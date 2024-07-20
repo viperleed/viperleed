@@ -49,6 +49,7 @@ STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 
+# TODO: catch errors from history.info, at .read()
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
 
@@ -91,7 +92,7 @@ class Bookkeeper:
         # Make top level history folder if not there yet
         try:
             self.top_level_history_path.mkdir(exist_ok=True)
-        except OSError:
+        except OSError:                                                         # TODO: untested raise
             LOGGER.error('Error creating history folder.')
             raise
 
@@ -106,7 +107,7 @@ class Bookkeeper:
         # history.info handler - creates file if not yet there
         self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
                                             create_new=True)
-        self.update_from_cwd()
+        self.update_from_cwd()                                                  # TODO: this is annoying. Logs stuff before running. Can we do it in run instead?
 
     def update_from_cwd(self):
         """Updates timestamp, tensor number and log lines, etc. from cwd.
@@ -140,13 +141,14 @@ class Bookkeeper:
         suffix = (self.timestamp +
                   ('' if self.job_name is None else f'_{self.job_name}'))
         job_number = self.max_job_for_tensor[self.tensor_number]
-        dir_name = lambda job_number: (
-            f't{self.tensor_number:03d}.r{job_number:03d}_{suffix}')
-        # if there is already a folder with the same name and correct
-        # timestamp/suffix, we take that, otherwise, we increase the job number
-        if not (self.top_level_history_path / dir_name(job_number)).is_dir():
+        dir_name_fmt = f't{self.tensor_number:03d}.r{{job:03d}}_{suffix}'
+        # If there is already a folder with the same name and correct
+        # timestamp/suffix, we take that, otherwise, we increase the
+        # job number
+        dir_name = dir_name_fmt.format(job=job_number)
+        if not (self.top_level_history_path / dir_name).is_dir():
             job_number += 1
-        return dir_name(job_number)
+        return dir_name_fmt.format(job=job_number)
 
     def _get_new_history_directory_name(self):
         """Return the name of a history directory for a given run.
@@ -171,7 +173,7 @@ class Bookkeeper:
           <bookie_timestamp>, but is most likely the same.
         """
         dir_name = self.base_history_dir_name
-        if (self.top_level_history_path / dir_name).is_dir():
+        if (self.top_level_history_path / dir_name).is_dir():                   # TODO: untested
             bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
                                                  time.localtime())
             dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
@@ -205,7 +207,7 @@ class Bookkeeper:
         # any calc logs
         files_to_archive.extend(self.cwd_logs[0])
         # check workhistory
-        if self.work_history_path.is_dir():
+        if self.work_history_path.is_dir():                                     # TODO: untested
             files_to_archive.extend(_get_current_workhistory_directories(
                 self.work_history_path, contains='r'))
         files_to_archive = [file for file in files_to_archive
@@ -253,12 +255,12 @@ class Bookkeeper:
         """
         try:
             mode = BookkeeperMode(mode)
-        except ValueError as exc:
+        except ValueError as exc:                                               # TODO: untested raise
             raise ValueError(f'Unknown mode {mode}') from exc
 
         try:
             method = getattr(self, f'_run_{mode.name.lower()}_mode')
-        except AttributeError as exc:
+        except AttributeError as exc:                                           # TODO: untested raise
             raise NotImplementedError from exc
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
@@ -326,29 +328,46 @@ class Bookkeeper:
                            'notes. If you really want to purge the last run, '
                            'remove the notes first.')
             return 1
-
-        # the directory we want to remove is not self.history_dir (since that
+        # Check whether there is an entry at all
+        last_entry = self.history_info.last_entry
+        if not last_entry:
+            LOGGER.error('Error: Failed to remove last entry from '
+                         f'{HISTORY_INFO_NAME}: No entries to remove.')
+            return 1
+        # And check if there was some user edit in the last one
+        if not last_entry.can_be_removed:
+            if not last_entry.was_understood:  # Can't be auto-fixed
+                err_ = 'contains invalid fields that could not be interpreted'
+            elif last_entry.misses_mandatory_fields:                            # TODO: untested
+                err_ = 'some expected fields were deleted'
+            else:    # Needs fixing, but can be done in --fixup mode
+                assert not last_entry.has_notes  # Checked above
+                err_ = ('contains fields with non-standard format (run '
+                        'bookkeeper --fixup to automatically fix it)')
+            LOGGER.error('Error: Failed to remove last entry from '
+                         f'{HISTORY_INFO_NAME}: {err_}. Please '
+                         'proceed manually.')
+            return 1
+                                                                                # TODO: !!! UNTESTED
+        # The directory we want to remove is not self.history_dir (since that   # TODO: don't we also want to purge all the intermediate ones from workhistory?
         # would be _moved-<timestamp>), but the one with the same base name!
         dir_to_remove = (self.top_level_history_path
                          / self.base_history_dir_name)
-        # remove history entry
-        if dir_to_remove.is_dir():
-            try:
-                shutil.rmtree(dir_to_remove)
-            except OSError:
-                LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
-                return 1
-            self._discard_common()
-        else:
+        if not dir_to_remove.is_dir():
             LOGGER.error(f'FULL_DISCARD mode failed: could not identify '
                          'directory to remove. Please proceed manually.')
-        # remove history entry from history.info
-        try:
-            self.history_info.remove_last_entry()
-        except NoHistoryEntryError as exc:
-            LOGGER.warning('Error: Failed to remove last entry from '
-                           f'{HISTORY_INFO_NAME}: {exc}')
+            return 1
 
+        # Remove history folder
+        try:
+            shutil.rmtree(dir_to_remove)
+        except OSError:
+            LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
+            return 1
+        self._discard_common()
+        # And the history entry from history.info
+        self.history_info.remove_last_entry()
+        return 0
 
     def _discard_common(self):
         """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
@@ -394,7 +413,7 @@ class Bookkeeper:
             r_super=r_super,
             ))
 
-    def _infer_run_info_from_log(self):
+    def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
         run_info, r_ref, r_super = None, None, None
         for line in self.last_log_lines:
             if line.startswith('Executed segments: '):
@@ -420,7 +439,7 @@ class Bookkeeper:
     def remove_log_files(self):
         _discard_files(*self.all_cwd_logs)
 
-    def remove_tensors_and_deltas(self):
+    def remove_tensors_and_deltas(self):                                        # TODO: untested
         tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
         delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
         _discard_files(self.cwd / tensor_file, self.cwd / delta_file)
@@ -431,7 +450,7 @@ class Bookkeeper:
             if ori_file.is_file():
                 try:
                     shutil.move(ori_file, self.cwd / file)
-                except OSError:
+                except OSError:                                                 # TODO: untested
                     LOGGER.error(f'Failed to move {ori_file} to {file}.')
                     raise
 
@@ -447,7 +466,7 @@ class Bookkeeper:
                 _copy_one_file_to_history(original_file, self.history_dir)
                 original_timestamp = original_file.stat().st_mtime
                 cwd_timestamp = cwd_file.stat().st_mtime
-                if original_timestamp < cwd_timestamp:
+                if original_timestamp < cwd_timestamp:                          # TODO: untested
                     LOGGER.warning(
                         f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
                         'copied to history, but the file in the input '
@@ -456,7 +475,7 @@ class Bookkeeper:
             elif original_file.is_file():
                 # just copy original
                 _copy_one_file_to_history(original_file, self.history_dir)
-            elif cwd_file.is_file():
+            elif cwd_file.is_file():                                            # TODO: untested
                 # if file is optional input file, ignore
                 if file in RUNTIME_GENERATED_INPUT_FILES:
                     continue
@@ -479,14 +498,14 @@ class Bookkeeper:
         """Copy OUT and SUPP directories to history."""
         for name in (DEFAULT_SUPP, DEFAULT_OUT):
             dir = self.cwd / name
-            if not dir.is_dir():
+            if not dir.is_dir():                                                # TODO: untested
                 LOGGER.warning(f'Could not find {name} directory in '
                                f'{self.cwd}. It will not be copied '
                                'to history.')
                 continue
             try:
                 shutil.copytree(dir, self.history_dir / name)
-            except OSError:
+            except OSError:                                                     # TODO: untested
                 LOGGER.error(f'Failed to copy {name} directory to history.')
 
     def copy_log_files_to_history(self):
@@ -511,7 +530,7 @@ def store_input_files_to_history(root_path, history_path):
     root_path, history_path = Path(root_path), Path(history_path)
     original_inputs_path = root_path / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME
     if original_inputs_path.is_dir():
-        input_origin_path = original_inputs_path
+        input_origin_path = original_inputs_path                                # TODO: untested
     else:
         input_origin_path = root_path
         print(f'Could not find directory {ORIGINAL_INPUTS_DIR_NAME!r} with '
@@ -524,14 +543,14 @@ def store_input_files_to_history(root_path, history_path):
     for file in files_to_copy:
         try:
             shutil.copy2(file, history_path/file.name)
-        except OSError as exc:
+        except OSError as exc:                                                  # TODO: untested
             print(f'Failed to copy file {file} to history: {exc}')
 
 
 def _create_new_history_dir(new_history_path):
     try:
         new_history_path.mkdir()
-    except OSError:
+    except OSError:                                                             # TODO: untested
         LOGGER.error('Error: Could not create target directory '
                      f'{new_history_path}\n Stopping...')
         raise
@@ -542,7 +561,7 @@ def _discard_files(*file_paths):
     _move_or_discard_files(file_paths, None, discard=True)
 
 
-def _discard_workhistory_previous(work_history_path):
+def _discard_workhistory_previous(work_history_path):                           # TODO: untested
     """Remove 'previous'-labelled directories in `work_history_path`."""
     work_hist_prev = _get_workhistory_directories(work_history_path,
                                                   contains=PREVIOUS_LABEL)
@@ -572,7 +591,7 @@ def _find_max_run_per_tensor(history_path):
     max_nums = defaultdict(int)  # max. job number per tensor number
     for directory in history_path.iterdir():
         match = HIST_FOLDER_RE.match(directory.name)
-        if not directory.is_dir() or not match:
+        if not directory.is_dir() or not match:                                 # TODO: untested
             continue
         tensor_num = int(match['tensor_num'])
         job_num = int(match['job_num'])
@@ -580,7 +599,7 @@ def _find_max_run_per_tensor(history_path):
     return max_nums
 
 
-def _get_current_workhistory_directories(work_history_path, contains=''):
+def _get_current_workhistory_directories(work_history_path, contains=''):       # TODO: untested
     """Return a generator of subfolders in work_history_path.
 
     As compared with _get_workhistory_directories, only those
@@ -609,7 +628,7 @@ def _get_current_workhistory_directories(work_history_path, contains=''):
     return (d for d in directories if PREVIOUS_LABEL not in d.name)
 
 
-def _get_workhistory_directories(work_history_path, contains=''):
+def _get_workhistory_directories(work_history_path, contains=''):               # TODO: untested
     """Return a generator of subfolders in `work_history_path`.
 
     Parameters
@@ -635,7 +654,7 @@ def _get_workhistory_directories(work_history_path, contains=''):
     return (d for d in globbed if d.is_dir() and HIST_FOLDER_RE.match(d.name))
 
 
-def _move_and_cleanup_workhistory(work_history_path,
+def _move_and_cleanup_workhistory(work_history_path,                            # TODO: untested
                                   history_path,
                                   timestamp,
                                   max_job_for_tensor,
@@ -703,17 +722,17 @@ def _move_or_discard_one_file(file, target_folder, discard):
     if discard and file.is_file():
         try:
             file.unlink()
-        except OSError:
+        except OSError:                                                         # TODO: untested
             LOGGER.warning(f'Failed to discard file {file.name}.')
         return
     if discard:  # Should be a directory
         try:
             shutil.rmtree(file)
-        except OSError:
+        except OSError:                                                         # TODO: untested
             LOGGER.warning(f'Failed to discard directory {file.name}.')
         return
     # Move it
-    try:
+    try:                                                                        # TODO: untested
         shutil.move(file, target_folder / file.name)
     except OSError:
         LOGGER.error(f'Failed to move {file.name}.')
@@ -723,11 +742,11 @@ def _copy_one_file_to_history(file_path, history_path):
     """Copy file_path to history_path."""
     try:
         shutil.copy2(file_path, history_path / file_path.name)
-    except OSError:
+    except OSError:                                                             # TODO: untested
         LOGGER.error(f'Failed to copy {file_path} to history.')
 
 
-def _move_workhistory_folders(work_history_path, history_path,
+def _move_workhistory_folders(work_history_path, history_path,                  # TODO: untested
                               timestamp, max_job_for_tensor):
     """Move timestamp-labelled folders in work_history_path to history_path.
 
@@ -783,16 +802,16 @@ def _read_and_clear_notes_file(cwd):
     """Return notes read from file. Clear the file contents."""
     notes_path = next(cwd.glob('notes*'), None)
     if notes_path is None:
-        return ''
+        return ''                                                               # TODO: untested
     try:
         notes = notes_path.read_text(encoding='utf-8')
-    except OSError:
+    except OSError:                                                             # TODO: untested
         print(f'Error: Failed to read {notes_path.name} file.')
         return ''
     try:  # pylint: disable=too-many-try-statements
         with notes_path.open('w', encoding='utf-8'):
             pass
-    except OSError:
+    except OSError:                                                             # TODO: untested
         LOGGER.error(f'Failed to clear the {notes_path.name} '
                      'file after reading.')
     return notes
@@ -818,7 +837,7 @@ def _read_most_recent_log(cwd):
     try:  # pylint: disable=too-many-try-statements
         with most_recent_log.open('r', encoding='utf-8') as log_file:
             last_log_lines = log_file.readlines()
-    except OSError:
+    except OSError:                                                             # TODO: untested
         pass
     return old_timestamp, last_log_lines
 
@@ -827,7 +846,7 @@ def _update_state_files_from_out(cwd):
     """Moved states files from OUT to root if available and rename old to _ori."""
     out_path = cwd / 'OUT'
     if not out_path.is_dir():
-        return
+        return                                                                  # TODO: untested
     for file in STATE_FILES:
         out_file = out_path / f'{file}_OUT'
         if out_file.is_file():

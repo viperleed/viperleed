@@ -60,7 +60,7 @@ class StoreBookkeeperMode(Action):
         """Set args.mode to the right BookkeeperMode."""
         try:
             mode = BookkeeperMode(self.dest)
-        except ValueError:
+        except ValueError:                                                      # TODO: untested
             parser.error(f'Unknown bookkeeper mode {self.dest!r}')
         setattr(args, 'mode', mode)
         setattr(args, self.dest, self.const)
@@ -120,7 +120,7 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
             default=DEFAULT_WORK_HISTORY
             )
 
-    def __call__(self, args=None):
+    def __call__(self, args=None):                                              # TODO: untested
         """Call the bookkeeper with command-line args."""
         parsed_args = self.parse_cli_args(args)
         bookkeeper = Bookkeeper(

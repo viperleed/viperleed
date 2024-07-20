@@ -39,6 +39,6 @@ class BookkeeperMode(Enum):
     DISCARD_FULL = 'discard_full'
 
     @property
-    def discard(self):
+    def discard(self):                                                          # TODO: untested. Necessary?
         """Return whether this is mode DISCARD."""
         return self is BookkeeperMode.DISCARD
