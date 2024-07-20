@@ -59,7 +59,7 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
         The r-factor obtained for the sl, rp combination
     """
     rp.TENSOR_OUTPUT = [0]
-    rp.workdir = Path(work_dir)
+    rp.workdir = Path(work_dir).resolve()
     # internally transform theta, phi to within range
     if rp.THETA < 0:
         rp.THETA = abs(rp.THETA)

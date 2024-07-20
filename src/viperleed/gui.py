@@ -109,12 +109,14 @@ def gui_main():
     # * Math: family =  'CMU Serif'
     qtg.QFontDatabase.addApplicationFont(os.path.join(font_path, 'cmunrm.otf'))
 
-    leed_gui = gl.LEED_GUI()
-    leed_gui.show()
+    # leed_gui = gl.LEED_GUI()
+    # leed_gui.show()
+    gl.show_use_betatest_version_popup()
 
     print('Done', flush=True)
 
-    sys.exit(app.exec_())
+    # sys.exit(app.exec_())
+    sys.exit()
 
 
 if __name__ == '__main__':

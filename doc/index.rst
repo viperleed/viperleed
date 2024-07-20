@@ -57,13 +57,15 @@ project:
 
 -  The :ref:`ViPErLEED hardware<hardware>`
       A set of hardware, firmware and control software for the easy
-      acquisition of |LEED-IV| data with pre-existing LEED systems.
+      acquisition of |LEED-IV| data with pre-existing LEED systems
+      :cite:p:`viperleedMeasure`.
 -  The :ref:`imagej_plugins`
       Software for extracting |IV| curves from the experimental data
-      ("movies").
+      ("movies") :cite:p:`viperleedSpot`.
 -  The :ref:`viperleed.calc package<viperleed_calc>`
       A Python package for the calculation of |IV| curves, quantitative
-      analysis of :term:`LEED` data, and surface-structure optimization.
+      analysis of :term:`LEED` data, and surface-structure optimization
+      :cite:p:`viperleedCalc`.
 
 .. _toc_figure:
 .. figure:: /_static/paper_figures/ViPErLEED-overview_embedded.svg

@@ -109,6 +109,9 @@ def runPhaseshiftGen_old(sl, rp,
     psgensource = Path(rp.source_dir, psgensource)
     excosource = Path(shortpath, excosource)
 
+    if os.name == 'nt':
+        psgensource = psgensource.with_suffix('.exe')                           # TODO: does this cover it or should we use 'win' in sys.platform()?
+
     if not psgensource.is_file():
         raise FileNotFoundError('Could not find PHASESHIFTS executable at '
                                 f'{psgensource}. Did you forget to compile it? '
@@ -257,7 +260,7 @@ def runPhaseshiftGen_old(sl, rp,
                     "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             logger.error(_err)
             raise RuntimeError(_err)
-        el_charge_density_path = (rp.source_dir / "atom_density_files" / 
+        el_charge_density_path = (rp.source_dir / "atom_density_files" /
                                   chemel / (f"chgden{chemel}")).resolve()
         charge_density_short_path = (Path(atdenssource) / chemel /
                                     f"chgden{chemel}")
@@ -340,13 +343,13 @@ def runPhaseshiftGen_old(sl, rp,
     try:
         with open(phaseshifts_log_path, 'w') as wf:
             wf.writelines([
-                f"Output of EEASISSS called with args '{ps_output.args}'",
-                f"Exit code: {ps_output.returncode}",
-                "stdout:",
+                f"Output of EEASISSS called with args '{ps_output.args}'\n",
+                f"Exit code: {ps_output.returncode}\n",
+                "stdout:\n",
                 f"{ps_output.stdout}",
-                "stderr:",
-                f"{ps_output.stderr}",
-            ])
+                ])
+            if ps_output.stderr:
+                wf.writelines(["stderr:", f"{ps_output.stderr}"])
     except OSError:
         logger.error("Could not write EEASISSS stdout/stderr to log file. "
                      "Execution will proceed, but this may indicate a permission "

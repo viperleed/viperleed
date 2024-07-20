@@ -20,9 +20,12 @@ class DomainParameters:
     """Stores workdir, slab and Rparams objects for each domain"""
 
     def __init__(self, workdir, homedir, name):
-        self.workdir = Path(workdir)  # path to sub-directory for domain calculation
-        self.homedir = Path(homedir)  # path to main calc directory
-        self.name = name              # domain name as defined by user
+        # .workdir is the path to the sub-directory for where this
+        # domain is calculated, .homedir, the one to the main calc
+        # directory
+        self.workdir = Path(workdir).resolve()
+        self.homedir = Path(homedir).resolve()
+        self.name = name  # Domain name as defined by user
         self.sl = None
         self.rp = None
         self.refcalcRequired = False

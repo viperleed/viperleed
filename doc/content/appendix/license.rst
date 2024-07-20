@@ -19,14 +19,27 @@ ViPErLEED developers cannot grant permission to redistribute certain parts
 of the software. For inquiries or questions, please contact the ViPErLEED
 developers under info@viperleed.org.
 
-All files in the main repository and all files authored by the ViPErLEED
-developers are licensed under the :term:`GPLv3`. This explicitly includes
-the ViPErLEED Python package (|calc|, ``gui``, ``utils``), ViPErLEED
-electronics (firmware, schematics, software) and the ViPErLEED :term:`ImageJ`
-plugins.
+All files in the ``master`` branch of the ``viperleed`` repository and all
+files authored by the ViPErLEED developers are licensed under :term:`GPLv3`
+(or later). This explicitly includes the ViPErLEED Python package (|calc|,
+``extensions``, ``gui[lib]``, ``utils``), ViPErLEED electronics (firmware,
+schematics, software). The :ref:`imagej_plugins` are also released under
+:term:`GPLv3` (or later).
 
-The documentation for all parts of ViPErLEED is licensed under the
-:term:`CC BY 4.0` license.
+.. only:: not latex
+
+    The documentation for all parts of ViPErLEED is licensed under the
+    :term:`CC BY 4.0` license. See file :download:`LICENSE</LICENSE>`.
+
+.. only:: latex
+
+    The documentation for all parts of ViPErLEED is licensed under the
+    :term:`CC BY 4.0` license. Here the ``LICENSE`` file for the ViPErLEED
+    documentation:
+
+    .. literalinclude:: /LICENSE
+        :caption: License statement valid for all parts of the ViPErLEED
+                  documentation.
 
 
 TensErLEED

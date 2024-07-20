@@ -90,10 +90,8 @@ class Rparams:
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
-        self.OPTIMIZE = {  # settings for fd optimization
-            'which': 'none', 'step': 0., 'minpoints': 4,
-            'maxpoints': 10, 'convergence': 0., 'maxstep': 0.
-            }
+        # OPTIMIZE: settings for fd optimization
+        self.OPTIMIZE = self.get_default('OPTIMIZE')
         self.PARABOLA_FIT = {'type': 'none', 'alpha': 1e-2, 'mincurv': 5e-3,
                              'localize': 0}
         self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['d'] # changed in updateDerivedParams
@@ -153,7 +151,8 @@ class Rparams:
         # RUN VARIABLES
         self.starttime = timer()
         self.source_dir = None  # where to find 'tensorleed'
-        self.workdir = Path(os.getcwd())  # MAIN WORK DIRECTORY; where to find input
+        # .workdir is the MAIN WORK DIRECTORY; where to find input
+        self.workdir = Path.cwd().resolve()
         self.compile_logs_dir = None
         self.searchConvInit = {
             'gaussian': None, 'dgen': {'all': None, 'best': None, 'dec': None}}
