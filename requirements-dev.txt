@@ -9,6 +9,7 @@ line_profiler   # Profiling code line-by-line
 # requirements files
 -r requirements-dist.txt   # Building sdist for pypi
 -r requirements-doc.txt    # Building documentation; !!! py >= 3.9 !!!
+-r requirements-lint.txt   # Running style checks
 -r requirements-tests.txt  # Running pytest tests
 
 
