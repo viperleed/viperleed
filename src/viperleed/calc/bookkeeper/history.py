@@ -818,8 +818,8 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             time_str = repr(value)
         return self._format_field('timestamp', value_str=time_str)
 
-    @staticmethod
-    def _from_string_check_single_entry(entry_str):
+    @classmethod
+    def _from_string_check_single_entry(cls, entry_str):
         """Make sure that `entry_str` only contains a single entry."""
         if HISTORY_INFO_SEPARATOR.strip() in entry_str:                         # TODO: This, and the splitting we do above, does not cover cases in which users may have used the separator in other spots.
             raise ValueError('Found multiple entries. Split them at '
@@ -831,7 +831,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         # multi-line regex will gobble up everything that follows,
         # including following entries. This is not a problem if
         # the 'Notes:' field has been deleted. Do the last one first.
-        n_entries = sum(bool(m.group(0))
+        n_entries = sum(cls._matched_known_fields(m)
                         for m in _ENTRY_RE.finditer(entry_str))
         if n_entries > 1:
             raise EntrySyntaxError(err_msg)
@@ -841,13 +841,16 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         notes = _ENTRY_RE.match(entry_str)['notes']
         if notes is None or not notes.strip():  # OK
             return
-        match = _ENTRY_RE.match(notes.strip())
-        has_known_fields = any(
-            # We only have named groups for known fields
-            v for v in match.groupdict().values()
-            )
-        if has_known_fields:
+        if cls._matched_known_fields(_ENTRY_RE.match(notes.strip())):
             raise EntrySyntaxError(err_msg)
+
+    @staticmethod
+    def _matched_known_fields(entry_match):
+        """Return whether a re.match object identified known entry fields."""
+        return any(
+            # We only have named groups for known fields
+            v for v in entry_match.groupdict().values()
+            )
 
     @classmethod
     def _parse_fields_from_string(cls, entry_str, kwargs):

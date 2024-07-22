@@ -49,7 +49,7 @@ class BookkeeperTag(IntEnum):
 Tag = BookkeeperTag
 
 
-NOTES_TEST_CONTENT = 'This is a test note.'
+NOTES_TEST_CONTENT = 'This is a test note.\n   Over multiple lines.'
 MOCK_TIME_ISO = '2003-02-01 04:03:06'
 MOCK_TIME_GERMAN = '03.02.01 04:03:06'
 
