@@ -254,8 +254,6 @@ def is_optional(field, with_type=None):
 # for the different fields? Each field could then have a .format and
 # a .check method that do what is done here now. It may a bit tricky
 # to get it right, though.
-# TODO: _MISSING notes and not discarded should not print, but
-# missing notes with discarded should.
 # TODO: comment-only entry
 @dataclass(frozen=True)
 class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
@@ -386,6 +384,10 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         formatted = (fmt() for field, fmt in self._formatters.items()
                      if getattr(self, field) != _MISSING)
         txt = '\n'.join(f for f in formatted if f.rstrip())
+        if self.notes == _MISSING and self.discarded:
+            # We fix-up automatically entries with missing
+            # 'Notes:' that have been explicitly discarded
+            txt += '\n' + self._format_notes()
         return '\n' + txt
 
     @property
@@ -550,6 +552,10 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         """Complain if no value was provided at all for `attr`."""
         if getattr(self, attr) == _MISSING:
             raise EntrySyntaxError(_MSG_MISSING)
+
+    def _check_notes_field(self):
+        """Complain if the Notes field is missing."""
+        self._check_missing('notes')
 
     def _check_r_factor_field(self, which_r):
         """Check whether one of the R-factor fields is fine."""
@@ -739,7 +745,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         """Return a string with multi-line notes."""
         notes_str = self.notes.strip()
         if notes_str == _MISSING:
-            return ''
+            notes_str = ''
         notes = f'{_TAG["notes"]} {notes_str}'
         discarded = f'{_DISCARDED}' if self.discarded else ''
         if discarded and notes_str:
@@ -833,7 +839,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     @staticmethod
     def _process_string_notes(kwargs):
         """Update `kwargs` according to its notes."""
-        notes = kwargs['notes']
+        notes = kwargs.get('notes', None)
         if notes is None:
             kwargs['notes'] = _MISSING
             return
