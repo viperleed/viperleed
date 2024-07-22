@@ -451,7 +451,7 @@ class CasesInfoEntryPureComment:
         entry = CasesInfoEntryCorrect().case_no_notes()
         return HISTORY_INFO_SEPARATOR.join(
             comment if which is self.comment else '\n' + entry
-            for which in which_ones.split(',')
+            for which in which_ones
             )
 
 
