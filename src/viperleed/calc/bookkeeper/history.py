@@ -184,8 +184,8 @@ _TAG = {
 _SPACE = r'[ \t]'  # Exclude \n
 _COMMA_SEPARATED = rf'\d+({_SPACE}*,{_SPACE}*\d+)*'
 _COMMA_OR_SPACE_SEPARATED = rf'\d+({_SPACE}*[,{_SPACE}]?{_SPACE}*\d+)*'
-_FLOAT_RE = r'\d+(.\d+)?'  # Positive, without '+'
-_MULTILINE = r'.*(\n.*)*'
+_FLOAT_RE = r'\d+(.\d+)?'    # Positive, without '+'
+_MULTILINE = r'.*(?:\n.*)*'  # Non capturing to detect unknown lines
 _SPACE_SEPARATED = rf'\d+({_SPACE}+\d+)*'
 
 # Some special ones for the fields
@@ -196,17 +196,38 @@ _SPACE_SEPARATED = rf'\d+({_SPACE}+\d+)*'
 # the v1.0.0 modes make the alternative names obsolete.
 _FOLDER_NAME_RE = r't\d+\.r\d+_(moved-)?\d{{6}}-\d{{6}}{job_name}'
 
-# Regular expression for matching whole history entries:
-# Catch any character past the expected tags (notes: over more lines).
-# HistoryInfoEntry deals with the details of each field.
-_FIELDS_RE = {field: rf'{tag}{_SPACE}*(?P<{field}>.*)'
-              for field, tag in _TAG.items()}
-_FIELDS_RE['notes'] = _FIELDS_RE['notes'].replace('.*', _MULTILINE)             # TODO: marked as untested??
-_ENTRY_RE = re.compile(
-    # All fields optional, just in the right order.
-    # HistoryInfoEntry will deal with missing ones
-    ''.join(rf'(\n?{field_re})?' for field_re in _FIELDS_RE.values())
-    )
+
+def _make_entry_regex():
+    """Return a compiled regular expression for a history.info entry."""
+    # Regular expression for matching whole history entries:
+    # Catch any character past the expected tags (notes: over more
+    # lines). HistoryInfoEntry deals with the details of each field.
+    fields_re = {field: rf'{tag}{_SPACE}*(?P<{field}>.*)'
+                 for field, tag in _TAG.items()}
+    fields_re['notes'] = fields_re['notes'].replace('.*', _MULTILINE)
+    fields_re_keys = tuple(fields_re)
+
+    def _except_next(ind=None):
+        """Return a pattern for anything not starting with known keys."""
+        all_next = (
+            '|'.join(_TAG[item] for item in fields_re_keys) if ind is None
+            else '|'.join(_TAG[item] for item in fields_re_keys[ind+1:])
+            )
+        return rf'(\n?(?!{all_next}).+)*'
+
+    # Prepare pattern for a single entry:
+    # Can start with anything, except the tag of the first field,
+    # then have all fields in the right order, potentially with
+    # stuff in between. All fields are optional and HistoryInfoEntry
+    # deals with missing and extra ones.
+    entry_re_pattern = _except_next()
+    for i, field_re in enumerate(fields_re.values()):
+        # Non capturing (?:...) is necessary to detect unknown lines
+        entry_re_pattern += rf'(?:\n?{field_re})?'
+        entry_re_pattern += rf'(\n?(?!{_except_next(i)}).+)*'
+    return re.compile(entry_re_pattern)
+
+_ENTRY_RE = _make_entry_regex()
 
 
 # Sentinel for fields that do not exist at all.
@@ -819,11 +840,12 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         notes = _ENTRY_RE.match(entry_str)['notes']
         if notes is None:  # OK
             return
-        # Add an extra line to check all the lines in notes
-        notes = notes.strip() + '\n' + _MISSING
+        notes = notes.strip()
+        if notes:  # Add an extra line to check all the lines in notes
+            notes +=  '\n' + _MISSING
         while notes and notes != _MISSING:
             match = _ENTRY_RE.match(notes.strip())
-            if match and match.group(0):
+            if any(v for v in match.groupdict().values()):
                 raise EntrySyntaxError(err_msg)
             # The extra _MISSING line and the while
             # condition prevent a ValueError here:
@@ -834,7 +856,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     def _parse_fields_from_string(cls, entry_str, kwargs):
         """Update `kwargs` by parsing `entry_str`."""
         match = _ENTRY_RE.match(entry_str.strip())
-        if not match:
+        if not match:  # Safeguard for something wrong with _ENTRY_RE
             raise HistoryInfoError(f'Could not parse entry\n{entry_str}\n'
                                    'This is probably a bug. Please report it '
                                    'to the ViPErLEED team')
@@ -850,6 +872,17 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
                 kwargs[name] = value.rstrip()
             elif not is_optional(field):  # No match at all
                 kwargs[name] = _MISSING
+
+        # Now check if there was any extra unknown field.
+        known = {v for v in match.groupdict().values() if v}
+        extras = [g
+                  for g in match.groups()
+                  if g and g not in known and g.strip()]
+        if extras:
+            raise EntrySyntaxError(
+                f'Found unexpected lines in entry\n{entry_str}\n'
+                'Problematic lines:\n' + '\n-> '.join(extras)
+                )
 
     @staticmethod
     def _process_string_notes(kwargs):
