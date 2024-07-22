@@ -685,8 +685,6 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     def _fixup_list_of_int_string(self, attr, value_str):
         """Try converting `value_str` to a list of int for `attr`."""
         value_str = value_str.strip()
-        if not value_str:
-            raise EntrySyntaxError(_MSG_EMPTY)
         if not re.fullmatch(_COMMA_OR_SPACE_SEPARATED, value_str):
             raise EntrySyntaxError('Not a list of comma-separated integers')
 
