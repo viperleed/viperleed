@@ -563,9 +563,8 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         if value is None:  # R factors are optional
             return
         if isinstance(value, str) and not value.strip():
-            # Also OK to have an empty string for optional fields
-            object.__setattr__(self, which_r, None)
-            return
+            object.__setattr__(self, which_r, '')
+            raise EntrySyntaxError(_MSG_EMPTY)
         if isinstance(value, str):  # Non-empty
             value = self._fixup_float_string(value)
             object.__setattr__(self, which_r, value)
@@ -585,13 +584,14 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     def _check_run_info_field(self):
         """Check whether the run_info attribute is fine."""
         value = self.run_info
-        if not value:  # OK, it's optional
+        if value is None:  # OK, it's optional
             return
         if not isinstance(self.run_info, str):
             raise EntrySyntaxError(_MSG_NO_STRING)
         value = value.strip()
-        if not value:  # OK, it's optional
-            return
+        if not value:
+            object.__setattr__(self, 'run_info', '')
+            raise EntrySyntaxError(_MSG_EMPTY)
         if not re.fullmatch(_SPACE_SEPARATED, value):
             raise EntrySyntaxError('Not a space-separated list of integers.')
 
@@ -716,8 +716,10 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         value = getattr(self, field_name)
         if value == _MISSING:
             value_str = ''
-        elif value_str is None and not value:
+        elif value_str is None and value is None:
             return ''
+        elif value_str is None and not value:
+            value_str = ''
         elif value_str is None:
             value_str = value if isinstance(value, str) else f'{value:{fmt}}'
         return self._format_line(_TAG[field_name], value_str)
