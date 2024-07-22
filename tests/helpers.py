@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
+from collections.abc import Sequence
 from contextlib import contextmanager
 import copy
 from dataclasses import dataclass, fields
@@ -22,6 +23,7 @@ from pathlib import Path
 import pytest
 from pytest_cases import fixture
 from pytest_cases.filters import get_case_tags
+from pytest_cases.filters import CaseFilter
 
 
 # Think about a decorator for injecting fixtures.
@@ -155,16 +157,7 @@ def flat_fixture(func, **fixture_args):                                         
     return _decorator(func)
 
 
-def exclude_tags(*tags):
-    """Return a filter that excludes cases with given tags."""
-    def _filter(case):
-        """Return False if case has any of the tags."""
-        case_tags = get_case_tags(case)
-        return not any(tag in case_tags for tag in tags)
-    return _filter
-
-
-# #######################   CONTEX MANAGERS   #########################
+# ######################   CONTEXT MANAGERS   #########################
 
 @contextmanager
 def execute_in_dir(path):
@@ -206,7 +199,30 @@ def raises_test_exception(obj, attr):
         yield
 
 
-# ###############################   CLASSES   #################################
+# ###########################   FILTERS   #############################
+
+def exclude_tags(*tags):
+    """Return a filter that excludes cases with given tags."""
+    def _filter(case):
+        """Return False if case has any of the tags."""
+        case_tags = get_case_tags(case)
+        return not any(tag in case_tags for tag in tags)
+    return CaseFilter(_filter)
+
+
+def has_any_tag(*tags):
+    """Return a filter selecting cases with at least one of these tags."""
+    def _filter(case):
+        case_tags = set(get_case_tags(case))
+        return any(t in case_tags for t in tags)
+
+    if not tags:
+        raise ValueError('Must select at least one tag')
+    return CaseFilter(_filter)
+
+
+
+# ###########################   CLASSES   #############################
 
 @dataclass
 class InfoBase:
