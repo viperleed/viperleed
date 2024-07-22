@@ -60,7 +60,7 @@ class StoreBookkeeperMode(Action):
         """Set args.mode to the right BookkeeperMode."""
         try:
             mode = BookkeeperMode(self.dest)
-        except ValueError:                                                      # TODO: untested
+        except ValueError:
             parser.error(f'Unknown bookkeeper mode {self.dest!r}')
         setattr(args, 'mode', mode)
         setattr(args, self.dest, self.const)

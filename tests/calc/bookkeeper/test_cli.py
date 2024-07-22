@@ -1,9 +1,13 @@
 """Tests for the viperleed bookkeeper command-line interface."""
 
+from unittest.mock import Mock
+
 import pytest
 from pytest_cases import fixture, parametrize
 
+from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.cli import BookkeeperCLI
+from viperleed.calc.bookkeeper.cli import StoreBookkeeperMode
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
 
@@ -62,3 +66,37 @@ class TestBookkeeperParser:
         with pytest.raises(SystemExit) as exc:
             bookkeeper_parser.parse_args(flags)
         assert exc.value.code == 2  # argparse error code
+
+
+def test_action_raises_unexpected_mode(bookkeeper_parser):
+    """Check complaints when called with an unexpected mode."""
+    action = StoreBookkeeperMode(option_strings=None, dest='unknown')
+    with pytest.raises(SystemExit):
+        action(bookkeeper_parser, Mock(), None)
+
+
+class TestBookkeeperRun:
+    """Tests for calling the BookkeeperCLI."""
+
+    @fixture(name='mock_run')
+    def fixture_mock_run(self, monkeypatch):
+        """Return a BookkeeperCLI with its .run method replaced."""
+        def mock_init(*_args, **_kwargs):                                       # TODO: remove after side effects have been removed.
+            """Prevent side effects of Bookkeeper.__init__."""
+            return None
+        mock_method = Mock()
+        monkeypatch.setattr(Bookkeeper, 'run', mock_method)
+        monkeypatch.setattr(Bookkeeper, '__init__', mock_init)
+        return mock_method
+
+    _mode = {
+        '': BookkeeperMode.ARCHIVE,  # The default
+        ('--discard',): BookkeeperMode.DISCARD,
+        }
+
+    @parametrize('args,expect', _mode.items())
+    def test_bookkeeper_run(self, args, expect, mock_run):
+        """Check correct call to bookkeeper.run."""
+        bookie = BookkeeperCLI()
+        bookie(args)
+        mock_run.assert_called_with(expect)
