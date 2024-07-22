@@ -441,7 +441,12 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
                   for attr, (_, value) in self._needs_fixup.items()}
         # The timestamp needs special care, as there is no
         # 'fixed' value, but it is a matter of format change
-        fix_time_fmt = kwargs.pop('timestamp', False)
+        # Concerning the pylint disable: it would be better indeed
+        # to use a named constant, but we'd then have to do it for
+        # all. I'd then rather make _TAG an Enum.
+        # pylint: disable-next=magic-value-comparison
+        fix_time_fmt = 'timestamp' in kwargs
+        kwargs.pop('timestamp', None)
 
         # replace_value goes via __init__ + __post_init__, and would
         # log the same messages as for this instance. Mute logger.
@@ -779,8 +784,12 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     def _format_timestamp(self):
         """Return a line with TIME."""
         value = self.timestamp
-        time_str = (value if isinstance(value, str)
-                    else value.strftime(self.time_format.value))
+        if isinstance(value, str):
+            time_str = value
+        elif isinstance(value, datetime):
+            time_str = value.strftime(self.time_format.value)
+        else:  # Something funny
+            time_str = repr(value)
         return self._format_field('timestamp', value_str=time_str)
 
     @staticmethod
