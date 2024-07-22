@@ -185,7 +185,7 @@ Notes:'''
 class CasesInfoEntryCorrect:
     """Collection of cases for non-user-edited history.info entries."""
 
-    @case(tags=(*Tag.all_targets(), Tag.NEEDS_NO_FIX))
+    @case(tags=(Tag.HISTORY, Tag.NEEDS_NO_FIX))
     def case_no_notes(self):
         """Return one full history.info entry without notes."""
         return f'''\
@@ -207,7 +207,7 @@ Notes:'''
 # FOLDER    t003.r001_010203-040506
 Notes:'''
 
-    @case(tags=(*Tag.all_targets(), Tag.NEEDS_NO_FIX))
+    @case(tags=(Tag.HISTORY, Tag.NEEDS_NO_FIX))
     def case_jobname_and_notes(self):
         """Return one full entry with notes and a specific job name."""
         return f'''\
@@ -219,7 +219,7 @@ Notes:'''
 Notes: {NOTES_TEST_CONTENT}
 '''
 
-    @case(tags=(*Tag.all_targets(), Tag.NEEDS_NO_FIX))
+    @case(tags=(Tag.HISTORY, Tag.NEEDS_NO_FIX))
     def case_discarded(self):
         """Return the contents of an entry marked as DISCARDED."""
         return f'''\
@@ -301,7 +301,7 @@ Notes:'''
     # This one cannot be used as a single entry, and would be
     # labelled as "needs_fixing" if used as a single string,
     # but cannot be auto-fixed
-    @case(tags=(*Tag.all_targets(), Tag.MULTI_ENTRY))
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
     def case_two_entries(self):
         """Return the contents of two consecutive valid entries."""
         return f'''\
