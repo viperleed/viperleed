@@ -34,9 +34,9 @@ from .conftest import NOTES_TEST_CONTENT
 @fixture(name='after_archive')
 def fixture_bookkeeper_mock_dir_after_archive(after_run):
     """Yield a temporary directory for testing the bookkeeper."""
-    bookkeeper, bookkeeper_mock_dir_after_run, history_path, history_run_path = after_run
+    bookkeeper, *_ = after_run
     bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
-    return bookkeeper, bookkeeper_mock_dir_after_run, history_path, history_run_path
+    return after_run
 
 
 @fixture(name='before_run')
