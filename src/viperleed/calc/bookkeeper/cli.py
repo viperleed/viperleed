@@ -120,7 +120,7 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
             default=DEFAULT_WORK_HISTORY
             )
 
-    def __call__(self, args=None):                                              # TODO: untested
+    def __call__(self, args=None):
         """Call the bookkeeper with command-line args."""
         parsed_args = self.parse_cli_args(args)
         bookkeeper = Bookkeeper(

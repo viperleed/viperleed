@@ -11,6 +11,9 @@ from viperleed.calc.bookkeeper.cli import StoreBookkeeperMode
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
 
+_ARGPARSE_EXIT_WITH_ERROR = 2
+
+
 @fixture(name='bookkeeper_parser')
 def fixture_bookkeeper_parser():
     """Return a CLI argument parser for viperleed.calc.bookkeeper."""
@@ -65,7 +68,7 @@ class TestBookkeeperParser:
         """Check complaints when conflicting modes are given."""
         with pytest.raises(SystemExit) as exc:
             bookkeeper_parser.parse_args(flags)
-        assert exc.value.code == 2  # argparse error code
+        assert exc.value.code == _ARGPARSE_EXIT_WITH_ERROR
 
 
 def test_action_raises_unexpected_mode(bookkeeper_parser):
