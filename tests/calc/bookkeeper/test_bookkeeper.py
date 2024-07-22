@@ -148,7 +148,7 @@ class TestBookkeeperArchive:
         """Check correct storage of history files in ARCHIVE mode."""
         bookkeeper, mock_dir, *_ = after_run
         # bookkeeper should think that it needs archiving
-        assert bookkeeper.archiving_required is True
+        assert bookkeeper.archiving_required
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
         check_history_exists(after_run)
         check_out_files_in_history(after_run)
@@ -194,7 +194,7 @@ class TestBookkeeperClear:
         """Check correct overwriting of input files in CLEAR mode."""
         bookkeeper, mock_dir = before_run
         # bookkeeper should not think that it needs archiving
-        assert bookkeeper.archiving_required is False
+        assert not bookkeeper.archiving_required
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
         # Bookkeeper should not do anything (except for logging)
         history_contents = (f for f in (mock_dir / 'history').iterdir()
@@ -208,7 +208,7 @@ class TestBookkeeperClear:
         E.g. if the run crashed."""
         bookkeeper, *_ = after_run
         # bookkeeper should think that it needs archiving
-        assert bookkeeper.archiving_required is True
+        assert bookkeeper.archiving_required
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
         check_history_exists(after_run)
         check_out_files_in_history(after_run)
@@ -224,7 +224,7 @@ class TestBookkeeperClear:
         E.g. if the run crashed."""
         bookkeeper, mock_dir, *_ = after_archive
         # bookkeeper should not think that it needs archiving
-        assert bookkeeper.archiving_required is False
+        assert not bookkeeper.archiving_required
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
         check_history_exists(after_archive)
         check_out_files_in_history(after_archive)
@@ -241,7 +241,7 @@ class TestBookkeeperDiscard:
         """Check correct overwriting of input files in CLEAR mode."""
         bookkeeper, mock_dir = before_run
         # bookkeeper should not think that it needs archiving
-        assert bookkeeper.archiving_required is False
+        assert not bookkeeper.archiving_required
         bookkeeper.run(mode=BookkeeperMode.DISCARD)
         # Bookkeeper should not do anything (except for logging)
         history_contents = (f for f in (mock_dir / 'history').iterdir()
@@ -257,7 +257,7 @@ class TestBookkeeperDiscard:
         """Calling DISCARD after a run without ARCHiVE. E.g. if the run crashed."""
         bookkeeper, *_ = after_run
         # bookkeeper should think that it needs archiving
-        assert bookkeeper.archiving_required is True
+        assert bookkeeper.archiving_required
         bookkeeper.run(mode=BookkeeperMode.DISCARD)
         check_history_exists(after_run)
         check_out_files_in_history(after_run)
@@ -276,7 +276,7 @@ class TestBookkeeperDiscard:
         Should revert state to before the run."""
         bookkeeper, mock_dir, *_ = after_archive
         # bookkeeper should not think that it needs archiving
-        assert bookkeeper.archiving_required is False
+        assert not bookkeeper.archiving_required
         bookkeeper.run(mode=BookkeeperMode.DISCARD)
         check_history_exists(after_archive)
         check_out_files_in_history(after_archive)
@@ -304,7 +304,7 @@ class TestBookkeeperDiscardFull:
         Should be the same as normal DISCARD in this case."""
         bookkeeper, mock_dir = before_run
         # bookkeeper should not think that it needs archiving
-        assert bookkeeper.archiving_required is False
+        assert not bookkeeper.archiving_required
         bookkeeper.run(mode=BookkeeperMode.DISCARD_FULL)
         # Bookkeeper should not do anything (except for logging)
         history_contents = (f for f in (mock_dir / 'history').iterdir()
