@@ -18,7 +18,6 @@ from enum import IntEnum, auto
 import logging
 
 from pytest_cases import case
-from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.history import _DISCARDED
@@ -380,7 +379,7 @@ Notes:'''
     @case(tags=(Tag.HISTORY, Tag.CANT_FIX))
     def case_empty_timestamp(self):
         """Return a full entry with RUN information."""
-        return f'''\
+        return '''\
 # TENSORS   1, 2, 3
 # JOB ID    4, 5, 6
 # TIME
@@ -388,33 +387,32 @@ Notes:'''
 Notes:'''
 
 
-class CasesInfoEntryMissing:
-    """Contents of HistoryInfoEntry with missing mandatory fields."""
+_missing = tuple(f.name
+                 for f in fields(HistoryInfoEntry)
+                 if f.init and not is_optional(f))
+_missing += (
+    'notes',  # Optional with empty default, but field is mandatory
+    )
 
-    missing = tuple(f.name
-                    for f in fields(HistoryInfoEntry)
-                    if f.init and not is_optional(f))
-    missing += (
-        'notes',  # Optional with empty default, but field is mandatory
-        )
-
-    @case(tags=(Tag.HISTORY, Tag.MISS_MANDATORY, Tag.CANT_FIX))
-    @parametrize(field=missing)
-    def case_missing_field(self, field, caplog):
-        """Return the contents of an entry with a missing mandatory field."""
-        with caplog.at_level(logging.CRITICAL):
-            dummy = HistoryInfoEntry.from_string(
-                CasesInfoEntryCorrect().case_notes()
-                )
-        kwargs = {f.name: getattr(dummy, f.name)
-                  for f in fields(dummy)
-                  if f.init and f.name != field}
-        with caplog.at_level(logging.CRITICAL):
-            entry_str = str(HistoryInfoEntry(**kwargs))
-        if field == 'notes':
-            entry_str = '\n'.join(line for line in entry_str.splitlines()
-                                  if field not in line.lower())
-        return entry_str
+@case(tags=(Tag.HISTORY, Tag.MISS_MANDATORY, Tag.CANT_FIX))
+@parametrize(field=_missing)
+def case_missing_field(field, caplog):
+    """Return the contents of an entry with a missing mandatory field."""
+    with caplog.at_level(logging.CRITICAL):
+        dummy = HistoryInfoEntry.from_string(
+            CasesInfoEntryCorrect().case_notes()
+            )
+    kwargs = {f.name: getattr(dummy, f.name)
+              for f in fields(dummy)
+              if f.init and f.name != field}
+    with caplog.at_level(logging.CRITICAL):
+        entry_str = str(HistoryInfoEntry(**kwargs))
+    # Reason for disable: We would need an Enum of known field tags
+    # pylint: disable-next=magic-value-comparison
+    if field == 'notes':
+        entry_str = '\n'.join(line for line in entry_str.splitlines()
+                              if field not in line.lower())
+    return entry_str
 
 
 class CasesInfoEntryReplaced:

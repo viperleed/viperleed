@@ -15,7 +15,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
-from pytest_cases.filters import has_tags, has_tag
+from pytest_cases.filters import has_tags
 
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history import _DISCARDED
@@ -23,7 +23,6 @@ from viperleed.calc.bookkeeper.history import _MSG_NOT_UNDERSTOOD_PREFIX
 from viperleed.calc.bookkeeper.history import _TAG
 from viperleed.calc.bookkeeper.history import EntrySyntaxError
 from viperleed.calc.bookkeeper.history import HistoryInfoEntry
-from viperleed.calc.bookkeeper.history import HistoryInfoError
 from viperleed.calc.bookkeeper.history import HistoryInfoFile
 from viperleed.calc.bookkeeper.history import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history import TimestampFormat
@@ -121,6 +120,7 @@ class TestHistoryEntry:
     def test_format_problematic_fields_auto_fix(self, entry_str):
         """Check that no problematic fields are marked."""
         entry = HistoryInfoEntry.from_string(entry_str)
+        # pylint: disable-next=magic-value-comparison
         assert 'fixable' in entry.format_problematic_fields()
 
     @cant_fix
@@ -205,14 +205,9 @@ class TestHistoryEntry:
 
     def test_discarded_entry_with_missing_notes(self, caplog):
         """Check correct formatting of a discarded entry without notes."""
-        missing = cases_bookkeeper.CasesInfoEntryMissing().case_missing_field(
-            'notes',
-            caplog
-            )
+        missing = cases_bookkeeper.case_missing_field('notes', caplog)
         entry = HistoryInfoEntry.from_string(missing)
         discarded = entry.as_discarded()
-        print('WITHOUT NOTES:\n', str(entry))
-        print('DISCARDED:\n', str(discarded))
         assert _TAG['notes'] not in str(entry)
         assert _TAG['notes'] in str(discarded)
 
@@ -226,7 +221,7 @@ class TestHistoryEntryRaises:
     def test_entry_from_string_raises(self, contents, exc):
         """Check complaints when reading a string entry."""
         with pytest.raises(exc):
-            entry = HistoryInfoEntry.from_string(contents)
+            HistoryInfoEntry.from_string(contents)
 
     @parametrize_with_cases('contents,exc',
                             cases=cases_bookkeeper,
@@ -270,6 +265,7 @@ class TestHistoryInfoFile:
         assert history_info.path == actual_file
 
     def test_history_info_entry_parsing(self, history_info_file):
+        """Check correct parsing of a one-entry history.info file."""
         history_info, contents = history_info_file
         assert bool(history_info.last_entry) == bool(contents)
 
@@ -301,20 +297,8 @@ class TestHistoryInfoFile:
         last_entry = history_info.last_entry
         if last_entry is None:
             return
-        print(f"{last_entry.job_nums=}")
-        print("actual:")
-        print(contents.strip())
-        print("\nbefore back forth:")
-        print(history_info.raw_contents.strip())
         history_info.remove_last_entry()
-        print("\nafter removed:")
-        print(history_info.raw_contents.strip(), '\nEND')
-        print("Calling append in test regenerate")
         history_info.append_entry(last_entry)
-        print(f"{last_entry.job_nums=}")
-        print("\nadded again:")
-        print(history_info.raw_contents.strip())
-        print(f"{last_entry.job_nums=}")
         self._check_linewise_equal(contents, history_info.raw_contents)
 
     def test_history_info_discard_last_entry(self, history_info_file, caplog):
@@ -327,6 +311,7 @@ class TestHistoryInfoFile:
             return
         history_info.discard_last_entry()
         if last_entry.discarded:
+            # pylint: disable-next=magic-value-comparison
             assert 'already' in caplog.text
             assert history_info.last_entry is last_entry
         else:
@@ -378,4 +363,7 @@ class TestHistoryInfoRaises:
         info, *_ = make_history_file(contents)
         with pytest.raises(exc):
             info.read()
+        # Disable as we really want to check the private member,
+        # since the @property returns a default value of unset
+        # pylint: disable-next=protected-access
         assert info._time_format is None
