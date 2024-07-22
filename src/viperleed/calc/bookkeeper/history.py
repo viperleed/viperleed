@@ -513,15 +513,10 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         """Check whether the folder_name attribute is fine."""
         attr = 'folder_name'
         self._check_missing(attr)
+        self._check_mandatory_field_is_not_empty(attr)
         value = getattr(self, attr)
-        if value is None:
-            raise EntrySyntaxError(_MSG_EMPTY)
         if not isinstance(value, str):
             raise EntrySyntaxError(_MSG_NO_STRING)
-
-        value = value.strip()
-        if not value:
-            raise EntrySyntaxError(_MSG_EMPTY)
 
         job_name = re.escape(
             '' if not self.job_name or not isinstance(self.job_name, str)
@@ -546,6 +541,13 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     def _check_job_nums_field(self):
         """Check whether the job_nums attribute is fine."""
         self._check_list_of_int_field('job_nums', accept_none=False)
+
+    def _check_mandatory_field_is_not_empty(self, attr):
+        """Complain if a mandatory field is empty."""
+        value = getattr(self, attr)
+        if isinstance(value, str) and not value.strip():
+            object.__setattr__(self, attr, '')
+            raise EntrySyntaxError(_MSG_EMPTY)
 
     def _check_missing(self, attr):
         """Complain if no value was provided at all for `attr`."""
@@ -602,11 +604,8 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         # dataclass. Notice that this is not a problem, as we call
         # this method only in __post_init__, and __hash__ uses a
         # tuple of the values of the attributes.
+        self._check_mandatory_field_is_not_empty(attr)
         value = getattr(self, attr)
-        is_empty = isinstance(value, str) and not value.strip()
-        if is_empty:
-            object.__setattr__(self, attr, '')
-            raise EntrySyntaxError(_MSG_EMPTY)
         is_akin_to_none = (  # Variations of None
             value is None
             or value == [None]
@@ -615,6 +614,9 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         if accept_none and is_akin_to_none:
             object.__setattr__(self, attr, [])
             return
+        if not accept_none and not value:
+            object.__setattr__(self, attr, [])
+            raise EntrySyntaxError(_MSG_EMPTY)
         if isinstance(value, str):
             self._fixup_list_of_int_string(attr, value)
             value = getattr(self, attr)
