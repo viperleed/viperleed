@@ -210,6 +210,7 @@ _ENTRY_RE = re.compile(
 
 
 # Sentinel for fields that do not exist at all.
+_MISSING = '_tag_does_not_exist_in_entry__#oMBde$fsT&BLvIH6b2XEMjW$!iKp%lW'
 
 
 # Some standard error messages
