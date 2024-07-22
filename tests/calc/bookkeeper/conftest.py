@@ -18,94 +18,27 @@ __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
 
-from pytest_cases import fixture, parametrize
+from pytest_cases import fixture
+from pytest_cases import parametrize
+from pytest_cases import parametrize_with_cases
 
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
-from viperleed.calc.bookkeeper.history import HISTORY_INFO_SEPARATOR
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 
 from ...helpers import execute_in_dir
+from . import cases_bookkeeper
+from .cases_bookkeeper import BookkeeperTag as Tag
+from .cases_bookkeeper import NOTES_TEST_CONTENT
+
+_QUICK = False  # Select only a subset of tests? (~factor 7 difference)
 
 
 ALT_HISTORY_NAME = 'history_alt_name'
-NOTES_TEST_CONTENT = 'This is a test note.'
-MOCK_HISTORY_INFO_FILES = {
-    'no history.info': None,
-    'empty history.info': '',
-    'entry with job name': f'''\
-# TENSORS
-# JOB ID
-# JOB NAME  test_jobname
-# TIME      03.02.01 04:03:06
-# FOLDER    t003.r001_010203-040506
-Notes: {NOTES_TEST_CONTENT}
-''',
-    'entry without job name': f'''\
-# TENSORS
-# JOB ID
-# TIME      03.02.01 04:03:06
-# FOLDER    t003.r001_010203-040506
-Notes: {NOTES_TEST_CONTENT}
-''',
-    'entry without note': '''\
-# TENSORS
-# JOB ID
-# TIME      03.02.01 04:03:06
-# FOLDER    t003.r001_010203-040506
-Notes:
-''',
-    'with RUN': '''\
-# TENSORS
-# JOB ID
-# RUN       1 2 3
-# TIME      03.02.01 04:03:06
-# FOLDER    t003.r001_010203-040506
-Notes:
-''',
-    'with R REF': '''\
-# TENSORS
-# JOB ID
-# TIME      03.02.01 04:03:06
-# R REF     0.1234
-# FOLDER    t003.r001_010203-040506
-Notes:
-''',
-    'with R SUPER': '''\
-# TENSORS
-# JOB ID
-# TIME      03.02.01 04:03:06
-# R SUPER   0.1234
-# FOLDER    t003.r001_010203-040506
-Notes:
-''',
-    'entry discarded': f'''\
-# TENSORS
-# JOB ID
-# JOB NAME  test_jobname
-# TIME      03.02.01 04:03:06
-# FOLDER    t003.r001_010203-040506
-Notes: {NOTES_TEST_CONTENT}
-DISCARDED
-''',
-    'two entries without job name': f'''\
-# TENSORS
-# JOB ID
-# TIME      03.02.01 04:03:06
-# FOLDER    t003.r001_010203-040506
-Notes: {NOTES_TEST_CONTENT}
-{HISTORY_INFO_SEPARATOR}
-# TENSORS
-# JOB ID
-# TIME      03.02.01 04:05:06
-# FOLDER    t003.r001_010203-040506
-Notes: {NOTES_TEST_CONTENT}
-''',
-}
 MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_JOB_NAMES = (None, 'test_jobname')
 MOCK_ORIG_CONTENT = 'This is a test original input file.'
@@ -115,12 +48,26 @@ MOCK_TIMESTAMP = '010203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
 
 
+if _QUICK:
+    with_history_name = parametrize(history_name=(DEFAULT_HISTORY,))
+    with_jobs = parametrize(job_name=(MOCK_JOB_NAMES[0],))
+    with_logs = parametrize(log_file_name=(MOCK_LOG_FILES[0],),
+                            ids=(MOCK_LOG_FILES[0],))
+else:
+    with_history_name = parametrize(
+        history_name=(DEFAULT_HISTORY, ALT_HISTORY_NAME)
+        )
+    with_jobs = parametrize(job_name=MOCK_JOB_NAMES)
+    with_logs = parametrize(log_file_name=MOCK_LOG_FILES, ids=MOCK_LOG_FILES)
+
+
 @fixture(name='bookkeeper_mock_dir_after_run')
-@parametrize(log_file_name=MOCK_LOG_FILES, ids=MOCK_LOG_FILES)
-@parametrize(history_info_file=MOCK_HISTORY_INFO_FILES.values(),
-             ids=MOCK_HISTORY_INFO_FILES.keys())
+@with_logs
+@parametrize_with_cases('history_info_contents',
+                        cases=cases_bookkeeper,
+                        has_tag=Tag.BOOKKEEPER)
 def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name,
-                                          history_info_file):
+                                          history_info_contents):
     """Yield a temporary directory for testing the bookkeeper."""
     out_path = tmp_path / DEFAULT_OUT
     supp_path = tmp_path / DEFAULT_SUPP
@@ -135,10 +82,10 @@ def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name,
     notes_file = tmp_path / 'notes.txt'
     notes_file.write_text(NOTES_TEST_CONTENT)
     # mock history.info file
-    if history_info_file is not None:
+    if history_info_contents is not None:
         hist_info_path = tmp_path / HISTORY_INFO_NAME
         with open(hist_info_path, 'w') as f:
-            f.write(history_info_file)
+            f.write(history_info_contents)
     # create mock Tensor and Delta files
     (tensors_path / 'Tensors_003.zip').touch()
     (deltas_path / 'Deltas_003.zip').touch()
@@ -172,8 +119,8 @@ def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name,
 
 
 @fixture
-@parametrize(job_name=MOCK_JOB_NAMES)
-@parametrize(history_name=(DEFAULT_HISTORY, ALT_HISTORY_NAME))
+@with_jobs
+@with_history_name
 def after_run(bookkeeper_mock_dir_after_run, job_name, history_name):
     """Return the path to the temporary directory after the run."""
     bookkeeper = Bookkeeper(cwd=bookkeeper_mock_dir_after_run,
