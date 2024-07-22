@@ -372,7 +372,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
                 value_msg = (f' with value {value!r}' if value != _MISSING
                              else '')
                 LOGGER.warning(
-                    f'{HISTORY_INFO_NAME}: Could not understand {tag} '
+                    f'{_MSG_NOT_UNDERSTOOD_PREFIX} {tag} '
                     f'field{value_msg}. Reason: {exc}'
                     )
         if not self.was_understood:
