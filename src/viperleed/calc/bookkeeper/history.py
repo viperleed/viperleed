@@ -731,22 +731,29 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
 
     def _format_job_nums(self):
         """Return a line with JOB ID."""
-        # Important: must check str first, as this is the best way
-        # to retain as much as possible the value that users may
-        # have modified.
-        if isinstance(self.job_nums, str):
-            jobs_str = self.job_nums
-        elif not self.job_nums:
-            jobs_str = ''
-        else:
-            assert isinstance(self.job_nums, Sequence)
-            jobs_str = str(list(self.job_nums))[1:-1]
-        return self._format_field('job_nums', value_str=jobs_str)
+        value = self.job_nums
+        if not isinstance(value, str) and not value:  # Empty
+            value = ''
+        return self._forma_list_of_ints('job_nums', value)
 
     @staticmethod
     def _format_line(tag, value):
         """Return a formatted line from a tag and values."""
         return f'{tag:<{_HISTORY_INFO_SPACING}}{value}'
+
+    def _forma_list_of_ints(self, attr, value):
+        """Return a line with a list of integers (if the value is correct)."""
+        # Important: must check str first, as this is the best way
+        # to retain as much as possible the value that users may
+        # have removed
+        if isinstance(value, str):
+            value_str = value
+        elif isinstance(value, Sequence):
+            # Use list as it does not add trailing comma
+            value_str = str(list(value))[1:-1]
+        else:  # Not a sequence. Probably some problematic value.
+            value_str = repr(value)
+        return self._format_field(attr, value_str=value_str)
 
     def _format_notes(self):
         """Return a string with multi-line notes."""
@@ -769,17 +776,9 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         value = self.tensor_nums
         no_tensors = (not value         # Field empty
                       or value == [0])  # INIT-only run
-        # Important: must check str first, as this is the best way
-        # to retain as much as possible the value that users may
-        # have removed
-        if isinstance(value, str):
-            tensor_str = value
-        elif no_tensors:
-            tensor_str = 'None'
-        else:  # A sequence. Use list as it does not add trailing comma
-            assert isinstance(value, Sequence)
-            tensor_str = str(list(value))[1:-1]
-        return self._format_field('tensor_nums', value_str=tensor_str)
+        if not isinstance(value, str) and no_tensors:
+            value = 'None'
+        return self._forma_list_of_ints('tensor_nums', value)
 
     def _format_timestamp(self):
         """Return a line with TIME."""
