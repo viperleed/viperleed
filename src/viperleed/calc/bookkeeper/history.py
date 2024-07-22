@@ -228,16 +228,12 @@ class TimestampFormat(Enum):
     GERMAN = '%d.%m.%y %H:%M:%S'  # Format used for < v1.0.0
     ISO = '%Y-%m-%d %H:%M:%S'     # Format used for >= v1.0.0
     _CALC = '%y%m%d-%H%M%S'       # Format used by calc in log files
+    DEFAULT = ISO
 
     @property
     def writable(self):
         """Return whether this format can be used for writing."""
         return not self.name.startswith('_')
-
-    @classmethod
-    def default(cls):                                                           # TODO: untested
-        """Return the default date-time format."""
-        return cls.ISO
 
 
 def is_optional(field, with_type=None):
@@ -290,7 +286,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         The time when this run was started. A string representing
         a date-time is also accepted. 'moved-' is discarded from
         the string before parsing. If a valid string is given, but
-        does not conform with TimestampFormat.default(), the value
+        does not conform with TimestampFormat.DEFAULT, the value
         is accepted but marked as 'needs fixing'. A string that
         cannot be turned into a date-time is also accepted, but
         causes the entry to be flagged as 'not understood' (and
@@ -418,7 +414,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     @property
     def time_format(self):
         """Return the format used for self.timestamp."""
-        return self._time_format or TimestampFormat.default()
+        return self._time_format or TimestampFormat.DEFAULT
 
     @property
     def was_understood(self):
@@ -449,8 +445,8 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         with logging_silent():
             fixed = replace_value(self, **kwargs)
             if fix_time_fmt:
-                fixed = fixed.with_time_format(TimestampFormat.default())
-        if fixed.needs_fixing:
+                fixed = fixed.with_time_format(TimestampFormat.DEFAULT)
+        if fixed.needs_fixing:  # Safeguard for the future
             raise HistoryInfoError('Failed to fix fields for entry:\n'
                                    + self.format_problematic_fields())
         return fixed
@@ -504,7 +500,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         new = deepcopy(self)
         object.__setattr__(new, '_time_format', fmt)
         # And clean up possible time format issues
-        if fmt is fmt.default():
+        if fmt is fmt.DEFAULT:
             # pylint: disable-next=protected-access  # It's a deepcopy
             new._needs_fixup.pop('timestamp', None)
         return new
@@ -660,7 +656,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         else:  # No valid format
             raise EntrySyntaxError('Field could not be parsed as a date-time')
         # Finally, check whether the format is the current default
-        if self.time_format is not TimestampFormat.default():
+        if self.time_format is not TimestampFormat.DEFAULT:
             reason = 'outdated format'
             # No fixed value as one has to fiddle with the _time_format
             # attribute instead. This is done in with_time_format().
