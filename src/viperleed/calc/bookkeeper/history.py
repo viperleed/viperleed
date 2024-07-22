@@ -72,7 +72,7 @@ class HistoryInfoFile:
         """
         self.path = Path(file_path)
         if not self.path.is_file() and not create_new:
-            raise FileNotFoundError(f'{HISTORY_INFO_NAME} file not '            # TODO: untested
+            raise FileNotFoundError(f'{HISTORY_INFO_NAME} file not '
                                     f'found at {self.path}.')
         if not self.path.is_file():  # create new file
             self.path.touch()
@@ -159,7 +159,7 @@ class HistoryInfoFile:
             for entry_str in self.raw_contents.split(sep):
                 try:
                     entry = HistoryInfoEntry.from_string(entry_str)
-                except EntrySyntaxError:  # Not a valid entry                   # TODO: untested
+                except EntrySyntaxError:  # Not a valid entry
                     continue
                 self._time_format = entry.time_format
                 return
@@ -210,27 +210,27 @@ _ENTRY_RE = re.compile(
 
 
 # Sentinel for fields that do not exist at all.
-_MISSING = '_tag_does_not_exist_in_entry__#oMBde$fsT&BLvIH6b2XEMjW$!iKp%lW'     # TODO: untested
 
 
 # Some standard error messages
+_MSG_NOT_UNDERSTOOD_PREFIX = f'{HISTORY_INFO_NAME}: Could not understand'
 _MSG_EMPTY = 'Field is empty'
-_MSG_NO_FLOAT = 'Field is not a floating-point number'                          # TODO: untested?
-_MSG_NO_STRING = 'Field is not a string'                                        # TODO: untested?
+_MSG_NO_FLOAT = 'Field is not a floating-point number'
+_MSG_NO_STRING = 'Field is not a string'
 _MSG_MISSING = 'Mandatory field not found'
 
 
-class TimestampFormat(Enum):                                                    # TODO: marked as untested?
+class TimestampFormat(Enum):
     """A collection of known formats for timestamps."""
 
     # Underscore names are used only for conversion purposes
     # while parsing strings, and never for formatting.
-    GERMAN = '%d.%m.%y %H:%M:%S'  # Format used for < v1.0.0                    # TODO: untested?
+    GERMAN = '%d.%m.%y %H:%M:%S'  # Format used for < v1.0.0
     ISO = '%Y-%m-%d %H:%M:%S'     # Format used for >= v1.0.0
     _CALC = '%y%m%d-%H%M%S'       # Format used by calc in log files
 
     @property
-    def writable(self):                                                         # TODO: untested
+    def writable(self):
         """Return whether this format can be used for writing."""
         return not self.name.startswith('_')
 
@@ -240,7 +240,7 @@ class TimestampFormat(Enum):                                                    
         return cls.ISO
 
 
-def is_optional(field, with_type=None):                                         # TODO: untested
+def is_optional(field, with_type=None):
     """Return whether a datclasses.Field is optional."""
     if with_type is None:
         with_type = field.type
@@ -261,7 +261,7 @@ def is_optional(field, with_type=None):                                         
 # missing notes with discarded should.
 # TODO: comment-only entry
 @dataclass(frozen=True)
-class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058            # TODO: untested??
+class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     """A container for information in a single "block" of history.info.
 
     Attributes
@@ -331,7 +331,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058            
     tensor_nums: Union[List[int], str] = _MISSING
     job_nums: Union[List[int], str] = _MISSING
     timestamp: Union[datetime, str] = _MISSING
-    folder_name: str = _MISSING                                                 # TODO: untested?
+    folder_name: str = _MISSING
     notes: Optional[str] = ''
     discarded: Optional[bool] = False
     job_name: Optional[str] = None
