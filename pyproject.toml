@@ -117,17 +117,43 @@ classifiers = [
 
 
 
+[tool.coverage]  # Collection and reporting of test coverage
+    [tool.coverage.paths]
+    source = [
+       'src',
+       '*/site-packages',
+       ]
+
+    [tool.coverage.run]
+    branch = true
+    parallel = true
+    source = [  # Only collect coverage for these
+        'viperleed',
+        'tests',
+        ]
+
+    [tool.coverage.report]
+    show_missing = true
+    precision = 2
+
+
+
+
 
 [tool.pytest.ini_options]
 addopts = [
     '--import-mode=importlib',
+    '--cov=viperleed',
+    '--cov-report=html',
+    '--cov-branch',
     ]
 pythonpath = ['.', '..']
 # Turn all warnings into errors. See also "How to capture warnings"
 filterwarnings = ['error',]
 required_plugins = [
     'pytest-cases>=3.8.1',  # 3.8.1 fixes some ScopeMismatch
-    'pytest-subtests'
+    'pytest-cov>=2.5',      # Added --cov-branch
+    'pytest-subtests',
     ]
 xfail_strict = true
 
