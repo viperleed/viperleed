@@ -33,6 +33,7 @@ from .constants import LOGGER
 from .history import HistoryInfoEntry
 from .history import HistoryInfoFile
 from .history import NoHistoryEntryError
+from .history import PureCommentEntry
 from .mode import BookkeeperMode
 
 
@@ -336,7 +337,9 @@ class Bookkeeper:
             return 1
         # And check if there was some user edit in the last one
         if not last_entry.can_be_removed:
-            if not last_entry.was_understood:  # Can't be auto-fixed
+            if isinstance(last_entry, PureCommentEntry):
+                err_ = 'is a comment-only field'
+            elif not last_entry.was_understood:  # Can't be auto-fixed
                 err_ = 'contains invalid fields that could not be interpreted'
             elif last_entry.misses_mandatory_fields:                            # TODO: untested
                 err_ = 'some expected fields were deleted'

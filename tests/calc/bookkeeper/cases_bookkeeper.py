@@ -415,6 +415,46 @@ def case_missing_field(field, caplog):
     return entry_str
 
 
+class CasesInfoEntryPureComment:
+    """Entries containing also pure-comment values."""
+
+    @case(tags=(Tag.HISTORY, Tag.ENTRY))
+    def case_pure_comment_entry(self):
+        """Return the contents of a single, comment-only entry."""
+        return '''
+    Some text
+        with indentation too
+
+    and empty lines, that is a pure-comment block.
+      It cannot be discarded.
+    '''
+
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
+    def case_multi_pure_comments(self):
+        """An entry with more comments."""
+        one_entry = self.case_pure_comment_entry()
+        return HISTORY_INFO_SEPARATOR.join(one_entry for _ in range(2))
+
+    comment = object()
+    entry = object()
+
+    @parametrize(which_ones=(
+        (comment, entry),
+        (entry, comment),
+        (entry, comment, entry),
+        (comment, entry, comment)
+        ))
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
+    def case_correct_and_comment(self, which_ones):
+        """Return a mix of correct and comment-only entries."""
+        comment = self.case_pure_comment_entry()
+        entry = CasesInfoEntryCorrect().case_no_notes()
+        return HISTORY_INFO_SEPARATOR.join(
+            comment if which is self.comment else '\n' + entry
+            for which in which_ones.split(',')
+            )
+
+
 class CasesInfoEntryReplaced:
     """Contents of HistoryInfoEntry with some user-replaced fields."""
 

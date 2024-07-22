@@ -25,6 +25,7 @@ from viperleed.calc.bookkeeper.history import EntrySyntaxError
 from viperleed.calc.bookkeeper.history import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history import HistoryInfoFile
 from viperleed.calc.bookkeeper.history import NoHistoryEntryError
+from viperleed.calc.bookkeeper.history import PureCommentEntry
 from viperleed.calc.bookkeeper.history import TimestampFormat
 
 from ...helpers import exclude_tags
@@ -298,6 +299,9 @@ class TestHistoryInfoFile:
         if last_entry is None:
             return
         history_info.remove_last_entry()
+        if history_info.last_entry is last_entry:
+            assert isinstance(last_entry, PureCommentEntry)
+            return
         history_info.append_entry(last_entry)
         self._check_linewise_equal(contents, history_info.raw_contents)
 
@@ -310,13 +314,17 @@ class TestHistoryInfoFile:
                 history_info.discard_last_entry()
             return
         history_info.discard_last_entry()
-        if last_entry.discarded:
+        try:
+            was_discarded = last_entry.discarded
+        except AttributeError:
+            return
+        assert history_info.last_entry_was_discarded
+        if was_discarded:
             # pylint: disable-next=magic-value-comparison
             assert 'already' in caplog.text
             assert history_info.last_entry is last_entry
         else:
             assert history_info.last_entry is not last_entry
-        assert history_info.last_entry_was_discarded
 
     @staticmethod
     def _count_entries(path):
@@ -333,17 +341,22 @@ class TestHistoryInfoFile:
         history_info, *_ = history_info_file
         # check number of entries before and run checks accordingly
         n_entries = self._count_entries(history_info.path)
-        if not n_entries:
-            assert history_info.last_entry is None
+        last_entry = history_info.last_entry
+        if not n_entries and last_entry is None:
             with pytest.raises(NoHistoryEntryError):
                 history_info.remove_last_entry()
             with pytest.raises(NoHistoryEntryError):
                 history_info.discard_last_entry()
             return
-        assert history_info.last_entry is not None
+        assert last_entry is not None
         history_info.remove_last_entry()
         n_entries_again = self._count_entries(history_info.path)
-        assert n_entries_again == n_entries - 1
+        if isinstance(last_entry, PureCommentEntry):
+            assert not last_entry.can_be_removed
+            assert history_info.last_entry is last_entry
+            assert n_entries_again == n_entries
+        else:
+            assert n_entries_again == n_entries - 1
 
 
 class TestHistoryInfoRaises:

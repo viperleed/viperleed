@@ -51,6 +51,10 @@ class FixableSyntaxError(HistoryInfoError):
     """An entry has some syntax error, but it can be fixed."""
 
 
+class _PureCommentEntryError(HistoryInfoError):
+    """Exception used internally to decide that an entry is comment only."""
+
+
 class HistoryInfoFile:
     """Deals with the history.info file in a history directory."""
 
@@ -87,6 +91,8 @@ class HistoryInfoFile:
         """Return whether the last entry has associated notes."""
         if self.last_entry is None:
             return False
+        if isinstance(self.last_entry, PureCommentEntry):
+            return False
         return bool(self.last_entry.has_notes)
 
     @property
@@ -113,6 +119,10 @@ class HistoryInfoFile:
         """Mark the last entry in the history.info file as discarded."""
         if self.last_entry is None:
             raise NoHistoryEntryError('No entries to discard.')
+        if isinstance(self.last_entry, PureCommentEntry):
+            LOGGER.warning('Cannot discard last entry. '
+                           'It contains only comments.')
+            return
         if self.last_entry.discarded:
             LOGGER.warning('Last entry is already discarded.')
             return
@@ -130,13 +140,18 @@ class HistoryInfoFile:
         *_, entry_str = self.raw_contents.split(HISTORY_INFO_SEPARATOR.strip())
         entry = HistoryInfoEntry.from_string(entry_str)                         # TODO: how to test this properly? It does not raise. Perhaps a TolerantHistoryInfoEntry?
         if self._time_format:
-            entry = entry.with_time_format(self._time_format)
+            try:
+                entry = entry.with_time_format(self._time_format)
+            except AttributeError:  # Pure comment
+                pass
         self.last_entry = entry
 
     def remove_last_entry(self):
         """Remove the last entry from the history.info file."""
         if self.last_entry is None:
             raise NoHistoryEntryError('No entries to remove.')
+        if isinstance(self.last_entry, PureCommentEntry):
+            return
         if HISTORY_INFO_SEPARATOR.strip() in self.raw_contents:
             content_without_last, *_ = self.raw_contents.rsplit(
                 HISTORY_INFO_SEPARATOR.strip(),
@@ -161,7 +176,10 @@ class HistoryInfoFile:
                     entry = HistoryInfoEntry.from_string(entry_str)
                 except EntrySyntaxError:  # Not a valid entry
                     continue
-                self._time_format = entry.time_format
+                try:
+                    self._time_format = entry.time_format
+                except AttributeError:    # Pure comment
+                    continue
                 return
 
 
@@ -275,7 +293,6 @@ def is_optional(field, with_type=None):
 # for the different fields? Each field could then have a .format and
 # a .check method that do what is done here now. It may a bit tricky
 # to get it right, though.
-# TODO: comment-only entry
 @dataclass(frozen=True)
 class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     """A container for information in a single "block" of history.info.
@@ -503,11 +520,27 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
 
     @classmethod
     def from_string(cls, entry_str):
-        """Return an HistoryInfoEntry instance from its string version."""
+        """Return an entry object from its string version.
+
+        Parameters
+        ----------
+        entry_str : str
+            The string version of this entry.
+
+        Returns
+        -------
+        entry: HistoryInfoEntry or PureCommentEntry
+            The entry. A PureCommentEntry is returned when entry_str
+            does not contain any of the expected fields but only text.
+        """
         cls._from_string_check_single_entry(entry_str)
         # Deal with DISCARDED later, as we need notes
         kwargs = {'discarded': False}
-        cls._parse_fields_from_string(entry_str, kwargs)
+        try:
+            cls._parse_fields_from_string(entry_str, kwargs)
+        except _PureCommentEntryError:
+            print(f'pure: {entry_str!r}')
+            return PureCommentEntry(entry_str)
         cls._process_string_notes(kwargs)  # Notes and DISCARD
         return cls(**kwargs)
 
@@ -878,6 +911,9 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         extras = [g
                   for g in match.groups()
                   if g and g not in known and g.strip()]
+        if extras and not known:
+            # Pure comment
+            raise _PureCommentEntryError
         if extras:
             raise EntrySyntaxError(
                 f'Found unexpected lines in entry\n{entry_str}\n'
@@ -894,3 +930,15 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         kwargs['discarded'] = notes.endswith(_DISCARDED)
         if kwargs['discarded']:
             kwargs['notes'] = notes[:-len(_DISCARDED)].rstrip()
+
+
+@dataclass(frozen=True)
+class PureCommentEntry:
+    """An entry with only comments."""
+
+    raw_comment: str = ''
+
+    @property
+    def can_be_removed(self):
+        """Return that a pure-comment entry can never be removed."""
+        return False
