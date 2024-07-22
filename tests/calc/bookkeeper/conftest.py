@@ -69,46 +69,48 @@ else:
 def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name,
                                           history_info_contents):
     """Yield a temporary directory for testing the bookkeeper."""
+    deltas_path = tmp_path / 'Deltas'
+    tensors_path = tmp_path / 'Tensors'
     out_path = tmp_path / DEFAULT_OUT
     supp_path = tmp_path / DEFAULT_SUPP
-    tensors_path = tmp_path / 'Tensors'
-    deltas_path = tmp_path / 'Deltas'
-    directories = (out_path, supp_path, tensors_path, deltas_path)
+    original_inputs_path = supp_path / ORIGINAL_INPUTS_DIR_NAME
+    directories = (
+        deltas_path,
+        tensors_path,
+        out_path,
+        supp_path,
+        original_inputs_path,
+        tmp_path / ALT_HISTORY_NAME / 't001.r001_20xxxx-xxxxxx',
+        tmp_path / ALT_HISTORY_NAME / 't002.r002_20xxxx-xxxxxx',
+        )
+
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
-    # create mock log files
-    (tmp_path / log_file_name).touch()
-    # create mock notes file
-    notes_file = tmp_path / 'notes.txt'
-    notes_file.write_text(NOTES_TEST_CONTENT)
-    # mock history.info file
+
+    files = {  # path: contents
+        tmp_path / log_file_name: None,
+        tmp_path / 'notes.txt': NOTES_TEST_CONTENT,
+        deltas_path / 'Deltas_003.zip': None,
+        tensors_path / 'Tensors_003.zip': None,
+        }
+    # Inputs in root
+    files.update((tmp_path / f, MOCK_INPUT_CONTENT)
+                 for f in MOCK_STATE_FILES)
+    # Original inputs in SUPP
+    files.update((original_inputs_path / f, MOCK_ORIG_CONTENT)
+                 for f in MOCK_STATE_FILES)
+    # OUT
+    files.update((out_path / f'{f}_OUT', MOCK_OUT_CONTENT)
+                 for f in MOCK_STATE_FILES)
+    # history.info
     if history_info_contents is not None:
-        hist_info_path = tmp_path / HISTORY_INFO_NAME
-        with open(hist_info_path, 'w') as f:
-            f.write(history_info_contents)
-    # create mock Tensor and Delta files
-    (tensors_path / 'Tensors_003.zip').touch()
-    (deltas_path / 'Deltas_003.zip').touch()
+        files[tmp_path / HISTORY_INFO_NAME] = history_info_contents
 
-    # create non-empty mock alt_history folder
-    alt_history = tmp_path / ALT_HISTORY_NAME
-    for run_name in ('t001.r001_20xxxx-xxxxxx', 't002.r002_20xxxx-xxxxxx'):
-        (alt_history / run_name).mkdir(parents=True, exist_ok=True)
-
-    # create mock input files
-    for file in MOCK_STATE_FILES:
-        (tmp_path / file).write_text(MOCK_INPUT_CONTENT)
-
-    # create mock original_inputs folder
-    original_inputs_path = supp_path / ORIGINAL_INPUTS_DIR_NAME
-    original_inputs_path.mkdir(parents=True, exist_ok=True)
-    for file in MOCK_STATE_FILES:
-        (original_inputs_path / file).write_text(MOCK_ORIG_CONTENT)
-
-    # create mock OUT folder
-    for file in MOCK_STATE_FILES:
-        out_file = out_path / f'{file}_OUT'
-        out_file.write_text(MOCK_OUT_CONTENT)
+    for file, contents in files.items():
+        if contents is None:
+            file.touch()
+        else:
+            file.write_text(contents, encoding='utf-8')
 
     with execute_in_dir(tmp_path):
         yield tmp_path
@@ -131,4 +133,4 @@ def after_run(bookkeeper_mock_dir_after_run, job_name, history_name):
     if job_name is not None:
         dir_name += f'_{job_name}'
     history_run_path = history_path / dir_name
-    return bookkeeper, bookkeeper_mock_dir_after_run, history_path, history_run_path
+    return bookkeeper, bookkeeper.cwd, history_path, history_run_path
