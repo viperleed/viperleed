@@ -35,8 +35,6 @@ from . import cases_bookkeeper
 from .cases_bookkeeper import BookkeeperTag as Tag
 from .cases_bookkeeper import NOTES_TEST_CONTENT
 
-_QUICK = False  # Select only a subset of tests? (~factor 7 difference)
-
 
 ALT_HISTORY_NAME = 'history_alt_name'
 MOCK_INPUT_CONTENT = 'This is a test input file.'
@@ -48,17 +46,11 @@ MOCK_TIMESTAMP = '010203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
 
 
-if _QUICK:
-    with_history_name = parametrize(history_name=(DEFAULT_HISTORY,))
-    with_jobs = parametrize(job_name=(MOCK_JOB_NAMES[0],))
-    with_logs = parametrize(log_file_name=(MOCK_LOG_FILES[0],),
-                            ids=(MOCK_LOG_FILES[0],))
-else:
-    with_history_name = parametrize(
-        history_name=(DEFAULT_HISTORY, ALT_HISTORY_NAME)
-        )
-    with_jobs = parametrize(job_name=MOCK_JOB_NAMES)
-    with_logs = parametrize(log_file_name=MOCK_LOG_FILES, ids=MOCK_LOG_FILES)
+with_history_name = parametrize(
+    history_name=(DEFAULT_HISTORY, ALT_HISTORY_NAME)
+    )
+with_jobs = parametrize(job_name=MOCK_JOB_NAMES)
+with_logs = parametrize(log_file_name=MOCK_LOG_FILES, ids=MOCK_LOG_FILES)
 
 
 @fixture(name='bookkeeper_mock_dir_after_run')
