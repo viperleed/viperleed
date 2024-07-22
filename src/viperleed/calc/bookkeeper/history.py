@@ -729,6 +729,11 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             value_str = value if isinstance(value, str) else f'{value:{fmt}}'
         return self._format_line(_TAG[field_name], value_str)
 
+    def _format_folder_name(self):
+        """Return a line with FOLDER."""
+        return self._format_field('folder_name',
+                                  value_str=str(self.folder_name).rstrip())
+
     def _format_job_nums(self):
         """Return a line with JOB ID."""
         value = self.job_nums
