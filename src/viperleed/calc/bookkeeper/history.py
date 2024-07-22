@@ -505,7 +505,8 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     def from_string(cls, entry_str):
         """Return an HistoryInfoEntry instance from its string version."""
         cls._from_string_check_single_entry(entry_str)
-        kwargs = {'discarded': False}      # Later, as we need notes
+        # Deal with DISCARDED later, as we need notes
+        kwargs = {'discarded': False}
         cls._parse_fields_from_string(entry_str, kwargs)
         cls._process_string_notes(kwargs)  # Notes and DISCARD
         return cls(**kwargs)
@@ -838,19 +839,15 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         # Now check the second option. Here we have to take off one
         # line at a time from the notes, and check if the rest matches
         notes = _ENTRY_RE.match(entry_str)['notes']
-        if notes is None:  # OK
+        if notes is None or not notes.strip():  # OK
             return
-        notes = notes.strip()
-        if notes:  # Add an extra line to check all the lines in notes
-            notes +=  '\n' + _MISSING
-        while notes and notes != _MISSING:
-            match = _ENTRY_RE.match(notes.strip())
-            if any(v for v in match.groupdict().values()):
-                raise EntrySyntaxError(err_msg)
-            # The extra _MISSING line and the while
-            # condition prevent a ValueError here:
-            _, notes = notes.split('\n', maxsplit=1)
-            notes = notes.strip()
+        match = _ENTRY_RE.match(notes.strip())
+        has_known_fields = any(
+            # We only have named groups for known fields
+            v for v in match.groupdict().values()
+            )
+        if has_known_fields:
+            raise EntrySyntaxError(err_msg)
 
     @classmethod
     def _parse_fields_from_string(cls, entry_str, kwargs):
