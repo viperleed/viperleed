@@ -238,9 +238,10 @@ class Bookkeeper:
             if file in STATE_FILES and use_ori:
                 cwd_file = self.cwd / f'{file}_ori'
 
+            copy_file, with_name = None, None                                   # TODO: do we want to maintain the _ori suffix?? If not we can replace the second None with file.
             if original_file.is_file() and cwd_file.is_file():
-                # copy original, but warn if cwd is newer
-                self._copy_one_file_to_history(original_file)
+                # Copy original, but warn if cwd is newer
+                copy_file = original_file
                 try:
                     _check_newer(cwd_file, original_file)
                 except _FileNotOlderError:
@@ -249,22 +250,22 @@ class Bookkeeper:
                         'copied to history, but the file in the input '
                         'directory is newer.'
                         )
-            elif original_file.is_file():
-                # just copy original
-                self._copy_one_file_to_history(original_file)
-            elif cwd_file.is_file():                                            # TODO: untested
-                # if file is optional input file, ignore
-                if file in RUNTIME_GENERATED_INPUT_FILES:
-                    continue
-                # copy cwd and warn
-                from_root = f'{cwd_file.name}_from_root'
-                self._copy_one_file_to_history(cwd_file,
-                                               with_name=from_root)
+            elif original_file.is_file():  # Just copy original
+                copy_file = original_file
+            elif file in RUNTIME_GENERATED_INPUT_FILES:
+                # Ignore optional inputs in root. If the user gave
+                # these explicitly, they have already been copied
+                # by calc to original_inputs
+                continue
+            elif cwd_file.is_file():  # copy cwd and warn                       # TODO: untested
+                copy_file, with_name = cwd_file, f'{cwd_file.name}_from_root'
                 LOGGER.warning(
                     f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
                     'Using file from root directory instead and renaming to '
-                    f'{cwd_file.name}_from_root.'
+                    f'{with_name}.'
                     )
+            if copy_file:
+                self._copy_one_file_to_history(copy_file, with_name=with_name)
 
     def _copy_log_files_to_history(self):
         """Copy log files to history."""
@@ -272,11 +273,11 @@ class Bookkeeper:
             self._copy_one_file_to_history(file)
 
     def _copy_one_file_to_history(self, file_path, with_name=None):
-        """Copy file_path to history_path."""
+        """Copy file_path to history, optionally renaming."""
         dest_name = with_name or file_path.name
         try:
             shutil.copy2(file_path, self.history_dir / dest_name)
-        except OSError:                                                             # TODO: untested
+        except OSError:                                                         # TODO: untested
             LOGGER.error(f'Failed to copy {file_path} to history.')
 
     def _copy_out_and_supp(self):
