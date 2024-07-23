@@ -139,32 +139,9 @@ class Bookkeeper:
             container.append(file)
         return calc_logs, other_logs
 
-    def _make_history_and_prepare_logger(self):
-        """Make history folder and add handlers to the bookkeeper logger."""
-        if self._state_info['logger_prepared']:
-            return
 
-        # Attach a stream handler to logger if not already present
-        if not any(isinstance(h, logging.StreamHandler)
-                   for h in LOGGER.handlers):
-            LOGGER.addHandler(logging.StreamHandler())
-        LOGGER.setLevel(logging.INFO)
-        LOGGER.propagate = True
 
-        try:  # Make top level history folder if not there yet
-            self.top_level_history_path.mkdir(exist_ok=True)
-        except OSError:                                                         # TODO: untested raise
-            LOGGER.error('Error creating history folder.')
-            raise
 
-        # Attach file handler for history/bookkeeper.log
-        bookkeeper_log = self.top_level_history_path / BOOKIE_LOGFILE
-        LOGGER.addHandler(logging.FileHandler(bookkeeper_log, mode='a'))
-        LOGGER.info(  # Log only once per instance
-            '\n### Bookeeper running at '
-            f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###'
-            )
-        self._state_info['logger_prepared'] = True
 
     @property
     def files_needs_archiving(self):
@@ -482,6 +459,33 @@ class Bookkeeper:
                 err_ = err_.format('discard' if discard else 'delete empty')
                 LOGGER.error(err_, exc_info=True)
         return tensor_nums
+
+    def _make_history_and_prepare_logger(self):
+        """Make history folder and add handlers to the bookkeeper logger."""
+        if self._state_info['logger_prepared']:
+            return
+
+        # Attach a stream handler to logger if not already present
+        if not any(isinstance(h, logging.StreamHandler)
+                   for h in LOGGER.handlers):
+            LOGGER.addHandler(logging.StreamHandler())
+        LOGGER.setLevel(logging.INFO)
+        LOGGER.propagate = True
+
+        try:  # Make top level history folder if not there yet
+            self.top_level_history_path.mkdir(exist_ok=True)
+        except OSError:                                                         # TODO: untested raise
+            LOGGER.error('Error creating history folder.')
+            raise
+
+        # Attach file handler for history/bookkeeper.log
+        bookkeeper_log = self.top_level_history_path / BOOKIE_LOGFILE
+        LOGGER.addHandler(logging.FileHandler(bookkeeper_log, mode='a'))
+        LOGGER.info(  # Log only once per instance
+            '\n### Bookeeper running at '
+            f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###'
+            )
+        self._state_info['logger_prepared'] = True
 
     def _move_workhistory_folders(self):                                        # TODO: untested
         """Move relevant folders from the current work history to history.
