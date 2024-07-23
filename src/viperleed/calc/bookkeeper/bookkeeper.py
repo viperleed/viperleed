@@ -253,12 +253,13 @@ class Bookkeeper:
             cwd_file = self.cwd / file
             if file in STATE_FILES and use_ori:
                 cwd_file = self.cwd / f'{file}_ori'
+
             if original_file.is_file() and cwd_file.is_file():
                 # copy original, but warn if cwd is newer
-                _copy_one_file_to_history(original_file, self.history_dir)
-                original_timestamp = original_file.stat().st_mtime
-                cwd_timestamp = cwd_file.stat().st_mtime
-                if original_timestamp < cwd_timestamp:                          # TODO: untested
+                self._copy_one_file_to_history(original_file)
+                try:
+                    _check_newer(cwd_file, original_file)
+                except _FileNotOlderError:
                     LOGGER.warning(
                         f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
                         'copied to history, but the file in the input '
@@ -266,32 +267,33 @@ class Bookkeeper:
                         )
             elif original_file.is_file():
                 # just copy original
-                _copy_one_file_to_history(original_file, self.history_dir)
+                self._copy_one_file_to_history(original_file)
             elif cwd_file.is_file():                                            # TODO: untested
                 # if file is optional input file, ignore
                 if file in RUNTIME_GENERATED_INPUT_FILES:
                     continue
                 # copy cwd and warn
-                _copy_one_file_to_history(
-                    self.cwd / file, self.history_dir)
+                from_root = f'{cwd_file.name}_from_root'
+                self._copy_one_file_to_history(cwd_file,
+                                               with_name=from_root)
                 LOGGER.warning(
                     f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
                     'Using file from root directory instead and renaming to '
                     f'{cwd_file.name}_from_root.'
                     )
-                try:
-                    os.rename(self.history_dir / file,
-                            self.history_dir / f'{cwd_file.name}_from_root')
-                except OSError:
-                    LOGGER.error(f'Failed to rename {file} to '
-                                 f'{cwd_file.name}_from_root.')
 
     def _copy_log_files_to_history(self):
         """Copy log files to history."""
-        calc_logs, other_logs = self.cwd_logs
-        log_files = calc_logs + other_logs
-        for file in log_files:
-            _copy_one_file_to_history(file, self.history_dir)
+        for file in self.all_cwd_logs:
+            self._copy_one_file_to_history(file)
+
+    def _copy_one_file_to_history(self, file_path, with_name=None):
+        """Copy file_path to history_path."""
+        dest_name = with_name or file_path.name
+        try:
+            shutil.copy2(file_path, self.history_dir / dest_name)
+        except OSError:                                                             # TODO: untested
+            LOGGER.error(f'Failed to copy {file_path} to history.')
 
     def _copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
@@ -308,11 +310,7 @@ class Bookkeeper:
                 LOGGER.error(f'Failed to copy {name} directory to history.')
 
     def _deal_with_workhistory_and_history_info(self, discard=False):
-        tensor_nums = _move_and_cleanup_workhistory(self.work_history_path,
-                                                    self.top_level_history_path,
-                                                    self.timestamp,
-                                                    self.max_job_for_tensor,
-                                                    discard)
+        tensor_nums = self._move_and_cleanup_workhistory(discard)
         tensor_nums.add(self.tensor_number)
 
         run_info, r_ref, r_super = self._infer_run_info_from_log()
@@ -331,6 +329,19 @@ class Bookkeeper:
             r_ref=r_ref,
             r_super=r_super,
             ))
+
+    def _discard_workhistory_previous(self):                                    # TODO: untested
+        """Remove 'previous'-labelled directories in workhistory."""
+        work_hist_prev = self._get_workhistory_directories(
+            contains=PREVIOUS_LABEL
+            )
+        for directory in work_hist_prev:
+            try:
+                shutil.rmtree(directory)
+            except OSError:
+                LOGGER.error(f'Failed to delete {directory} directory '
+                             f'from {self.work_history_path}',
+                             exc_info=True)
 
     def _find_max_run_per_tensor(self):
         """Return maximum run numbers for all directories in 'history'.
@@ -351,6 +362,30 @@ class Bookkeeper:
             job_num = int(match['job_num'])
             max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
         return max_nums
+
+    def _get_current_workhistory_directories(self, contains=''):                # TODO: untested
+        """Return a generator of subfolders in the current workhistory folder.
+
+        As compared with _get_workhistory_directories, only those
+        directories not marked as 'previous' are returned.
+
+        Parameters
+        ----------
+        contains : str, optional
+            Select only those subdirectories whose name contains this
+            string. Default is an empty string, corresponding to no
+            filtering other than the one described in Returns.
+
+        Returns
+        -------
+        subfolders : generator
+            When iterated over, it yields paths to the immediate
+            subdirectories of the current workhistory folder whose
+            name matches the HIST_FOLDER_RE regular expression, whose
+            name include `contains`, but does not contain 'previous'.
+        """
+        directories = self._get_workhistory_directories(contains=contains)
+        return (d for d in directories if PREVIOUS_LABEL not in d.name)
 
     def _get_new_history_directory_name(self):
         """Return the name of a history directory for a given run.
@@ -381,6 +416,100 @@ class Bookkeeper:
             dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
         return dir_name
 
+    def _get_workhistory_directories(self, contains=''):                        # TODO: untested
+        """Return a generator of subfolders in the current workhistory folder.
+
+        Parameters
+        ----------
+        contains : str, optional
+            Select only those subdirectories whose name contains this
+            string. Default is an empty string, corresponding to no
+            filtering other than the one described in Returns.
+
+        Returns
+        -------
+        subfolders : generator
+            When iterated over, it yields paths to the immediate
+            subdirectories of the current work-history folder whose
+            name matches the HIST_FOLDER_RE regular expression, and
+            whose name include `contains`.
+        """
+        work_history_path = self.work_history_path
+        globbed = (work_history_path.glob(f'*{contains}*') if contains
+                   else work_history_path.iterdir())
+        return (d for d in globbed
+                if d.is_dir() and HIST_FOLDER_RE.match(d.name))
+
+    def _move_and_cleanup_workhistory(self, discard):                           # TODO: untested
+        """Move files from the current work-history history, then clean up.
+
+        If the current work-history folder is empty, it is always
+        deleted. Otherwise only if `discard` is True.
+
+        Parameters
+        ----------
+        discard : bool
+            Whether files should only be discarded without copying them.
+
+        Returns
+        -------
+        tensor_nums : set of int
+            Indices of tensors found in the current work-history folder
+            that have been moved to history as new history entries.
+        """
+        workhistory = self.work_history_path
+        tensor_nums = set()
+        if not workhistory.is_dir():
+            return tensor_nums
+
+        # Always remove any 'previous'-labelled folders
+        self._discard_workhistory_previous()
+        if not discard:
+            tensor_nums = self._move_workhistory_folders()
+        is_empty = not any(workhistory.iterdir())
+        if is_empty or discard:
+            try:
+                shutil.rmtree(workhistory)
+            except OSError:
+                err_ = f'Failed to {{}} {workhistory.name} folder'
+                err_ = err_.format('discard' if discard else 'delete empty')
+                LOGGER.error(err_, exc_info=True)
+        return tensor_nums
+
+    def _move_workhistory_folders(self):                                        # TODO: untested
+        """Move relevant folders from the current work history to history.
+
+        Returns
+        -------
+        tensor_nums : set
+            The tensor numbers of the folders that have been moved.
+        """
+        tensor_nums = set()
+        directories = self._get_current_workhistory_directories(
+            contains=self.timestamp
+            )
+        for directory in directories:
+            match = HIST_FOLDER_RE.match(directory.name)
+            if not match:  # Should always match
+                continue
+            tensor_num = int(match['tensor_num'])
+            try:
+                search_num = int(directory.name[6:9])                           # TODO: is this right? 6:9 should be job_num
+            except (ValueError, IndexError):
+                continue
+
+            tensor_nums.add(tensor_num)
+            job_num = self.max_job_for_tensor[tensor_num] + 1
+            newname = (
+                f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
+                + directory.name[9:]
+                )
+            try:
+                shutil.move(directory, self.top_level_history_path / newname)
+            except OSError:
+                LOGGER.error(f'Error: Failed to move {directory}.')
+        return tensor_nums
+
     def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
         run_info, r_ref, r_super = None, None, None
         for line in self.last_log_lines:
@@ -398,8 +527,13 @@ class Bookkeeper:
         return run_info, r_ref, r_super
 
     def _make_and_copy_to_history(self, use_ori=False):
-                # Copy everything to history
-        _create_new_history_dir(self.history_dir)
+        """Create new history subfolder and copy all files there."""
+        try:
+            self.history_dir.mkdir()
+        except OSError:                                                             # TODO: untested
+            LOGGER.error('Error: Could not create target directory '
+                         f'{self.history_dir}\n Stopping...')
+            raise
         self._copy_out_and_supp()
         self._copy_input_files_from_original_inputs_and_cwd(use_ori)
         self._copy_log_files_to_history()
@@ -443,7 +577,7 @@ class Bookkeeper:
         self._make_and_copy_to_history(use_ori=False)
 
         # move old files to _ori and replace from OUT
-        _update_state_files_from_out(self.cwd)
+        self._update_state_files_from_out()
 
         # workhistory and history.info
         self._deal_with_workhistory_and_history_info(discard=False)
@@ -545,6 +679,22 @@ class Bookkeeper:
         except NoHistoryEntryError as exc:
             LOGGER.warning('Error: Failed to mark last entry as '
                            f'discarded in {HISTORY_INFO_NAME}: {exc}')
+    
+    def _update_state_files_from_out(self):
+        """Move state files from OUT to root. Rename old to '_ori'."""
+        out_path = self.cwd / 'OUT'
+        if not out_path.is_dir():
+            return                                                              # TODO: untested
+        for file in STATE_FILES:
+            out_file = out_path / f'{file}_OUT'
+            cwd_file = self.cwd / file
+            if not out_file.is_file():
+                continue
+            # NB: all the moving around is local to the same folder
+            # tree, so we don't really need shutil. Path.rename always
+            # works for the same file system.
+            cwd_file.rename(self.cwd / f'{file}_ori')
+            out_file.rename(cwd_file)
 
 
 def store_input_files_to_history(root_path, history_path):
@@ -578,140 +728,18 @@ def store_input_files_to_history(root_path, history_path):
             print(f'Failed to copy file {file} to history: {exc}')
 
 
-def _create_new_history_dir(new_history_path):
-    try:
-        new_history_path.mkdir()
-    except OSError:                                                             # TODO: untested
-        LOGGER.error('Error: Could not create target directory '
-                     f'{new_history_path}\n Stopping...')
-        raise
+def _check_newer(should_be_older, should_be_newer):
+    """Warn if file `should_be_older` is newer than file `should_be_newer`."""
+    newer_timestamp = should_be_newer.stat().st_mtime
+    older_timestamp = should_be_older.stat().st_mtime
+    if newer_timestamp < older_timestamp:                                       # TODO: untested
+        raise _FileNotOlderError
+
 
 
 def _discard_files(*file_paths):
     """Delete files at `file_paths`. Log if they can't be deleted."""
     _move_or_discard_files(file_paths, None, discard=True)
-
-
-def _discard_workhistory_previous(work_history_path):                           # TODO: untested
-    """Remove 'previous'-labelled directories in `work_history_path`."""
-    work_hist_prev = _get_workhistory_directories(work_history_path,
-                                                  contains=PREVIOUS_LABEL)
-    for directory in work_hist_prev:
-        try:
-            shutil.rmtree(directory)
-        except OSError:
-            print(f'Failed to delete {directory} directory '
-                  f'from {work_history_path}')
-
-
-def _get_current_workhistory_directories(work_history_path, contains=''):       # TODO: untested
-    """Return a generator of subfolders in work_history_path.
-
-    As compared with _get_workhistory_directories, only those
-    directories not marked as 'previous' are returned.
-
-    Parameters
-    ----------
-    work_history_path : Path
-        Path to the workhistory folder where
-        subdirectories are looked up.
-    contains : str, optional
-        Select only those subdirectories whose name contains this
-        string. Default is an empty string, corresponding to no
-        filtering other than the one described in Returns.
-
-    Returns
-    -------
-    subfolders : generator
-        When iterated over, it yields paths to the immediate
-        subdirectories of `work_history_path` whose name matches
-        the HIST_FOLDER_RE regular expression, whose name
-        include `contains`, but does not contain 'previous'.
-    """
-    directories = _get_workhistory_directories(work_history_path,
-                                               contains=contains)
-    return (d for d in directories if PREVIOUS_LABEL not in d.name)
-
-
-def _get_workhistory_directories(work_history_path, contains=''):               # TODO: untested
-    """Return a generator of subfolders in `work_history_path`.
-
-    Parameters
-    ----------
-    work_history_path : Path
-        Path to the workhistory folder where
-        subdirectories are looked up.
-    contains : str, optional
-        Select only those subdirectories whose name contains this
-        string. Default is an empty string, corresponding to no
-        filtering other than the one described in Returns.
-
-    Returns
-    -------
-    subfolders : generator
-        When iterated over, it yields paths to the immediate
-        subdirectories of work_history_path whose name matches
-        the HIST_FOLDER_RE regular expression, and whose name
-        include `contains`.
-    """
-    globbed = (work_history_path.glob(f'*{contains}*') if contains
-               else work_history_path.iterdir())
-    return (d for d in globbed if d.is_dir() and HIST_FOLDER_RE.match(d.name))
-
-
-def _move_and_cleanup_workhistory(work_history_path,                            # TODO: untested
-                                  history_path,
-                                  timestamp,
-                                  max_job_for_tensor,
-                                  discard):
-    """Move files from `work_history_path` to `history_path`, then clean up.
-
-    If `work_history_path` is empty, it is always deleted. Otherwise
-    only if `discard` is True.
-
-    Parameters
-    ----------
-    work_history_path : Path
-        Path to the workhistory directory, moved in root by
-        sections.cleanup, as it is included in manifest in
-        move_oldruns.
-    history_path : Path
-        The target history folder where files should be copied.
-    timestamp : str
-        The time-stamp selecting the subfolders to be moved. Only
-        those folders whose name contains timestamp are copied over.
-    max_job_for_tensor : defaultdict(int)
-        The maximum job number known for each tensor number. Used
-        to generate new folder names (incrementing by one unit)
-        in `history_path`.
-    discard : bool
-        Whether files should only be discarded without copying them.
-
-    Returns
-    -------
-    tensor_nums : set of int
-        Indices of tensors found in `work_history_path` that have
-        been moved to `history_path` as new history entries.
-    """
-    tensor_nums = set()
-    if not work_history_path.is_dir():
-        return tensor_nums
-
-    # Always remove any 'previous'-labelled folders
-    _discard_workhistory_previous(work_history_path)
-    if not discard:
-        tensor_nums = _move_workhistory_folders(work_history_path,
-                                                history_path,
-                                                timestamp,
-                                                max_job_for_tensor)
-    is_empty = not any(work_history_path.iterdir())
-    if is_empty or discard:
-        try:
-            shutil.rmtree(work_history_path)
-        except OSError as exc:
-            err_ = f'Failed to {{}} {work_history_path.name} folder: {exc}'
-            print(err_.format('discard' if discard else 'delete empty'))
-    return tensor_nums
 
 
 def _move_or_discard_files(file_paths, target_folder, discard):
@@ -741,66 +769,6 @@ def _move_or_discard_one_file(file, target_folder, discard):
         shutil.move(file, target_folder / file.name)
     except OSError:
         LOGGER.error(f'Failed to move {file.name}.')
-
-
-def _copy_one_file_to_history(file_path, history_path):
-    """Copy file_path to history_path."""
-    try:
-        shutil.copy2(file_path, history_path / file_path.name)
-    except OSError:                                                             # TODO: untested
-        LOGGER.error(f'Failed to copy {file_path} to history.')
-
-
-def _move_workhistory_folders(work_history_path, history_path,                  # TODO: untested
-                              timestamp, max_job_for_tensor):
-    """Move timestamp-labelled folders in work_history_path to history_path.
-
-    Parameters
-    ----------
-    work_history_path : Path
-        Base path to the workhistory folder from
-        which stuff should be moved.
-    history_path : Path
-        Destination path for the subfolders of
-        `work_history_path` that will be moved.
-    timestamp : str
-        Selects which sub-folders of `work_history_path` should be
-        moved. Only those whose name contains `timestamp` are moved.
-    max_job_for_tensor : defaultdict(int)
-        The maximum job number known for each tensor number. Used
-        to generate new folder names (incrementing by one unit)
-        in `history_path` for each of the directories moved from
-        `work_history_path`.
-
-    Returns
-    -------
-    tensor_nums : set
-        The tensor numbers of the folders that have been moved.
-    """
-    tensor_nums = set()
-    directories = _get_current_workhistory_directories(work_history_path,
-                                                       contains=timestamp)
-    for directory in directories:
-        match = HIST_FOLDER_RE.match(directory.name)
-        if not match:  # Should always match
-            continue
-        tensor_num = int(match['tensor_num'])
-        try:
-            search_num = int(directory.name[6:9])                               # TODO: is this right? 6:9 should be job_num
-        except (ValueError, IndexError):
-            continue
-
-        tensor_nums.add(tensor_num)
-        job_num = max_job_for_tensor[tensor_num] + 1
-        newname = (
-            f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
-            + directory.name[9:]
-            )
-        try:
-            shutil.move(directory, history_path / newname)
-        except OSError:
-            print(f'Error: Failed to move {directory}.')
-    return tensor_nums
 
 
 def _read_and_clear_notes_file(cwd):
@@ -845,18 +813,3 @@ def _read_most_recent_log(cwd):
     except OSError:                                                             # TODO: untested
         pass
     return old_timestamp, last_log_lines
-
-
-def _update_state_files_from_out(cwd):
-    """Moved states files from OUT to root if available and rename old to _ori."""
-    out_path = cwd / 'OUT'
-    if not out_path.is_dir():
-        return                                                                  # TODO: untested
-    for file in STATE_FILES:
-        out_file = out_path / f'{file}_OUT'
-        if out_file.is_file():
-            try:
-                shutil.move(cwd / file, cwd / f'{file}_ori')
-                shutil.move(out_file, cwd / file)
-            except OSError:
-                print(f'Error: failed to copy {out_file} as new {file}.')
