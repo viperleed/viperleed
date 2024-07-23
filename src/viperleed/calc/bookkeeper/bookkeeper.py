@@ -37,6 +37,7 @@ from .history import PureCommentEntry
 from .mode import BookkeeperMode
 
 
+BOOKIE_LOGFILE = 'bookkeeper.log'  # Persistent among runs
 CALC_LOG_PREFIXES = (
     LOG_PREFIX,
     'tleedm',   # For backwards compatibility
@@ -83,32 +84,42 @@ class Bookkeeper:
                                 / ORIGINAL_INPUTS_DIR_NAME)
 
         self.job_name = job_name
-        # attach a stream handler to logger if not already present
+        self._state_info = {
+            'logger_prepared': False,
+            }
+        self._make_history_and_prepare_logger()
+
+        # history.info handler - creates file if not yet there
+        self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
+                                            create_new=True)
+        self.update_from_cwd()                                                  # TODO: this is annoying. Logs stuff before running. Can we do it in run instead?
+
+    def _make_history_and_prepare_logger(self):
+        """Make history folder and add handlers to the bookkeeper logger."""
+        if self._state_info['logger_prepared']:
+            return
+
+        # Attach a stream handler to logger if not already present
         if not any(isinstance(h, logging.StreamHandler)
                    for h in LOGGER.handlers):
             LOGGER.addHandler(logging.StreamHandler())
         LOGGER.setLevel(logging.INFO)
         LOGGER.propagate = True
 
-        # Make top level history folder if not there yet
-        try:
+        try:  # Make top level history folder if not there yet
             self.top_level_history_path.mkdir(exist_ok=True)
         except OSError:                                                         # TODO: untested raise
             LOGGER.error('Error creating history folder.')
             raise
 
-        # attach file handler for history/bookkeeper.log
-        bookkeeper_log_path = self.top_level_history_path / 'bookkeeper.log'
-        LOGGER.addHandler(logging.FileHandler(bookkeeper_log_path,
-                                              mode='a'))
-
-        LOGGER.info('\n### Bookeeper running at '
-                    f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###')
-
-        # history.info handler - creates file if not yet there
-        self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
-                                            create_new=True)
-        self.update_from_cwd()                                                  # TODO: this is annoying. Logs stuff before running. Can we do it in run instead?
+        # Attach file handler for history/bookkeeper.log
+        bookkeeper_log = self.top_level_history_path / BOOKIE_LOGFILE
+        LOGGER.addHandler(logging.FileHandler(bookkeeper_log, mode='a'))
+        LOGGER.info(  # Log only once per instance
+            '\n### Bookeeper running at '
+            f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###'
+            )
+        self._state_info['logger_prepared'] = True
 
     def update_from_cwd(self):
         """Updates timestamp, tensor number and log lines, etc. from cwd.
