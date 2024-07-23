@@ -51,6 +51,10 @@ STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 
+class _FileNotOlderError(Exception):
+    """Exception used internally for file age checks."""
+
+
 # TODO: catch errors from history.info, at .read()
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
