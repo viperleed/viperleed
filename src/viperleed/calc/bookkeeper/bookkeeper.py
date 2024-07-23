@@ -128,8 +128,6 @@ class Bookkeeper:
         return calc_logs, other_logs
 
     @property
-    def cwd_ori_files(self):
-        return [self.cwd / f'{file}_ori' for file in STATE_FILES]
 
     def _make_history_and_prepare_logger(self):
         """Make history folder and add handlers to the bookkeeper logger."""
@@ -414,7 +412,8 @@ class Bookkeeper:
         _discard_files(self.cwd / tensor_file, self.cwd / delta_file)
 
     def _remove_ori_files(self):
-        _discard_files(*self.cwd_ori_files)
+        ori_files = (self.cwd / f'{file}_ori' for file in STATE_FILES)
+        _discard_files(*ori_files)
 
     def _remove_out_and_supp(self):
         _discard_files(self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP)
