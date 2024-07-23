@@ -128,8 +128,6 @@ class Bookkeeper:
             container.append(file)
         return calc_logs, other_logs
 
-    @property
-
     def _make_history_and_prepare_logger(self):
         """Make history folder and add handlers to the bookkeeper logger."""
         if self._state_info['logger_prepared']:
