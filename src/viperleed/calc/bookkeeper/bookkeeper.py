@@ -94,6 +94,43 @@ class Bookkeeper:
                                             create_new=True)
         self.update_from_cwd()                                                  # TODO: this is annoying. Logs stuff before running. Can we do it in run instead?
 
+    @property
+    def all_cwd_logs(self):
+        return self.cwd_logs[0] + self.cwd_logs[1]
+
+    @property
+    def base_history_dir_name(self):
+        """The name of the history directory based on timestamp, number and name.
+
+        This is not necessarily the name of the history directory! Use
+        self.history_dir.name instead."""
+        suffix = (self.timestamp +
+                  ('' if self.job_name is None else f'_{self.job_name}'))
+        job_number = self.max_job_for_tensor[self.tensor_number]
+        dir_name_fmt = f't{self.tensor_number:03d}.r{{job:03d}}_{suffix}'
+        # If there is already a folder with the same name and correct
+        # timestamp/suffix, we take that, otherwise, we increase the
+        # job number
+        dir_name = dir_name_fmt.format(job=job_number)
+        if not (self.top_level_history_path / dir_name).is_dir():
+            job_number += 1
+        return dir_name_fmt.format(job=job_number)
+
+    @property
+    def cwd_logs(self):
+        calc_logs, other_logs = [], []
+        for file in self.cwd.glob('*.log'):
+            if not file.is_file():
+                continue
+            container = (calc_logs if file.name.startswith(CALC_LOG_PREFIXES)
+                         else other_logs)
+            container.append(file)
+        return calc_logs, other_logs
+
+    @property
+    def cwd_ori_files(self):
+        return [self.cwd / f'{file}_ori' for file in STATE_FILES]
+
     def _make_history_and_prepare_logger(self):
         """Make history folder and add handlers to the bookkeeper logger."""
         if self._state_info['logger_prepared']:
@@ -120,43 +157,6 @@ class Bookkeeper:
             f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###'
             )
         self._state_info['logger_prepared'] = True
-
-    @property
-    def base_history_dir_name(self):
-        """The name of the history directory based on timestam, number and name.
-
-        This is not necessarily the name of the history directory! Use
-        self.history_dir.name instead."""
-        suffix = (self.timestamp +
-                  ('' if self.job_name is None else f'_{self.job_name}'))
-        job_number = self.max_job_for_tensor[self.tensor_number]
-        dir_name_fmt = f't{self.tensor_number:03d}.r{{job:03d}}_{suffix}'
-        # If there is already a folder with the same name and correct
-        # timestamp/suffix, we take that, otherwise, we increase the
-        # job number
-        dir_name = dir_name_fmt.format(job=job_number)
-        if not (self.top_level_history_path / dir_name).is_dir():
-            job_number += 1
-        return dir_name_fmt.format(job=job_number)
-
-    @property
-    def cwd_ori_files(self):
-        return [self.cwd / f'{file}_ori' for file in STATE_FILES]
-
-    @property
-    def cwd_logs(self):
-        calc_logs, other_logs = [], []
-        for file in self.cwd.glob('*.log'):
-            if not file.is_file():
-                continue
-            container = (calc_logs if file.name.startswith(CALC_LOG_PREFIXES)
-                        else other_logs)
-            container.append(file)
-        return calc_logs, other_logs
-
-    @property
-    def all_cwd_logs(self):
-        return self.cwd_logs[0] + self.cwd_logs[1]
 
     @property
     def files_needs_archiving(self):
