@@ -139,35 +139,6 @@ class Bookkeeper:
             job_number += 1
         return dir_name_fmt.format(job=job_number)
 
-    def _get_new_history_directory_name(self):
-        """Return the name of a history directory for a given run.
-
-        Folder has form 'tXXX.rYYY_<suffix>'. <suffix> can vary. It may
-        be:
-        - if there was a log file, and the folder is not
-          present in history:
-              <log_timestamp>[_<job_name>]
-        - if there was a log file, but there is already a folder
-          in history with the same timestamp and job_name (typically
-          that means that bookkeeper was called multiple times with
-          the same job_name on the same run):
-              <log_timestamp>[_<job_name>]_moved-<bookie_timestamp>
-        - if there was no log file:
-              moved-<bookie_timestamp>[_<job_name>]
-        - in the unlikely event that the folder in the previous point
-          already exists (this would mean that the bookkeeper is called
-          twice with the same job_name within one second):
-              moved-<bookie_timestamp>[_<job_name>]_moved-<bookie_timestamp2>
-          where <bookie_timestamp2> may be slightly later than
-          <bookie_timestamp>, but is most likely the same.
-        """
-        dir_name = self.base_history_dir_name
-        if (self.top_level_history_path / dir_name).is_dir():                   # TODO: untested
-            bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
-                                                 time.localtime())
-            dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
-        return dir_name
-
     @property
     def cwd_ori_files(self):
         return [self.cwd / f'{file}_ori' for file in STATE_FILES]
@@ -186,7 +157,6 @@ class Bookkeeper:
     @property
     def all_cwd_logs(self):
         return self.cwd_logs[0] + self.cwd_logs[1]
-
 
     @property
     def files_needs_archiving(self):
@@ -277,6 +247,92 @@ class Bookkeeper:
         # Read the current state of the history.info file
         self.history_info.read()
 
+    def _copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
+        """Copy files from original_inputs_path to target_path."""
+        for file in ALL_INPUT_FILES:
+            original_file = self.orig_inputs_dir / file
+            cwd_file = self.cwd / file
+            if file in STATE_FILES and use_ori:
+                cwd_file = self.cwd / f'{file}_ori'
+            if original_file.is_file() and cwd_file.is_file():
+                # copy original, but warn if cwd is newer
+                _copy_one_file_to_history(original_file, self.history_dir)
+                original_timestamp = original_file.stat().st_mtime
+                cwd_timestamp = cwd_file.stat().st_mtime
+                if original_timestamp < cwd_timestamp:                          # TODO: untested
+                    LOGGER.warning(
+                        f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
+                        'copied to history, but the file in the input '
+                        'directory is newer.'
+                        )
+            elif original_file.is_file():
+                # just copy original
+                _copy_one_file_to_history(original_file, self.history_dir)
+            elif cwd_file.is_file():                                            # TODO: untested
+                # if file is optional input file, ignore
+                if file in RUNTIME_GENERATED_INPUT_FILES:
+                    continue
+                # copy cwd and warn
+                _copy_one_file_to_history(
+                    self.cwd / file, self.history_dir)
+                LOGGER.warning(
+                    f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
+                    'Using file from root directory instead and renaming to '
+                    f'{cwd_file.name}_from_root.'
+                    )
+                try:
+                    os.rename(self.history_dir / file,
+                            self.history_dir / f'{cwd_file.name}_from_root')
+                except OSError:
+                    LOGGER.error(f'Failed to rename {file} to '
+                                 f'{cwd_file.name}_from_root.')
+
+    def _copy_log_files_to_history(self):
+        """Copy log files to history."""
+        calc_logs, other_logs = self.cwd_logs
+        log_files = calc_logs + other_logs
+        for file in log_files:
+            _copy_one_file_to_history(file, self.history_dir)
+
+    def _copy_out_and_supp(self):
+        """Copy OUT and SUPP directories to history."""
+        for name in (DEFAULT_SUPP, DEFAULT_OUT):
+            dir = self.cwd / name
+            if not dir.is_dir():                                                # TODO: untested
+                LOGGER.warning(f'Could not find {name} directory in '
+                               f'{self.cwd}. It will not be copied '
+                               'to history.')
+                continue
+            try:
+                shutil.copytree(dir, self.history_dir / name)
+            except OSError:                                                     # TODO: untested
+                LOGGER.error(f'Failed to copy {name} directory to history.')
+
+    def _deal_with_workhistory_and_history_info(self, discard=False):
+        tensor_nums = _move_and_cleanup_workhistory(self.work_history_path,
+                                                    self.top_level_history_path,
+                                                    self.timestamp,
+                                                    self.max_job_for_tensor,
+                                                    discard)
+        tensor_nums.add(self.tensor_number)
+
+        run_info, r_ref, r_super = self._infer_run_info_from_log()
+
+        self.history_info.append_entry(HistoryInfoEntry(
+            tensor_nums=list(tensor_nums),
+            job_nums=[self.max_job_for_tensor[tensor] + 1
+                      for tensor in tensor_nums],
+            timestamp=self.timestamp,
+            discarded=discard,
+            folder_name=self.history_dir.name,
+            notes=_read_and_clear_notes_file(self.cwd),
+            # optionals
+            job_name=self.job_name,
+            run_info=run_info,
+            r_ref=r_ref,
+            r_super=r_super,
+            ))
+
     def _find_max_run_per_tensor(self):
         """Return maximum run numbers for all directories in 'history'.
 
@@ -296,6 +352,82 @@ class Bookkeeper:
             job_num = int(match['job_num'])
             max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
         return max_nums
+
+    def _get_new_history_directory_name(self):
+        """Return the name of a history directory for a given run.
+
+        Folder has form 'tXXX.rYYY_<suffix>'. <suffix> can vary. It may
+        be:
+        - if there was a log file, and the folder is not
+          present in history:
+              <log_timestamp>[_<job_name>]
+        - if there was a log file, but there is already a folder
+          in history with the same timestamp and job_name (typically
+          that means that bookkeeper was called multiple times with
+          the same job_name on the same run):
+              <log_timestamp>[_<job_name>]_moved-<bookie_timestamp>
+        - if there was no log file:
+              moved-<bookie_timestamp>[_<job_name>]
+        - in the unlikely event that the folder in the previous point
+          already exists (this would mean that the bookkeeper is called
+          twice with the same job_name within one second):
+              moved-<bookie_timestamp>[_<job_name>]_moved-<bookie_timestamp2>
+          where <bookie_timestamp2> may be slightly later than
+          <bookie_timestamp>, but is most likely the same.
+        """
+        dir_name = self.base_history_dir_name
+        if (self.top_level_history_path / dir_name).is_dir():                   # TODO: untested
+            bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
+                                                 time.localtime())
+            dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
+        return dir_name
+
+    def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
+        run_info, r_ref, r_super = None, None, None
+        for line in self.last_log_lines:
+            if line.startswith('Executed segments: '):
+                run_info = line.split('Executed segments: ')[1].strip()
+                break
+        for line in self.last_log_lines:
+            if 'Final R (refcalc)' in line:
+                r_ref = float(line.split(':', maxsplit=1)[1].strip())
+                break
+        for line in self.last_log_lines:
+            if 'Final R (superpos)' in line:
+                r_super = float(line.split(':', maxsplit=1)[1].strip())
+                break
+        return run_info, r_ref, r_super
+
+    def _make_and_copy_to_history(self, use_ori=False):
+                # Copy everything to history
+        _create_new_history_dir(self.history_dir)
+        self._copy_out_and_supp()
+        self._copy_input_files_from_original_inputs_and_cwd(use_ori)
+        self._copy_log_files_to_history()
+
+    def _remove_log_files(self):
+        _discard_files(*self.all_cwd_logs)
+
+    def _remove_tensors_and_deltas(self):                                        # TODO: untested
+        tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
+        delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
+        _discard_files(self.cwd / tensor_file, self.cwd / delta_file)
+
+    def _remove_ori_files(self):
+        _discard_files(*self.cwd_ori_files)
+
+    def _remove_out_and_supp(self):
+        _discard_files(self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP)
+
+    def _replace_state_files_from_ori(self):
+        for file in STATE_FILES:
+            ori_file = self.cwd / f'{file}_ori'
+            if ori_file.is_file():
+                try:
+                    shutil.move(ori_file, self.cwd / file)
+                except OSError:                                                 # TODO: untested
+                    LOGGER.error(f'Failed to move {ori_file} to {file}.')
+                    raise
 
     def _run_archive_mode(self):
         if self.history_with_same_base_name_exists:
@@ -329,28 +461,23 @@ class Bookkeeper:
             self._deal_with_workhistory_and_history_info(discard=False)
 
         # remove OUT, SUPP, logs and _ori files
-        self.remove_log_files()
-        self.remove_out_and_supp()
-        self.remove_ori_files()
+        self._remove_log_files()
+        self._remove_out_and_supp()
+        self._remove_ori_files()
 
         return 0
 
-    def _run_discard_mode(self):
-        if (not self.history_with_same_base_name_exists
-                and self.files_needs_archiving):
-            LOGGER.info(f'History folder {self.history_dir} does not '
-                        'yet exist. Running archive mode first.')
-            self._make_and_copy_to_history(use_ori=False)
+    def _run_discard_common(self):
+        """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
+        # replace input files from _ori
+        self._replace_state_files_from_ori()
 
-            # workhistory and history.info
-            self._deal_with_workhistory_and_history_info(discard=True)
+        if self.tensor_number not in self.max_job_for_tensor:
+            self._remove_tensors_and_deltas()
 
-        self._discard_common()
-        try:
-            self.history_info.discard_last_entry()
-        except NoHistoryEntryError as exc:
-            LOGGER.warning('Error: Failed to mark last entry as '
-                           f'discarded in {HISTORY_INFO_NAME}: {exc}')
+        # remove OUT, SUPP and logs
+        self._remove_log_files()
+        self._remove_out_and_supp()
 
     def _run_discard_full_mode(self):
         # Check for notes in history.info
@@ -397,156 +524,27 @@ class Bookkeeper:
         except OSError:
             LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
             return 1
-        self._discard_common()
+        self._run_discard_common()
         # And the history entry from history.info
         self.history_info.remove_last_entry()
         return 0
 
-    def _discard_common(self):
-        """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
-        # replace input files from _ori
-        self.replace_state_files_from_ori()
+    def _run_discard_mode(self):
+        if (not self.history_with_same_base_name_exists
+                and self.files_needs_archiving):
+            LOGGER.info(f'History folder {self.history_dir} does not '
+                        'yet exist. Running archive mode first.')
+            self._make_and_copy_to_history(use_ori=False)
 
-        if self.tensor_number not in self.max_job_for_tensor:
-            self.remove_tensors_and_deltas()
+            # workhistory and history.info
+            self._deal_with_workhistory_and_history_info(discard=True)
 
-        # remove OUT, SUPP and logs
-        self.remove_log_files()
-        self.remove_out_and_supp()
-
-    def _make_and_copy_to_history(self, use_ori=False):
-                # Copy everything to history
-        _create_new_history_dir(self.history_dir)
-        self.copy_out_and_supp()
-        self.copy_input_files_from_original_inputs_and_cwd(use_ori)
-        self.copy_log_files_to_history()
-
-    def _deal_with_workhistory_and_history_info(self, discard=False):
-        tensor_nums = _move_and_cleanup_workhistory(self.work_history_path,
-                                                    self.top_level_history_path,
-                                                    self.timestamp,
-                                                    self.max_job_for_tensor,
-                                                    discard)
-        tensor_nums.add(self.tensor_number)
-
-        run_info, r_ref, r_super = self._infer_run_info_from_log()
-
-        self.history_info.append_entry(HistoryInfoEntry(
-            tensor_nums=list(tensor_nums),
-            job_nums=[self.max_job_for_tensor[tensor] + 1
-                      for tensor in tensor_nums],
-            timestamp=self.timestamp,
-            discarded=discard,
-            folder_name=self.history_dir.name,
-            notes=_read_and_clear_notes_file(self.cwd),
-            # optionals
-            job_name=self.job_name,
-            run_info=run_info,
-            r_ref=r_ref,
-            r_super=r_super,
-            ))
-
-    def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
-        run_info, r_ref, r_super = None, None, None
-        for line in self.last_log_lines:
-            if line.startswith('Executed segments: '):
-                run_info = line.split('Executed segments: ')[1].strip()
-                break
-        for line in self.last_log_lines:
-            if 'Final R (refcalc)' in line:
-                r_ref = float(line.split(':', maxsplit=1)[1].strip())
-                break
-        for line in self.last_log_lines:
-            if 'Final R (superpos)' in line:
-                r_super = float(line.split(':', maxsplit=1)[1].strip())
-                break
-        return run_info, r_ref, r_super
-
-
-    def remove_ori_files(self):
-        _discard_files(*self.cwd_ori_files)
-
-    def remove_out_and_supp(self):
-        _discard_files(self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP)
-
-    def remove_log_files(self):
-        _discard_files(*self.all_cwd_logs)
-
-    def remove_tensors_and_deltas(self):                                        # TODO: untested
-        tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
-        delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
-        _discard_files(self.cwd / tensor_file, self.cwd / delta_file)
-
-    def replace_state_files_from_ori(self):
-        for file in STATE_FILES:
-            ori_file = self.cwd / f'{file}_ori'
-            if ori_file.is_file():
-                try:
-                    shutil.move(ori_file, self.cwd / file)
-                except OSError:                                                 # TODO: untested
-                    LOGGER.error(f'Failed to move {ori_file} to {file}.')
-                    raise
-
-    def copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
-        """Copy files from original_inputs_path to target_path."""
-        for file in ALL_INPUT_FILES:
-            original_file = self.orig_inputs_dir / file
-            cwd_file = self.cwd / file
-            if file in STATE_FILES and use_ori:
-                cwd_file = self.cwd / f'{file}_ori'
-            if original_file.is_file() and cwd_file.is_file():
-                # copy original, but warn if cwd is newer
-                _copy_one_file_to_history(original_file, self.history_dir)
-                original_timestamp = original_file.stat().st_mtime
-                cwd_timestamp = cwd_file.stat().st_mtime
-                if original_timestamp < cwd_timestamp:                          # TODO: untested
-                    LOGGER.warning(
-                        f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
-                        'copied to history, but the file in the input '
-                        'directory is newer.'
-                        )
-            elif original_file.is_file():
-                # just copy original
-                _copy_one_file_to_history(original_file, self.history_dir)
-            elif cwd_file.is_file():                                            # TODO: untested
-                # if file is optional input file, ignore
-                if file in RUNTIME_GENERATED_INPUT_FILES:
-                    continue
-                # copy cwd and warn
-                _copy_one_file_to_history(
-                    self.cwd / file, self.history_dir)
-                LOGGER.warning(
-                    f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
-                    'Using file from root directory instead and renaming to '
-                    f'{cwd_file.name}_from_root.'
-                    )
-                try:
-                    os.rename(self.history_dir / file,
-                            self.history_dir / f'{cwd_file.name}_from_root')
-                except OSError:
-                    LOGGER.error(f'Failed to rename {file} to '
-                                 f'{cwd_file.name}_from_root.')
-
-    def copy_out_and_supp(self):
-        """Copy OUT and SUPP directories to history."""
-        for name in (DEFAULT_SUPP, DEFAULT_OUT):
-            dir = self.cwd / name
-            if not dir.is_dir():                                                # TODO: untested
-                LOGGER.warning(f'Could not find {name} directory in '
-                               f'{self.cwd}. It will not be copied '
-                               'to history.')
-                continue
-            try:
-                shutil.copytree(dir, self.history_dir / name)
-            except OSError:                                                     # TODO: untested
-                LOGGER.error(f'Failed to copy {name} directory to history.')
-
-    def copy_log_files_to_history(self):
-        """Copy log files to history."""
-        calc_logs, other_logs = self.cwd_logs
-        log_files = calc_logs + other_logs
-        for file in log_files:
-            _copy_one_file_to_history(file, self.history_dir)
+        self._run_discard_common()
+        try:
+            self.history_info.discard_last_entry()
+        except NoHistoryEntryError as exc:
+            LOGGER.warning('Error: Failed to mark last entry as '
+                           f'discarded in {HISTORY_INFO_NAME}: {exc}')
 
 
 def store_input_files_to_history(root_path, history_path):
@@ -604,7 +602,6 @@ def _discard_workhistory_previous(work_history_path):                           
         except OSError:
             print(f'Failed to delete {directory} directory '
                   f'from {work_history_path}')
-
 
 
 def _get_current_workhistory_directories(work_history_path, contains=''):       # TODO: untested
