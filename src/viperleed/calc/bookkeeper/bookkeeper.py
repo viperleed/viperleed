@@ -283,14 +283,14 @@ class Bookkeeper:
     def _copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
         for name in (DEFAULT_SUPP, DEFAULT_OUT):
-            dir = self.cwd / name
-            if not dir.is_dir():                                                # TODO: untested
+            directory = self.cwd / name
+            if not directory.is_dir():                                          # TODO: untested
                 LOGGER.warning(f'Could not find {name} directory in '
                                f'{self.cwd}. It will not be copied '
                                'to history.')
                 continue
             try:
-                shutil.copytree(dir, self.history_dir / name)
+                shutil.copytree(directory, self.history_dir / name)
             except OSError:                                                     # TODO: untested
                 LOGGER.error(f'Failed to copy {name} directory to history.')
 
