@@ -55,6 +55,13 @@ class _FileNotOlderError(Exception):
     """Exception used internally for file age checks."""
 
 
+class BookeeperExitCode(IntEnum):
+    """Exit code of the bookkeeper."""
+    SUCCESS = 0
+    NOTHING_TO_DO = -1
+    FAIL = 1
+
+
 # TODO: catch errors from history.info, at .read()
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
@@ -198,9 +205,7 @@ class Bookkeeper:
 
         Returns
         -------
-        exit_code : int
-            0 -> success
-            1 -> No files to be copied
+        exit_code : BookeeperExitCode
 
         Raises
         ------
@@ -219,12 +224,12 @@ class Bookkeeper:
             raise ValueError(f'Unknown mode {mode}') from exc
 
         try:
-            method = getattr(self, f'_run_{mode.name.lower()}_mode')
+            runner = getattr(self, f'_run_{mode.name.lower()}_mode')
         except AttributeError as exc:                                           # TODO: untested raise
             raise NotImplementedError from exc
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
-        return method()
+        return runner()
 
     def update_from_cwd(self):
         """Updates timestamp, tensor number and log lines, etc. from cwd.
@@ -543,7 +548,7 @@ class Bookkeeper:
     def _remove_log_files(self):
         _discard_files(*self.all_cwd_logs)
 
-    def _remove_tensors_and_deltas(self):                                        # TODO: untested
+    def _remove_tensors_and_deltas(self):                                       # TODO: untested
         tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
         delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
         _discard_files(self.cwd / tensor_file, self.cwd / delta_file)
@@ -571,11 +576,11 @@ class Bookkeeper:
                 f'History directory for run {self.base_history_dir_name} '
                 'exists. Exiting without doing anything.'
                 )
-            return 1
         if not self.files_needs_archiving:
+            return BookeeperExitCode.NOTHING_TO_DO
             LOGGER.info('No files to be moved to history. Exiting '
                         'without doing anything.')
-            return 1
+            return BookeeperExitCode.NOTHING_TO_DO
         self._make_and_copy_to_history(use_ori=False)
 
         # move old files to _ori and replace from OUT
@@ -584,7 +589,7 @@ class Bookkeeper:
         # workhistory and history.info
         self._deal_with_workhistory_and_history_info(discard=False)
 
-        return 0
+        return BookeeperExitCode.SUCCESS
 
     def _run_clear_mode(self):
         if (not self.history_with_same_base_name_exists
@@ -601,7 +606,7 @@ class Bookkeeper:
         self._remove_out_and_supp()
         self._remove_ori_files()
 
-        return 0
+        return BookeeperExitCode.SUCCESS
 
     def _run_discard_common(self):
         """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
@@ -621,13 +626,13 @@ class Bookkeeper:
             LOGGER.warning(f'The last entry in {HISTORY_INFO_NAME} has user '
                            'notes. If you really want to purge the last run, '
                            'remove the notes first.')
-            return 1
+            return BookeeperExitCode.FAIL
         # Check whether there is an entry at all
         last_entry = self.history_info.last_entry
         if not last_entry:
             LOGGER.error('Error: Failed to remove last entry from '
                          f'{HISTORY_INFO_NAME}: No entries to remove.')
-            return 1
+            return BookeeperExitCode.FAIL
         # And check if there was some user edit in the last one
         if not last_entry.can_be_removed:
             if isinstance(last_entry, PureCommentEntry):
@@ -643,7 +648,7 @@ class Bookkeeper:
             LOGGER.error('Error: Failed to remove last entry from '
                          f'{HISTORY_INFO_NAME}: {err_}. Please '
                          'proceed manually.')
-            return 1
+            return BookeeperExitCode.FAIL
                                                                                 # TODO: !!! UNTESTED
         # The directory we want to remove is not self.history_dir (since that   # TODO: don't we also want to purge all the intermediate ones from workhistory?
         # would be _moved-<timestamp>), but the one with the same base name!
@@ -652,18 +657,18 @@ class Bookkeeper:
         if not dir_to_remove.is_dir():
             LOGGER.error(f'FULL_DISCARD mode failed: could not identify '
                          'directory to remove. Please proceed manually.')
-            return 1
+            return BookeeperExitCode.FAIL
 
         # Remove history folder
         try:
             shutil.rmtree(dir_to_remove)
         except OSError:
             LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
-            return 1
+            return BookeeperExitCode.FAIL
         self._run_discard_common()
         # And the history entry from history.info
         self.history_info.remove_last_entry()
-        return 0
+        return BookeeperExitCode.SUCCESS
 
     def _run_discard_mode(self):
         if (not self.history_with_same_base_name_exists
@@ -681,7 +686,9 @@ class Bookkeeper:
         except NoHistoryEntryError as exc:
             LOGGER.warning('Error: Failed to mark last entry as '
                            f'discarded in {HISTORY_INFO_NAME}: {exc}')
-    
+            return BookeeperExitCode.FAIL
+        return BookeeperExitCode.SUCCESS
+
     def _update_state_files_from_out(self):
         """Move state files from OUT to root. Rename old to '_ori'."""
         out_path = self.cwd / 'OUT'
