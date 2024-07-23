@@ -120,8 +120,7 @@ class Bookkeeper:
         # and the highest run number currently stored for each tensor in
         # history_path
         self.tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
-        self.max_job_for_tensor = _find_max_run_per_tensor(
-            self.top_level_history_path)
+        self.max_job_for_tensor = self._find_max_run_per_tensor()
 
         # Infer timestamp from log file, if possible
         self.timestamp, self.last_log_lines = _read_most_recent_log(self.cwd)
@@ -266,6 +265,26 @@ class Bookkeeper:
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
         return method()
+
+    def _find_max_run_per_tensor(self):
+        """Return maximum run numbers for all directories in 'history'.
+
+        Returns
+        -------
+        max_nums : defaultdict(int)
+            The maximum run number currently stored in the 'history'
+            folder for each of the tensors in 'history'.
+        """
+        history_path = self.top_level_history_path
+        max_nums = defaultdict(int)  # max. job number per tensor number
+        for directory in history_path.iterdir():
+            match = HIST_FOLDER_RE.match(directory.name)
+            if not directory.is_dir() or not match:                             # TODO: untested
+                continue
+            tensor_num = int(match['tensor_num'])
+            job_num = int(match['job_num'])
+            max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
+        return max_nums
 
     def _run_archive_mode(self):
         if self.history_with_same_base_name_exists:
@@ -575,31 +594,6 @@ def _discard_workhistory_previous(work_history_path):                           
             print(f'Failed to delete {directory} directory '
                   f'from {work_history_path}')
 
-
-def _find_max_run_per_tensor(history_path):
-    """Return maximum run numbers for all directories in `history_path`.
-
-    Parameters
-    ----------
-    history_path : Path
-        The path to the history folder in which
-        tensor-run directories are looked up.
-
-    Returns
-    -------
-    max_nums : defaultdict(int)
-        The maximum run number currently stored in `history_path`
-        for each of the tensors in `history_path`.
-    """
-    max_nums = defaultdict(int)  # max. job number per tensor number
-    for directory in history_path.iterdir():
-        match = HIST_FOLDER_RE.match(directory.name)
-        if not directory.is_dir() or not match:                                 # TODO: untested
-            continue
-        tensor_num = int(match['tensor_num'])
-        job_num = int(match['job_num'])
-        max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
-    return max_nums
 
 
 def _get_current_workhistory_directories(work_history_path, contains=''):       # TODO: untested
