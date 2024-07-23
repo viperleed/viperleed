@@ -550,6 +550,48 @@ class Bookkeeper:
         self._copy_input_files_from_original_inputs_and_cwd(use_ori)
         self._copy_log_files_to_history()
 
+    def _read_and_clear_notes_file(self):
+        """Return notes read from file. Clear the file contents."""
+        notes_path = next(self.cwd.glob('notes*'), None)
+        if notes_path is None:
+            return ''                                                           # TODO: untested
+        try:
+            notes = notes_path.read_text(encoding='utf-8')
+        except OSError:                                                         # TODO: untested
+            LOGGER.error(f'Error: Failed to read {notes_path.name} file.',
+                         exc_info=True)
+            return ''
+        try:
+            notes_path.write_text('', encoding='utf-8')
+        except OSError:                                                         # TODO: untested
+            LOGGER.error(f'Failed to clear the {notes_path.name} '
+                         'file after reading.', exc_info=True)
+        return notes
+
+    def _read_most_recent_log(self):
+        """Read timestamp and lines from the most-recent calc log file."""
+        last_log_lines = []
+        try:
+            most_recent_log = max(
+                (log_file
+                 for prefix in CALC_LOG_PREFIXES
+                 for log_file in self.cwd.glob(f'{prefix}*.log')
+                 if log_file.is_file()),
+                key=attrgetter('name')
+                )
+        except ValueError:  # No log files
+            timestamp = time.strftime('%y%m%d-%H%M%S', time.localtime())
+            old_timestamp = f'moved-{timestamp}'
+            return old_timestamp, last_log_lines
+
+        old_timestamp = most_recent_log.name[-17:-4]
+        try:  # pylint: disable=too-many-try-statements
+            with most_recent_log.open('r', encoding='utf-8') as log_file:
+                last_log_lines = log_file.readlines()
+        except OSError:                                                         # TODO: untested
+            pass
+        return old_timestamp, last_log_lines
+
     def _remove_log_files(self):
         _discard_files(*self.all_cwd_logs)
 
@@ -783,47 +825,3 @@ def _move_or_discard_one_file(file, target_folder, discard):
         shutil.move(file, target_folder / file.name)
     except OSError:
         LOGGER.error(f'Failed to move {file.name}.')
-
-
-def _read_and_clear_notes_file(cwd):
-    """Return notes read from file. Clear the file contents."""
-    notes_path = next(cwd.glob('notes*'), None)
-    if notes_path is None:
-        return ''                                                               # TODO: untested
-    try:
-        notes = notes_path.read_text(encoding='utf-8')
-    except OSError:                                                             # TODO: untested
-        print(f'Error: Failed to read {notes_path.name} file.')
-        return ''
-    try:  # pylint: disable=too-many-try-statements
-        with notes_path.open('w', encoding='utf-8'):
-            pass
-    except OSError:                                                             # TODO: untested
-        LOGGER.error(f'Failed to clear the {notes_path.name} '
-                     'file after reading.')
-    return notes
-
-
-def _read_most_recent_log(cwd):
-    """Return timestamp and lines from the most-recent log file in cwd."""
-    last_log_lines = []
-    try:
-        most_recent_log = max(
-            (log_file
-             for prefix in CALC_LOG_PREFIXES
-             for log_file in cwd.glob(f'{prefix}*.log')
-             if log_file.is_file()),
-            key=attrgetter('name')
-            )
-    except ValueError:  # No log files
-        timestamp = time.strftime('%y%m%d-%H%M%S', time.localtime())
-        old_timestamp = f'moved-{timestamp}'
-        return old_timestamp, last_log_lines
-
-    old_timestamp = most_recent_log.name[-17:-4]
-    try:  # pylint: disable=too-many-try-statements
-        with most_recent_log.open('r', encoding='utf-8') as log_file:
-            last_log_lines = log_file.readlines()
-    except OSError:                                                             # TODO: untested
-        pass
-    return old_timestamp, last_log_lines
