@@ -121,28 +121,6 @@ class Bookkeeper:
             )
         self._state_info['logger_prepared'] = True
 
-    def update_from_cwd(self):
-        """Updates timestamp, tensor number and log lines, etc. from cwd.
-
-        This method is called in __init__, but can also be called manually if
-        a new run happens during the lifetime of the bookkeeper.
-        """
-        # Figure out the number of the tensor (it's the most recent one)
-        # and the highest run number currently stored for each tensor in
-        # history_path
-        self.tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
-        self.max_job_for_tensor = self._find_max_run_per_tensor()
-
-        # Infer timestamp from log file, if possible
-        self.timestamp, self.last_log_lines = _read_most_recent_log(self.cwd)
-
-        # get history dir to deal with
-        self.history_dir = (self.top_level_history_path /
-                            self._get_new_history_directory_name())
-
-        # Read the current state of the history.info file
-        self.history_info.read()
-
     @property
     def base_history_dir_name(self):
         """The name of the history directory based on timestam, number and name.
@@ -276,6 +254,28 @@ class Bookkeeper:
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
         return method()
+
+    def update_from_cwd(self):
+        """Updates timestamp, tensor number and log lines, etc. from cwd.
+
+        This method is called in __init__, but can also be called manually if
+        a new run happens during the lifetime of the bookkeeper.
+        """
+        # Figure out the number of the tensor (it's the most recent one)
+        # and the highest run number currently stored for each tensor in
+        # history_path
+        self.tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
+        self.max_job_for_tensor = self._find_max_run_per_tensor()
+
+        # Infer timestamp from log file, if possible
+        self.timestamp, self.last_log_lines = _read_most_recent_log(self.cwd)
+
+        # get history dir to deal with
+        self.history_dir = (self.top_level_history_path /
+                            self._get_new_history_directory_name())
+
+        # Read the current state of the history.info file
+        self.history_info.read()
 
     def _find_max_run_per_tensor(self):
         """Return maximum run numbers for all directories in 'history'.
