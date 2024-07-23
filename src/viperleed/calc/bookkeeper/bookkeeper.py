@@ -221,7 +221,7 @@ class Bookkeeper:
         self.max_job_for_tensor = self._find_max_run_per_tensor()
 
         # Infer timestamp from log file, if possible
-        self.timestamp, self.last_log_lines = _read_most_recent_log(self.cwd)
+        self.timestamp, self.last_log_lines = self._read_most_recent_log()
 
         # get history dir to deal with
         self.history_dir = (self.top_level_history_path /
@@ -307,7 +307,7 @@ class Bookkeeper:
             timestamp=self.timestamp,
             discarded=discard,
             folder_name=self.history_dir.name,
-            notes=_read_and_clear_notes_file(self.cwd),
+            notes=self._read_and_clear_notes_file(),
             # optionals
             job_name=self.job_name,
             run_info=run_info,
