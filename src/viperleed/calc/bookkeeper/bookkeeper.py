@@ -731,8 +731,8 @@ class Bookkeeper:
         try:
             self.history_info.discard_last_entry()
         except NoHistoryEntryError as exc:
-            LOGGER.warning('Error: Failed to mark last entry as '
-                           f'discarded in {HISTORY_INFO_NAME}: {exc}')
+            LOGGER.error('Error: Failed to mark last entry as '
+                         f'discarded in {HISTORY_INFO_NAME}: {exc}')
             return BookeeperExitCode.FAIL
         return BookeeperExitCode.SUCCESS
 
@@ -770,9 +770,11 @@ def store_input_files_to_history(root_path, history_path):
         input_origin_path = original_inputs_path                                # TODO: untested
     else:
         input_origin_path = root_path
-        print(f'Could not find directory {ORIGINAL_INPUTS_DIR_NAME!r} with '
-              'unaltered input files. Files will instead be copied from the '
-              'root directory.')
+        LOGGER.warning(
+            f'Could not find directory {ORIGINAL_INPUTS_DIR_NAME!r} with '
+             'unaltered input files. Files will instead be copied from the '
+             'root directory.'
+             )
 
     # Only files, no directories
     files_to_copy = (file for file in input_origin_path.iterdir()
@@ -780,8 +782,9 @@ def store_input_files_to_history(root_path, history_path):
     for file in files_to_copy:
         try:
             shutil.copy2(file, history_path/file.name)
-        except OSError as exc:                                                  # TODO: untested
-            print(f'Failed to copy file {file} to history: {exc}')
+        except OSError:                                                         # TODO: untested
+            LOGGER.error(f'Failed to copy file {file} to history.',
+                         exc_info=True)
 
 
 def _check_newer(should_be_older, should_be_newer):
@@ -790,7 +793,6 @@ def _check_newer(should_be_older, should_be_newer):
     older_timestamp = should_be_older.stat().st_mtime
     if newer_timestamp < older_timestamp:                                       # TODO: untested
         raise _FileNotOlderError
-
 
 
 def _discard_files(*file_paths):
@@ -812,13 +814,13 @@ def _move_or_discard_one_file(file, target_folder, discard):
         try:
             file.unlink()
         except OSError:                                                         # TODO: untested
-            LOGGER.warning(f'Failed to discard file {file.name}.')
+            LOGGER.error(f'Failed to discard file {file.name}.')
         return
     if discard:  # Should be a directory
         try:
             shutil.rmtree(file)
         except OSError:                                                         # TODO: untested
-            LOGGER.warning(f'Failed to discard directory {file.name}.')
+            LOGGER.error(f'Failed to discard directory {file.name}.')
         return
     # Move it
     try:                                                                        # TODO: untested
