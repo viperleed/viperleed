@@ -96,7 +96,8 @@ class Bookkeeper:
 
     @property
     def all_cwd_logs(self):
-        return self.cwd_logs[0] + self.cwd_logs[1]
+        """Return paths to all the log files in the root directory."""
+        return sum(self.cwd_logs, start=tuple())
 
     @property
     def base_history_dir_name(self):
