@@ -37,7 +37,6 @@ from .history import CantRemoveEntryError
 from .history import HistoryInfoEntry
 from .history import HistoryInfoFile
 from .history import NoHistoryEntryError
-from .history import PureCommentEntry
 from .mode import BookkeeperMode
 
 
