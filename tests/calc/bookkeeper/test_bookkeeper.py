@@ -490,6 +490,32 @@ class TestBookkeeperOthers:
 class TestBookkeeperRaises:
     """"Collection of tests for various bookkeeper complaints."""
 
+    @staticmethod
+    def _patch_oserror(*args, **kwargs):
+        raise OSError
+
+    @staticmethod
+    def _patch_exception(*args, **kwargs):
+        # We really want to raise a very general exception since
+        # we want to check that we're not catching too broadly
+        # pylint: disable-next=broad-exception-raised
+        raise Exception
+
+    def test_cant_make_history(self, monkeypatch):
+        """Check complaints when we fail to make the history directory."""
+        bookkeeper = Bookkeeper()
+        with monkeypatch.context() as patch:
+            patch.setattr('pathlib.Path.mkdir', self._patch_oserror)
+            with pytest.raises(OSError):
+                # pylint: disable-next=protected-access   # OK in tests
+                bookkeeper._make_history_and_prepare_logger()
+
+        with monkeypatch.context() as patch:
+            patch.setattr('pathlib.Path.mkdir', self._patch_exception)
+            with pytest.raises(Exception):
+                # pylint: disable-next=protected-access   # OK in tests
+                bookkeeper._make_history_and_prepare_logger()
+
     def test_invalid_mode(self):
         """Check complaints when an invalid mode is used."""
         bookkeeper = Bookkeeper()
@@ -507,17 +533,6 @@ class TestBookkeeperRaises:
         bookkeeper = Bookkeeper()
         with pytest.raises(NotImplementedError):
             bookkeeper.run('invalid')
-
-    @staticmethod
-    def _patch_oserror(*args, **kwargs):
-        raise OSError
-
-    @staticmethod
-    def _patch_exception(*args, **kwargs):
-        # We really want to raise a very general exception since
-        # we want to check that we're not catching too broadly
-        # pylint: disable-next=broad-exception-raised
-        raise Exception
 
     raises = object()
     logs = object()
@@ -632,21 +647,6 @@ class TestBookkeeperRaises:
             method = getattr(bookkeeper, method_name)
             method()
         assert _UPDATE_METHOD in str(exc)
-
-    def test_cant_make_history(self, monkeypatch):
-        """Check complaints when we fail to make the history directory."""
-        bookkeeper = Bookkeeper()
-        with monkeypatch.context() as patch:
-            patch.setattr('pathlib.Path.mkdir', self._patch_oserror)
-            with pytest.raises(OSError):
-                # pylint: disable-next=protected-access   # OK in tests
-                bookkeeper._make_history_and_prepare_logger()
-
-        with monkeypatch.context() as patch:
-            patch.setattr('pathlib.Path.mkdir', self._patch_exception)
-            with pytest.raises(Exception):
-                # pylint: disable-next=protected-access   # OK in tests
-                bookkeeper._make_history_and_prepare_logger()
 
 
 class TestBookkeeperComplaints:
