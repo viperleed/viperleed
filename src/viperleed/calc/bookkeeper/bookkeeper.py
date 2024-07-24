@@ -753,40 +753,6 @@ class Bookkeeper:
             out_file.rename(cwd_file)
 
 
-def store_input_files_to_history(root_path, history_path):
-    """Find input files in `root_path` and copy them to `history_path`.
-
-    Parameters
-    ----------
-    root_path : pathlike
-        Root directory from which to take files. Should be cwd.
-    history_path : pathlike
-        Path to the history directory in which the files should
-        be stored.
-    """
-    root_path, history_path = Path(root_path), Path(history_path)
-    original_inputs_path = root_path / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME
-    if original_inputs_path.is_dir():
-        input_origin_path = original_inputs_path                                # TODO: untested
-    else:
-        input_origin_path = root_path
-        LOGGER.warning(
-            f'Could not find directory {ORIGINAL_INPUTS_DIR_NAME!r} with '
-             'unaltered input files. Files will instead be copied from the '
-             'root directory.'
-             )
-
-    # Only files, no directories
-    files_to_copy = (file for file in input_origin_path.iterdir()
-                     if file.is_file() and file.name in ALL_INPUT_FILES)
-    for file in files_to_copy:
-        try:
-            shutil.copy2(file, history_path/file.name)
-        except OSError:                                                         # TODO: untested
-            LOGGER.error(f'Failed to copy file {file} to history.',
-                         exc_info=True)
-
-
 def _check_newer(should_be_older, should_be_newer):
     """Warn if file `should_be_older` is newer than file `should_be_newer`."""
     newer_timestamp = should_be_newer.stat().st_mtime

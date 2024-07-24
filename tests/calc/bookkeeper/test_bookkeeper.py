@@ -15,7 +15,6 @@ from pytest_cases import fixture
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
-from viperleed.calc.bookkeeper.bookkeeper import store_input_files_to_history
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history import _DISCARDED
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
@@ -79,19 +78,6 @@ def fixture_history_path(mock_tree_after_calc_run):
 def fixture_history_run_path(history_path):
     """Return the path to a history run subfolder of `history_path`."""
     return history_path / f't000.r001_{MOCK_TIMESTAMP}'
-
-
-def test_store_input_files_to_history(tmp_path, mock_tree_after_calc_run):
-    """Check correct storage of input files in root to history."""
-    inputs_path = (mock_tree_after_calc_run
-                   / DEFAULT_SUPP / ORIGINAL_INPUTS_DIR_NAME)
-    history = tmp_path / DEFAULT_HISTORY
-    history.mkdir(parents=True, exist_ok=True)
-    store_input_files_to_history(inputs_path, history)
-    for file in MOCK_STATE_FILES:
-        hist_file = history / file
-        hist_file_content = hist_file.read_text()
-        assert MOCK_ORIG_CONTENT in hist_file_content
 
 
 class _TestBookkeeperRunBase:
