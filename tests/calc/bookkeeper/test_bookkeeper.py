@@ -470,6 +470,17 @@ class TestBookkeeperRaises:
         with pytest.raises(NotImplementedError):
             bookkeeper.run('invalid')
 
+    @staticmethod
+    def _patch_oserror(*args, **kwargs):
+        raise OSError
+    
+    @staticmethod
+    def _patch_exception(*args, **kwargs):
+        # We really want to raise a very general exception since
+        # we want to check that we're not catching too broadly
+        # pylint: disable-next=broad-exception-raised
+        raise Exception
+
     raises = object()
     logs = object()
     skips = object()
@@ -485,17 +496,6 @@ class TestBookkeeperRaises:
         '_remove_out_and_supp': ('shutil.rmtree', logs),
         '_replace_state_files_from_ori': ('pathlib.Path.replace', raises),
         }
-
-    @staticmethod
-    def _patch_oserror(*args, **kwargs):
-        raise OSError
-    
-    @staticmethod
-    def _patch_exception(*args, **kwargs):
-        # We really want to raise a very general exception since
-        # we want to check that we're not catching too broadly
-        # pylint: disable-next=broad-exception-raised
-        raise Exception
 
     @parametrize(method_name=_os_error)
     def test_oserror(self, method_name, tmp_path, monkeypatch, caplog):
@@ -541,7 +541,6 @@ class TestBookkeeperRaises:
             # There is always some logging
             assert any(r for r in caplog.records
                        if r.levelno >= logging.WARNING)
-
 
     _attr_needs_update = (
         'all_cwd_logs',
