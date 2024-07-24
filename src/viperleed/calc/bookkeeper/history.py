@@ -871,7 +871,10 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
 
         # Now check the second option. Here we have to take off one
         # line at a time from the notes, and check if the rest matches
-        notes = _ENTRY_RE.match(entry_str)['notes']
+        match = _ENTRY_RE.match(entry_str)
+        if not match:  # Will be caught in _parse_fields_from_string
+            return
+        notes = match['notes']
         if notes is None or not notes.strip():  # OK
             return
         if cls._matched_known_fields(_ENTRY_RE.match(notes.strip())):

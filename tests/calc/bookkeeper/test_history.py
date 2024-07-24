@@ -10,6 +10,7 @@ __license__ = 'GPLv3+'
 
 from dataclasses import fields
 import logging
+import re
 
 import pytest
 from pytest_cases import fixture
@@ -23,6 +24,7 @@ from viperleed.calc.bookkeeper.history import _MSG_NOT_UNDERSTOOD_PREFIX
 from viperleed.calc.bookkeeper.history import _TAG
 from viperleed.calc.bookkeeper.history import EntrySyntaxError
 from viperleed.calc.bookkeeper.history import HistoryInfoEntry
+from viperleed.calc.bookkeeper.history import HistoryInfoError
 from viperleed.calc.bookkeeper.history import HistoryInfoFile
 from viperleed.calc.bookkeeper.history import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history import PureCommentEntry
@@ -251,6 +253,14 @@ class TestHistoryEntryRaises:
         entry_lines.insert(pos, '# UNKOWN    with some value')
         entry_str = '\n'.join(entry_lines)
         with pytest.raises(EntrySyntaxError):
+            HistoryInfoEntry.from_string(entry_str)
+
+    def test_cannot_parse(self, monkeypatch):
+        """Check complaints if we cannot parse at all a string."""
+        entry_str = CorrectEntry().case_notes()
+        monkeypatch.setattr('viperleed.calc.bookkeeper.history._ENTRY_RE',
+                            re.compile('ThisDoesNotMatchAtAll'))
+        with pytest.raises(HistoryInfoError):
             HistoryInfoEntry.from_string(entry_str)
 
 
