@@ -50,7 +50,7 @@ with_history_name = parametrize(
     history_name=(DEFAULT_HISTORY, ALT_HISTORY_NAME)
     )
 with_jobs = parametrize(job_name=MOCK_JOB_NAMES)
-with_logs = parametrize(log_file_name=MOCK_LOG_FILES, ids=MOCK_LOG_FILES)
+with_logs = parametrize(log_file_name=MOCK_LOG_FILES)
 
 
 @fixture(name='mock_tree_after_calc_run')
