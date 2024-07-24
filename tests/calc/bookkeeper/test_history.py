@@ -22,6 +22,7 @@ from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history import _DISCARDED
 from viperleed.calc.bookkeeper.history import _MSG_NOT_UNDERSTOOD_PREFIX
 from viperleed.calc.bookkeeper.history import _TAG
+from viperleed.calc.bookkeeper.history import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history import EntrySyntaxError
 from viperleed.calc.bookkeeper.history import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history import HistoryInfoError
@@ -284,7 +285,9 @@ class TestHistoryInfoFile:
         """Check that the history.info file is read correctly."""
         history_info, contents = history_info_file
         has_notes = NOTES_TEST_CONTENT in contents
-        assert history_info.last_entry_has_notes == has_notes
+        last_entry = history_info.last_entry
+        if last_entry and not isinstance(last_entry, PureCommentEntry):
+            assert bool(last_entry.has_notes) == has_notes
         if has_notes:
             assert history_info.last_entry.notes == NOTES_TEST_CONTENT
 
@@ -306,9 +309,11 @@ class TestHistoryInfoFile:
         history_info, contents = history_info_file
         assert contents == history_info.raw_contents
         last_entry = history_info.last_entry
-        if last_entry is None:
+        try:
+            history_info.remove_last_entry()
+        except HistoryInfoError:
+            assert last_entry is None or not last_entry.can_be_removed
             return
-        history_info.remove_last_entry()
         if history_info.last_entry is last_entry:
             assert isinstance(last_entry, PureCommentEntry)
             return
@@ -359,14 +364,13 @@ class TestHistoryInfoFile:
                 history_info.discard_last_entry()
             return
         assert last_entry is not None
+        if not last_entry.can_be_removed:
+            with pytest.raises(CantRemoveEntryError):
+                history_info.remove_last_entry()
+            return
         history_info.remove_last_entry()
         n_entries_again = self._count_entries(history_info.path)
-        if isinstance(last_entry, PureCommentEntry):
-            assert not last_entry.can_be_removed
-            assert history_info.last_entry is last_entry
-            assert n_entries_again == n_entries
-        else:
-            assert n_entries_again == n_entries - 1
+        assert n_entries_again == n_entries - 1
 
 
 class TestHistoryInfoRaises:

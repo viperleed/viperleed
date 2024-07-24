@@ -33,6 +33,7 @@ from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from .constants import HISTORY_INFO_NAME
 from .constants import LOGGER
+from .history import CantRemoveEntryError
 from .history import HistoryInfoEntry
 from .history import HistoryInfoFile
 from .history import NoHistoryEntryError
@@ -938,35 +939,16 @@ class Bookkeeper:
         self._remove_out_and_supp()
 
     def _run_discard_full_mode(self):
-        # Check for notes in history.info
-        if self.history_info.last_entry_has_notes:
-            LOGGER.warning(f'The last entry in {HISTORY_INFO_NAME} has user '
-                           'notes. If you really want to purge the last run, '
-                           'remove the notes first.')
-            return BookeeperExitCode.FAIL
-        # Check whether there is an entry at all
-        last_entry = self.history_info.last_entry
-        if not last_entry:
-            LOGGER.error('Error: Failed to remove last entry from '
-                         f'{HISTORY_INFO_NAME}: No entries to remove.')
+        try:
+            self.history_info.may_remove_last_entry()
+        except NoHistoryEntryError as exc:
+            LOGGER.warning('Error: Failed to remove last entry '
+                           f'from {HISTORY_INFO_NAME}: {exc}')
             return BookeeperExitCode.NOTHING_TO_DO
-        # And check if there was some user edit in the last one
-        if not last_entry.can_be_removed:                                       # TODO: untested
-            if isinstance(last_entry, PureCommentEntry):
-                err_ = 'is a comment-only field'
-            elif not last_entry.was_understood:  # Can't be auto-fixed
-                err_ = 'contains invalid fields that could not be interpreted'
-            elif last_entry.misses_mandatory_fields:                            # TODO: untested
-                err_ = 'some expected fields were deleted'
-            else:    # Needs fixing, but can be done in --fixup mode            # TODO: implement
-                assert not last_entry.has_notes  # Checked above
-                err_ = ('contains fields with non-standard format (run '
-                        'bookkeeper --fixup to automatically fix it)')
-            LOGGER.error('Error: Failed to remove last entry from '
-                         f'{HISTORY_INFO_NAME}: {err_}. Please '
-                         'proceed manually.')
+        except CantRemoveEntryError as exc:
+            LOGGER.error(str(exc))
             return BookeeperExitCode.FAIL
-                                                                                # TODO: !!! UNTESTED
+
         # The directory we want to remove is not self.history_dir (since that   # TODO: don't we also want to purge all the intermediate ones from workhistory?
         # would be _moved-<timestamp>), but the one with the same base name!
         dir_to_remove = (self.top_level_history_path
@@ -976,7 +958,7 @@ class Bookkeeper:
                          'directory to remove. Please proceed manually.')
             return BookeeperExitCode.FAIL
 
-        # Clean up main workhistory
+        # Clean up workhistory in root
         self._move_and_cleanup_workhistory(discard=True)
 
         # Remove history folder

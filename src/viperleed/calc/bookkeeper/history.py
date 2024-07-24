@@ -39,6 +39,10 @@ class HistoryInfoError(Exception):
     """Base class for all errors related to the history.info file."""
 
 
+class CantRemoveEntryError(HistoryInfoError):
+    """An entry cannot be removed."""
+
+
 class NoHistoryEntryError(HistoryInfoError):
     """There is no entry to process according to the criteria."""
 
@@ -87,15 +91,6 @@ class HistoryInfoFile:
         self.read()
 
     @property
-    def last_entry_has_notes(self):
-        """Return whether the last entry has associated notes."""
-        if self.last_entry is None:
-            return False
-        if isinstance(self.last_entry, PureCommentEntry):
-            return False
-        return bool(self.last_entry.has_notes)
-
-    @property
     def last_entry_was_discarded(self):
         """Return whether the last entry is labeled as DISCARDED."""
         return getattr(self.last_entry, 'discarded', False)
@@ -127,8 +122,42 @@ class HistoryInfoFile:
             LOGGER.warning('Last entry is already discarded.')
             return
         discarded_entry = self.last_entry.as_discarded()
-        self.remove_last_entry()
+        self._do_remove_last_entry()
         self.append_entry(discarded_entry)
+
+    def may_remove_last_entry(self):
+        """Raise if the last entry can't be removed."""
+        if not self.last_entry:
+            raise NoHistoryEntryError('No entries to remove.')
+
+        if self.last_entry.can_be_removed:
+            return
+
+        # Comment-only entries technically do not have notes
+        is_comment = isinstance(self.last_entry, PureCommentEntry)
+
+        # Check for notes in history.info
+        if not is_comment and self.last_entry.has_notes:
+            raise CantRemoveEntryError(
+                f'The last entry in {self.path.name} has user '
+                'notes. If you really want to purge the last run, '
+                'remove the notes first.'
+                )
+
+        if is_comment:                                                          # TODO: untested from here on
+            err_ = 'is a comment-only field'
+        elif self.last_entry.misses_mandatory_fields:
+            # This has to come before .was_understood as it's a subset
+            err_ = 'some expected fields were deleted'
+        elif not self.last_entry.was_understood:  # Can't be auto-fixed
+            err_ = 'contains invalid fields that could not be interpreted'
+        else:    # Needs fixing, but can be done in --fixup mode                # TODO: implement
+            assert not self.last_entry.has_notes  # Checked above
+            err_ = ('contains fields with non-standard format (run '
+                    'bookkeeper --fixup to automatically fix it)')
+        raise CantRemoveEntryError('Failed to remove last entry from '
+                                   f'{self.path.name}: {err_}. Please '
+                                   'proceed manually.')
 
     def read(self):
         """Read the current contents of the history.info file."""
@@ -148,10 +177,11 @@ class HistoryInfoFile:
 
     def remove_last_entry(self):
         """Remove the last entry from the history.info file."""
-        if self.last_entry is None:
-            raise NoHistoryEntryError('No entries to remove.')
-        if isinstance(self.last_entry, PureCommentEntry):
-            return
+        self.may_remove_last_entry()
+        self._do_remove_last_entry()
+
+    def _do_remove_last_entry(self):
+        """Actually remove the last entry assuming its possible."""
         if HISTORY_INFO_SEPARATOR.strip() in self.raw_contents:
             content_without_last, *_ = self.raw_contents.rsplit(
                 HISTORY_INFO_SEPARATOR.strip(),
