@@ -967,7 +967,7 @@ class Bookkeeper:
         # Remove history folder
         try:
             shutil.rmtree(dir_to_remove)
-        except OSError:                                                         # TODO: untested
+        except OSError:
             LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
             return BookkeeperExitCode.FAIL
         self._run_discard_common()

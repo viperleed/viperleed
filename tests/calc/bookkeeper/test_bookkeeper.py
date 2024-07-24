@@ -25,6 +25,7 @@ from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import _FROM_ROOT
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
+from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.bookkeeper import BOOKIE_LOGFILE
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history import _DISCARDED
@@ -515,6 +516,31 @@ class TestBookkeeperRaises:
             with pytest.raises(Exception):
                 # pylint: disable-next=protected-access   # OK in tests
                 bookkeeper._make_history_and_prepare_logger()
+
+    def test_discard_full_cant_remove_folder(self, after_archive,
+                                             caplog, monkeypatch):
+        """Check complaints when it's not possible to remove folders."""
+        bookkeeper, *_ = after_archive
+        # Purge notes otherwise we can't remove anything.
+        info = bookkeeper.history_info.raw_contents
+        info, _ = info.rsplit('Notes:', maxsplit=1)
+        if info:
+            info += 'Notes:\n'
+        info = bookkeeper.history_info.path.write_text(info)
+        bookkeeper.history_info.read()
+
+        with monkeypatch.context() as patch:
+            patch.setattr('shutil.rmtree', self._patch_exception)
+            with pytest.raises(Exception):
+                # pylint: disable-next=protected-access   # OK in tests
+                bookkeeper._run_discard_full_mode()
+        with monkeypatch.context() as patch:
+            patch.setattr('shutil.rmtree', self._patch_oserror)
+            # pylint: disable-next=protected-access       # OK in tests
+            exit_code = bookkeeper._run_discard_full_mode()
+            # pylint: disable-next=magic-value-comparison
+            assert 'Failed to delete' in caplog.text
+            assert exit_code is BookkeeperExitCode.FAIL
 
     def test_invalid_mode(self):
         """Check complaints when an invalid mode is used."""
