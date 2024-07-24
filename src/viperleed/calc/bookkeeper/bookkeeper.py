@@ -693,7 +693,7 @@ class Bookkeeper:
         if not last_entry:
             LOGGER.error('Error: Failed to remove last entry from '
                          f'{HISTORY_INFO_NAME}: No entries to remove.')
-            return BookeeperExitCode.FAIL
+            return BookeeperExitCode.NOTHING_TO_DO
         # And check if there was some user edit in the last one
         if not last_entry.can_be_removed:
             if isinstance(last_entry, PureCommentEntry):
