@@ -486,16 +486,20 @@ class TestBookkeeperRaises:
         '_replace_state_files_from_ori': ('pathlib.Path.replace', raises),
         }
 
+    @staticmethod
+    def _patch_oserror(*args, **kwargs):
+        raise OSError
+    
+    @staticmethod
+    def _patch_exception(*args, **kwargs):
+        # We really want to raise a very general exception since
+        # we want to check that we're not catching too broadly
+        # pylint: disable-next=broad-exception-raised
+        raise Exception
+
     @parametrize(method_name=_os_error)
     def test_oserror(self, method_name, tmp_path, monkeypatch, caplog):
         """Check expected outcome of calling a method on a bookkeeper."""
-        def _patch_oserror(*args, **kwargs):
-            raise OSError
-        def _patch_exception(*args, **kwargs):
-            # We really want to raise a very general exception since
-            # we want to check that we're not catching too broadly
-            # pylint: disable-next=broad-exception-raised
-            raise Exception
 
         workhistory = tmp_path/DEFAULT_WORK_HISTORY
         workhistory.mkdir()
@@ -518,12 +522,12 @@ class TestBookkeeperRaises:
             args = tuple()
         method = getattr(bookkeeper, method_name)
         with monkeypatch.context() as patch:
-            patch.setattr(to_patch, _patch_exception)
+            patch.setattr(to_patch, self._patch_exception)
             with pytest.raises(Exception):
                 method(*args)
 
         with monkeypatch.context() as patch:
-            patch.setattr(to_patch, _patch_oserror)
+            patch.setattr(to_patch, self._patch_oserror)
             if action is self.skips:
                 with not_raises(OSError):
                     method(*args)
@@ -591,6 +595,19 @@ class TestBookkeeperRaises:
             method = getattr(bookkeeper, method_name)
             method()
         assert _UPDATE_METHOD in str(exc)
+
+    def test_cant_make_history(self, monkeypatch):
+        """Check complaints when we fail to make the history directory."""
+        bookkeeper = Bookkeeper()
+        with monkeypatch.context() as patch:
+            patch.setattr('pathlib.Path.mkdir', self._patch_oserror)
+            with pytest.raises(OSError):
+                bookkeeper._make_history_and_prepare_logger()
+        
+        with monkeypatch.context() as patch:
+            patch.setattr('pathlib.Path.mkdir', self._patch_exception)
+            with pytest.raises(Exception):
+                bookkeeper._make_history_and_prepare_logger()
 
 
 class TestBookkeeperComplaints:
