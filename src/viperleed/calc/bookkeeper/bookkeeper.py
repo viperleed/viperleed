@@ -10,6 +10,7 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from collections import defaultdict
+from enum import IntEnum
 import logging
 from operator import attrgetter
 import os
