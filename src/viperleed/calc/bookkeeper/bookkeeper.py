@@ -13,7 +13,6 @@ from collections import defaultdict
 from enum import IntEnum
 import logging
 from operator import attrgetter
-import os
 from pathlib import Path
 import re
 import shutil
