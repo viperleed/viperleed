@@ -369,7 +369,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     discarded: Optional[bool] = False
     job_name: Optional[str] = None
     run_info: Optional[str] = None
-    r_ref: Optional[float] = None
+    r_ref: Optional[float] = None                                               # TODO: how to handle integer/fractional?
     r_super: Optional[float] = None
     # _needs_fixup is {field_name: (reason, fixed)} for all the
     # fields that do not conform to the standard formatting. The
