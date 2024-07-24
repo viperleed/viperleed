@@ -260,6 +260,7 @@ class Bookkeeper:
                 # these explicitly, they have already been copied
                 # by calc to original_inputs
                 continue
+            elif cwd_file.is_file():  # Copy cwd and warn                       # TODO: untested
                 copy_file, with_name = cwd_file, f'{cwd_file.name}_from_root'
                 LOGGER.warning(
                     f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
