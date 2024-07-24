@@ -152,7 +152,7 @@ class _FileNotOlderError(Exception):
     """Exception used internally for file age checks."""
 
 
-class BookeeperExitCode(IntEnum):
+class BookkeeperExitCode(IntEnum):
     """Exit code of the bookkeeper."""
     SUCCESS = 0
     NOTHING_TO_DO = -1
@@ -301,7 +301,7 @@ class Bookkeeper:
 
         Returns
         -------
-        exit_code : BookeeperExitCode
+        exit_code : BookkeeperExitCode
 
         Raises
         ------
@@ -898,11 +898,11 @@ class Bookkeeper:
                 f'History directory for run {self.history_dir_base_name} '
                 'exists. Exiting without doing anything.'
                 )
-            return BookeeperExitCode.NOTHING_TO_DO
+            return BookkeeperExitCode.NOTHING_TO_DO
         if not self.files_need_archiving:
             LOGGER.info('No files to be moved to history. Exiting '
                         'without doing anything.')
-            return BookeeperExitCode.NOTHING_TO_DO
+            return BookkeeperExitCode.NOTHING_TO_DO
         self._make_and_copy_to_history(use_ori=False)
 
         # move old files to _ori and replace from OUT
@@ -911,7 +911,7 @@ class Bookkeeper:
         # workhistory and history.info
         self._deal_with_workhistory_and_history_info(discard=False)
 
-        return BookeeperExitCode.SUCCESS
+        return BookkeeperExitCode.SUCCESS
 
     def _run_clear_mode(self):
         if self.archiving_required:
@@ -927,7 +927,7 @@ class Bookkeeper:
         self._remove_out_and_supp()
         self._remove_ori_files()
 
-        return BookeeperExitCode.SUCCESS
+        return BookkeeperExitCode.SUCCESS
 
     def _run_discard_common(self):
         """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
@@ -947,10 +947,10 @@ class Bookkeeper:
         except NoHistoryEntryError as exc:
             LOGGER.warning('Error: Failed to remove last entry '
                            f'from {HISTORY_INFO_NAME}: {exc}')
-            return BookeeperExitCode.NOTHING_TO_DO
+            return BookkeeperExitCode.NOTHING_TO_DO
         except CantRemoveEntryError as exc:
             LOGGER.error(str(exc))
-            return BookeeperExitCode.FAIL
+            return BookkeeperExitCode.FAIL
 
         # The directory we want to remove is not self.history_dir (since that   # TODO: don't we also want to purge all the intermediate ones from workhistory?
         # would be _moved-<timestamp>), but the one with the same base name!
@@ -959,7 +959,7 @@ class Bookkeeper:
         if not dir_to_remove.is_dir():
             LOGGER.error('FULL_DISCARD mode failed: could not identify '
                          'directory to remove. Please proceed manually.')
-            return BookeeperExitCode.FAIL
+            return BookkeeperExitCode.FAIL
 
         # Clean up workhistory in root
         self._move_and_cleanup_workhistory(discard=True)
@@ -969,11 +969,11 @@ class Bookkeeper:
             shutil.rmtree(dir_to_remove)
         except OSError:                                                         # TODO: untested
             LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
-            return BookeeperExitCode.FAIL
+            return BookkeeperExitCode.FAIL
         self._run_discard_common()
         # And the history entry from history.info
         self.history_info.remove_last_entry()
-        return BookeeperExitCode.SUCCESS
+        return BookkeeperExitCode.SUCCESS
 
     def _run_discard_mode(self):
         if self.archiving_required:
@@ -990,8 +990,8 @@ class Bookkeeper:
         except NoHistoryEntryError as exc:
             LOGGER.error('Error: Failed to mark last entry as '
                          f'discarded in {HISTORY_INFO_NAME}: {exc}')
-            return BookeeperExitCode.FAIL
-        return BookeeperExitCode.SUCCESS
+            return BookkeeperExitCode.FAIL
+        return BookkeeperExitCode.SUCCESS
 
     def _update_state_files_from_out(self):
         """Move state files from OUT to root. Rename old to '_ori'."""
