@@ -546,7 +546,7 @@ class Bookkeeper:
         """Create new history subfolder and copy all files there."""
         try:
             self.history_dir.mkdir()
-        except OSError:                                                             # TODO: untested
+        except OSError:                                                         # TODO: untested
             LOGGER.error('Error: Could not create target directory '
                          f'{self.history_dir}\n Stopping...')
             raise
@@ -621,7 +621,7 @@ class Bookkeeper:
             ori_file = self.cwd / f'{file}_ori'
             if ori_file.is_file():
                 try:
-                    shutil.move(ori_file, self.cwd / file)
+                    ori_file.replace(self.cwd / file)
                 except OSError:                                                 # TODO: untested
                     LOGGER.error(f'Failed to move {ori_file} to {file}.')
                     raise
@@ -756,10 +756,12 @@ class Bookkeeper:
             if not out_file.is_file():
                 continue
             # NB: all the moving around is local to the same folder
-            # tree, so we don't really need shutil. Path.rename always
-            # works for the same file system.
-            cwd_file.rename(self.cwd / f'{file}_ori')
-            out_file.rename(cwd_file)
+            # tree, so we don't really need shutil. Path.replace always
+            # works for the same file system. Notice also the use of
+            # replace rather than rename, as the behavior of rename
+            # is not identical for all platforms.
+            cwd_file.replace(self.cwd / f'{file}_ori')
+            out_file.replace(cwd_file)
 
 
 def _check_newer(older, newer):
