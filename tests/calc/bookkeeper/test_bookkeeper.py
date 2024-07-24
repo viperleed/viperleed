@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 import ast
 from enum import Enum
 import logging
+import shutil
 import time
 
 import pytest
@@ -420,6 +421,32 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
                 'No entries to remove',
                 )
             assert any(msg in caplog.text for msg in expected_logs)
+
+
+class TestBookkeeperOthers:
+    """Collections of various tests for bits not covered by other tests."""
+
+    _logs = {
+        'tleedm-231110-103910.log': {'r_super': '0.1582',
+                                     'run_info': '0 3 31 12'},
+        'viperleed-calc-231110-103910.log': {
+            'r_super': '0.1582',
+            'r_ref': '0.1582 (0.1354 / 0.1827)',
+            'run_info': '0 1 11 2 3 31 12',
+            },
+        }
+    _logs['*.log'] = _logs['viperleed-calc-231110-103910.log']
+
+    @parametrize('pattern,expect', _logs.items(), ids=_logs)
+    def test_infer_from_log(self, pattern, expect, data_path, tmp_path):
+        """Check correct detection of information from a log file."""
+        for logfile in (data_path/'bookkeeper').glob(pattern):
+            shutil.copy2(logfile, tmp_path)
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        bookkeeper.update_from_cwd(silent=True)
+        log_info = bookkeeper._infer_run_info_from_log()
+        assert bookkeeper.all_cwd_logs
+        assert log_info == expect
 
 
 class TestBookkeeperRaises:

@@ -60,10 +60,15 @@ RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 _FROM_ROOT = '_from_root'
 
 # Regular expressions for parsing the log file
+_RFAC_RE = r'[\d.( )/]+'
 _LOG_FILE_RE = {
-    'run_info': re.compile(r'Executed segments:\s*(<run_info>\w+)\s*'),
-    'r_ref': re.compile(r'Final R (refcalc)\s*:\s*(<r_ref>\w+)\s*'),
-    'r_super': re.compile(r'Final R (superpos)\s*:\s*(<r_super>\w+)\s*'),
+    'run_info': re.compile(r'Executed segments:\s*(?P<run_info>[\d ]+)\s*'),
+    'r_ref': re.compile(
+        rf'Final R \(refcalc\)\s*:\s*(?P<r_ref>{_RFAC_RE})\s*'
+        ),
+    'r_super': re.compile(
+        rf'Final R \(superpos\)\s*:\s*(?P<r_super>{_RFAC_RE})\s*'
+        ),
     }
 
 
@@ -677,7 +682,7 @@ class Bookkeeper:
                 if d.is_dir() and HIST_FOLDER_RE.match(d.name))
 
     @_needs_update_for_attr('_state_info[last_log_lines]')
-    def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
+    def _infer_run_info_from_log(self):
         """Return a dictionary of information read from the calc log."""
         matched = {k: False for k in _LOG_FILE_RE}
         log_lines = self._state_info['last_log_lines'] or tuple()

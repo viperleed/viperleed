@@ -1,0 +1,113 @@
+Starting new log: tleedm-231110-103910.log
+Time of execution (UTC): 2023-11-10 10:39:10
+This is ViPErLEED version 0.10.0
+
+! THIS VERSION IS A PRE-RELEASE NOT MEANT FOR PUBLIC DISTRIBUTION !
+
+Reading structure from file POSCAR
+dbg: PARAMETERS file was read successfully
+# WARNING: tensorleed directory found in /mnt/c/Work/Vienna/SPECSLab/Technical/Upgrades/Python LEED-IV/000-git/viperleed, using that instead of {_source}.
+Detected TensErLEED version 1.76
+ViPErLEED is using TensErLEED version 1.76.
+
+STARTING SECTION: INITIALIZATION
+dbg: VIBROCC file was read successfully
+dbg: VIBROCC value consistency check finished
+dbg: IVBEAMS file was read successfully
+Loaded EXPBEAMS.csv file containing 7 beams (total energy range: 2.4e+03 eV).
+Found unit cell type: hexagonal
+Starting symmetry search...
+dbg: Generating candidate high-symmetry positions from layer with 1 atoms...
+dbg: Checking for rotation axes: 8 candidates...
+dbg: Highest rotation axis has order 3
+dbg: Checking for mirror/glide planes...
+dbg: 18 candidates for mirror/glide planes found...
+Found plane group: p3m1
+dbg: Wrote to POSCAR successfully
+dbg: Wrote to POSCAR_oricell successfully
+Checking bulk unit cell...
+Found SUPERLATTICE = (1x1)
+Starting bulk symmetry search...
+Found bulk plane group: p6m
+dbg: Wrote to POSCAR_bulk successfully
+dbg: Wrote to POSCAR_bulk_appended successfully
+dbg: Found 7 blocks in PHASESHIFTS file, which is consistent with PARAMETERS.
+Generating BEAMLIST...
+dbg: Highest energy considered in BEAMLIST: 736.63 eV
+dbg: Wrote to BEAMLIST successfully.
+dbg: BEAMLIST file was read successfully
+dbg: Wrote to PatternInfo.tlm successfully
+Finishing section at 10:39:13. Section took 2.41 seconds.
+
+STARTING SECTION: SEARCH
+dbg: DISPLACEMENTS block OCC was read successfully
+Unpacking Deltas_001.zip...
+Automatically detected number of available CPUs: 16
+dbg: Wrote to AUXEXPBEAMS successfully
+dbg: Wrote to /mnt/c/Work/Vienna/SPECSLab/Technical/Upgrades/Python LEED-IV/000-git/BetaTestStuff/00 - Tester reports/Max_Buchta_Julich/2023-11-02 - fortran_comp_with_occ_delta/VacancieFit_again/VacancieFit/work/rf.info successfully
+dbg: Delta-amplitudes were not calculated in current run; looking for delta files by name.
+Total energy range from experimental beams is 2.4e+03 eV (5 independent fit parameters, 4.8e+02 eV per parameter)
+dbg: Wrote input files for search: PARAM, search.steu, restrict.f
+dbg: Using fortran compiler: mpiifort
+dbg: Checksums of TensErLEED source files for search validated.
+Compiling fortran input files...
+dbg: Compiled fortran files successfully
+Search log will be written to file /mnt/c/Work/Vienna/SPECSLab/Technical/Upgrades/Python LEED-IV/000-git/BetaTestStuff/00 - Tester reports/Max_Buchta_Julich/2023-11-02 - fortran_comp_with_occ_delta/VacancieFit_again/VacancieFit/work/search-231110-103910.log.
+Starting search. See files Search-progress.pdf and SD.TL for progress information.
+dbg: Starting search process with command "mpirun -n 16 ./search-231110-103910".
+Search convergence criterion reached: max. generations without change (best 10% of structures): 105/100.
+dbg: R = 0.1582 (Generation 1700, 60.605 s since gen. 0, 35.8 s/kG overall)
+dbg: Read complete block from SD.TL file after 1 read attempt(s).
+Stopping search...
+Reducing GAUSSIAN_WIDTH parameter to 0.25 and restarting search...
+dbg: Failed to read current configuration from control.chem. Loading last known configuraiton from stored SD.TL data instead...
+dbg: Wrote search.steu input for search.
+dbg: Starting search process with command "mpirun -n 16 ./search-231110-103910".
+Search convergence criterion reached: max. generations without change (best 10% of structures): 200/200.
+dbg: R = 0.1582 (Generation 3500, 60.485 s since gen. 1700, 40.8 s/kG overall)
+dbg: Read complete block from SD.TL file after 1 read attempt(s).
+Stopping search...
+Convergence reached: No improvement to best 10% of structures since changing GAUSSIAN_WIDTH.
+Finished search. Processing files...
+Reading search results from SD.TL, generation 1900
+dbg: Read complete block from SD.TL file after 1 read attempt(s).
+All trial structures converged to the same configuration (R = 0.1582)
+dbg: Wrote to POSCAR_OUT_231110-103910 successfully
+Wrote to VIBROCC_OUT_231110-103910 successfully
+Finishing section at 10:41:46. Section took 2:32 minutes.
+
+STARTING SECTION: SUPERPOS
+dbg: Wrote Superpos input successfully
+dbg: Using fortran compiler: ifort
+dbg: Checksums of TensErLEED source files for superpos validated.
+Compiling fortran input files...
+Starting Superpos calculation...
+Finished Superpos calculation. Processing files...
+dbg: Wrote to FITBEAMS.csv successfully
+dbg: Wrote to FITBEAMS_norm.csv successfully
+Finishing section at 10:41:47. Section took 1.56 seconds.
+
+STARTING SECTION: R-FACTOR CALCULATION
+dbg: Wrote to AUXEXPBEAMS successfully
+dbg: Wrote to R-factor input file WEXPEL successfully
+dbg: Checksums of TensErLEED source files for R-factor validated.
+Compiling fortran input files...
+Starting R-factor calculation...
+R-factor log will be written to file rfactor-231110-103910.log
+Finished R-factor calculation. Processing files...
+With inner potential shift of 1.50 eV: R = 0.1582
+
+Finishing section at 10:41:53. Section took 6.06 seconds.
+
+Starting cleanup...
+Wrote manifest file successfully.
+
+Finishing execution at 2023-11-10 10:41:55
+Total elapsed time: 2:44 minutes
+
+### The following lines have been modifed to correctly test the bookkeeper
+### The values do not correspond to the ones of the rest of the log file
+Executed segments: 0 1 11 2 3 31 12
+Final R (refcalc): 0.1582 (0.1354 / 0.1827)
+Final R (superpos): 0.1582
+
