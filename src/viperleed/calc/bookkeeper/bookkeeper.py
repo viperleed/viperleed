@@ -863,7 +863,7 @@ class Bookkeeper:
         """Delete all log files in root."""
         _discard_files(*self.all_cwd_logs)
 
-    def _remove_tensors_and_deltas(self):                                       # TODO: untested
+    def _remove_tensors_and_deltas(self):
         """Delete the most recent tensor and delta files."""
         tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
         delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
@@ -994,7 +994,7 @@ class Bookkeeper:
         """Move state files from OUT to root. Rename old to '_ori'."""
         out_path = self.cwd / 'OUT'
         if not out_path.is_dir():
-            return                                                              # TODO: untested
+            return
         for file in STATE_FILES:
             out_file = out_path / f'{file}_OUT'
             cwd_file = self.cwd / file

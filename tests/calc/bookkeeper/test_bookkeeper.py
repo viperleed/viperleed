@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 import ast
 from enum import Enum
 import logging
+from pathlib import Path
 import shutil
 import time
 
@@ -426,6 +427,10 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
 class TestBookkeeperOthers:
     """Collections of various tests for bits not covered by other tests."""
 
+    # Note about the disable: It is more convenient to modify the key
+    # for the glob-all-logs pattern later, as we can then simply edit
+    # if we ever change again the naming of log files.
+    # pylint: disable-next=dict-init-mutate
     _logs = {
         'tleedm-231110-103910.log': {'r_super': '0.1582',
                                      'run_info': '0 3 31 12'},
@@ -444,9 +449,42 @@ class TestBookkeeperOthers:
             shutil.copy2(logfile, tmp_path)
         bookkeeper = Bookkeeper(cwd=tmp_path)
         bookkeeper.update_from_cwd(silent=True)
+        # pylint: disable-next=protected-access   # OK in tests
         log_info = bookkeeper._infer_run_info_from_log()
         assert bookkeeper.all_cwd_logs
         assert log_info == expect
+
+    def test_no_state_files_in_out(self):
+        """Check correct behavior when there is no file in OUT to be used."""
+        bookkeeper = Bookkeeper()
+        # pylint: disable-next=protected-access   # OK in tests
+        bookkeeper._update_state_files_from_out()  # There's no out
+        assert not any(Path(f).exists() for f in MOCK_STATE_FILES)
+
+    def test_remove_tensors_deltas(self, tmp_path):
+        """Check removal of tensor and delta files."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        removed_files = (
+            tmp_path/'Tensors/Tensors_003.zip',
+            tmp_path/'Deltas/Deltas_003.zip',
+            )
+        surviving_files= (
+            tmp_path/'Tensors/Tensors_002.zip',
+            tmp_path/'Tensors/Tensors_001.zip',
+            tmp_path/'Deltas/Deltas_001.zip',
+            )
+        folders = (tmp_path/'Tensors',
+                   tmp_path/'Deltas')
+        for folder in folders:
+            folder.mkdir(parents=True)
+        for file in (*removed_files, *surviving_files):
+            file.touch()
+        bookkeeper.update_from_cwd()
+        # pylint: disable-next=protected-access   # OK in tests
+        bookkeeper._remove_tensors_and_deltas()
+        assert not any(f.exists() for f in removed_files)
+        assert all(f.exists() for f in surviving_files)
+        assert all(f.exists() for f in folders)
 
 
 class TestBookkeeperRaises:
@@ -473,7 +511,7 @@ class TestBookkeeperRaises:
     @staticmethod
     def _patch_oserror(*args, **kwargs):
         raise OSError
-    
+
     @staticmethod
     def _patch_exception(*args, **kwargs):
         # We really want to raise a very general exception since
@@ -601,11 +639,13 @@ class TestBookkeeperRaises:
         with monkeypatch.context() as patch:
             patch.setattr('pathlib.Path.mkdir', self._patch_oserror)
             with pytest.raises(OSError):
+                # pylint: disable-next=protected-access   # OK in tests
                 bookkeeper._make_history_and_prepare_logger()
-        
+
         with monkeypatch.context() as patch:
             patch.setattr('pathlib.Path.mkdir', self._patch_exception)
             with pytest.raises(Exception):
+                # pylint: disable-next=protected-access   # OK in tests
                 bookkeeper._make_history_and_prepare_logger()
 
 
@@ -660,8 +700,6 @@ class TestBookkeeperComplaints:
 
         # Some stuff in history that should not be considered
         history = bookkeeper.top_level_history_path
-        history_dir = bookkeeper.history_dir
-        history_info = bookkeeper.history_info
         tensor_num_unused = 999
         invalid_history_stuff = (
             history/f't{tensor_num_unused}.r999_some_file',
@@ -673,6 +711,8 @@ class TestBookkeeperComplaints:
             make()
 
         bookkeeper.update_from_cwd(silent=True)
+        history_dir = bookkeeper.history_dir
+        history_info = bookkeeper.history_info
         assert tensor_num_unused not in bookkeeper.max_job_for_tensor
         assert not_collected_log not in bookkeeper.all_cwd_logs
 
