@@ -1020,21 +1020,16 @@ def _check_newer(older, newer):
 def _discard_files(*file_paths):
     """Delete files at `file_paths`. Log if they can't be deleted."""
     for file in file_paths:
-        _discard_one_file(file)
-
-
-def _discard_one_file(file):
-    """Delete a file or directory, if it exists."""
-    if not file.exists():
-        return
-    if file.is_file():
+        if not file.exists():
+            continue
+        if file.is_file():
+            try:
+                file.unlink()
+            except OSError:
+                LOGGER.error(f'Failed to discard file {file.name}.')
+            continue
+        assert file.is_dir()  # Should be a directory
         try:
-            file.unlink()
+            shutil.rmtree(file)
         except OSError:
-            LOGGER.error(f'Failed to discard file {file.name}.')
-        return
-    assert file.is_dir()  # Should be a directory
-    try:
-        shutil.rmtree(file)
-    except OSError:
-        LOGGER.error(f'Failed to discard directory {file.name}.')
+            LOGGER.error(f'Failed to discard directory {file.name}.')
