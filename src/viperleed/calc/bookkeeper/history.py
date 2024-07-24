@@ -144,7 +144,7 @@ class HistoryInfoFile:
                 'remove the notes first.'
                 )
 
-        if is_comment:                                                          # TODO: untested from here on
+        if is_comment:
             err_ = 'is a comment-only field'
         elif self.last_entry.misses_mandatory_fields:
             # This has to come before .was_understood as it's a subset
