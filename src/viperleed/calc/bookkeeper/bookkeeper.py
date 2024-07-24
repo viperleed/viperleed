@@ -668,7 +668,60 @@ class Bookkeeper:
         return (d for d in globbed
                 if d.is_dir() and HIST_FOLDER_RE.match(d.name))
 
-    def _move_and_cleanup_workhistory(self, discard):                           # TODO: untested
+    @_needs_update_for_attr('_state_info[last_log_lines]')
+    def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
+        """Return a dictionary of information read from the calc log."""
+        matched = {k: False for k in _LOG_FILE_RE}
+        log_lines = self._state_info['last_log_lines'] or tuple()
+        for line in reversed(log_lines):  # Info is at the end
+            for info, already_matched in matched.items():
+                if already_matched:
+                    continue
+                matched[info] = _LOG_FILE_RE[info].match(line)
+            if all(matched.values()):
+                break
+        return {k: match[k] for k, match in matched.items() if match}
+
+    def _make_and_copy_to_history(self, use_ori=False):
+        """Create new history subfolder and copy all files there."""
+        try:
+            self.history_dir.mkdir()
+        except OSError:
+            LOGGER.error('Error: Could not create target directory '
+                         f'{self.history_dir}\n Stopping...')
+            raise
+        self._copy_out_and_supp()
+        self._copy_input_files_from_original_inputs_or_cwd(use_ori)
+        self._copy_log_files()
+
+    def _make_history_and_prepare_logger(self):
+        """Make history folder and add handlers to the bookkeeper logger."""
+        if self._state_info['logger_prepared']:
+            return
+
+        # Attach a stream handler to logger if not already present
+        if not any(isinstance(h, logging.StreamHandler)
+                   for h in LOGGER.handlers):
+            LOGGER.addHandler(logging.StreamHandler())
+        LOGGER.setLevel(logging.INFO)
+        LOGGER.propagate = True
+
+        try:  # Make top level history folder if not there yet
+            self.top_level_history_path.mkdir(exist_ok=True)
+        except OSError:                                                         # TODO: untested raise
+            LOGGER.error('Error creating history folder.')
+            raise
+
+        # Attach file handler for history/bookkeeper.log
+        bookkeeper_log = self.top_level_history_path / BOOKIE_LOGFILE
+        LOGGER.addHandler(logging.FileHandler(bookkeeper_log, mode='a'))
+        LOGGER.info(  # Log only once per instance
+            '\n### Bookeeper running at '
+            f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###'
+            )
+        self._state_info['logger_prepared'] = True
+
+    def _move_and_cleanup_workhistory(self, discard):
         """Move files from the current work-history folder, then clean up.
 
         If the current work-history folder is empty, it is always
@@ -704,34 +757,7 @@ class Bookkeeper:
                 LOGGER.error(err_, exc_info=True)
         return tensor_nums
 
-    def _make_history_and_prepare_logger(self):
-        """Make history folder and add handlers to the bookkeeper logger."""
-        if self._state_info['logger_prepared']:
-            return
-
-        # Attach a stream handler to logger if not already present
-        if not any(isinstance(h, logging.StreamHandler)
-                   for h in LOGGER.handlers):
-            LOGGER.addHandler(logging.StreamHandler())
-        LOGGER.setLevel(logging.INFO)
-        LOGGER.propagate = True
-
-        try:  # Make top level history folder if not there yet
-            self.top_level_history_path.mkdir(exist_ok=True)
-        except OSError:                                                         # TODO: untested raise
-            LOGGER.error('Error creating history folder.')
-            raise
-
-        # Attach file handler for history/bookkeeper.log
-        bookkeeper_log = self.top_level_history_path / BOOKIE_LOGFILE
-        LOGGER.addHandler(logging.FileHandler(bookkeeper_log, mode='a'))
-        LOGGER.info(  # Log only once per instance
-            '\n### Bookeeper running at '
-            f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###'
-            )
-        self._state_info['logger_prepared'] = True
-
-    def _move_workhistory_folders(self):                                        # TODO: untested
+    def _move_workhistory_folders(self):
         """Move relevant folders from the current work history to history.
 
         Returns
@@ -770,32 +796,6 @@ class Bookkeeper:
                              exc_info=True)
             tensor_nums.add(tensor_num)
         return tensor_nums
-
-    @_needs_update_for_attr('_state_info[last_log_lines]')
-    def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
-        """Return a dictionary of information read from the calc log."""
-        matched = {k: False for k in _LOG_FILE_RE}
-        log_lines = self._state_info['last_log_lines'] or tuple()
-        for line in reversed(log_lines):  # Info is at the end
-            for info, already_matched in matched.items():
-                if already_matched:
-                    continue
-                matched[info] = _LOG_FILE_RE[info].match(line)
-            if all(matched.values()):
-                break
-        return {k: match[k] for k, match in matched.items() if match}
-
-    def _make_and_copy_to_history(self, use_ori=False):
-        """Create new history subfolder and copy all files there."""
-        try:
-            self.history_dir.mkdir()
-        except OSError:                                                         # TODO: untested
-            LOGGER.error('Error: Could not create target directory '
-                         f'{self.history_dir}\n Stopping...')
-            raise
-        self._copy_out_and_supp()
-        self._copy_input_files_from_original_inputs_or_cwd(use_ori)
-        self._copy_log_files()
 
     def _read_and_clear_notes_file(self):
         """Return notes read from file. Clear the file contents."""
