@@ -55,6 +55,10 @@ STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 # Input files that may be generated at runtime - don't warn if missing
 RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
+
+# Suffix for files moved from root rather than original_inputs
+_FROM_ROOT = '_from_root'
+
 # Regular expressions for parsing the log file
 _LOG_FILE_RE = {
     'run_info': re.compile(r'Executed segments:\s*(<run_info>\w+)\s*'),
@@ -306,12 +310,12 @@ class Bookkeeper:
         """
         try:
             mode = BookkeeperMode(mode)
-        except ValueError as exc:                                               # TODO: untested raise
+        except ValueError as exc:
             raise ValueError(f'Unknown mode {mode}') from exc
 
         try:
             runner = getattr(self, f'_run_{mode.name.lower()}_mode')
-        except AttributeError as exc:                                           # TODO: untested raise
+        except AttributeError as exc:
             raise NotImplementedError from exc
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
@@ -405,7 +409,7 @@ class Bookkeeper:
         # Any calc logs
         files_to_archive.extend(self._paths['calc_logs'])
         # Workhistory folders
-        if self.work_history_path.is_dir():                                     # TODO: untested
+        if self.work_history_path.is_dir():
             files_to_archive.extend(
                 self._get_current_workhistory_directories(contains='r')
                 )
@@ -430,7 +434,7 @@ class Bookkeeper:
         max_jobs = defaultdict(int)  # max. job number per tensor number
         for directory in history_path.iterdir():
             match = HIST_FOLDER_RE.match(directory.name)
-            if not directory.is_dir() or not match:                             # TODO: untested
+            if not directory.is_dir() or not match:
                 continue
             tensor_num = int(match['tensor_num'])
             job_num = int(match['job_num'])
@@ -482,8 +486,8 @@ class Bookkeeper:
                 # these explicitly, they have already been copied
                 # by calc to original_inputs
                 continue
-            elif cwd_file.is_file():  # Copy cwd and warn                       # TODO: untested
-                copy_file, with_name = cwd_file, f'{cwd_file.name}_from_root'
+            elif cwd_file.is_file():  # Copy cwd and warn
+                copy_file, with_name = cwd_file, f'{cwd_file.name}{_FROM_ROOT}'
                 LOGGER.warning(
                     f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
                     'Using file from root directory instead and renaming to '
@@ -497,26 +501,28 @@ class Bookkeeper:
         for file in self.all_cwd_logs:
             self._copy_one_file_to_history(file)
 
+    @_needs_update_for_attr('_folder_names[history_dir]')
     def _copy_one_file_to_history(self, file_path, with_name=None):
         """Copy `file_path` to history, optionally renaming."""
         dest_name = with_name or file_path.name
         try:
             shutil.copy2(file_path, self.history_dir / dest_name)
-        except OSError:                                                         # TODO: untested
+        except OSError:
             LOGGER.error(f'Failed to copy {file_path} to history.')
 
+    @_needs_update_for_attr('_folder_names[history_dir]')
     def _copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
         for name in (DEFAULT_SUPP, DEFAULT_OUT):
             directory = self.cwd / name
-            if not directory.is_dir():                                          # TODO: untested
+            if not directory.is_dir():
                 LOGGER.warning(f'Could not find {name} directory in '
                                f'{self.cwd}. It will not be copied '
                                'to history.')
                 continue
             try:
                 shutil.copytree(directory, self.history_dir / name)
-            except OSError:                                                     # TODO: untested
+            except OSError:
                 LOGGER.error(f'Failed to copy {name} directory to history.')
 
     def _deal_with_workhistory_and_history_info(self, discard=False):
@@ -537,7 +543,7 @@ class Bookkeeper:
             **self._infer_run_info_from_log()
             ))
 
-    def _discard_workhistory_previous(self):                                    # TODO: untested
+    def _discard_workhistory_previous(self):
         """Remove 'previous'-labelled directories in work history."""
         work_hist_prev = self._get_workhistory_directories(
             contains=PREVIOUS_LABEL
@@ -609,7 +615,7 @@ class Bookkeeper:
         None.
         """
         dir_name = self.history_dir_base_name
-        if (self.top_level_history_path / dir_name).is_dir():                   # TODO: untested
+        if (self.top_level_history_path / dir_name).is_dir():
             bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
                                                  time.localtime())
             dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
@@ -622,7 +628,7 @@ class Bookkeeper:
             )
         return (f for f in folders if f.is_dir())
 
-    def _get_current_workhistory_directories(self, contains=''):                # TODO: untested
+    def _get_current_workhistory_directories(self, contains=''):
         """Return a generator of subfolders in the current workhistory folder.
 
         As compared with _get_workhistory_directories, only those
@@ -646,7 +652,7 @@ class Bookkeeper:
         directories = self._get_workhistory_directories(contains=contains)
         return (d for d in directories if PREVIOUS_LABEL not in d.name)
 
-    def _get_workhistory_directories(self, contains=''):                        # TODO: untested
+    def _get_workhistory_directories(self, contains=''):
         """Return a generator of subfolders in the current workhistory folder.
 
         Parameters
@@ -771,7 +777,7 @@ class Bookkeeper:
         directories = self._get_current_workhistory_directories(
             contains=self.timestamp
             )
-        for directory in directories:
+        for directory in directories:                                           # TODO: untested
             match = HIST_FOLDER_RE.match(directory.name)
             if not match:  # Should always match
                 continue
@@ -803,25 +809,29 @@ class Bookkeeper:
         """Return notes read from file. Clear the file contents."""
         notes_path = next(self.cwd.glob('notes*'), None)
         if notes_path is None:
-            return ''                                                           # TODO: untested
+            return ''
         try:
             notes = notes_path.read_text(encoding='utf-8')
-        except OSError:                                                         # TODO: untested
+        except OSError:
             LOGGER.error(f'Error: Failed to read {notes_path.name} file.',
                          exc_info=True)
             return ''
         try:
             notes_path.write_text('', encoding='utf-8')
-        except OSError:                                                         # TODO: untested
+        except OSError:
             LOGGER.error(f'Failed to clear the {notes_path.name} '
                          'file after reading.', exc_info=True)
         return notes
 
+    @_needs_update_for_attr('_paths[calc_logs]')
     def _read_most_recent_log(self):
         """Read timestamp and lines from the most-recent calc log file."""
         last_log_lines = []
         split_logs = {}
         for prefix in CALC_LOG_PREFIXES:  # newest to oldest
+            # Note on the disable: pylint does not recognize that we
+            # dynamically set the _paths['calc_logs'] to be a tuple.
+            # pylint: disable-next=not-an-iterable
             logs = (f for f in self._paths['calc_logs']
                     if f.name.startswith(prefix))
             try:
@@ -839,7 +849,7 @@ class Bookkeeper:
         try:  # pylint: disable=too-many-try-statements
             with most_recent_log.open('r', encoding='utf-8') as log_file:
                 last_log_lines = log_file.readlines()
-        except OSError:                                                         # TODO: untested
+        except OSError:
             pass
         return old_timestamp, last_log_lines
 
@@ -869,7 +879,7 @@ class Bookkeeper:
             if ori_file.is_file():
                 try:
                     ori_file.replace(self.cwd / file)
-                except OSError:                                                 # TODO: untested
+                except OSError:
                     LOGGER.error(f'Failed to move {ori_file} to {file}.')
                     raise
 
@@ -937,7 +947,7 @@ class Bookkeeper:
                          f'{HISTORY_INFO_NAME}: No entries to remove.')
             return BookeeperExitCode.NOTHING_TO_DO
         # And check if there was some user edit in the last one
-        if not last_entry.can_be_removed:
+        if not last_entry.can_be_removed:                                       # TODO: untested
             if isinstance(last_entry, PureCommentEntry):
                 err_ = 'is a comment-only field'
             elif not last_entry.was_understood:  # Can't be auto-fixed
@@ -965,7 +975,7 @@ class Bookkeeper:
         # Remove history folder                                                 # TODO: how about the workhistory ones?
         try:
             shutil.rmtree(dir_to_remove)
-        except OSError:
+        except OSError:                                                         # TODO: untested
             LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
             return BookeeperExitCode.FAIL
         self._run_discard_common()
@@ -1015,7 +1025,7 @@ def _check_newer(older, newer):
     """Raise if file `older` is newer than file `newer`."""
     newer_timestamp = newer.stat().st_mtime
     older_timestamp = older.stat().st_mtime
-    if newer_timestamp < older_timestamp:                                       # TODO: untested
+    if newer_timestamp < older_timestamp:
         raise _FileNotOlderError
 
 
@@ -1032,11 +1042,11 @@ def _discard_one_file(file):
     if file.is_file():
         try:
             file.unlink()
-        except OSError:                                                         # TODO: untested
+        except OSError:
             LOGGER.error(f'Failed to discard file {file.name}.')
         return
     assert file.is_dir()  # Should be a directory
     try:
         shutil.rmtree(file)
-    except OSError:                                                             # TODO: untested
+    except OSError:
         LOGGER.error(f'Failed to discard directory {file.name}.')

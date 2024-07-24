@@ -8,27 +8,39 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+import ast
+from enum import Enum
 import logging
+import time
 
+import pytest
 from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc import DEFAULT_HISTORY
+from viperleed.calc import DEFAULT_WORK_HISTORY
+from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.bookkeeper.bookkeeper import _FROM_ROOT
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
+from viperleed.calc.bookkeeper.bookkeeper import BOOKIE_LOGFILE
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history import _DISCARDED
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
+from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
+from ...helpers import not_raises
 from .conftest import MOCK_INPUT_CONTENT
-from .conftest import MOCK_ORIG_CONTENT
 from .conftest import MOCK_OUT_CONTENT
 from .conftest import MOCK_TIMESTAMP
 from .conftest import MOCK_STATE_FILES
 from .conftest import NOTES_TEST_CONTENT
 
+
+_UPDATE_METHOD = 'update_from_cwd'
 
 @fixture(name='after_archive')
 def fixture_after_archive(after_calc_run):
@@ -97,7 +109,7 @@ class _TestBookkeeperRunBase:
         cwd = bookkeeper.cwd
         assert (cwd / DEFAULT_HISTORY).exists()
         history_contents = (f for f in (cwd / DEFAULT_HISTORY).iterdir()
-                            if f.name != 'bookkeeper.log')
+                            if f.name != BOOKIE_LOGFILE)
         assert not any(history_contents)
 
     def check_no_warnings(self, caplog, contain=None, exclude_msgs=()):
@@ -207,11 +219,12 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         assert not bookkeeper.archiving_required
         # write stuff to files to check they are not overwritten
         cwd = bookkeeper.cwd
+        sentinel_text = 'something else'
         for file in MOCK_STATE_FILES:
-            (cwd / file).write_text('something else')
+            (cwd / file).write_text(sentinel_text)
         bookkeeper.run(mode=self.mode)
         for file in MOCK_STATE_FILES:
-            assert (cwd / file).read_text() == 'something else'
+            assert (cwd / file).read_text() == sentinel_text
         self.check_no_warnings(caplog)
 
     # pylint: disable-next=arguments-differ
@@ -392,6 +405,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         # Since the run was not archived, the history should be empty
         assert not history_run_path.is_dir()
         if notes_in_history_info:
+            # pylint: disable-next=magic-value-comparison
             assert 'last entry in history.info has user notes' in caplog.text
         elif last_entry and not last_entry.can_be_removed:
             expected_logs = (
@@ -406,3 +420,240 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
                 'No entries to remove',
                 )
             assert any(msg in caplog.text for msg in expected_logs)
+
+
+class TestBookkeeperRaises:
+    """"Collection of tests for various bookkeeper complaints."""
+
+    def test_invalid_mode(self):
+        """Check complaints when an invalid mode is used."""
+        bookkeeper = Bookkeeper()
+        with pytest.raises(ValueError):
+            bookkeeper.run('invalid')
+
+    def test_no_runner_implemented(self, monkeypatch):
+        """Check complaints if a runner is not available for a mode."""
+        class _MockMode(Enum):
+            INVALID = 'invalid'
+        monkeypatch.setattr(
+            'viperleed.calc.bookkeeper.bookkeeper.BookkeeperMode',
+            _MockMode
+            )
+        bookkeeper = Bookkeeper()
+        with pytest.raises(NotImplementedError):
+            bookkeeper.run('invalid')
+
+    raises = object()
+    logs = object()
+    skips = object()
+    _os_error = {
+        '_copy_out_and_supp': ('shutil.copytree', logs),
+        '_discard_workhistory_previous': ('shutil.rmtree', logs),
+        '_make_and_copy_to_history': ('pathlib.Path.mkdir', raises),
+        '_move_and_cleanup_workhistory(True)': ('shutil.rmtree', logs),
+        '_read_and_clear_notes_file read': ('pathlib.Path.read_text', logs),
+        '_read_and_clear_notes_file write': ('pathlib.Path.write_text', logs),
+        '_read_most_recent_log': ('pathlib.Path.open', skips),
+        '_remove_log_files': ('pathlib.Path.unlink', logs),
+        '_remove_out_and_supp': ('shutil.rmtree', logs),
+        '_replace_state_files_from_ori': ('pathlib.Path.replace', raises),
+        }
+
+    @parametrize(method_name=_os_error)
+    def test_oserror(self, method_name, tmp_path, monkeypatch, caplog):
+        """Check expected outcome of calling a method on a bookkeeper."""
+        def _patch_oserror(*args, **kwargs):
+            raise OSError
+        def _patch_exception(*args, **kwargs):
+            # We really want to raise a very general exception since
+            # we want to check that we're not catching too broadly
+            # pylint: disable-next=broad-exception-raised
+            raise Exception
+
+        workhistory = tmp_path/DEFAULT_WORK_HISTORY
+        workhistory.mkdir()
+        (workhistory/f't001.r002_some_{PREVIOUS_LABEL}_folder').mkdir()
+        (tmp_path/DEFAULT_OUT).mkdir()
+        (tmp_path/'notes').touch()
+        (tmp_path/f'{LOG_PREFIX}-20xxxx-xxxxxx.log').touch()
+        (tmp_path/'PARAMETERS_ori').touch()
+
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        bookkeeper.update_from_cwd(silent=True)
+
+        to_patch, action = self._os_error[method_name]
+        method_name, *_ = method_name.split()
+        if '(' in method_name:  # pylint: disable=magic-value-comparison
+            method_name, args = method_name.split('(')
+            args = args.replace(')', '') + ','
+            args = ast.literal_eval(args)
+        else:
+            args = tuple()
+        method = getattr(bookkeeper, method_name)
+        with monkeypatch.context() as patch:
+            patch.setattr(to_patch, _patch_exception)
+            with pytest.raises(Exception):
+                method(*args)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(to_patch, _patch_oserror)
+            if action is self.skips:
+                with not_raises(OSError):
+                    method(*args)
+                return
+            if action is self.raises:
+                with pytest.raises(OSError):
+                    method(*args)
+            else:
+                assert action is self.logs
+                method(*args)
+            # There is always some logging
+            assert any(r for r in caplog.records
+                       if r.levelno >= logging.WARNING)
+
+
+    _attr_needs_update = (
+        'all_cwd_logs',
+        'archiving_required',
+        'cwd_logs',
+        'files_need_archiving',
+        'history_dir',
+        'history_dir_base_name',
+        'history_info',
+        'history_with_same_base_name_exists',
+        'max_job_for_tensor',
+        'tensor_number',
+        'timestamp',
+        )
+    _method_needs_update = (  # Only those without args
+        '_collect_files_to_archive',
+        '_copy_input_files_from_original_inputs_or_cwd',
+        '_copy_log_files',
+        '_copy_out_and_supp',
+        '_deal_with_workhistory_and_history_info',
+        '_discard_workhistory_previous',
+        '_find_base_name_for_history_subfolder',
+        '_find_new_history_directory_name',
+        '_get_conflicting_history_subfolders',
+        '_infer_run_info_from_log',
+        '_make_and_copy_to_history',
+        '_move_workhistory_folders',
+        '_remove_log_files',
+        '_remove_tensors_and_deltas',
+        '_run_archive_mode',
+        '_run_clear_mode',
+        '_run_discard_common',
+        '_run_discard_full_mode',
+        '_run_discard_mode',
+        )
+
+    @parametrize(attr=_attr_needs_update)
+    def test_too_early_attribute_access(self, attr):
+        """check that accessing attributes before update_from_cwd fails."""
+        bookkeeper = Bookkeeper()
+        with pytest.raises(AttributeError) as exc:
+            getattr(bookkeeper, attr)
+        assert _UPDATE_METHOD in str(exc)
+
+    @parametrize(method_name=_attr_needs_update)
+    def test_too_early_method_call(self, method_name):
+        """check that accessing attributes before update_from_cwd fails."""
+        bookkeeper = Bookkeeper()
+        with pytest.raises(AttributeError) as exc:
+            # Some methods raise already at getattr, some at call
+            method = getattr(bookkeeper, method_name)
+            method()
+        assert _UPDATE_METHOD in str(exc)
+
+
+class TestBookkeeperComplaints:
+    """Tests for situations that do not raise but issue log warnings/errors."""
+
+    def test_cwd_file_newer(self, caplog, tmp_path):
+        """Check warnings when a cwd file is newer than an original_input."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        ori_inputs = tmp_path/DEFAULT_SUPP/ORIGINAL_INPUTS_DIR_NAME
+        ori_inputs.mkdir(parents=True)
+        (ori_inputs/'POSCAR').touch()
+        time.sleep(0.05)
+        (tmp_path/'POSCAR').touch()
+
+        bookkeeper.update_from_cwd()
+        # pylint: disable-next=protected-access  # OK in tests
+        bookkeeper._copy_input_files_from_original_inputs_or_cwd()
+        # pylint: disable-next=magic-value-comparison
+        assert 'is newer' in caplog.text
+
+    def test_copy_from_root(self, caplog, tmp_path):
+        """Check warnings when no original_input is present."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        (tmp_path/'POSCAR').touch()
+        (tmp_path/DEFAULT_OUT).mkdir()  # Otherwise 'nothing to do'
+        bookkeeper.update_from_cwd()
+        target = bookkeeper.history_dir
+        bookkeeper.run('archive')
+        assert _FROM_ROOT in caplog.text
+        assert (tmp_path/'POSCAR').is_file()
+        assert (target/'POSCAR_from_root').is_file()
+
+    def test_funky_files(self, tmp_path):
+        """Check that funny files and directories are not considered."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        # Stuff that should not be copied over:
+        not_collected_log = tmp_path/'not_a_log.log'
+        not_collected_log.mkdir()
+
+        (tmp_path/DEFAULT_OUT).mkdir()  # Otherwise 'nothing to do'
+        bookkeeper.update_from_cwd(silent=True)
+
+        # Stuff that should not be considered for the state
+        workhistory = tmp_path/DEFAULT_WORK_HISTORY
+        not_collected_dirs = (
+            workhistory/'some_folder',
+            workhistory/f't001.r002_{PREVIOUS_LABEL}',
+            )
+        for directory in not_collected_dirs:
+            directory.mkdir(parents=True)
+
+        # Some stuff in history that should not be considered
+        history = bookkeeper.top_level_history_path
+        history_dir = bookkeeper.history_dir
+        history_info = bookkeeper.history_info
+        tensor_num_unused = 999
+        invalid_history_stuff = (
+            history/f't{tensor_num_unused}.r999_some_file',
+            history/'some_stray_directory',
+            )
+        for path in invalid_history_stuff:
+            # pylint: disable-next=magic-value-comparison  # 'file'
+            make = getattr(path, 'touch' if 'file' in path.name else 'mkdir')
+            make()
+
+        bookkeeper.update_from_cwd(silent=True)
+        assert tensor_num_unused not in bookkeeper.max_job_for_tensor
+        assert not_collected_log not in bookkeeper.all_cwd_logs
+
+        # About the disables: W0212 (protected-access) is OK in a test;
+        # E1135 (unsupported-membership-test) is a pylint problem, as
+        # it cannot infer that by the time we reach this one we have
+        # a tuple in _paths['to_be_archived'].
+        # pylint: disable-next=E1135,W0212
+        assert not any(f in bookkeeper._paths['to_be_archived']
+                       for f in not_collected_dirs)
+
+        bookkeeper.run('archive')
+        assert not_collected_log.exists()
+        assert not (history_dir/not_collected_log.name).exists()
+        for file in not_collected_dirs:
+            assert (not file.exists() if PREVIOUS_LABEL in file.name
+                    else file.is_dir())
+        assert all(f.exists() for f in invalid_history_stuff)
+        assert history_dir.is_dir()
+        assert history_info.path.read_bytes()
+
+        # Now discard should remove workhistory and all the stuff
+        bookkeeper.run('discard_full')
+        assert not_collected_log.exists()
+        assert not workhistory.exists()
+        assert not history_dir.exists()
+        assert not history_info.path.read_bytes()

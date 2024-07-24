@@ -84,12 +84,8 @@ class TestBookkeeperRun:
     @fixture(name='mock_run')
     def fixture_mock_run(self, monkeypatch):
         """Return a BookkeeperCLI with its .run method replaced."""
-        def mock_init(*_args, **_kwargs):                                       # TODO: remove after side effects have been removed.
-            """Prevent side effects of Bookkeeper.__init__."""
-            return None
         mock_method = Mock()
         monkeypatch.setattr(Bookkeeper, 'run', mock_method)
-        monkeypatch.setattr(Bookkeeper, '__init__', mock_init)
         return mock_method
 
     _mode = {
