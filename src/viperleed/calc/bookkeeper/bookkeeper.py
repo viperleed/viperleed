@@ -565,9 +565,12 @@ class Bookkeeper:
     def _find_base_name_for_history_subfolder(self):
         """Store internally the potential name of the history subfolder.
 
-        This is not necessarily the name of the history directory that
-        is actually created. Use self.history_dir.name instead. See
-        also help(self._get_new_history_directory_name).
+        This is the base name for the folder that will contain the
+        final output and SUPP files. Folders coming from the work-
+        history folder have their own naming. Notice also that this
+        is not necessarily the name of the history directory that is
+        actually created. Use self.history_dir.name instead. See also
+        help(self._get_new_history_directory_name).
 
         Returns
         -------
