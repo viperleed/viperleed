@@ -76,17 +76,20 @@ class Bookkeeper:
         Parameters
         ----------
         job_name : str or None, optional
-            Custom name to append to the stored folder and to history.info.
-            If not given or None, no extra name is added. Default is None.
+            Custom name to append to the stored folder and to
+            history.info. If not given or None, no extra name
+            is added. Default is None.
         history_name : str, optional
             The name of the folder in the current directory where the
             most recent run should be archived. Default is 'history'.
         work_history_name : str, optional
-            The name of the workhistory subfolder of ./work where
-            intermediate runs may have been stored. Results are also
-            copied from here to ./history_name. Default is workhistory.
+            The name of the workhistory subfolder of the current
+            directory where intermediate runs may have been stored.
+            Results are also copied from here to ./history_name.
+            Default is 'workhistory'.
         cwd : Path, optional
-            The current working directory. Default is the current directory.
+            The current working directory. Default is the current
+            directory.
         """
         self.cwd = Path(cwd)
         self.top_level_history_path = self.cwd / history_name
@@ -209,7 +212,7 @@ class Bookkeeper:
         return runner()
 
     def update_from_cwd(self):
-        """Updates timestamp, tensor number and log lines, etc. from cwd.
+        """Update timestamp, tensor number, log lines, etc. from root.
 
         This method is called in __init__, but can also be called manually if
         a new run happens during the lifetime of the bookkeeper.
@@ -268,12 +271,12 @@ class Bookkeeper:
                 self._copy_one_file_to_history(copy_file, with_name=with_name)
 
     def _copy_log_files_to_history(self):
-        """Copy log files to history."""
+        """Copy all the log files in root to history."""
         for file in self.all_cwd_logs:
             self._copy_one_file_to_history(file)
 
     def _copy_one_file_to_history(self, file_path, with_name=None):
-        """Copy file_path to history, optionally renaming."""
+        """Copy `file_path` to history, optionally renaming."""
         dest_name = with_name or file_path.name
         try:
             shutil.copy2(file_path, self.history_dir / dest_name)
@@ -295,10 +298,11 @@ class Bookkeeper:
                 LOGGER.error(f'Failed to copy {name} directory to history.')
 
     def _deal_with_workhistory_and_history_info(self, discard=False):
+        """Move work-history subfolders and update the history.info file."""
         tensor_nums = self._move_and_cleanup_workhistory(discard)
-        tensor_nums.add(self.tensor_number)
 
         run_info, r_ref, r_super = self._infer_run_info_from_log()
+        tensor_nums.add(self.tensor_number)                                     # TODO: how about sorting on tensor numbers?
 
         self.history_info.append_entry(HistoryInfoEntry(
             tensor_nums=list(tensor_nums),
@@ -316,7 +320,7 @@ class Bookkeeper:
             ))
 
     def _discard_workhistory_previous(self):                                    # TODO: untested
-        """Remove 'previous'-labelled directories in workhistory."""
+        """Remove 'previous'-labelled directories in work history."""
         work_hist_prev = self._get_workhistory_directories(
             contains=PREVIOUS_LABEL
             )
@@ -375,8 +379,8 @@ class Bookkeeper:
     def _get_new_history_directory_name(self):
         """Return the name of a history directory for a given run.
 
-        Folder has form 'tXXX.rYYY_<suffix>'. <suffix> can vary. It may
-        be:
+        Folder name has form 'tXXX.rYYY_<suffix>'. <suffix> can vary.
+        It may be:
         - if there was a log file, and the folder is not
           present in history:
               <log_timestamp>[_<job_name>]
@@ -426,15 +430,15 @@ class Bookkeeper:
                 if d.is_dir() and HIST_FOLDER_RE.match(d.name))
 
     def _move_and_cleanup_workhistory(self, discard):                           # TODO: untested
-        """Move files from the current work-history history, then clean up.
+        """Move files from the current work-history folder, then clean up.
 
         If the current work-history folder is empty, it is always
-        deleted. Otherwise only if `discard` is True.
+        deleted. Otherwise, only if `discard` is True.
 
         Parameters
         ----------
         discard : bool
-            Whether files should only be discarded without copying them.
+            Whether files should only be deleted, without copying them.
 
         Returns
         -------
@@ -593,21 +597,26 @@ class Bookkeeper:
         return old_timestamp, last_log_lines
 
     def _remove_log_files(self):
+        """Delete all log files in root."""
         _discard_files(*self.all_cwd_logs)
 
     def _remove_tensors_and_deltas(self):                                       # TODO: untested
+        """Delete the most recent tensor and delta files."""
         tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
         delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
         _discard_files(self.cwd / tensor_file, self.cwd / delta_file)
 
     def _remove_ori_files(self):
+        """Delete '_ori'-suffixed files from root."""
         ori_files = (self.cwd / f'{file}_ori' for file in STATE_FILES)
         _discard_files(*ori_files)
 
     def _remove_out_and_supp(self):
+        """Delete the SUPP and OUT directories from root."""
         _discard_files(self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP)
 
     def _replace_state_files_from_ori(self):
+        """Replace input files with their '_ori'-suffixed version."""
         for file in STATE_FILES:
             ori_file = self.cwd / f'{file}_ori'
             if ori_file.is_file():
@@ -688,7 +697,7 @@ class Bookkeeper:
                 err_ = 'contains invalid fields that could not be interpreted'
             elif last_entry.misses_mandatory_fields:                            # TODO: untested
                 err_ = 'some expected fields were deleted'
-            else:    # Needs fixing, but can be done in --fixup mode
+            else:    # Needs fixing, but can be done in --fixup mode            # TODO: implement
                 assert not last_entry.has_notes  # Checked above
                 err_ = ('contains fields with non-standard format (run '
                         'bookkeeper --fixup to automatically fix it)')
@@ -702,11 +711,11 @@ class Bookkeeper:
         dir_to_remove = (self.top_level_history_path
                          / self.base_history_dir_name)
         if not dir_to_remove.is_dir():
-            LOGGER.error(f'FULL_DISCARD mode failed: could not identify '
+            LOGGER.error('FULL_DISCARD mode failed: could not identify '
                          'directory to remove. Please proceed manually.')
             return BookeeperExitCode.FAIL
 
-        # Remove history folder
+        # Remove history folder                                                 # TODO: how about the workhistory ones?
         try:
             shutil.rmtree(dir_to_remove)
         except OSError:
