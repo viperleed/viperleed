@@ -473,9 +473,11 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     @property
     def misses_mandatory_fields(self):
         """Return whether this entry has missing fields."""
-        return any(getattr(self, f.name) == _MISSING
-                   for f in fields(self)
-                   if f.init and not is_optional(f))
+        misses_stuff = any(getattr(self, f.name) == _MISSING
+                           for f in fields(self)
+                           if f.init and not is_optional(f))
+        # Notes are marked as optional, but they really are not
+        return misses_stuff or self.notes == _MISSING
 
     @property
     def needs_fixing(self):
