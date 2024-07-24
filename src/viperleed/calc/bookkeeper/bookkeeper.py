@@ -631,8 +631,8 @@ class Bookkeeper:
                 f'History directory for run {self.base_history_dir_name} '
                 'exists. Exiting without doing anything.'
                 )
-        if not self.files_needs_archiving:
             return BookeeperExitCode.NOTHING_TO_DO
+        if not self.files_needs_archiving:
             LOGGER.info('No files to be moved to history. Exiting '
                         'without doing anything.')
             return BookeeperExitCode.NOTHING_TO_DO
