@@ -35,6 +35,7 @@ def fixture_after_archive(after_calc_run):
     """Yield a temporary directory for testing the bookkeeper."""
     bookkeeper, *_ = after_calc_run
     bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+    bookkeeper.update_from_cwd(silent=True)
     return after_calc_run
 
 
@@ -60,6 +61,7 @@ def fixture_before_calc_run(tmp_path):
         (tmp_path / file).write_text(MOCK_INPUT_CONTENT)
 
     bookkeeper = Bookkeeper(cwd=tmp_path)
+    bookkeeper.update_from_cwd(silent=True)
     with execute_in_dir(tmp_path):
         yield bookkeeper
     # It would be nice to clean up, but the following line causes
@@ -152,6 +154,7 @@ class _TestBookkeeperRunBase:
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
         bookkeeper.run(mode=self.mode)
+        bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
         self.check_root_is_clean(*after_archive)
@@ -162,6 +165,7 @@ class _TestBookkeeperRunBase:
         # bookkeeper should think that it needs archiving
         assert bookkeeper.archiving_required
         bookkeeper.run(mode=self.mode)
+        bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_calc_run)
         self.check_out_files_in_history(*after_calc_run)
 

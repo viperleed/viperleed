@@ -10,7 +10,9 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from collections import defaultdict
+from contextlib import nullcontext
 from enum import IntEnum
+from functools import wraps
 import logging
 from operator import attrgetter
 from pathlib import Path
@@ -22,6 +24,7 @@ from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.lib.base import logging_silent
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
@@ -49,6 +52,88 @@ STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
 # Input files that may be generated at runtime - don't warn if missing
 RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
+
+# Regular expressions for parsing the log file
+_LOG_FILE_RE = {
+    'run_info': re.compile(r'Executed segments:\s*(<run_info>\w+)\s*'),
+    'r_ref': re.compile(r'Final R (refcalc)\s*:\s*(<r_ref>\w+)\s*'),
+    'r_super': re.compile(r'Final R (superpos)\s*:\s*(<r_super>\w+)\s*'),
+    }
+
+
+def _get_attr_or_dict_item(attr):
+    """Return an attribute getter for 'attr_name' or 'dict_name[item_name]'.
+
+    Parameters
+    ----------
+    attr : str
+        The attribute of self to be looked up. If the value is None,
+        the decorated function raises AttributeError suggesting to
+        call update_from_cwd beforehand. `attr` may also have the form
+        'dict_name[dict_item]'. In this case, self.dict_name[dict_item]
+        is looked up instead.
+
+    Returns
+    -------
+    getter : callable
+        A function that returns `attr` from its first argument.
+    cleaned_attr : str
+        'attr_name' or 'item_name', depending on the form of `attr`.
+    """
+    if '[' in attr:  # pylint: disable=magic-value-comparison
+        dict_, attr = attr.split('[')
+        attr = attr.replace(']', '')
+        def _getattr(self):
+            container = getattr(self, dict_)
+            return container[attr]
+    else:
+        def _getattr(self):
+            return getattr(self, attr)
+    return _getattr, attr
+
+
+def _make_property(attr, needs_update=False):
+    """Return a property getter that looks up `attr`."""
+    getter, property_name = _get_attr_or_dict_item(attr)
+    if needs_update:
+        getter = _needs_update_for_attr(attr, attr_name=property_name)(getter)
+    return property(getter)
+
+
+def _needs_update_for_attr(attr, attr_name=None):
+    """Return a decorator that complains if `attr` is None.
+
+    Parameters
+    ----------
+    attr : str
+        The attribute of self to be looked up. If the value is None,
+        the decorated function raises AttributeError suggesting to
+        call update_from_cwd beforehand. `attr` may also have the form
+        'dict_name[dict_item]'. In this case, self.dict_name[dict_item]
+        is looked up instead.
+    attr_name : str, optional
+        The name of the decorated function. Automatically fetched from
+        the decorated function if not given. Default is None.
+
+    Returns
+    -------
+    _decorator : callable
+        A decorator to apply to a function that raises AttributeError
+        before calling the function if `attr` is None.
+    """
+    _getattr, *_ = _get_attr_or_dict_item(attr)
+    def _decorator(func):
+        func_name = attr_name or func.__name__
+        @wraps(func)
+        def _wrapper(self, *args, **kwargs):
+            if _getattr(self) is None:
+                raise AttributeError(
+                    f'{type(self).__name__} has no {func_name} yet. '
+                    'Call update_from_cwd() beforehand.'
+                    )
+            return func(self, *args, **kwargs)
+        return _wrapper
+    return _decorator
 
 
 class _FileNotOlderError(Exception):
@@ -91,89 +176,108 @@ class Bookkeeper:
             The current working directory. Default is the current
             directory.
         """
-        self.cwd = Path(cwd)
-        self.top_level_history_path = self.cwd / history_name
-        self.work_history_path = self.cwd / work_history_name
-        self.orig_inputs_dir = (self.cwd / DEFAULT_SUPP
-                                / ORIGINAL_INPUTS_DIR_NAME)
-
-        self.job_name = job_name
-        self._state_info = {
-            'logger_prepared': False,
+        self._folder_names = {
+            'top_level_history': history_name,
+            'workhistory': work_history_name,
+            'history_dir_base_name': None,   # Set in update_from_cwd
+            'history_dir': None,             # Set in update_from_cwd
             }
-        self._make_history_and_prepare_logger()
+        self._history_info = None   # Set in update_from_cwd
+        self._paths = {
+            'cwd': Path(cwd),
+            # The next ones are set in update_from_cwd
+            'calc_logs': None,      # tuple
+            'other_logs': None,     # tuple
+            'to_be_archived': None  # tuple
+            }
+        self._state_info = {
+            'job_name': job_name,
+            'logger_prepared': False,
+            # The next ones are set in update_from_cwd
+            'last_log_lines': None,       # tuple
+            'max_job_for_tensor': None,   # defaultdict[int]
+            'tensor_number': None,        # int
+            'timestamp': None,            # str
+            'history_with_same_base_name_exists': None,  # bool
+            }
 
-        # history.info handler - creates file if not yet there
-        self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
-                                            create_new=True)
-        self.update_from_cwd()                                                  # TODO: this is annoying. Logs stuff before running. Can we do it in run instead?
+    # Simple dynamic @properties
+    cwd = _make_property('_paths[cwd]')
+    history_dir_base_name = _make_property(
+        # Notice that this is not necessarily the name of the
+        # history subfolder that is created. Use .history_dir
+        # for that.
+        '_folder_names[history_dir_base_name]',
+        needs_update=True,
+        )
+    history_with_same_base_name_exists = _make_property(
+        '_state_info[history_with_same_base_name_exists]',
+        needs_update=True,
+        )
+    job_name = _make_property('_state_info[job_name]')
+    max_job_for_tensor = _make_property('_state_info[max_job_for_tensor]',
+                                        needs_update=True)
+    tensor_number = _make_property('_state_info[tensor_number]',
+                                   needs_update=True)
+    timestamp = _make_property('_state_info[timestamp]',
+                               needs_update=True)
 
     @property
     def all_cwd_logs(self):
         """Return paths to all the log files in the root directory."""
-        return sum(self.cwd_logs, start=[])
-
-    @property
-    def base_history_dir_name(self):
-        """The name of the history directory based on timestamp, number and name.
-
-        This is not necessarily the name of the history directory! Use
-        self.history_dir.name instead."""
-        suffix = (self.timestamp +
-                  ('' if self.job_name is None else f'_{self.job_name}'))
-        job_number = self.max_job_for_tensor[self.tensor_number]
-        dir_name_fmt = f't{self.tensor_number:03d}.r{{job:03d}}_{suffix}'
-        # If there is already a folder with the same name and correct
-        # timestamp/suffix, we take that, otherwise, we increase the
-        # job number
-        dir_name = dir_name_fmt.format(job=job_number)
-        if not (self.top_level_history_path / dir_name).is_dir():
-            job_number += 1
-        return dir_name_fmt.format(job=job_number)
-
-    @property
-    def cwd_logs(self):
-        calc_logs, other_logs = [], []
-        for file in self.cwd.glob('*.log'):
-            if not file.is_file():
-                continue
-            container = (calc_logs if file.name.startswith(CALC_LOG_PREFIXES)
-                         else other_logs)
-            container.append(file)
-        return calc_logs, other_logs
-
-
-
-
-
-    @property
-    def files_needs_archiving(self):
-        """Check if there are any files that need archiving."""
-        # check for OUT and SUPP
-        files_to_archive = [self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP]
-        # any calc logs
-        files_to_archive.extend(self.cwd_logs[0])
-        # check workhistory
-        if self.work_history_path.is_dir():                                     # TODO: untested
-            files_to_archive.extend(_get_current_workhistory_directories(
-                self.work_history_path, contains='r'))
-        files_to_archive = [file for file in files_to_archive
-                            if file.is_file() or file.is_dir()]
-        return bool(files_to_archive)
-
-    @property
-    def history_with_same_base_name_exists(self):
-        """Check if a history folder with the same base name exists."""
-        all_history_entires = self.top_level_history_path.glob('*')
-        return any(entry.is_dir() and
-                   entry.name.startswith(self.base_history_dir_name)
-                   for entry in all_history_entires)
+        return sum(self.cwd_logs, start=tuple())
 
     @property
     def archiving_required(self):
         """Check if archiving is required."""
-        return (self.files_needs_archiving and
-                not self.history_with_same_base_name_exists)
+        return (self.files_need_archiving
+                and not self.history_with_same_base_name_exists)
+
+    @property
+    @_needs_update_for_attr('_paths[calc_logs]')
+    def cwd_logs(self):
+        """Return log files, split into those of calc and all the others."""
+        return self._paths['calc_logs'], self._paths['other_logs']
+
+    @property
+    @_needs_update_for_attr('_paths[to_be_archived]')
+    def files_need_archiving(self):
+        """Check if there are any files that need archiving."""
+        return bool(self._paths['to_be_archived'])
+
+    @property
+    @_needs_update_for_attr('_folder_names[history_dir]')
+    def history_dir(self):
+        """Return the path to the history subfolder that we deal with.
+
+        This is the directory to which files will be moved upon run().
+
+        Returns
+        -------
+        Path
+        """
+        return self.top_level_history_path / self._folder_names['history_dir']
+
+    @property
+    @_needs_update_for_attr('_history_info')
+    def history_info(self):
+        """Return the HistoryInfoFile handling history.info."""
+        return self._history_info
+
+    @property
+    def orig_inputs_dir(self):
+        """Return the path to the folder containing untouched input files."""
+        return self.cwd / DEFAULT_SUPP / ORIGINAL_INPUTS_DIR_NAME
+
+    @property
+    def top_level_history_path(self):
+        """Return the path to the 'history' folder."""
+        return self.cwd / self._folder_names['top_level_history']
+
+    @property
+    def work_history_path(self):
+        """Return the path to the 'workhistory' folder."""
+        return self.cwd / self._folder_names['workhistory']
 
     def run(self, mode):
         """Run the bookkeeper in the given mode.
@@ -209,32 +313,148 @@ class Bookkeeper:
             raise NotImplementedError from exc
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
-        return runner()
+        self.update_from_cwd()
+        try:
+            return runner()
+        finally:
+            # Clean up all the state attributes so we
+            # don't risk giving the wrong information.
+            self._clean_state()
 
-    def update_from_cwd(self):
+    def update_from_cwd(self, silent=False):
         """Update timestamp, tensor number, log lines, etc. from root.
 
-        This method is called in __init__, but can also be called manually if
-        a new run happens during the lifetime of the bookkeeper.
+        This method is always called automatically before every run
+        of the bookkeeper.
+
+        Parameters
+        ----------
+        silent : bool, optional
+            Whether logging messages should be silenced or not.
+            The default is False.
+
+        Returns
+        -------
+        None.
         """
-        # Figure out the number of the tensor (it's the most recent one)
-        # and the highest run number currently stored for each tensor in
-        # history_path
-        self.tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
-        self.max_job_for_tensor = self._find_max_run_per_tensor()
+        context = logging_silent if silent else nullcontext
+        with context():
+            self._make_history_and_prepare_logger()
 
-        # Infer timestamp from log file, if possible
-        self.timestamp, self.last_log_lines = self._read_most_recent_log()
+            # Figure out the number of the tensor (it's the most recent
+            # one) and the highest run number currently stored for each
+            # tensor in history.
+            tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
+            self._state_info['tensor_number'] = tensor_number
+            self._collect_max_run_per_tensor()
 
-        # get history dir to deal with
-        self.history_dir = (self.top_level_history_path /
-                            self._get_new_history_directory_name())
+            # Infer timestamp from log file, if possible
+            timestamp, log_lines = self._read_most_recent_log()
+            self._state_info['timestamp'] = timestamp
+            self._state_info['last_log_lines'] = log_lines
 
-        # Read the current state of the history.info file
-        self.history_info.read()
+            # Infer which history subfolder we should be handling
+            self._find_base_name_for_history_subfolder()
+            self._find_new_history_directory_name()
 
-    def _copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
-        """Copy files from original_inputs_path to target_path."""
+            # history.info handler (may create history.info file)
+            self._history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
+                                                 create_new=True)
+            self.history_info.read()
+
+            # Collect all the necessary files
+            self._collect_log_files()
+            self._collect_files_to_archive()
+
+    def _clean_state(self):
+        """Rebuild (almost) the same state as after __init__.
+
+        The only surviving attributes are the ones given
+        at __init__ and the state that concerns logging.
+
+        Returns
+        -------
+        None.
+        """
+        kwargs = {
+            'job_name': self.job_name,
+            'history_name': self._folder_names['top_level_history'],
+            'work_history_name': self._folder_names['workhistory'],
+            'cwd': self.cwd
+            }
+        logger_prepared = self._state_info['logger_prepared']
+
+        # Note on the disable: while it is indeed not very elegant to
+        # call __init__ again, it is the simplest way to (i) make it
+        # clear in __init__ which attributes we have, and (ii) avoid
+        # code repetition here. The alternative would be to set all
+        # attributes and keys to None in __init__, and call another
+        # method both in __init__ and here. This seems a lot of
+        # complication just to reset (almost) everything to None.
+        # pylint: disable-next=unnecessary-dunder-call
+        self.__init__(**kwargs)
+        self._state_info['logger_prepared'] = logger_prepared
+
+    @_needs_update_for_attr('_paths[calc_logs]')
+    def _collect_files_to_archive(self):
+        """Scan the root directory for files to be stored to history."""
+        # Check for OUT and SUPP
+        files_to_archive = [self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP]
+        # Any calc logs
+        files_to_archive.extend(self._paths['calc_logs'])
+        # Workhistory folders
+        if self.work_history_path.is_dir():                                     # TODO: untested
+            files_to_archive.extend(
+                self._get_current_workhistory_directories(contains='r')
+                )
+        self._paths['to_be_archived'] = tuple(p for p in files_to_archive
+                                              if p.is_file() or p.is_dir())
+
+    def _collect_log_files(self):
+        """Find the path to log files in root, store them internally."""
+        calc_logs, other_logs = [], []
+        for file in self.cwd.glob('*.log'):
+            if not file.is_file():
+                continue
+            container = (calc_logs if file.name.startswith(CALC_LOG_PREFIXES)
+                         else other_logs)
+            container.append(file)
+        self._paths['calc_logs'] = tuple(calc_logs)
+        self._paths['other_logs'] = tuple(other_logs)
+
+    def _collect_max_run_per_tensor(self):
+        """Find the maximum run numbers for all directories in history."""
+        history_path = self.top_level_history_path
+        max_jobs = defaultdict(int)  # max. job number per tensor number
+        for directory in history_path.iterdir():
+            match = HIST_FOLDER_RE.match(directory.name)
+            if not directory.is_dir() or not match:                             # TODO: untested
+                continue
+            tensor_num = int(match['tensor_num'])
+            job_num = int(match['job_num'])
+            max_jobs[tensor_num] = max(max_jobs[tensor_num], job_num)
+        self._state_info['max_job_for_tensor'] = max_jobs
+
+    def _copy_input_files_from_original_inputs_or_cwd(self, use_ori=False):
+        """Copy input files to the history subfolder.
+
+        The files are preferentially collected from the original_inputs
+        subfolder of SUPP, only if they are not found, they are taken
+        from the root directory (unless they are auto-generated ones).
+        If the root directory contains a newer version of the file
+        than in original_inputs, warn the user (but still copy the one
+        from original_inputs).
+
+        Parameters
+        ----------
+        use_ori : bool, optional
+            Whether '_ori'-suffixed files should be copied rather
+            than 'bare' ones. Default is False.
+
+        Returns
+        -------
+        None.
+        """
         for file in ALL_INPUT_FILES:
             original_file = self.orig_inputs_dir / file
             cwd_file = self.cwd / file
@@ -270,7 +490,7 @@ class Bookkeeper:
             if copy_file:
                 self._copy_one_file_to_history(copy_file, with_name=with_name)
 
-    def _copy_log_files_to_history(self):
+    def _copy_log_files(self):
         """Copy all the log files in root to history."""
         for file in self.all_cwd_logs:
             self._copy_one_file_to_history(file)
@@ -300,8 +520,6 @@ class Bookkeeper:
     def _deal_with_workhistory_and_history_info(self, discard=False):
         """Move work-history subfolders and update the history.info file."""
         tensor_nums = self._move_and_cleanup_workhistory(discard)
-
-        run_info, r_ref, r_super = self._infer_run_info_from_log()
         tensor_nums.add(self.tensor_number)                                     # TODO: how about sorting on tensor numbers?
 
         self.history_info.append_entry(HistoryInfoEntry(
@@ -314,9 +532,7 @@ class Bookkeeper:
             notes=self._read_and_clear_notes_file(),
             # Optional ones
             job_name=self.job_name,
-            run_info=run_info,
-            r_ref=r_ref,
-            r_super=r_super,
+            **self._infer_run_info_from_log()
             ))
 
     def _discard_workhistory_previous(self):                                    # TODO: untested
@@ -332,52 +548,40 @@ class Bookkeeper:
                              f'from {self.work_history_path}',
                              exc_info=True)
 
-    def _find_max_run_per_tensor(self):
-        """Return maximum run numbers for all directories in 'history'.
+    def _find_base_name_for_history_subfolder(self):
+        """Store internally the potential name of the history subfolder.
+
+        This is not necessarily the name of the history directory that
+        is actually created. Use self.history_dir.name instead. See
+        also help(self._get_new_history_directory_name).
 
         Returns
         -------
-        max_nums : defaultdict(int)
-            The maximum run number currently stored in the 'history'
-            folder for each of the tensors in 'history'.
+        None.
         """
-        history_path = self.top_level_history_path
-        max_nums = defaultdict(int)  # max. job number per tensor number
-        for directory in history_path.iterdir():
-            match = HIST_FOLDER_RE.match(directory.name)
-            if not directory.is_dir() or not match:                             # TODO: untested
-                continue
-            tensor_num = int(match['tensor_num'])
-            job_num = int(match['job_num'])
-            max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
-        return max_nums
+        suffix = (self.timestamp +
+                  ('' if self.job_name is None else f'_{self.job_name}'))
+        job_number = self.max_job_for_tensor[self.tensor_number]
+        dir_name_fmt = f't{self.tensor_number:03d}.r{{job:03d}}_{suffix}'
+        # If there is already a folder with the same name and correct
+        # timestamp/suffix, we take that, otherwise, we increase the
+        # job number: it's a new run.
+        dir_name = dir_name_fmt.format(job=job_number)
+        if not (self.top_level_history_path / dir_name).is_dir():
+            job_number += 1
+        base_name = dir_name_fmt.format(job=job_number)
+        self._folder_names['history_dir_base_name'] = base_name
 
-    def _get_current_workhistory_directories(self, contains=''):                # TODO: untested
-        """Return a generator of subfolders in the current workhistory folder.
+        # Now that we have a base name, we can also check if there
+        # are already history folders with the same base name.
+        self._state_info['history_with_same_base_name_exists'] = any(           # TODO: would it be enough to use the info above? We already know if there is a folder with the same base name.
+            self._get_conflicting_history_subfolders()
+            )
 
-        As compared with _get_workhistory_directories, only those
-        directories not marked as 'previous' are returned.
+    def _find_new_history_directory_name(self):
+        """Store internally the name of the history directory to be used.
 
-        Parameters
-        ----------
-        contains : str, optional
-            Select only those subdirectories whose name contains this
-            string. Default is an empty string, corresponding to no
-            filtering other than the one described in Returns.
-
-        Returns
-        -------
-        subfolders : generator
-            When iterated over, it yields paths to the immediate
-            subdirectories of the current workhistory folder whose
-            name matches the HIST_FOLDER_RE regular expression, whose
-            name include `contains`, but does not contain 'previous'.
-        """
-        directories = self._get_workhistory_directories(contains=contains)
-        return (d for d in directories if PREVIOUS_LABEL not in d.name)
-
-    def _get_new_history_directory_name(self):
-        """Return the name of a history directory for a given run.
+        The path to the directory is then available via self.history_dir.
 
         Folder name has form 'tXXX.rYYY_<suffix>'. <suffix> can vary.
         It may be:
@@ -397,13 +601,48 @@ class Bookkeeper:
               moved-<bookie_timestamp>[_<job_name>]_moved-<bookie_timestamp2>
           where <bookie_timestamp2> may be slightly later than
           <bookie_timestamp>, but is most likely the same.
+
+        Returns
+        -------
+        None.
         """
-        dir_name = self.base_history_dir_name
+        dir_name = self.history_dir_base_name
         if (self.top_level_history_path / dir_name).is_dir():                   # TODO: untested
             bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
                                                  time.localtime())
             dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
-        return dir_name
+        self._folder_names['history_dir'] = dir_name
+
+    def _get_conflicting_history_subfolders(self):
+        """Return an iterator of history subfolders with the same base name."""
+        folders = self.top_level_history_path.glob(
+            f'{self.history_dir_base_name}*'
+            )
+        return (f for f in folders if f.is_dir())
+
+    def _get_current_workhistory_directories(self, contains=''):                # TODO: untested
+        """Return a generator of subfolders in the current workhistory folder.
+
+        As compared with _get_workhistory_directories, only those
+        directories not marked as 'previous' are returned.
+
+        Parameters
+        ----------
+        contains : str, optional
+            Select only those subfolders whose name contains this
+            string. Default is an empty string, corresponding to
+            no filtering other than the one described in Returns.
+
+        Returns
+        -------
+        subfolders : generator
+            When iterated over, it yields paths to the immediate
+            subfolders of the current workhistory folder whose name
+            matches the HIST_FOLDER_RE regular expression, contains
+            `contains`, but does not contain 'previous'.
+        """
+        directories = self._get_workhistory_directories(contains=contains)
+        return (d for d in directories if PREVIOUS_LABEL not in d.name)
 
     def _get_workhistory_directories(self, contains=''):                        # TODO: untested
         """Return a generator of subfolders in the current workhistory folder.
@@ -532,21 +771,19 @@ class Bookkeeper:
             tensor_nums.add(tensor_num)
         return tensor_nums
 
+    @_needs_update_for_attr('_state_info[last_log_lines]')
     def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
-        run_info, r_ref, r_super = None, None, None
-        for line in self.last_log_lines:
-            if line.startswith('Executed segments: '):
-                run_info = line.split('Executed segments: ')[1].strip()
+        """Return a dictionary of information read from the calc log."""
+        matched = {k: False for k in _LOG_FILE_RE}
+        log_lines = self._state_info['last_log_lines'] or tuple()
+        for line in reversed(log_lines):  # Info is at the end
+            for info, already_matched in matched.items():
+                if already_matched:
+                    continue
+                matched[info] = _LOG_FILE_RE[info].match(line)
+            if all(matched.values()):
                 break
-        for line in self.last_log_lines:
-            if 'Final R (refcalc)' in line:
-                r_ref = float(line.split(':', maxsplit=1)[1].strip())
-                break
-        for line in self.last_log_lines:
-            if 'Final R (superpos)' in line:
-                r_super = float(line.split(':', maxsplit=1)[1].strip())
-                break
-        return run_info, r_ref, r_super
+        return {k: match[k] for k, match in matched.items() if match}
 
     def _make_and_copy_to_history(self, use_ori=False):
         """Create new history subfolder and copy all files there."""
@@ -557,8 +794,8 @@ class Bookkeeper:
                          f'{self.history_dir}\n Stopping...')
             raise
         self._copy_out_and_supp()
-        self._copy_input_files_from_original_inputs_and_cwd(use_ori)
-        self._copy_log_files_to_history()
+        self._copy_input_files_from_original_inputs_or_cwd(use_ori)
+        self._copy_log_files()
 
     def _read_and_clear_notes_file(self):
         """Return notes read from file. Clear the file contents."""
@@ -635,11 +872,11 @@ class Bookkeeper:
     def _run_archive_mode(self):
         if self.history_with_same_base_name_exists:
             LOGGER.info(
-                f'History directory for run {self.base_history_dir_name} '
+                f'History directory for run {self.history_dir_base_name} '
                 'exists. Exiting without doing anything.'
                 )
             return BookeeperExitCode.NOTHING_TO_DO
-        if not self.files_needs_archiving:
+        if not self.files_need_archiving:
             LOGGER.info('No files to be moved to history. Exiting '
                         'without doing anything.')
             return BookeeperExitCode.NOTHING_TO_DO
@@ -655,7 +892,7 @@ class Bookkeeper:
 
     def _run_clear_mode(self):
         if (not self.history_with_same_base_name_exists
-            and self.files_needs_archiving):
+            and self.files_need_archiving):
             LOGGER.info(f'History folder {self.history_dir} does not '
                         'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=True)
@@ -715,7 +952,7 @@ class Bookkeeper:
         # The directory we want to remove is not self.history_dir (since that   # TODO: don't we also want to purge all the intermediate ones from workhistory?
         # would be _moved-<timestamp>), but the one with the same base name!
         dir_to_remove = (self.top_level_history_path
-                         / self.base_history_dir_name)
+                         / self.history_dir_base_name)
         if not dir_to_remove.is_dir():
             LOGGER.error('FULL_DISCARD mode failed: could not identify '
                          'directory to remove. Please proceed manually.')
@@ -734,7 +971,7 @@ class Bookkeeper:
 
     def _run_discard_mode(self):
         if (not self.history_with_same_base_name_exists
-                and self.files_needs_archiving):
+                and self.files_need_archiving):
             LOGGER.info(f'History folder {self.history_dir} does not '
                         'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=False)

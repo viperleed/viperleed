@@ -59,7 +59,7 @@ with_logs = parametrize(log_file_name=MOCK_LOG_FILES, ids=MOCK_LOG_FILES)
                         cases=cases_bookkeeper,
                         has_tag=Tag.BOOKKEEPER)
 def fixture_mock_tree_after_calc_run(tmp_path, log_file_name,
-                                          history_info_contents):
+                                     history_info_contents):
     """Yield a temporary directory for testing the bookkeeper."""
     deltas_path = tmp_path / 'Deltas'
     tensors_path = tmp_path / 'Tensors'
@@ -120,6 +120,7 @@ def after_calc_run(mock_tree_after_calc_run, job_name, history_name):
     bookkeeper = Bookkeeper(cwd=mock_tree_after_calc_run,
                             job_name=job_name,
                             history_name=history_name)
+    bookkeeper.update_from_cwd(silent=True)
     history_path = mock_tree_after_calc_run / history_name
     dir_name = f't003.r001_{MOCK_TIMESTAMP}'
     if job_name is not None:
