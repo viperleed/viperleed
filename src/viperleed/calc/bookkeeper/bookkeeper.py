@@ -971,7 +971,10 @@ class Bookkeeper:
                          'directory to remove. Please proceed manually.')
             return BookeeperExitCode.FAIL
 
-        # Remove history folder                                                 # TODO: how about the workhistory ones?
+        # Clean up main workhistory
+        self._move_and_cleanup_workhistory(discard=True)
+
+        # Remove history folder
         try:
             shutil.rmtree(dir_to_remove)
         except OSError:                                                         # TODO: untested
