@@ -43,7 +43,9 @@ from .mode import BookkeeperMode
 BOOKIE_LOGFILE = 'bookkeeper.log'  # Persistent among runs
 CALC_LOG_PREFIXES = (
     LOG_PREFIX,
-    'tleedm',   # For backwards compatibility
+    # The next ones are for backwards compatibility. Must
+    # be in historical order of use: Most recent first!
+    'tleedm',
     )
 HIST_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
@@ -349,6 +351,7 @@ class Bookkeeper:
             self._collect_max_run_per_tensor()
 
             # Infer timestamp from log file, if possible
+            self._collect_log_files()
             timestamp, log_lines = self._read_most_recent_log()
             self._state_info['timestamp'] = timestamp
             self._state_info['last_log_lines'] = log_lines
@@ -363,7 +366,6 @@ class Bookkeeper:
             self.history_info.read()
 
             # Collect all the necessary files
-            self._collect_log_files()
             self._collect_files_to_archive()
 
     def _clean_state(self):
@@ -818,15 +820,17 @@ class Bookkeeper:
     def _read_most_recent_log(self):
         """Read timestamp and lines from the most-recent calc log file."""
         last_log_lines = []
+        split_logs = {}
+        for prefix in CALC_LOG_PREFIXES:  # newest to oldest
+            logs = (f for f in self._paths['calc_logs']
+                    if f.name.startswith(prefix))
+            try:
+                split_logs[prefix] = max(logs, key=attrgetter('name'))
+            except ValueError:
+                pass
         try:
-            most_recent_log = max(
-                (log_file
-                 for prefix in CALC_LOG_PREFIXES
-                 for log_file in self.cwd.glob(f'{prefix}*.log')
-                 if log_file.is_file()),
-                key=attrgetter('name')
-                )
-        except ValueError:  # No log files
+            most_recent_log = next(iter(split_logs.values()))
+        except StopIteration:  # No log files
             timestamp = time.strftime('%y%m%d-%H%M%S', time.localtime())
             old_timestamp = f'moved-{timestamp}'
             return old_timestamp, last_log_lines
