@@ -905,8 +905,7 @@ class Bookkeeper:
         return BookeeperExitCode.SUCCESS
 
     def _run_clear_mode(self):
-        if (not self.history_with_same_base_name_exists
-            and self.files_need_archiving):
+        if self.archiving_required:
             LOGGER.info(f'History folder {self.history_dir} does not '
                         'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=True)
@@ -984,8 +983,7 @@ class Bookkeeper:
         return BookeeperExitCode.SUCCESS
 
     def _run_discard_mode(self):
-        if (not self.history_with_same_base_name_exists
-                and self.files_need_archiving):
+        if self.archiving_required:
             LOGGER.info(f'History folder {self.history_dir} does not '
                         'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=False)
