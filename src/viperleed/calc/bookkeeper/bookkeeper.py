@@ -192,7 +192,7 @@ class Bookkeeper:
         ValueError
             If `mode` is not a valid bookkeeper mode.
         NotImplementedError
-            If `mode` is not a valid bookkeeper mode, but
+            If `mode` is a valid bookkeeper mode, but
             there is no method named _run_<mode>_mode.
         OSError
             If creation of the history folder or any of the subfolders
@@ -260,7 +260,6 @@ class Bookkeeper:
                 # these explicitly, they have already been copied
                 # by calc to original_inputs
                 continue
-            elif cwd_file.is_file():  # copy cwd and warn                       # TODO: untested
                 copy_file, with_name = cwd_file, f'{cwd_file.name}_from_root'
                 LOGGER.warning(
                     f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
@@ -312,7 +311,7 @@ class Bookkeeper:
             discarded=discard,
             folder_name=self.history_dir.name,
             notes=self._read_and_clear_notes_file(),
-            # optionals
+            # Optional ones
             job_name=self.job_name,
             run_info=run_info,
             r_ref=r_ref,
