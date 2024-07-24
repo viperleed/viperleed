@@ -513,16 +513,22 @@ class Bookkeeper:
             except (ValueError, IndexError):
                 continue
 
-            tensor_nums.add(tensor_num)
             job_num = self.max_job_for_tensor[tensor_num] + 1
             newname = (
                 f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
                 + directory.name[9:]
                 )
+            target = self.top_level_history_path / newname
+            if target.exists():
+                LOGGER.error(f'Error: Failed to move {directory} to {target}: '
+                             'Target path already exists. Stopping...')
+                raise FileExistsError
             try:
-                shutil.move(directory, self.top_level_history_path / newname)
+                directory.replace(target)
             except OSError:
-                LOGGER.error(f'Error: Failed to move {directory}.')
+                LOGGER.error(f'Error: Failed to move {directory}.',
+                             exc_info=True)
+            tensor_nums.add(tensor_num)
         return tensor_nums
 
     def _infer_run_info_from_log(self):                                         # TODO: untested -- log_lines always empty?
