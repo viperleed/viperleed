@@ -243,7 +243,7 @@ class Bookkeeper:
                 # Copy original, but warn if cwd is newer
                 copy_file = original_file
                 try:
-                    _check_newer(cwd_file, original_file)
+                    _check_newer(older=cwd_file, newer=original_file)
                 except _FileNotOlderError:
                     LOGGER.warning(
                         f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
@@ -753,10 +753,10 @@ class Bookkeeper:
             out_file.rename(cwd_file)
 
 
-def _check_newer(should_be_older, should_be_newer):
-    """Warn if file `should_be_older` is newer than file `should_be_newer`."""
-    newer_timestamp = should_be_newer.stat().st_mtime
-    older_timestamp = should_be_older.stat().st_mtime
+def _check_newer(older, newer):
+    """Raise if file `older` is newer than file `newer`."""
+    newer_timestamp = newer.stat().st_mtime
+    older_timestamp = older.stat().st_mtime
     if newer_timestamp < older_timestamp:                                       # TODO: untested
         raise _FileNotOlderError
 
