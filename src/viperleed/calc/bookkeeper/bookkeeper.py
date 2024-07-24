@@ -763,33 +763,22 @@ def _check_newer(should_be_older, should_be_newer):
 
 def _discard_files(*file_paths):
     """Delete files at `file_paths`. Log if they can't be deleted."""
-    _move_or_discard_files(file_paths, None, discard=True)
-
-
-def _move_or_discard_files(file_paths, target_folder, discard):
-    """Move file_paths to target_folder or delete them."""
     for file in file_paths:
-        _move_or_discard_one_file(file, target_folder, discard)
+        _discard_one_file(file)
 
 
-def _move_or_discard_one_file(file, target_folder, discard):
-    """Move file to target_folder or delete it."""
+def _discard_one_file(file):
+    """Delete a file or directory, if it exists."""
     if not file.exists():
         return
-    if discard and file.is_file():
+    if file.is_file():
         try:
             file.unlink()
         except OSError:                                                         # TODO: untested
             LOGGER.error(f'Failed to discard file {file.name}.')
         return
-    if discard:  # Should be a directory
-        try:
-            shutil.rmtree(file)
-        except OSError:                                                         # TODO: untested
-            LOGGER.error(f'Failed to discard directory {file.name}.')
-        return
-    # Move it
-    try:                                                                        # TODO: untested
-        shutil.move(file, target_folder / file.name)
-    except OSError:
-        LOGGER.error(f'Failed to move {file.name}.')
+    assert file.is_dir()  # Should be a directory
+    try:
+        shutil.rmtree(file)
+    except OSError:                                                             # TODO: untested
+        LOGGER.error(f'Failed to discard directory {file.name}.')
