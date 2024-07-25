@@ -282,7 +282,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             List of MeasureControllerABC objects.
         """
         self._disconnect_secondary_controllers()
-        self._stop_threads()
+        self.stop_threads()
         qtw.qApp.processEvents()
         self.threads.clear()
         for controller in new_controllers:
@@ -1007,7 +1007,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         self.disconnect_devices()
         self._force_end_timer.stop()
-        self._stop_threads()
+        self.stop_threads()
         self.running = False
         self.finished.emit()
 
@@ -1601,7 +1601,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self.error_occurred.emit(error)
         self._init_errors = []
 
-    def _stop_threads(self):
+    def stop_threads(self):
         """Quit all threads immediately."""
         for thread in self.threads:
             thread.quit()
