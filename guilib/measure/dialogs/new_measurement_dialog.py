@@ -42,6 +42,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             'clone_settings': qtw.QCheckBox(),
             }
         self._cfg_dir = Path()
+        self.setWindowTitle('Select measurement type')
         self._compose_and_connect()
 
     @property
