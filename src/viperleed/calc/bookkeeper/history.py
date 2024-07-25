@@ -316,6 +316,11 @@ class TimestampFormat(Enum):
 # for the different fields? Each field could then have a .format and
 # a .check method that do what is done here now. It may a bit tricky
 # to get it right, though.
+# TODO: may be nicer to make _MISSING a MissingField class, then also
+# have DuplicateField and ExtraField classes to handle various
+# situations. An netry should then probably store its ._raw_contents
+# as a list of fields. It would then make way more sense to have
+# separate field classes altogether.
 @dataclass(frozen=True)
 class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     """A container for information in a single "block" of history.info.
