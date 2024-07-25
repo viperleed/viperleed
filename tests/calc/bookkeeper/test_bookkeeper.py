@@ -505,7 +505,7 @@ class TestBookkeeperRaises:
                 # pylint: disable-next=protected-access   # OK in tests
                 bookkeeper._make_history_and_prepare_logger()
 
-        with raises_test_exception('pathlib', 'Path.mkdir'):
+        with raises_test_exception('pathlib.Path.mkdir'):
             # pylint: disable-next=protected-access       # OK in tests
             bookkeeper._make_history_and_prepare_logger()
 
@@ -521,7 +521,7 @@ class TestBookkeeperRaises:
         info = bookkeeper.history_info.path.write_text(info)
         bookkeeper.history_info.read()
 
-        with raises_test_exception('shutil', 'rmtree'):
+        with raises_test_exception('shutil.rmtree'):
             # pylint: disable-next=protected-access       # OK in tests
             bookkeeper._run_discard_full_mode()
         with monkeypatch.context() as patch:
@@ -590,7 +590,7 @@ class TestBookkeeperRaises:
         else:
             args = tuple()
         method = getattr(bookkeeper, method_name)
-        with raises_test_exception(*to_patch.split('.', maxsplit=1)):
+        with raises_test_exception(to_patch):
             method(*args)
 
         with monkeypatch.context() as patch:

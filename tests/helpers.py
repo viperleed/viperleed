@@ -11,7 +11,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
-from collections.abc import Sequence
 from contextlib import contextmanager
 import copy
 from dataclasses import dataclass, fields
@@ -38,7 +37,7 @@ POSCAR_PATH = TEST_DATA / 'POSCARs'
 
 # ##############################   EXCEPTIONS   ###############################
 
-class CustomTestException(Exception):
+class CustomTestException(BaseException):
     """A custom exception for checking try...except blocks."""
 
 
@@ -182,20 +181,58 @@ def not_raises(exception):
 
 
 @contextmanager
-def raises_test_exception(obj, attr):
-    """Temporarily make obj.attr raise CustomTestException."""
+def raises_test_exception(obj, attr=None):
+    """Temporarily make obj.attr raise CustomTestException.
+
+    This context manager is commonly used to test that a certain
+    piece of code does not use catch-all try...except blocks in
+    either try...except or try...except Exception forms.
+
+    Parameters
+    ----------
+    obj : object or str
+        The object whose attribute should be set. May also be
+        the dotted name of a module[.submodules][.class].attribute.
+    attr : str, optional
+        The name of the attribute to be modified. May be omitted if
+        a full dotted name is given as the first argument.
+
+    Returns
+    -------
+    None.
+    """
     # Exclude this function when reporting the exception trace
     __tracebackhide__ = True  # pylint: disable=unused-variable
-    obj_name = (obj.__name__ if inspect.ismodule(obj)
-                else type(obj).__name__)
+    if inspect.ismodule(obj):
+        obj_name = obj.__name__
+    elif isinstance(obj, str):  # Likely a dotted name
+        obj_name = obj
+    else:
+        obj_name = type(obj).__name__
+
+    _err = ('When using the one-argument form, the argument must be a string '
+            'corresponding to the dotted name of the attribute to set.')
+    if attr is None and not isinstance(obj, str):
+        raise TypeError(_err)
+    if attr is not None and not isinstance(attr, str):
+        raise TypeError('attribute name to be patched must be a string')
+    # pylint: disable-next=magic-value-comparison  # OK for the dot
+    if isinstance(obj, str) and not '.' in obj:
+        raise ValueError(_err)
 
     def _replaced(*args, **kwargs):
-        raise CustomTestException(f'Replaced {obj_name}.{attr} was called '
-                                  f'with args={args}, kwargs={kwargs}')
+        patched = f'Replaced {obj_name}'
+        if attr is not None:
+            patched += attr
+        raise CustomTestException(f'{patched} was called with '
+                                  f'args={args}, kwargs={kwargs}')
 
     monkey_patch = pytest.MonkeyPatch
     with monkey_patch.context() as patch, pytest.raises(CustomTestException):
-        patch.setattr(obj, attr, _replaced)
+        if attr is None:
+            patch.setattr(obj, _replaced)
+        else:
+            patch.setattr(obj, attr, _replaced)
         yield
 
 
