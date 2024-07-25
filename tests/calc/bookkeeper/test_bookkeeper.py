@@ -688,15 +688,14 @@ class TestBookkeeperComplaints:
         assert (tmp_path/'POSCAR').is_file()
         assert (target/'POSCAR_from_root').is_file()
 
-    def test_funky_files(self, tmp_path):
-        """Check that funny files and directories are not considered."""
-        bookkeeper = Bookkeeper(cwd=tmp_path)
+    @fixture(name='prepare_funky_files')
+    def fixture_prepare_funky_files(self, tmp_path):
+        """Prepare a bunch of files/folders that will not be considered."""
         # Stuff that should not be copied over:
         not_collected_log = tmp_path/'not_a_log.log'
         not_collected_log.mkdir()
 
         (tmp_path/DEFAULT_OUT).mkdir()  # Otherwise 'nothing to do'
-        bookkeeper.update_from_cwd(silent=True)
 
         # Stuff that should not be considered for the state
         workhistory = tmp_path/DEFAULT_WORK_HISTORY
@@ -708,7 +707,8 @@ class TestBookkeeperComplaints:
             directory.mkdir(parents=True)
 
         # Some stuff in history that should not be considered
-        history = bookkeeper.top_level_history_path
+        history = tmp_path/DEFAULT_HISTORY
+        history.mkdir()
         tensor_num_unused = 999
         invalid_history_stuff = (
             history/f't{tensor_num_unused}.r999_some_file',
@@ -718,6 +718,16 @@ class TestBookkeeperComplaints:
             # pylint: disable-next=magic-value-comparison  # 'file'
             make = getattr(path, 'touch' if 'file' in path.name else 'mkdir')
             make()
+        return (tensor_num_unused, not_collected_log,
+                not_collected_dirs, invalid_history_stuff)
+
+    def test_funky_files(self, prepare_funky_files, tmp_path):                  # TODO: move somewhere else.
+        """Check that funny files and directories are not considered."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        (tensor_num_unused,
+         not_collected_log,
+         not_collected_dirs,
+         invalid_history_stuff) = prepare_funky_files
 
         bookkeeper.update_from_cwd(silent=True)
         history_dir = bookkeeper.history_dir
@@ -746,6 +756,6 @@ class TestBookkeeperComplaints:
         # Now discard should remove workhistory and all the stuff
         bookkeeper.run('discard_full')
         assert not_collected_log.exists()
-        assert not workhistory.exists()
+        assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()
         assert not history_dir.exists()
         assert not history_info.path.read_bytes()
