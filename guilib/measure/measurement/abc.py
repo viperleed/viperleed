@@ -35,6 +35,8 @@ from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.measurement import _meassettings as _settings
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.guilib.measure.widgets.collapsableview import CollapsableCameraList
+from viperleed.guilib.measure.widgets.collapsableview import CollapsableControllerList
 
 _QUEUED = qtc.Qt.QueuedConnection
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -710,6 +712,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         self.check_before_getting_settings_handler()
         handler = SettingsHandler(self.settings, display_config=True)
+        sys_config = SystemSettings()
+        settings_path = sys_config.paths['configuration']
 
         handler.add_section('measurement_info')
         line_edit = qtw.QLineEdit()
@@ -718,11 +722,29 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                            display_name='Measurement tag',
                            )
         text_field = qtw.QTextEdit()
-        text_field.setMaximumHeight(int(text_field.sizeHint().height()/2))
+        height = text_field.sizeHint().height()
+        text_field.setMaximumHeight(int(height/2))
         handler.add_option('measurement_info', 'info',
                            handler_widget=text_field,
                            display_name='Additional information',
                            )
+
+        test_widget = CollapsableControllerList()
+        test_widget.default_settings_folder = settings_path
+        test_widget.setMaximumHeight(height)
+        test_widget.setMinimumHeight(height)
+        handler.add_static_option('measurement_info', 'controllers',
+                                  handler_widget=test_widget,
+                                  display_name='Controllers',
+                                  )
+        test_widget = CollapsableCameraList()
+        test_widget.default_settings_folder = settings_path
+        test_widget.setMaximumHeight(height)
+        test_widget.setMinimumHeight(height)
+        handler.add_static_option('measurement_info', 'cameras',
+                                  handler_widget=test_widget,
+                                  display_name='Cameras',
+                                  )
 
         handler.add_section('measurement_settings')
         type_display = qtw.QLabel()
