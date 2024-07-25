@@ -405,6 +405,16 @@ def get_devices(package):
     return devices
 
 
+def make_device(settings_file, device_cls, settings_info, **kwargs):
+    """Instantiate a device."""
+    if 'address' in settings_info.more:
+        address = settings_info.more['address']
+        device = device_cls(settings=settings_file, address=address, **kwargs)
+    else:
+        device = device_cls(settings=settings_file, **kwargs)
+    return device
+
+
 def safe_connect(signal, slot, **kwargs):
     """Connect signal to slot swallowing TypeError."""
     if not callable(slot) and not isinstance(slot, qtc.pyqtSignal):
