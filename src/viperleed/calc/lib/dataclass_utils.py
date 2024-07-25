@@ -48,10 +48,10 @@ def set_frozen_attr(self, attr_name, attr_value):
     object.__setattr__(self, attr_name, attr_value)
 
 
-def is_optional_field(field, with_type=None):
+def is_optional_field(field_, with_type=None):
     """Return whether a datclasses.Field is optional."""
     if with_type is None:
-        with_type = field.type
+        with_type = field_.type
     # The following trick works because Optional removes 'repeated'
     # entries, so that Optional[Optional[t]] == Optional[t]
-    return field.type == Optional[with_type]
+    return field_.type == Optional[with_type]
