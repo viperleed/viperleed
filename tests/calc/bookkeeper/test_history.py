@@ -272,9 +272,9 @@ class TestHistoryEntryRaises:
 class TestHistoryInfoFile:
     """Collection of tests for reading/writing the history.info file."""
 
-    def test_history_info_read_contents(self, after_calc_run):
+    def test_history_info_read_contents(self, after_calc_execution):
         """Check that the history.info file is read correctly."""
-        bookkeeper, *_ = after_calc_run
+        bookkeeper, *_ = after_calc_execution
         history_info = bookkeeper.history_info
         actual_file = bookkeeper.cwd / HISTORY_INFO_NAME
         assert actual_file.exists()

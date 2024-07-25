@@ -30,7 +30,7 @@ from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import _DISCARDED
 from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
-from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
@@ -56,16 +56,16 @@ not_raises_oserror = functools.partial(not_raises, exc=OSError)
 
 
 @fixture(name='after_archive')
-def fixture_after_archive(after_calc_run):
+def fixture_after_archive(after_calc_execution):
     """Yield a temporary directory for testing the bookkeeper."""
-    bookkeeper, *_ = after_calc_run
-    bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+    bookkeeper, *_ = after_calc_execution
+    bookkeeper.run(mode=Mode.ARCHIVE)
     bookkeeper.update_from_cwd(silent=True)
-    return after_calc_run
+    return after_calc_execution
 
 
-@fixture(name='before_calc_run')
-def fixture_before_calc_run(tmp_path):
+@fixture(name='before_calc_execution')
+def fixture_before_calc_execution(tmp_path):
     """Yield a temporary directory for testing the bookkeeper.
 
     This represents a new calculation, i.e., before any viperleed calc or
@@ -96,9 +96,9 @@ def fixture_before_calc_run(tmp_path):
 
 
 @fixture(name='history_path')
-def fixture_history_path(mock_tree_after_calc_run):
-    """Return the path to a history subfolder of `mock_tree_after_calc_run`."""
-    return mock_tree_after_calc_run / DEFAULT_HISTORY
+def fixture_history_path(mock_tree_after_calc_execution):
+    """Return the path to a history subfolder after a calc execution."""
+    return mock_tree_after_calc_execution / DEFAULT_HISTORY
 
 
 @fixture(name='history_run_path')
@@ -148,6 +148,18 @@ class _TestBookkeeperRunBase:
             assert hist_file.is_file()
             assert MOCK_OUT_CONTENT in hist_file.read_text()
 
+    def check_root_inputs_renamed_to_ori(self, bookkeeper, *_,
+                                         check_input_contents=True):
+        """Check that the input files have now a _ori suffix."""
+        cwd = bookkeeper.cwd
+        for file in MOCK_STATE_FILES:
+            ori_contents = (cwd / f'{file}_ori').read_text()
+            assert MOCK_INPUT_CONTENT in ori_contents
+            if not check_input_contents:
+                continue
+            input_content = (cwd / file).read_text()
+            assert MOCK_OUT_CONTENT in input_content
+
     def check_root_inputs_replaced_by_out(self, bookkeeper, *_):
         """Check that the input files in root come from OUT."""
         cwd = bookkeeper.cwd
@@ -163,6 +175,16 @@ class _TestBookkeeperRunBase:
             input_content = (cwd / file).read_text()
             assert MOCK_INPUT_CONTENT in input_content
 
+    def check_root_after_archive(self, *after_archive,
+                                 check_input_contents=True):
+        """Make sure the root is structured as expected after archiving."""
+        self.check_root_inputs_renamed_to_ori(
+            *after_archive,
+            check_input_contents=check_input_contents
+            )
+        if check_input_contents:
+            self.check_root_inputs_replaced_by_out(*after_archive)
+
     def check_root_is_clean(self, bookkeeper, *_):
         """Check that no calc output is present in the main directory."""
         cwd = bookkeeper.cwd
@@ -172,7 +194,8 @@ class _TestBookkeeperRunBase:
         assert not (cwd / DEFAULT_OUT).exists()
         assert not any(cwd.glob('*.log'))
 
-    def _test_after_archive_base(self, after_archive):
+    def run_after_archive_and_check(self, after_archive,
+                                    check_input_contents=True):
         """Check that running bookkeeper after ARCHIVE does basic stuff."""
         bookkeeper, *_ = after_archive
         # bookkeeper should not think that it needs archiving
@@ -181,7 +204,13 @@ class _TestBookkeeperRunBase:
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
-        self.check_root_is_clean(*after_archive)
+        if self.mode is Mode.ARCHIVE:
+            self.check_root_after_archive(
+                *after_archive,
+                check_input_contents=check_input_contents,
+                )
+        else:
+            self.check_root_is_clean(*after_archive)
         # Check that the workhistory directories are
         # also where they should be
         history = bookkeeper.top_level_history_path
@@ -196,46 +225,36 @@ class _TestBookkeeperRunBase:
             assert moved_file.is_file()
             assert ori_name in moved_file.read_text()
 
-    def _test_after_calc_run_base(self, after_calc_run):
+    def run_after_calc_exec_and_check(self, after_calc_execution):
         """Check that running bookkeeper after calc does some basic stuff."""
-        bookkeeper, *_ = after_calc_run
+        bookkeeper, *_ = after_calc_execution
         # bookkeeper should think that it needs archiving
         assert bookkeeper.archiving_required
         bookkeeper.run(mode=self.mode)
         bookkeeper.update_from_cwd(silent=True)
-        self.check_history_exists(*after_calc_run)
-        self.check_out_files_in_history(*after_calc_run)
+        self.check_history_exists(*after_calc_execution)
+        self.check_out_files_in_history(*after_calc_execution)
 
-    def test_before_calc_run(self, before_calc_run):
+    def run_before_calc_exec_and_check(self, before_calc_execution):
         """Check that running bookkeeper before calc does almost nothing."""
-        bookkeeper = before_calc_run
+        bookkeeper = before_calc_execution
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
         bookkeeper.run(mode=self.mode)
         # Bookkeeper should not do anything (except for logging)
-        self.check_history_folder_empty(before_calc_run)
-        self.check_root_inputs_untouched(before_calc_run)
+        self.check_history_folder_empty(before_calc_execution)
+        self.check_root_inputs_untouched(before_calc_execution)
 
 
 class TestBookkeeperArchive(_TestBookkeeperRunBase):
     """Tests for correct behavior of ARCHIVE bookkeeper runs."""
 
-    mode = BookkeeperMode.ARCHIVE
+    mode = Mode.ARCHIVE
 
-    def _check_root_inputs_renamed_to_ori(self, bookkeeper, *_):
-        """Check that the input files have now a _ori suffix."""
-        cwd = bookkeeper.cwd
-        for file in MOCK_STATE_FILES:
-            ori_file = cwd / f'{file}_ori'
-            assert ori_file.is_file()
-            input_content = (cwd / file).read_text()
-            assert MOCK_OUT_CONTENT in input_content
-
-    def test_archive_after_calc_run(self, after_calc_run, caplog):
+    def test_archive_after_calc_exec(self, after_calc_execution, caplog):
         """Check correct storage of history files in ARCHIVE mode."""
-        self._test_after_calc_run_base(after_calc_run)
-        self._check_root_inputs_renamed_to_ori(*after_calc_run)
-        self.check_root_inputs_replaced_by_out(*after_calc_run)
+        self.run_after_calc_exec_and_check(after_calc_execution)
+        self.check_root_after_archive(*after_calc_execution)
         self.check_no_warnings(caplog)
 
     def test_archive_again(self, after_archive, caplog):
@@ -246,36 +265,35 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         sentinel_text = 'something else'
         for file in MOCK_STATE_FILES:
             (cwd / file).write_text(sentinel_text)
-        super()._test_after_archive_base(after_archive)
+        self.run_after_archive_and_check(after_archive,
+                                         check_input_contents=False)
         for file in MOCK_STATE_FILES:
             assert (cwd / file).read_text() == sentinel_text
         self.check_no_warnings(caplog)
 
-    # pylint: disable-next=arguments-differ
-    def test_before_calc_run(self, before_calc_run, caplog):
+    def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check no archiving happens before calc runs."""
-        super().test_before_calc_run(before_calc_run)
+        self.run_before_calc_exec_and_check(before_calc_execution)
         self.check_no_warnings(caplog)
 
 
 class TestBookkeeperClear(_TestBookkeeperRunBase):
     """Tests for correct behavior of CLEAR bookkeeper runs."""
 
-    mode = BookkeeperMode.CLEAR
+    mode = Mode.CLEAR
 
-    # pylint: disable-next=arguments-differ
-    def test_before_calc_run(self, before_calc_run, caplog):
+    def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in CLEAR mode."""
-        super().test_before_calc_run(before_calc_run)
+        self.run_before_calc_exec_and_check(before_calc_execution)
         self.check_no_warnings(caplog)
 
     def test_clear_after_archive(self, after_archive, caplog):
         """Check behavior of CLEAR after ARCHIVE (e.g., manual call)."""
-        self._test_after_archive_base(after_archive)
+        self.run_after_archive_and_check(after_archive)
         self.check_root_inputs_replaced_by_out(*after_archive)
         self.check_no_warnings(caplog)
 
-    def test_clear_after_calc_run(self, after_calc_run, caplog):
+    def test_clear_after_calc_exec(self, after_calc_execution, caplog):
         """Check behavior of CLEAR after a non-ARCHIVEd calc run.
 
         This may happen, for example, if the previous (calc or
@@ -283,32 +301,31 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
 
         Parameters
         ----------
-        after_calc_run: fixture
+        after_calc_execution: fixture
         caplog: fixture
 
         Returns
         -------
         None.
         """
-        self._test_after_calc_run_base(after_calc_run)
+        self.run_after_calc_exec_and_check(after_calc_execution)
         self.check_no_warnings(caplog)
-        self.check_root_is_clean(*after_calc_run)
+        self.check_root_is_clean(*after_calc_execution)
 
         # Original SHOULD NOT be replaced by output:
         # ARCHIVE does not run only if the run crashed,
         # in which case we don't want to overwrite
-        self.check_root_inputs_untouched(*after_calc_run)
+        self.check_root_inputs_untouched(*after_calc_execution)
 
 
 class TestBookkeeperDiscard(_TestBookkeeperRunBase):
     """Tests for correct behavior of DISCARD bookkeeper runs."""
 
-    mode = BookkeeperMode.DISCARD
+    mode = Mode.DISCARD
 
-    # pylint: disable-next=arguments-differ
-    def test_before_calc_run(self, before_calc_run, caplog):
+    def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in CLEAR mode."""
-        super().test_before_calc_run(before_calc_run)
+        self.run_before_calc_exec_and_check(before_calc_execution)
         self.check_no_warnings(
             caplog,
             exclude_msgs=('Failed to mark last entry as discarded',),
@@ -316,7 +333,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 
     def test_discard_after_archive(self, after_archive, caplog):
         """Check reverting of state when DISCARDing an ARCHIVEd calc run."""
-        self._test_after_archive_base(after_archive)
+        self.run_after_archive_and_check(after_archive)
 
         # Original be replaced by output                                        # TODO: this does something else!
         bookkeeper, *_ = after_archive
@@ -335,7 +352,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
             )
         self.check_no_warnings(caplog, exclude_msgs=faulty_entry_logs)
 
-    def test_discard_after_calc_run(self, after_calc_run, caplog):
+    def test_discard_after_calc_exec(self, after_calc_execution, caplog):
         """Check behavior of DISCARD after a non-ARCHIVEd calc run.
 
         This may happen, for example, if the previous (calc or
@@ -343,24 +360,24 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 
         Parameters
         ----------
-        after_calc_run: fixture
+        after_calc_execution: fixture
         caplog: fixture
 
         Returns
         -------
         None.
         """
-        self._test_after_calc_run_base(after_calc_run)
+        self.run_after_calc_exec_and_check(after_calc_execution)
         self.check_no_warnings(caplog, exclude_msgs=('discarded',))
-        self.check_root_is_clean(*after_calc_run)
+        self.check_root_is_clean(*after_calc_execution)
 
         # Original SHOULD NOT be replaced by output:
         # ARCHIVE does not run only if the run crashed,
         # in which case we don't want to overwrite
-        self.check_root_inputs_untouched(*after_calc_run)
+        self.check_root_inputs_untouched(*after_calc_execution)
 
         # A 'DISCARDED' note should be in history.info
-        bookkeeper, *_ = after_calc_run
+        bookkeeper, *_ = after_calc_execution
         assert bookkeeper.history_info.last_entry_was_discarded
         assert _DISCARDED in bookkeeper.history_info.path.read_text()
 
@@ -368,24 +385,23 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
     """Tests for correct behavior of DISCARD_FULL bookkeeper runs."""
 
-    mode = BookkeeperMode.DISCARD_FULL
+    mode = Mode.DISCARD_FULL
 
-    # pylint: disable-next=arguments-differ
-    def test_before_calc_run(self, before_calc_run, caplog):
+    def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in DISCARD_FULL mode.
 
         This should do the same as a normal DISCARD.
 
         Parameters
         ----------
-        before_calc_run: fixture
+        before_calc_execution: fixture
         caplog: fixture
 
         Returns
         -------
         None.
         """
-        super().test_before_calc_run(before_calc_run)
+        self.run_before_calc_exec_and_check(before_calc_execution)
         self.check_no_warnings(
             caplog,
             exclude_msgs=('remove',)   # Catches two expected warnings
@@ -417,9 +433,9 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         self.check_root_inputs_untouched(*after_archive)
         self.check_no_warnings(caplog)
 
-    def test_discard_full_after_calc_run(self, after_calc_run, caplog):
+    def test_discard_full_after_calc_exec(self, after_calc_execution, caplog):
         """Check behavior of DISCARD_FULL on a non-ARCHIVEd calc run."""
-        bookkeeper, *_, history_run_path = after_calc_run
+        bookkeeper, *_, history_run_path = after_calc_execution
         cwd = bookkeeper.cwd
         notes_in_history_info = (
             NOTES_TEST_CONTENT in (cwd / HISTORY_INFO_NAME).read_text()
@@ -651,7 +667,7 @@ class TestBookkeeperRaises:
         }
 
     @parametrize(method_name=_os_error)
-    def test_oserror(self, method_name, tmp_path, monkeypatch, caplog):
+    def test_oserror(self, method_name, tmp_path, caplog):
         """Check expected outcome of calling a method on a bookkeeper."""
 
         workhistory = tmp_path/DEFAULT_WORK_HISTORY

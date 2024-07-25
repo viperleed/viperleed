@@ -2,10 +2,10 @@
 
 Fixtures
 --------
-after_calc_run
+after_calc_execution
     Return the path to a temporary directory after a bookkeeper
     execution.
-mock_tree_after_calc_run
+mock_tree_after_calc_execution
     Yield a temporary directory for testing the bookkeeper.
 """
 
@@ -60,13 +60,13 @@ with_jobs = parametrize(job_name=MOCK_JOB_NAMES)
 with_logs = parametrize(log_file_name=MOCK_LOG_FILES)
 
 
-@fixture(name='mock_tree_after_calc_run')
+@fixture(name='mock_tree_after_calc_execution')
 @with_logs
 @parametrize_with_cases('history_info_contents',
                         cases=cases_bookkeeper,
                         has_tag=Tag.BOOKKEEPER)
-def fixture_mock_tree_after_calc_run(tmp_path, log_file_name,
-                                     history_info_contents):
+def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
+                                           history_info_contents):
     """Yield a temporary directory for testing the bookkeeper."""
     deltas_path = tmp_path / 'Deltas'
     tensors_path = tmp_path / 'Tensors'
@@ -128,13 +128,14 @@ def fixture_mock_tree_after_calc_run(tmp_path, log_file_name,
 @fixture
 @with_jobs
 @with_history_name
-def after_calc_run(mock_tree_after_calc_run, job_name, history_name):
+def after_calc_execution(mock_tree_after_calc_execution,
+                         job_name, history_name):
     """Return the bookkeeper, and the path to the history subfolder."""
-    bookkeeper = Bookkeeper(cwd=mock_tree_after_calc_run,
+    bookkeeper = Bookkeeper(cwd=mock_tree_after_calc_execution,
                             job_name=job_name,
                             history_name=history_name)
     bookkeeper.update_from_cwd(silent=True)
-    history_path = mock_tree_after_calc_run / history_name
+    history_path = bookkeeper.cwd / history_name
     dir_name = f't003.r001_{MOCK_TIMESTAMP}'
     if job_name is not None:
         dir_name += f'_{job_name}'
