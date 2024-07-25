@@ -26,6 +26,7 @@ from typing import Dict, List, Optional, Union
 
 from viperleed.calc.lib.base import logging_silent
 from viperleed.calc.lib.dataclass_utils import is_optional_field
+from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from .constants import HISTORY_INFO_NAME
 from .constants import LOGGER
@@ -584,7 +585,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         if fmt is self._time_format:
             return self
         new = deepcopy(self)
-        object.__setattr__(new, '_time_format', fmt)
+        set_frozen_attr(new, '_time_format', fmt)
         # And clean up possible time format issues
         if fmt is fmt.DEFAULT:
             # pylint: disable-next=protected-access  # It's a deepcopy
@@ -628,7 +629,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         """Complain if a mandatory field is empty."""
         value = getattr(self, attr)
         if isinstance(value, str) and not value.strip():
-            object.__setattr__(self, attr, '')
+            set_frozen_attr(self, attr, '')
             raise EntrySyntaxError(_MSG_EMPTY)
 
     def _check_missing(self, attr):
@@ -646,11 +647,11 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         if value is None:  # R factors are optional
             return
         if isinstance(value, str) and not value.strip():
-            object.__setattr__(self, which_r, '')
+            set_frozen_attr(self, which_r, '')
             raise EntrySyntaxError(_MSG_EMPTY)
         if isinstance(value, str):  # Non-empty
             value = self._fixup_float_string(value)
-            object.__setattr__(self, which_r, value)
+            set_frozen_attr(self, which_r, value)
         if not isinstance(value, float):
             raise EntrySyntaxError(_MSG_NO_FLOAT)
         if not -1e-5 < value < 2+1e-5:
@@ -673,7 +674,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             raise EntrySyntaxError(_MSG_NO_STRING)
         value = value.strip()
         if not value:
-            object.__setattr__(self, 'run_info', '')
+            set_frozen_attr(self, 'run_info', '')
             raise EntrySyntaxError(_MSG_EMPTY)
         if not re.fullmatch(_SPACE_SEPARATED, value):
             raise EntrySyntaxError('Not a space-separated list of integers.')
@@ -686,7 +687,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         """Check whether the value of `attr` is a valid list of integers."""
         self._check_missing(attr)
 
-        # Below we use object.__setattr__ to circumvent the frozen
+        # Below we use set_frozen_attr to circumvent the frozen
         # dataclass. Notice that this is not a problem, as we call
         # this method only in __post_init__, and __hash__ uses a
         # tuple of the values of the attributes.
@@ -698,10 +699,10 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             or (isinstance(value, str) and value.strip() == str(None))
             )
         if accept_none and is_akin_to_none:
-            object.__setattr__(self, attr, [])
+            set_frozen_attr(self, attr, [])
             return
         if not accept_none and not value:
-            object.__setattr__(self, attr, [])
+            set_frozen_attr(self, attr, [])
             raise EntrySyntaxError(_MSG_EMPTY)
         if isinstance(value, str):
             self._fixup_list_of_int_string(attr, value)
@@ -728,20 +729,20 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
 
         value = value.replace('moved-', '').strip()
         if not value:
-            object.__setattr__(self, 'timestamp', '')
+            set_frozen_attr(self, 'timestamp', '')
             raise EntrySyntaxError(_MSG_EMPTY)
 
         for fmt in TimestampFormat:
             try:
-                object.__setattr__(self,
-                                   'timestamp',
-                                   datetime.strptime(value, fmt.value))
+                set_frozen_attr(self,
+                                'timestamp',
+                                datetime.strptime(value, fmt.value))
             except ValueError:  # Not the right format
                 continue
             # Conversion successful. Remember the format,
             # as long as it is acceptable for writing
             if fmt.writable:
-                object.__setattr__(self, '_time_format', fmt)
+                set_frozen_attr(self, '_time_format', fmt)
             break
         else:  # No valid format
             raise EntrySyntaxError('Field could not be parsed as a date-time')
@@ -763,7 +764,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
                            partial(self._format_field, field_name=field))
             for field in _TAG
             }
-        object.__setattr__(self, '_formatters', formatters)
+        set_frozen_attr(self, '_formatters', formatters)
 
     def _fixup_float_string(self, value_str):
         """Try converting `value_str` to a float value."""
@@ -788,7 +789,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
 
         value = list(ast.literal_eval(value_str + ','))
         if comma_separated:  # Format OK. Store list instead of str
-            object.__setattr__(self, attr, value)
+            set_frozen_attr(self, attr, value)
             return
         reason = 'some space-separated items, rather than comma separated'
         self._needs_fixup[attr] = (reason, value)

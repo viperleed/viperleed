@@ -14,6 +14,40 @@ __license__ = 'GPLv3+'
 from typing import Optional
 
 
+# TODO: this may be made stricter to ensure it is only used
+# inside the source code of a dataclass and not from user code.
+# One can use sys._get_frame (CPython only) as suggested in
+# https://stackoverflow.com/questions/900392 or
+# https://stackoverflow.com/questions/2654113
+def set_frozen_attr(self, attr_name, attr_value):
+    """Set self.attr_name to attr_value even if self is frozen.
+
+    It is **VERY IMPORTANT** to realize that this function is a
+    workaround that makes a frozen dataclass not actually frozen.
+    It is thus critical that this function is used **only** in
+    a context where it makes sense to actually modify an attribute
+    of a dataclass that is supposed to be immutable. This usually
+    means that this function should be used ONLY INTERNALLY in the
+    implementation of a dataclass.
+
+    Parameters
+    ----------
+    self : dataclass
+        The dataclass whose attribute should be set.
+    attr_name : str
+        The name of the attribute to set.
+    attr_value : object
+        The value of the attribute.
+
+    Raises
+    ------
+    AttributeError
+        If self has no `attr_name` attribute.
+    """
+    getattr(self, attr_name)  # Raises AttributeError if not present
+    object.__setattr__(self, attr_name, attr_value)
+
+
 def is_optional_field(field, with_type=None):
     """Return whether a datclasses.Field is optional."""
     if with_type is None:
