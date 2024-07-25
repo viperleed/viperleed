@@ -456,6 +456,9 @@ class SettingsDialogOption(qtc.QObject):
             Vertical alignment of label field relative to handler_widget.
             Only the first character matters. Any character other than 'c'
             or 'b' will be treated as 'top'. Default is 'top'.
+        relevant_for_meas: bool, optional
+            Whether this option is to be displayed when
+            editing measurement settings. Default is False.
         **kwargs : object
             Other keyword arguments passed on to handler_widget if
             only a QWidget class is given.
@@ -472,6 +475,7 @@ class SettingsDialogOption(qtc.QObject):
         self.option_name = option_name
         self._advanced = kwargs.pop('is_advanced', False)
         self._read_only = bool(kwargs.pop('read_only', False))
+        self._relevant_for_meas = kwargs.pop('relevant_for_meas', False)
 
         if isinstance(handler_widget, type(qtw.QWidget)):
             handler_widget = handler_widget(*args, **kwargs)
@@ -529,6 +533,16 @@ class SettingsDialogOption(qtc.QObject):
     def read_only(self):
         """Return whether this option can be modified."""
         return self._read_only
+
+    @property
+    def relevant_for_meas(self):
+        """Return whether this option is relevant for measurements."""
+        return self._relevant_for_meas
+
+    @relevant_for_meas.setter
+    def relevant_for_meas(self, relevant):
+        """Set whether this option is relevant for measurements."""
+        self._relevant_for_meas = bool(relevant)
 
     def get_(self):
         """Return the value of this option as a string."""
@@ -685,6 +699,11 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
         is_advanced : bool, optional
             Whether this section contains only settings that are to be
             displayed if a user selects the 'Advanced' display.
+            Default is False.
+        relevant_for_meas: bool, optional
+            Whether this this section contains only settings that are to
+            be displayed when editing measurement settings.
+            Default is False.
         parent : QWidget, optional
             The parent widget of this SettingsDialogSection. Default
             is None.
@@ -701,6 +720,7 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
         tooltip = kwargs.get('tooltip', '')
 
         self._advanced = kwargs.get('is_advanced', False)
+        self._relevant_for_meas = kwargs.pop('relevant_for_meas', False)
 
         self._info = qtw.QLabel()
         self.central_widget = qtw.QWidget()
@@ -722,6 +742,16 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
     def advanced(self, advanced):
         """Mark this section as containing only advanced settings."""
         self._advanced = bool(advanced)
+
+    @property
+    def relevant_for_meas(self):
+        """Return whether this section contains only measurement settings."""
+        return self._relevant_for_meas
+
+    @relevant_for_meas.setter
+    def relevant_for_meas(self, relevant):
+        """Mark this section as containing only measurment settings."""
+        self._relevant_for_meas = bool(relevant)
 
     def set_info(self, info_text):
         """Add informative text in a QLabel."""
@@ -826,6 +856,8 @@ class SettingsDialogSection(SettingsDialogSectionBase):
         self.__layout.addRow(*option)
         if self.advanced:
             option.advanced = True
+        if self.relevant_for_meas:
+            option.relevant_for_meas = True
         option.handler_widget_changed.connect(self.__on_option_widget_changed)
 
     def add_options(self, options):
@@ -908,6 +940,7 @@ class SettingsDialog(qtw.QDialog):
         self.__settings = {'current': settings,
                            'applied': copy.deepcopy(settings),
                            'original': copy.deepcopy(settings)}
+        self._measurement_settings_only = False
 
         # Set up children widgets and self
         self.__ctrls = {
@@ -922,6 +955,11 @@ class SettingsDialog(qtw.QDialog):
                             & ~qtc.Qt.WindowContextHelpButtonHint)
 
     @property
+    def adv_button(self):
+        """Return the advanced settings button."""
+        return self.__ctrls['advanced']
+
+    @property
     def settings(self):
         """Return the settings currently displayed."""
         return self.__settings['current']
@@ -930,6 +968,17 @@ class SettingsDialog(qtw.QDialog):
     def handled_object(self):
         """Return the object whose settings are shown."""
         return self._handled_obj
+
+    @property
+    def measurement_settings_only(self):
+        """Return whether only measurement settings should be shown."""
+        return self._measurement_settings_only
+
+    @measurement_settings_only.setter
+    def measurement_settings_only(self, meas_only):
+        """Set whether only measurement settings should be shown."""
+        self._only_show_measurement_settings()
+        self._measurement_settings_only = meas_only
 
     @qtc.pyqtSlot()
     def accept(self):
@@ -946,8 +995,14 @@ class SettingsDialog(qtw.QDialog):
                 )
             _saved = reply == _MSGBOX.Save
             if _saved:
-                self.settings.update_file()
-                self.__settings['original'].read_dict(self.settings)
+                try:
+                    self.settings.update_file()
+                except FileNotFoundError:
+                    # The file must have been moved before
+                    # the settings could be saved.                              # TODO: open QMessageBox to ask the user how to proceed from here. Ask whether the user wants to save the settings and if yes, ask where and under which name.
+                    pass
+                finally:
+                    self.__settings['original'].read_dict(self.settings)
             self.settings_saved.emit(_saved)
         super().accept()
 
@@ -983,7 +1038,7 @@ class SettingsDialog(qtw.QDialog):
             # i.e., not a show after minimized
             self.settings.read_again()
             self.handler.update_widgets()
-            self.__ctrls['advanced'].setChecked(False)
+            self.adv_button.setChecked(False)
             if self.handled_object:
                 self.update_title()
             # Update all settings with the current ones, and
@@ -1019,15 +1074,14 @@ class SettingsDialog(qtw.QDialog):
         self.__ctrls['apply'] = apply_btn = buttons.buttons()[-1]
         apply_btn.setEnabled(False)
 
-        adv_btn = self.__ctrls['advanced']
-        adv_btn.setDefault(False)
-        adv_btn.setAutoDefault(False)
-        adv_btn.setCheckable(True)
+        self.adv_button.setDefault(False)
+        self.adv_button.setAutoDefault(False)
+        self.adv_button.setCheckable(True)
 
         # Use a ResetRole to have the button placed in a
         # different spot than all others on every platform
-        buttons.addButton(adv_btn, _bbox.ResetRole)
-        # adv_btn.setVisible(self.handler.has_advanced_options())
+        buttons.addButton(self.adv_button, _bbox.ResetRole)
+        # self.adv_button.setVisible(self.handler.has_advanced_options())
 
         layout = qtw.QVBoxLayout()
         for widg in self.handler.widgets:
@@ -1050,7 +1104,7 @@ class SettingsDialog(qtw.QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         apply_btn.clicked.connect(self.__on_apply_pressed)
-        adv_btn.toggled.connect(self.__on_show_advanced_toggled)
+        self.adv_button.toggled.connect(self.__on_show_advanced_toggled)
         self.handler.settings_changed.connect(self.__update_apply_enabled)
         self.handler.redraw_needed.connect(self.__update_advanced_btn)
 
@@ -1073,7 +1127,7 @@ class SettingsDialog(qtw.QDialog):
             btn_text = "Show less"
         else:
             btn_text = "Show all"
-        self.__ctrls['advanced'].setText(btn_text)
+        self.adv_button.setText(btn_text)
         for widg in self.handler.widgets:
             if isinstance(widg, SettingsDialogSection):
                 _section_visible = False
@@ -1085,12 +1139,24 @@ class SettingsDialog(qtw.QDialog):
                 widg.setVisible(visible or not widg.advanced)
         self.adjustSize()   # TODO: does not always adjust when going smaller?
 
+    def _only_show_measurement_settings(self):
+        """Hide all settings that are not relevant for the measurement."""
+        for widg in self.handler.widgets:
+            if isinstance(widg, SettingsDialogSection):
+                _section_visible = False
+                for option in widg.options:
+                    _section_visible |= option.relevant_for_meas
+                    option.setVisible(option.relevant_for_meas)
+                widg.setVisible(_section_visible)
+            else:
+                widg.setVisible(widg.relevant_for_meas)
+        self.adjustSize()
+
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):
         """Update visibility of button and options."""
-        adv_btn = self.__ctrls['advanced']
-        adv_btn.setVisible(self.handler.has_advanced_options())
-        self.__on_show_advanced_toggled(adv_btn.isChecked())
+        self.adv_button.setVisible(self.handler.has_advanced_options())
+        self.__on_show_advanced_toggled(self.adv_button.isChecked())
 
     def __update_apply_enabled(self):
         """Enable/disable 'Apply' depending on whether anything changed."""
