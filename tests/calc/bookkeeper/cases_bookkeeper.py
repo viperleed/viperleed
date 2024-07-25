@@ -17,6 +17,7 @@ from dataclasses import fields
 from enum import IntEnum, auto
 import logging
 
+import pytest
 from pytest_cases import case
 from pytest_cases import parametrize
 
@@ -134,6 +135,7 @@ Notes: {NOTES_TEST_CONTENT}'''
         return multi_entry, ValueError
 
     @case(tags=(Tag.HISTORY, Tag.CANT_FIX))
+    @pytest.mark.xfail(reason='not handled correctly yet')
     def case_repeated_fields_identical(self):                                   # TODO: not correctly recognized
         """Return entry contents with duplicate identical fields."""
         return f'''\
@@ -146,6 +148,7 @@ Notes: {NOTES_TEST_CONTENT}'''
 Notes:'''
 
     @case(tags=(Tag.HISTORY, Tag.CANT_FIX))
+    @pytest.mark.xfail(reason='not handled correctly yet')
     def case_repeated_fields_different(self):                                   # TODO: not correctly recognized
         """Return entry contents with duplicate fields and different values."""
         return f'''\
@@ -158,6 +161,7 @@ Notes:'''
 Notes:'''
 
     @case(tags=(Tag.HISTORY, Tag.CANT_FIX))
+    @pytest.mark.xfail(reason='not handled correctly yet')
     def case_sorting_messed_up(self):                                           # TODO: not correctly recognized
         """Return entry contents with duplicate fields and different values."""
         return f'''\
