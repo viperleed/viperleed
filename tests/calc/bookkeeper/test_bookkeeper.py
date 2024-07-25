@@ -27,9 +27,9 @@ from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import _FROM_ROOT
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
-from viperleed.calc.bookkeeper.bookkeeper import BOOKIE_LOGFILE
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import _DISCARDED
+from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP

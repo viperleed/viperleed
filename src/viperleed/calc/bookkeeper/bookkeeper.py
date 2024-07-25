@@ -13,7 +13,6 @@ from collections import defaultdict
 from contextlib import nullcontext
 from enum import IntEnum
 from functools import wraps
-import logging
 from operator import attrgetter
 from pathlib import Path
 import re
@@ -36,11 +35,11 @@ from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
+from . import log
 from .log import LOGGER
 from .mode import BookkeeperMode
 
 
-BOOKIE_LOGFILE = 'bookkeeper.log'  # Persistent among runs
 CALC_LOG_PREFIXES = (
     LOG_PREFIX,
     # The next ones are for backwards compatibility. Must
@@ -716,11 +715,7 @@ class Bookkeeper:
             return
 
         # Attach a stream handler to logger if not already present
-        if not any(isinstance(h, logging.StreamHandler)
-                   for h in LOGGER.handlers):
-            LOGGER.addHandler(logging.StreamHandler())
-        LOGGER.setLevel(logging.INFO)
-        LOGGER.propagate = True
+        log.ensure_has_stream_handler()
 
         try:  # Make top level history folder if not there yet
             self.top_level_history_path.mkdir(exist_ok=True)
@@ -729,8 +724,7 @@ class Bookkeeper:
             raise
 
         # Attach file handler for history/bookkeeper.log
-        bookkeeper_log = self.top_level_history_path / BOOKIE_LOGFILE
-        LOGGER.addHandler(logging.FileHandler(bookkeeper_log, mode='a'))
+        log.add_bookeeper_logfile(self.top_level_history_path)
         LOGGER.info(  # Log only once per instance
             '\n### Bookeeper running at '
             f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###'
@@ -846,10 +840,10 @@ class Bookkeeper:
             # Note on the disable: pylint does not recognize that we
             # dynamically set the _paths['calc_logs'] to be a tuple.
             # pylint: disable-next=not-an-iterable
-            logs = (f for f in self._paths['calc_logs']
-                    if f.name.startswith(prefix))
+            calc_logs = (f for f in self._paths['calc_logs']
+                         if f.name.startswith(prefix))
             try:
-                split_logs[prefix] = max(logs, key=attrgetter('name'))
+                split_logs[prefix] = max(calc_logs, key=attrgetter('name'))
             except ValueError:
                 pass
         try:
