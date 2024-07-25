@@ -36,6 +36,7 @@ from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
 from ...helpers import not_raises
+from ...helpers import raises_test_exception
 from .conftest import MOCK_INPUT_CONTENT
 from .conftest import MOCK_OUT_CONTENT
 from .conftest import MOCK_TIMESTAMP
@@ -495,13 +496,6 @@ class TestBookkeeperRaises:
     def _patch_oserror(*args, **kwargs):
         raise OSError
 
-    @staticmethod
-    def _patch_exception(*args, **kwargs):
-        # We really want to raise a very general exception since
-        # we want to check that we're not catching too broadly
-        # pylint: disable-next=broad-exception-raised
-        raise Exception
-
     def test_cant_make_history(self, monkeypatch):
         """Check complaints when we fail to make the history directory."""
         bookkeeper = Bookkeeper()
@@ -511,11 +505,9 @@ class TestBookkeeperRaises:
                 # pylint: disable-next=protected-access   # OK in tests
                 bookkeeper._make_history_and_prepare_logger()
 
-        with monkeypatch.context() as patch:
-            patch.setattr('pathlib.Path.mkdir', self._patch_exception)
-            with pytest.raises(Exception):
-                # pylint: disable-next=protected-access   # OK in tests
-                bookkeeper._make_history_and_prepare_logger()
+        with raises_test_exception('pathlib', 'Path.mkdir'):
+            # pylint: disable-next=protected-access       # OK in tests
+            bookkeeper._make_history_and_prepare_logger()
 
     def test_discard_full_cant_remove_folder(self, after_archive,
                                              caplog, monkeypatch):
@@ -529,11 +521,9 @@ class TestBookkeeperRaises:
         info = bookkeeper.history_info.path.write_text(info)
         bookkeeper.history_info.read()
 
-        with monkeypatch.context() as patch:
-            patch.setattr('shutil.rmtree', self._patch_exception)
-            with pytest.raises(Exception):
-                # pylint: disable-next=protected-access   # OK in tests
-                bookkeeper._run_discard_full_mode()
+        with raises_test_exception('shutil', 'rmtree'):
+            # pylint: disable-next=protected-access       # OK in tests
+            bookkeeper._run_discard_full_mode()
         with monkeypatch.context() as patch:
             patch.setattr('shutil.rmtree', self._patch_oserror)
             # pylint: disable-next=protected-access       # OK in tests
@@ -600,10 +590,8 @@ class TestBookkeeperRaises:
         else:
             args = tuple()
         method = getattr(bookkeeper, method_name)
-        with monkeypatch.context() as patch:
-            patch.setattr(to_patch, self._patch_exception)
-            with pytest.raises(Exception):
-                method(*args)
+        with raises_test_exception(*to_patch.split('.', maxsplit=1)):
+            method(*args)
 
         with monkeypatch.context() as patch:
             patch.setattr(to_patch, self._patch_oserror)
