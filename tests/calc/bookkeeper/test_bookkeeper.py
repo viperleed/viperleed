@@ -10,6 +10,7 @@ __license__ = 'GPLv3+'
 
 import ast
 from enum import Enum
+import functools
 import logging
 from pathlib import Path
 import shutil
@@ -36,6 +37,8 @@ from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
 from ...helpers import not_raises
+from ...helpers import make_obj_raise
+from ...helpers import raises_exception
 from ...helpers import raises_test_exception
 from .conftest import MOCK_INPUT_CONTENT
 from .conftest import MOCK_OUT_CONTENT
@@ -45,6 +48,11 @@ from .conftest import NOTES_TEST_CONTENT
 
 
 _UPDATE_METHOD = 'update_from_cwd'
+raises_oserror = functools.partial(raises_exception, exc=OSError)
+make_raise_oserror = functools.partial(make_obj_raise, exc=OSError)
+not_raises_oserror = functools.partial(not_raises, exc=OSError)
+
+
 
 @fixture(name='after_archive')
 def fixture_after_archive(after_calc_run):
@@ -492,25 +500,18 @@ class TestBookkeeperOthers:
 class TestBookkeeperRaises:
     """"Collection of tests for various bookkeeper complaints."""
 
-    @staticmethod
-    def _patch_oserror(*args, **kwargs):
-        raise OSError
-
-    def test_cant_make_history(self, monkeypatch):
+    def test_cant_make_history(self):
         """Check complaints when we fail to make the history directory."""
         bookkeeper = Bookkeeper()
-        with monkeypatch.context() as patch:
-            patch.setattr('pathlib.Path.mkdir', self._patch_oserror)
-            with pytest.raises(OSError):
-                # pylint: disable-next=protected-access   # OK in tests
-                bookkeeper._make_history_and_prepare_logger()
-
-        with raises_test_exception('pathlib.Path.mkdir'):
-            # pylint: disable-next=protected-access       # OK in tests
+        with raises_oserror('pathlib.Path.mkdir'):
+            # pylint: disable-next=protected-access    # OK in tests
             bookkeeper._make_history_and_prepare_logger()
 
-    def test_discard_full_cant_remove_folder(self, after_archive,
-                                             caplog, monkeypatch):
+        with raises_test_exception('pathlib.Path.mkdir'):
+            # pylint: disable-next=protected-access    # OK in tests
+            bookkeeper._make_history_and_prepare_logger()
+
+    def test_discard_full_cant_remove_folder(self, after_archive, caplog):
         """Check complaints when it's not possible to remove folders."""
         bookkeeper, *_ = after_archive
         # Purge notes otherwise we can't remove anything.
@@ -522,11 +523,10 @@ class TestBookkeeperRaises:
         bookkeeper.history_info.read()
 
         with raises_test_exception('shutil.rmtree'):
-            # pylint: disable-next=protected-access       # OK in tests
+            # pylint: disable-next=protected-access    # OK in tests
             bookkeeper._run_discard_full_mode()
-        with monkeypatch.context() as patch:
-            patch.setattr('shutil.rmtree', self._patch_oserror)
-            # pylint: disable-next=protected-access       # OK in tests
+        with make_raise_oserror('shutil.rmtree'):
+            # pylint: disable-next=protected-access    # OK in tests
             exit_code = bookkeeper._run_discard_full_mode()
             # pylint: disable-next=magic-value-comparison
             assert 'Failed to delete' in caplog.text
@@ -558,8 +558,8 @@ class TestBookkeeperRaises:
         '_discard_workhistory_previous': ('shutil.rmtree', logs),
         '_make_and_copy_to_history': ('pathlib.Path.mkdir', raises),
         '_move_and_cleanup_workhistory(True)': ('shutil.rmtree', logs),
-        '_read_and_clear_notes_file read': ('pathlib.Path.read_text', logs),
-        '_read_and_clear_notes_file write': ('pathlib.Path.write_text', logs),
+        '_read_and_clear_notes_file-read': ('pathlib.Path.read_text', logs),
+        '_read_and_clear_notes_file-write': ('pathlib.Path.write_text', logs),
         '_read_most_recent_log': ('pathlib.Path.open', skips),
         '_remove_log_files': ('pathlib.Path.unlink', logs),
         '_remove_out_and_supp': ('shutil.rmtree', logs),
@@ -582,7 +582,7 @@ class TestBookkeeperRaises:
         bookkeeper.update_from_cwd(silent=True)
 
         to_patch, action = self._os_error[method_name]
-        method_name, *_ = method_name.split()
+        method_name, *_ = method_name.split('-')
         if '(' in method_name:  # pylint: disable=magic-value-comparison
             method_name, args = method_name.split('(')
             args = args.replace(')', '') + ','
@@ -593,19 +593,14 @@ class TestBookkeeperRaises:
         with raises_test_exception(to_patch):
             method(*args)
 
-        with monkeypatch.context() as patch:
-            patch.setattr(to_patch, self._patch_oserror)
-            if action is self.skips:
-                with not_raises(OSError):
-                    method(*args)
-                return
-            if action is self.raises:
-                with pytest.raises(OSError):
-                    method(*args)
-            else:
-                assert action is self.logs
+        if action is self.raises:
+            with raises_oserror(to_patch):
                 method(*args)
-            # There is always some logging
+        else:
+            with make_raise_oserror(to_patch), not_raises_oserror():
+                method(*args)
+        # Check logging results, unless we silently skip
+        if action is not self.skips:
             assert any(r for r in caplog.records
                        if r.levelno >= logging.WARNING)
 

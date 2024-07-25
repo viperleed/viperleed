@@ -170,18 +170,109 @@ def execute_in_dir(path):
 
 
 @contextmanager
-def not_raises(exception):
+def not_raises(exc):
     """Fail a test if a specific exception is raised."""
     # Exclude this function when reporting the exception trace
     __tracebackhide__ = True  # pylint: disable=unused-variable
     try:
         yield
-    except exception:
-        pytest.fail(f'DID RAISE {exception.__name__}')
+    except exc:
+        pytest.fail(f'DID RAISE {exc.__name__}')
 
 
 @contextmanager
-def raises_test_exception(obj, attr=None):
+def make_obj_raise(obj_or_dotted_name, exc, attr=None):
+    """Temporarily make obj_or_dotted_name.attr raise exc.
+
+    This is a wrapper around the pytest.monkeypatch fixture used
+    as a context.
+
+    Parameters
+    ----------
+    obj_or_dotted_name : object or str
+        The object whose attribute should be set. May also be
+        the dotted name of a module[.submodules][.class].attribute.
+    exc : BaseException
+        The exception to be raised.
+    attr : str, optional
+        The name of the attribute to be modified. May be omitted if
+        a full dotted name is given as the first argument.
+
+    Yields
+    ------
+    patch : fixture
+        The pytest monkeypatch context.
+    """
+    # Exclude this function when reporting the exception trace
+    __tracebackhide__ = True  # pylint: disable=unused-variable
+    if inspect.ismodule(obj_or_dotted_name):
+        obj_name = obj_or_dotted_name.__name__
+    elif isinstance(obj_or_dotted_name, str):  # Likely a dotted name
+        obj_name = obj_or_dotted_name
+    else:
+        obj_name = type(obj_or_dotted_name).__name__
+
+    _err = ('When using the one-argument form, the argument must be a string '
+            'corresponding to the dotted name of the attribute to set.')
+    if attr is None and not isinstance(obj_or_dotted_name, str):
+        raise TypeError(_err)
+    if attr is not None and not isinstance(attr, str):
+        raise TypeError('attribute name to be patched must be a string')
+    # pylint: disable-next=magic-value-comparison  # OK for the dot
+    if isinstance(obj_or_dotted_name, str) and not '.' in obj_or_dotted_name:
+        raise ValueError(_err)
+    if not issubclass(exc, BaseException):
+        raise TypeError('exc must be a BaseException subclass')
+
+    def _replaced(*args, **kwargs):
+        patched = f'Replaced {obj_name}'
+        if attr is not None:
+            patched += attr
+        raise exc(f'{patched} was called with args={args}, kwargs={kwargs}')
+
+    monkeypatch = pytest.MonkeyPatch
+    with monkeypatch.context() as patch:
+        if attr is None:
+            patch.setattr(obj_or_dotted_name, _replaced)
+        else:
+            patch.setattr(obj_or_dotted_name, attr, _replaced)
+        yield patch
+
+
+@contextmanager
+def raises_exception(obj_or_dotted_name, exc, attr=None):
+    """Make obj_or_dotted_name.attr raise exc, and ensure code raises it.
+
+    This context manager is commonly used to test that a certain
+    piece of code correctly catches specific exceptions.
+
+    Parameters
+    ----------
+    obj_or_dotted_name : object or str
+        The object whose attribute should be set. May also be
+        the dotted name of a module[.submodules][.class].attribute.
+    exc : BaseException
+        The exception to be raised.
+    attr : str, optional
+        The name of the attribute to be modified. May be omitted if
+        a full dotted name is given as the first argument.
+
+    Yields
+    ------
+    patch : fixture
+        The pytest monkeypatch context.
+    raises : fixture
+        The pytest.raises context.
+    """
+    # Exclude this function when reporting the exception trace
+    __tracebackhide__ = True  # pylint: disable=unused-variable
+    obj = obj_or_dotted_name  # Just to have 'with' fit one line
+    with make_obj_raise(obj, exc, attr) as patch, pytest.raises(exc) as raises:
+        yield patch, raises
+
+
+@contextmanager
+def raises_test_exception(obj_or_dotted_name, attr=None):
     """Temporarily make obj.attr raise CustomTestException.
 
     This context manager is commonly used to test that a certain
@@ -190,50 +281,26 @@ def raises_test_exception(obj, attr=None):
 
     Parameters
     ----------
-    obj : object or str
+    obj_or_dotted_name : object or str
         The object whose attribute should be set. May also be
         the dotted name of a module[.submodules][.class].attribute.
     attr : str, optional
         The name of the attribute to be modified. May be omitted if
         a full dotted name is given as the first argument.
 
-    Returns
-    -------
-    None.
+    Yields
+    ------
+    patch : fixture
+        The pytest monkeypatch context.
+    raises : fixture
+        The pytest.raises context.
     """
     # Exclude this function when reporting the exception trace
     __tracebackhide__ = True  # pylint: disable=unused-variable
-    if inspect.ismodule(obj):
-        obj_name = obj.__name__
-    elif isinstance(obj, str):  # Likely a dotted name
-        obj_name = obj
-    else:
-        obj_name = type(obj).__name__
+    exc = CustomTestException
+    with raises_exception(obj_or_dotted_name, exc, attr) as context:
+        yield context
 
-    _err = ('When using the one-argument form, the argument must be a string '
-            'corresponding to the dotted name of the attribute to set.')
-    if attr is None and not isinstance(obj, str):
-        raise TypeError(_err)
-    if attr is not None and not isinstance(attr, str):
-        raise TypeError('attribute name to be patched must be a string')
-    # pylint: disable-next=magic-value-comparison  # OK for the dot
-    if isinstance(obj, str) and not '.' in obj:
-        raise ValueError(_err)
-
-    def _replaced(*args, **kwargs):
-        patched = f'Replaced {obj_name}'
-        if attr is not None:
-            patched += attr
-        raise CustomTestException(f'{patched} was called with '
-                                  f'args={args}, kwargs={kwargs}')
-
-    monkey_patch = pytest.MonkeyPatch
-    with monkey_patch.context() as patch, pytest.raises(CustomTestException):
-        if attr is None:
-            patch.setattr(obj, _replaced)
-        else:
-            patch.setattr(obj, attr, _replaced)
-        yield
 
 
 # ###########################   FILTERS   #############################
