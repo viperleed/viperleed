@@ -134,7 +134,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: camera returns other data with images. Stuff that comes to mind:
 #       max(image); fraction of saturated pixels;
 # BUG: exception ignored in ctypes callback: "camera has no exposure"
-#      probably a masked AttributError??
+#      probably a masked AttributeError??
 # TODO: bad pixels info not updated on show
 # TODO: bad pixels & dark progress bar: text is not always accurate
 # TODO: camera extra time should consider that delivery of the
@@ -335,6 +335,11 @@ class Measure(ViPErLEEDPluginBase):                                             
             event.ignore()
             return
 
+        try:
+            self.measurement.stop_threads()
+        except AttributeError:
+            pass
+
         retry_later = False
         if self._measurement_thread.isRunning():
             self._measurement_thread.quit()
@@ -415,11 +420,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         # The get_devices method does return the device name, class and,
         # additional information. The class and additional information
         # are returned as a tuple.
-        for cam_name, cls_and_info in self._detect_devices("camera"):
+        for cam_name, cls_and_info in self._detect_devices('camera'):
             act = cameras.addAction(cam_name)
             act.setData(cls_and_info)
             act.triggered.connect(self._on_camera_clicked)
-        for ctrl_name, cls_and_info in self._detect_devices("controller"):
+        for ctrl_name, cls_and_info in self._detect_devices('controller'):
             act = controllers.addAction(ctrl_name)
             act.setData(cls_and_info)
             act.triggered.connect(self._on_controller_clicked)
@@ -662,7 +667,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                   "third_btn_text": "Create a new settings file"}
         config = base.get_object_settings(device_cls, settings_info, **kwargs)
 
-        if config == "":  # pylint: disable=C1901
+        if not config:  # pylint: disable=C1901
             # Did not find one, and user dismissed the dialog.
             return None
 
@@ -832,11 +837,23 @@ class Measure(ViPErLEEDPluginBase):                                             
         base.safe_disconnect(self._measurement_thread.started,
                              self._timers['start_measurement'].start)
 
+    @qtc.pyqtSlot()
+    def _cleanup_measurement_settings_dialog(self):
+        """Remove settings dialog from dialogs and delete."""
+        try:
+            self._dialogs['measurement_settings'].deleteLater()
+        except AttributeError:
+            pass
+        qtw.qApp.processEvents()
+        self._dialogs['measurement_settings'] = None
+
     @qtc.pyqtSlot(object, ViPErLEEDSettings)
     def _create_settings_dialog(self, measurement_class, settings):
         """Create measurement settings dialog."""
         measurement = measurement_class(settings)
+        measurement.disconnect_devices()
         dialog = SettingsDialog(measurement, parent=self)
+
         dialog.rejected.connect(self._measurement_cancelled)
         dialog.accepted.connect(self._on_settings_accepted)
         dialog.setModal(True)
@@ -899,8 +916,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         # It is necessary to call deleteLater(), otherwise the measurement
         # object will remain alive and the next dialog may attempt to
         # reuse a measurement object for another measurement.
-        dialog.deleteLater()
-        self._dialogs['measurement_settings'] = None
+        self._cleanup_measurement_settings_dialog()
 
         self.measurement.moveToThread(self._measurement_thread)
         self._connect_measurement()
@@ -1073,6 +1089,11 @@ class Measure(ViPErLEEDPluginBase):                                             
     @qtc.pyqtSlot()
     def _measurement_cancelled(self):
         """Handle measurement cancellation."""
+        try:
+            self.sender().handled_object.stop_threads()
+        except AttributeError:
+            pass
+        self._cleanup_measurement_settings_dialog()
         self._switch_enabled(True)
 
     @qtc.pyqtSlot(Path, Exception)
