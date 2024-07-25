@@ -135,6 +135,41 @@ Notes: {NOTES_TEST_CONTENT}'''
         multi_entry = HISTORY_INFO_SEPARATOR.join(one_entry for _ in range(4))
         return multi_entry, ValueError
 
+    @case(tags=(Tag.HISTORY, Tag.CANT_FIX))
+    def case_repeated_fields_identical(self):                                   # TODO: not correctly recognized
+        """Return entry contents with duplicate identical fields."""
+        return f'''\
+# TENSORS   1, 2, 3
+# JOB ID    4, 5, 6
+# JOB ID    4, 5, 6
+# TIME      {MOCK_TIME_ISO}
+# R REF     0.1234
+# FOLDER    t003.r001_010203-040506
+Notes:'''
+
+    @case(tags=(Tag.HISTORY, Tag.CANT_FIX))
+    def case_repeated_fields_different(self):                                   # TODO: not correctly recognized
+        """Return entry contents with duplicate fields and different values."""
+        return f'''\
+# TENSORS   1, 2, 3
+# JOB ID    4, 5, 6
+# JOB ID    14, 15, 16
+# TIME      {MOCK_TIME_ISO}
+# R REF     0.1234
+# FOLDER    t003.r001_010203-040506
+Notes:'''
+
+    @case(tags=(Tag.HISTORY, Tag.CANT_FIX))
+    def case_sorting_messed_up(self):                                           # TODO: not correctly recognized
+        """Return entry contents with duplicate fields and different values."""
+        return f'''\
+# JOB ID    4, 5, 6
+# TENSORS   1, 2, 3
+# R REF     0.1234
+# FOLDER    t003.r001_010203-040506
+Notes:
+# TIME      {MOCK_TIME_ISO}'''
+
 
 class CasesInfoEntryCommented:
     """Collection of history.info contents with some empty fields."""
@@ -289,6 +324,7 @@ Notes:'''
 # FOLDER    t003.r001_010203-040506
 Notes:'''
 
+    # @case(tags=(Tag.HISTORY, Tag.NEEDS_NO_FIX))
     @case(tags=(*Tag.all_targets(), Tag.NEEDS_NO_FIX))
     def case_tensors_none(self):
         """Return an entry where no TENSORS were used."""
