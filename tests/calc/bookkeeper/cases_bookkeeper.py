@@ -24,7 +24,7 @@ from viperleed.calc.bookkeeper.history import _DISCARDED
 from viperleed.calc.bookkeeper.history import EntrySyntaxError
 from viperleed.calc.bookkeeper.history import HISTORY_INFO_SEPARATOR
 from viperleed.calc.bookkeeper.history import HistoryInfoEntry
-from viperleed.calc.bookkeeper.history import is_optional
+from viperleed.calc.lib.dataclass_utils import is_optional_field
 
 
 class BookkeeperTag(IntEnum):
@@ -389,7 +389,7 @@ Notes:'''
 
 _missing = tuple(f.name
                  for f in fields(HistoryInfoEntry)
-                 if f.init and not is_optional(f))
+                 if f.init and not is_optional_field(f))
 _missing += (
     'notes',  # Optional with empty default, but field is mandatory
     )

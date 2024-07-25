@@ -25,6 +25,7 @@ import re
 from typing import Dict, List, Optional, Union
 
 from viperleed.calc.lib.base import logging_silent
+from viperleed.calc.lib.dataclass_utils import is_optional_field
 
 from .constants import HISTORY_INFO_NAME
 from .constants import LOGGER
@@ -306,15 +307,6 @@ class TimestampFormat(Enum):
         return not self.name.startswith('_')
 
 
-def is_optional(field, with_type=None):
-    """Return whether a datclasses.Field is optional."""
-    if with_type is None:
-        with_type = field.type
-    # The following trick works because Optional removes 'repeated'
-    # entries, so that Optional[Optional[t]] == Optional[t]
-    return field.type == Optional[with_type]
-
-
 # TODO: the _fixup methods may be made even more lenient
 # and accept some comment text following each field.
 # TODO: this class is a bit messy. Perhaps one could have better code
@@ -475,7 +467,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         """Return whether this entry has missing fields."""
         misses_stuff = any(getattr(self, f.name) == _MISSING
                            for f in fields(self)
-                           if f.init and not is_optional(f))
+                           if f.init and not is_optional_field(f))
         # Notes are marked as optional, but they really are not
         return misses_stuff or self.notes == _MISSING
 
@@ -571,7 +563,6 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         try:
             cls._parse_fields_from_string(entry_str, kwargs)
         except _PureCommentEntryError:
-            print(f'pure: {entry_str!r}')
             return PureCommentEntry(entry_str)
         cls._process_string_notes(kwargs)  # Notes and DISCARD
         return cls(**kwargs)
@@ -938,7 +929,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             value = match[name]
             if value is not None:
                 kwargs[name] = value.rstrip()
-            elif not is_optional(field):  # No match at all
+            elif not is_optional_field(field):  # No match at all
                 kwargs[name] = _MISSING
 
         # Now check if there was any extra unknown field.
