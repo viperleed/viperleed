@@ -12,6 +12,8 @@ __created__ = '2024-07-25'
 __license__ = 'GPLv3+'
 
 from typing import Optional
+from dataclasses import fields
+from dataclasses import is_dataclass
 
 
 # TODO: this may be made stricter to ensure it is only used
@@ -44,7 +46,14 @@ def set_frozen_attr(self, attr_name, attr_value):
     AttributeError
         If self has no `attr_name` attribute.
     """
-    getattr(self, attr_name)  # Raises AttributeError if not present
+    if not is_dataclass(self):
+        raise TypeError('Cannot use set_frozen_attr on non-dataclass objects')
+    try:
+        getattr(self, attr_name)
+    except AttributeError:
+        # It may still be that the attribute is a init=False field.
+        if not any(f.name == attr_name for f in fields(self) if not f.init):
+            raise
     object.__setattr__(self, attr_name, attr_value)
 
 
