@@ -496,6 +496,78 @@ class TestBookkeeperOthers:
         assert all(f.exists() for f in surviving_files)
         assert all(f.exists() for f in folders)
 
+    @fixture(name='funky_files')
+    def fixture_funky_files(self, tmp_path):
+        """Prepare a bunch of files/folders that will not be considered."""
+        # Stuff that should not be copied over:
+        not_collected_log = tmp_path/'not_a_log.log'
+        not_collected_log.mkdir()
+
+        (tmp_path/DEFAULT_OUT).mkdir()  # Otherwise 'nothing to do'
+
+        # Stuff that should not be considered for the state
+        workhistory = tmp_path/DEFAULT_WORK_HISTORY
+        not_collected_dirs = (
+            workhistory/'some_folder',
+            workhistory/f't001.r002_{PREVIOUS_LABEL}',
+            )
+        for directory in not_collected_dirs:
+            directory.mkdir(parents=True)
+
+        # Some stuff in history that should not be considered
+        history = tmp_path/DEFAULT_HISTORY
+        history.mkdir()
+        tensor_num_unused = 999
+        invalid_history_stuff = (
+            history/f't{tensor_num_unused}.r999_some_file',
+            history/'some_stray_directory',
+            )
+        for path in invalid_history_stuff:
+            # pylint: disable-next=magic-value-comparison  # 'file'
+            make = getattr(path, 'touch' if 'file' in path.name else 'mkdir')
+            make()
+        return (tensor_num_unused, not_collected_log,
+                not_collected_dirs, invalid_history_stuff)
+
+    def test_funky_files(self, funky_files, tmp_path):
+        """Check that funny files and directories are not considered."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        (tensor_num_unused,
+         not_collected_log,
+         not_collected_dirs,
+         invalid_history_stuff) = funky_files
+
+        bookkeeper.update_from_cwd(silent=True)
+        history_dir = bookkeeper.history_dir
+        history_info = bookkeeper.history_info
+        assert tensor_num_unused not in bookkeeper.max_job_for_tensor
+        assert not_collected_log not in bookkeeper.all_cwd_logs
+
+        # About the disables: W0212 (protected-access) is OK in a test;
+        # E1135 (unsupported-membership-test) is a pylint problem, as
+        # it cannot infer that by the time we reach this one we have
+        # a tuple in _paths['to_be_archived'].
+        # pylint: disable-next=E1135,W0212
+        assert not any(f in bookkeeper._paths['to_be_archived']
+                       for f in not_collected_dirs)
+
+        bookkeeper.run('archive')
+        assert not_collected_log.exists()
+        assert not (history_dir/not_collected_log.name).exists()
+        for file in not_collected_dirs:
+            assert (not file.exists() if PREVIOUS_LABEL in file.name
+                    else file.is_dir())
+        assert all(f.exists() for f in invalid_history_stuff)
+        assert history_dir.is_dir()
+        assert history_info.path.read_bytes()
+
+        # Now discard should remove workhistory and all the stuff
+        bookkeeper.run('discard_full')
+        assert not_collected_log.exists()
+        assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()
+        assert not history_dir.exists()
+        assert not history_info.path.read_bytes()
+
 
 class TestBookkeeperRaises:
     """"Collection of tests for various bookkeeper complaints."""
@@ -687,75 +759,3 @@ class TestBookkeeperComplaints:
         assert _FROM_ROOT in caplog.text
         assert (tmp_path/'POSCAR').is_file()
         assert (target/'POSCAR_from_root').is_file()
-
-    @fixture(name='prepare_funky_files')
-    def fixture_prepare_funky_files(self, tmp_path):
-        """Prepare a bunch of files/folders that will not be considered."""
-        # Stuff that should not be copied over:
-        not_collected_log = tmp_path/'not_a_log.log'
-        not_collected_log.mkdir()
-
-        (tmp_path/DEFAULT_OUT).mkdir()  # Otherwise 'nothing to do'
-
-        # Stuff that should not be considered for the state
-        workhistory = tmp_path/DEFAULT_WORK_HISTORY
-        not_collected_dirs = (
-            workhistory/'some_folder',
-            workhistory/f't001.r002_{PREVIOUS_LABEL}',
-            )
-        for directory in not_collected_dirs:
-            directory.mkdir(parents=True)
-
-        # Some stuff in history that should not be considered
-        history = tmp_path/DEFAULT_HISTORY
-        history.mkdir()
-        tensor_num_unused = 999
-        invalid_history_stuff = (
-            history/f't{tensor_num_unused}.r999_some_file',
-            history/'some_stray_directory',
-            )
-        for path in invalid_history_stuff:
-            # pylint: disable-next=magic-value-comparison  # 'file'
-            make = getattr(path, 'touch' if 'file' in path.name else 'mkdir')
-            make()
-        return (tensor_num_unused, not_collected_log,
-                not_collected_dirs, invalid_history_stuff)
-
-    def test_funky_files(self, prepare_funky_files, tmp_path):                  # TODO: move somewhere else.
-        """Check that funny files and directories are not considered."""
-        bookkeeper = Bookkeeper(cwd=tmp_path)
-        (tensor_num_unused,
-         not_collected_log,
-         not_collected_dirs,
-         invalid_history_stuff) = prepare_funky_files
-
-        bookkeeper.update_from_cwd(silent=True)
-        history_dir = bookkeeper.history_dir
-        history_info = bookkeeper.history_info
-        assert tensor_num_unused not in bookkeeper.max_job_for_tensor
-        assert not_collected_log not in bookkeeper.all_cwd_logs
-
-        # About the disables: W0212 (protected-access) is OK in a test;
-        # E1135 (unsupported-membership-test) is a pylint problem, as
-        # it cannot infer that by the time we reach this one we have
-        # a tuple in _paths['to_be_archived'].
-        # pylint: disable-next=E1135,W0212
-        assert not any(f in bookkeeper._paths['to_be_archived']
-                       for f in not_collected_dirs)
-
-        bookkeeper.run('archive')
-        assert not_collected_log.exists()
-        assert not (history_dir/not_collected_log.name).exists()
-        for file in not_collected_dirs:
-            assert (not file.exists() if PREVIOUS_LABEL in file.name
-                    else file.is_dir())
-        assert all(f.exists() for f in invalid_history_stuff)
-        assert history_dir.is_dir()
-        assert history_info.path.read_bytes()
-
-        # Now discard should remove workhistory and all the stuff
-        bookkeeper.run('discard_full')
-        assert not_collected_log.exists()
-        assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()
-        assert not history_dir.exists()
-        assert not history_info.path.read_bytes()
