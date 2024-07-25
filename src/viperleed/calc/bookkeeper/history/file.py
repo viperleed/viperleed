@@ -1,4 +1,4 @@
-"""Module file of viperleed.calc.bookkeeper.history_info.
+"""Module file of viperleed.calc.bookkeeper.history.
 
 Defines the HistoryInfoFile class, a handler for the history.info file.
 """
@@ -14,12 +14,12 @@ __license__ = 'GPLv3+'
 from pathlib import Path
 
 from viperleed.calc.lib.base import logging_silent
+from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
+from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 
 from ..log import LOGGER
 from .constants import HISTORY_INFO_NAME
 from .constants import HISTORY_INFO_SEPARATOR
-from .entry import HistoryInfoEntry
-from .entry import PureCommentEntry
 from .errors import CantRemoveEntryError
 from .errors import EntrySyntaxError
 from .errors import NoHistoryEntryError

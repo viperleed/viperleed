@@ -18,7 +18,7 @@ from pathlib import Path
 
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc.bookkeeper.history_info.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.cli_base import ViPErLEEDCLI
 
 from .bookkeeper import Bookkeeper

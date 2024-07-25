@@ -1,4 +1,4 @@
-"""Module constants of viperleed.calc.bookkeeper.history_info.
+"""Module constants of viperleed.calc.bookkeeper.history.
 
 Defines shared constants used in the history.info file.
 """

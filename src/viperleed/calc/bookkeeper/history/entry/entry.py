@@ -1,4 +1,4 @@
-"""Module entry of viperleed.calc.bookkeeper.history_info.
+"""Module entry of viperleed.calc.bookkeeper.history.entry.
 
 Defines classes that handle the contents of a single 'block'
 of the history.info file.
@@ -20,7 +20,6 @@ from dataclasses import field as data_field
 from dataclasses import fields
 from dataclasses import replace as replace_value
 from datetime import datetime
-from enum import Enum
 from functools import partial
 from functools import partialmethod
 import re
@@ -31,12 +30,13 @@ from viperleed.calc.lib.base import logging_silent
 from viperleed.calc.lib.dataclass_utils import is_optional_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
-from .constants import HISTORY_INFO_NAME
-from .constants import HISTORY_INFO_SEPARATOR
-from .errors import EntrySyntaxError
-from .errors import FixableSyntaxError
-from .errors import HistoryInfoError
-from .errors import _PureCommentEntryError
+from ..constants import HISTORY_INFO_NAME
+from ..constants import HISTORY_INFO_SEPARATOR
+from ..errors import EntrySyntaxError
+from ..errors import FixableSyntaxError
+from ..errors import HistoryInfoError
+from ..errors import _PureCommentEntryError
+from .formats import TimestampFormat
 
 
 _DISCARDED = 'DISCARDED'    # For entries marked via --discard
@@ -118,22 +118,6 @@ _MSG_EMPTY = 'Field is empty'
 _MSG_NO_FLOAT = 'Field is not a floating-point number'
 _MSG_NO_STRING = 'Field is not a string'
 _MSG_MISSING = 'Mandatory field not found'
-
-
-class TimestampFormat(Enum):
-    """A collection of known formats for timestamps."""
-
-    # Underscore names are used only for conversion purposes
-    # while parsing strings, and never for formatting.
-    GERMAN = '%d.%m.%y %H:%M:%S'  # Format used for < v1.0.0
-    ISO = '%Y-%m-%d %H:%M:%S'     # Format used for >= v1.0.0
-    _CALC = '%y%m%d-%H%M%S'       # Format used by calc in log files
-    DEFAULT = ISO
-
-    @property
-    def writable(self):
-        """Return whether this format can be used for writing."""
-        return not self.name.startswith('_')
 
 
 # TODO: the _fixup methods may be made even more lenient

@@ -24,11 +24,11 @@ from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
-from viperleed.calc.bookkeeper.history_info.constants import HISTORY_INFO_NAME
-from viperleed.calc.bookkeeper.history_info.entry import HistoryInfoEntry
-from viperleed.calc.bookkeeper.history_info.errors import CantRemoveEntryError
-from viperleed.calc.bookkeeper.history_info.errors import NoHistoryEntryError
-from viperleed.calc.bookkeeper.history_info.file import HistoryInfoFile
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
+from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
+from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
 from viperleed.calc.lib.base import logging_silent
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES

@@ -6,6 +6,26 @@ the original bookkeeper.py module.
 
 Modules
 -------
+__main__
+    Entry point for the bookkeeper when run via python -m bookkeeper.
+bookkeeper
+    Defines the Bookkeeper class that handles the whole process.
+cli
+    Defines the command-line interface for invoking the bookkeeper
+    as a standalone utility.
+log
+    Defines the bookkeeper logger instance and its related
+    functionality.
+mode
+    Defines the BookkeeperMode enumeration of the possible modes
+    of execution of the bookkeeper. See help(BookkeeperMode) for
+    information on what each mode entails.
+
+Packages
+--------
+history
+    Defines the functionality for handling the history.info file
+    and its contents, including reading/writing and editing formats.
 """
 
 __authors__ = (

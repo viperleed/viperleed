@@ -18,20 +18,20 @@ from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 from pytest_cases.filters import has_tags
 
-from viperleed.calc.bookkeeper.history_info.constants import HISTORY_INFO_NAME
-from viperleed.calc.bookkeeper.history_info.entry import _DISCARDED
-from viperleed.calc.bookkeeper.history_info.entry import (
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.entry.entry import _DISCARDED
+from viperleed.calc.bookkeeper.history.entry.entry import (
     _MSG_NOT_UNDERSTOOD_PREFIX
     )
-from viperleed.calc.bookkeeper.history_info.entry import _TAG
-from viperleed.calc.bookkeeper.history_info.entry import HistoryInfoEntry
-from viperleed.calc.bookkeeper.history_info.entry import PureCommentEntry
-from viperleed.calc.bookkeeper.history_info.entry import TimestampFormat
-from viperleed.calc.bookkeeper.history_info.errors import CantRemoveEntryError
-from viperleed.calc.bookkeeper.history_info.errors import EntrySyntaxError
-from viperleed.calc.bookkeeper.history_info.errors import HistoryInfoError
-from viperleed.calc.bookkeeper.history_info.errors import NoHistoryEntryError
-from viperleed.calc.bookkeeper.history_info.file import HistoryInfoFile
+from viperleed.calc.bookkeeper.history.entry.entry import _TAG
+from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
+from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
+from viperleed.calc.bookkeeper.history.entry.formats import TimestampFormat
+from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
+from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
+from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
 
 from ...helpers import exclude_tags
 from .conftest import NOTES_TEST_CONTENT
@@ -262,7 +262,7 @@ class TestHistoryEntryRaises:
         """Check complaints if we cannot parse at all a string."""
         entry_str = CorrectEntry().case_notes()
         monkeypatch.setattr(
-            'viperleed.calc.bookkeeper.history_info.entry._ENTRY_RE',
+            'viperleed.calc.bookkeeper.history.entry.entry._ENTRY_RE',
             re.compile('ThisDoesNotMatchAtAll')
             )
         with pytest.raises(HistoryInfoError):

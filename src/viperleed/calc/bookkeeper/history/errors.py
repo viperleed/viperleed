@@ -1,4 +1,4 @@
-"""Module errors of viperleed.calc.bookkeeper.history_info.
+"""Module errors of viperleed.calc.bookkeeper.history.
 
 Defines exceptions related to handling the history.info file.
 """
