@@ -261,8 +261,10 @@ class TestHistoryEntryRaises:
     def test_cannot_parse(self, monkeypatch):
         """Check complaints if we cannot parse at all a string."""
         entry_str = CorrectEntry().case_notes()
-        monkeypatch.setattr('viperleed.calc.bookkeeper.history._ENTRY_RE',
-                            re.compile('ThisDoesNotMatchAtAll'))
+        monkeypatch.setattr(
+            'viperleed.calc.bookkeeper.history_info.entry._ENTRY_RE',
+            re.compile('ThisDoesNotMatchAtAll')
+            )
         with pytest.raises(HistoryInfoError):
             HistoryInfoEntry.from_string(entry_str)
 
