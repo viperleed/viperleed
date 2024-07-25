@@ -23,6 +23,7 @@ import re
 from typing import Any
 
 from viperleed.calc.lib.base import pairwise
+from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from .base import SpecialParameter
 
@@ -116,9 +117,9 @@ class LayerCutToken:
         if not self.is_auto_cut and (self.lower, self.upper) != (None, None):
             raise ValueError('Only dc/dz can have bounds')
         if isinstance(self.lower, Real):
-            object.__setattr__(self, 'lower', self.make_numeric(self.lower))
+            set_frozen_attr(self, 'lower', self.make_numeric(self.lower))
         if isinstance(self.upper, Real):
-            object.__setattr__(self, 'upper', self.make_numeric(self.upper))
+            set_frozen_attr(self, 'upper', self.make_numeric(self.upper))
         if self.is_auto_cut:
             self._check_valid_bound_type(self.lower, self.upper)
 
