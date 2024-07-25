@@ -20,10 +20,12 @@ import logging
 from pytest_cases import case
 from pytest_cases import parametrize
 
-from viperleed.calc.bookkeeper.history import _DISCARDED
-from viperleed.calc.bookkeeper.history import EntrySyntaxError
-from viperleed.calc.bookkeeper.history import HISTORY_INFO_SEPARATOR
-from viperleed.calc.bookkeeper.history import HistoryInfoEntry
+from viperleed.calc.bookkeeper.history_info.constants import (
+    HISTORY_INFO_SEPARATOR
+    )
+from viperleed.calc.bookkeeper.history_info.entry import _DISCARDED
+from viperleed.calc.bookkeeper.history_info.entry import HistoryInfoEntry
+from viperleed.calc.bookkeeper.history_info.errors import EntrySyntaxError
 from viperleed.calc.lib.dataclass_utils import is_optional_field
 
 

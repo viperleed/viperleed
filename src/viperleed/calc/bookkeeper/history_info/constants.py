@@ -1,7 +1,6 @@
-"""Module constants of viperleed.calc.bookkeeper.
+"""Module constants of viperleed.calc.bookkeeper.history_info.
 
-Collects the definitions of a few constants used
-in multiple modules of the bookkeeper package.
+Defines shared constants used in the history.info file.
 """
 
 __authors__ = (
@@ -13,10 +12,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
-import logging
 
-from viperleed.calc.lib.base import parent_name
-
-
-LOGGER = logging.getLogger(parent_name(__name__))
 HISTORY_INFO_NAME = 'history.info'
+HISTORY_INFO_SEPARATOR = '\n###########\n'

@@ -18,18 +18,20 @@ from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 from pytest_cases.filters import has_tags
 
-from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
-from viperleed.calc.bookkeeper.history import _DISCARDED
-from viperleed.calc.bookkeeper.history import _MSG_NOT_UNDERSTOOD_PREFIX
-from viperleed.calc.bookkeeper.history import _TAG
-from viperleed.calc.bookkeeper.history import CantRemoveEntryError
-from viperleed.calc.bookkeeper.history import EntrySyntaxError
-from viperleed.calc.bookkeeper.history import HistoryInfoEntry
-from viperleed.calc.bookkeeper.history import HistoryInfoError
-from viperleed.calc.bookkeeper.history import HistoryInfoFile
-from viperleed.calc.bookkeeper.history import NoHistoryEntryError
-from viperleed.calc.bookkeeper.history import PureCommentEntry
-from viperleed.calc.bookkeeper.history import TimestampFormat
+from viperleed.calc.bookkeeper.history_info.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history_info.entry import _DISCARDED
+from viperleed.calc.bookkeeper.history_info.entry import (
+    _MSG_NOT_UNDERSTOOD_PREFIX
+    )
+from viperleed.calc.bookkeeper.history_info.entry import _TAG
+from viperleed.calc.bookkeeper.history_info.entry import HistoryInfoEntry
+from viperleed.calc.bookkeeper.history_info.entry import PureCommentEntry
+from viperleed.calc.bookkeeper.history_info.entry import TimestampFormat
+from viperleed.calc.bookkeeper.history_info.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history_info.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history_info.errors import HistoryInfoError
+from viperleed.calc.bookkeeper.history_info.errors import NoHistoryEntryError
+from viperleed.calc.bookkeeper.history_info.file import HistoryInfoFile
 
 from ...helpers import exclude_tags
 from .conftest import NOTES_TEST_CONTENT
