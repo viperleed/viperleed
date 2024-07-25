@@ -23,12 +23,14 @@ from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
 from viperleed.calc import DEFAULT_HISTORY
+from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.history_info.constants import HISTORY_INFO_NAME
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
+from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
 from . import cases_bookkeeper
@@ -44,6 +46,11 @@ MOCK_OUT_CONTENT = 'This is a test output file.'
 MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
 MOCK_TIMESTAMP = '010203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
+MOCK_WORKHISTORY = {  # name in workhistory: name in history
+    f't003.r001_RDS_{MOCK_TIMESTAMP}': f't003.r001.001_RDS_{MOCK_TIMESTAMP}',
+    f't004.r005_DS_{MOCK_TIMESTAMP}': f't004.r001.005_DS_{MOCK_TIMESTAMP}',
+    f't003.r000_{PREVIOUS_LABEL}_xxx': None,  # deleted
+    }
 
 
 with_history_name = parametrize(
@@ -66,7 +73,7 @@ def fixture_mock_tree_after_calc_run(tmp_path, log_file_name,
     out_path = tmp_path / DEFAULT_OUT
     supp_path = tmp_path / DEFAULT_SUPP
     original_inputs_path = supp_path / ORIGINAL_INPUTS_DIR_NAME
-    directories = (
+    directories = [
         deltas_path,
         tensors_path,
         out_path,
@@ -74,7 +81,9 @@ def fixture_mock_tree_after_calc_run(tmp_path, log_file_name,
         original_inputs_path,
         tmp_path / ALT_HISTORY_NAME / 't001.r001_20xxxx-xxxxxx',
         tmp_path / ALT_HISTORY_NAME / 't002.r002_20xxxx-xxxxxx',
-        )
+        ]
+    directories.extend(tmp_path/DEFAULT_WORK_HISTORY/f
+                       for f in MOCK_WORKHISTORY)
 
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
@@ -97,6 +106,10 @@ def fixture_mock_tree_after_calc_run(tmp_path, log_file_name,
     # history.info
     if history_info_contents is not None:
         files[tmp_path / HISTORY_INFO_NAME] = history_info_contents
+
+    # workhistory
+    files.update((tmp_path/DEFAULT_WORK_HISTORY/f/'file', f)
+                 for f in MOCK_WORKHISTORY)
 
     for file, contents in files.items():
         if contents is None:

@@ -44,6 +44,7 @@ from .conftest import MOCK_INPUT_CONTENT
 from .conftest import MOCK_OUT_CONTENT
 from .conftest import MOCK_TIMESTAMP
 from .conftest import MOCK_STATE_FILES
+from .conftest import MOCK_WORKHISTORY
 from .conftest import NOTES_TEST_CONTENT
 
 
@@ -145,8 +146,7 @@ class _TestBookkeeperRunBase:
         for file in MOCK_STATE_FILES:
             hist_file = history_run_path / DEFAULT_OUT / f'{file}_OUT'
             assert hist_file.is_file()
-            hist_content = hist_file.read_text()
-            assert MOCK_OUT_CONTENT in hist_content
+            assert MOCK_OUT_CONTENT in hist_file.read_text()
 
     def check_root_inputs_replaced_by_out(self, bookkeeper, *_):
         """Check that the input files in root come from OUT."""
@@ -182,6 +182,19 @@ class _TestBookkeeperRunBase:
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
         self.check_root_is_clean(*after_archive)
+        # Check that the workhistory directories are
+        # also where they should be
+        history = bookkeeper.top_level_history_path
+        workhistory = bookkeeper.cwd / DEFAULT_WORK_HISTORY
+        assert not workhistory.is_dir()
+        for ori_name, hist_name in MOCK_WORKHISTORY.items():
+            if hist_name is None:  # File should be deleted
+                continue
+            moved_dir = history/hist_name
+            moved_file = moved_dir/'file'
+            assert moved_dir.is_dir()
+            assert moved_file.is_file()
+            assert ori_name in moved_file.read_text()
 
     def _test_after_calc_run_base(self, after_calc_run):
         """Check that running bookkeeper after calc does some basic stuff."""
@@ -228,13 +241,12 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
     def test_archive_again(self, after_archive, caplog):
         """Bookkeeper ARCHIVE after ARCHIVE should not do anything."""
         bookkeeper, *_ = after_archive
-        assert not bookkeeper.archiving_required
-        # write stuff to files to check they are not overwritten
+        # Write stuff to files to check they are not overwritten
         cwd = bookkeeper.cwd
         sentinel_text = 'something else'
         for file in MOCK_STATE_FILES:
             (cwd / file).write_text(sentinel_text)
-        bookkeeper.run(mode=self.mode)
+        super()._test_after_archive_base(after_archive)
         for file in MOCK_STATE_FILES:
             assert (cwd / file).read_text() == sentinel_text
         self.check_no_warnings(caplog)

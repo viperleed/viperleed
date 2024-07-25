@@ -48,7 +48,7 @@ CALC_LOG_PREFIXES = (
     'tleedm',
     )
 HIST_FOLDER_RE = re.compile(
-    r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
+    r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})(?P<rest>_.*)'
     )
 STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
@@ -780,33 +780,39 @@ class Bookkeeper:
         -------
         tensor_nums : set
             The tensor numbers of the folders that have been moved.
+
+        Raises
+        ------
+        FileExistsError
+            If moving one of the work-history directories fails because
+            there already is a history directory with the same name.
         """
         tensor_nums = set()
         directories = self._get_current_workhistory_directories(
             contains=self.timestamp
             )
-        for directory in directories:                                           # TODO: untested
+        # Work-history directories have the following naming convention
+        # [see cleanup.move_oldruns(rp, prerun=False)]:
+        #    tTTT.rSSS[_<short_labels_of_sections>]_<log_timestamp>
+        # Here we 'shift' the SSS part further down the line, to make
+        # folders of the form
+        #    tTTT.rRRR.SSS[_<short_labels_of_sections>]_<log_timestamp>
+        for directory in directories:
             match = HIST_FOLDER_RE.match(directory.name)
-            if not match:  # Should always match
-                continue
             tensor_num = int(match['tensor_num'])
-            try:
-                search_num = int(directory.name[6:9])                           # TODO: is this right? 6:9 should be job_num
-            except (ValueError, IndexError):
-                continue
-
+            search_num = int(match['job_num'])  # Misuse the job_num
             job_num = self.max_job_for_tensor[tensor_num] + 1
             newname = (
                 f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
-                + directory.name[9:]
+                + match['rest']
                 )
             target = self.top_level_history_path / newname
-            if target.exists():
-                LOGGER.error(f'Error: Failed to move {directory} to {target}: '
-                             'Target path already exists. Stopping...')
-                raise FileExistsError
             try:
                 directory.replace(target)
+            except FileExistsError:
+                LOGGER.error(f'Error: Failed to move {directory} to {target}: '
+                             'Target path already exists. Stopping...')
+                raise
             except OSError:
                 LOGGER.error(f'Error: Failed to move {directory}.',
                              exc_info=True)
