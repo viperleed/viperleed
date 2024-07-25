@@ -798,7 +798,8 @@ class CameraABC(DeviceABC):
         handler.add_option('camera_settings', 'mode',
                            handler_widget=qtw.QLabel,
                            read_only=True)
-        handler.add_section('measurement_settings', display_name="Acquisition")
+        handler.add_section('measurement_settings', display_name="Acquisition",
+                            relevant_for_meas=True)
         handler.add_section('camera_settings', display_name="Image Properties")
 
         # pylint: disable=redefined-variable-type

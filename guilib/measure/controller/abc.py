@@ -727,7 +727,7 @@ class ControllerABC(DeviceABC):
         if not self.sets_energy:
             return handler
 
-        handler.add_section('measurement_settings')
+        handler.add_section('measurement_settings', relevant_for_meas=True)
         info = (
             ('i0_settle_time', 'I<sub>0</sub> settle time',
              '<nobr>The time intervall required for the I<sub>0</sub> '
@@ -1241,7 +1241,7 @@ class MeasureControllerABC(ControllerABC):
         """
         handler = super().get_settings_handler()
         if not handler.has_section('measurement_settings'):
-            handler.add_section('measurement_settings')
+            handler.add_section('measurement_settings', relevant_for_meas=True)
         widget = CoercingSpinBox(soft_range=(1, float('inf')))
         widget.setMinimum(0)
         tip = ("<nobr>The number of measurements the controller should"
