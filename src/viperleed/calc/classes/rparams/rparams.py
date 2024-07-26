@@ -855,6 +855,9 @@ class Rparams:
         None.
         """
         for figures in self.lastParScatterFigs.values():
+            # Pylint can't tell that we will not execute this,
+            # as per decorator, if we fail to import matplotlib
+            # pylint: disable-next=possibly-used-before-assignment
             close_figures(plt, *figures)
 
     def generateSearchPars(self, sl, subdomain=False):

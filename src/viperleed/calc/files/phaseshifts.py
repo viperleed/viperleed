@@ -553,6 +553,9 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
               "#F0E442", "#0072B2", "#D55E00", "#CC79A7"]  # colorblind safe 8
     styles = ["-", "--", ":", "-."]  # for when we run out of colors
     for i, label in enumerate(ps_labels):
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         fig, ax = plt.subplots(figsize=figsize)
         figs.append(fig)
         fig.subplots_adjust(left=0.1, right=0.98,
@@ -574,6 +577,9 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         legend.get_frame().set_linewidth(linewidth*0.7)
 
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(filename)
         for fig in figs:
             pdf.savefig(fig)
