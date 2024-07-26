@@ -211,6 +211,7 @@ xfail_strict = true
 
     [tool.pylint.main]
     check-quote-consistency = 'yes'
+    fail-on = ['I']   # Fails also for info messages
 
     [tool.pylint.format]
     max-line-length = 80
