@@ -16,12 +16,11 @@ __license__ = 'GPLv3+'
 import copy
 import logging
 import time
-from timeit import default_timer as timer
 
 import numpy as np
 
 from viperleed.calc.files import poscar
-from viperleed.calc.lib.base import get_elapsed_time_str
+from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.cli_base import ViPErLEEDCLI
 
 
@@ -55,7 +54,7 @@ class AttachBulkCLI(ViPErLEEDCLI, cli_name='attach_bulk'):
         """The actual implementation of the __call__ method."""
         logname = 'Combine-POSCAR.log'
         _set_up_logger(logname)
-        starttime = timer()
+        timer = ExecutionTimer()
 
         # pylint: disable-next=logging-format-interpolation
         logging.info(_LOG_HEAD.format(logname=logname, now=_now()))
@@ -79,11 +78,9 @@ class AttachBulkCLI(ViPErLEEDCLI, cli_name='attach_bulk'):
             logging.error('Exception while writing combined POSCAR:',
                           exc_info=True)
         # pylint: disable-next=logging-format-interpolation
-        logging.info(_LOG_TAIL.format(
-            logname=logname,
-            now=_now(),
-            delta_t=get_elapsed_time_str(timer() - starttime)
-            ))
+        logging.info(_LOG_TAIL.format(logname=logname,
+                                      now=_now(),
+                                      delta_t=timer.how_long(as_string=True)))
         return 0
 
 

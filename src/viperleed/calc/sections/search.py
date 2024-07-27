@@ -38,6 +38,7 @@ from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -325,7 +326,7 @@ def _check_search_log(search_log_path):
           and "undefined portion of a memory object" in log_content):
         raise SearchSigbusError from None
     # (3) different V0_IMAG between Deltas and Search
-    elif ("Average optical potential value in rf.info is incorrect:" 
+    elif ("Average optical potential value in rf.info is incorrect:"
           in log_content):
         raise SearchInconsistentV0ImagError from None
 
@@ -889,7 +890,7 @@ def search(sl, rp):
     convergedConfig = {"all": None, "best": None, "dec": None}
     lastconfig = None
     rp.searchMaxGenInit = rp.SEARCH_MAX_GEN
-    absstarttime = timer()
+    since_started = ExecutionTimer()
     tried_repeat = False        # if SD.TL is not written, try restarting
     pgid = None
     logger.info("Starting search. See files Search-progress.pdf "
@@ -1052,12 +1053,14 @@ def search(sl, rp):
                     time_since_print = timer() - last_debug_print_time
                     current_gen = gens[-1] if gens else 0
                     if (current_gen - last_debug_write_gen > rp.output_interval):
-                        speed = 1000*(timer() - absstarttime)/current_gen # in s/kG
+                        # "speed" is actually the inverse of a
+                        # speed, in seconds per 1000 generations
+                        speed = 1000 * since_started.how_long() / current_gen
                         logger.debug(
                             f"R = {min(rfacs)} (Generation {current_gen}, "
                             f"{time_since_print:.3f} s since "
                             f"gen. {last_debug_write_gen}, "
-                            f"{speed:.1f} s/kG overall)"
+                            f'{speed:.1f} s/kG overall)'
                             )
                         last_debug_print_time = timer()
                         last_debug_write_gen = current_gen

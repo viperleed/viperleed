@@ -14,13 +14,12 @@ from pathlib import Path                                                        
 import re
 import shutil
 import time
-from timeit import default_timer as timer
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
-from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str
+from viperleed.calc.lib.base import copytree_exists_ok
 
 # files to go in SUPP
 _SUPP_FILES = (
@@ -464,13 +463,10 @@ def cleanup(manifest, rp=None):
         logger.error("Failed to write manifest file.")
 
     # write final log message
-    if rp is None:
-        elapsedTimeStr = "unknown"
-    else:
-        elapsedTimeStr = get_elapsed_time_str(timer() - rp.starttime)
-    logger.info("\nFinishing execution at "+time.strftime("%Y-%m-%d %H:%M:%S",
-                                                          time.localtime())
-                + "\nTotal elapsed time: "+elapsedTimeStr+"\n")
+    elapsed = 'unknown' if not rp else rp.timer.how_long(as_string=True)
+    logger.info('\nFinishing execution at '
+                f'{time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())}'
+                f'\nTotal elapsed time: {elapsed}\n')
     if len(history) > 0:
         s = ""
         for ind in history:
