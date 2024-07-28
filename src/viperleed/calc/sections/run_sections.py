@@ -15,15 +15,14 @@ __license__ = 'GPLv3+'
 
 import logging
 import os
-import time
-from timeit import default_timer as timer
 
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files.displacements import readDISPLACEMENTS
 from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
-from viperleed.calc.lib.base import get_elapsed_time_str
+from viperleed.calc.lib.time_utils import DateTimeFormat
+from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.sections import deltas
 from viperleed.calc.sections import errorcalc
 from viperleed.calc.sections import fd_optimization
@@ -92,7 +91,7 @@ def run_section(index, sl, rp):
             except Exception:
                 pass
     logger.info(o)
-    sectionStartTime = timer()
+    since_section_started = ExecutionTimer()
     rp.runHistory.append(index)
     for dp in rp.domainParams:
         dp.rp.runHistory = rp.runHistory
@@ -217,8 +216,8 @@ def run_section(index, sl, rp):
         logger.error(f"Error in section {sectionNames[index]}")
         raise
     logger.info(
-        f"Finishing section at {time.strftime('%H:%M:%S', time.localtime())}. "
-        f"Section took {get_elapsed_time_str(timer() - sectionStartTime)}."
+        f'Finishing section at {DateTimeFormat.TIME.now()}. '
+        f'Section took {since_section_started.how_long(as_string=True)}.'
         )
 
 

@@ -368,22 +368,6 @@ def fortranContLine(s):
     return o
 
 
-def get_elapsed_time_str(t):
-    """
-    Takes float time in seconds, returns a formatted string giving the elapsed
-    times in minutes, hours or seconds, as appropriate.
-    """
-    if t >= 3600:
-        elapsedTimeStr = (str(int(t/3600)) + ":"+(str(int(t/60) % 60)).zfill(2)
-                          + " hours")
-    elif t >= 60:
-        elapsedTimeStr = (str(int(t/60)) + ":"+(str(int(t) % 60)).zfill(2)
-                          + " minutes")
-    else:
-        elapsedTimeStr = str(round(t, 2)) + " seconds"
-    return elapsedTimeStr
-
-
 def readIntRange(s):
     """Takes a string, returns a list of integers. If the string is a single
     int or space-separated ints, the return value is a list containing only
