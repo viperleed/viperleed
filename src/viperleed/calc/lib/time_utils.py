@@ -184,6 +184,43 @@ class ExpiringTimer(ExecutionTimer):
         """Start this timer again."""
         super().restart(started_at=started_at)
         self._interval_started = self.started_at
+
+
+class ExpiringTimerWithDeadline(ExpiringTimer):
+    """A timer that expires regularly, and also has an overall deadline."""
+
+    def __init__(self, interval, deadline, started_at=None, expire_once=False):
+        """Initialize instance with a time interval.
+
+        Parameters
+        ----------
+        interval : float
+            How much time in seconds should this timer take to expire.
+        deadline : float
+            How much time in seconds should this timer take to be
+            considered completely exhausted.
+        started_at : float, optional
+            When this timer was started. If not given, the timer
+            is started right now. Default is None.
+        expire_once : bool, optional
+            Whether this timer should certainly expire the first time
+            `has_expired` is called. After that it will expire after
+            `interval` seconds since the last call to `has_expired`.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(interval,
+                         started_at=started_at,
+                         expire_once=expire_once)
+        self._deadline = deadline
+
+    def has_reached_deadline(self):
+        """Return whether this timer has reached its deadline."""
+        return self.now() - self.started_at >= self._deadline
+
+
 def _elapsed_time_as_str(interval):
     """Return an elapsed-time string from an interval in seconds.
 

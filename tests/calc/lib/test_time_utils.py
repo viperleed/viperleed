@@ -36,10 +36,6 @@ class MockTimer:
 
     def sleep(self, seconds):
         """Sleep for a few seconds."""
-        self.advance(seconds)
-
-    def advance(self, seconds):
-        """Add a few seconds to the current time."""
         self._current_time += seconds
 
 
@@ -67,8 +63,8 @@ def get_tester(tester_name):
 class TestExecutionTimer:
     """Collection of tests for the ExecutionTimer class."""
 
-    timer_cls = ExecutionTimer
     timer_args = tuple()
+    timer_cls = ExecutionTimer
 
     def patch_timer(self, patch, *args, **kwargs):
         """Return a fake time module and a patched instance of timer_cls."""
@@ -114,7 +110,7 @@ class TestExecutionTimer:
             mock, timer = self.patch_timer(patch, started_at=12.3)
             mock.sleep(15)
             assert timer.how_long() == 15
-            mock.advance(27)
+            mock.sleep(27)
             timer.restart()
             assert timer.started_at == 54.3
 
@@ -154,8 +150,8 @@ class TestExpiringOnCountTimer(TestExecutionTimer):
     """Collection of tests for a timer that also counts 'object intervals'."""
 
     _InitArgs = namedtuple('_InitArgs', ('interval,count_start'))
-    timer_cls = ExpiringOnCountTimer
     timer_args = _InitArgs(interval=5, count_start=0)
+    timer_cls = ExpiringOnCountTimer
 
     def test_init(self):
         """Check correct initialization of the timer."""
@@ -198,38 +194,49 @@ class TestExpiringOnCountTimer(TestExecutionTimer):
 
 
 class TestExpiringTimer(TestExecutionTimer):
-    """Tests for a timer that expires in time."""
+    """Tests for a timer that periodically expires in time."""
 
     _InitArgs = namedtuple('_InitArgs', ('interval'))
-    timer_cls = ExpiringTimer
     timer_args = _InitArgs(interval=5)
+    timer_cls = ExpiringTimer
 
     def test_init(self):
         """Check correct initialization."""
         super().test_init()
         timer = self.make_timer()
-        assert timer.interval == 5
+        assert timer.interval == self.timer_args.interval
 
     def test_has_expired(self, monkeypatch):
         """Check correct expiration of the timer."""
+        interval = self.timer_args.interval
         with monkeypatch.context() as patch:
             mock, timer = self.patch_timer(patch, expire_once=True)
             assert timer.has_expired()  # because of expire_once
-            mock.sleep(2)  # interval is 5, from class args
+            mock.sleep(0.25*interval)
             assert not timer.has_expired()
-            mock.sleep(4)
+            mock.sleep(1.05*interval)
             assert timer.has_expired()
 
 
-# def test_expiring_timer_with_deadline_init():
-    # timer = ExpiringTimerWithDeadline(interval=5, deadline=10)
-    # assert timer.interval == 5
+class TestExpiringTimerWithDeadline(TestExecutionTimer):
+    """Tests for a periodically expiring timer that also 'stops' for good."""
 
-# def test_expiring_timer_with_deadline_has_reached_deadline():
-    # mock_time = MockTimer(start_time=0)
-    # ExecutionTimer.now = mock_time
-    # timer = ExpiringTimerWithDeadline(interval=5, deadline=10)
-    # mock_time.advance(9)
-    # assert not timer.has_reached_deadline()
-    # mock_time.advance(2)
-    # assert timer.has_reached_deadline()
+    _InitArgs = namedtuple('_InitArgs', ('interval,deadline'))
+    timer_args = _InitArgs(interval=5, deadline=32)
+    timer_cls = ExpiringTimerWithDeadline
+
+    def test_has_reached_deadline(self, monkeypatch):
+        """Check correct detection of deadline-reached condition."""
+        with monkeypatch.context() as patch:
+            mock, timer = self.patch_timer(patch, started_at=19)
+            assert not timer.has_expired()
+            assert not timer.has_reached_deadline()
+            mock.sleep(12)
+            assert timer.has_expired()               # interval is 5
+            assert not timer.has_reached_deadline()  # deadline is 32
+            mock.sleep(12)
+            assert timer.has_expired()
+            assert not timer.has_reached_deadline()
+            mock.sleep(12)
+            assert timer.has_expired()
+            assert timer.has_reached_deadline()
