@@ -39,6 +39,7 @@ from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.time_utils import ExecutionTimer
+from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -879,7 +880,6 @@ def search(sl, rp):
     # start search process
     repeat = True
     genOffset = 0
-    last_debug_write_gen = 0
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
@@ -891,7 +891,11 @@ def search(sl, rp):
     lastconfig = None
     rp.searchMaxGenInit = rp.SEARCH_MAX_GEN
     since_started = ExecutionTimer()
-    tried_repeat = False        # if SD.TL is not written, try restarting
+    since_last_debug = ExpiringOnCountTimer(
+            interval=rp.output_interval,
+            count_start=0,
+            )
+    tried_repeat = False  # if SD.TL is not written, try restarting
     pgid = None
     logger.info("Starting search. See files Search-progress.pdf "
                 "and SD.TL for progress information.")
@@ -946,7 +950,7 @@ def search(sl, rp):
 
         # MONITOR SEARCH
         searchStartTime = timer()
-        last_debug_print_time = searchStartTime
+        since_last_debug.restart(searchStartTime)
         filepos = 0
         timestep = 1  # time step to check files
         # !!! evaluation time could be higher - keep low only for debugging; TODO
@@ -1050,20 +1054,18 @@ def search(sl, rp):
                                 break
                     # decide to write debug info
                     # will only write once per SD.TL read
-                    time_since_print = timer() - last_debug_print_time
                     current_gen = gens[-1] if gens else 0
-                    if (current_gen - last_debug_write_gen > rp.output_interval):
+                    if since_last_debug.count_expired(current_gen):
                         # "speed" is actually the inverse of a
                         # speed, in seconds per 1000 generations
                         speed = 1000 * since_started.how_long() / current_gen
                         logger.debug(
-                            f"R = {min(rfacs)} (Generation {current_gen}, "
-                            f"{time_since_print:.3f} s since "
-                            f"gen. {last_debug_write_gen}, "
+                            f'R = {min(rfacs)} (Generation {current_gen}, '
+                            f'{since_last_debug.how_long():.3f} s since '
+                            f'gen. {since_last_debug.previous_count}, '
                             f'{speed:.1f} s/kG overall)'
                             )
-                        last_debug_print_time = timer()
-                        last_debug_write_gen = current_gen
+                        since_last_debug.restart()
                         check_datafiles = True
                     if newData:
                         _, _, lastconfig = newData[-1]

@@ -70,6 +70,63 @@ class ExecutionTimer:
                             f'not {type(other).__name__!r}') from exc
 
 
+class ExpiringOnCountTimer(ExecutionTimer):
+    """A timer that has a non-time-related interval for expiration."""
+
+    def __init__(self, interval, count_start, started_at=None):
+        """Initialize instance with a time interval.
+
+        Parameters
+        ----------
+        interval : object
+            How often should this timer expire. Should support
+            addition with `count_start`.
+        count_start : object
+            The starting value for the stuff to be "counted". Must
+            support subtraction with other objects to be counted.
+        started_at : float, optional
+            When this timer was started. If not given, the timer
+            is started right now. Default is None.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(started_at=started_at)
+        self._interval = interval
+        self._count_started = count_start
+        self._previous_count = count_start
+
+    @property
+    def previous_count(self):
+        """Return the starting counts before the last expiration."""
+        return self._previous_count
+
+    def count_expired(self, count_new):
+        """Return whether count_new causes this timer to expire.
+
+        Parameters
+        ----------
+        count_new : object
+            The quantity to use for checking whether this interval
+            has expired. Should support comparing to self.interval
+            via ordering operators. If this is the case, `count_new`
+            is saved internally as the starting point for the next
+            expiration.
+
+        Returns
+        -------
+        expired : bool
+            Whether count_new made the timer expire.
+        """
+        prev_count = self._count_started
+        expired = count_new > prev_count + self._interval
+        if expired:
+            self._previous_count = prev_count
+            self._count_started = count_new
+        return expired
+
+
 def _elapsed_time_as_str(interval):
     """Return an elapsed-time string from an interval in seconds.
 
