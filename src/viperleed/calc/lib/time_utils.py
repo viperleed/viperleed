@@ -127,6 +127,63 @@ class ExpiringOnCountTimer(ExecutionTimer):
         return expired
 
 
+class ExpiringTimer(ExecutionTimer):
+    """A timer that expires after a certain amount of time."""
+
+    def __init__(self, interval, started_at=None, expire_once=False):
+        """Initialize instance with a time interval.
+
+        Parameters
+        ----------
+        interval : float
+            How much time in seconds should this timer take to expire.
+        started_at : float, optional
+            When this timer was started. If not given, the timer
+            is started right now. Default is None.
+        expire_once : bool, optional
+            Whether this timer should certainly expire the first time
+            `has_expired` is called. After that it will expire after
+            `interval` seconds since the last call to `has_expired`.
+
+        Returns
+        -------
+        None.
+        """
+        self._interval = interval
+        self._interval_started = 0  # super() sets it via self.restart
+        super().__init__(started_at=started_at)
+        if expire_once:
+            # Subtracting a bit more ensures we expire right away.
+            # One interval is not enough, as we check ">", not ">="
+            self._interval_started -= 1.1*self.interval
+
+    @property
+    def interval(self):
+        """Return the interval of this timer."""
+        return self._interval
+
+    def has_expired(self):
+        """Return whether this interval has gone by and how long in total.
+
+        If the timer has expired its internal clock for the
+        interval is also reset to right now.
+
+        Returns
+        -------
+        has_expired : bool
+            Whether enough time has passed for this timer to expire.
+        """
+        now = self.now()
+        how_long_interval = now - self._interval_started
+        expired = how_long_interval > self.interval
+        if expired:
+            self._interval_started = now
+        return expired
+
+    def restart(self, started_at=None):
+        """Start this timer again."""
+        super().restart(started_at=started_at)
+        self._interval_started = self.started_at
 def _elapsed_time_as_str(interval):
     """Return an elapsed-time string from an interval in seconds.
 

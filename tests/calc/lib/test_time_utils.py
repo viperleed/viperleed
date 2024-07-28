@@ -121,6 +121,7 @@ class TestExecutionTimer:
     _other_timer = {
         ExecutionTimer: 'TestExecutionTimer',
         ExpiringOnCountTimer: 'TestExpiringOnCountTimer',
+        ExpiringTimer: 'TestExpiringTimer',
         }
 
     @parametrize('other,test_cls', _other_timer.items(), ids=_other_timer)
@@ -152,8 +153,9 @@ class TestExecutionTimer:
 class TestExpiringOnCountTimer(TestExecutionTimer):
     """Collection of tests for a timer that also counts 'object intervals'."""
 
+    _InitArgs = namedtuple('_InitArgs', ('interval,count_start'))
     timer_cls = ExpiringOnCountTimer
-    timer_args = (5, 0)  # interval, count_start
+    timer_args = _InitArgs(interval=5, count_start=0)
 
     def test_init(self):
         """Check correct initialization of the timer."""
@@ -161,7 +163,6 @@ class TestExpiringOnCountTimer(TestExecutionTimer):
         timer = self.make_timer()
         assert timer.previous_count == 0  # From self.timer_args
 
-    _InitArgs = namedtuple('_InitArgs', ('interval,count_start'))
     _CountInfo = namedtuple('_CountInfo', ('not_expires,expires,previous'))
     _counts = {
         int: (
@@ -195,23 +196,30 @@ class TestExpiringOnCountTimer(TestExecutionTimer):
             assert timer.count_expired(type_(expires))
             assert timer.previous_count == type_(previous)
 
-# def test_expiring_timer_init():
-    # timer = ExpiringTimer(interval=5)
-    # assert timer.interval == 5
 
-# def test_expiring_timer_has_expired():
-    # mock_time = MockTimer(start_time=0)
-    # ExecutionTimer.now = mock_time
-    # timer = ExpiringTimer(interval=5)
-    # assert not timer.has_expired()
-    # mock_time.advance(6)
-    # assert timer.has_expired()
+class TestExpiringTimer(TestExecutionTimer):
+    """Tests for a timer that expires in time."""
 
-# def test_expiring_timer_restart():
-    # timer = ExpiringTimer(interval=5)
-    # time.sleep(0.1)
-    # timer.restart()
-    # assert timer.started_at >= 0
+    _InitArgs = namedtuple('_InitArgs', ('interval'))
+    timer_cls = ExpiringTimer
+    timer_args = _InitArgs(interval=5)
+
+    def test_init(self):
+        """Check correct initialization."""
+        super().test_init()
+        timer = self.make_timer()
+        assert timer.interval == 5
+
+    def test_has_expired(self, monkeypatch):
+        """Check correct expiration of the timer."""
+        with monkeypatch.context() as patch:
+            mock, timer = self.patch_timer(patch, expire_once=True)
+            assert timer.has_expired()  # because of expire_once
+            mock.sleep(2)  # interval is 5, from class args
+            assert not timer.has_expired()
+            mock.sleep(4)
+            assert timer.has_expired()
+
 
 # def test_expiring_timer_with_deadline_init():
     # timer = ExpiringTimerWithDeadline(interval=5, deadline=10)
@@ -225,8 +233,3 @@ class TestExpiringOnCountTimer(TestExecutionTimer):
     # assert not timer.has_reached_deadline()
     # mock_time.advance(2)
     # assert timer.has_reached_deadline()
-
-# def test_elapsed_time_as_str():
-    # assert _elapsed_time_as_str(3661) == "1:01 hours"
-    # assert _elapsed_time_as_str(61) == "1:01 minutes"
-    # assert _elapsed_time_as_str(0.01) == "0.01 seconds"
