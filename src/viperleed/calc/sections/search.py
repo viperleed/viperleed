@@ -952,7 +952,6 @@ def search(sl, rp):
         search_eval_timer = ExpiringTimerWithDeadline(                          # TODO: would be nicer with a QTimer, or even a QFileSystemWatcher
             interval=rp.searchEvalTime,  # How often to read SD.TL
             deadline=900,   # Max 15 min without an SD.TL produced
-            expire_once=True,   # We should evaluate at least once
             )
         since_last_debug.synchronize_with(search_eval_timer)
         filepos = 0
