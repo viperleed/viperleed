@@ -15,13 +15,13 @@ __license__ = 'GPLv3+'
 
 import logging
 import os
-import time
 
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files.displacements import readDISPLACEMENTS
 from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
+from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.sections import deltas
 from viperleed.calc.sections import errorcalc
@@ -217,7 +217,7 @@ def run_section(index, sl, rp):
         logger.error(f"Error in section {sectionNames[index]}")
         raise
     logger.info(
-        f"Finishing section at {time.strftime('%H:%M:%S', time.localtime())}. "
+        f'Finishing section at {DateTimeFormat.TIME.now()}. '
         f'Section took {since_section_started.how_long(as_string=True)}.'
         )
 

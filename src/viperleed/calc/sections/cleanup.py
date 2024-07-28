@@ -13,13 +13,13 @@ import os
 from pathlib import Path                                                        # TODO: use everywhere
 import re
 import shutil
-import time
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.timer_utils import DateTimeFormat
 
 # files to go in SUPP
 _SUPP_FILES = (
@@ -464,8 +464,7 @@ def cleanup(manifest, rp=None):
 
     # write final log message
     elapsed = 'unknown' if not rp else rp.timer.how_long(as_string=True)
-    logger.info('\nFinishing execution at '
-                f'{time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())}'
+    logger.info(f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
                 f'\nTotal elapsed time: {elapsed}\n')
     if len(history) > 0:
         s = ""

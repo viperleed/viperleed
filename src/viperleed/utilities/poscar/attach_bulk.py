@@ -15,11 +15,11 @@ __license__ = 'GPLv3+'
 
 import copy
 import logging
-import time
 
 import numpy as np
 
 from viperleed.calc.files import poscar
+from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.cli_base import ViPErLEEDCLI
 
@@ -131,7 +131,7 @@ def _check_ab_consistent(slab, bulk):
 
 def _now():
     """Return the current time as a string."""
-    return time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
+    return DateTimeFormat.LOG_CONTENTS.now(use_gmt=True)
 
 
 def _read_both_poscars_from_user_input():

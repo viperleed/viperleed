@@ -13,12 +13,75 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-07-26'
 __license__ = 'GPLv3+'
 
+from enum import Enum
 from datetime import timedelta
+import time
 from timeit import default_timer  # This is the most accurate available
 
 
 _ONE_MINUTE = 60
 _ONE_HOUR = 60 * _ONE_MINUTE
+_TIME_COLONS = '%H:%M:%S'
+
+
+def now_(datetime_format, use_gmt=False):
+    """Return a formatted date-time for right now.
+
+    It is more convenient to use the DateTimeFormat.now() function so
+    you don't need to specify a time format, and can use consistent
+    formats every time, based on the formats available in the
+    DateTimeFormat enumeration.
+
+    Parameters
+    ----------
+    use_gmt : bool, optional
+        Whether the time should refer to the GMT time rather than
+        the local time.
+
+    Returns
+    -------
+    str
+    """
+    get_now = time.gmtime if use_gmt else time.localtime
+    return time.strftime(datetime_format, get_now())
+
+
+class DateTimeFormat(Enum):
+    """Date-time formats used in viperleed.calc.
+
+    Attributes
+    ----------
+    ISO : str
+        The ISO-compliant date-time format. Does not include
+        microseconds nor time-zone indication.
+    LOG_CONTENTS : str
+        The format used for lines added to log files. Typically
+        also used for printing to the terminal.
+    FILE_SUFFIX : str
+        The format used for suffixes of file names (e.g., log files).
+    TIME : str
+        The format used for time-only strings.
+    """
+
+    ISO = f'%Y-%m-%d {_TIME_COLONS}'
+    LOG_CONTENTS = ISO
+    FILE_SUFFIX = '%y%m%d-%H%M%S'
+    TIME = _TIME_COLONS
+
+    def now(self, use_gmt=False):
+        """Return a formatted date-time for right now.
+
+        Parameters
+        ----------
+        use_gmt : bool, optional
+            Whether the time should refer to the GMT time rather than
+            the local time.
+
+        Returns
+        -------
+        str
+        """
+        return now_(self.value, use_gmt=use_gmt)
 
 
 class ExecutionTimer:
