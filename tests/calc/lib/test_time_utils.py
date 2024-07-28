@@ -9,6 +9,7 @@ __license__ = 'GPLv3+'
 
 from collections import namedtuple
 from dataclasses import dataclass
+import datetime
 import sys
 import time
 
@@ -16,15 +17,28 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
-from viperleed.calc.lib.time_utils import _elapsed_time_as_str
 
 
-class MockTimer:
-    """Helper for mocking the passage of time."""
+def get_tester(tester_name):
+    """Return one of the test classes below from its name."""
+    this_module = sys.modules[__name__]
+    return getattr(this_module, tester_name)
+
+
+def patch_time_module(patch, current_time=0):
+    """Temporarily replace the time module of viperleed.calc.lib.time_utils."""
+    mock_module = MockTime(start_time=current_time)
+    patch.setattr('viperleed.calc.lib.time_utils.time', mock_module)
+    return mock_module
+
+
+class MockTime:
+    """A fake version of the time module."""
 
     def __init__(self, start_time):
         """Initialize fake timer at `start_time`."""
@@ -34,9 +48,24 @@ class MockTimer:
         """Return the current time."""
         return self._current_time
 
+    def gmtime(self):
+        """Return the current time in the GMT zone."""
+        now = datetime.datetime.fromtimestamp(self.now())
+        return now.timetuple()
+
+    def localtime(self):
+        """Return the current, local time."""
+        return self.gmtime()
+
+    def now(self):
+        """Return the current time."""
+        return self()
+
     def sleep(self, seconds):
         """Sleep for a few seconds."""
         self._current_time += seconds
+
+    strftime = time.strftime
 
 
 @dataclass(order=True, frozen=True)
@@ -53,13 +82,6 @@ class MockCountable:
             return NotImplemented
 
 
-
-def get_tester(tester_name):
-    """Return one of the test classes below from its name."""
-    this_module = sys.modules[__name__]
-    return getattr(this_module, tester_name)
-
-
 class TestExecutionTimer:
     """Collection of tests for the ExecutionTimer class."""
 
@@ -69,7 +91,7 @@ class TestExecutionTimer:
     def patch_timer(self, patch, *args, **kwargs):
         """Return a fake time module and a patched instance of timer_cls."""
         args = args or self.timer_args
-        mock = MockTimer(start_time=kwargs.get('started_at', 0))
+        mock = MockTime(start_time=kwargs.get('started_at', 0))
         patch.setattr(self.timer_cls, 'now', mock)
         timer = self.make_timer(*args, **kwargs)
         return mock, timer
@@ -240,3 +262,50 @@ class TestExpiringTimerWithDeadline(TestExecutionTimer):
             mock.sleep(12)
             assert timer.has_expired()
             assert timer.has_reached_deadline()
+
+
+class TestDateTimeFormat:
+    """Tests for the DateTimeFormat enumeration class."""
+
+    mock_time_stamp = time.mktime((2023, 1, 1, 12, 1, 38, 6, 1, 0))
+    _formatted = {
+        'file_suffix': '230101-120138',
+        'iso': '2023-01-01 12:01:38',
+        'log_contents': '2023-01-01 12:01:38',
+        'time': '12:01:38',
+        }
+
+    @parametrize('fmt,expect', _formatted.items(), ids=_formatted)
+    @parametrize(use_gmt=(True,False))
+    def test_datetime_format_iso(self, fmt, expect, use_gmt, monkeypatch):
+        """Check correct date-time formatting."""
+        with monkeypatch.context() as patch:
+            mock_time = patch_time_module(patch,
+                                          current_time=self.mock_time_stamp)
+            fmt_enum = DateTimeFormat[fmt.upper()]
+            assert fmt_enum.now(use_gmt=use_gmt) == expect
+
+
+# import pytest
+# import time
+# from enum import Enum
+# from your_module import now_, DateTimeFormat, _TIME_COLONS
+
+
+# # Mock data for testing
+
+# def test_now_local_time(monkeypatch):
+    # mock_time = MockTime(mock_time_data)
+    # monkeypatch.setattr(time, 'localtime', mock_time.localtime)
+    # formatted_time = now_('%Y-%m-%d %H:%M:%S', use_gmt=False)
+    # assert formatted_time == "2023-01-01 12:00:00"
+
+# def test_now_gmt_time(monkeypatch):
+    # mock_time = MockTime(mock_time_data)
+    # monkeypatch.setattr(time, 'gmtime', mock_time.gmtime)
+    # formatted_time = now_('%Y-%m-%d %H:%M:%S', use_gmt=True)
+    # assert formatted_time == "2023-01-01 12:00:00"
+
+
+# def test_time_colons():
+    # assert _TIME_COLONS == '%H:%M:%S'
