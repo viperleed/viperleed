@@ -19,7 +19,7 @@ from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok
-from viperleed.calc.lib.timer_utils import DateTimeFormat
+from viperleed.calc.lib.time_utils import DateTimeFormat
 
 # files to go in SUPP
 _SUPP_FILES = (
