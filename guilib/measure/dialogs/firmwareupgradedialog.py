@@ -79,6 +79,16 @@ def get_firmware_version_from_ino_file(file_name):
     raise ValueError(f'No firmware version in {file_name}')
 
 
+def get_version_from_folder_name(folder_name):
+    """Return a Version from a folder name."""
+    *_, version_str = folder_name.split('_')
+    try:
+        return base.Version(version_str)
+    except ValueError:  # Not a valid folder name
+        pass
+    return None
+
+
 class FirmwareUpgradeDialog(qtw.QDialog):
     """Dialog to handle user interaction when upgrading firmware."""
 
@@ -382,17 +392,15 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         firmware_dict = {}
         for file in file_path.glob('*.zip'):
             with ZipFile(file, mode='r') as archive:
-                # !!! We are assuming here that the first folder in the
-                # .zip file matches the name of the firmware version.
+                folders = (n for n in archive.namelist() if '/' in n)
+                top_level = (folder.split('/')[0] for folder in folders)
+                folder_and_versions = (
+                    (f, get_version_from_folder_name(f))
+                    for f in top_level
+                    )
                 try:
-                    folder_name, *_ = archive.namelist()[0].split('/')
-                except IndexError:
-                    continue
-                *_, version_str = folder_name.split('_')
-                try:
-                    version = base.Version(version_str)
-                except ValueError:
-                    # Some non-firmware zip file
+                    folder_name, version = next(folder_and_versions)
+                except StopIteration:  # Some non-firmware zip file
                     continue
                 firmware_dict[folder_name] = FirmwareVersionInfo(folder_name,
                                                                  version, file)
