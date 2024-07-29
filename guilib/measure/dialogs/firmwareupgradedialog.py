@@ -384,7 +384,10 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             with ZipFile(file, mode='r') as archive:
                 # !!! We are assuming here that the first folder in the
                 # .zip file matches the name of the firmware version.
-                folder_name, *_ = archive.namelist()[0].split('/')
+                try:
+                    folder_name, *_ = archive.namelist()[0].split('/')
+                except IndexError:
+                    continue
                 *_, version_str = folder_name.split('_')
                 try:
                     version = base.Version(version_str)
