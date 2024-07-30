@@ -29,6 +29,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTags
 from viperleed.guilib.measure.hardwarebase import device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
@@ -647,7 +648,8 @@ class ImagingSourceCamera(abc.CameraABC):
             )
         handler.add_option('camera_settings', 'black_level',
                            handler_widget=_widget, tooltip=_tip,
-                           is_advanced=True, display_name="Dark Level")
+                           tags=SettingsTags.ADVANCED,
+                           display_name="Dark Level")
 
         # Color format
         _tip = (
@@ -662,7 +664,7 @@ class ImagingSourceCamera(abc.CameraABC):
         _widget.notify_ = _widget.currentIndexChanged
         handler.add_option('camera_settings', 'color_format',
                            handler_widget=_widget, tooltip=_tip,
-                           is_advanced=True)
+                           tags=SettingsTags.ADVANCED)
         return handler
 
     def list_devices(self):

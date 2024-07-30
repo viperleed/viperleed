@@ -26,9 +26,11 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes import thermocouple
+from viperleed.guilib.measure.dialogs.settingsdialog import FieldInfo
 from viperleed.guilib.measure.dialogs.settingsdialog import (
-    SettingsDialogSectionBase, FieldInfo
+    SettingsDialogSectionBase
     )
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTags
 from viperleed.guilib.measure.serial.viperleedserial import (
     ViPErLEEDHardwareError, ExtraSerialErrors
     )
@@ -284,7 +286,7 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
 
         # Modify arguments for the following super() call
         kwargs['display_name'] = "Hardware configuration"
-        kwargs['is_advanced'] = True
+        kwargs['tags'] = SettingsTags.ADVANCED
         kwargs['tooltip'] = (
             "This section lists what each hardware channel "
             "is capable of measuring. Quantities appearing "

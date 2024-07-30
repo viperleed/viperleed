@@ -34,6 +34,7 @@ Part of the code here is inspired by https://github.com/pythonguis/pyqtconfig
 import ast
 import copy
 import collections
+import enum
 from pathlib import Path
 from types import MethodType as _bound_method
 import warnings
@@ -138,6 +139,15 @@ def _get_hook(obj):
             (v for k, v in _DEFAULT_HOOKS.items() if isinstance(obj, k)),
             None)
     return hook
+
+
+class SettingsTags(enum.Flag):
+    """Flags that decide the display behaviour of a settings widget."""
+    OPTION = enum.auto()
+    SECTION = enum.auto()
+    ADVANCED = enum.auto()
+    MEASUREMENT = enum.auto()
+    READ_ONLY = enum.auto()
 
 
 class _QContainerMeta(type(collections.abc.Container), type(qtc.QObject)):
@@ -287,7 +297,8 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                                       *args, **kwargs)
         self[section_name][option_name] = option
 
-        if not option.read_only:
+        # if not option.read_only:
+        if SettingsTags.READ_ONLY not in option.tags:
             option.value_changed.connect(
                 self.__option_setter(section_name, option_name)
                 )
@@ -332,8 +343,13 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
-        option = StaticSettingsDialogOption(option_name, handler_widget, *args,
-                                            read_only=True, **kwargs)
+        tags = kwargs.get('tags', None)
+        if tags and SettingsTags.READ_ONLY not in tags:
+            tags = tags | SettingsTags.READ_ONLY
+        else:
+            tags = SettingsTags.READ_ONLY
+        option = StaticSettingsDialogOption(option_name, handler_widget,
+                                            *args, tags=tags, **kwargs)
         self[section_name][option_name] = option
         if self.has_section(section_name):
             self.__sections[section_name].add_option(option)
@@ -445,20 +461,20 @@ class SettingsDialogOption(qtc.QObject):
             when hovering over, or clicking on the info icon. If it
             is an empty string, no tooltip is shown. Default is an
             empty string.
-        read_only : bool, optional
-            Whether the user is allowed to change the ViPErLEEDSettings
-            by interacting with the handler of this SettingsDialogOption.
-            Default is False.
-        is_advanced : bool, optional
-            Whether this option is to be displayed only in "Advanced"
-            mode. Default is False.
+        tags : SettingsTags, optional
+            Contains additional tags of this option. Possible tags are:
+                SettingsTags.ADVANCED
+                    Present if the option contains advanced settings.
+                SettingsTags.MEASUREMENT
+                    Present if the option contains settings
+                    related to the measurement.
+                SettingsTags.READ_ONLY
+                    Present if the option contains read-only settings.
+            Default is None.
         label_alignment : {'top', 'centre', 'bottom'}
             Vertical alignment of label field relative to handler_widget.
             Only the first character matters. Any character other than 'c'
             or 'b' will be treated as 'top'. Default is 'top'.
-        relevant_for_meas: bool, optional
-            Whether this option is to be displayed when
-            editing measurement settings. Default is False.
         **kwargs : object
             Other keyword arguments passed on to handler_widget if
             only a QWidget class is given.
@@ -473,9 +489,11 @@ class SettingsDialogOption(qtc.QObject):
 
         super().__init__(kwargs.pop('parent', None))
         self.option_name = option_name
-        self._advanced = kwargs.pop('is_advanced', False)
-        self._read_only = bool(kwargs.pop('read_only', False))
-        self._relevant_for_meas = kwargs.pop('relevant_for_meas', False)
+
+        self._tags = SettingsTags.OPTION
+        additional_tags = kwargs.pop('tags', None)
+        if additional_tags:
+            self._tags = self._tags | additional_tags
 
         if isinstance(handler_widget, type(qtw.QWidget)):
             handler_widget = handler_widget(*args, **kwargs)
@@ -501,12 +519,7 @@ class SettingsDialogOption(qtc.QObject):
     @property
     def advanced(self):
         """Return whether this option is considered advanced."""
-        return self._advanced
-
-    @advanced.setter
-    def advanced(self, is_advanced):
-        """Set whether this option is considered advanced."""
-        self._advanced = bool(is_advanced)
+        return SettingsTags.ADVANCED in self.tags
 
     @property
     def handler_widget(self):
@@ -532,17 +545,22 @@ class SettingsDialogOption(qtc.QObject):
     @property
     def read_only(self):
         """Return whether this option can be modified."""
-        return self._read_only
+        return SettingsTags.READ_ONLY in self.tags
 
     @property
     def relevant_for_meas(self):
         """Return whether this option is relevant for measurements."""
-        return self._relevant_for_meas
+        return SettingsTags.MEASUREMENT in self.tags
 
-    @relevant_for_meas.setter
-    def relevant_for_meas(self, relevant):
-        """Set whether this option is relevant for measurements."""
-        self._relevant_for_meas = bool(relevant)
+    @property
+    def tags(self):
+        """Return tags."""
+        return self._tags
+
+    @tags.setter
+    def tags(self, new_tags):
+        """Set tags."""
+        self._tags = new_tags
 
     def get_(self):
         """Return the value of this option as a string."""
@@ -696,17 +714,19 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
             A descriptive text that will be used as tooltip, displayed
             when the mouse cursor hovers over the section title. If an
             empty string no tooltip is shown. Default is an empty string.
-        is_advanced : bool, optional
-            Whether this section contains only settings that are to be
-            displayed if a user selects the 'Advanced' display.
-            Default is False.
-        relevant_for_meas: bool, optional
-            Whether this this section contains only settings that are to
-            be displayed when editing measurement settings.
-            Default is False.
         parent : QWidget, optional
             The parent widget of this SettingsDialogSection. Default
             is None.
+        tags : SettingsTags, optional
+            Contains additional tags of this section. Possible tags are:
+                SettingsTags.ADVANCED
+                    Present if the section contains advanced settings.
+                SettingsTags.MEASUREMENT
+                    Present if the section contains settings
+                    related to the measurement.
+                SettingsTags.READ_ONLY
+                    Present if the section contains read-only settings.
+            Default is None.
 
         Raises
         -------
@@ -719,8 +739,10 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
 
         tooltip = kwargs.get('tooltip', '')
 
-        self._advanced = kwargs.get('is_advanced', False)
-        self._relevant_for_meas = kwargs.pop('relevant_for_meas', False)
+        self._tags = SettingsTags.SECTION
+        additional_tags = kwargs.pop('tags', None)
+        if additional_tags:
+            self._tags = self._tags | additional_tags
 
         self._info = qtw.QLabel()
         self.central_widget = qtw.QWidget()
@@ -736,22 +758,22 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
     @property
     def advanced(self):
         """Return whether this section contains only advanced settings."""
-        return self._advanced
-
-    @advanced.setter
-    def advanced(self, advanced):
-        """Mark this section as containing only advanced settings."""
-        self._advanced = bool(advanced)
+        return SettingsTags.ADVANCED in self.tags
 
     @property
     def relevant_for_meas(self):
         """Return whether this section contains only measurement settings."""
-        return self._relevant_for_meas
+        return SettingsTags.MEASUREMENT in self.tags
 
-    @relevant_for_meas.setter
-    def relevant_for_meas(self, relevant):
-        """Mark this section as containing only measurment settings."""
-        self._relevant_for_meas = bool(relevant)
+    @property
+    def tags(self):
+        """Return tags."""
+        return self._tags
+
+    @tags.setter
+    def tags(self, new_tags):
+        """Set tags."""
+        self._tags = new_tags
 
     def set_info(self, info_text):
         """Add informative text in a QLabel."""
@@ -811,9 +833,16 @@ class SettingsDialogSection(SettingsDialogSectionBase):
             A descriptive text that will be used as tooltip, displayed
             when the mouse cursor hovers over the section title. If an
             empty string no tooltip is shown. Default is an empty string.
-        is_advanced : bool, optional
-            Whether this section contains only settings that are to be
-            displayed if a user selects the 'Advanced' display.
+        tags : SettingsTags, optional
+            Contains additional tags of this section. Possible tags are:
+                SettingsTags.ADVANCED
+                    Present if the section contains advanced settings.
+                SettingsTags.MEASUREMENT
+                    Present if the section contains settings
+                    related to the measurement.
+                SettingsTags.READ_ONLY
+                    Present if the section contains read-only settings.
+            Default is None.
         options : Sequence, optional
             Elements are SettingsDialogOption instances. Options can
             also be added later with the .add_option/.add_options
@@ -855,9 +884,9 @@ class SettingsDialogSection(SettingsDialogSectionBase):
         self.__options.append(option)
         self.__layout.addRow(*option)
         if self.advanced:
-            option.advanced = True
+            option.tags = option.tags | SettingsTags.ADVANCED
         if self.relevant_for_meas:
-            option.relevant_for_meas = True
+            option.tags = option.tags | SettingsTags.MEASUREMENT
         option.handler_widget_changed.connect(self.__on_option_widget_changed)
 
     def add_options(self, options):
@@ -1189,13 +1218,17 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             when hovering over, or clicking on the info icon. If it
             is an empty string, no tooltip is shown. Default is an
             empty string.
-        read_only : bool
-            Whether the user is allowed to change the ViPErLEEDSettings
-            by interacting with the handler of this SettingsDialogOption.
-            Must be True, otherwise a RuntimeError is raised.
-        is_advanced : bool, optional
-            Whether this option is to be displayed only in "Advanced"
-            mode. Default is False.
+        tags : SettingsTags, optional
+            Contains additional tags of this option. Possible tags are:
+                SettingsTags.ADVANCED
+                    Present if the option contains advanced settings.
+                SettingsTags.MEASUREMENT
+                    Present if the option contains settings
+                    related to the measurement.
+                SettingsTags.READ_ONLY
+                    Option contains read-only settings.
+            SettingsTags.READ_ONLY must be present, otherwise a
+            RuntimeError is raised.
         label_alignment : {'top', 'centre', 'bottom'}
             Vertical alignment of label field relative to handler_widget.
             Only the first character matters. Any character other than 'c'
@@ -1214,7 +1247,8 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             read_only is not True. Indicates wrong
             use of StaticSettingsDialogOption.
         """
-        if kwargs.get('read_only') != True:
+        tags = kwargs.get('tags', None)
+        if not tags or SettingsTags.READ_ONLY not in tags:
             raise RuntimeError(
                 'A StaticSettingsDialogOption may only be read_only. You '
                 'are seeing this message due to a faulty implementation.'
