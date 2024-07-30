@@ -84,6 +84,16 @@ class SearchInconsistentV0ImagError(SearchError):
         super().__init__(self.message, *args, **kwargs)
 
 
+class SearchProcessKilledError(SearchError):
+    message = ("The search was stopped because the MPI process was killed by "
+               "system. This is most likely because the process ran out of "
+               "available memory. Consider reducing the number of MPI "
+               "processes by setting a lower value for NCORES or limiting the "
+               "parameter space in the DISPLACEMENTS file.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(self.message, *args, **kwargs)
+
 def processSearchResults(sl, rp, search_log_path, final=True):
     """Read the best structure from the last block of 'SD.TL' into a slab.
 
@@ -330,7 +340,12 @@ def _check_search_log(search_log_path):
     elif ("Average optical potential value in rf.info is incorrect:"
           in log_content):
         raise SearchInconsistentV0ImagError from None
-
+    # (4) MPI process killed, most likely because of insufficient memory
+    # Note the two different error messages for Intel and GNU MPI 
+    elif ("YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)"
+          in log_content or
+          "=   KILLED BY SIGNAL: 9 (Killed)" in log_content):
+        raise SearchProcessKilledError from None
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     """
