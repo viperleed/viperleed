@@ -20,7 +20,6 @@ import signal
 import subprocess
 import sys
 import time
-from timeit import default_timer as timer
 
 import numpy as np
 import scipy
@@ -38,6 +37,9 @@ from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.time_utils import ExecutionTimer
+from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
+from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -325,7 +327,7 @@ def _check_search_log(search_log_path):
           and "undefined portion of a memory object" in log_content):
         raise SearchSigbusError from None
     # (3) different V0_IMAG between Deltas and Search
-    elif ("Average optical potential value in rf.info is incorrect:" 
+    elif ("Average optical potential value in rf.info is incorrect:"
           in log_content):
         raise SearchInconsistentV0ImagError from None
 
@@ -878,19 +880,22 @@ def search(sl, rp):
     # start search process
     repeat = True
     genOffset = 0
-    last_debug_write_gen = 0
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
-    parab_x0 = None     # starting guess for parabola                           # TODO: would be nicer to incorporate it into a ParabolaFit class
+    parab_x0 = None    # starting guess for parabola                            # TODO: would be nicer to incorporate it into a ParabolaFit class
     rfac_predict = []  # tuples (gen, r) from parabola fit                      # TODO: would be nicer to incorporate it into a ParabolaFit class
     realLastConfig = {"all": [], "best": [], "dec": []}                         # TODO: would be nicer with a SearchConfigurationTracker class that has an .update
     realLastConfigGen = {"all": 0, "best": 0, "dec": 0}
     convergedConfig = {"all": None, "best": None, "dec": None}
     lastconfig = None
     rp.searchMaxGenInit = rp.SEARCH_MAX_GEN
-    absstarttime = timer()
-    tried_repeat = False        # if SD.TL is not written, try restarting
+    since_started = ExecutionTimer()
+    since_last_debug = ExpiringOnCountTimer(
+            interval=rp.output_interval,
+            count_start=0,
+            )
+    tried_repeat = False  # if SD.TL is not written, try restarting
     pgid = None
     logger.info("Starting search. See files Search-progress.pdf "
                 "and SD.TL for progress information.")
@@ -944,13 +949,14 @@ def search(sl, rp):
                          "Check files SD.TL and rf.info.")
 
         # MONITOR SEARCH
-        searchStartTime = timer()
-        last_debug_print_time = searchStartTime
+        search_eval_timer = ExpiringTimerWithDeadline(                          # TODO: would be nicer with a QTimer, or even a QFileSystemWatcher
+            interval=rp.searchEvalTime,  # How often to read SD.TL
+            deadline=900,   # Max 15 min without an SD.TL produced
+            )
+        since_last_debug.synchronize_with(search_eval_timer)
         filepos = 0
         timestep = 1  # time step to check files
         # !!! evaluation time could be higher - keep low only for debugging; TODO
-        evaluationTime = rp.searchEvalTime  # how often should SD.TL be evaluated # TODO: would be nicer with a QTimer, or even a QFileSystemWatcher
-        lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""
         sdtlGenNum = 0
         gaussianWidthOri = rp.GAUSSIAN_WIDTH
@@ -980,10 +986,8 @@ def search(sl, rp):
                     comment = f"GAUSSIAN_WIDTH = {rp.GAUSSIAN_WIDTH}"
                     logger.info("GAUSSIAN_WIDTH parameter changed. "
                                 "Search will restart.")
-                t = timer() - searchStartTime
-                if (t - lastEval > evaluationTime) or stop:
+                if search_eval_timer.has_expired() or stop:
                     # evaluate
-                    lastEval = t
                     newData = []
                     if os.path.isfile("SD.TL"):
                         filepos, content = iosearch.readSDTL_next(
@@ -994,7 +998,8 @@ def search(sl, rp):
                                 content, whichR=rp.SEARCH_BEAMS,
                                 n_expect=rp.SEARCH_POPULATION
                                 )
-                    elif t >= 900 and rp.HALTING < 3:                           # TODO: nicer with a QTimer timeout
+                    elif (search_eval_timer.has_reached_deadline()              # TODO: nicer with a QTimer timeout
+                          and rp.HALTING < 3):
                         stop = True
                         if tried_repeat:
                             logger.warning(
@@ -1049,18 +1054,18 @@ def search(sl, rp):
                                 break
                     # decide to write debug info
                     # will only write once per SD.TL read
-                    time_since_print = timer() - last_debug_print_time
                     current_gen = gens[-1] if gens else 0
-                    if (current_gen - last_debug_write_gen > rp.output_interval):
-                        speed = 1000*(timer() - absstarttime)/current_gen # in s/kG
+                    if since_last_debug.count_expired(current_gen):
+                        # "speed" is actually the inverse of a
+                        # speed, in seconds per 1000 generations
+                        speed = 1000 * since_started.how_long() / current_gen
                         logger.debug(
-                            f"R = {min(rfacs)} (Generation {current_gen}, "
-                            f"{time_since_print:.3f} s since "
-                            f"gen. {last_debug_write_gen}, "
-                            f"{speed:.1f} s/kG overall)"
+                            f'R = {min(rfacs)} (Generation {current_gen}, '
+                            f'{since_last_debug.how_long():.3f} s since '
+                            f'gen. {since_last_debug.previous_count}, '
+                            f'{speed:.1f} s/kG overall)'
                             )
-                        last_debug_print_time = timer()
-                        last_debug_write_gen = current_gen
+                        since_last_debug.restart()
                         check_datafiles = True
                     if newData:
                         _, _, lastconfig = newData[-1]

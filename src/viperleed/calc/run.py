@@ -17,7 +17,6 @@ import logging
 import os
 from pathlib import Path
 import shutil
-import time
 
 from viperleed import __version__
 from viperleed.calc import LOGGER as logger
@@ -26,6 +25,7 @@ from viperleed.calc.classes import rparams
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.base import CustomLogFormatter
+from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import prerun_clean
 from viperleed.calc.sections.initialization import (
@@ -81,7 +81,7 @@ def run_calc(system_name=None,
     """
     os.umask(0)
     # start logger, write to file:
-    timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
+    timestamp = DateTimeFormat.FILE_SUFFIX.now()
 
     log_name = f'{LOG_PREFIX}-{timestamp}.log'
     logger.setLevel(logging.INFO)
@@ -94,8 +94,8 @@ def run_calc(system_name=None,
         consoleHandler.setFormatter(logFormatter)
         logger.addHandler(consoleHandler)
 
-    logger.info(f"Starting new log: {log_name}\nTime of execution (UTC): "
-                + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+    logger.info(f"Starting new log: {log_name}\nTime of execution: "
+                + DateTimeFormat.LOG_CONTENTS.now())
     logger.info(f"This is ViPErLEED version {__version__}\n")
 
     tmp_manifest = ["SUPP", "OUT", log_name]
