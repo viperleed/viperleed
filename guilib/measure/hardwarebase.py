@@ -232,10 +232,9 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     path_to_config : Path, "", or None
         The path to the only configuration file successfully
         found. None or "" if no configuration file was found.
-        None is always returned if prompt_if_invalid is False,
-        or because the user dismissed the pop-up. The empty
-        string is returned if an alternative option was given
-        as a third_btn_text parameter, but the user anyway
+        None is always returned if the user dismissed the pop-up.
+        The empty string is returned if an alternative option was
+        given as a third_btn_text parameter, but the user anyway
         dismissed the dialog.
     """
     parent_widget = kwargs.get("parent_widget", None)
@@ -297,17 +296,10 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
             Whether settings in obj_info should be looked up exactly
             or not. What this entails is up to the reimplementation of
             find_matching_settings_files. Default is False.
-        prompt_if_invalid : bool, optional
-            In case the search for a config file failed, pop up
-            a dialog asking the user for input. The search is
-            considered failed in case no config file was found,
-            or if multiple config files matched the criterion.
-            Default is True.
         parent_widget : QWidget or None, optional
             The parent widget of the pop up. Unless parent_widget
             is None, the pop up will be blocking user events for
-            parent_widget till the user closes it. Used only
-            if prompt_if_invalid is True. Default is None.
+            parent_widget till the user closes it. Default is None.
         third_btn_text : str, optional
             If given and not empty, the string is used as the text
             for an extra button with "accept role" in the did-not-
@@ -318,16 +310,15 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
     Returns
     -------
     path_to_config : Path or None
-        The path to the only settings file successfully found.
-        None if no settings file was found. None is always
-        returned if prompt_if_invalid is False, or because the
-        user dismissed the pop-up. The empty string is returned
-        if an alternative option was given as a third_btn_text
-        parameter, but the user anyway dismissed the dialog.
+        The path to the only settings file successfully found or the
+        file that has been selected by the user. None if no settings
+        file was found. None is returned if the user dismissed the
+        pop-up. The empty string is returned if an alternative option
+        was given as a third_btn_text parameter, but the user anyway
+        dismissed the dialog.
     """
     directory = kwargs.get('directory', DEFAULTS_PATH)
     match_exactly = kwargs.get('match_exactly', False)
-    prompt_if_invalid = kwargs.get('prompt_if_invalid', True)
     parent_widget = kwargs.get('parent_widget', None)
     default = True if directory is DEFAULTS_PATH else False
 
@@ -336,29 +327,25 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         )
 
     if device_config_files and len(device_config_files) == 1:
-        # Found exactly one config file
+        # Found exactly one config file.
         return device_config_files[0]
 
-    if not prompt_if_invalid:
-        return None
-
-    if not device_config_files:
-        return _get_object_settings_not_found(obj_cls, obj_info, **kwargs)
-
-    # Found multiple config files that match.
-    # Let the user pick which one to use
-    names = [f.name for f in device_config_files]
-    dropdown = DropdownDialog(
-        "Found multiple settings files",
-        "Found multiple settings files for "
-        f"{obj_info.unique_name} in {directory} and subfolders.\n"
-        "Select which one should be used:",
-        names, parent=parent_widget
-        )
-    config = None
-    if dropdown.exec_() == dropdown.Apply:
-        config = device_config_files[names.index(dropdown.selection)]
-    return config
+    if device_config_files:
+        # Found multiple config files that match.
+        # Let the user pick which one to use.
+        names = [f.name for f in device_config_files]
+        dropdown = DropdownDialog(
+            "Found multiple settings files",
+            "Found multiple settings files for "
+            f"{obj_info.unique_name} in {directory} and subfolders.\n"
+            "Select which one should be used:",
+            names, parent=parent_widget
+            )
+        config = None
+        if dropdown.exec_() == dropdown.Apply:
+            config = device_config_files[names.index(dropdown.selection)]
+        return config
+    return _get_object_settings_not_found(obj_cls, obj_info, **kwargs)
 
 
 def get_devices(package):
