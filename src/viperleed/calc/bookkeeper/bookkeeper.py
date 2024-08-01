@@ -25,12 +25,12 @@ from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
-from viperleed.calc.bookkeeper.history.entry.formats import TimestampFormat
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
 from viperleed.calc.lib.base import logging_silent
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
+from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
@@ -728,7 +728,7 @@ class Bookkeeper:
         log.add_bookeeper_logfile(self.top_level_history_path)
         LOGGER.info(  # Log only once per instance
             '\n### Bookeeper running at '
-            f'{time.strftime(TimestampFormat.ISO.value, time.localtime())} ###'
+            f'{DateTimeFormat.LOG_CONTENTS.now()} ###'
             )
         self._state_info['logger_prepared'] = True
 
