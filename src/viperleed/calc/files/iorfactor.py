@@ -948,7 +948,7 @@ def beamlist_to_array(beams):
     n_E = in_grid.shape[0]
 
     # fill with NaNs as default value
-    beam_arr = np.full([n_E, n_beams], fill_value=np.NaN)
+    beam_arr = np.full([n_E, n_beams], fill_value=np.nan)
 
     id_start = np.zeros(n_beams, dtype=np.int32)
     n_E_beams = np.zeros(n_beams, dtype=np.int32)
