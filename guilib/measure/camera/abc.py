@@ -31,7 +31,7 @@ from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.classes.abc import DeviceABC
 from viperleed.guilib.measure.classes.abc import DeviceABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTags
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
@@ -797,11 +797,12 @@ class CameraABC(DeviceABC):
         """
         handler = super().get_settings_handler()
         handler.add_option('camera_settings', 'mode',
-                           tags=SettingsTags.READ_ONLY)
                            handler_widget=qtw.QLabel(self.mode.capitalize()),
+                           tags=SettingsTag.READ_ONLY | SettingsTag.REGULAR)
         handler.add_section('measurement_settings', display_name="Acquisition",
-                            tags=SettingsTags.MEASUREMENT)
-        handler.add_section('camera_settings', display_name="Image Properties")
+                            tags=SettingsTag.MEASUREMENT | SettingsTag.REGULAR)
+        handler.add_section('camera_settings', display_name="Image Properties",
+                            tags=SettingsTag.REGULAR)
 
         # pylint: disable=redefined-variable-type
         # Triggered for _widget. While this is true, it clear what
@@ -908,7 +909,7 @@ class CameraABC(DeviceABC):
             self.settings['camera_settings']['bad_pixels_path'] = ''
         handler.add_option('camera_settings', 'bad_pixels_path',
                            handler_widget=PathSelector,
-                           tags=SettingsTags.READ_ONLY, tooltip=_tip)
+                           tags=SettingsTag.READ_ONLY, tooltip=_tip)
         return handler
 
     @abstractmethod

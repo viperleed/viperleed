@@ -141,13 +141,17 @@ def _get_hook(obj):
     return hook
 
 
-class SettingsTags(enum.Flag):
+class SettingsTag(enum.Flag):
     """Flags that decide the display behaviour of a settings widget."""
     OPTION = enum.auto()
     SECTION = enum.auto()
+    REGULAR = enum.auto()
     ADVANCED = enum.auto()
     MEASUREMENT = enum.auto()
     READ_ONLY = enum.auto()
+
+
+Tag = SettingsTag
 
 
 class _QContainerMeta(type(collections.abc.Container), type(qtc.QObject)):
@@ -198,6 +202,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 'File', 'config', widget,
                 display_name='Settings file',
                 tooltip=str(file) if file else None,
+                tags=Tag.REGULAR
                 )
 
     def __delitem__(self, item):
@@ -298,7 +303,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         self[section_name][option_name] = option
 
         # if not option.read_only:
-        if SettingsTags.READ_ONLY not in option.tags:
+        if Tag.READ_ONLY not in option.tags:
             option.value_changed.connect(
                 self.__option_setter(section_name, option_name)
                 )
@@ -343,11 +348,11 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
-        tags = kwargs.get('tags', None)
-        if tags and SettingsTags.READ_ONLY not in tags:
-            tags = tags | SettingsTags.READ_ONLY
+        tags = kwargs.pop('tags', None)
+        if tags and Tag.READ_ONLY not in tags:
+            tags = tags | Tag.READ_ONLY
         else:
-            tags = SettingsTags.READ_ONLY
+            tags = Tag.READ_ONLY
         option = StaticSettingsDialogOption(option_name, handler_widget,
                                             *args, tags=tags, **kwargs)
         self[section_name][option_name] = option
@@ -369,6 +374,9 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         section = SettingsDialogSection(section_name, **kwargs)
         self.__sections[section_name] = section
         self.__widgets.append(section)
+
+    def get_widgets_with_tags(self, tags):
+        return tuple(wid for wid in self.widgets if tags in wid.tags)
 
     def has_advanced_options(self):
         """Return whether self contains any advanced option."""
@@ -461,14 +469,16 @@ class SettingsDialogOption(qtc.QObject):
             when hovering over, or clicking on the info icon. If it
             is an empty string, no tooltip is shown. Default is an
             empty string.
-        tags : SettingsTags, optional
+        tags : SettingsTag, optional
             Contains additional tags of this option. Possible tags are:
-                SettingsTags.ADVANCED
+                SettingsTag.REGULAR
+                    Present if the option contains regular settings.
+                SettingsTag.ADVANCED
                     Present if the option contains advanced settings.
-                SettingsTags.MEASUREMENT
+                SettingsTag.MEASUREMENT
                     Present if the option contains settings
                     related to the measurement.
-                SettingsTags.READ_ONLY
+                SettingsTag.READ_ONLY
                     Present if the option contains read-only settings.
             Default is None.
         label_alignment : {'top', 'centre', 'bottom'}
@@ -490,7 +500,7 @@ class SettingsDialogOption(qtc.QObject):
         super().__init__(kwargs.pop('parent', None))
         self.option_name = option_name
 
-        self._tags = SettingsTags.OPTION
+        self._tags = Tag.OPTION
         additional_tags = kwargs.pop('tags', None)
         if additional_tags:
             self._tags = self._tags | additional_tags
@@ -507,6 +517,8 @@ class SettingsDialogOption(qtc.QObject):
 
         self.display_name = self._make_label_widget(display_name, tooltip,
                                                      v_align)
+        if Tag.REGULAR not in self._tags:
+            self.setVisible(False)
 
     def __iter__(self):
         """Return the label and the handler for this option."""
@@ -519,7 +531,7 @@ class SettingsDialogOption(qtc.QObject):
     @property
     def advanced(self):
         """Return whether this option is considered advanced."""
-        return SettingsTags.ADVANCED in self.tags
+        return bool(Tag.ADVANCED & self.tags)
 
     @property
     def handler_widget(self):
@@ -545,12 +557,17 @@ class SettingsDialogOption(qtc.QObject):
     @property
     def read_only(self):
         """Return whether this option can be modified."""
-        return SettingsTags.READ_ONLY in self.tags
+        return bool(Tag.READ_ONLY & self.tags)
+
+    @property
+    def regular(self):
+        """Return whether this is a regular option of the device settings."""
+        return bool(Tag.REGULAR & self.tags)
 
     @property
     def relevant_for_meas(self):
         """Return whether this option is relevant for measurements."""
-        return SettingsTags.MEASUREMENT in self.tags
+        return bool(Tag.MEASUREMENT & self.tags)
 
     @property
     def tags(self):
@@ -717,14 +734,16 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
         parent : QWidget, optional
             The parent widget of this SettingsDialogSection. Default
             is None.
-        tags : SettingsTags, optional
+        tags : SettingsTag, optional
             Contains additional tags of this section. Possible tags are:
-                SettingsTags.ADVANCED
+                SettingsTag.REGULAR
+                    Present if the section contains regular settings.
+                SettingsTag.ADVANCED
                     Present if the section contains advanced settings.
-                SettingsTags.MEASUREMENT
+                SettingsTag.MEASUREMENT
                     Present if the section contains settings
                     related to the measurement.
-                SettingsTags.READ_ONLY
+                SettingsTag.READ_ONLY
                     Present if the section contains read-only settings.
             Default is None.
 
@@ -739,7 +758,7 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
 
         tooltip = kwargs.get('tooltip', '')
 
-        self._tags = SettingsTags.SECTION
+        self._tags = Tag.SECTION
         additional_tags = kwargs.pop('tags', None)
         if additional_tags:
             self._tags = self._tags | additional_tags
@@ -758,12 +777,17 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
     @property
     def advanced(self):
         """Return whether this section contains only advanced settings."""
-        return SettingsTags.ADVANCED in self.tags
+        return bool(Tag.ADVANCED & self.tags)
+
+    @property
+    def regular(self):
+        """Return whether this is a regular section of the device settings."""
+        return bool(Tag.REGULAR & self._tags)
 
     @property
     def relevant_for_meas(self):
         """Return whether this section contains only measurement settings."""
-        return SettingsTags.MEASUREMENT in self.tags
+        return bool(Tag.MEASUREMENT & self.tags)
 
     @property
     def tags(self):
@@ -833,14 +857,16 @@ class SettingsDialogSection(SettingsDialogSectionBase):
             A descriptive text that will be used as tooltip, displayed
             when the mouse cursor hovers over the section title. If an
             empty string no tooltip is shown. Default is an empty string.
-        tags : SettingsTags, optional
+        tags : SettingsTag, optional
             Contains additional tags of this section. Possible tags are:
-                SettingsTags.ADVANCED
+                SettingsTag.REGULAR
+                    Present if the section contains regular settings.
+                SettingsTag.ADVANCED
                     Present if the section contains advanced settings.
-                SettingsTags.MEASUREMENT
+                SettingsTag.MEASUREMENT
                     Present if the section contains settings
                     related to the measurement.
-                SettingsTags.READ_ONLY
+                SettingsTag.READ_ONLY
                     Present if the section contains read-only settings.
             Default is None.
         options : Sequence, optional
@@ -883,10 +909,13 @@ class SettingsDialogSection(SettingsDialogSectionBase):
         """Add one SettingsDialogOption to self."""
         self.__options.append(option)
         self.__layout.addRow(*option)
+        if self.regular:
+            option.tags = option.tags | Tag.REGULAR
+            option.setVisible(True)
         if self.advanced:
-            option.tags = option.tags | SettingsTags.ADVANCED
+            option.tags = option.tags | Tag.ADVANCED
         if self.relevant_for_meas:
-            option.tags = option.tags | SettingsTags.MEASUREMENT
+            option.tags = option.tags | Tag.MEASUREMENT
         option.handler_widget_changed.connect(self.__on_option_widget_changed)
 
     def add_options(self, options):
@@ -1114,6 +1143,8 @@ class SettingsDialog(qtw.QDialog):
 
         layout = qtw.QVBoxLayout()
         for widg in self.handler.widgets:
+            if widg.relevant_for_meas and not widg.regular:
+                continue
             if isinstance(widg, SettingsDialogSectionBase):
                 layout.addWidget(widg)
                 continue
@@ -1158,14 +1189,19 @@ class SettingsDialog(qtw.QDialog):
             btn_text = "Show all"
         self.adv_button.setText(btn_text)
         for widg in self.handler.widgets:
+            if not widg.advanced and not widg.regular:
+                continue
             if isinstance(widg, SettingsDialogSection):
                 _section_visible = False
                 for option in widg.options:
-                    _section_visible |= visible or not option.advanced
-                    option.setVisible(visible or not option.advanced)
+                    _section_visible |= visible or (not option.advanced
+                                                    and option.regular)
+                    option.setVisible(visible or (not option.advanced
+                                                  and option.regular))
                 widg.setVisible(_section_visible)
             else:
-                widg.setVisible(visible or not widg.advanced)
+                widg.setVisible(visible or (not widg.advanced
+                                            and widg.regular))
         self.adjustSize()   # TODO: does not always adjust when going smaller?
 
     def _only_show_measurement_settings(self):
@@ -1218,16 +1254,18 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             when hovering over, or clicking on the info icon. If it
             is an empty string, no tooltip is shown. Default is an
             empty string.
-        tags : SettingsTags, optional
+        tags : SettingsTag, optional
             Contains additional tags of this option. Possible tags are:
-                SettingsTags.ADVANCED
+                SettingsTag.REGULAR
+                    Present if the option contains regular settings.
+                SettingsTag.ADVANCED
                     Present if the option contains advanced settings.
-                SettingsTags.MEASUREMENT
+                SettingsTag.MEASUREMENT
                     Present if the option contains settings
                     related to the measurement.
-                SettingsTags.READ_ONLY
+                SettingsTag.READ_ONLY
                     Option contains read-only settings.
-            SettingsTags.READ_ONLY must be present, otherwise a
+            SettingsTag.READ_ONLY must be present, otherwise a
             RuntimeError is raised.
         label_alignment : {'top', 'centre', 'bottom'}
             Vertical alignment of label field relative to handler_widget.
@@ -1248,7 +1286,7 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             use of StaticSettingsDialogOption.
         """
         tags = kwargs.get('tags', None)
-        if not tags or SettingsTags.READ_ONLY not in tags:
+        if not tags or Tag.READ_ONLY not in tags:
             raise RuntimeError(
                 'A StaticSettingsDialogOption may only be read_only. You '
                 'are seeing this message due to a faulty implementation.'

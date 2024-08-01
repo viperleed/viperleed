@@ -27,7 +27,7 @@ from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 from viperleed.guilib.measure.controller import abc
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTags
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 
 # For settings dialog:
 from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
@@ -515,10 +515,11 @@ class ViPErinoController(abc.MeasureControllerABC):
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
                            display_name='Firmware version',
-                           tags=SettingsTags.READ_ONLY)
+                           tags=SettingsTag.READ_ONLY | SettingsTag.REGULAR)
         handler.add_option('controller', 'device_name',
                            handler_widget=_settings.SerialNumberEditor(self),
-                           display_name='Serial No.')
+                           display_name='Serial No.',
+                           tags=SettingsTag.REGULAR)
         handler.add_from_handler(super().get_settings_handler())
         handler.add_complex_section(
             _settings.HardwareConfigurationEditor(controller=self)              # TODO: add ADC_update rate for measurement

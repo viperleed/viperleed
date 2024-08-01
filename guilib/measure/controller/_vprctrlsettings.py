@@ -30,7 +30,7 @@ from viperleed.guilib.measure.dialogs.settingsdialog import FieldInfo
 from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase
     )
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTags
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.serial.viperleedserial import (
     ViPErLEEDHardwareError, ExtraSerialErrors
     )
@@ -286,7 +286,7 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
 
         # Modify arguments for the following super() call
         kwargs['display_name'] = "Hardware configuration"
-        kwargs['tags'] = SettingsTags.ADVANCED
+        kwargs['tags'] = SettingsTag.ADVANCED
         kwargs['tooltip'] = (
             "This section lists what each hardware channel "
             "is capable of measuring. Quantities appearing "
@@ -350,6 +350,19 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
 
         info['measurement_devices'] = str(tuple(devices))
         return info
+
+    @property
+    def regular(self):
+        """Return whether this section contains only regular settings."""
+        # We want to see this section always in the regular settings if
+        # (1) we don't have info yet
+        if not self.__adcs:
+            return True
+        # (2) something is wrong with the current selection
+        if any('?' in combo.currentText()
+               for adc in self.__adcs for combo in adc.values()):
+            return True
+        return super().regular
 
     @qtc.pyqtSlot()
     def update_widgets(self):

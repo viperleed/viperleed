@@ -27,7 +27,7 @@ from viperleed.guilib.measure.classes.abc import DeviceABC
 from viperleed.guilib.measure.classes.abc import DeviceABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTags
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 
 
@@ -729,7 +729,7 @@ class ControllerABC(DeviceABC):
             return handler
 
         handler.add_section('measurement_settings',
-                            tags=SettingsTags.MEASUREMENT)
+                            tags=SettingsTag.MEASUREMENT)
         info = (
             ('i0_settle_time', 'I<sub>0</sub> settle time',
              '<nobr>The time intervall required for the I<sub>0</sub> '
@@ -1244,7 +1244,7 @@ class MeasureControllerABC(ControllerABC):
         handler = super().get_settings_handler()
         if not handler.has_section('measurement_settings'):
             handler.add_section('measurement_settings',
-                                tags=SettingsTags.MEASUREMENT)
+                                tags=SettingsTag.MEASUREMENT)
         widget = CoercingSpinBox(soft_range=(1, float('inf')))
         widget.setMinimum(0)
         tip = ("<nobr>The number of measurements the controller should"

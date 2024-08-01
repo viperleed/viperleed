@@ -33,6 +33,7 @@ from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.measurement import _meassettings as _settings
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.guilib.measure.widgets.collapsableview import CollapsableCameraList
@@ -715,7 +716,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         sys_config = SystemSettings()
         settings_path = sys_config.paths['configuration']
 
-        handler.add_section('measurement_info')
+        handler.add_section('measurement_info', tags=SettingsTag.REGULAR)
         line_edit = qtw.QLineEdit()
         handler.add_option('measurement_info', 'tag',
                            handler_widget=line_edit,
@@ -746,7 +747,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                                   display_name='Cameras',
                                   )
 
-        handler.add_section('measurement_settings')
+        handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
         type_display = qtw.QLabel()
         type_display.setText(type(self).__name__)
         handler.add_static_option('measurement_settings', 'measurement_class',
