@@ -500,8 +500,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             used to transform measurements into physical values.
             This whole complex section is "advanced", and will be
             shown only if there is something missing.
-        'measurement_settings'/'adc_update_rate'                                # TODO
-            Advanced
+        'measurement_settings'/'adc_update_rate'
+            Allows selecting the ADC update rate from given values.
         All the settings handled by MeasureControllerABC.
 
         Returns
@@ -522,8 +522,19 @@ class ViPErinoController(abc.MeasureControllerABC):
                            tags=SettingsTag.REGULAR)
         handler.add_from_handler(super().get_settings_handler())
         handler.add_complex_section(
-            _settings.HardwareConfigurationEditor(controller=self)              # TODO: add ADC_update rate for measurement
+            _settings.HardwareConfigurationEditor(controller=self)
             )
+        widget = _settings.UpdateRateSelector(self)
+        tooltip = ('<nobr>The frequency at which the </nobr>controller '
+                  'acquires measurements. For regular measurements it is '
+                  'preferable to set the measurement frequency to the '
+                  'line frequency.')
+        handler.add_option(
+            'measurement_settings', 'adc_update_rate', handler_widget=widget,
+            display_name='Measurement frequency', tooltip=tooltip,
+            # tags=SettingsTag.ADVANCED
+            )
+
         return handler
 
     @classmethod

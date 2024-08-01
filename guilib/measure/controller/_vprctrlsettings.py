@@ -253,6 +253,29 @@ class SerialNumberEditor(qtw.QWidget):
         _INVOKE(self.__ctrl, 'set_serial_number', qtc.Q_ARG(str, new_serial))
 
 
+class UpdateRateSelector(qtw.QComboBox):
+    """Class to select ADC update rate values."""
+
+    def __init__(self, controller, **kwargs):
+        """Initialize instance."""
+        super().__init__(**kwargs)
+        self._rates = controller.settings.items('adc_update_rate')
+        for key, frequency in self._rates:
+            self.addItem(str(round(float(frequency))) + (' Hz'), userData=key)
+        self.notify_ = self.currentIndexChanged
+
+    def get_(self):
+        """Return the selected update rate."""
+        return self.currentData()
+
+    def set_(self, value):
+        """Set update rate from the settings file."""
+        for i in range(self.count()):
+            if self.itemData(i) == value:
+                self.setCurrentIndex(i)
+                break
+
+
 class HardwareConfigurationEditor(SettingsDialogSectionBase):
     """Class for viewing and setting ADC inputs.
 
