@@ -797,8 +797,8 @@ class CameraABC(DeviceABC):
         """
         handler = super().get_settings_handler()
         handler.add_option('camera_settings', 'mode',
-                           handler_widget=qtw.QLabel,
                            tags=SettingsTags.READ_ONLY)
+                           handler_widget=qtw.QLabel(self.mode.capitalize()),
         handler.add_section('measurement_settings', display_name="Acquisition",
                             tags=SettingsTags.MEASUREMENT)
         handler.add_section('camera_settings', display_name="Image Properties")
