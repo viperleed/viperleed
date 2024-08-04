@@ -15,6 +15,14 @@ from dataclasses import fields as data_fields
 from dataclasses import is_dataclass
 import typing
 
+try:  # Import stuff that was made available since py3.8
+    from typing import get_args as ty_get_args
+except ImportError:
+    from typing_extensions import get_args as ty_get_args
+    from typing_extensions import get_origin as ty_get_origin
+else:
+    from typing import get_origin as ty_get_origin
+
 
 def is_optional_field(field, with_type=None):
     """Return whether a datclasses.Field is optional."""
@@ -65,3 +73,27 @@ def set_frozen_attr(self, attr_name, attr_value):
         if not any(f.name == attr_name for f in non_init):
             raise
     object.__setattr__(self, attr_name, attr_value)
+
+
+_SpecialType = tuple({  # These types are not pubic API
+    type(typing.Optional),
+    type(typing.Any),   # In Py3.12 they are different
+    })
+
+
+def _find_type_origin(type_hint):
+    """Yield nested type origins from a `type_hint`."""
+    # Adapted from https://stackoverflow.com/questions/50563546
+    if isinstance(type_hint, _SpecialType):
+        # Special types, without extra parameters
+        return
+
+    actual_type = ty_get_origin(type_hint) or type_hint
+    if isinstance(actual_type, _SpecialType):
+        # Case of typing.Union[...] or typing.ClassVar[...] or ...
+        args = ty_get_args(type_hint)
+        all_origins = tuple(tuple(_find_type_origin(arg)) for arg in args)
+        for origins in all_origins:
+            yield from origins
+    else:
+        yield actual_type
