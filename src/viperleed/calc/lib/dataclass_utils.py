@@ -13,7 +13,7 @@ __license__ = 'GPLv3+'
 
 from dataclasses import fields as data_fields
 from dataclasses import is_dataclass
-from typing import Optional
+import typing
 
 
 def is_optional_field(field, with_type=None):
@@ -22,7 +22,7 @@ def is_optional_field(field, with_type=None):
         with_type = field.type
     # The following trick works because Optional removes 'repeated'
     # entries, so that Optional[Optional[t]] == Optional[t]
-    return field.type == Optional[with_type]
+    return field.type == typing.Optional[with_type]
 
 
 # TODO: this may be made stricter to ensure it is only used
