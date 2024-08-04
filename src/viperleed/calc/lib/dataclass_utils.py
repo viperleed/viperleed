@@ -173,7 +173,11 @@ def set_frozen_attr(self, attr_name, attr_value):
         non_init = (f for f in data_fields(self) if not f.init)
         if not any(f.name == attr_name for f in non_init):
             raise
-    object.__setattr__(self, attr_name, attr_value)
+    try:
+        # Try setattr first, in case it's not frozen and it was edited
+        setattr(self, attr_name, attr_value)
+    except FrozenInstanceError:
+        object.__setattr__(self, attr_name, attr_value)
 
 
 _SpecialType = tuple({  # These types are not pubic API
