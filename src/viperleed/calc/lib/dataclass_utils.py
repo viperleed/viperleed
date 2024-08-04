@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 
 import functools
 from dataclasses import dataclass
+from dataclasses import field as data_field
 from dataclasses import fields as data_fields
 from dataclasses import is_dataclass
 import typing
@@ -59,6 +60,17 @@ def is_optional_field(field, with_type=None):
     # The following trick works because Optional removes 'repeated'
     # entries, so that Optional[Optional[t]] == Optional[t]
     return field.type == typing.Optional[with_type]
+
+
+def non_init_field(**kwargs):
+    """Return a dataclass field not used for initialization."""
+    try:
+        kwargs['default_factory']
+    except KeyError:  # Can't set a default if there's a factory
+        kwargs.setdefault('default', None)
+    kwargs['init'] = False
+    kwargs.setdefault('repr', False)
+    return data_field(**kwargs)
 
 
 # TODO: this may be made stricter to ensure it is only used

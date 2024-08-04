@@ -18,9 +18,9 @@ __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
-from dataclasses import field
 
 from viperleed.calc.lib.dataclass_utils import frozen
+from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 
@@ -52,7 +52,7 @@ class NumericBounds:
     range_: tuple = (None, None)
     accept_limits: tuple = (True, True)
     out_of_range_event: str = 'fail'
-    _msg_: str = field(init=False)
+    _msg_: str = non_init_field()
 
     def __post_init__(self):
         """Process assigned attributes.
@@ -202,8 +202,8 @@ class Assignment:
     values_str: str
     parameter: str
     flags_str: str = ''
-    flags: tuple = field(init=False)
-    values: tuple = field(init=False)
+    flags: tuple = non_init_field()
+    values: tuple = non_init_field()
 
     def __post_init__(self):
         """Split out left- and right-hand sides into flags and values."""
