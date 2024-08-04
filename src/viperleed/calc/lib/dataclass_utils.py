@@ -208,6 +208,10 @@ _SpecialType = tuple({  # These types are not pubic API
 def _find_type_origin(type_hint):
     """Yield nested type origins from a `type_hint`."""
     # Adapted from https://stackoverflow.com/questions/50563546
+    if type_hint in (typing.Any, ...):
+        yield object  # Not quite accurate, but close enough
+        return
+
     if isinstance(type_hint, _SpecialType):
         # Special types, without extra parameters
         return
