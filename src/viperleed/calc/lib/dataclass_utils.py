@@ -57,7 +57,7 @@ def check_types(self, init_only=False):
 
 
 def is_optional_field(field, with_type=None):
-    """Return whether a datclasses.Field is optional."""
+    """Return whether a dataclasses.Field is optional."""
     if with_type is None:
         with_type = field.type
     # The following trick works because Optional removes 'repeated'
@@ -138,7 +138,7 @@ def replace_values(instance, skip=(), **changes):
 # https://stackoverflow.com/questions/900392 or
 # https://stackoverflow.com/questions/2654113
 def set_frozen_attr(self, attr_name, attr_value):
-    """Set self.attr_name to attr_value even if self is frozen.
+    """Set `attr_name` to `attr_value`, even if `self` is frozen.
 
     It is **VERY IMPORTANT** to realize that this function is a
     workaround that makes a frozen dataclass not actually frozen.
@@ -160,7 +160,9 @@ def set_frozen_attr(self, attr_name, attr_value):
     Raises
     ------
     AttributeError
-        If self has no `attr_name` attribute.
+        If `self` has no `attr_name` attribute.
+    TypeError
+        If `self` is not a dataclass.
     """
     if not is_dataclass(self):
         raise TypeError('Cannot use set_frozen_attr on non-dataclass objects')
