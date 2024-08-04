@@ -1,4 +1,4 @@
-"""Module dataclasses_utils of viperleed.calc.lib.
+"""Module dataclass_utils of viperleed.calc.lib.
 
 Collects useful functions that add up on top of the dataclasses
 stdlib module.
