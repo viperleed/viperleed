@@ -11,18 +11,18 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-07-25'
 __license__ = 'GPLv3+'
 
-from dataclasses import fields
+from dataclasses import fields as data_fields
 from dataclasses import is_dataclass
 from typing import Optional
 
 
-def is_optional_field(field_, with_type=None):
+def is_optional_field(field, with_type=None):
     """Return whether a datclasses.Field is optional."""
     if with_type is None:
-        with_type = field_.type
+        with_type = field.type
     # The following trick works because Optional removes 'repeated'
     # entries, so that Optional[Optional[t]] == Optional[t]
-    return field_.type == Optional[with_type]
+    return field.type == Optional[with_type]
 
 
 # TODO: this may be made stricter to ensure it is only used
@@ -61,6 +61,7 @@ def set_frozen_attr(self, attr_name, attr_value):
         getattr(self, attr_name)
     except AttributeError:
         # It may still be that the attribute is a init=False field.
-        if not any(f.name == attr_name for f in fields(self) if not f.init):
+        non_init = (f for f in data_fields(self) if not f.init)
+        if not any(f.name == attr_name for f in non_init):
             raise
     object.__setattr__(self, attr_name, attr_value)
