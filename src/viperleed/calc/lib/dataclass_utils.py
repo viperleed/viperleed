@@ -42,7 +42,26 @@ frozen = dataclass_transform(frozen_default=True)(
 
 
 def check_types(self, init_only=False):
-    """Raise TypeError if fields don't match their type hints."""
+    """Raise TypeError if fields don't match their type hints.
+
+    Parameters
+    ----------
+    init_only : bool, optional
+        Whether only the fields used for initialization should be
+        checked. Default is False, corresponding to checking all
+        fields.
+
+    Notes
+    -----
+    Only the type of the fields is checked: The types of the items of
+        collection fields are not checked.
+    InitVar and ClassVar attributes are also unchecked.
+
+    Raises
+    ------
+    TypeError
+        If any of the field types do not fit their type hints.
+    """
     for field in data_fields(self):
         if init_only and not field.init:
             continue
