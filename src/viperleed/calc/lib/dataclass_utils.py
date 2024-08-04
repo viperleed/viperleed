@@ -11,11 +11,14 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-07-25'
 __license__ = 'GPLv3+'
 
+import copy
 import functools
+from dataclasses import FrozenInstanceError
 from dataclasses import dataclass
 from dataclasses import field as data_field
 from dataclasses import fields as data_fields
 from dataclasses import is_dataclass
+from dataclasses import replace as data_replace
 import typing
 import sys
 
@@ -71,6 +74,62 @@ def non_init_field(**kwargs):
     kwargs['init'] = False
     kwargs.setdefault('repr', False)
     return data_field(**kwargs)
+
+
+def replace_values(instance, skip=(), **changes):
+    """Return a new dataclass instance with values replaced.
+
+    This is an extension of the dataclasses.replace function that
+    also copies over the values of non-initialization fields to the
+    new instance. Notice that mutable non-initialization fields are
+    copied over as deep copies. If you need a different behavior,
+    specify them in `skip`, then deal with them explicitly. InitVar
+    and ClassVar fields are not copied. If `instance` has InitVar
+    fields without a default, they must be specified in `changes`.
+    In Python 3.7, this is also the case for InitVar fields that
+    do have a default.
+
+    Parameters
+    ----------
+    instance : dataclass
+        The dataclass instance whose values should be replaced.
+    skip : Sequence of str
+        Names of non-initialization fields not to be copied over.
+    **changes : dict
+        The values to replace, as keyword arguments.
+
+    Return
+    ------
+    new_instance : type(instance)
+        A new dataclass of the same type as `instance` with all
+        attributes copied over, except for those replaced and those
+        specified in `skip`.
+    """
+    new_instance = data_replace(instance, **changes)
+    if isinstance(skip, str):
+        skip = {skip,}
+    # Since there's no public API to detect whether instances
+    # are frozen, we'll try out if a bare setattr is enough
+    _setattr = setattr
+    for field in data_fields(instance):
+        if field.init:  # data_replace already takes care of these
+            continue
+        attr = field.name
+        if attr in skip:
+            continue
+        value = getattr(instance, attr)
+        try:
+            hash(value)
+        except TypeError:
+            # Non-hashable, so likely mutable
+            value = copy.deepcopy(value)
+
+        try:
+            _setattr(new_instance, attr, value)
+        except FrozenInstanceError:  # Happens only once per call
+            _setattr = set_frozen_attr
+            _setattr(new_instance, attr, value)
+    return new_instance
 
 
 # TODO: this may be made stricter to ensure it is only used
