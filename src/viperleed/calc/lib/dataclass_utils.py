@@ -24,6 +24,21 @@ else:
     from typing import get_origin as ty_get_origin
 
 
+def check_types(self, init_only=False):
+    """Raise TypeError if fields don't match their type hints."""
+    for field in data_fields(self):
+        if init_only and not field.init:
+            continue
+        attr = field.name
+        value = getattr(self, attr)
+        actual_types = tuple(_find_type_origin(field.type))
+        if actual_types and not isinstance(value, actual_types):
+            raise TypeError(
+                    f'Expected type {field.type} for argument {attr!r} '
+                    f'but received type {type(value).__name__!r} instead'
+                    )
+
+
 def is_optional_field(field, with_type=None):
     """Return whether a datclasses.Field is optional."""
     if with_type is None:
