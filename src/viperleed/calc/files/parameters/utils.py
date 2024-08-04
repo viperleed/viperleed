@@ -18,8 +18,9 @@ __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import field
 
+from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 
@@ -28,7 +29,7 @@ from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 # could go higher up the hierarchy into a file.utils.py or similar
 
 
-@dataclass(frozen=True)
+@frozen
 class NumericBounds:
     """A container for bounds of numeric parameters.
 
@@ -173,7 +174,7 @@ POSITIVE_INT = NumericBounds(type_=int, range_=(1, None))
 POSITIVE_FLOAT = NumericBounds(type_=float, range_=(0, None))
 
 
-@dataclass(frozen=True)
+@frozen
 class Assignment:
     """Class to store the flags and values of a parameter.
 

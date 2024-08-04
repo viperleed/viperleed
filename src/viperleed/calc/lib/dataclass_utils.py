@@ -11,9 +11,12 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-07-25'
 __license__ = 'GPLv3+'
 
+import functools
+from dataclasses import dataclass
 from dataclasses import fields as data_fields
 from dataclasses import is_dataclass
 import typing
+import sys
 
 try:  # Import stuff that was made available since py3.8
     from typing import get_args as ty_get_args
@@ -22,6 +25,16 @@ except ImportError:
     from typing_extensions import get_origin as ty_get_origin
 else:
     from typing import get_origin as ty_get_origin
+
+if sys.version_info < (3, 12):  # No frozen_default keyword in py3.11
+    from typing_extensions import dataclass_transform
+else:
+    from typing import dataclass_transform
+
+
+frozen = dataclass_transform(frozen_default=True)(
+    functools.partial(dataclass, frozen=True)
+    )
 
 
 def check_types(self, init_only=False):
