@@ -211,7 +211,7 @@ class Assignment:
             value = self.parameter.strip()
         except AttributeError as exc:  # Not a string
             raise TypeError('parameter must be a string') from exc
-        if value:
+        if not value:
             raise ValueError('parameter must contain printable characters')
         set_frozen_attr(self, 'parameter', value)
 
