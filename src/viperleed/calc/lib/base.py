@@ -98,27 +98,6 @@ class BackwardsReader:                                                          
             self.data.pop()
 
 
-class CustomLogFormatter(logging.Formatter):
-    """Logging Formatter for level-dependent message formatting"""
-    FORMATS = {
-        logging.DEBUG: "dbg: %(msg)s",
-        logging.INFO: "%(msg)s",
-        logging.WARNING: "# WARNING: %(msg)s",
-        logging.ERROR: "### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n"
-                       "# %(msg)s \n#############",
-        logging.CRITICAL: "### CRITICAL ### in %(module)s:%(funcName)s:"
-                          "%(lineno)s\n# %(msg)s \n################",
-        "DEFAULT": "%(msg)s",
-    }
-
-    def format(self, record):
-        # debug log format for everything at DEBUG level or lower
-        if record.levelno < logging.DEBUG:
-            log_fmt = self.FORMATS.get(logging.DEBUG)
-        else:
-            log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
 
 
 ###############################################

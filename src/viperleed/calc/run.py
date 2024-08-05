@@ -24,7 +24,7 @@ from viperleed.calc import LOG_PREFIX
 from viperleed.calc.classes import rparams
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
-from viperleed.calc.lib.base import CustomLogFormatter
+from viperleed.calc.lib.log_utils import CustomLogFormatter
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import prerun_clean
