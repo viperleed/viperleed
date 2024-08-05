@@ -54,6 +54,31 @@ def debug_or_lower(logger, effective=True):
     return level <= DEBUG
 
 
+@contextmanager
+def logging_silent(level=logging.CRITICAL):
+    """Mute all logging messages with at least `level` for ALL loggers.
+
+    Parameters
+    ----------
+    level : int, optional
+        The maximum logging level in use. Default is
+        logging.CRITICAL, which silences all logging
+        messages.
+
+    Returns
+    -------
+    None.
+    """
+    # Adapted from https://gist.github.com/simon-weber/7853144
+    # Uses an undocumented, but public API: logging.Manager.disable
+    previous_level = logging.root.manager.disable
+    logging.disable(level)
+    try:
+        yield
+    finally:
+        logging.disable(previous_level)
+
+
 def prepare_calc_logger(logger, file_name, with_console):
     """Prepare logger to be used with calc.run."""
     logger.setLevel(logging.INFO)
