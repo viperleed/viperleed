@@ -14,8 +14,22 @@ __created__ = '2024-08-05'
 __license__ = 'GPLv3+'
 
 
+from contextlib import contextmanager
 import logging
 from logging import DEBUG
+
+
+@contextmanager
+def at_level(logger, level):
+    """Temporarily set the level of `logger` to `level`."""
+    # Fetch the current level, but don't use getEffectiveLevel
+    # that walks up the parent tree to fetch up to the root
+    previous_level = logger.level
+    logger.setLevel(level)
+    try:
+        yield
+    finally:
+        logger.setLevel(previous_level)
 
 
 class CustomLogFormatter(logging.Formatter):

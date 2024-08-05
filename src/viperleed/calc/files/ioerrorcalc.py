@@ -32,7 +32,7 @@ if CAN_PLOT:
     import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)  # Mute matplotlib debug messages                 # TODO: perhaps nicer to use at_level only in the relevant spots? See also iorfactor and ivplot
 
 
 def extract_var_r(errors):
@@ -507,7 +507,7 @@ def make_errors_figs(errors, formatting=None):
         fig.tight_layout(rect=(0, 0, 1, 0.965))
         fig.suptitle(titles[mode])
         figs.append(fig)
-    logger.log(1, f'Number of error figures: {len(figs)}')
+    logger.log(1, f'Number of error figures: {len(figs)}')                      # TODO: This will never appear as we set INFO at the module level
     return figs
 
 def _error_legends(mode, mode_errors):
