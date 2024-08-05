@@ -142,7 +142,6 @@ class TestCanPlot:
         _exc_text = 'Close failed'
         mock_pyplot.close.side_effect = Exception(_exc_text)
         close_figures(mock_pyplot, Mock())
-        print(caplog.text)
         assert _exc_text in caplog.text
 
     def test_prepare_matplotlib_for_calc(self, monkeypatch):
