@@ -18,7 +18,10 @@ __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+
+from viperleed.calc.lib.dataclass_utils import frozen
+from viperleed.calc.lib.dataclass_utils import non_init_field
+from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 
 # TODO: some of these classes are probably also useful for other
@@ -26,7 +29,7 @@ from dataclasses import dataclass, field
 # could go higher up the hierarchy into a file.utils.py or similar
 
 
-@dataclass(frozen=True)
+@frozen
 class NumericBounds:
     """A container for bounds of numeric parameters.
 
@@ -49,7 +52,7 @@ class NumericBounds:
     range_: tuple = (None, None)
     accept_limits: tuple = (True, True)
     out_of_range_event: str = 'fail'
-    _msg_: str = field(init=False)
+    _msg_: str = non_init_field()
 
     def __post_init__(self):
         """Process assigned attributes.
@@ -78,8 +81,7 @@ class NumericBounds:
             raise ValueError('out_of_range_event "modulo" needs both limits '
                              'to be acceptable.')
 
-        # Use object.__setattr__ for frozen data-class
-        object.__setattr__(self, '_msg_', self._make_message())
+        set_frozen_attr(self, '_msg_', self._make_message())
 
     @property
     def coerce(self):
@@ -172,7 +174,7 @@ POSITIVE_INT = NumericBounds(type_=int, range_=(1, None))
 POSITIVE_FLOAT = NumericBounds(type_=float, range_=(0, None))
 
 
-@dataclass(frozen=True)
+@frozen
 class Assignment:
     """Class to store the flags and values of a parameter.
 
@@ -200,30 +202,31 @@ class Assignment:
     values_str: str
     parameter: str
     flags_str: str = ''
-    flags: tuple = field(init=False)
-    values: tuple = field(init=False)
+    flags: tuple = non_init_field()
+    values: tuple = non_init_field()
 
     def __post_init__(self):
         """Split out left- and right-hand sides into flags and values."""
         try:
-            object.__setattr__(self, 'parameter', self.parameter.strip())
+            value = self.parameter.strip()
         except AttributeError as exc:  # Not a string
             raise TypeError('parameter must be a string') from exc
-        if not self.parameter:
+        if not value:
             raise ValueError('parameter must contain printable characters')
+        set_frozen_attr(self, 'parameter', value)
 
         flags = self._unpack_assignment_side(self.flags_str)
         values = self._unpack_assignment_side(self.values_str)
 
-        object.__setattr__(self, 'flags', flags)
-        object.__setattr__(self, 'values', values)
+        set_frozen_attr(self, 'flags', flags)
+        set_frozen_attr(self, 'values', values)
 
         # Make sure values_str and flags_str are actually strings:
         # we also accept Sequence of strings at __init__
         if not isinstance(self.values_str, str):
-            object.__setattr__(self, 'values_str', ' '.join(self.values_str))
+            set_frozen_attr(self, 'values_str', ' '.join(self.values_str))
         if not isinstance(self.flags_str, str):
-            object.__setattr__(self, 'flags_str', ' '.join(self.flags_str))
+            set_frozen_attr(self, 'flags_str', ' '.join(self.flags_str))
 
     @property
     def flag(self):

@@ -8,7 +8,6 @@ __created__ = '2024-07-26'
 __license__ = 'GPLv3+'
 
 from collections import namedtuple
-from dataclasses import dataclass
 import datetime
 import sys
 import time
@@ -17,6 +16,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
@@ -68,7 +68,7 @@ class MockTime:
     strftime = time.strftime
 
 
-@dataclass(order=True, frozen=True)
+@frozen(order=True)
 class MockCountable:
     """Come object that can be counted."""
 

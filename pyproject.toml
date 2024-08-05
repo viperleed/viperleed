@@ -24,6 +24,7 @@ dependencies = [
     'quicktions',
     'scipy',
     'scikit-learn',
+    'typing-extensions; python_version<"3.12"',
     'wrapt',
     ]
 keywords = [
