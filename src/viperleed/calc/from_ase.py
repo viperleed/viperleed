@@ -33,6 +33,7 @@ from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib.base import rotation_matrix
+from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.run import run_calc
 from viperleed.extensions.error_codes import check_ierr
 
@@ -120,9 +121,9 @@ class _ImmutableSlabTransform(SlabTransform):
 
     def __init__(self):
         """Initialize instance attributes."""
-        object.__setattr__(self, 'orthogonal_matrix', None)
-        object.__setattr__(self, 'uc_scaling', None)
-        object.__setattr__(self, 'cut_cell_c_fraction', 0.)
+        set_frozen_attr(self, 'orthogonal_matrix', None)
+        set_frozen_attr(self, 'uc_scaling', None)
+        set_frozen_attr(self, 'cut_cell_c_fraction', 0.)
 
     def __setattr__(self, name, value):
         """Raise FrozenInstanceError."""
