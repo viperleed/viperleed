@@ -54,7 +54,21 @@ def debug_or_lower(logger, effective=True):
     return level <= DEBUG
 
 
-class CustomLogFormatter(logging.Formatter):
+def prepare_calc_logger(logger, file_name, with_console):
+    """Prepare logger to be used with calc.run."""
+    logger.setLevel(logging.INFO)
+    formatter = CalcLogFormatter()
+    file_handler = logging.FileHandler(file_name, mode='w')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    if not with_console:
+        return
+    stderr_handler = logging.StreamHandler()  # Uses sys.stderr
+    stderr_handler.setFormatter(formatter)
+    logger.addHandler(stderr_handler)
+
+
+class CalcLogFormatter(logging.Formatter):
     """Logging Formatter for level-dependent message formatting."""
 
     formats = {
@@ -73,7 +87,7 @@ class CustomLogFormatter(logging.Formatter):
         }
 
     def format(self, record):
-        """Debug log format for everything at DEBUG level or lower."""
+        """Use the DEBUG log format for everything at DEBUG level or lower."""
         level = record.levelno
         log_fmt = (self.formats[DEBUG] if level < DEBUG
                    else self.formats.get(level, self.formats['DEFAULT']))
