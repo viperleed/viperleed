@@ -32,6 +32,12 @@ def at_level(logger, level):
         logger.setLevel(previous_level)
 
 
+def debug_or_lower(logger, effective=True):
+    """Return whether `logger` has a level less than DEBUG."""
+    level = logger.getEffectiveLevel() if effective else logger.level
+    return level <= DEBUG
+
+
 class CustomLogFormatter(logging.Formatter):
     """Logging Formatter for level-dependent message formatting."""
 
