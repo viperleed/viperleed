@@ -79,6 +79,15 @@ def logging_silent(level=logging.CRITICAL):
         logging.disable(previous_level)
 
 
+def logger_silent(logger, level=logging.CRITICAL):
+    """Return a context that silences `logger` messages below `level`."""
+    @contextmanager
+    def _context():
+        with at_level(logger, level):
+            yield
+    return _context
+
+
 def prepare_calc_logger(logger, file_name, with_console):
     """Prepare logger to be used with calc.run."""
     logger.setLevel(logging.INFO)

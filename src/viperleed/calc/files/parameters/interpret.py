@@ -18,6 +18,7 @@ __created__ = '2020-08-18'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
+from contextlib import nullcontext
 import copy
 from functools import partialmethod, wraps
 import logging
@@ -43,6 +44,7 @@ from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.base import readIntRange, readVector
 from viperleed.calc.lib.base import recombineListElements, splitSublists
+from viperleed.calc.lib.log_utils import logger_silent
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.sections.calc_section import CalcSection as Section
@@ -218,23 +220,19 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         self.slab = slab
         self._search_conv_read = False
 
-        _backup_log_level = _LOGGER.level
-        if silent:
-            _LOGGER.setLevel(logging.ERROR)
+        log_context = (logger_silent(_LOGGER, logging.ERROR) if silent
+                       else nullcontext)
+        with log_context():
+            self._update_param_order()
+            for param, assignment in self._get_param_assignments():
+                self._complain_if_invalid_param_in_domain_calc(param)
+                self._interpret_param(param, assignment)
+                _LOGGER.log(_BELOW_DEBUG,
+                            f'Successfully interpreted parameter {param}')
 
-        self._update_param_order()
-        for param, assignment in self._get_param_assignments():
-            self._complain_if_invalid_param_in_domain_calc(param)
-            self._interpret_param(param, assignment)
-            _LOGGER.log(_BELOW_DEBUG,
-                        f'Successfully interpreted parameter {param}')
-
-        # Make sure there is no inconsistent combination of parameters
-        checker = ParametersChecker()
-        checker.check_parameter_conflicts(self.rpars)
-
-        # Finally set the log level back to what it was
-        _LOGGER.setLevel(_backup_log_level)
+            # Make sure there is no inconsistent combination of parameters
+            checker = ParametersChecker()
+            checker.check_parameter_conflicts(self.rpars)
 
     # ----------------  Helper methods for interpret() ----------------
     def _complain_if_invalid_param_in_domain_calc(self, param):
