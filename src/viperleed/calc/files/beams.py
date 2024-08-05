@@ -239,11 +239,12 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
             with open(filename, 'r') as rf:
                 lines = [li[:-1] for li in rf.readlines()]
         except FileNotFoundError:
-            if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
-                with open(filename[:-4], 'r') as rf:
+            _filename = str(filename)
+            if _filename.endswith('.csv') and os.path.isfile(_filename[:-4]):
+                with open(_filename[:-4], 'r') as rf:
                     lines = [li[:-1] for li in rf.readlines()]
             else:
-                logger.error("Error reading "+filename)
+                logger.error("Error reading "+_filename)
                 raise
 
     firstline = True
