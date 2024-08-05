@@ -109,11 +109,11 @@ class CalcLogFormatter(logging.Formatter):
         logging.WARNING: '# WARNING: %(msg)s',
         logging.ERROR: (
             '### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n'
-            '# %(msg)s \n#############'
+            '# %(msg)s\n#############'
             ),
         logging.CRITICAL: (
             '### CRITICAL ### in %(module)s:%(funcName)s:%(lineno)s\n'
-            '# %(msg)s \n################'
+            '# %(msg)s\n################'
             ),
         'DEFAULT': '%(msg)s',
         }
