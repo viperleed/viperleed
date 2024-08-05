@@ -33,12 +33,10 @@ def at_level(logger, level):
 
 
 def close_all_handlers(logger):
-    """Close all handlers of `logger`. Shutdown logging if desired."""
+    """Close all handlers of `logger`."""
     while logger.handlers:
         handler = logger.handlers[-1]
         logger.removeHandler(handler)
-        if not handler:
-            continue
         # The next bit looks similar to logging.shutdown, but only
         # removes and closes the handlers for a specific logger
         try:
