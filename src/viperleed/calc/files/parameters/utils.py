@@ -18,7 +18,10 @@ __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+
+from viperleed.calc.lib.dataclass_utils import frozen
+from viperleed.calc.lib.dataclass_utils import non_init_field
+from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
@@ -28,7 +31,7 @@ from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 # could go higher up the hierarchy into a file.utils.py or similar
 
 
-@dataclass(frozen=True)
+@frozen
 class NumericBounds:
     """A container for bounds of numeric parameters.
 
@@ -51,7 +54,7 @@ class NumericBounds:
     range_: tuple = (None, None)
     accept_limits: tuple = (True, True)
     out_of_range_event: str = 'fail'
-    _msg_: str = field(init=False)
+    _msg_: str = non_init_field()
 
     def __post_init__(self):
         """Process assigned attributes.
@@ -173,7 +176,7 @@ POSITIVE_INT = NumericBounds(type_=int, range_=(1, None))
 POSITIVE_FLOAT = NumericBounds(type_=float, range_=(0, None))
 
 
-@dataclass(frozen=True)
+@frozen
 class Assignment:
     """Class to store the flags and values of a parameter.
 
@@ -201,8 +204,8 @@ class Assignment:
     values_str: str
     parameter: str
     flags_str: str = ''
-    flags: tuple = field(init=False)
-    values: tuple = field(init=False)
+    flags: tuple = non_init_field()
+    values: tuple = non_init_field()
 
     def __post_init__(self):
         """Split out left- and right-hand sides into flags and values."""
@@ -210,7 +213,7 @@ class Assignment:
             value = self.parameter.strip()
         except AttributeError as exc:  # Not a string
             raise TypeError('parameter must be a string') from exc
-        if value:
+        if not value:
             raise ValueError('parameter must contain printable characters')
         set_frozen_attr(self, 'parameter', value)
 

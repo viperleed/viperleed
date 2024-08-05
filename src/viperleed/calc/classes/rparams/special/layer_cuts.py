@@ -15,7 +15,6 @@ __created__ = '2023-10-21'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from enum import IntEnum, auto
 import itertools
 from numbers import Real
@@ -23,6 +22,7 @@ import re
 from typing import Any
 
 from viperleed.calc.lib.base import pairwise
+from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from .base import SpecialParameter
@@ -50,7 +50,7 @@ class LayerCutTokenType(IntEnum):
 _AUTO_CUT_RE = re.compile(r'(?P<type>dz|dc)\((?P<cutoff>[\d.]+)\)')
 
 
-@dataclass(frozen=True)
+@frozen
 class LayerCutToken:
     """A single token of a LayerCuts object."""
 
