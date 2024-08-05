@@ -25,6 +25,7 @@ from viperleed.calc.classes import rparams
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.log_utils import CustomLogFormatter
+from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import prerun_clean
@@ -206,7 +207,7 @@ def run_calc(system_name=None,
     exit_code = section_loop(rp, slab)
 
     # Finalize logging - if not done, will break unit testing
-    logger.handlers.clear()
+    close_all_handlers(logger)
     logging.shutdown()
 
     return exit_code

@@ -32,6 +32,22 @@ def at_level(logger, level):
         logger.setLevel(previous_level)
 
 
+def close_all_handlers(logger):
+    """Close all handlers of `logger`. Shutdown logging if desired."""
+    while logger.handlers:
+        handler = logger.handlers[-1]
+        logger.removeHandler(handler)
+        if not handler:
+            continue
+        # The next bit looks similar to logging.shutdown, but only
+        # removes and closes the handlers for a specific logger
+        try:
+            _flush_and_close_handler(handler)
+        except (OSError, ValueError):
+            # Handler already closed, but still lingering around.
+            pass
+
+
 def debug_or_lower(logger, effective=True):
     """Return whether `logger` has a level less than DEBUG."""
     level = logger.getEffectiveLevel() if effective else logger.level
@@ -63,3 +79,20 @@ class CustomLogFormatter(logging.Formatter):
                    else self.formats.get(level, self.formats['DEFAULT']))
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
+
+
+@contextmanager
+def _acquire_handler(handler):
+    """Safely acquire a handler, then release it."""
+    try:  # pylint: disable=too-many-try-statements
+        handler.acquire()
+        yield
+    finally:
+        handler.release()
+
+
+def _flush_and_close_handler(handler):
+    """Flush all the non-handled record, then close a handler."""
+    with _acquire_handler(handler):
+        handler.flush()
+        handler.close()
