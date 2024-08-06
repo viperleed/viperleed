@@ -130,11 +130,11 @@ def split_string_range(range_string):
         raise ValueError(f'Invalid range string: {range_string}') from None
 
 
-def strip_comments(line):
+def strip_comments(line, strip_whitespaces=True):
     """Return the part of line to the left of comments."""
-    for comment_char in "!#%":
+    for comment_char in '!#%':
         try:
             line, *_ = line.split(comment_char)
         except ValueError:  # Nothing left to split
             return ''
-    return line.strip()
+    return line.strip() if strip_whitespaces else line
