@@ -43,19 +43,19 @@ def parent_name(dotted_name, remove=''):
     return stripped_name
 
 
-def range_to_str(il):
+def range_to_str(integers):
     """Return a sort-and-compressed string version of an integer sequence.
 
     Parameters
     ----------
-    il : Sequence
+    integers : Sequence
         The list of integers to be sorted and compressed.
 
     Returns
     -------
     range_string : str
         A sorted and compressed form of the integers specified in
-        `il`. For example, when called with [1, 6, 4, 5, 2, 8]
+        `integers`. For example, when called with [1, 6, 4, 5, 2, 8]
         will return '1-2, 4-6, 8'.
 
     Raises
@@ -63,28 +63,28 @@ def range_to_str(il):
     TypeError
         If any of the items in integers is not an int.
     """
-    if not all(isinstance(v, int) for v in il):
-        t = next(type(v) for v in il if not isinstance(v, int))
+    if not all(isinstance(v, int) for v in integers):
+        type_ = next(type(v) for v in integers if not isinstance(v, int))
         raise TypeError(
-            f'range_to_str: expected list of int, found type {t.__name__}'
+            f'range_to_str: expected list of int, found type {type_.__name__}'
             )
-    sl = sorted(il, reverse=True)
-    prev = sl.pop()
+    sorted_integers = sorted(integers, reverse=True)
+    prev = sorted_integers.pop()
     rmin = prev
     out = str(prev)
-    while sl:
-        v = sl.pop()
-        if v == prev:
+    while sorted_integers:
+        next_ = sorted_integers.pop()
+        if next_ == prev:
             continue
-        if v - prev == 1:
-            prev = v
+        if next_ - prev == 1:
+            prev = next_
             continue
         if prev != rmin:
-            out += f'-{prev}, {v}'
+            out += f'-{prev}, {next_}'
         else:
-            out += f', {v}'
-        prev = v
-        rmin = v
+            out += f', {next_}'
+        prev = next_
+        rmin = next_
     if prev != rmin:
         out += f'-{prev}'
     return out
@@ -112,12 +112,12 @@ def readIntLine(line, width=3):                                                 
     return tuple(out)
 
 
-def readIntRange(s):
+def readIntRange(ranges):
     """Returns a list of integers from a string.
 
     Parameters
     ----------
-    s : str
+    ranges : str
         The string containing the integers. It may contain multiple,
         space-separated, range specifications in the form i1-i2/i1:i2.
         In this case, the bounds are considered inclusive, i.e., the
@@ -128,13 +128,12 @@ def readIntRange(s):
     list of int
     """
     out = []
-    sl = s.split()
-    for ss in sl:
+    for int_or_range in ranges.split():
         try:
-            out.append(int(ss))
+            out.append(int(int_or_range))
         except ValueError:
             try:
-                start, stop = split_string_range(ss)
+                start, stop = split_string_range(int_or_range)
             except ValueError:
                 return []
 
