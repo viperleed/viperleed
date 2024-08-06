@@ -441,16 +441,6 @@ def parseMathSqrt(s):
                         raise
     return f
 
-# def angle(v1, v2, acute=True):
-#     """Returns the angle between two vectors"""
-#  !! UNSIGNED!
-#     angle = np.arccos(np.dot(v1, v2)
-#                       / (np.linalg.norm(v1)*np.linalg.norm(v2)))
-#     if acute == True:
-#         return angle
-#     else:
-#         return 2 * np.pi - angle
-
 
 def angle(v1, v2):
     """Returns the angle between two 2D vectors"""
