@@ -29,7 +29,8 @@ from viperleed.calc.files.iorfactor import largest_nr_grid_points
 from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
 from viperleed.calc.files.vibrocc import writeVIBROCC
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import BackwardsReader, readIntLine
+from viperleed.calc.lib.base import BackwardsReader
+from viperleed.calc.lib.string_utils import readIntLine
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)

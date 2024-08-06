@@ -317,37 +317,6 @@ def fortranContLine(s):
     return o
 
 
-def range_to_str(il):
-    """Takes a list of integers, sorts them and returns a string short form.
-    For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
-    will be ignored."""
-    if not all(isinstance(v, int) for v in il):
-        t = next(type(v) for v in il if not isinstance(v, int))
-        raise TypeError(
-            f"range_to_str: expected list of int, found type {t.__name__}"
-            )
-    sl = sorted(il, reverse=True)
-    prev = sl.pop()
-    rmin = prev
-    out = str(prev)
-    while sl:
-        v = sl.pop()
-        if v == prev:
-            continue
-        if v - prev == 1:
-            prev = v
-            continue
-        if prev != rmin:
-            out += f"-{prev}, {v}"
-        else:
-            out += f", {v}"
-        prev = v
-        rmin = v
-    if prev != rmin:
-        out += f"-{prev}"
-    return out
-
-
 def readVector(s, ucell=None, defRelaltive=False):
     """Takes a string 'xyz[f1 f2 f3]', 'abc[f1 f2 f3]' or just '[f1 f2 f3]'
     and returns the corresponding vector in cartesian coordinates, or None if
@@ -369,30 +338,6 @@ def readVector(s, ucell=None, defRelaltive=False):
         return np.dot((v1, v2, v3), ucell.T)
     # xyz
     return np.array([v1, v2, v3])
-
-
-def readIntLine(line, width=3):                                                 # TODO: Probably better ways with list comprehension
-    """
-    Reads an (arbitrary length) line of integers with fixed width. Will try
-    to interpret everything as integers until the line ends.
-
-    Parameters
-    ----------
-    line : str
-        The line to interpret
-    width : integer, optional
-        The width of each integer. The default is 3.
-
-    Returns
-    -------
-    Tuple of integers
-    """
-    line = line.rstrip()
-    out = []
-    while line:
-        chunk, line = line[:width], line[width:]
-        out.append(int(chunk))
-    return tuple(out)
 
 
 def cosvec(x, y):

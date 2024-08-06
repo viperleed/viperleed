@@ -14,6 +14,61 @@ __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
 
+def range_to_str(il):
+    """Takes a list of integers, sorts them and returns a string short form.
+    For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
+    will be ignored."""
+    if not all(isinstance(v, int) for v in il):
+        t = next(type(v) for v in il if not isinstance(v, int))
+        raise TypeError(
+            f'range_to_str: expected list of int, found type {t.__name__}'
+            )
+    sl = sorted(il, reverse=True)
+    prev = sl.pop()
+    rmin = prev
+    out = str(prev)
+    while sl:
+        v = sl.pop()
+        if v == prev:
+            continue
+        if v - prev == 1:
+            prev = v
+            continue
+        if prev != rmin:
+            out += f'-{prev}, {v}'
+        else:
+            out += f', {v}'
+        prev = v
+        rmin = v
+    if prev != rmin:
+        out += f'-{prev}'
+    return out
+
+
+def readIntLine(line, width=3):                                                 # TODO: Probably better ways with list comprehension
+    """
+    Reads an (arbitrary length) line of integers with fixed width. Will try
+    to interpret everything as integers until the line ends.
+
+    Parameters
+    ----------
+    line : str
+        The line to interpret
+    width : integer, optional
+        The width of each integer. The default is 3.
+
+    Returns
+    -------
+    Tuple of integers
+    """
+    line = line.rstrip()
+    out = []
+    while line:
+        chunk, line = line[:width], line[width:]
+        out.append(int(chunk))
+    return tuple(out)
+
+
 def readIntRange(s):
     """Takes a string, returns a list of integers. If the string is a single
     int or space-separated ints, the return value is a list containing only
