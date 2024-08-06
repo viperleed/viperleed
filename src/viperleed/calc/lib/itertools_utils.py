@@ -12,7 +12,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-06'
 __license__ = 'GPLv3+'
 
-import itertools
+from collections import deque
+from itertools import islice
 
 
 try:
@@ -26,16 +27,13 @@ def n_wise(iterable, n_items):
     if n_items < 2:
         raise ValueError('n_wise needs at least n_items=2')
     iterable = iter(iterable)  # In case it's a Sequence
-    n_minus_one_items = tuple(itertools.islice(iterable, n_items - 1))
-    if len(n_minus_one_items) < n_items - 1:
-        return  # Not enough items
-    for nth_item in iterable:
-        yield n_minus_one_items, nth_item
-        n_minus_one_items = (*n_minus_one_items[1:], nth_item)
+    items = deque(islice(iterable, n_items - 1), n_items)
+    for item in iterable:
+        items.append(item)
+        yield tuple(items)
 
 
 if not pairwise:
     def pairwise(iterable):
         """Yield pairs of items from `iterable` as tuples."""
         yield from n_wise(iterable, 2)
-
