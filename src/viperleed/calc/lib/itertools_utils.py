@@ -24,7 +24,7 @@ except ImportError:
 
 def n_wise(iterable, n_items):
     """Yield `n`-tuples of items from `iterable`."""
-    if n_items < 2:
+    if n_items < 2:  # pylint: disable=magic-value-comparison  # Clear
         raise ValueError('n_wise needs at least n_items=2')
     iterable = iter(iterable)  # In case it's a Sequence
     items = deque(islice(iterable, n_items - 1), n_items)

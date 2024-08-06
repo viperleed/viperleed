@@ -7,7 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-06'
 __license__ = 'GPLv3+'
 
-from collections.abc import Iterator
 import sys
 
 import pytest
@@ -152,8 +151,8 @@ class TestPairwise:
         'returning next(self.iterator) causes a ValueError(generator '
         'already executing). This seems like a problem with our current '
         'implementation of pairwise that is not really equivalent to '
-        'the one of CPython. This mechanics seems complicated enough '
-        'for us to actually use it.'
+        'the one of CPython. This mechanics seems too complicated for us '
+        'to actually use it: do not worry about the inconsistency for now.'
         )
     _reenter = {
         'one': ({1}, [(([2], [3]), [4]),
@@ -195,15 +194,12 @@ class TestPairwise:
     @parametrize('maxcount,expect',
                  _reenter_finite.items(),
                  ids=_reenter_finite)
-    @pytest.mark.xfail(sys.version_info < PY_310,
-                       reason=xfail_reason,
-                       strict=False)  # The ones with empty args XPASS
+    @pytest.mark.xfail(sys.version_info < PY_310, reason=xfail_reason)
     def test_reenter_finite_length(self, maxcount, expect):
         """Check pairwise result when reentering with a max number of items."""
         iterable = StoppingIterator(maxcount)
         iterable(pairwise)
-        for item in expect:
-            assert list(iterable.iterator) == expect
+        assert list(iterable.iterator) == expect
 
     _sequences = (
         '123',
