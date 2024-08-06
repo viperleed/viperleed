@@ -14,6 +14,9 @@ __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
 
+import re
+
+
 def parent_name(dotted_name, remove=''):
     """Return a version of dotted_name with the last attribute removed.
 
@@ -138,3 +141,21 @@ def strip_comments(line, strip_whitespaces=True):
         except ValueError:  # Nothing left to split
             return ''
     return line.strip() if strip_whitespaces else line
+
+
+UNDERSCORE = '_'
+
+def to_snake_case(other_case):
+    """Return a snake_case from another one."""
+    pascal_parts = re.findall(r'[A-Z]+[a-z\d]*', other_case)
+    if not pascal_parts:
+        return other_case
+    small_caps_match = re.match(r'[a-z_]+', other_case)
+    parts = (pascal_parts if not small_caps_match
+             else (small_caps_match.group(), *pascal_parts))
+    if ''.join(parts) != other_case:
+        raise ValueError(f'{other_case!r} is not in PascalCase or camelCase')
+    snake_case = UNDERSCORE.join(p.lower() for p in parts)
+    if UNDERSCORE in other_case and UNDERSCORE*2 in snake_case:
+        raise NotImplementedError(f'{other_case!r} is in mixed case')
+    return snake_case
