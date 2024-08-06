@@ -485,16 +485,6 @@ def dist_from_line(p1, p2, r):
     raise ValueError("Vector dimensions have to be either 2 or 3.")
 
 
-def strip_comments(line):
-    """Return the part of line to the left of comments."""
-    for comment_char in "!#%":
-        try:
-            line, *_ = line.split(comment_char)
-        except ValueError:  # Nothing left to split
-            return ''
-    return line.strip()
-
-
 def readToExc(llist):                                                           # TODO: unused; could be an iterator
     """For reading PARAMETERS files; takes a list, returns elements until the
     first one that starts with an exclamation mark."""

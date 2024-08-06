@@ -24,8 +24,8 @@ import shutil
 
 import numpy as np
 
-from viperleed.calc.lib.base import strip_comments
 from viperleed.calc.lib.string_utils import parent_name
+from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
 from .reader import RawLineParametersReader

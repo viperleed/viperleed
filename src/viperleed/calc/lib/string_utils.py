@@ -128,3 +128,13 @@ def split_string_range(range_string):
         return range_list[0], range_list[-1]
     except IndexError:
         raise ValueError(f'Invalid range string: {range_string}') from None
+
+
+def strip_comments(line):
+    """Return the part of line to the left of comments."""
+    for comment_char in "!#%":
+        try:
+            line, *_ = line.split(comment_char)
+        except ValueError:  # Nothing left to split
+            return ''
+    return line.strip()
