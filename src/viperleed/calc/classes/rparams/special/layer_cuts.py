@@ -21,9 +21,9 @@ from numbers import Real
 import re
 from typing import Any
 
-from viperleed.calc.lib.base import pairwise
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+from viperleed.calc.lib.itertools_utils import pairwise
 
 from .base import SpecialParameter
 

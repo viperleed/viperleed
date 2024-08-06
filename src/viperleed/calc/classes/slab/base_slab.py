@@ -38,8 +38,8 @@ from viperleed.calc.lib.base import COLLAPSE_EPS
 from viperleed.calc.lib.base import add_edges_and_corners
 from viperleed.calc.lib.base import collapse
 from viperleed.calc.lib.base import collapse_fractional
-from viperleed.calc.lib.base import pairwise
 from viperleed.calc.lib.base import rotation_matrix_order
+from viperleed.calc.lib.itertools_utils import pairwise
 from viperleed.calc.lib.string_utils import parent_name
 
 from .errors import AlreadyMinimalError

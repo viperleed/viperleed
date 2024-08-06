@@ -267,19 +267,6 @@ def ensure_integer_matrix(matrix, eps=1e-6):
     return rounded
 
 
-def pairwise(iterable):
-    """Return a generator of pairs of subsequent elements."""
-    try:
-        # pairwise is available in py >= 3.10
-        return itertools.pairwise(iterable)
-    except AttributeError:
-        pass
-    # Rough equivalent from the python docs
-    orig, offset = itertools.tee(iterable)
-    next(offset, None)
-    return zip(orig, offset)
-
-
 def rotation_matrix(angle, dim=2):
     """Returns a (2x2) matrix for in-plane rotation of the given rotation
     angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
