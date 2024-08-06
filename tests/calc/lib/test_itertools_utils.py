@@ -15,6 +15,7 @@ from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.lib.itertools_utils import n_wise
 from viperleed.calc.lib.itertools_utils import pairwise
+from viperleed.calc.lib.itertools_utils import threewise
 
 from .cases_itertools_utils import CasesSequence
 from .cases_itertools_utils import CasesRaises
@@ -270,3 +271,27 @@ class TestPairwise:
             # consuming pairwise. Ours does not, but that's
             # enough.
             tuple(pairwise(seq_type(seq)))
+
+
+# We don't need many tests for this one, as
+# it's only a simple wrapper around n_wise
+class TestThreeWise:
+    """Tests for the threewise function."""
+
+    _init = {
+        'empty string': ('', []),
+        'single letter': ('a', []),
+        'two letters': ('ab', []),
+        'three letters': ('abc', [('a', 'b', 'c')]),
+        'five letters': ('abcde',
+                         [('a', 'b', 'c'), ('b', 'c', 'd'), ('c', 'd', 'e')]),
+        'large range': (
+            range(10_000),
+            list(zip(range(10_000), range(1, 10_000), range(2, 10_000)))
+            ),
+        }
+
+    @parametrize('arg,expect', _init.values(), ids=_init)
+    def test_list(self, arg, expect):
+        """Check expected outcome for list(pairwise(arg))."""
+        assert list(threewise(arg)) == expect

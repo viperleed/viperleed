@@ -24,17 +24,9 @@ from typing import Any
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.itertools_utils import pairwise
+from viperleed.calc.lib.itertools_utils import threewise
 
 from .base import SpecialParameter
-
-
-def threewise(iterable):
-    """Yield triplets of items from iterable."""
-    orig, shift_one, shift_two = itertools.tee(iterable, 3)
-    next(shift_one, None)
-    next(shift_two, None)
-    next(shift_two, None)
-    yield from zip(orig, shift_one, shift_two)
 
 
 class LayerCutTokenType(IntEnum):

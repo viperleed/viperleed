@@ -37,3 +37,8 @@ if not pairwise:
     def pairwise(iterable):
         """Yield pairs of items from `iterable` as tuples."""
         yield from n_wise(iterable, 2)
+
+
+def threewise(iterable):
+    """Yield triplets of items from an `iterable`."""
+    yield from n_wise(iterable, 3)
