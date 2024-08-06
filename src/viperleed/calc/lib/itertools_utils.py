@@ -14,12 +14,29 @@ __license__ = 'GPLv3+'
 
 from collections import deque
 from itertools import islice
+from itertools import cycle as iter_cycle
 
 
 try:
     from itertools import pairwise   # Python >= 3.10
 except ImportError:
     pairwise = None  # Defined later
+
+
+def cycle(iterable, start=0):
+    """Return a generator that cycles though `iterable` beginning at start."""
+    if not isinstance(start, int):
+        raise TypeError(f'start must be int, not {type(start).__name__!r}')
+    if iterable:
+        try:
+            start %= len(iterable)
+        except AttributeError:
+            # Not a sequence. Do it the hard way, i.e., slicing from
+            # start. May be not performing well for large start values
+            # compared to the number of elements.
+            pass
+    _cycled = iter_cycle(iterable)
+    return islice(_cycled, start, None)
 
 
 def n_wise(iterable, n_items):

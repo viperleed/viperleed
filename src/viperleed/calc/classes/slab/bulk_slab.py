@@ -23,12 +23,12 @@ from scipy.spatial.distance import cdist as euclid_distance
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import add_edges_and_corners, collapse
 from viperleed.calc.lib.base import rotation_matrix_order
+from viperleed.calc.lib.itertools_utils import cycle
 
 from .base_slab import BaseSlab
 from .errors import AlreadyMinimalError
 from .errors import MissingSublayersError
 from .errors import SlabError
-from .utils import _cycle
 
 
 class BulkSlab(BaseSlab):
@@ -437,7 +437,7 @@ class BulkSlab(BaseSlab):
         # All pairs of layers in between must also be at the
         # same distance.
         z_dist = self.sublayers[period].cartbotz - self.sublayers[0].cartbotz
-        layer_pairs = zip(self.sublayers, _cycle(self.sublayers, period))
+        layer_pairs = zip(self.sublayers, cycle(self.sublayers, period))
         for i, (lay, lay_plus_period) in enumerate(layer_pairs, start=1):
             if i > n_layers / 2:
                 return True
@@ -644,8 +644,8 @@ class BulkSlab(BaseSlab):
         # lowocclayer. We take it out of the iterator while making
         # the translations. After then, compare_layers is aligned
         # with ref_layers.
-        compare_layers = _cycle(self.sublayers,
-                                lowocclayer.num + sublayer_period)
+        compare_layers = cycle(self.sublayers,
+                               lowocclayer.num + sublayer_period)
         translations = [at.cartpos - ori for at in next(compare_layers)]
 
         for ref_layer, compare_layer in zip(ref_layers, compare_layers):

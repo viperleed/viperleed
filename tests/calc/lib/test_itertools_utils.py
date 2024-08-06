@@ -7,12 +7,14 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-06'
 __license__ = 'GPLv3+'
 
+from itertools import islice
 import sys
 
 import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc.lib.itertools_utils import cycle
 from viperleed.calc.lib.itertools_utils import n_wise
 from viperleed.calc.lib.itertools_utils import pairwise
 from viperleed.calc.lib.itertools_utils import threewise
@@ -89,6 +91,71 @@ class StoppingIterator:
         if self.count == 1:
             return next(self.iterator, None)
         return [self.count]  # new object
+
+
+class TestCycle:
+    """Tests for the extension of itertools' infinite cycle iterator."""
+
+    _simple = {
+        'empty': (tuple(), 12, []),
+        'generator': (range(5), 13, [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2]),
+        'list': ([1, 2, 3], 6, [1, 2, 3, 1, 2, 3]),
+        'one item': ([42], 7, [42, 42, 42, 42, 42, 42, 42]),
+        'string': ('abc', 8, ['a', 'b', 'c', 'a', 'b', 'c', 'a', 'b']),
+        'tuple': (tuple(range(10)),
+                  21,
+                  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                  0]),
+        }
+
+    @parametrize('sequence,n_items,expect', _simple.values(), ids=_simple)
+    def test_simple(self, sequence, n_items, expect):
+        """Check a simple call to cycle, without a start."""
+        assert list(islice(cycle(sequence), n_items)) == expect
+
+    _start = {
+        'start at zero': ([1, 2, 3], 0, [1, 2, 3, 1, 2, 3]),
+        'start at one': ([1, 2, 3], 1, [2, 3, 1, 2, 3, 1]),
+        'start at two': ([1, 2, 3], 2, [3, 1, 2, 3, 1, 2]),
+        'start past length': ([1, 2, 3], 4, [2, 3, 1, 2, 3, 1]),
+        'start past length further': ([1, 2, 3], 5, [3, 1, 2, 3, 1, 2]),
+        'start past length very large': ([1, 2, 3], 10279, [2, 3, 1, 2, 3, 1]),
+        'start negative': ([1, 2, 3], -1, [3, 1, 2, 3, 1, 2]),
+        'start negative past length': ([1, 2, 3], -4, [3, 1, 2, 3, 1, 2]),
+        'empty': (tuple(), 28, []),
+        'generator': (range(4), 37, [1, 2, 3, 0, 1, 2]),
+        'one item': ([42], 9237, [42, 42, 42, 42, 42, 42]),
+        'string': ('abcd', 2, ['c', 'd', 'a', 'b', 'c', 'd']),
+        'tuple': ((1, 2, 3), 1, [2, 3, 1, 2, 3, 1]),
+        }
+
+    @parametrize('sequence,start,expect', _start.values(), ids=_start)
+    def test_with_start(self, sequence, start, expect):
+        """Check correct outcome when a start value is given."""
+        assert list(islice(cycle(sequence, start=start), 6)) == expect
+
+    def test_mutable_consumed(self):
+        """Check mutation of a sequence after consumption has no impact."""
+        seq = [1, 2, 3]
+        gen = cycle(seq)
+        assert list(islice(gen, 7)) == [1, 2, 3, 1, 2, 3, 1]
+        seq.append(4)
+        # Notice that it goes on from where it was before
+        assert list(islice(gen, 7)) == [2, 3, 1, 2, 3, 1, 2]
+
+    def test_mutable_changed(self):
+        """Check mutation of a sequence before consumption has impact."""
+        seq = [1, 2, 3]
+        gen = cycle(seq, start=1)
+        seq.append(4)
+        assert list(islice(gen, 7)) == [2, 3, 4, 1, 2, 3, 4]
+
+    @parametrize(start=('a', 2.5))
+    def test_raises(self, start):
+        """check complaints for wrong start types."""
+        with pytest.raises(TypeError):
+            list(islice(cycle([1, 2, 3], start=start), 6))
 
 
 class TestNWise:
