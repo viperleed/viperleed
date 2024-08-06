@@ -22,7 +22,7 @@ from viperleed.calc.symmetry import setSymmetry
 logger = logging.getLogger(__name__)
 
 
-def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
+def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            # TODO: This should probably set rp.fileLoaded['DISPLACEMENTS'] = True
     """
     Reads the DISPLACEMENTS file to rp.disp_blocks without interpreting it.
 
