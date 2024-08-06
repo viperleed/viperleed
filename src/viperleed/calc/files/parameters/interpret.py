@@ -42,8 +42,9 @@ from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.base import parent_name
-from viperleed.calc.lib.base import readIntRange, readVector
+from viperleed.calc.lib.base import readVector
 from viperleed.calc.lib.base import recombineListElements, splitSublists
+from viperleed.calc.lib.string_utils import readIntRange
 from viperleed.calc.lib.log_utils import logger_silent
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import readWoodsNotation

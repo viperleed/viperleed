@@ -13,8 +13,8 @@ import re
 
 import numpy as np
 
-from viperleed.calc.lib.base import readIntRange
 from viperleed.calc.lib.base import splitSublists
+from viperleed.calc.lib.string_utils import readIntRange
 from viperleed.calc.symmetry import enforceSymmetry
 from viperleed.calc.symmetry import setSymmetry
 

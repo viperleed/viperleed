@@ -317,42 +317,6 @@ def fortranContLine(s):
     return o
 
 
-def readIntRange(s):
-    """Takes a string, returns a list of integers. If the string is a single
-    int or space-separated ints, the return value is a list containing only
-    those int. If the string contains i1-i2 or i1:i2, the list is
-    range(i1, i2+1), i.e. contains both i1 and i2."""
-    out = []
-    sl = s.split()
-    for ss in sl:
-        try:
-            out.append(int(ss))
-        except ValueError:
-            try:
-                start, stop = split_string_range(ss)
-            except ValueError:
-                return []
-
-            try:
-                out.extend(range(int(start), int(stop)+1))
-            except ValueError:
-                return []
-    return list(dict.fromkeys(out))  # Like set, but keep order
-
-
-def split_string_range(range_string):
-    """Return start and stop as strings from "start:stop" or "start-stop"."""
-    range_list = []
-    if '-' in range_string:
-        range_list = range_string.split('-')
-    elif ':' in range_string:
-        range_list = range_string.split(':')
-    try:
-        return range_list[0], range_list[-1]
-    except IndexError:
-        raise ValueError(f"Invalid range string: {range_string}") from None
-
-
 def range_to_str(il):
     """Takes a list of integers, sorts them and returns a string short form.
     For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
