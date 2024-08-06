@@ -80,6 +80,8 @@ def run_calc(system_name=None,
         1: clean exit through KeyboardInterrupt
         2: exit due to Exception before entering main loop
         3: exit due to Exception during main loop
+    State
+        The last state recorded by the StateRecorder.
     """
     os.umask(0)
     # start logger, write to file:
@@ -215,7 +217,7 @@ def run_calc(system_name=None,
     logger.handlers.clear()
     logging.shutdown()
 
-    return exit_code
+    return exit_code, GLOBALS['StateRecorder'].get_last_state()
 
 
 
