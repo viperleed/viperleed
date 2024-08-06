@@ -1,4 +1,6 @@
-"""
+"""Module state_recorder of viperleed.calc.classes.
+
+Defines a class to record and retrieve calculation states.
 """
 
 __authors__ = (
@@ -22,8 +24,7 @@ class StateRecorder:
     """
 
     def __init__(self):
-        """
-        """
+        """Initialize the state recorder with an empty list of states."""
         self.recorded_states = []
 
     def record(self, slab, rparams, section):
