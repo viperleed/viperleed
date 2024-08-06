@@ -18,7 +18,7 @@ import re
 
 
 def parent_name(dotted_name, remove=''):
-    """Return a version of dotted_name with the last attribute removed.
+    """Return a version of `dotted_name` with the last attribute removed.
 
     Parameters
     ----------
@@ -33,7 +33,8 @@ def parent_name(dotted_name, remove=''):
     Returns
     -------
     stripped_name : str
-        A version of dotted_name with [.]remove removed from the right.
+        A version of `dotted_name` with [.]`remove` removed from
+        the right.
     """
     remove = remove or '.'
     if not remove.startswith('.'):
@@ -43,9 +44,25 @@ def parent_name(dotted_name, remove=''):
 
 
 def range_to_str(il):
-    """Takes a list of integers, sorts them and returns a string short form.
-    For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
-    will be ignored."""
+    """Return a sort-and-compressed string version of an integer sequence.
+
+    Parameters
+    ----------
+    il : Sequence
+        The list of integers to be sorted and compressed.
+
+    Returns
+    -------
+    range_string : str
+        A sorted and compressed form of the integers specified in
+        `il`. For example, when called with [1, 6, 4, 5, 2, 8]
+        will return '1-2, 4-6, 8'.
+
+    Raises
+    ------
+    TypeError
+        If any of the items in integers is not an int.
+    """
     if not all(isinstance(v, int) for v in il):
         t = next(type(v) for v in il if not isinstance(v, int))
         raise TypeError(
@@ -74,9 +91,7 @@ def range_to_str(il):
 
 
 def readIntLine(line, width=3):                                                 # TODO: Probably better ways with list comprehension
-    """
-    Reads an (arbitrary length) line of integers with fixed width. Will try
-    to interpret everything as integers until the line ends.
+    """Read an (arbitrary length) line of integers with fixed width.
 
     Parameters
     ----------
@@ -87,7 +102,7 @@ def readIntLine(line, width=3):                                                 
 
     Returns
     -------
-    Tuple of integers
+    tuple of int
     """
     line = line.rstrip()
     out = []
@@ -98,10 +113,20 @@ def readIntLine(line, width=3):                                                 
 
 
 def readIntRange(s):
-    """Takes a string, returns a list of integers. If the string is a single
-    int or space-separated ints, the return value is a list containing only
-    those int. If the string contains i1-i2 or i1:i2, the list is
-    range(i1, i2+1), i.e. contains both i1 and i2."""
+    """Returns a list of integers from a string.
+
+    Parameters
+    ----------
+    s : str
+        The string containing the integers. It may contain multiple,
+        space-separated, range specifications in the form i1-i2/i1:i2.
+        In this case, the bounds are considered inclusive, i.e., the
+        return value contains both i1 and i2.
+
+    Returns
+    -------
+    list of int
+    """
     out = []
     sl = s.split()
     for ss in sl:
@@ -121,7 +146,7 @@ def readIntRange(s):
 
 
 def split_string_range(range_string):
-    """Return start and stop as strings from "start:stop" or "start-stop"."""
+    """Return start and stop as strings from 'start:stop' or 'start-stop'."""
     range_list = []
     if '-' in range_string:
         range_list = range_string.split('-')
@@ -134,7 +159,7 @@ def split_string_range(range_string):
 
 
 def strip_comments(line, strip_whitespaces=True):
-    """Return the part of line to the left of comments."""
+    """Return the part of `line` to the left of comments."""
     for comment_char in '!#%':
         try:
             line, *_ = line.split(comment_char)
@@ -146,7 +171,7 @@ def strip_comments(line, strip_whitespaces=True):
 UNDERSCORE = '_'
 
 def to_snake_case(other_case):
-    """Return a snake_case from another one."""
+    """Return a snake_case name from another one."""
     pascal_parts = re.findall(r'[A-Z]+[a-z\d]*', other_case)
     if not pascal_parts:
         return other_case
