@@ -16,6 +16,7 @@ __license__ = 'GPLv3+'
 import logging
 import os
 
+from viperleed import GLOBALS
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files.displacements import readDISPLACEMENTS
@@ -36,6 +37,7 @@ from viperleed.calc.sections.cleanup import cleanup, move_oldruns
 
 logger = logging.getLogger(__name__)
 
+STATE_RECORDER = GLOBALS['StateRecorder']
 
 def run_section(index, sl, rp):
     """Run a specific viperleed.calc section.
@@ -265,6 +267,9 @@ def section_loop(rp, sl):
                 sl = rp.pseudoSlab
             if rp.domainParams:
                 rp.setHaltingLevel(max(dp.rp.halt for dp in rp.domainParams))
+
+            # record state to the state recorder
+            STATE_RECORDER.record(sl, rp, sec)
 
             # Decide how to proceed
             next_section = next(iter(rp.RUN), None)

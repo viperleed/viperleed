@@ -19,9 +19,11 @@ from pathlib import Path
 import shutil
 
 from viperleed import __version__
-from viperleed.calc import LOGGER as logger
+from viperleed import GLOBALS
 from viperleed.calc import LOG_PREFIX
+from viperleed.calc import LOGGER as logger
 from viperleed.calc.classes import rparams
+from viperleed.calc.classes.state_recorder import StateRecorder
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.base import CustomLogFormatter
@@ -39,7 +41,7 @@ def run_calc(system_name=None,
              console_output=True,
              slab=None,
              preset_params=None,
-             source=None):
+             source=None,
     """Run a ViPErLEED calculation.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
@@ -201,6 +203,10 @@ def run_calc(system_name=None,
 
     rp.updateDerivedParams()
     logger.info(f"ViPErLEED is using TensErLEED version {str(rp.TL_VERSION)}.")
+    
+    # Create the state recorder
+    if GLOBALS['StateRecorder'] is None:
+        GLOBALS['StateRecorder'] = StateRecorder()
 
     prerun_clean(rp, log_name)
     exit_code = section_loop(rp, slab)

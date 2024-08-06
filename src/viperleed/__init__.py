@@ -17,6 +17,7 @@ __version__ = '0.12.2'
 GLOBALS = {
     'USE_GUI': None,
     'version': __version__,
+    'StateRecorder': None, # Recorder for calculation states
     'version_message': ('ViPErLEED (Vienna Package for Erlangen LEED) '
                         f'v{__version__}')
     }
