@@ -15,13 +15,11 @@ from copy import deepcopy
 
 from viperleed.calc.sections.calc_section import CalcSection
 
-# A state is given by a tuple (slab, rparams, section).
+# A state is given by a tuple (slab, rparams).
 State = namedtuple('State', 'slab, rparams, section')
 
 class StateRecorder:
-    """
-    A state is given by a tuple (slab, rparams).
-    """
+    """Class that records and retrieves calculation states."""
 
     def __init__(self):
         """Initialize the state recorder with an empty list of states."""
@@ -31,7 +29,7 @@ class StateRecorder:
         """Freezes and records the current state."""
         state = State(slab=deepcopy(slab),
                       rparams=deepcopy(rparams),
-                      section=section)
+                      section=CalcSection(section))
         self.recorded_states.append(state)
 
     def get_last_state(self):
@@ -44,8 +42,8 @@ class StateRecorder:
         for state in reversed(self.recorded_states):
             if state.rparams.section == _section:
                 return state
-        raise ValueError(f"No state recorded for section {section.long_name}")
+        raise ValueError(f"No state recorded for section {section.long_name}.")
 
     def pop_last_state(self, index=None):
-        """Removes and returns the last recorded state, similar to list.pop()."""
+        """Removes and returns the last recorded state, similar to List.pop()."""
         return self.recorded_states.pop(index if index is not None else -1)
