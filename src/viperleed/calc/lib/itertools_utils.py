@@ -27,7 +27,7 @@ def n_wise(iterable, n_items):
         raise ValueError('n_wise needs at least n_items=2')
     iterable = iter(iterable)  # In case it's a Sequence
     n_minus_one_items = tuple(itertools.islice(iterable, n_items - 1))
-    if n_minus_one_items < n_items - 1:
+    if len(n_minus_one_items) < n_items - 1:
         return  # Not enough items
     for nth_item in iterable:
         yield n_minus_one_items, nth_item
