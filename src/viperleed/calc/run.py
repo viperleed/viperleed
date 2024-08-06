@@ -19,7 +19,6 @@ from pathlib import Path
 import shutil
 
 from viperleed import __version__
-from viperleed import GLOBALS
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import LOGGER as logger
 from viperleed.calc.classes import rparams
@@ -205,19 +204,17 @@ def run_calc(system_name=None,
 
     rp.updateDerivedParams()
     logger.info(f"ViPErLEED is using TensErLEED version {str(rp.TL_VERSION)}.")
-    
-    # Create the state recorder
-    if GLOBALS['StateRecorder'] is None:
-        GLOBALS['StateRecorder'] = StateRecorder()
+
+    state_recorder = StateRecorder()
 
     prerun_clean(rp, log_name)
-    exit_code = section_loop(rp, slab)
+    exit_code = section_loop(rp, slab, state_recorder)
 
     # Finalize logging - if not done, will break unit testing
     logger.handlers.clear()
     logging.shutdown()
 
-    return exit_code, GLOBALS['StateRecorder'].get_last_state()
+    return exit_code, state_recorder.get_last_state()
 
 
 

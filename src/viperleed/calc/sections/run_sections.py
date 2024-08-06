@@ -17,6 +17,7 @@ import logging
 import os
 
 from viperleed import GLOBALS
+from viperleed.calc.classes.state_recorder import StateRecorder
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files.displacements import readDISPLACEMENTS
@@ -36,8 +37,6 @@ from viperleed.calc.sections.cleanup import cleanup, move_oldruns
 
 
 logger = logging.getLogger(__name__)
-
-STATE_RECORDER = GLOBALS['StateRecorder']
 
 def run_section(index, sl, rp):
     """Run a specific viperleed.calc section.
@@ -224,7 +223,7 @@ def run_section(index, sl, rp):
         )
 
 
-def section_loop(rp, sl):
+def section_loop(rp, sl, state_recorder=None):
     """
     Executes sections as specified in rp.RUN, may loop if required.
 
@@ -243,6 +242,9 @@ def section_loop(rp, sl):
         2: exit due to Exception before entering main loop
         3: exit due to Exception during main loop
     """
+    if state_recorder is None:  # create a new state recorder if not provided
+        state_recorder = StateRecorder()
+
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
     searchLoopR = None
     searchLoopLevel = 0
@@ -269,7 +271,8 @@ def section_loop(rp, sl):
                 rp.setHaltingLevel(max(dp.rp.halt for dp in rp.domainParams))
 
             # record state to the state recorder
-            STATE_RECORDER.record(sl, rp, sec)
+            if state_recorder is not None:
+                state_recorder.record(sl, rp, sec)
 
             # Decide how to proceed
             next_section = next(iter(rp.RUN), None)
