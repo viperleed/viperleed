@@ -13,6 +13,7 @@ import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc.lib.itertools_utils import n_wise
 from viperleed.calc.lib.itertools_utils import pairwise
 
 from .cases_itertools_utils import CasesSequence
@@ -87,6 +88,41 @@ class StoppingIterator:
         if self.count == 1:
             return next(self.iterator, None)
         return [self.count]  # new object
+
+
+class TestNWise:
+    """Tests for the n_wise class."""
+
+    _init = {
+        'empty string': ('', 5, []),
+        'single letter': ('a', 5, []),
+        'two letters': ('ab', 5, []),
+        'five letters': ('abcde', 6, []),
+        'six letters': ('abcde', 5, [tuple('abcde')]),
+        'ten letters': ('abcdefghij', 8,
+                         [('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'),
+                          ('b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'),
+                          ('c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')]),
+        'large range': (range(10_000), 6,
+                        list(zip(*(range(i, 10_000) for i in range(6))))),
+        }
+
+    @parametrize('arg,n_items,expect', _init.values(), ids=_init)
+    def test_list(self, arg, n_items, expect):
+        """Check expected outcome for list(pairwise(arg))."""
+        assert list(n_wise(arg, n_items)) == expect
+
+    _raises = {
+        'negative': (-5, ValueError),
+        'float': (2.38, ValueError),
+        'non numeric': ({}, TypeError),
+        }
+
+    @parametrize('n_items,exc', _raises.values(), ids=_raises)
+    def test_raises(self, n_items, exc):
+        """Check complaints for funny n_wise values."""
+        with pytest.raises(exc):
+            tuple(n_wise(range(10), n_items))
 
 
 class TestPairwise:
