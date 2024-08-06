@@ -14,6 +14,31 @@ __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
 
+def parent_name(dotted_name, remove=''):
+    """Return a version of dotted_name with the last attribute removed.
+
+    Parameters
+    ----------
+    dotted_name : str
+        The dotted name (e.g., the name of an attribute or a module).
+    remove : str, optional
+        What should be removed from the right side. It may, or may
+        not contain a dot. If it does not begin with a leading dot,
+        a single dot is prepended to `remove`. If not given, the
+        last dotted portion is removed. Default is an empty string.
+
+    Returns
+    -------
+    stripped_name : str
+        A version of dotted_name with [.]remove removed from the right.
+    """
+    remove = remove or '.'
+    if not remove.startswith('.'):
+        remove = '.' + remove
+    stripped_name, *_ = dotted_name.rsplit(remove, maxsplit=1)
+    return stripped_name
+
+
 def range_to_str(il):
     """Takes a list of integers, sorts them and returns a string short form.
     For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
