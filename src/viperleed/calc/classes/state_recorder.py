@@ -74,29 +74,29 @@ class _StateSequence(MutableSequence):
         raise TypeError(f'{type(self).__name__!r} cannot be reversed.')
 
 
-class CalcStateRecorder:
-    """Class that records and retrieves calculation states."""
 
-    def __init__(self):
-        """Initialize the state recorder with an empty list of states."""
-        self._recorded_states = _StateSequence()
+class CalcStateRecorder(_StateSequence):
+    """Class that records and retrieves calculation states."""
 
     def record(self, slab, rpars, section):
         """Freeze and record the current state."""
         state = CalcState(slab=deepcopy(slab),
                           rpars=deepcopy(rpars),
                           section=CalcSection(section))
-        self._recorded_states.append(state)
+        self.append(state)
 
     @property
     def last_state(self):
         """Return the last recorded state."""
-        return self._recorded_states[-1]
+        return self[-1]
 
     def get_last_section_state(self, section):
         """Return the last state recorded for a given section."""
-        _section = CalcSection(section)
-        for state in reversed(self._recorded_states):
-            if state.section is _section:
-                return state
+        section = CalcSection(section)
+        try:
+            return next(state
+                        for state in reversed(self)
+                        if state.section is section)
+        except StopIteration:
+            pass
         raise ValueError(f'No state recorded for section {section.long_name}.')
