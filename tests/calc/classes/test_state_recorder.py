@@ -72,3 +72,46 @@ class TestCalcStateSequence:
         calc_state_sequence.reverse()
         assert calc_state_sequence[0] == calc_state
 
+class TestCalcStateRecorder:
+    """Tests for CalcStateRecorder"""
+    def test_record(self, calc_state_recorder, calc_state):
+        slab, rpars, section = calc_state
+        calc_state_recorder.record(slab, rpars, section)
+        assert len(calc_state_recorder._recorded_states) == 1
+        recorded_state = calc_state_recorder._recorded_states[0]
+        assert CalcSection(recorded_state.section.long_name) == section
+        assert recorded_state.slab.elements == slab.elements
+        assert recorded_state.rpars is not None
+
+
+    def test_last_state(self, calc_state_recorder, calc_state):
+        slab, rpars, section = calc_state
+        calc_state_recorder.record(slab, rpars, section)
+        last_state = calc_state_recorder.last_state
+        assert CalcSection(last_state.section.long_name) == section
+        assert last_state.slab.elements == slab.elements
+        assert last_state.rpars is not None
+
+    def test_get_last_section_state(self, calc_state_recorder, calc_state):
+        slab, rpars, section = calc_state
+        calc_state_recorder.record(slab, rpars, section)
+        last_section_state = calc_state_recorder.get_last_section_state(section)
+        assert CalcSection(last_section_state.section.long_name) == section
+        assert last_section_state.slab.elements == slab.elements
+        assert last_section_state.rpars is not None
+
+    def test_get_last_section_state_raises(self, calc_state_recorder, calc_state):
+        unused_section = CalcSection('1')
+        with pytest.raises(ValueError, match='No state recorded for section '
+                           f'{unused_section.long_name}.'):
+            calc_state_recorder.get_last_section_state(unused_section)
+
+    def test_pop_last_state(self, calc_state_recorder, calc_state):
+        slab, rpars, section = calc_state
+        calc_state_recorder.record(slab, rpars, section)
+        popped_state = calc_state_recorder.pop_last_state()
+        assert CalcSection(popped_state.section.long_name) == section
+        assert popped_state.slab.elements == slab.elements
+        assert popped_state.rpars is not None
+        assert len(calc_state_recorder._recorded_states) == 0
+
