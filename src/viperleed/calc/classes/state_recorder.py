@@ -50,11 +50,11 @@ class CalcStateSequence(MutableSequence):
         raise ValueError('CalcStateSequence does not support item deletion. '
                          'Use pop() instead.')
 
-    def append(self, state):
+    def append(self, value):
         """Add a state to the sequence."""
-        self._recorded_states.append(state)
+        self._recorded_states.append(value)
 
-    def insert(self, index, state):
+    def insert(self, index, value):
         """Disallow inserting states."""
         raise ValueError('CalcStateSequence does not support item insertion.')
 
