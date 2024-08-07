@@ -42,12 +42,11 @@ class CalcStateSequence(MutableSequence):
 
     def __setitem__(self, index, value):
         """Disallow modifying the state at `index`."""
-        raise ValueError('CalcStateSequence does not support item assignment.')
+        raise TypeError(f'Cannot modify states of {type(self).__name__!r}.')
 
     def __delitem__(self, index):
         """Disallow deleting the state at `index`."""
-        raise ValueError('CalcStateSequence does not support item deletion. '
-                         'Use pop() instead.')
+        raise TypeError(f'Cannot remove states from {type(self).__name__!r}.')
 
     def append(self, value):
         """Add a state to the sequence."""
@@ -55,7 +54,8 @@ class CalcStateSequence(MutableSequence):
 
     def insert(self, index, value):
         """Disallow inserting states."""
-        raise ValueError('CalcStateSequence does not support item insertion.')
+        raise TypeError(f'Cannot insert states in {type(self).__name__!r}. '
+                        'Use append() or extend() instead.')
 
     def pop(self, index=-1):
         """Remove the last recorded state and return it."""
