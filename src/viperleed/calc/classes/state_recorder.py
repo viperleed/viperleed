@@ -21,8 +21,8 @@ from viperleed.calc.sections.calc_section import CalcSection
 CalcState = namedtuple('State', 'slab, rpars, section')
 
 
-class CalcStateSequence(MutableSequence):
-    """A sequence of calculation states."""
+class _StateSequence(MutableSequence):
+    """A sequence of states."""
 
     def __init__(self):
         """Initialize the sequence with an empty list of states."""
@@ -79,7 +79,7 @@ class CalcStateRecorder:
 
     def __init__(self):
         """Initialize the state recorder with an empty list of states."""
-        self._recorded_states = CalcStateSequence()
+        self._recorded_states = _StateSequence()
 
     def record(self, slab, rpars, section):
         """Freeze and record the current state."""
