@@ -343,7 +343,7 @@ class TestPairwise:
 
 # We don't need many tests for this one, as
 # it's only a simple wrapper around n_wise
-class TestThreeWise:
+class TestThreeWise:  # pylint: disable=too-few-public-methods
     """Tests for the threewise function."""
 
     _init = {
