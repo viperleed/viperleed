@@ -11,8 +11,9 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
-import copy
 from io import StringIO
+from pathlib import Path
+import copy
 import logging
 import os
 import re
@@ -239,12 +240,12 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
             with open(filename, 'r') as rf:
                 lines = [li[:-1] for li in rf.readlines()]
         except FileNotFoundError:
-            _filename = str(filename)
-            if _filename.endswith('.csv') and os.path.isfile(_filename[:-4]):
-                with open(_filename[:-4], 'r') as rf:
+            filename = Path(filename)
+            if filename.suffix == '.csv' and filename.with_suffix('').is_file:
+                with open(filename.with_suffix(''), 'r') as rf:
                     lines = [li[:-1] for li in rf.readlines()]
             else:
-                logger.error("Error reading "+_filename)
+                logger.error(f"Error reading {str(filename)}.")
                 raise
 
     firstline = True
