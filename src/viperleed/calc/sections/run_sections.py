@@ -348,4 +348,4 @@ def section_loop(rp, sl):
             logger.info("# Stopped by user STOP command.")
             break
     cleanup(rp.manifest, rp)
-    return 0
+    return 0, state_recorder
