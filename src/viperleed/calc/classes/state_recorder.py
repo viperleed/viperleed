@@ -26,7 +26,7 @@ class StateRecorder:
         self.recorded_states = []
 
     def record(self, slab, rparams, section):
-        """Freezes and records the current state."""
+        """Freeze and record the current state."""
         state = State(slab=deepcopy(slab),
                       rparams=deepcopy(rparams),
                       section=CalcSection(section))
