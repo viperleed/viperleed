@@ -164,8 +164,11 @@ def strip_comments(line, strip_whitespaces=True):
     for comment_char in '!#%':
         try:
             line, *_ = line.split(comment_char)
-        except ValueError:  # Nothing left to split
-            return ''
+        except AttributeError:  # Not a string
+            raise TypeError(f'Invalid line type {type(line).__name__!r}. '
+                            'Expected str.') from None
+        if not line.strip():
+            break
     return line.strip() if strip_whitespaces else line
 
 
