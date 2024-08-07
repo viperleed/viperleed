@@ -27,13 +27,15 @@ def parent_name(dotted_name, remove=''):
     remove : str, optional
         What should be removed from the right side. It may, or may
         not contain a dot. If it does not begin with a leading dot,
-        a single dot is prepended to `remove`. If not given, the
-        last dotted portion is removed. Default is an empty string.
+        a single dot is prepended to `remove`. Notice that any
+        portion of `dotted_name` to the right of `remove` will be
+        removed! If not given, the last dotted portion is removed.
+        Default is an empty string.
 
     Returns
     -------
     stripped_name : str
-        A version of `dotted_name` with [.]`remove` removed from
+        A version of `dotted_name` with [.]`remove`[rest] removed from
         the right.
     """
     remove = remove or '.'
