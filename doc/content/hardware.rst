@@ -4,6 +4,9 @@
 ViPErLEED hardware
 ==================
 
-**Documentation coming soon!**
 
-.. todo: Add documentation for the hardware part.
+.. toctree::
+    :maxdepth: 1
+
+    hardware/hardware_mods/hardware_mods_index
+    hardware/state_machine
