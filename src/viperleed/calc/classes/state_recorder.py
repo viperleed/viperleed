@@ -41,10 +41,11 @@ class CalcStateSequence(MutableSequence):
         raise ValueError('CalcStateSequence does not support item assignment.')
 
     def __delitem__(self, index):
-        raise ValueError('CalcStateSequence does not support item deletion.')
+        raise ValueError('CalcStateSequence does not support item deletion. '
+                         'Use pop() instead.')
 
-    def pop(self, index: int = -1):  # raises since we don't support deletion
-        return super().pop(index)
+    def pop(self, index: int = -1):
+        return self._recorded_states.pop(index)
 
     def __len__(self):
         return len(self._recorded_states)
