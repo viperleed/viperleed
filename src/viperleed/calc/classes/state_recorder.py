@@ -37,7 +37,7 @@ class StateRecorder:
         return self.recorded_states[-1]
 
     def get_last_section_state(self, section):
-        """Returns the last state recorded for a given section."""
+        """Return the last state recorded for a given section."""
         _section = CalcSection(section)
         for state in reversed(self.recorded_states):
             if state.rparams.section == _section:
