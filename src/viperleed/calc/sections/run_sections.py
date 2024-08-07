@@ -270,8 +270,7 @@ def section_loop(rp, sl, state_recorder=None):
                 rp.setHaltingLevel(max(dp.rp.halt for dp in rp.domainParams))
 
             # record state to the state recorder
-            if state_recorder is not None:
-                state_recorder.record(sl, rp, sec)
+            state_recorder.record(sl, rp, sec)
 
             # Decide how to proceed
             next_section = next(iter(rp.RUN), None)
