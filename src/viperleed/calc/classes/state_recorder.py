@@ -17,6 +17,14 @@ from copy import deepcopy
 from viperleed.calc.sections.calc_section import CalcSection
 
 
+class StateError(Exception):
+    """Base class for exceptions concerning states."""
+
+
+class NoStateError(StateError):
+    """No states available."""
+
+
 # A state is given by a tuple (slab, rpars).
 CalcState = namedtuple('State', 'slab, rpars, section')
 
