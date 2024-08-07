@@ -37,6 +37,7 @@ from viperleed.calc.sections.cleanup import cleanup, move_oldruns
 
 logger = logging.getLogger(__name__)
 
+
 def run_section(index, sl, rp):
     """Run a specific viperleed.calc section.
 
