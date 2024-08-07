@@ -171,14 +171,11 @@ UNDERSCORE = '_'
 
 def to_snake_case(other_case):
     """Return a snake_case name from another one."""
-    pascal_parts = re.findall(r'[A-Z]+[a-z\d]*', other_case)
-    if not pascal_parts:
-        return other_case
-    small_caps_match = re.match(r'[a-z_]+', other_case)
-    parts = (pascal_parts if not small_caps_match
-             else (small_caps_match.group(), *pascal_parts))
-    if ''.join(parts) != other_case:
-        raise ValueError(f'{other_case!r} is not in PascalCase or camelCase')
+    if re.search(r'[^\w\d]', other_case):
+        # Contains some funny characters.
+        raise ValueError(f'{other_case!r} is not a valid snake_case, '
+                         'camelCase, or PascalCase name')
+    parts = (p for p in re.split(r'([A-Z]\d*(?:[a-z]+\d*)+)', other_case) if p)
     snake_case = UNDERSCORE.join(p.lower() for p in parts)
     if UNDERSCORE in other_case and UNDERSCORE*2 in snake_case:
         raise NotImplementedError(f'{other_case!r} is in mixed case')
