@@ -84,8 +84,8 @@ class CalcStateRecorder:
     def record(self, slab, rpars, section):
         """Freeze and record the current state."""
         state = CalcState(slab=deepcopy(slab),
-                      rpars=deepcopy(rpars),
-                      section=CalcSection(section))
+                          rpars=deepcopy(rpars),
+                          section=CalcSection(section))
         self._recorded_states.append(state)
 
     @property
