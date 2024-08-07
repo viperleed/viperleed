@@ -40,7 +40,7 @@ class StateRecorder:
         """Return the last state recorded for a given section."""
         _section = CalcSection(section)
         for state in reversed(self._recorded_states):
-            if state.rpars.section == _section:
+            if state.section is _section:
                 return state
         raise ValueError(f'No state recorded for section {section.long_name}.')
 
