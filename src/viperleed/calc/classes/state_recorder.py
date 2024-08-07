@@ -33,7 +33,7 @@ class CalcStateSequence(MutableSequence):
         """Return the state at `index`."""
         return self._recorded_states[index]
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self):
         """Return an iterator of recorded states."""
         return iter(self._recorded_states)
 
@@ -58,11 +58,11 @@ class CalcStateSequence(MutableSequence):
         """Disallow inserting states."""
         raise ValueError('CalcStateSequence does not support item insertion.')
 
-    def pop(self, index: int = -1):
+    def pop(self, index=-1):
         """Remove the last recorded state and return it."""
         return self._recorded_states.pop(index)
 
-    def reverse(self) -> None:
+    def reverse(self):
         return self._recorded_states.reverse()
 
 
