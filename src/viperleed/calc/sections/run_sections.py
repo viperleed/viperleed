@@ -16,7 +16,6 @@ __license__ = 'GPLv3+'
 import logging
 import os
 
-from viperleed import GLOBALS
 from viperleed.calc.classes.state_recorder import StateRecorder
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
