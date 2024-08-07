@@ -16,9 +16,9 @@ from copy import deepcopy
 from viperleed.calc.sections.calc_section import CalcSection
 
 # A state is given by a tuple (slab, rpars).
-State = namedtuple('State', 'slab, rpars, section')
+CalcState = namedtuple('State', 'slab, rpars, section')
 
-class StateRecorder:
+class CalcStateRecorder:
     """Class that records and retrieves calculation states."""
 
     def __init__(self):
@@ -27,7 +27,7 @@ class StateRecorder:
 
     def record(self, slab, rpars, section):
         """Freeze and record the current state."""
-        state = State(slab=deepcopy(slab),
+        state = CalcState(slab=deepcopy(slab),
                       rpars=deepcopy(rpars),
                       section=CalcSection(section))
         self._recorded_states.append(state)

@@ -16,7 +16,7 @@ __license__ = 'GPLv3+'
 import logging
 import os
 
-from viperleed.calc.classes.state_recorder import StateRecorder
+from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files.displacements import readDISPLACEMENTS
@@ -242,7 +242,7 @@ def section_loop(rp, sl, state_recorder=None):
         3: exit due to Exception during main loop
     """
     if state_recorder is None:  # create a new state recorder if not provided
-        state_recorder = StateRecorder()
+        state_recorder = CalcStateRecorder()
 
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
     searchLoopR = None

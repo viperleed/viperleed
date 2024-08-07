@@ -22,7 +22,7 @@ from viperleed import __version__
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import LOGGER as logger
 from viperleed.calc.classes import rparams
-from viperleed.calc.classes.state_recorder import StateRecorder
+from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.base import CustomLogFormatter
@@ -205,7 +205,7 @@ def run_calc(system_name=None,
     rp.updateDerivedParams()
     logger.info(f"ViPErLEED is using TensErLEED version {str(rp.TL_VERSION)}.")
 
-    state_recorder = StateRecorder()
+    state_recorder = CalcStateRecorder()
 
     prerun_clean(rp, log_name)
     exit_code = section_loop(rp, slab, state_recorder)
