@@ -10,7 +10,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-06'
 __license__ = 'GPLv3+'
 
-from collections import MutableSequence, namedtuple
+from collections import namedtuple
+from collections.abc import MutableSequence
 from copy import deepcopy
 from typing import Iterator
 
