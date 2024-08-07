@@ -1,0 +1,16 @@
+# This file contains a list of the required python packages for
+# development of viperleed. Dependencies are categorized by topic.
+
+# Profiling
+line_profiler   # Profiling code line-by-line
+
+
+# Here other developer dependencies, stored in the respective
+# requirements files
+-r requirements-dist.txt   # Building sdist for pypi
+-r requirements-doc.txt    # Building documentation; !!! py >= 3.9 !!!
+-r requirements-tests.txt  # Running pytest tests
+
+
+## List of some useful packages, but we don't want to depend on them
+# make-to-batch  # Generate Windows make.bat from Makefiles -- not very good though

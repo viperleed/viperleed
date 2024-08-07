@@ -1,0 +1,353 @@
+.. include:: /substitutions.rst
+
+.. |5rt3| replace:: (5 × √3)\ :sub:`rect`
+.. |CuTe| replace:: Cu(111)-\ |5rt3|\ -Te
+
+.. _example_Cu-Te:
+
+====================================
+Example system: Cu(111)-Te ad-chains
+====================================
+
+The following example covers a ViPErLEED analysis and structure optimization
+for a copper-telluride layer on Cu(111) based on the paper by
+:cite:t:`kisslingerSubmonolayerCopperTelluride2021`. The experimental data and
+the outline for the analysis steps described below were provided by the authors
+of the publication. This system deals with a |5rt3| superstructure and has 10
+atoms per bulk layer. It serves as an example for how a rather challenging
+system can be treated with ViPErLEED. The analysis presented in the original
+publication was performed using an early development version of ViPErLEED
+:cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
+
+.. _Cu(111)-Te_LEED_pattern:
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/Cu(111)-Te_LEED_pattern.png
+   :width: 40%
+   :align: center
+
+   Experimental LEED pattern of |CuTe| at an incident electron energy of
+   60 eV. Diffraction spots are labeled by the ViPErLEED spot tracker
+   :cite:p:`viperleedSpot`.
+
+.. only:: html
+
+   All input files needed to follow along on your own machine can be found
+   :download:`here</_static/example_systems/Cu(111)-Te/input_files.zip>`.
+
+.. only:: not html
+
+   You can download the input files to follow along in the online version of
+   the documentation at `viperleed.org <viperleed.org>`__.
+
+.. tip::
+   If you are new to ViPErLEED, check out
+   :ref:`other tutorials<example_ag_100>`
+   first, which explain the basics in more detail.
+
+Introduction
+============
+
+The system we are analyzing is a |5rt3| superstructure of copper telluride on
+the hexagonal Cu(111) substrate. The tellurium coverage is 0.40 monolayers,
+which corresponds to four tellurium atoms per surface unit cell.
+
+From experiments, we have a set of 79 beams in our energy range (20 to
+500 eV), stored in the :ref:`EXPBEAMS.csv<expbeams>` file. These beams
+correspond to a total energy range of around 17500 eV, of which only
+around 1800 eV  are from integer-order beams.
+:numref:`Cu(111)-Te_LEED_pattern` shows a snapshot
+of the experimental LEED pattern.
+
+For our example analysis, we start from a qualitatively correct structure
+model (\ :ref:`POSCAR` file) with correct layer stacking
+:cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
+However, the initial atom positions in the POSCAR are taken from bulk Cu,
+so we should expect significant relaxation during structure optimization.
+:numref:`Cu-Te_structure_fig` shows a rendering of the initial structure
+(produced using
+:term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`).
+
+.. only:: html
+
+   We will need to run multiple delta-amplitude calculations and structure
+   optimizations. The individual :ref:`DISPLACEMENTS` files are not
+   all shown in full below, but you can download all input files
+   :download:`here</_static/example_systems/Cu(111)-Te/input_files.zip>`.
+
+
+.. _Cu-Te_structure_fig:
+
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/view_a_b_c.svg
+   :width: 100%
+   :align: center
+
+   POSCAR of |CuTe| rendered in :term:`VESTA`, viewed along |a| (left), |b|
+   (center), and |c| (right). Cu atoms are shown in blue, Te atoms in yellow.
+
+
+PARAMETERS
+==========
+
+Similar to the previous examples, we start by setting up a
+:ref:`PARAMETERS` file as in :numref:`list_cu-te_parameters`.
+
+.. _list_cu-te_parameters:
+.. literalinclude :: /_static/example_systems/Cu(111)-Te/PARAMETERS
+   :language: console
+   :caption: PARAMETERS file for |CuTe|.
+
+Most of the parameters in this file have been explained in
+:ref:`previous examples<example_ag_100>`, so we will skip some details
+here. Worth mentioning in this particular case is that we use
+:ref:`sitedef` to define the two topmost copper and tellurium atoms
+as explicit sites. We also give the in-plane relationship between the surface
+and bulk via the :ref:`SUPERLATTICE` parameter, to match the
+convention used in :ref:`EXPBEAMS.csv<expbeams>`. We use the explicit
+matrix notation as this particular reconstruction cannot be expressed
+in Wood's notation.
+
+.. tip::
+    For non-obvious relationships between surface and bulk unit cells it is
+    usually better to explicitly specify the :ref:`SUPERLATTICE` parameter.
+    This ensures consistency with the experimental data. This is especially
+    the case when multiple symmetry-induced domains coexist on the surface
+    because of a difference in the plane groups (or unit-cell sizes)
+    of the bulk and the superstructure. Since all domains are symmetry
+    equivalent, ViPErLEED has no way to choose among them.
+
+As usual, the :ref:`IVBEAMS` and :ref:`PHASESHIFTS` files are generated
+automatically during initialization (:ref:`RUN = 0<run>`).
+The :ref:`VIBROCC` file will also be generated by ViPErLEED based on the
+:ref:`T_DEBYE`, :ref:`T_EXPERIMENT`, and :ref:`VIBR_AMP_SCALE` parameters
+provided.
+
+Rough DISPLACEMENTS
+===================
+
+For the delta-amplitudes calculation and the structure optimization
+(:ref:`RUN = 1-3<run>`), we will start out with a very rough grid of
+geometric optimizations (:ref:`DISPLACEMENTS` file). Refer
+to :numref:`list_cu-te_diplacements_rough`. As is generally recommended,
+we start with optimizations normal to the surface (:math:`z`). Immediately
+following that comes an in-plane optimization. Due to the complex structure,
+one in-plane direction is not sufficient: we need to run an optimization
+along both :math:`x` *and* :math:`y` directions. For details on the syntax
+used, see the entry on the :ref:`DISPLACEMENTS` file.
+
+.. _list_cu-te_diplacements_rough:
+.. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_1
+   :language: console
+   :caption: DISPLACEMENTS (30 pm range) for |CuTe|.
+
+.. note::
+    Note that we allow displacements of up to 0.3 Å for tellurium to speed
+    up the convergence in this example. Normally, this is not recommended,
+    because the :ref:`tensor-LEED approximation<tensor_leed>` will lead to
+    substantial :ref:`errors<tensor_leed_errors>` for such large displacements.
+
+As usual, we can see a visualization of the optimization convergence in the
+:ref:`Search-report.pdf<searchreportpdf>` file of the ``OUT`` directory.
+:numref:`Cu(111)-Te_search_report` shows the first page of the
+:ref:`Search-report.pdf<searchreportpdf>` file. The upper panel shows the
+|R factor| as a function of the search progress (search generations). The
+lower panel reports the deviation of the structural parameters over time.
+Together, the two plots give an idea of the quality of the convergence of
+the optimization.
+
+.. _Cu(111)-Te_search_report:
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/Search-report_rough.svg
+   :width: 60%
+   :align: center
+
+   First page of the :ref:`Search-report.pdf<searchreportpdf>` file produced
+   by |calc| for the first, rough structure optimization for |CuTe|.
+
+The initial reference calculation :ref:`yields <r-factor_calculation>` an
+|R factor| :math:`R_\mathrm{P} \approx 0.82` since our starting configuration
+is very far from the ideal positions. Over the rough optimization, parameter
+values are shifted by up to 0.24 Å compared to the initial model (this is
+a lot!). The |R factor| drops to :math:`R_\mathrm{P} \approx 0.47`. This is
+still quite poor, but the progress is encouraging.
+
+Remember to keep the best fit-structure by calling the
+:ref:`bookkeeper utility<bookkeeper>` with the ``--cont``
+flag before proceeding:
+
+    .. code-block:: console
+
+        $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
+
+The |R factor| resulting from an additional reference calculation, is
+decreased to :math:`R_\mathrm{P} \approx 0.33` compared to the
+:math:`R_\mathrm{P} \approx 0.47` value at the end of the optimization run
+— **a big difference**. This comes from the mentioned
+:ref:`tensor-LEED error<tensor_leed_errors>`.
+
+Fine DISPLACEMENTS and search parameters
+========================================
+
+Since in the former fit no parameter value reached the edge of the respective
+variation range, we should follow up by running a second, less coarse,
+optimization. For this stage, a choice of 10 pm range with 1 pm steps
+(0.1 Å range with 0.01 Å steps) should be reasonable (see
+:numref:`list_cu-te_diplacements_fine`).
+
+.. _list_cu-te_diplacements_fine:
+.. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_2
+   :language: console
+   :caption: DISPLACEMENTS (10 pm range) for |CuTe|.
+
+.. hint::
+    In preparing this example we found that the default search parameters
+    lead to rather slow convergence in this and the following steps. To speed 
+    up the process, we recommend using these settings for :ref:`searchstart` 
+    and :ref:`SEARCH_CONVERGENCE` (simply append the lines to PARAMETERS):
+
+        .. code-block:: console
+
+            SEARCH_START = centered
+            SEARCH_CONVERGENCE gaussian = 0.05 0.5
+            SEARCH_CONVERGENCE dgen dec = 50 1.5
+
+    After the previous search steps, the parameters are close to the optimum.
+    Therefore, the danger of getting trapped in a local |R-factor| minimum
+    close to the starting position is low, and we can initialize the search
+    at the previously determined values.
+    The :ref:`SEARCH_CONVERGENCE` ``dgen`` parameter
+    ensures that the search range shrinks more rapidly than with standard
+    parameters.
+
+
+The optimization on the 1 pm (0.01 Å) grid allows us to further reduce
+the |R factor| to about :math:`R_\mathrm{P} \approx 0.23`, which is again a
+good improvement on the previous value of :math:`R_\mathrm{P} \approx 0.33`.
+
+Full-dynamic optimization
+=========================
+
+If we now visually compare experimental with calculated |IV| curves, we already
+notice a good qualitative agreement. However, we find that the peak widths in
+the experimental dataset seem to be consistently narrower than in our
+calculation. This is generally a sign that the imaginary part of the
+inner potential (|V0i|) of our calculation is off. To be more precise,
+|V0i| is likely too large, as larger |V0i| increases peak widths and
+smooths out the curves.
+
+|V0i| strongly affects the |R factor|, but is hard to estimate for an unknown
+system. Since we did not specify a value for |V0i| in PARAMETERS, ViPErLEED
+took the default value of 4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The
+parameter |V0i| is not accessible in the tensor-LEED approximation, but
+we can use a :ref:`full-dynamic optimization<fdoptimization>` to find an
+optimal value. To do this, we set :ref:`RUN = 6<run>` and add this line to
+:ref:`PARAMETERS`:
+
+.. code-block:: console
+
+    OPTIMIZE V0i = step 0.5
+
+.. warning::
+    Always make sure that the optimized value used for |V0i| is (i) reasonable
+    (\ :math:`V_{0\mathrm{i}} \lesssim 7` eV), (ii) forms an actual minimum,
+    and (iii) gives qualitatively correct |IV| curves.
+
+    Since larger |V0i| values smooth out the |IV| curves, it is possible to
+    deceptively decrease the |R factor| by arbitrarily increasing |V0i|. This
+    usually happens in cases of very high |R-factor| values, where |V0i|
+    optimization is not the main concern anyhow.
+
+.. _fig_cu-te_fdopt_v0i:
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_Optimization.svg
+   :width: 60%
+   :align: center
+
+   File ``FD_Optimization.pdf`` showing parabolic fit and minimum value for
+   |V0i|.
+
+The optimized value for |V0i| will be output in the log file and automatically
+added to the :ref:`PARAMETERS` file for subsequent runs.
+Furthermore, ViPErLEED produces the files
+:ref:`FD_Optimization.pdf<fdoptimizationdata>`
+(\ :numref:`fig_cu-te_fdopt_v0i`) and
+:ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`
+(\ :numref:`fig_cu-te_fdopt_v0i_beams`) in the ``OUT`` directory.
+``FD_Optimization_beams.pdf`` shows the calculated diffraction intensities
+for different values of the optimized parameter, while ``FD_Optimization.pdf``
+shows the |R factor|\ s corresponding to each trial value.
+
+.. _fig_cu-te_fdopt_v0i_beams:
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_beams.svg
+   :width: 90%
+   :align: center
+
+   Part of ``FD_Optimization_beams.pdf`` showing the effects of
+   |V0i| on the (1|0) beam. Note that the |V0i| variation
+   only leads to minor changes of the spectral appearance.
+
+Refined structure fit
+=====================
+
+As usual, we can now perform some final structure fits over a fine-grained
+grid with subpicometre step. In particular, we should also optimize the
+**vibrational amplitudes**, which we have skipped so far. We recommend
+starting with the vibrational amplitudes here, since we have not touched
+them at all in the previous optimization step.
+:numref:`list_cu-te_diplacements_very_fine` shows the DISPLACEMENTS file
+for the refined structure optimization.
+
+.. _list_cu-te_diplacements_very_fine:
+.. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_fine_1
+   :language: console
+   :caption: DISPLACEMENTS (0.5 pm step) for |CuTe|.
+
+You may want to finish up with a last "fine tuning" of the vibrational
+amplitudes and (\ :math:`z`) positions. See, for instance,
+``DISPLACEMENTS_fine_2`` in the input files, but feel free to play around
+with the setting yourself, to get a feeling for the available options.
+Altogether, this should bring us to a Pendry |R factor|
+:math:`R_\mathrm{P} \approx 0.19`, which is already a good agreement for
+such a heavily corrugated surface. For more details concerning corrugated
+surfaces see the discussion in
+Ref. :cite:alp:`kisslingerSubmonolayerCopperTelluride2021`.
+
+Error calculation
+=================
+
+We can also perform an error calculation for this system to gauge how
+sensitive our result is to minor changes of structural parameters. This
+can also give us an estimate of the uncertainty of the fit parameters.
+To run an error calculation, we need a :ref:`DISPLACEMENTS` file specifying 
+the requested steps.
+
+.. only:: html
+
+   :numref:`list_cu-te_errors_x` shows an example for displacements along the
+   :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
+   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibrational
+   amplitudes are provided in the
+   :download:`input files</_static/example_systems/Cu(111)-Te/input_files.zip>`.
+
+.. only:: not html
+
+   :numref:`list_cu-te_errors_x` shows an example for displacements along the
+   :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
+   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibrational
+   amplitudes are provided in the input files available in the online version
+   of the documentation at `viperleed.org <viperleed.org>`__.
+
+.. _list_cu-te_errors_x:
+.. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_errors_x
+   :language: console
+   :caption: DISPLACEMENTS for error calculation in :math:`x` direction.
+
+The results are plotted in the :ref:`errorspdf` file, shown in
+:numref:`fig_cu-te_errors`. We see that displacements for atoms in all
+layers have a drastic impact on the |R factor|. Thus, we can be fairly
+confident that all varied atoms are indeed present within the true surface
+structure.
+
+.. _fig_cu-te_errors:
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/Errors_x_vib.svg
+   :width: 100%
+   :align: center
+
+   Page 1 of file ``Errors.pdf`` for (left) displacements in :math:`x`
+   direction and (right) changes of vibrational amplitudes.

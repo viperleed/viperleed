@@ -1,0 +1,6 @@
+RUN = 6
+
+BEAM_INCIDENCE = THETA 0.0, PHI 90.0
+
+OPTIMIZE theta = step 1, minpoints 5, convergence 0.1
+...

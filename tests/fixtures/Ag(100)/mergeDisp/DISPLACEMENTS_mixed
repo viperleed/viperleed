@@ -1,7 +1,0 @@
-== SEARCH geo+vib+occ
-    = GEO_DELTA
-        Ag 1 z = -0.2 0.2 0.1
-    = VIB_DELTA
-        Ag 1 = -0.1 0.1 0.1
-    = OCC_DELTA
-        Ag 1 = Ag 0.5 1.0 0.1
