@@ -28,6 +28,10 @@ class CalcStateSequence(MutableSequence):
         """Initialize the sequence with an empty list of states."""
         self._recorded_states = []
 
+    def __bool__(self):
+        """Return whether there is any state."""
+        return bool(self._recorded_states)
+
     def __getitem__(self, index):
         """Return the state at `index`."""
         return self._recorded_states[index]
