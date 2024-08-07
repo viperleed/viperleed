@@ -30,18 +30,23 @@ class CalcStateSequence(MutableSequence):
         self._recorded_states = []
 
     def __getitem__(self, index):
+        """Return the state at `index`."""
         return self._recorded_states[index]
 
     def __iter__(self) -> Iterator:
+        """Return an iterator of recorded states."""
         return iter(self._recorded_states)
 
     def __len__(self):
+        """Return the number of recorded states."""
         return len(self._recorded_states)
 
     def __setitem__(self, index, value):
+        """Disallow modifying the state at `index`."""
         raise ValueError('CalcStateSequence does not support item assignment.')
 
     def __delitem__(self, index):
+        """Disallow deleting the state at `index`."""
         raise ValueError('CalcStateSequence does not support item deletion. '
                          'Use pop() instead.')
 
@@ -50,9 +55,11 @@ class CalcStateSequence(MutableSequence):
         self._recorded_states.append(state)
 
     def insert(self, index, state):
+        """Disallow inserting states."""
         raise ValueError('CalcStateSequence does not support item insertion.')
 
     def pop(self, index: int = -1):
+        """Remove the last recorded state and return it."""
         return self._recorded_states.pop(index)
 
     def reverse(self) -> None:
