@@ -210,11 +210,17 @@ class TestCycle:
         seq.append(4)
         assert list(islice(gen, 7)) == [2, 3, 4, 1, 2, 3, 4]
 
-    @parametrize(start=('a', 2.5))
-    def test_raises(self, start):
+    _start = {
+        'string': ([1, 2, 3], 'a', TypeError),
+        'float': ([1, 2, 3], 2.5, TypeError),
+        'negative for non sequence': ((2*i for i in range(5)), -1, ValueError),
+        }
+
+    @parametrize('iterable,start,exc', _start.values(), ids=_start)
+    def test_raises_start(self, iterable, start, exc):
         """check complaints for wrong start types."""
-        with pytest.raises(TypeError):
-            list(islice(cycle([1, 2, 3], start=start), 6))
+        with pytest.raises(exc):
+            list(islice(cycle(iterable, start=start), 6))
 
 
 class TestNWise:
