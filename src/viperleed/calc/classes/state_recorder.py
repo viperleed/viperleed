@@ -13,7 +13,6 @@ __license__ = 'GPLv3+'
 from collections import namedtuple
 from collections.abc import MutableSequence
 from copy import deepcopy
-from typing import Iterator
 
 from viperleed.calc.sections.calc_section import CalcSection
 
