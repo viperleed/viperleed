@@ -13,8 +13,8 @@ __created__ = '2024-08-06'
 __license__ = 'GPLv3+'
 
 from collections import deque
-from itertools import islice
 from itertools import cycle as iter_cycle
+from itertools import islice
 
 
 try:
@@ -30,7 +30,7 @@ def cycle(iterable, start=0):
     if iterable:
         try:
             start %= len(iterable)
-        except AttributeError:
+        except TypeError:
             # Not a sequence. Do it the hard way, i.e., slicing from
             # start. May be not performing well for large start values
             # compared to the number of elements.
