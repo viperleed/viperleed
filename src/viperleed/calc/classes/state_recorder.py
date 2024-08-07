@@ -17,8 +17,10 @@ from typing import Iterator
 
 from viperleed.calc.sections.calc_section import CalcSection
 
+
 # A state is given by a tuple (slab, rpars).
 CalcState = namedtuple('State', 'slab, rpars, section')
+
 
 class CalcStateSequence(MutableSequence):
     """A sequence of calculation states."""
@@ -27,15 +29,14 @@ class CalcStateSequence(MutableSequence):
         """Initialize the sequence with an empty list of states."""
         self._recorded_states = []
 
-    def append(self, state):
-        """Add a state to the sequence."""
-        self._recorded_states.append(state)
-
-    def insert(self, index, state):
-        raise ValueError('CalcStateSequence does not support item insertion.')
-
     def __getitem__(self, index):
         return self._recorded_states[index]
+
+    def __iter__(self) -> Iterator:
+        return iter(self._recorded_states)
+
+    def __len__(self):
+        return len(self._recorded_states)
 
     def __setitem__(self, index, value):
         raise ValueError('CalcStateSequence does not support item assignment.')
@@ -44,14 +45,15 @@ class CalcStateSequence(MutableSequence):
         raise ValueError('CalcStateSequence does not support item deletion. '
                          'Use pop() instead.')
 
+    def append(self, state):
+        """Add a state to the sequence."""
+        self._recorded_states.append(state)
+
+    def insert(self, index, state):
+        raise ValueError('CalcStateSequence does not support item insertion.')
+
     def pop(self, index: int = -1):
         return self._recorded_states.pop(index)
-
-    def __len__(self):
-        return len(self._recorded_states)
-
-    def __iter__(self) -> Iterator:
-        return iter(self._recorded_states)
 
     def reverse(self) -> None:
         return self._recorded_states.reverse()
