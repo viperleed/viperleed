@@ -35,7 +35,7 @@ class CalcStateRecorder:
     @property
     def last_state(self):
         """Return the last recorded state."""
-        return self.recorded_states[-1]
+        return self._recorded_states[-1]
 
     def get_last_section_state(self, section):
         """Return the last state recorded for a given section."""
