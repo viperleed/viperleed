@@ -46,5 +46,5 @@ class StateRecorder:
         raise ValueError(f'No state recorded for section {section.long_name}.')
 
     def pop_last_state(self, index=None):
-        """Removes and returns the last recorded state, similar to List.pop()."""
+        """Remove and return the last recorded state, similar to List.pop()."""
         return self._recorded_states.pop(index if index is not None else -1)
