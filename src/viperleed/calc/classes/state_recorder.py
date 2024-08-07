@@ -100,7 +100,3 @@ class CalcStateRecorder:
             if state.section is _section:
                 return state
         raise ValueError(f'No state recorded for section {section.long_name}.')
-
-    def pop_last_state(self):
-        """Remove and return the last recorded state, similar to List.pop()."""
-        return self._recorded_states.pop()
