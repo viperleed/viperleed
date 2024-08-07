@@ -63,10 +63,11 @@ class CalcStateSequence(MutableSequence):
 
     def pop(self, index=-1):
         """Remove the last recorded state and return it."""
-        return self._recorded_states.pop(index)
+        raise TypeError(f'Cannot pop state from {type(self).__name__!r}.')
 
     def reverse(self):
-        return self._recorded_states.reverse()
+        """Disallow reversing this sequence of states in place."""
+        raise TypeError(f'{type(self).__name__!r} cannot be reversed.')
 
 
 class CalcStateRecorder:
