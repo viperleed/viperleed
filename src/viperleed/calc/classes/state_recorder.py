@@ -56,6 +56,10 @@ class CalcStateSequence(MutableSequence):
         """Add a state to the sequence."""
         self._recorded_states.append(value)
 
+    def clear(self):
+        """Disallow clearing this sequence."""
+        raise TypeError(f'Cannot clear states in {type(self).__name__!r}.')
+
     def insert(self, index, value):
         """Disallow inserting states."""
         raise TypeError(f'Cannot insert states in {type(self).__name__!r}. '
