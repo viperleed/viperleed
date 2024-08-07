@@ -51,6 +51,9 @@ Glossary
       :envvar:`VIPERLEED_TENSORLEED` to locate the TensErLEED source code if
       the path is not given explicitly. See also :ref:`here<how_to_run>`.
 
+    ErLEED
+      The product name of the :term:`LEED` setup produced and distributed by the :term:`SPECS` company.
+
     fcc
       Face-centered-cubic crystal structure.
 
@@ -111,6 +114,18 @@ Glossary
 
     mpiifort
       The :term:`MPI` wrapper for :term:`ifort`.
+
+    SPECS
+      SPECS GmbH; a German company producing surface analysis instruments.
+      See the `company homepage <https://www.specs-group.com>`__.
+
+    Scienta Omicron
+      Scienta Omicron GmbH; an international company producing instruments for surface science and nanotechnology.
+      See the `company homepage <https://scientaomicron.com/en>`__.
+
+    SpectaLEED
+      The product name of a series of :term:`LEED` setups produced and distributed by the :term:`Scienta Omicron` company.
+      See also the product page for `SpectaLEED <https://pdf.directindustry.com/pdf/scienta-omicron/spectaleed/20757-76118.html>`__.
 
     TensErLEED
       Erlangen package for tensor LEED.
