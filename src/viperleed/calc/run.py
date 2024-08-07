@@ -22,7 +22,6 @@ from viperleed import __version__
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import LOGGER as logger
 from viperleed.calc.classes import rparams
-from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.base import CustomLogFormatter
