@@ -9,7 +9,6 @@ __created__ = '2024-07-10'
 __license__ = 'GPLv+3'
 
 import logging
-import sys
 from unittest.mock import Mock
 
 import pytest
@@ -17,6 +16,7 @@ from pytest_cases import fixture, parametrize
 
 # Import the module
 from viperleed.calc.lib import matplotlib_utils
+from viperleed.calc.lib.log_utils import at_level
 from viperleed.calc.lib.matplotlib_utils import _LOGGER
 from viperleed.calc.lib.matplotlib_utils import HasNoMatplotlibError
 from viperleed.calc.lib.matplotlib_utils import close_figures
@@ -30,13 +30,15 @@ from viperleed.calc.lib.matplotlib_utils import use_calc_style
 MOCK_RETURN = 'Function called'
 
 
-@fixture
-def mock_logger():
+@fixture(name='mock_logger')
+def fixture_mock_logger():
+    """Return a fake logging.Logger."""
     return Mock(logging.Logger)
 
 
-@fixture
-def mock_pyplot():
+@fixture(name='mock_pyplot')
+def fixture_mock_pyplot():
+    """Return a fake matplotlib.pyplot."""
     return Mock()
 
 
@@ -50,17 +52,6 @@ def fixture_factory_decorated():
         return decorator(mock_func)
 
     return _make
-
-
-@fixture(name='at_debug_level')
-def fixture_log_level():
-    """Yield the _LOGGER at DEBUG level, then clean it up."""
-    old_level = _LOGGER.level
-    _LOGGER.setLevel(logging.DEBUG)
-    try:
-        yield
-    finally:
-        _LOGGER.setLevel(old_level)
 
 
 class TestHasMatplotlibError:
@@ -84,6 +75,7 @@ class TestCannotPlot:
 
     @fixture(autouse=True)
     def missing_matplotlib(self, monkeypatch):
+        """Patch matplotlib_utils to fake the absence of matplotlib."""
         monkeypatch.setattr(matplotlib_utils, 'CAN_PLOT', False)
 
     @parametrize(decorator=(skip_without_matplotlib,
@@ -94,12 +86,13 @@ class TestCannotPlot:
         assert func() is None
 
     @parametrize(level=('debug', 'info', 'warning', 'error'))
-    # pylint: disable-next=unused-variable   # at_debug_level fixture
-    def test_log(self, level, caplog, decorated, at_debug_level):
+    def test_log(self, level, caplog, decorated):
         """Check emits log message."""
+        expected_log_msg = 'Necessary modules for plotting not found.'
         func = decorated(log_without_matplotlib(_LOGGER, level=level))
-        func()
-        assert 'Necessary modules for plotting not found.' in caplog.text
+        with at_level(_LOGGER, logging.DEBUG):
+            func()
+        assert expected_log_msg in caplog.text
 
     def test_raises(self, decorated):
         """Check that calling a raise-decorated function raises indeed."""
@@ -113,6 +106,7 @@ class TestCanPlot:
 
     @fixture(autouse=True)
     def with_matplotlib(self, monkeypatch):
+        """Make sure matplotlib is found, even if it's not there."""
         monkeypatch.setattr(matplotlib_utils, 'CAN_PLOT', True)
 
     @parametrize(decorator=(skip_without_matplotlib,
@@ -161,6 +155,7 @@ class TestCanPlot:
 
     @parametrize(mpl_version=('3.6', '3.7'))
     def test_use_calc_style(self, mpl_version, monkeypatch):
+        """Check that the matplotlib style is updated via use_calc_style."""
         mock_mpl_style = Mock()
         monkeypatch.setattr(matplotlib_utils, 'mpl_version', mpl_version)
         monkeypatch.setattr(matplotlib_utils, 'mpl_style', mock_mpl_style)
