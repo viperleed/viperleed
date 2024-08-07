@@ -236,13 +236,15 @@ def section_loop(rp, sl):
 
     Returns
     -------
-    int
+    exit_code : int
         0: exit without errors.
         1: clean exit through KeyboardInterrupt
-        2: exit due to Exception before entering main loop
         3: exit due to Exception during main loop
+    state_recorder : CalcStateRecorder
+        A record of the states of sl and rp at the end of each
+        executed section.
     """
-    # create state recorder
+    # Create a record for states at end of each section
     state_recorder = CalcStateRecorder()
 
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
@@ -330,12 +332,12 @@ def section_loop(rp, sl):
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")
             cleanup(rp.manifest, rp)
-            return 1
+            return 1, state_recorder
         except Exception:
             logger.error("Exception during viperleed.calc execution: ",
                          exc_info=True)
             cleanup(rp.manifest, rp)
-            return 3
+            return 3, state_recorder
         if rp.halt >= rp.HALTING:
             if not initHalt:
                 logger.info(
