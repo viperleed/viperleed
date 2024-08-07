@@ -214,7 +214,7 @@ def run_calc(system_name=None,
     logger.handlers.clear()
     logging.shutdown()
 
-    return exit_code, state_recorder.get_last_state()
+    return exit_code, state_recorder
 
 
 
