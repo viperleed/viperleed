@@ -14,6 +14,7 @@ import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc.lib.itertools_utils import consecutive_groups
 from viperleed.calc.lib.itertools_utils import cycle
 from viperleed.calc.lib.itertools_utils import n_wise
 from viperleed.calc.lib.itertools_utils import pairwise
@@ -91,6 +92,63 @@ class StoppingIterator:
         if self.count == 1:
             return next(self.iterator, None)
         return [self.count]  # new object
+
+
+class TestConsecutiveGroups:
+    """Tests for the consecutive_groups iterator."""
+
+    _groups = {
+        'list': ([1, 2, 3, 11, 12, 21, 22], [(1, 2, 3), (11, 12), (21, 22)]),
+        'single': ([5], [(5,)]),
+        'no consecutive': ([1, 3, 5, 7], [(1,), (3,), (5,), (7,)]),
+        'all consecutive': (list(range(5)), [tuple(range(5))]),
+        'empty': ([], []),
+        'large gap': ([1, 2, 50, 51, 52, 100], [(1, 2), (50, 51, 52), (100,)]),
+        'unsorted': ([1, 3, 2, 4], [(1,), (3,), (2,), (4,)]),
+        'negative': ([-3, -2, -1, 1, 2, 3], [(-3, -2, -1), (1, 2, 3)]),
+        }
+
+    @parametrize('iterable,expect', _groups.values(), ids=_groups)
+    def test_groups(self, iterable, expect):
+        """Check expected outcome for a simple iterable."""
+        assert list(consecutive_groups(iterable)) == expect
+
+    def test_infinite(self):
+        """Check result of grouping on an infinite iterator."""
+        _infinite = cycle([1,2,3], start=1)
+        result = list(islice(consecutive_groups(_infinite), 4))
+        expect = [(2, 3), (1, 2, 3), (1, 2, 3), (1, 2, 3)]
+        assert result == expect
+
+    _fails = {
+        # (iter, what you'd intuitively expect, what you actually get)
+        # These situations could be handled with custom ordering
+        # functions, like more-itertools does.
+        'duplicates': ([1, 2, 2, 3, 5, 6, 6, 7],
+                       [(1, 2, 2, 3), (5, 6, 6, 7)],
+                       [(1, 2), (2, 3), (5, 6), (6, 7)]),
+        'floats': ([1.1, 1.2, 1.3, 2.1, 2.2, 3.1],
+                   [(1.1, 1.2, 1.3), (2.1, 2.2), (3.1,)],
+                   [(1.1,), (1.2,), (1.3,), (2.1,), (2.2,), (3.1,)]),
+        }
+
+    @parametrize('iterable,would_like,is_instead', _fails.values(), ids=_fails)
+    def test_fails(self, iterable, would_like, is_instead):
+        """Check situations that we do not currently support."""
+        result = list(consecutive_groups(iterable))
+        assert result != would_like
+        assert result == is_instead
+
+    _raises = {
+        'string': ('abcefg', NotImplementedError),
+        'tuples': ([(1, 2, 3), (4, 5, 6)], NotImplementedError),
+        }
+
+    @parametrize('iterable,exc', _raises.values(), ids=_raises)
+    def test_raises(self, iterable, exc):
+        """Check complaints for unsupported situations."""
+        with pytest.raises(exc):
+            tuple(consecutive_groups(iterable))
 
 
 class TestCycle:

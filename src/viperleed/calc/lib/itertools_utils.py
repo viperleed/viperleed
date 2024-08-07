@@ -14,6 +14,7 @@ __license__ = 'GPLv3+'
 
 from collections import deque
 from itertools import cycle as iter_cycle
+from itertools import groupby
 from itertools import islice
 
 
@@ -21,6 +22,63 @@ try:
     from itertools import pairwise   # Python >= 3.10
 except ImportError:
     pairwise = None  # Defined later
+
+
+# The next one is adapted from more-itertools, which uses a recipe from
+# Python2: https://docs.python.org/2.6/library/itertools.html#examples
+# The more-itertools version also has a second keyword argument to pass
+# along a 'ordering' callable. We can pull that version if we need this
+# for anything more complex than integers.
+def consecutive_groups(iterable):
+    """Yield groups of consecutive items.
+
+    Parameters
+    ----------
+    iterable : Iterable
+        The iterable from which items should be returned in a grouped
+        fashion. It is assumed that `iterable` is already sorted in
+        increasing order.
+
+    Yields
+    ------
+    consecutive_items : Iterable
+        Consecutive items in iterable. It shares it source with
+        `iterable`. When an an output group is advanced, the previous
+        group is no longer available unless its elements are copied
+        (e.g., into a list).
+
+        >>> iterable = [1, 2, 3, 11, 12, 21, 22]
+        >>> saved_groups = []
+        >>> for group in consecutive_groups(iterable):
+        ...     saved_groups.append(list(group))  # Copy group elements
+        >>> saved_groups
+        [[1, 2, 3], [11, 12], [21, 22]]
+    """
+    # The trick is that the lambda uses the difference between
+    # each item's index and the item itself. For example, with
+    # [    1,      2,      3,      11,      12,      21,      22]
+    # enumerate gives
+    # [(0, 1), (1, 2), (2, 3), (4, 11), (5, 12), (6, 21), (7, 22)]
+    # hence, the keys used for grouping are
+    # [   -1,     -1,     -1,      -7,      -7,     -15,     -15]
+    # so that the groups are split correctly (itertools.groupby
+    # makes a new group every time the key changes value).
+    grouped = groupby(
+        enumerate(iterable),
+        key=lambda ind_and_item: ind_and_item[0] - ind_and_item[1]
+        )
+    groups = (g for _, g in grouped)  # Don't care about the keys
+    try:  # pylint: disable=too-many-try-statements
+        # We can't have fewer statements, as the thing that raises
+        # is the iteration in the 'for'. One could consume the whole
+        # 'groups' beforehand, but that's not great as we would drop
+        # support for infinite sequences.
+        for group in groups:
+            # Remove the enumerate indices
+            yield tuple(item for _, item in group)
+    except TypeError:
+        raise NotImplementedError('consecutive_groups supports '
+                                  'only integers.') from None
 
 
 def cycle(iterable, start=0):
