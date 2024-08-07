@@ -11,11 +11,12 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
-from io import StringIO
-from pathlib import Path
+
 import copy
+from io import StringIO
 import logging
 import os
+from pathlib import Path
 import re
 
 import fortranformat as ff
