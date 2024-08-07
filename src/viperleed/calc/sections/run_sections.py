@@ -222,7 +222,7 @@ def run_section(index, sl, rp):
         )
 
 
-def section_loop(rp, sl, state_recorder=None):
+def section_loop(rp, sl):
     """
     Executes sections as specified in rp.RUN, may loop if required.
 
@@ -241,8 +241,8 @@ def section_loop(rp, sl, state_recorder=None):
         2: exit due to Exception before entering main loop
         3: exit due to Exception during main loop
     """
-    if state_recorder is None:  # create a new state recorder if not provided
-        state_recorder = CalcStateRecorder()
+    # create state recorder
+    state_recorder = CalcStateRecorder()
 
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
     searchLoopR = None

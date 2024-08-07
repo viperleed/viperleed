@@ -205,10 +205,8 @@ def run_calc(system_name=None,
     rp.updateDerivedParams()
     logger.info(f"ViPErLEED is using TensErLEED version {str(rp.TL_VERSION)}.")
 
-    state_recorder = CalcStateRecorder()
-
     prerun_clean(rp, log_name)
-    exit_code = section_loop(rp, slab, state_recorder)
+    exit_code, state_recorder = section_loop(rp, slab)
 
     # Finalize logging - if not done, will break unit testing
     logger.handlers.clear()
