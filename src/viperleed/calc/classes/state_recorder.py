@@ -51,6 +51,13 @@ class _StateSequence(metaclass=ABCMeta):
         """Initialize the sequence with an empty list of states."""
         self._recorded_states = []
 
+    @property
+    def last_state(self):
+        """Return the last recorded state."""
+        if not self:
+            raise NoStateError('No states recorded yet.')
+        return self[-1]
+
     def __bool__(self):
         """Return whether there is any state."""
         return bool(self._recorded_states)
@@ -95,11 +102,6 @@ class CalcStateRecorder(_StateSequence):
                           rpars=deepcopy(rpars),
                           section=CalcSection(section))
         self.append(state)
-
-    @property
-    def last_state(self):
-        """Return the last recorded state."""
-        return self[-1]
 
     def get_last_section_state(self, section):
         """Return the last state recorded for a given section."""
