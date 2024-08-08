@@ -5,6 +5,7 @@ Defines a class to record and retrieve calculation states.
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-06'
