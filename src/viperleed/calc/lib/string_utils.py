@@ -14,6 +14,7 @@ __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
 
+import itertools
 import re
 
 from viperleed.calc.lib.itertools_utils import consecutive_groups
@@ -48,12 +49,13 @@ def parent_name(dotted_name, remove=''):
 
 
 def range_to_str(integers, sep=', ', range_sep='-'):
-    """Return a sort-and-compressed string version of an integer sequence.
+    """Return a sort-and-compressed string version of an integer iterable.
 
     Parameters
     ----------
-    integers : Sequence
-        The list of integers to be sorted and compressed.
+    integers : Iterable
+        The list of integers to be sorted and compressed. This function
+        will consume one-pass iterators.
     sep : str, optional
         The separator to use if multiple non-contiguous ranges are
         found in `integers`. Default is ', '.
@@ -73,7 +75,8 @@ def range_to_str(integers, sep=', ', range_sep='-'):
     TypeError
         If any of the items in integers is not an int.
     """
-    not_an_int = next((type(v) for v in integers if not isinstance(v, int)),
+    integers, type_check = itertools.tee(integers, 2)
+    not_an_int = next((type(v) for v in type_check if not isinstance(v, int)),
                       None)
     if not_an_int:
         raise TypeError('range_to_str: expected list of int, '
