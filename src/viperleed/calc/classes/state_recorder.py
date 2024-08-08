@@ -11,6 +11,7 @@ __created__ = '2024-08-06'
 __license__ = 'GPLv3+'
 
 from abc import ABCMeta
+from abc import abstractmethod
 from collections import namedtuple
 from copy import deepcopy
 
@@ -36,7 +37,10 @@ CalcState = namedtuple('State', 'slab, rpars, section')
 # below.
 
 class _StateSequence(metaclass=ABCMeta):
-    """A sequence of states."""
+    """A sequence of states.
+
+    Users can only .record() or .revert() to add/remove states.
+    """
 
     __slots__ = {
         # Prevent adding new attributes at runtime. See
@@ -90,18 +94,37 @@ class _StateSequence(metaclass=ABCMeta):
         """Return the index of state in this sequence."""
         return self._recorded_states.index(state, start=start, stop=stop)
 
+    def record(self, *args, **kwargs):
+        """Freeze and record the current state."""
+        state = self._make_new_state(*args, **kwargs)
+        self._recorded_states.append(state)
+
+    def revert(self, *args, **kwargs):
+        """Revert to the state before the most recent one."""
+        if not self:
+            raise NoStateError('No states recorded yet.')
+        self._revert_last_state(*args, **kwargs)
+        self._recorded_states.pop()
+
+    def _check_unexpected_args(self, accepted, *args, **kwargs):
+        """Raise if any argument is passed."""
+        if args or kwargs:
+            raise TypeError(f'{type(self).__name__!r}: Only '
+                            f'{accepted} argument(s) are acceptable.')
+
+    @abstractmethod
+    def _make_new_state(self, *args, **kwargs):
+        """Return a new state for this _StateSequence."""
+
+    @abstractmethod
+    def _revert_last_state(self, *args, **kwargs):
+        """Revert to the state before the most recent one."""
+
 
 class CalcStateRecorder(_StateSequence):
     """Class that records and retrieves calculation states."""
 
     __slots__ = ()  # Prevent adding new attributes at runtime.
-
-    def record(self, slab, rpars, section):
-        """Freeze and record the current state."""
-        state = CalcState(slab=deepcopy(slab),
-                          rpars=deepcopy(rpars),
-                          section=CalcSection(section))
-        self.append(state)
 
     def get_last_section_state(self, section):
         """Return the last state recorded for a given section."""
@@ -113,3 +136,28 @@ class CalcStateRecorder(_StateSequence):
         except StopIteration:
             pass
         raise ValueError(f'No state recorded for section {section.long_name}.')
+
+    # We're just providing a different signature for this concrete
+    # implementation. We also check that there are no extra arguments
+    # passed, so it's OK to have a different number of arguments. The
+    # others will not cause a TypeError from python, but an more
+    # understandable one.
+    # pylint: disable-next=arguments-differ
+    def record(self, slab, rpars, section, *args, **kwargs):
+        """Freeze and record the current state."""
+        self._check_unexpected_args('slab, rpars, and slab', *args, **kwargs)
+        super().record(slab, rpars, section)
+
+    # pylint: disable-next=arguments-differ              # Like .record
+    def _make_new_state(self, slab, rpars, section, *args, **kwargs):
+        """Return a new CalcState."""
+        self._check_unexpected_args('slab, rpars, and slab', *args, **kwargs)
+        return CalcState(slab=deepcopy(slab),
+                         rpars=deepcopy(rpars),
+                         section=CalcSection(section))
+
+    # pylint: disable-next=arguments-differ              # Like .record
+    def _revert_last_state(self, slab, rpars, *args, **kwargs):
+        """Revert to the state before the most recent one."""
+        self._check_unexpected_args('slab and rpars', *args, **kwargs)
+        raise NotImplementedError
