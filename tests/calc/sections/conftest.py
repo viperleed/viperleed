@@ -101,6 +101,7 @@ class BaseCalcFilesSetup:
             copytree_exists_ok(input_dir, self.work_path)
 
         self.failed = -1
+        self.records = None
         self.work_files_after_run = []
 
     @property
@@ -116,8 +117,8 @@ class BaseCalcFilesSetup:
     def run_calc_from_setup(self, source, preset_params):
         """Move to work folder, execute, collect outcome, go back home."""
         with execute_in_dir(self.work_path):
-            self.failed = run_calc(source=source,
-                                   preset_params=preset_params)
+            self.failed, self.records = run_calc(source=source,
+                                                 preset_params=preset_params)
         self.work_files_after_run = [f.name for f in self.work_path.glob('*')]
 
     def expected_file_exists(self, expected_file):

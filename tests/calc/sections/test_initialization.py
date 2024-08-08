@@ -40,6 +40,8 @@ class TestInitialization:                                                       
     def test_successful_run(self, init_files):
         """Check that initialization exits without errors."""
         assert not init_files.failed
+        assert init_files.records is not None
+        assert init_files.records.get_last_section_state('initialization')
 
     _expected_files = 'IVBEAMS', 'BEAMLIST', 'VIBROCC', 'PARAMETERS'
 
