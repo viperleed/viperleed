@@ -10,8 +10,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-06'
 __license__ = 'GPLv3+'
 
+from abc import ABCMeta
 from collections import namedtuple
-from collections.abc import MutableSequence
 from copy import deepcopy
 
 from viperleed.calc.sections.calc_section import CalcSection
@@ -29,8 +29,23 @@ class NoStateError(StateError):
 CalcState = namedtuple('State', 'slab, rpars, section')
 
 
-class _StateSequence(MutableSequence):
+# Do not use Sequence as a base class to avoid risking given the
+# impression that this is an immutable object, as Sequence usually
+# is reserved for immutable ones, like tuple or str. However, the
+# full set of methods available for a Sequence is implemented
+# below.
+
+class _StateSequence(metaclass=ABCMeta):
     """A sequence of states."""
+
+    __slots__ = {
+        # Prevent adding new attributes at runtime. See
+        # also https://stackoverflow.com/questions/472000
+        '_recorded_states': 'The internal list used for storage',
+        }
+
+    # Tell ABCMeta.__new__ that this class has TPFLAGS_SEQUENCE set.
+    __abc_tpflags__ = 1 << 5 # Py_TPFLAGS_SEQUENCE
 
     def __init__(self):
         """Initialize the sequence with an empty list of states."""
@@ -39,6 +54,10 @@ class _StateSequence(MutableSequence):
     def __bool__(self):
         """Return whether there is any state."""
         return bool(self._recorded_states)
+
+    def __contains__(self, state):
+        """Return whether `state` is in this sequence."""
+        return state in self._recorded_states
 
     def __getitem__(self, index):
         """Return the state at `index`."""
@@ -52,39 +71,23 @@ class _StateSequence(MutableSequence):
         """Return the number of recorded states."""
         return len(self._recorded_states)
 
-    def __setitem__(self, index, value):
-        """Disallow modifying the state at `index`."""
-        raise TypeError(f'Cannot modify states of {type(self).__name__!r}.')
+    def __reversed__(self):
+        """Return an iterator of recorded states in reverse order."""
+        return reversed(self._recorded_states)
 
-    def __delitem__(self, index):
-        """Disallow deleting the state at `index`."""
-        raise TypeError(f'Cannot remove states from {type(self).__name__!r}.')
+    def count(self, state):
+        """Return then number of occurrences of state in self."""
+        return self._recorded_states.count(state)
 
-    def append(self, value):
-        """Add a state to the sequence."""
-        self._recorded_states.append(value)
-
-    def clear(self):
-        """Disallow clearing this sequence."""
-        raise TypeError(f'Cannot clear states in {type(self).__name__!r}.')
-
-    def insert(self, index, value):
-        """Disallow inserting states."""
-        raise TypeError(f'Cannot insert states in {type(self).__name__!r}. '
-                        'Use append() or extend() instead.')
-
-    def pop(self, index=-1):
-        """Remove the last recorded state and return it."""
-        raise TypeError(f'Cannot pop state from {type(self).__name__!r}.')
-
-    def reverse(self):
-        """Disallow reversing this sequence of states in place."""
-        raise TypeError(f'{type(self).__name__!r} cannot be reversed.')
-
+    def index(self, state, start=0, stop=None):
+        """Return the index of state in this sequence."""
+        return self._recorded_states.index(state, start=start, stop=stop)
 
 
 class CalcStateRecorder(_StateSequence):
     """Class that records and retrieves calculation states."""
+
+    __slots__ = ()  # Prevent adding new attributes at runtime.
 
     def record(self, slab, rpars, section):
         """Freeze and record the current state."""
