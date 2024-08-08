@@ -59,6 +59,7 @@ class TestRangeToStr:
 
     _valid = {
         'one element': ([1], '1'),
+        'empty': (tuple(), ''),
         'sorted list': ([1, 2, 3, 5, 6, 8], '1-3, 5-6, 8'),
         'unsorted list': ([3, 1, 2, 8, 5, 6], '1-3, 5-6, 8'),
         'unsorted duplicate list': ([8, 3, 1, 2, 5, 5, 8, 5, 6],
@@ -66,7 +67,6 @@ class TestRangeToStr:
         'one-element group': ([1, 2, 4, 6, 7, 8], '1-2, 4, 6-8'),
         }
     _fail = {
-        'empty': (tuple(), ''),  # Raises .pop from empty
         'generator': (  # Raises (.pop empty). We consume it too early
             (i for i in range(10) if i%4),
             '1-3, 5-6, 7-9'
