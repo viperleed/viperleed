@@ -47,13 +47,19 @@ def parent_name(dotted_name, remove=''):
     return stripped_name
 
 
-def range_to_str(integers):
+def range_to_str(integers, sep=', ', range_sep='-'):
     """Return a sort-and-compressed string version of an integer sequence.
 
     Parameters
     ----------
     integers : Sequence
         The list of integers to be sorted and compressed.
+    sep : str, optional
+        The separator to use if multiple non-contiguous ranges are
+        found in `integers`. Default is ', '.
+    range_sep : str, optional
+        The separator to use between the first and last item of
+        contiguous ranges in `integers`. Default is '-'.
 
     Returns
     -------
@@ -77,7 +83,7 @@ def range_to_str(integers):
     sorted_integers = sorted(dict.fromkeys(integers))
     first_and_last_items = ((group[0], group[-1])
                             for group in consecutive_groups(sorted_integers))
-    return ', '.join(str(start) if start == end else f'{start}-{end}'
+    return sep.join(str(start) if start == end else f'{start}{range_sep}{end}'
                     for start, end in first_and_last_items)
 
 
