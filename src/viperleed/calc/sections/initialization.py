@@ -795,7 +795,7 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
     angle_between_first_uc_vec_and_x = sl.angle_between_ucell_and_coord_sys
     if angle_between_first_uc_vec_and_x > angle_eps and rp.THETA > angle_eps:
         logger.info(
-            f"Detected non-zero angle theta ({rp.THETA:.2f})° and"
+            f"Detected non-zero angle theta ({rp.THETA:.2f})° and "
             f"an angle of {angle_between_first_uc_vec_and_x:.2f}° "
             "between the first unit cell vector and the x direction of "
             "the coordinate system in the POSCAR file.\n"
