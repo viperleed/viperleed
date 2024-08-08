@@ -16,6 +16,8 @@ __license__ = 'GPLv3+'
 
 import re
 
+from viperleed.calc.lib.itertools_utils import consecutive_groups
+
 
 def parent_name(dotted_name, remove=''):
     """Return a version of `dotted_name` with the last attribute removed.
@@ -65,31 +67,18 @@ def range_to_str(integers):
     TypeError
         If any of the items in integers is not an int.
     """
-    if not all(isinstance(v, int) for v in integers):
-        type_ = next(type(v) for v in integers if not isinstance(v, int))
-        raise TypeError(
-            f'range_to_str: expected list of int, found type {type_.__name__}'
-            )
-    sorted_integers = sorted(integers, reverse=True)
-    prev = sorted_integers.pop()
-    rmin = prev
-    out = str(prev)
-    while sorted_integers:
-        next_ = sorted_integers.pop()
-        if next_ == prev:
-            continue
-        if next_ - prev == 1:
-            prev = next_
-            continue
-        if prev != rmin:
-            out += f'-{prev}, {next_}'
-        else:
-            out += f', {next_}'
-        prev = next_
-        rmin = next_
-    if prev != rmin:
-        out += f'-{prev}'
-    return out
+    not_an_int = next((type(v) for v in integers if not isinstance(v, int)),
+                      None)
+    if not_an_int:
+        raise TypeError('range_to_str: expected list of int, '
+                        f'found type {not_an_int.__name__!r}')
+    # Remove duplicates and sort input, as consecutive_groups
+    # does not handle these correctly
+    sorted_integers = sorted(dict.fromkeys(integers))
+    first_and_last_items = ((group[0], group[-1])
+                            for group in consecutive_groups(sorted_integers))
+    return ', '.join(str(start) if start == end else f'{start}-{end}'
+                    for start, end in first_and_last_items)
 
 
 def readIntLine(line, width=3):                                                 # TODO: Probably better ways with list comprehension
