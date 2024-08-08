@@ -67,7 +67,7 @@ class TestRangeToStr:
                                     '1-3, 5-6, 8'),
         'one-element group': ([1, 2, 4, 6, 7, 8], '1-2, 4, 6-8'),
         }
-    _fail = {
+    _fail = {  # No known failing conditions so far
         }
 
     @parametrize('integers,expect', _valid.values(), ids=_valid)
@@ -82,15 +82,16 @@ class TestRangeToStr:
         self.test_valid(integers, expect)
 
     _raises = {
-        'string item': ([1, '2', 3], TypeError),
-        'string sequence': ('831255856', TypeError),
+        'string item': ([1, '2', 3], {}, TypeError),
+        'string sequence': ('831255856', {}, TypeError),
+        'invalid separator': ([1,2,3], {'sep': None}, AttributeError),
         }
 
-    @parametrize('iterable,exc', _raises.values(), ids=_raises)
-    def test_raises(self, iterable, exc):
+    @parametrize('iterable,kwargs,exc', _raises.values(), ids=_raises)
+    def test_raises(self, iterable, kwargs, exc):
         """Check complaints when using an invalid iterable."""
         with pytest.raises(exc):
-            range_to_str(iterable)
+            range_to_str(iterable, **kwargs)
 
 
 class TestReadIntLine:
