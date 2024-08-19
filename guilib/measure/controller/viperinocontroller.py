@@ -531,8 +531,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                   'line frequency.')
         handler.add_option(
             'measurement_settings', 'adc_update_rate', handler_widget=widget,
-            display_name='Measurement frequency', tooltip=tooltip,
-            # tags=SettingsTag.ADVANCED
+            display_name='Measurement frequency', tooltip=tooltip
             )
 
         return handler

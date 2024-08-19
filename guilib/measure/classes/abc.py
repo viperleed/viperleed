@@ -248,7 +248,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         if not default:
             # Filter out default settings.
             settings_files = [file for file in settings_files
-                              if not '_defaults' in str(file)]
+                              if '_defaults' not in str(file)]
 
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
@@ -360,7 +360,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             True if the settings file is for the class.
         """
 
-    def are_settings_invalid(self, new_settings):
+    def are_settings_invalid(self, settings):
         """Check if there are any invalid settings.
 
         Reimplementations can add additional mandatory settings at
@@ -369,7 +369,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Parameters
         ----------
-        new_settings : ViPErLEEDSettings
+        settings : ViPErLEEDSettings
             The new settings.
 
         Returns
@@ -383,7 +383,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             the setttings.
         """
         return [(invalid,) for invalid in
-                new_settings.has_settings(*self._mandatory_settings)]
+                settings.has_settings(*self._mandatory_settings)]
 
     @abstractmethod
     def get_settings_handler(self):

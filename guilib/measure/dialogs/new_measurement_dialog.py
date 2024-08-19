@@ -108,7 +108,20 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             self._ctrls['settings_file'].addItem(settings.stem, settings)
 
     def _clone_and_return_settings(self, cls, source_path):
-        """Take from source path and clone to a path."""
+        """Take from source path and clone to a path.
+
+        Parameters
+        ----------
+        cls : MeasureEnergyCalibration or TimeResolved or IVVideo
+            The measurement class for which settings have been selected.
+        source_path : Path
+            The path to the source settings.
+
+        Returns
+        -------
+        settings_path : Path
+            The path to the new cloned settings.
+        """
         current_time = strftime("_%Y-%m-%d_%H-%M-%S", localtime())
         name = cls.__name__
         settings_path = self.cfg_dir / (name + current_time + '.ini')
@@ -119,12 +132,21 @@ class SelectNewMeasurementDialog(qtw.QDialog):
     def _switch_clone_settings(self, *_):
         """Disable/enable clone settings choice."""
         current_choice = self._ctrls['settings_file'].currentData()
-        enable = False if current_choice == 'default' else True
+        enable = not current_choice == 'default'
         self._ctrls['clone_settings'].setEnabled(enable)
 
     @qtc.pyqtSlot()
     def accept(self):
-        """Emit selected measurement type and settings path and close."""
+        """Emit selected measurement class and settings and close.
+
+        Emtis
+        -----
+        measurement_selected
+            If the settings was found and successfuly read.
+        settings_not_found
+            If the settings was not found. Carries the
+            settings path and the MissingSettingsFileError.
+        """
         cls = self._ctrls['type_selection'].currentData()
         settings_path = self._ctrls['settings_file'].currentData()
         default_path = cls.find_matching_settings_files(None, DEFAULTS_PATH,
@@ -142,7 +164,6 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             self.settings_not_found.emit(settings_path, err)
             super().reject()
             return
-        else:
-            self.measurement_selected.emit(cls, config)
 
+        self.measurement_selected.emit(cls, config)
         super().accept()

@@ -27,7 +27,6 @@ import sys
 
 from wrapt import synchronized  # thread-safety decorator
 
-from viperleed import guilib as gl
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 
@@ -192,8 +191,7 @@ class ViPErLEEDSettings(ConfigParser):
         except (TypeError, MissingSettingsFileError) as exc:
             raise NoSettingsError(f'{cls.__name__}: could not '
                                   'load settings.') from exc
-        else:
-            return config
+        return config
 
     def __bool__(self):
         """Return True if there is any section."""

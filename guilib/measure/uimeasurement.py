@@ -1074,7 +1074,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 # messages from controller instances.
                 source = f'{type(sender).__name__} at {sender.port_name}'
             elif isinstance(sender, FirmwareUpgradeDialog):
-                source = f'firmware upgrade dialog'
+                source = 'firmware upgrade dialog'
             else:
                 source = 'system or unknown'
 

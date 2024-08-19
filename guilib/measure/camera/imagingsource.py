@@ -17,7 +17,6 @@ from ctypes import POINTER, c_ubyte, cast as c_cast
 
 import numpy as np
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import abc
