@@ -1229,6 +1229,20 @@ class SettingsDialog(qtw.QDialog):
         self.__ctrls['apply'].setEnabled(settings_changed)
 
 
+class MeasurementSettingsDialog(SettingsDialog):
+    """A dialog to display measurement settings."""
+
+    @qtc.pyqtSlot()
+    def accept(self):
+        """Notify if settings changed, then close."""
+        for widget in self.handler.widgets:
+            try:
+                widget.store_lower_level_settings()
+            except AttributeError:
+                pass
+        super().accept()
+
+
 class StaticSettingsDialogOption(SettingsDialogOption):
     """Read only settings dialog option."""
 

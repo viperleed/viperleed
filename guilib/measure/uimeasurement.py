@@ -217,6 +217,9 @@ from viperleed.guilib.measure.dialogs.new_measurement_dialog import (
     SelectNewMeasurementDialog
     )
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsDialog
+from viperleed.guilib.measure.dialogs.settingsdialog import (
+    MeasurementSettingsDialog
+    )
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.serial.abc import SerialABC
 from viperleed.guilib.measure.widgets.cameraviewer import CameraViewer
@@ -852,7 +855,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Create measurement settings dialog."""
         measurement = measurement_class(settings)
         measurement.disconnect_devices()
-        dialog = SettingsDialog(measurement, parent=self)
+        dialog = MeasurementSettingsDialog(measurement, parent=self)
 
         dialog.rejected.connect(self._measurement_cancelled)
         dialog.accepted.connect(self._on_settings_accepted)
