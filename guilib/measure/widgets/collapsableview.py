@@ -12,6 +12,7 @@ Defines the CollapsableView, CollapsableList, CollapsableCameraList, and
 CollapsableControllerList classes.
 """
 
+from ast import literal_eval
 from pathlib import Path
 
 from PyQt5 import QtCore as qtc
@@ -32,6 +33,47 @@ def remove_spacing_and_margins(layout):
     """Remove spacing and margins from a layout."""
     layout.setSpacing(0)
     layout.setContentsMargins(0, 0, 0, 0)
+
+
+class QuantitySelector(qtw.QWidget):                                            # TODO: make title and borders (QFrame?)
+    """A widget that allows selection of quantities from settings."""
+
+    # This is signal is emitted when the quantity selection changes.
+    settings_changed = qtc.pyqtSignal()
+
+    def __init__(self, settings, parent=None):
+        """Initialise widget."""
+        super().__init__(parent=parent)
+        self._selections = []
+        quantities = settings.get('controller', 'measurement_devices',
+                                  fallback=())
+        self._compose(literal_eval(quantities))
+
+    def _compose(self, all_quantities):
+        """Compose quantity widgets."""
+        main_layout = qtw.QHBoxLayout()
+        for selections in all_quantities:
+            layout = qtw.QVBoxLayout()
+            group = QUncheckableButtonGroup()
+            group.buttonClicked.connect(group.uncheck_if_clicked)
+            group.buttonClicked.connect(self.settings_changed)
+            for quantity in selections:
+                button = qtw.QCheckBox()
+                group.addButton(button)
+                button.setText(quantity)
+                layout.addWidget(button)
+            layout.addStretch(1)
+            self._selections.append(group)
+            main_layout.addLayout(layout)
+        self.setLayout(main_layout)
+
+    def get_selected_quantities(self):
+        """Return the selected quantties."""
+        quantities = []
+        for group in self._selections:
+            if group.checkedButton():
+                quantities.append(group.checkedButton().text())
+        return tuple(quantities)
 
 
 class CollapsableView(qtw.QWidget):
