@@ -96,3 +96,32 @@ class QNoDefaultPushButton(qtw.QPushButton):
         """Initialise button."""
         super().__init__(*args, **kwargs)
         self.setAutoDefault(False)
+
+
+class QUncheckableButtonGroup(qtw.QButtonGroup):
+    """QButtonGroup that can be unchecked."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialise button group."""
+        super().__init__(*args, **kwargs)
+        self._pressed_button_was_checked = False
+        self.buttonPressed.connect(self._remember_status_of_pressed_button)
+
+    def uncheck_buttons(self):
+        """Uncheck all buttons."""
+        self.setExclusive(False)
+        self.checkedButton().setChecked(False)
+        self.setExclusive(True)
+
+    @qtc.pyqtSlot(qtw.QAbstractButton)
+    def uncheck_if_clicked(self, button):
+        """Uncheck if checked button was clicked."""
+        was_checked = self._pressed_button_was_checked
+        self._pressed_button_was_checked = False
+        if was_checked and button == self.checkedButton():
+            self.uncheck_buttons()
+
+    @qtc.pyqtSlot(qtw.QAbstractButton)
+    def _remember_status_of_pressed_button(self, button):
+        if button == self.checkedButton():
+            self._pressed_button_was_checked = True
