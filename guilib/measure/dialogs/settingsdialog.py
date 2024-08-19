@@ -402,7 +402,8 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
 
     def has_advanced_options(self):
         """Return whether self contains any advanced option."""
-        return _adv or any(s.advanced for s in self.__complex_sections)
+        _adv = any(o.has_tag(Tag.A) for s in self.values() for o in s.values())
+        return _adv or any(s.has_tag(Tag.A) for s in self.__complex_sections)
 
     def has_section(self, section):
         """Return whether a section is directly handled."""
@@ -545,11 +546,6 @@ class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
         return f"SettingsDialogOption({self.option_name})"
 
     @property
-    def advanced(self):
-        """Return whether this option is considered advanced."""
-        return bool(Tag.ADVANCED & self.tags)
-
-    @property
     def handler_widget(self):
         """Return the handler widget for this option."""
         return self._handler_widget
@@ -569,21 +565,6 @@ class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
     def label(self):
         """Return the QLabel widget for this option's label."""
         return self._label
-
-    @property
-    def read_only(self):
-        """Return whether this option can be modified."""
-        return bool(Tag.READ_ONLY & self.tags)
-
-    @property
-    def regular(self):
-        """Return whether this is a regular option of the device settings."""
-        return bool(Tag.REGULAR & self.tags)
-
-    @property
-    def relevant_for_meas(self):
-        """Return whether this option is relevant for measurements."""
-        return bool(Tag.MEASUREMENT & self.tags)
 
     def get_(self):
         """Return the value of this option as a string."""
@@ -774,21 +755,6 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
     def __repr__(self):
         """Return a string representation of self."""
         return f"{self.__class__.__name__}(display_name='{self.title()}')"
-
-    @property
-    def advanced(self):
-        """Return whether this section contains only advanced settings."""
-        return bool(Tag.ADVANCED & self.tags)
-
-    @property
-    def regular(self):
-        """Return whether this is a regular section of the device settings."""
-        return bool(Tag.REGULAR & self._tags)
-
-    @property
-    def relevant_for_meas(self):
-        """Return whether this section contains only measurement settings."""
-        return bool(Tag.MEASUREMENT & self.tags)
 
     def set_info(self, info_text):
         """Add informative text in a QLabel."""
@@ -989,7 +955,6 @@ class SettingsDialog(qtw.QDialog):
         self.__settings = {'current': settings,
                            'applied': copy.deepcopy(settings),
                            'original': copy.deepcopy(settings)}
-        self._measurement_settings_only = False
 
         # Set up children widgets and self
         self.__ctrls = {
@@ -1017,17 +982,6 @@ class SettingsDialog(qtw.QDialog):
     def handled_object(self):
         """Return the object whose settings are shown."""
         return self._handled_obj
-
-    @property
-    def measurement_settings_only(self):
-        """Return whether only measurement settings should be shown."""
-        return self._measurement_settings_only
-
-    @measurement_settings_only.setter
-    def measurement_settings_only(self, meas_only):
-        """Set whether only measurement settings should be shown."""
-        self._only_show_measurement_settings()
-        self._measurement_settings_only = meas_only
 
     @qtc.pyqtSlot()
     def accept(self):
@@ -1194,19 +1148,6 @@ class SettingsDialog(qtw.QDialog):
                 widg.setVisible(visible or (not widg.has_tag(Tag.A)
                                             and widg.has_tag(Tag.R)))
         self.adjustSize()   # TODO: does not always adjust when going smaller?
-
-    def _only_show_measurement_settings(self):
-        """Hide all settings that are not relevant for the measurement."""
-        for widg in self.handler.widgets:
-            if isinstance(widg, SettingsDialogSection):
-                _section_visible = False
-                for option in widg.options:
-                    _section_visible |= option.relevant_for_meas
-                    option.setVisible(option.relevant_for_meas)
-                widg.setVisible(_section_visible)
-            else:
-                widg.setVisible(widg.relevant_for_meas)
-        self.adjustSize()
 
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):

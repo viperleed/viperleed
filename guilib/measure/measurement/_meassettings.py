@@ -17,10 +17,102 @@ from ast import literal_eval
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.guilib.measure.dialogs.settingsdialog import (
+    SettingsDialogSectionBase
+    )
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
+from viperleed.guilib.measure.widgets.collapsableview import CollapsableCameraList
+from viperleed.guilib.measure.widgets.collapsableview import CollapsableControllerList
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.guilib.widgets.basewidgets import ButtonWithLabel
+
+
+class DeviceEditor(SettingsDialogSectionBase):
+    """Class for selecting devices and editing their settings."""
+
+    def __init__(self, settings, **kwargs):
+        """Initialize instance."""
+        self._settings = settings
+        self._add_cameras = kwargs.pop('add_cameras', False)
+        default_settings_folder = kwargs.pop('default_folder', None)
+        kwargs['display_name'] = 'Device configuration'
+        kwargs['tags'] = SettingsTag.REGULAR
+        kwargs['tooltip'] = ('This section lists devices, allows their '
+                             'selection, and the editing of their settings.')
+        super().__init__(**kwargs)
+
+        self._devices = {}
+        self._controllers = CollapsableControllerList()
+        self._cameras = CollapsableCameraList()
+        self._default_settings_folder = None
+        if default_settings_folder:
+            self.default_settings_folder = default_settings_folder
+
+        self.settings_changed.connect(self._store_device_settings)
+        self._compose_and_connect_collapsable_lists()
+
+    @property
+    def default_settings_folder(self):
+        """Return the default settings folder."""
+        return self._default_settings_folder
+
+    @default_settings_folder.setter
+    def default_settings_folder(self, settings_path):
+        """Set the default settings folder."""
+        self._default_settings_folder = settings_path
+        self._cameras.default_settings_folder = settings_path
+        self._controllers.default_settings_folder = settings_path
+
+    def _compose_and_connect_collapsable_lists(self):
+        """Compose the collapsable lists for cameras and controllers."""
+        central_layout = qtw.QVBoxLayout()
+        central_layout.addWidget(self._controllers)
+        if self._add_cameras:
+            central_layout.addWidget(self._cameras)
+        self.central_widget.setLayout(central_layout)
+        self._controllers.settings_changed.connect(self.settings_changed)
+        self._cameras.settings_changed.connect(self.settings_changed)
+
+    @qtc.pyqtSlot()
+    def _store_device_settings(self):
+        """Get the settings from the list viewers."""
+        self._settings.set('devices', 'primary_controller',
+                           str(self._controllers.get_primary_settings()))
+        self._settings.set('devices', 'secondary_controllers',
+                           str(self._controllers.get_secondary_settings()))
+        self._settings.set('devices', 'cameras',
+                           str(self._cameras.get_camera_settings()))
+
+    def set_list_height(self, height):
+        """Set the height of the collapsable lists."""
+        for collapsable_list in (self._controllers, self._cameras):
+            collapsable_list.setMaximumHeight(height)
+            collapsable_list.setMinimumHeight(height)
+
+    def store_lower_level_settings(self):
+        """Store the settings of the selected devices."""
+        for collapsable_list in (self._controllers, self._cameras):
+            collapsable_list.store_settings()
+
+    @qtc.pyqtSlot()
+    def update_widgets(self):
+        """Update collapsable lists."""
+        primary_settings = self._settings.getsequence(
+            'devices', 'primary_controller', fallback=()
+            )
+        self._devices['primary_controller'] = primary_settings
+        secondary_settings = self._settings.getsequence(
+            'devices', 'secondary_controllers', fallback=()
+            )
+        self._devices['secondary_controllers'] = secondary_settings
+        camera_settings = self._settings.getsequence('devices', 'cameras',
+                                                     fallback=())
+        self._devices['cameras'] = camera_settings
+        # self._controllers.set_controllers_from_settings(primary_settings,
+                                                        # secondary_settings)
+        # self._cameras.set_cameras_from_settings(camera_settings)
 
 
 class StepProfileViewer(ButtonWithLabel):

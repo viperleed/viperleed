@@ -337,21 +337,6 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
                                            type=qtc.Qt.QueuedConnection)
 
     @property
-    def advanced(self):
-        """Return whether this section contains only advanced settings."""
-        # We want this section to be normally visible (i.e., not
-        # advanced) only if there are some problems with the settings.
-        # We want to see this if
-        # (1) we don't have info yet
-        if not self.__adcs:
-            return False
-        # (2) something is wrong with the current selection
-        if any('?' in combo.currentText()
-               for adc in self.__adcs for combo in adc.values()):
-            return False
-        return super().advanced
-
-    @property
     def hardware_info(self):
         """Return a dictionary of information suitable for a settings file."""
         info = {}
@@ -373,19 +358,6 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
 
         info['measurement_devices'] = str(tuple(devices))
         return info
-
-    @property
-    def regular(self):
-        """Return whether this section contains only regular settings."""
-        # We want to see this section always in the regular settings if
-        # (1) we don't have info yet
-        if not self.__adcs:
-            return True
-        # (2) something is wrong with the current selection
-        if any('?' in combo.currentText()
-               for adc in self.__adcs for combo in adc.values()):
-            return True
-        return super().regular
 
     @qtc.pyqtSlot()
     def update_widgets(self):
@@ -582,6 +554,21 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
             layout.addWidget(qtw.QLabel(f"CH{col - 1}"), 0, col)
 
         # Finally "+" and "-" buttons for adding/removing channels              # TODO. Also, have one button to start fresh from ?? everywhere (in case of fucked up settings)
+
+    def has_tag(self, tag):
+        """Return whether this section hsa a specific tag."""
+        # We want this section to be normally visible if there are some
+        # problems with the settings and have to adjust the tags accordingly.
+        # We want to see this section if:
+        #   (1) we don't have info yet
+        #   (2) something is wrong with the current selection
+        if not self.__adcs or any('?' in combo.currentText()
+               for adc in self.__adcs for combo in adc.values()):
+            if tag is SettingsTag.ADVANCED:
+                return False
+            if tag is SettingsTag.REGULAR:
+                return True
+        return super().has_tag(tag)
 
 
 class _ADCChannelCombo(qtw.QComboBox):

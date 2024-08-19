@@ -36,8 +36,7 @@ from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.measurement import _meassettings as _settings
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
-from viperleed.guilib.measure.widgets.collapsableview import CollapsableCameraList
-from viperleed.guilib.measure.widgets.collapsableview import CollapsableControllerList
+
 
 _QUEUED = qtc.Qt.QueuedConnection
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -730,23 +729,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                            display_name='Additional information',
                            )
 
-        test_widget = CollapsableControllerList()
-        test_widget.default_settings_folder = settings_path
-        test_widget.setMaximumHeight(height)
-        test_widget.setMinimumHeight(height)
-        handler.add_static_option('measurement_info', 'controllers',
-                                  handler_widget=test_widget,
-                                  display_name='Controllers',
-                                  )
-        test_widget = CollapsableCameraList()
-        test_widget.default_settings_folder = settings_path
-        test_widget.setMaximumHeight(height)
-        test_widget.setMinimumHeight(height)
-        handler.add_static_option('measurement_info', 'cameras',
-                                  handler_widget=test_widget,
-                                  display_name='Cameras',
-                                  )
-
         handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
         type_display = qtw.QLabel()
         type_display.setText(type(self).__name__)
@@ -780,6 +762,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                            handler_widget=widget, display_name='Step profile',
                            tooltip=tip
                            )
+
+        device_section = _settings.DeviceEditor(
+            self.settings, default_folder=settings_path, add_cameras=True
+            )
+        device_section.set_list_height(height)
+        handler.add_complex_section(device_section)
+
         return handler
 
     def moveToThread(self, thread):  # pylint: disable=invalid-name
