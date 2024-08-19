@@ -252,7 +252,7 @@ class LinearStepEditor(ProfileStep):
         step_number_label.setText('Nr. of steps:')
         layout.addWidget(step_number_label)
         size = step_number_label.fontMetrics().boundingRect('a').height()
-        info = ('The number of intermediate steps.')
+        info = 'The number of intermediate steps.'
         layout.addWidget(FieldInfo(info, size=size))
         layout.addWidget(self._controls['step_number'])
         return layout
@@ -264,7 +264,7 @@ class LinearStepEditor(ProfileStep):
         duration_label.setText('Step duration:')
         layout.addWidget(duration_label)
         size = duration_label.fontMetrics().boundingRect('a').height()
-        info = ('The settle time after each energy.')
+        info = 'The settle time after each energy.'
         layout.addWidget(FieldInfo(info, size=size))
         layout.addWidget(self._controls['duration'])
         return layout

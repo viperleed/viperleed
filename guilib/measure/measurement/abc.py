@@ -611,12 +611,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         return bool(self.primary_controller)
 
-    def are_settings_invalid(self, new_settings):
+    def are_settings_invalid(self, settings):
         """Check if there are any invalid settings.
 
         Parameters
         ----------
-        new_settings : ViPErLEEDSettings
+        settings : ViPErLEEDSettings
             The new settings.
 
         Returns
@@ -629,7 +629,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             Further entries are information on what is wrong with
             the setttings.
         """
-        invalid_settings = new_settings.has_settings(
+        invalid_settings = settings.has_settings(
             *self._mandatory_settings,
             *self._other_mandatory_settings
             )
