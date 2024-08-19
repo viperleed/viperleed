@@ -143,15 +143,39 @@ def _get_hook(obj):
 
 class SettingsTag(enum.Flag):
     """Flags that decide the display behaviour of a settings widget."""
-    OPTION = enum.auto()
-    SECTION = enum.auto()
     REGULAR = enum.auto()
+    R = REGULAR
     ADVANCED = enum.auto()
+    A = ADVANCED
     MEASUREMENT = enum.auto()
     READ_ONLY = enum.auto()
 
 
 Tag = SettingsTag
+
+
+class SettingsTagHandler():
+    """This class can return whether it has certain tags or not."""
+
+    def __init__(self, **kwargs):
+        self._tags = kwargs.pop('tags', Tag(0))
+
+    @property
+    def tags(self):
+        """Return tags."""
+        return self._tags
+
+    @tags.setter
+    def tags(self, new_tags):
+        """Set tags."""
+        if not new_tags:
+            self._tags = Tag(0)
+            return
+        self._tags = new_tags
+
+    def has_tag(self, tag):
+        """Return whether the instance has this tag."""
+        return bool(tag & self.tags)
 
 
 class _QContainerMeta(type(collections.abc.Container), type(qtc.QObject)):
@@ -302,8 +326,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                                       *args, **kwargs)
         self[section_name][option_name] = option
 
-        # if not option.read_only:
-        if Tag.READ_ONLY not in option.tags:
+        if not option.has_tag(Tag.READ_ONLY):
             option.value_changed.connect(
                 self.__option_setter(section_name, option_name)
                 )
@@ -348,11 +371,9 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
-        tags = kwargs.pop('tags', None)
-        if tags and Tag.READ_ONLY not in tags:
-            tags = tags | Tag.READ_ONLY
-        else:
-            tags = Tag.READ_ONLY
+        tags = kwargs.pop('tags', Tag(0))
+        if Tag.READ_ONLY not in tags:
+            tags = tags | Tag.READ_ONLY # pylint: disable=E1131
         option = StaticSettingsDialogOption(option_name, handler_widget,
                                             *args, tags=tags, **kwargs)
         self[section_name][option_name] = option
@@ -376,11 +397,11 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         self.__widgets.append(section)
 
     def get_widgets_with_tags(self, tags):
+        """Return all widgets with a specific tag."""
         return tuple(wid for wid in self.widgets if tags in wid.tags)
 
     def has_advanced_options(self):
         """Return whether self contains any advanced option."""
-        _adv = any(o.advanced for s in self.values() for o in s.values())
         return _adv or any(s.advanced for s in self.__complex_sections)
 
     def has_section(self, section):
@@ -393,7 +414,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
             if not self.__config[section_name]:
                 # Empty section
                 continue
-            self.add_section(section_name)
+            self.add_section(section_name, tags=Tag.REGULAR)
             for option_name, value in self.__config[section_name].items():
                 handler = self.__guess_handler_from_value(value)
                 if handler is None:
@@ -441,7 +462,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         return qtc.pyqtSlot(str)(_setter)
 
 
-class SettingsDialogOption(qtc.QObject):
+class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
     """Class for handling a single settings option."""
 
     value_changed = qtc.pyqtSignal(str)
@@ -497,13 +518,8 @@ class SettingsDialogOption(qtc.QObject):
         tooltip = kwargs.pop('tooltip', '')
         v_align = kwargs.pop('label_alignment', 't')
 
-        super().__init__(kwargs.pop('parent', None))
+        super().__init__(*args, **kwargs)
         self.option_name = option_name
-
-        self._tags = Tag.OPTION
-        additional_tags = kwargs.pop('tags', None)
-        if additional_tags:
-            self._tags = self._tags | additional_tags
 
         if isinstance(handler_widget, type(qtw.QWidget)):
             handler_widget = handler_widget(*args, **kwargs)
@@ -517,7 +533,7 @@ class SettingsDialogOption(qtc.QObject):
 
         self.display_name = self._make_label_widget(display_name, tooltip,
                                                      v_align)
-        if Tag.REGULAR not in self._tags:
+        if not self.has_tag(Tag.REGULAR):
             self.setVisible(False)
 
     def __iter__(self):
@@ -569,16 +585,6 @@ class SettingsDialogOption(qtc.QObject):
         """Return whether this option is relevant for measurements."""
         return bool(Tag.MEASUREMENT & self.tags)
 
-    @property
-    def tags(self):
-        """Return tags."""
-        return self._tags
-
-    @tags.setter
-    def tags(self, new_tags):
-        """Set tags."""
-        self._tags = new_tags
-
     def get_(self):
         """Return the value of this option as a string."""
         return self.handler_widget.get_()
@@ -605,7 +611,7 @@ class SettingsDialogOption(qtc.QObject):
     def _check_handler(self):
         """Check that the handler widget can be used."""
         to_have = ('get_', 'set_')
-        if not self.read_only:
+        if not self.has_tag(Tag.READ_ONLY):
             to_have += ('notify_',)
         handler = self.handler_widget
         missing = {m: True for m in to_have if not hasattr(handler, m)}
@@ -616,8 +622,8 @@ class SettingsDialogOption(qtc.QObject):
                 )
 
     def _connect_handler(self):
-        """Connect self.handler_widget if not self.read_only."""
-        if self.read_only:
+        """Connect self.handler_widget if not read only."""
+        if self.has_tag(Tag.READ_ONLY):
             return
 
         signal = self.handler_widget.notify_
@@ -679,12 +685,12 @@ class SettingsDialogOption(qtc.QObject):
         self.value_changed.emit(self.get_())
 
     def _update_handler_from_read_only(self):
-        """Update the state of handler_widget according to self.read_only."""
+        """Update the state of handler_widget according to READ_ONLY tag."""
         handler = self.handler_widget
 
         # See if there is a readOnly method
         try:
-            handler.setReadOnly(self.read_only)
+            handler.setReadOnly(self.has_tag(Tag.READ_ONLY))
         except AttributeError:
             pass
         else:
@@ -692,13 +698,13 @@ class SettingsDialogOption(qtc.QObject):
 
         # See if there is a writeable read_only property
         try:
-            handler.read_only = self.read_only
+            handler.read_only = self.has_tag(Tag.READ_ONLY)
         except (AttributeError, TypeError):
             # Just disable it instead
-            handler.setEnabled(not self.read_only)
+            handler.setEnabled(not self.has_tag(Tag.READ_ONLY))
 
 
-class SettingsDialogSectionBase(qtw.QGroupBox):
+class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
     """A base class for handling groups of settings.
 
     Use this class only as the parent class for "advanced"
@@ -758,14 +764,9 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
 
         tooltip = kwargs.get('tooltip', '')
 
-        self._tags = Tag.SECTION
-        additional_tags = kwargs.pop('tags', None)
-        if additional_tags:
-            self._tags = self._tags | additional_tags
-
         self._info = qtw.QLabel()
         self.central_widget = qtw.QWidget()
-        super().__init__(display_name, kwargs.get('parent', None))
+        super().__init__(display_name, **kwargs)
 
         self.__compose()
         self.set_info(tooltip)
@@ -788,16 +789,6 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
     def relevant_for_meas(self):
         """Return whether this section contains only measurement settings."""
         return bool(Tag.MEASUREMENT & self.tags)
-
-    @property
-    def tags(self):
-        """Return tags."""
-        return self._tags
-
-    @tags.setter
-    def tags(self, new_tags):
-        """Set tags."""
-        self._tags = new_tags
 
     def set_info(self, info_text):
         """Add informative text in a QLabel."""
@@ -909,13 +900,13 @@ class SettingsDialogSection(SettingsDialogSectionBase):
         """Add one SettingsDialogOption to self."""
         self.__options.append(option)
         self.__layout.addRow(*option)
-        if self.regular:
-            option.tags = option.tags | Tag.REGULAR
+        if self.has_tag(Tag.REGULAR):
+            option.tags = option.tags | Tag.REGULAR # pylint: disable=E1131
             option.setVisible(True)
-        if self.advanced:
-            option.tags = option.tags | Tag.ADVANCED
-        if self.relevant_for_meas:
-            option.tags = option.tags | Tag.MEASUREMENT
+        if self.has_tag(Tag.ADVANCED):
+            option.tags = option.tags | Tag.ADVANCED # pylint: disable=E1131
+        if self.has_tag(Tag.MEASUREMENT):
+            option.tags = option.tags | Tag.MEASUREMENT # pylint: disable=E1131
         option.handler_widget_changed.connect(self.__on_option_widget_changed)
 
     def add_options(self, options):
@@ -1143,7 +1134,7 @@ class SettingsDialog(qtw.QDialog):
 
         layout = qtw.QVBoxLayout()
         for widg in self.handler.widgets:
-            if widg.relevant_for_meas and not widg.regular:
+            if widg.has_tag(Tag.MEASUREMENT) and not widg.has_tag(Tag.REGULAR):
                 continue
             if isinstance(widg, SettingsDialogSectionBase):
                 layout.addWidget(widg)
@@ -1189,19 +1180,19 @@ class SettingsDialog(qtw.QDialog):
             btn_text = "Show all"
         self.adv_button.setText(btn_text)
         for widg in self.handler.widgets:
-            if not widg.advanced and not widg.regular:
+            if not widg.has_tag(Tag.A) and not widg.has_tag(Tag.R):
                 continue
             if isinstance(widg, SettingsDialogSection):
                 _section_visible = False
                 for option in widg.options:
-                    _section_visible |= visible or (not option.advanced
-                                                    and option.regular)
-                    option.setVisible(visible or (not option.advanced
-                                                  and option.regular))
+                    _section_visible |= visible or (not option.has_tag(Tag.A)
+                                                    and option.has_tag(Tag.R))
+                    option.setVisible(visible or (not option.has_tag(Tag.A)
+                                                  and option.has_tag(Tag.R)))
                 widg.setVisible(_section_visible)
             else:
-                widg.setVisible(visible or (not widg.advanced
-                                            and widg.regular))
+                widg.setVisible(visible or (not widg.has_tag(Tag.A)
+                                            and widg.has_tag(Tag.R)))
         self.adjustSize()   # TODO: does not always adjust when going smaller?
 
     def _only_show_measurement_settings(self):
@@ -1299,8 +1290,8 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             read_only is not True. Indicates wrong
             use of StaticSettingsDialogOption.
         """
-        tags = kwargs.get('tags', None)
-        if not tags or Tag.READ_ONLY not in tags:
+        tags = kwargs.get('tags', Tag(0))
+        if Tag.READ_ONLY not in tags:
             raise RuntimeError(
                 'A StaticSettingsDialogOption may only be read_only. You '
                 'are seeing this message due to a faulty implementation.'
