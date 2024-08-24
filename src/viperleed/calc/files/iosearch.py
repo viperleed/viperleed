@@ -30,7 +30,7 @@ from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
 from viperleed.calc.files.vibrocc import writeVIBROCC
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import BackwardsReader
-from viperleed.calc.lib.string_utils import readIntLine
+from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -144,7 +144,7 @@ def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
                 try:
                     percent = int(line.split("|")[-2].strip()[:-1])
                     valstring = line.split("|")[-1].rstrip()
-                    pars = readIntLine(valstring, width=4)
+                    pars = read_int_line(valstring, width=4)
                     dpars.append((percent, pars))
                 except ValueError:
                     if print_info:
@@ -314,7 +314,7 @@ def readDataChem(rp, source, cutoff=0, max_configs=0):
             if cutoff != 0 and rfac > cutoff:
                 continue
             valstring = line.split("|")[1].rstrip()
-            pars = readIntLine(valstring, width=4)
+            pars = read_int_line(valstring, width=4)
         except (ValueError, IndexError):
             logger.debug("Could not read values in data.chem line:\n"+line)
             continue
@@ -873,7 +873,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 if rp.SEARCH_CULL.type_.is_genetic or getPredicted:
                     # prepare readable clines
                     try:
-                        csurvive = [readIntLine(s, width=ctrl_width)
+                        csurvive = [read_int_line(s, width=ctrl_width)
                                     for s in clines[:nsurvive]]
                     except ValueError:
                         if rp.SEARCH_CULL.type_.is_genetic:

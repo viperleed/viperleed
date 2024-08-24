@@ -91,7 +91,7 @@ def range_to_str(integers, sep=', ', range_sep='-'):
                     for start, end in first_and_last_items)
 
 
-def readIntLine(line, width=3):
+def read_int_line(line, width=3):
     """Read an (arbitrary length) line of integers with fixed width.
 
     Parameters

@@ -14,7 +14,7 @@ from pytest_cases import parametrize
 
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import range_to_str
-from viperleed.calc.lib.string_utils import readIntLine
+from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.string_utils import readIntRange
 from viperleed.calc.lib.string_utils import split_string_range
 from viperleed.calc.lib.string_utils import strip_comments
@@ -95,7 +95,7 @@ class TestRangeToStr:
 
 
 class TestReadIntLine:
-    """Tests for the readIntLine function."""
+    """Tests for the read_int_line function."""
 
     _valid = {  # args, expected result
         ('123456', 3): (123, 456),
@@ -109,12 +109,12 @@ class TestReadIntLine:
     @parametrize('args,expect', _valid.items())
     def test_valid(self, args, expect):
         """Check expected outcome."""
-        assert readIntLine(*args) == expect
+        assert read_int_line(*args) == expect
 
     def test_raises(self):
         """Check complaints if items are not integers."""
         with pytest.raises(ValueError):
-            readIntLine('1 2 3 a 5', 2)
+            read_int_line('1 2 3 a 5', 2)
 
 
 class TestReadIntRange:
