@@ -17,6 +17,7 @@ __license__ = 'GPLv3+'
 import itertools
 import re
 
+from viperleed.calc.lib.itertools_utils import batched
 from viperleed.calc.lib.itertools_utils import consecutive_groups
 
 
@@ -90,7 +91,7 @@ def range_to_str(integers, sep=', ', range_sep='-'):
                     for start, end in first_and_last_items)
 
 
-def readIntLine(line, width=3):                                                 # TODO: Probably better ways with list comprehension
+def readIntLine(line, width=3):
     """Read an (arbitrary length) line of integers with fixed width.
 
     Parameters
@@ -105,11 +106,7 @@ def readIntLine(line, width=3):                                                 
     tuple of int
     """
     line = line.rstrip()
-    out = []
-    while line:
-        chunk, line = line[:width], line[width:]
-        out.append(int(chunk))
-    return tuple(out)
+    return tuple(int(''.join(batch)) for batch in batched(line, width))
 
 
 def readIntRange(ranges):
