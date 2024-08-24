@@ -1465,9 +1465,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         """
         atnums = []
         for site_spec in site_specs:
-            extra_atom_numbers = readIntRange(site_spec)
-            if extra_atom_numbers:
-                atnums.extend(extra_atom_numbers)
+            try:
+                atnums.extend(readIntRange(site_spec))
+            except ValueError:  # Not integer nor range of integers
+                pass
+            else:
                 continue
             if 'top(' in site_spec:
                 n_top = int(site_spec.split('(')[1].split(')')[0])

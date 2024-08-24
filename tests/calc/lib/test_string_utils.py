@@ -126,6 +126,7 @@ class TestReadIntRange:
         '1-3  5  7-9': [1, 2, 3, 5, 7, 8, 9],
         '1-3 2 3 5-8': [1, 2, 3, 5, 6, 7, 8],
         '1-3 2 3 5:8': [1, 2, 3, 5, 6, 7, 8],
+        '1-1': [1],
         }
     _fail = {  # string, expected, and actual results
         'not a valid range': ('1-3-5', [], [1, 2, 3, 4, 5]),
@@ -143,16 +144,18 @@ class TestReadIntRange:
         assert result == what_is
         assert result != what_should_be
 
-    _invalid = {                                                                # TODO: All of these should probably raise instead!
+    _invalid = {
         'not an int': '1-3 a 5',
         'not an int bound': '1-3 a-12 5',
         'partial range': '1- 3-6 9',
+        'empty range': '\n\t  ',
         }
 
     @parametrize(string=_invalid.values(), ids=_invalid)
     def test_invalid(self, string):
         """Check expected outcome."""
-        assert not readIntRange(string)
+        with pytest.raises(ValueError):
+            readIntRange(string)
 
 
 class TestSplitStringRange:

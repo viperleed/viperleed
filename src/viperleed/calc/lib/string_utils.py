@@ -123,6 +123,12 @@ def readIntRange(ranges):
     Returns
     -------
     list of int
+
+    Raises
+    ------
+    ValueError
+        If `ranges` cannot be interpreted as a string
+        defining one or more ranges of integers.
     """
     out = []
     for int_or_range in ranges.split():
@@ -131,14 +137,21 @@ def readIntRange(ranges):
         except ValueError:
             try:
                 start, stop = split_string_range(int_or_range)
-            except ValueError:
-                return []
-
+            except ValueError as exc:
+                raise ValueError(f'Could not interpret {int_or_range!r} '
+                                 'as a single integer or a range of '
+                                 'integers') from exc
             try:
                 out.extend(range(int(start), int(stop)+1))
             except ValueError:
-                return []
-    return list(dict.fromkeys(out))  # Like set, but keep order
+                raise ValueError(
+                    f'Could not interpret {start!r} or {stop!r} '
+                    f'as integer values in range {int_or_range!r}'
+                    ) from None
+    integers = list(dict.fromkeys(out))  # Like set, but keep order
+    if not integers:
+        raise ValueError(f'No integers in {ranges!r}')
+    return integers
 
 
 def split_string_range(range_string):

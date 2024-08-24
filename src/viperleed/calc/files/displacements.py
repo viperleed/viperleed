@@ -475,13 +475,13 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 numlist = []
                 for s in nl:
                     if "l(" not in s:
-                        il = readIntRange(s)
-                        if len(il) > 0:
-                            numlist.extend(il)
-                        else:
+                        try:
+                            numlist.extend(readIntRange(s))
+                        except ValueError:
                             logger.warning(
-                                'DISPLACEMENTS file: could not '
-                                'parse integer range, skipping line: '+pside)
+                                'DISPLACEMENTS file: could not parse '
+                                f'integer range, skipping line: {pside}'
+                                )
                             rp.setHaltingLevel(2)
                             break
                     else:
@@ -489,14 +489,17 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                         if not m:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse layer '
-                                'expression, skipping line: '+pside)
+                                f'expression, skipping line: {pside}'
+                                )
                             rp.setHaltingLevel(2)
                             break
-                        il = readIntRange(m.group("laynum"))
-                        if len(il) == 0:
+                        try:
+                            il = readIntRange(m['laynum'])
+                        except ValueError:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse layer '
-                                'expression, skipping line: '+pside)
+                                f'expression, skipping line: {pside}'
+                                )
                             rp.setHaltingLevel(2)
                             break
                         for ln in il:
