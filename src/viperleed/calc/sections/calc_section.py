@@ -14,7 +14,7 @@ __license__ = 'GPLv3+'
 from enum import Enum
 from itertools import chain
 
-from viperleed.calc.lib.string_utils import readIntRange
+from viperleed.calc.lib.string_utils import read_int_range
 from viperleed.calc.lib.string_utils import split_string_range
 
 
@@ -96,7 +96,7 @@ class CalcSection(Enum):
                 f'{cls.__name__}: Could not interpret one of '
                 f'{start!r} and/or {stop!r} as a valid section'
                 ) from None
-        return tuple(cls(v) for v in readIntRange(_as_int_range))
+        return tuple(cls(v) for v in read_int_range(_as_int_range))
 
     @property
     def history_tag(self):

@@ -109,8 +109,8 @@ def read_int_line(line, width=3):
     return tuple(int(''.join(batch)) for batch in batched(line, width))
 
 
-def readIntRange(ranges):
-    """Returns a list of integers from a string.
+def read_int_range(ranges):
+    """Return a list of integers from a string.
 
     Parameters
     ----------

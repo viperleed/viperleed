@@ -15,7 +15,7 @@ from pytest_cases import parametrize
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import range_to_str
 from viperleed.calc.lib.string_utils import read_int_line
-from viperleed.calc.lib.string_utils import readIntRange
+from viperleed.calc.lib.string_utils import read_int_range
 from viperleed.calc.lib.string_utils import split_string_range
 from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.calc.lib.string_utils import to_snake_case
@@ -118,7 +118,7 @@ class TestReadIntLine:
 
 
 class TestReadIntRange:
-    """Tests for the readIntRange function."""
+    """Tests for the read_int_range function."""
 
     _valid = {
         '1-3 5 7-9': [1, 2, 3, 5, 7, 8, 9],
@@ -135,12 +135,12 @@ class TestReadIntRange:
     @parametrize('string,expect', _valid.items())
     def test_valid(self, string, expect):
         """Check expected outcome."""
-        assert readIntRange(string) == expect
+        assert read_int_range(string) == expect
 
     @parametrize('string,what_should_be,what_is', _fail.values(), ids=_fail)
     def test_fail(self, string, what_should_be, what_is):
         """Check currently incorrect results."""
-        result = readIntRange(string)
+        result = read_int_range(string)
         assert result == what_is
         assert result != what_should_be
 
@@ -155,7 +155,7 @@ class TestReadIntRange:
     def test_invalid(self, string):
         """Check expected outcome."""
         with pytest.raises(ValueError):
-            readIntRange(string)
+            read_int_range(string)
 
 
 class TestSplitStringRange:

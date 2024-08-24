@@ -14,7 +14,7 @@ import re
 import numpy as np
 
 from viperleed.calc.lib.base import splitSublists
-from viperleed.calc.lib.string_utils import readIntRange
+from viperleed.calc.lib.string_utils import read_int_range
 from viperleed.calc.symmetry import enforceSymmetry
 from viperleed.calc.symmetry import setSymmetry
 
@@ -476,7 +476,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 for s in nl:
                     if "l(" not in s:
                         try:
-                            numlist.extend(readIntRange(s))
+                            numlist.extend(read_int_range(s))
                         except ValueError:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse '
@@ -494,7 +494,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             rp.setHaltingLevel(2)
                             break
                         try:
-                            il = readIntRange(m['laynum'])
+                            il = read_int_range(m['laynum'])
                         except ValueError:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse layer '
