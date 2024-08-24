@@ -16,12 +16,38 @@ from collections import deque
 from itertools import cycle as iter_cycle
 from itertools import groupby
 from itertools import islice
+import sys
 
+PY_313 = (3, 13)
+
+if sys.version_info >= PY_313:
+    # batched is available already in 3.12, but has no 'strict' keyword
+    from itertools import batched
+else:
+    batched = None  # pylint: disable=invalid-name   # OK not UPPERCASE
 
 try:
     from itertools import pairwise   # Python >= 3.10
 except ImportError:
     pairwise = None  # Defined later
+
+
+if not batched:
+    # Use a version adapted from the itertools documentation under
+    # (by removing the walrus operator in order to support Py3.7 too)
+    # https://docs.python.org/3.12/library/itertools.html#itertools.batched
+    # pylint: disable-next=invalid-name   # Same signature as Python3.X
+    def batched(iterable, n, *, strict=False):
+        """Yield `n`-long tuples from iterable."""
+        if n < 1:
+            raise ValueError('n must be at least one')
+        iterator = iter(iterable)
+        batch = tuple(islice(iterator, n))
+        while batch:
+            if strict and len(batch) != n:
+                raise ValueError('batched(): incomplete batch')
+            yield batch
+            batch = tuple(islice(iterator, n))
 
 
 # The next one is adapted from more-itertools, which uses a recipe from

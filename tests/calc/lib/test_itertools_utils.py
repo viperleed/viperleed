@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-06'
 __license__ = 'GPLv3+'
 
+from itertools import chain
 from itertools import islice
 import sys
 
@@ -14,6 +15,7 @@ import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc.lib.itertools_utils import batched
 from viperleed.calc.lib.itertools_utils import consecutive_groups
 from viperleed.calc.lib.itertools_utils import cycle
 from viperleed.calc.lib.itertools_utils import n_wise
@@ -24,7 +26,6 @@ from .cases_itertools_utils import CasesSequence
 from .cases_itertools_utils import CasesRaises
 
 PY_310 = (3, 10)
-PY_311 = (3, 11)
 
 
 class ReenteringIterator:
@@ -92,6 +93,79 @@ class StoppingIterator:
         if self.count == 1:
             return next(self.iterator, None)
         return [self.count]  # new object
+
+
+class TestBatched:
+    """Test the batched iterator.
+
+    These tests are adapted from the ones of CPython 3.14, as found at
+    https://github.com/python/cpython/blob/main/Lib/test/test_itertools.py
+
+    This guarantees that our implementation of batched passes the same
+    tests as the most recent CPython implementation.
+    """
+
+    _valid = {  # args, kwargs, expect
+        'three': (('ABCDEFG', 3), {},
+                  [('A', 'B', 'C'), ('D', 'E', 'F'), ('G',)]),
+        'two': (('ABCDEFG', 2), {},
+                [('A', 'B'), ('C', 'D'), ('E', 'F'), ('G',)]),
+        'one': (('ABCDEFG', 1), {},
+                [('A',), ('B',), ('C',), ('D',), ('E',), ('F',), ('G',)]),
+        'strict': (('ABCDEF', 2), {'strict': True},
+                   [('A', 'B'), ('C', 'D'), ('E', 'F')]),
+        }
+
+    @parametrize('args,kwargs,expect', _valid.values(), ids=_valid)
+    def test_valid(self, args, kwargs, expect):
+        """Check expected outcome for valid inputs."""
+        assert list(batched(*args, **kwargs)) == expect
+
+    _raises = {
+        'too few': (('ABCDEFG',), {}, TypeError),
+        'too many': (('ABCDEFG', 3, None), {}, TypeError),
+        'not iterable': ((None, 3), {}, TypeError),
+        'n_items string': (('ABCDEFG', 'hello'), {}, TypeError),
+        'n_items zero': (('ABCDEFG', 0), {}, ValueError),
+        'n_items negative': (('ABCDEFG', -1), {}, ValueError),
+        'strict, wrong length': (('ABCDEFG', 3), {'strict': True}, ValueError),
+        }
+
+    @parametrize('args,kwargs,exc', _raises.values(), ids=_raises)
+    def test_raises(self, args, kwargs, exc):
+        """Check complaints for invalid arguments."""
+        with pytest.raises(exc):
+            list(batched(*args, **kwargs))
+
+    _letters = (
+        '', 'A', 'AB', 'ABC', 'ABCD', 'ABCDE', 'ABCDEF', 'ABCDEFG', 'ABCDEFGH',
+        'ABCDEFGHI', 'ABCDEFGHIJ', 'ABCDEFGHIJK', 'ABCDEFGHIJKL',
+        'ABCDEFGHIJKLM', 'ABCDEFGHIJKLMN', 'ABCDEFGHIJKLMNO',
+        'ABCDEFGHIJKLMNOP', 'ABCDEFGHIJKLMNOPQ', 'ABCDEFGHIJKLMNOPQR',
+        'ABCDEFGHIJKLMNOPQRS', 'ABCDEFGHIJKLMNOPQRST', 'ABCDEFGHIJKLMNOPQRSTU',
+        'ABCDEFGHIJKLMNOPQRSTUV', 'ABCDEFGHIJKLMNOPQRSTUVW',
+        'ABCDEFGHIJKLMNOPQRSTUVWX', 'ABCDEFGHIJKLMNOPQRSTUVWXY',
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        )
+
+    @parametrize(data=_letters)
+    @parametrize(n_items=range(1, 6))
+    def test_data_preserved(self, data, n_items, subtests):
+        """Check data are batched correctly."""
+        batches = list(batched(data, n_items))
+        with subtests.test('Order is preserved and no data is lost'):
+            assert ''.join(chain(*batches)) == data
+        with subtests.test('Each batch is an exact tuple'):
+            # About the disable: we really want to check that each
+            # batched item is EXACTLY a tuple, not a subclass.
+            # pylint: disable-next=unidiomatic-typecheck
+            assert all(type(batch) is tuple for batch in batches)
+        if not batches:
+            return
+        with subtests.test(f'All but the last batch is of size {n_items}'):
+            last_batch = batches.pop()
+            assert all(len(batch) == n_items for batch in batches)
+            assert len(last_batch) <= n_items
 
 
 class TestConsecutiveGroups:
