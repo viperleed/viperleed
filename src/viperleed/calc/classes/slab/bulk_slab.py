@@ -21,8 +21,9 @@ import numpy as np
 from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import add_edges_and_corners, collapse
 from viperleed.calc.lib.base import rotation_matrix_order
+from viperleed.calc.lib.coordinates import add_edges_and_corners
+from viperleed.calc.lib.coordinates import collapse
 from viperleed.calc.lib.itertools_utils import cycle
 
 from .base_slab import BaseSlab

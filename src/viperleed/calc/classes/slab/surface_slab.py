@@ -31,10 +31,10 @@ from viperleed.calc.files.parameters.errors import (
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import NonIntegerMatrixError
 from viperleed.calc.lib.base import SingularMatrixError
-from viperleed.calc.lib.base import add_edges_and_corners
-from viperleed.calc.lib.base import collapse
-from viperleed.calc.lib.base import collapse_fractional
 from viperleed.calc.lib.base import ensure_integer_matrix
+from viperleed.calc.lib.coordinates import add_edges_and_corners
+from viperleed.calc.lib.coordinates import collapse
+from viperleed.calc.lib.coordinates import collapse_fractional
 from viperleed.calc.lib.itertools_utils import pairwise
 from viperleed.calc.lib.periodic_table import COVALENT_RADIUS
 from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
