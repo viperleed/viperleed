@@ -154,7 +154,7 @@ def read_int_range(ranges):
     return integers
 
 
-def splitMaxRight(string, sep):
+def rsplit_once(string, sep):
     """Split `string` once from the right at `sep`."""
     try:
         return string.rsplit(sep, maxsplit=1)

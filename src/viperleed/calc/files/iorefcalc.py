@@ -22,7 +22,7 @@ from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import fortranContLine
-from viperleed.calc.lib.string_utils import splitMaxRight
+from viperleed.calc.lib.string_utils import rsplit_once
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ def combine_tensors(oripath=".", targetpath=".", buffer=0):
         raise RuntimeError("No Tensor files found")
     for num in tnum:
         tlist = sorted(tnum[num], key=lambda x: float(x.split("_")[2][:-2]))
-        name = os.path.join(targetpath, splitMaxRight(tlist[0], "_")[0])
+        name = os.path.join(targetpath, rsplit_once(tlist[0], "_")[0])
         with open(name, "w") as wf:
             # having the 'if' this far outside duplicates code, but speeds
             #  up the loop

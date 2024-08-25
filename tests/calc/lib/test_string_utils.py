@@ -16,7 +16,7 @@ from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import range_to_str
 from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.string_utils import read_int_range
-from viperleed.calc.lib.string_utils import splitMaxRight
+from viperleed.calc.lib.string_utils import rsplit_once
 from viperleed.calc.lib.string_utils import split_string_range
 from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.calc.lib.string_utils import to_snake_case
@@ -159,8 +159,8 @@ class TestReadIntRange:
             read_int_range(string)
 
 
-class TestSplitMaxRight:
-    """Tests for the splitMaxRight function."""
+class TestRsplitOnce:
+    """Tests for the rsplit_once function."""
 
     _valid = {
         'empty string': ('', '.', ['']),
@@ -181,7 +181,7 @@ class TestSplitMaxRight:
     @parametrize('string,sep,expect', _valid.values(), ids=_valid)
     def test_valid(self, string, sep, expect):
         """Check correct outcome with valid arguments."""
-        assert splitMaxRight(string, sep) == expect
+        assert rsplit_once(string, sep) == expect
 
     _raises = {
         'not a string': (None, ',', TypeError),
@@ -193,7 +193,7 @@ class TestSplitMaxRight:
     def test_raises(self, string, sep, exc):
         """Check complaints for invalid inputs."""
         with pytest.raises(exc):
-            splitMaxRight(string, sep)
+            rsplit_once(string, sep)
 
 
 class TestSplitStringRange:
