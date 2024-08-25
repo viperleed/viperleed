@@ -49,13 +49,18 @@ def conditional_sort(sequence, skip, key=None):
                for item in sequence)
 
 
-def recombineListElements(llist, com):
-    """Merge items that start/end with `com` with the next/previous ones."""
-    i = 0
-    newlist = llist[:]
-    while i < len(newlist)-1:
-        if newlist[i][-1] == com or newlist[i+1][0] == com:
-            newlist[i] += newlist.pop(i+1)
+def recombine_items(sequence, com):
+    """Merge items that start/end with `com` with the previous/next one."""
+    if not sequence:
+        return []
+    iterable = iter(sequence)
+    buffer = next(iterable)
+    newlist = []
+    for item in iterable:
+        if buffer.endswith(com) or item.startswith(com):
+            buffer += item
         else:
-            i += 1
+            newlist.append(buffer)
+            buffer = item
+    newlist.append(buffer)
     return newlist

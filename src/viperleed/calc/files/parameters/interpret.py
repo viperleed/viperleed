@@ -44,7 +44,7 @@ from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.base import readVector
 from viperleed.calc.lib.base import splitSublists
 from viperleed.calc.lib.log_utils import logger_silent
-from viperleed.calc.lib.sequence_utils import recombineListElements
+from viperleed.calc.lib.sequence_utils import recombine_items
 from viperleed.calc.lib.string_utils import read_int_range
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.version import Version
@@ -1671,7 +1671,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         # with the bracketed part as optional and 'value' either
         # zero or one (or a bool that can be translated to those)
         rgx = re.compile(r'\s*((?P<repeats>\d+)\s*[*])?\s*(?P<value>[01])\s*$')
-        tokens = recombineListElements(assignment.values, '*')
+        tokens = recombine_items(assignment.values, '*')
         for token in tokens:
             token_01 = re.sub(r'[Tt](rue|RUE)?', '1', token)
             token_01 = re.sub(r'[Ff](alse|ALSE)?', '0', token_01)

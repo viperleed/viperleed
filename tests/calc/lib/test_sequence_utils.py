@@ -11,7 +11,7 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.lib.sequence_utils import conditional_sort
-from viperleed.calc.lib.sequence_utils import recombineListElements
+from viperleed.calc.lib.sequence_utils import recombine_items
 
 
 class TestConditionalSort:
@@ -52,19 +52,19 @@ class TestConditionalSort:
             conditional_sort(*args)
 
 
-class TestRecombineListElements:
-    """Tests for the recombineListElements function."""
+class TestRecombineItems:
+    """Tests for the recombine_items function."""
 
     _valid = {
         'at end': (['apple', 'banana-', '-cherry'], '-',
                    ['apple', 'banana--cherry']),
         'at_start': (['-apple', 'banana', 'cherry'], '-',
                      ['-apple', 'banana', 'cherry']),
-        'empty': ([], '-', []),
+        'empty': ({}, '-', []),
         'left': (['a', 'b', '-c', 'd'], '-', ['a', 'b-c', 'd']),
         'right': (['a', 'b-', 'c', 'd'], '-', ['a', 'b-c', 'd']),
         'mixed': (['a', 'b-', '-c', 'd-', '-e'], '-', ['a', 'b--c', 'd--e']),
-        'multiple': (['a', 'b-', '-c', '-d', 'e'], '-', ['a', 'b--c-d', 'e']),
+        'multiple': (('a', 'b-', '-c', '-d', 'e'), '-', ['a', 'b--c-d', 'e']),
         'no combinations': (['apple', 'banana', 'cherry'], '-',
                             ['apple', 'banana', 'cherry']),
         'one item': (['a'], '-', ['a']),
@@ -74,9 +74,9 @@ class TestRecombineListElements:
     @parametrize('seq,sep,expect', _valid.values(), ids=_valid)
     def test_valid(self, seq, sep, expect):
         """Check correct outcome with acceptable arguments."""
-        assert recombineListElements(seq, sep) == expect
+        assert recombine_items(seq, sep) == expect
 
     def test_raises_not_string(self):
         """Check complaints with non-string items."""
-        with pytest.raises(TypeError):
-            recombineListElements(['a', 1], '-')
+        with pytest.raises(AttributeError):
+            recombine_items(['a', 1], '-')
