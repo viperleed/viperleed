@@ -354,20 +354,6 @@ def splitSublists(llist, sep):                                                  
     return(newlist)
 
 
-def recombineListElements(llist, com):
-    """Takes a list, checks in each element whether the first/last characters
-    are the given combination character, and if so, combines list elements with
-    the list element before/after."""
-    i = 0
-    newlist = llist[:]
-    while i < len(newlist)-1:
-        if newlist[i][-1] == com or newlist[i+1][0] == com:
-            newlist[i] += newlist.pop(i+1)
-        else:
-            i += 1
-    return newlist
-
-
 def addUnequalPoints(l1, l2, eps, uniqueLists=False):
     """Adds all points from l1 to l2, if they are not already in l2
     (+- epsilon)."""
