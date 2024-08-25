@@ -2,7 +2,6 @@
 
 Defines functions for handling atomic coordinates."""
 
-
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
@@ -50,6 +49,12 @@ def add_edges_and_corners(cartesian, fractional, releps, ucell, props=None):
         If given, it should have the same length as `cartesian`. It
         is interpreted as a list of properties that should also be
         duplicated whenever an atom is duplicated. Default is None.
+
+    Notes
+    -----
+    For performance reasons, no checking is done on the validity
+    of the shapes of the arguments. Users are expected to check
+    them beforehand to prevent unexpected behavior.
 
     Returns
     -------
