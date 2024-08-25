@@ -237,7 +237,7 @@ class TestSplitStringRange:
     def test_raises(self, string):
         """Check complaints when using an invalid iterable."""
         with pytest.raises(ValueError):
-            print(split_string_range(string))
+            split_string_range(string)
 
 
 class TestStripComments:

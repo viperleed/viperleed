@@ -165,15 +165,12 @@ def rsplit_once(string, sep):
 
 def split_string_range(range_string):
     """Return start and stop as strings from 'start:stop' or 'start-stop'."""
-    range_list = []
-    if '-' in range_string:
-        range_list = range_string.split('-')
-    elif ':' in range_string:
-        range_list = range_string.split(':')
     try:
-        return range_list[0], range_list[-1]
-    except IndexError:
+        sep = next(c for c in '-:' if c in range_string)
+    except StopIteration:
         raise ValueError(f'Invalid range string: {range_string}') from None
+    range_list = range_string.split(sep)
+    return range_list[0], range_list[-1]
 
 
 def strip_comments(line, strip_whitespaces=True):
