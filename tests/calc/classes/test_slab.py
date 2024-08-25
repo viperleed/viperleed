@@ -914,7 +914,7 @@ class TestCoordinates:
         slab.collapse_cartesian_coordinates()
         assert atom.cartpos == pytest.approx(expect, abs=1e-8)
 
-    def test_collapse_fractional(self, manual_slab_3_atoms):                    # TODO: will have to add a test for calc.lib.base in which we use both 'floor' and 'round' methods. Find especially cases that are 'problematic' with %1.0: e.g., 1-1e-8, 1-1e-9, 1-1e-15
+    def test_collapse_fractional(self, manual_slab_3_atoms):
         """Check that fractional coordinates are correctly collapsed."""
         slab = manual_slab_3_atoms
         atom = slab.atlist[0]
