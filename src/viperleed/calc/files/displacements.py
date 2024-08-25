@@ -873,7 +873,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             'wrong element. Atom will be skipped.'.format(at))
                         rp.setHaltingLevel(1)
                 # else:
-                #     # !!! currently unused, not in wiki - delete?
+                #     # !!! currently unused, not in wiki - delete?             # TODO: Not true! It is in the Syntax example in the documentation of OCC_DELTA, and described in detail there!
                 #     elparts = "".join(subl[:-3]).split("+")
                 #     elweights = []
                 #     elsum = 0.0

@@ -316,6 +316,18 @@ def readToExc(llist):                                                           
     return newlist
 
 
+# TODO: This function is confusing. It is used to 'recombine' elements
+# that were space-split before into 'sep'-then-space-split lists. E.g.,
+# in OCC_DELTA DISPLACEMENTS:
+#    chem start stop step, other_chem start stop step
+# --> by space first: ['chem', 'start', 'stop', 'step,',
+#                      'other_chem', 'start', 'stop', 'step']
+# --> splitSublists:  [['chem', 'start', 'stop', 'step'],
+#                      ['other_chem', 'start', 'stop', 'step']]
+# It would be way cleaner to do the splitting in the correct order:
+# --> split first on comma: ['chem start stop step',
+#                            'other_chem start stop step']
+# then each item on spaces.
 def splitSublists(llist, sep):                                                  # TODO: could be an iterator
     """Takes a list and a separator, splits strings in the list by the
     separator, returns results as list of lists"""
