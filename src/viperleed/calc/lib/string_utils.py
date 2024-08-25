@@ -154,16 +154,13 @@ def read_int_range(ranges):
     return integers
 
 
-def splitMaxRight(s, sep):
-    """Same as s.split(sep, maxsplit=1), but splitting at the first instance
-    from the right."""
-    sr = s[::-1]
-    L = sr.split(sep, maxsplit=1)
-    L.reverse()
-    nl = []
-    for ns in L:
-        nl.append(ns[::-1])
-    return nl
+def splitMaxRight(string, sep):
+    """Split `string` once from the right at `sep`."""
+    try:
+        return string.rsplit(sep, maxsplit=1)
+    except AttributeError:
+        raise TypeError(f'Invalid {type(string).__name__!r}. '
+                        'Expected str.') from None
 
 
 def split_string_range(range_string):
