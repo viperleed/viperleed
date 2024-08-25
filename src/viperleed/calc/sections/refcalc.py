@@ -24,8 +24,8 @@ from viperleed.calc.files import parameters
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
-from viperleed.calc.lib.base import splitMaxRight
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.string_utils import splitMaxRight
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)

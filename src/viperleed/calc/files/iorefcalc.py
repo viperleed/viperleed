@@ -21,7 +21,8 @@ import numpy as np
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import fortranContLine, splitMaxRight
+from viperleed.calc.lib.base import fortranContLine
+from viperleed.calc.lib.string_utils import splitMaxRight
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
