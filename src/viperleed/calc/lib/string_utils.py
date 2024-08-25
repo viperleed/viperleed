@@ -154,6 +154,18 @@ def read_int_range(ranges):
     return integers
 
 
+def splitMaxRight(s, sep):
+    """Same as s.split(sep, maxsplit=1), but splitting at the first instance
+    from the right."""
+    sr = s[::-1]
+    L = sr.split(sep, maxsplit=1)
+    L.reverse()
+    nl = []
+    for ns in L:
+        nl.append(ns[::-1])
+    return nl
+
+
 def split_string_range(range_string):
     """Return start and stop as strings from 'start:stop' or 'start-stop'."""
     range_list = []

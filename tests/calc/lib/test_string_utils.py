@@ -16,6 +16,7 @@ from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import range_to_str
 from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.string_utils import read_int_range
+from viperleed.calc.lib.string_utils import splitMaxRight
 from viperleed.calc.lib.string_utils import split_string_range
 from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.calc.lib.string_utils import to_snake_case
@@ -156,6 +157,43 @@ class TestReadIntRange:
         """Check expected outcome."""
         with pytest.raises(ValueError):
             read_int_range(string)
+
+
+class TestSplitMaxRight:
+    """Tests for the splitMaxRight function."""
+
+    _valid = {
+        'empty string': ('', '.', ['']),
+        'multi sep': ('a.b.c.d.e', '.', ['a.b.c.d', 'e']),
+        'multi sep, consecutive': ('a.a....a', '.', ['a.a...', 'a']),
+        'multi sep, same chars': ('a.a.a.a.a.a.a', '.', ['a.a.a.a.a.a', 'a']),
+        'no sep': ('abcdefghi', '.', ['abcdefghi']),
+        'one sep': ('abc.def', '.', ['abc', 'def']),
+        'two sep': ('abc.def.ghi', '.', ['abc.def', 'ghi']),
+        'sep at end': ('abcdef.', '.', ['abcdef', '']),
+        'sep at start': ('.abcdef', '.', ['', 'abcdef']),
+        'sep long': ('abcXXdefXXghi', 'XX', ['abcXXdef', 'ghi']),
+        'sep only': ('.', '.', ['', '']),
+        'sep unicode': ('abc.def.ghi.jkl', '。', ['abc.def.ghi.jkl']),
+        'special chars': ('a$b^c.d!e@f#g', '#', ['a$b^c.d!e@f', 'g']),
+        }
+
+    @parametrize('string,sep,expect', _valid.values(), ids=_valid)
+    def test_valid(self, string, sep, expect):
+        """Check correct outcome with valid arguments."""
+        assert splitMaxRight(string, sep) == expect
+
+    _raises = {
+        'not a string': (None, ',', TypeError),
+        'not a string sep': ('abc,def', 1, TypeError),
+        'empty sep': ('abc,def', '', ValueError),
+        }
+
+    @parametrize('string,sep,exc', _raises.values(), ids=_raises)
+    def test_raises(self, string, sep, exc):
+        """Check complaints for invalid inputs."""
+        with pytest.raises(exc):
+            splitMaxRight(string, sep)
 
 
 class TestSplitStringRange:

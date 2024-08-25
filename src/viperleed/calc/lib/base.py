@@ -354,18 +354,6 @@ def splitSublists(llist, sep):                                                  
     return(newlist)
 
 
-def splitMaxRight(s, sep):
-    """Same as s.split(sep, maxsplit=1), but splitting at the first instance
-    from the right."""
-    sr = s[::-1]
-    L = sr.split(sep, maxsplit=1)
-    L.reverse()
-    nl = []
-    for ns in L:
-        nl.append(ns[::-1])
-    return nl
-
-
 def recombineListElements(llist, com):
     """Takes a list, checks in each element whether the first/last characters
     are the given combination character, and if so, combines list elements with
