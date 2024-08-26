@@ -75,7 +75,7 @@ def max_diff(sequence):
     ValueError
         If `sequence` is too short to compute a difference.
     """
-    if len(sequence) < 2:
+    if len(sequence) < 2:  # pylint: disable=magic-value-comparison
         raise ValueError(f'Argument {sequence!r} has only one item')
     ind_and_diff = (
         (i + 1, second - first)
