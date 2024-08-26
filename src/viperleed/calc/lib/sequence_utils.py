@@ -11,6 +11,9 @@ __created__ = '2024-08-25'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
+from operator import itemgetter
+
+from viperleed.calc.lib.itertools_utils import pairwise
 
 
 # Adapted from https://stackoverflow.com/questions/45382174
@@ -68,12 +71,12 @@ def max_diff(list_):
     """
     if len(list_) < 2:
         return None, None
-    list_ = sorted(list_)
-    maxdiff = max([list_[i] - list_[i-1] for i in range(1, len(list_))])
-    m = [i for i in range(1, len(list_)) if list_[i] - list_[i-1] == maxdiff]
-    if m:
-        return m[0], maxdiff
-    return None, maxdiff
+    sorted_list = sorted(list_)
+    ind_and_diff = (
+        (i + 1, second - first)
+        for i, (first, second) in enumerate(pairwise(sorted_list))
+        )
+    return max(ind_and_diff, key=itemgetter(1))
 
 
 def recombine_items(sequence, com):
