@@ -495,19 +495,3 @@ def copytree_exists_ok(source, destination):
         else:  # file
             shutil.copy2(srcentry, dstentry)
     shutil.copystat(source, destination)
-
-
-def make_unique_list(w_duplicates):                                             # TODO: better function in guilib.helpers
-    """Helper function to remove duplicates from list. Does same as creating a set but preservers order.
-
-    Args:
-        w_duplicates (iterable): list with duplicates
-
-    Returns:
-        list: list with duplictes removed
-    """
-    unique_list = []
-    for item in w_duplicates:
-        if item not in unique_list:
-            unique_list.append(item)
-    return unique_list
