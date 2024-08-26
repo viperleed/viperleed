@@ -214,20 +214,6 @@ def lcm(a, b):
     return a * b // np.gcd(a, b)
 
 
-def max_diff(list_):
-    """Find the index in a list such that list[i] - list[i-1] is the largest
-    value difference in the list (after sorting). Return i and the difference.
-    """
-    if len(list_) < 2:
-        return None, None
-    list_ = sorted(list_)
-    maxdiff = max([list_[i] - list_[i-1] for i in range(1, len(list_))])
-    m = [i for i in range(1, len(list_)) if list_[i] - list_[i-1] == maxdiff]
-    if m:
-        return m[0], maxdiff
-    return None, maxdiff
-
-
 def parseMathSqrt(s):
     try:
         f = float(s)

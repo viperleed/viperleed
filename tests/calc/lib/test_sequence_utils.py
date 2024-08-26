@@ -11,6 +11,7 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.lib.sequence_utils import conditional_sort
+from viperleed.calc.lib.sequence_utils import max_diff
 from viperleed.calc.lib.sequence_utils import recombine_items
 
 
@@ -50,6 +51,26 @@ class TestConditionalSort:
         """Check complaints for invalid arguments."""
         with pytest.raises(TypeError):
             conditional_sort(*args)
+
+
+class TestMaxDiff:
+    """Tests for the max_diff function."""
+
+    _valid = {
+        'empty': ([], (None, None)),
+        'large': (list(range(10_000)), (1, 1)),
+        'negative': ([5, -5, 0, -10, 10], (1, 5)),
+        'no diff': ([1, 1, 1, 1], (1, 0)),
+        'same diff multiple': ([1, 2, 4, 5, 7, 8], (2, 2)),
+        'single item': ([5], (None, None)),
+        'sorted': ([1, 3, 6, 10], (3, 4)),
+        'two items': ([3, 5], (1, 2)),
+        }
+
+    @parametrize('seq,expect', _valid.values(), ids=_valid)
+    def test_valid(self, seq, expect):
+        """Check correct result with acceptable arguments."""
+        assert max_diff(seq) == expect
 
 
 class TestRecombineItems:

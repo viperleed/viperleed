@@ -49,6 +49,20 @@ def conditional_sort(sequence, skip, key=None):
                for item in sequence)
 
 
+def max_diff(list_):
+    """Find the index in a list such that list[i] - list[i-1] is the largest
+    value difference in the list (after sorting). Return i and the difference.
+    """
+    if len(list_) < 2:
+        return None, None
+    list_ = sorted(list_)
+    maxdiff = max([list_[i] - list_[i-1] for i in range(1, len(list_))])
+    m = [i for i in range(1, len(list_)) if list_[i] - list_[i-1] == maxdiff]
+    if m:
+        return m[0], maxdiff
+    return None, maxdiff
+
+
 def recombine_items(sequence, com):
     """Merge items that start/end with `com` with the previous/next one."""
     if not sequence:
