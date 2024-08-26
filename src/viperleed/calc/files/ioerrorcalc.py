@@ -19,12 +19,12 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import numpy as np
 from scipy import interpolate
 
-from viperleed.calc.lib.base import max_diff
-from viperleed.calc.lib.string_utils import range_to_str
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
+from viperleed.calc.lib.sequence_utils import max_diff
+from viperleed.calc.lib.string_utils import range_to_str
 
 if CAN_PLOT:
     prepare_matplotlib_for_calc()
