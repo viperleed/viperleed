@@ -50,8 +50,21 @@ def conditional_sort(sequence, skip, key=None):
 
 
 def max_diff(list_):
-    """Find the index in a list such that list[i] - list[i-1] is the largest
-    value difference in the list (after sorting). Return i and the difference.
+    """Return the index and value of the largest difference of two items.
+    
+    Parameters
+    ----------
+    list_ : Sequence
+        The sequence of items for which the largest difference is returned.
+    
+    Returns
+    -------
+    ind : int
+        The first index in `list_` such that list_[ind] - list_[ind-1]
+        is the largest among the differences between two consecutive
+        items in `list_`.
+    maxdiff : object
+        The value of the largest difference.
     """
     if len(list_) < 2:
         return None, None
