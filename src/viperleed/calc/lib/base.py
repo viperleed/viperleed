@@ -144,29 +144,6 @@ def fortranContLine(s):
     return o
 
 
-def readVector(s, ucell=None, defRelaltive=False):
-    """Takes a string 'xyz[f1 f2 f3]', 'abc[f1 f2 f3]' or just '[f1 f2 f3]'
-    and returns the corresponding vector in cartesian coordinates, or None if
-    the string cannot be parsed."""
-    m = re.match(r'\s*(xyz|abc)?\[\s*(?P<v1>[-0-9.]+)\s+'
-                 r'(?P<v2>[-0-9.]+)\s+(?P<v3>[-0-9.]+)\s*\]', s)
-    if not m:
-        return None
-    try:
-        v1 = float(m.group("v1"))
-        v2 = float(m.group("v2"))
-        v3 = float(m.group("v3"))
-    except (ValueError, IndexError):
-        return None
-    if "abc" in s:
-        if ucell is None:
-            return None
-        uct = ucell.T
-        return np.dot((v1, v2, v3), ucell.T)
-    # xyz
-    return np.array([v1, v2, v3])
-
-
 def cosvec(x, y):
     """
     Returns the cosine of the angle between two vectors

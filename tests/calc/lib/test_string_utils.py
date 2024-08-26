@@ -16,6 +16,7 @@ from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import range_to_str
 from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.string_utils import read_int_range
+from viperleed.calc.lib.string_utils import readVector
 from viperleed.calc.lib.string_utils import rsplit_once
 from viperleed.calc.lib.string_utils import split_string_range
 from viperleed.calc.lib.string_utils import strip_comments
@@ -157,6 +158,38 @@ class TestReadIntRange:
         """Check expected outcome."""
         with pytest.raises(ValueError):
             read_int_range(string)
+
+
+class TestReadVector:
+    """Tests for the readVector function."""
+
+    _valid = {
+        'xyz': (('xyz[1 2 3]',), [1, 2, 3]),
+        'abc': (('abc[1 2 3]', np.eye(3)), [1, 2, 3]),
+        'abc, non-simple ucell': (
+            ('abc[1 1 1]',
+             np.array([[1, 2, 3], [0, 1, 4], [0, 0, 1]]).T),
+            [1, 3, 8],
+            )
+        }
+
+    @parametrize('args,expect', _valid.values(), ids=_valid)
+    def test_valid(self, args, expect):
+        """Check expected outcome for acceptable arguments."""
+        result = readVector(*args)
+        assert result == pytest.approx(expect)
+
+    _invalid = {
+        'xyz[1 2]': None,    # Not enough items
+        'abc[1 2 3]': None,  # Missing ucell
+        'xyz[a b c]': None,  # Non-numeric items
+        'xyz[0.1.2 3 4]': None,  # Non-numeric items
+        }
+
+    @parametrize('string,expect', _invalid.items(), ids=_invalid)
+    def test_invalid(self, string, expect):
+        """Check outcome for invalid arguments."""
+        assert readVector(string) == expect
 
 
 class TestRsplitOnce:

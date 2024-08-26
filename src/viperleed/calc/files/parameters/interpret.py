@@ -41,10 +41,10 @@ from viperleed.calc.classes.rparams import SymmetryEps
 from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
-from viperleed.calc.lib.base import readVector
 from viperleed.calc.lib.log_utils import logger_silent
 from viperleed.calc.lib.sequence_utils import recombine_items
 from viperleed.calc.lib.string_utils import read_int_range
+from viperleed.calc.lib.string_utils import readVector
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import readWoodsNotation
