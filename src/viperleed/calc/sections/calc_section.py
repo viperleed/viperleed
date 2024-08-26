@@ -62,6 +62,12 @@ class CalcSection(Enum):
             except ValueError:
                 pass
 
+        # Try with the capitalized version of the string
+        try:
+            return cls[value.upper()]
+        except KeyError:
+            pass
+
         # Try with the aliases instead. First look for an exact match
         for name, aliases in _ALIASES.items():
             if any(alias == value for alias in aliases):

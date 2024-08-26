@@ -19,8 +19,8 @@ from pathlib import Path
 import shutil
 
 from viperleed import __version__
-from viperleed.calc import LOGGER as logger
 from viperleed.calc import LOG_PREFIX
+from viperleed.calc import LOGGER as logger
 from viperleed.calc.classes import rparams
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
@@ -74,11 +74,15 @@ def run_calc(system_name=None,
 
     Returns
     -------
-    int
+    exit_code : int
         0: exit without errors.
         1: clean exit through KeyboardInterrupt
         2: exit due to Exception before entering main loop
         3: exit due to Exception during main loop
+    state_recorder : CalcStateRecorder or None
+        A collection of the intermediate states of the Slab and Rparams
+        objects at the end of each executed section. None if the run
+        terminates before any section is executed.
     """
     os.umask(0)
     # start logger, write to file:
@@ -100,12 +104,12 @@ def run_calc(system_name=None,
             logger.error("No PARAMETERS file found, and no preset parameters "
                          "passed. Execution will stop.")
             cleanup(tmp_manifest)
-            return 2
+            return 2, None
         rp = rparams.Rparams()
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmp_manifest)
-        return 2
+        return 2, None
 
     # check if this is going to be a domain search
     domains = False
@@ -119,7 +123,7 @@ def run_calc(system_name=None,
         if not poscar_file.is_file():
             logger.error("POSCAR not found. Stopping execution...")
             cleanup(tmp_manifest)
-            return 2
+            return 2, None
 
         logger.info("Reading structure from file POSCAR")
         try:
@@ -127,7 +131,7 @@ def run_calc(system_name=None,
         except Exception:
             logger.error("Exception while reading POSCAR", exc_info=True)
             cleanup(tmp_manifest)
-            return 2
+            return 2, None
 
         if not slab.preprocessed:
             logger.info("The POSCAR file will be processed and overwritten. "
@@ -138,7 +142,7 @@ def run_calc(system_name=None,
                 logger.error("Failed to copy POSCAR to POSCAR_user. Stopping "
                              "execution...")
                 cleanup(tmp_manifest)
-                return 2
+                return 2, None
             tmp_manifest.append("POSCAR_user")
     try:
         # interpret the PARAMETERS file
@@ -149,11 +153,11 @@ def run_calc(system_name=None,
         logger.error('Main PARAMETERS file contains an invalid parameter '
                      'for a multi-domain calculation', exc_info=True)
         cleanup(tmp_manifest)
-        return 2
+        return 2, None
     except parameters.errors.ParameterError:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmp_manifest)
-        return 2
+        return 2, None
 
     rp.timestamp = timestamp
     rp.manifest = tmp_manifest
@@ -191,19 +195,19 @@ def run_calc(system_name=None,
     if rp.halt >= rp.HALTING:
         logger.info("Halting execution...")
         cleanup(rp.manifest, rp)
-        return 0
+        return 0, None
 
     rp.updateDerivedParams()
     logger.info(f"ViPErLEED is using TensErLEED version {str(rp.TL_VERSION)}.")
 
     prerun_clean(rp, log_name)
-    exit_code = section_loop(rp, slab)
+    exit_code, state_recorder = section_loop(rp, slab)
 
     # Finalize logging - if not done, will break unit testing
     close_all_handlers(logger)
     logging.shutdown()
 
-    return exit_code
+    return exit_code, state_recorder
 
 
 
