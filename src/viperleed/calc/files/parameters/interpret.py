@@ -42,7 +42,6 @@ from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.base import readVector
-from viperleed.calc.lib.base import splitSublists
 from viperleed.calc.lib.log_utils import logger_silent
 from viperleed.calc.lib.sequence_utils import recombine_items
 from viperleed.calc.lib.string_utils import read_int_range
@@ -1768,7 +1767,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             wood = self._read_woods_notation(param, assignment)
             setattr(self.rpars, param, wood)
         else:
-            matrix = self._read_matrix_notation(param, assignment.values)
+            matrix = self._read_matrix_notation(param, assignment.values_str)
             setattr(self.rpars, param, matrix)
 
     # ------------------------ Helper methods -------------------------
@@ -1933,11 +1932,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterNeedsSlabError(param, message)
         return readWoodsNotation(assignment.values_str, self.slab.ucell)
 
-    def _read_matrix_notation(self, param, values):
-        """Try interpreting values as a 2x2 matrix."""
-        matrix = splitSublists(values, ',')
+    def _read_matrix_notation(self, param, value_str):
+        """Try interpreting value_str as a 2x2 matrix."""
+        matrix = [row.split() for row in value_str.split(',')]
         if len(matrix) != 2:
-            message = 'Number of lines in matrix is not equal to 2'
+            message = 'Number of rows in matrix is not equal to 2'
             self.rpars.setHaltingLevel(2)
             raise ParameterParseError(param, message)
         if any(len(row) != 2 for row in matrix):
