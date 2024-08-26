@@ -57,12 +57,10 @@ class TestMaxDiff:
     """Tests for the max_diff function."""
 
     _valid = {
-        'empty': ([], (None, None)),
         'large': (list(range(10_000)), (1, 1)),
-        'negative': ([5, -5, 0, -10, 10], (1, 5)),
+        'negative': ([5, -5, 0, -10, 10], (4, 20)),
         'no diff': ([1, 1, 1, 1], (1, 0)),
         'same diff multiple': ([1, 2, 4, 5, 7, 8], (2, 2)),
-        'single item': ([5], (None, None)),
         'sorted': ([1, 3, 6, 10], (3, 4)),
         'two items': ([3, 5], (1, 2)),
         }
@@ -71,6 +69,17 @@ class TestMaxDiff:
     def test_valid(self, seq, expect):
         """Check correct result with acceptable arguments."""
         assert max_diff(seq) == expect
+
+    _raises = {
+        'empty': ([], ValueError),
+        'single item': ([5], ValueError),
+        }
+
+    @parametrize('seq,exc', _raises.values(), ids=_raises)
+    def test_raises(self, seq, exc):
+        """Check complaints with inappropriate arguments."""
+        with pytest.raises(exc):
+            max_diff(seq)
 
 
 class TestRecombineItems:
