@@ -156,27 +156,49 @@ def read_int_range(ranges):
     return integers
 
 
-def readVector(s, ucell=None, defRelaltive=False):
-    """Takes a string 'xyz[f1 f2 f3]', 'abc[f1 f2 f3]' or just '[f1 f2 f3]'
-    and returns the corresponding vector in cartesian coordinates, or None if
-    the string cannot be parsed."""
-    m = re.match(r'\s*(xyz|abc)?\[\s*(?P<v1>[-0-9.]+)\s+'
-                 r'(?P<v2>[-0-9.]+)\s+(?P<v3>[-0-9.]+)\s*\]', s)
-    if not m:
-        return None
+def read_vector(string, ucell=None):
+    """Return a 3-item vector in Cartesian coordinates from a string.
+
+    Parameters
+    ----------
+    string : str
+        The string version of the vector to return. May have form
+        'xyz[f1 f2 f3]', 'abc[f1 f2 f3]', or just '[f1 f2 f3]'.
+    ucell : numpy.ndarray, optional
+        The unit cell to use to transform a fractional vector into a
+        Cartesian one. Unit vectors are rows, i.e., a, b, c == ucell
+        This argument is only used if `string` has the 'abc[f1 f2 f3]'
+        form, and it is mandatory in this case.
+
+    Returns
+    -------
+    numpy.ndarray
+
+    Raises
+    ------
+    ValueError
+        If `string` has an invalid format.
+    TypeError
+        If `string` has format 'abc[f1 f2 f3]', but no `ucell` is given.
+    """
+    # pylint: disable-next=magic-value-comparison  # Clear enough
+    _fractional = 'abc' in string
+    _three_floats = r'\s+'.join(r'(-?\d+(?:\.\d+)?)' for _ in range(3))
+    match_ = re.match(fr'\s*(?:xyz|abc)?\[\s*{_three_floats}\s*\]', string)
+    if not match_:
+        raise ValueError(
+            f'Invalid format for {string!r}. Expected \'[f1 f2 f3]\', '
+            '\'xyz[f1 f2 f3]\', or \'abc[f1 f2 f3]\'.'
+            )
     try:
-        v1 = float(m.group("v1"))
-        v2 = float(m.group("v2"))
-        v3 = float(m.group("v3"))
-    except (ValueError, IndexError):
-        return None
-    if "abc" in s:
-        if ucell is None:
-            return None
-        uct = ucell.T
-        return np.dot((v1, v2, v3), ucell.T)
-    # xyz
-    return np.array([v1, v2, v3])
+        vector = np.array(match_.groups()).astype(float)
+    except ValueError:
+        raise ValueError(f'Failed to convert {match_.groups()} '
+                         'to numeric values.') from None
+    if _fractional and ucell is None:
+        raise TypeError(f'ucell is mandatory for {string!r} '
+                        'in fractional form.')
+    return vector.dot(ucell) if _fractional else vector
 
 
 def rsplit_once(string, sep):

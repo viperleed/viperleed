@@ -43,9 +43,9 @@ from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
 from viperleed.calc.lib.sequence_utils import recombine_items
-from viperleed.calc.lib.string_utils import read_int_range
-from viperleed.calc.lib.string_utils import readVector
 from viperleed.calc.lib.string_utils import parent_name
+from viperleed.calc.lib.string_utils import read_int_range
+from viperleed.calc.lib.string_utils import read_vector
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.sections.calc_section import CalcSection as Section
@@ -580,10 +580,12 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         bulk_repeat_str = assignment.values_str.lower()
         # (1) Vector
         if '[' in bulk_repeat_str:
-            vec = readVector(bulk_repeat_str, self.slab.ucell)
-            if vec is None:
-                raise ParameterParseError(parameter=param)
-            self.rpars.BULK_REPEAT = vec
+            try:
+                self.rpars.BULK_REPEAT = read_vector(bulk_repeat_str,
+                                                     self.slab.ucell.T)
+            except ValueError as exc:
+                raise ParameterParseError(parameter=param,
+                                          message=str(exc)) from None
             return
 
         # (2) Z distance

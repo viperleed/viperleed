@@ -8,7 +8,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
-
+import numpy as np
 import pytest
 from pytest_cases import parametrize
 
@@ -16,7 +16,7 @@ from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import range_to_str
 from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.string_utils import read_int_range
-from viperleed.calc.lib.string_utils import readVector
+from viperleed.calc.lib.string_utils import read_vector
 from viperleed.calc.lib.string_utils import rsplit_once
 from viperleed.calc.lib.string_utils import split_string_range
 from viperleed.calc.lib.string_utils import strip_comments
@@ -161,14 +161,14 @@ class TestReadIntRange:
 
 
 class TestReadVector:
-    """Tests for the readVector function."""
+    """Tests for the read_vector function."""
 
     _valid = {
         'xyz': (('xyz[1 2 3]',), [1, 2, 3]),
         'abc': (('abc[1 2 3]', np.eye(3)), [1, 2, 3]),
         'abc, non-simple ucell': (
             ('abc[1 1 1]',
-             np.array([[1, 2, 3], [0, 1, 4], [0, 0, 1]]).T),
+             np.array([[1, 2, 3], [0, 1, 4], [0, 0, 1]])),
             [1, 3, 8],
             )
         }
@@ -176,20 +176,21 @@ class TestReadVector:
     @parametrize('args,expect', _valid.values(), ids=_valid)
     def test_valid(self, args, expect):
         """Check expected outcome for acceptable arguments."""
-        result = readVector(*args)
+        result = read_vector(*args)
         assert result == pytest.approx(expect)
 
     _invalid = {
-        'xyz[1 2]': None,    # Not enough items
-        'abc[1 2 3]': None,  # Missing ucell
-        'xyz[a b c]': None,  # Non-numeric items
-        'xyz[0.1.2 3 4]': None,  # Non-numeric items
+        'xyz[1 2]': ValueError,    # Not enough items
+        'abc[1 2 3]': TypeError,   # Missing ucell
+        'xyz[a b c]': ValueError,  # Non-numeric items
+        'xyz[0.1.2 3 4]': ValueError,  # Non-numeric items
         }
 
-    @parametrize('string,expect', _invalid.items(), ids=_invalid)
-    def test_invalid(self, string, expect):
+    @parametrize('string,exc', _invalid.items(), ids=_invalid)
+    def test_invalid(self, string, exc):
         """Check outcome for invalid arguments."""
-        assert readVector(string) == expect
+        with pytest.raises(exc):
+            read_vector(string)
 
 
 class TestRsplitOnce:
