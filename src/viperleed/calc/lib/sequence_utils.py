@@ -71,10 +71,9 @@ def max_diff(list_):
     """
     if len(list_) < 2:
         return None, None
-    sorted_list = sorted(list_)
     ind_and_diff = (
         (i + 1, second - first)
-        for i, (first, second) in enumerate(pairwise(sorted_list))
+        for i, (first, second) in enumerate(pairwise(list_))
         )
     return max(ind_and_diff, key=itemgetter(1))
 
