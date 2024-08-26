@@ -156,7 +156,7 @@ class TestExecutionTimer:
             mock.sleep(sleep_for)
             assert timer1.started_at != timer2.started_at
             assert timer1.how_long() == sleep_for
-            assert timer2.how_long() == sleep_for + timer2_delay
+            assert timer2.how_long() == sleep_for - timer2_delay
             mock.sleep(sleep_for)
             timer2.synchronize_with(timer1)
             assert timer1.started_at == timer2.started_at
