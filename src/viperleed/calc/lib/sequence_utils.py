@@ -52,34 +52,34 @@ def conditional_sort(sequence, skip, key=None):
                for item in sequence)
 
 
-def max_diff(list_):
+def max_diff(sequence):
     """Return the index and value of the largest difference of two items.
 
     Parameters
     ----------
-    list_ : Sequence
+    sequence : Sequence
         The sequence of items for which the largest difference is
         returned. Must have at least two items.
 
     Returns
     -------
     ind : int
-        The first index in `list_` such that list_[ind] - list_[ind-1]
+        The first index such that sequence[ind] - sequence[ind-1]
         is the largest among the differences between two consecutive
-        items in `list_`.
+        items in `sequence`.
     maxdiff : object
         The value of the largest difference.
 
     Raises
     ------
     ValueError
-        If `list_` is too short to compute a difference.
+        If `sequence` is too short to compute a difference.
     """
-    if len(list_) < 2:
-        raise ValueError(f'Argument {list_} has only one item')
+    if len(sequence) < 2:
+        raise ValueError(f'Argument {sequence!r} has only one item')
     ind_and_diff = (
         (i + 1, second - first)
-        for i, (first, second) in enumerate(pairwise(list_))
+        for i, (first, second) in enumerate(pairwise(sequence))
         )
     return max(ind_and_diff, key=itemgetter(1))
 
