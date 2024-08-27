@@ -69,7 +69,7 @@ def readWoodsNotation(s, ucell):
         # q = np.linalg.norm(r[1])/np.linalg.norm(r[0])
         # this would be to get from bulk vectors to surface, we have to reverse
         q = 1/(np.linalg.norm(r[1])/np.linalg.norm(r[0]))
-        omega = abs(angle(r[0], r[1]))
+        omega = abs(angle(*r))
         # this is always constant in Wood notation, no need to reverse.
         if t == 'p':
             # matrices from: Klaus Hermann; Crystallography and Surface

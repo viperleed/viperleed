@@ -26,6 +26,11 @@ class TestAngle:
         'orthogonal': (([1, 0], [0, 1]), np.pi / 2),
         'parallel': (([1.3, 2.6], [4.2, 8.4]), 0),
         'zero': (([0, 0], [1, 7]), 0),
+        'multiple': (
+            ([[1, 0], [ 1, 0], [1, 0], [1.3, 2.6], [0, 0]],
+             [[1, 1], [-1, 0], [0, 1], [4.2, 8.4], [1, 7]]),
+            (np.pi/4, np.pi, np.pi/2, 0, 0),
+            ),
         }
 
     @parametrize('vectors,expect', _valid.values(), ids=_valid)
@@ -33,6 +38,18 @@ class TestAngle:
         """Check expected outcome for acceptable arguments."""
         result = angle(*vectors)
         assert result == pytest.approx(expect)
+
+    _nargs = {
+        'none': (),
+        'one': (1,),
+        'three': (1, 1, 1),
+        }
+
+    @parametrize(args=_nargs.values(), ids=_nargs)
+    def test_raises_nargs(self, args):
+        """Check complaints for too few/many arguments."""
+        with pytest.raises(TypeError):
+            angle(*args)
 
 
 class TestCosvec:

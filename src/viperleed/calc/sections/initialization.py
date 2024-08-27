@@ -540,8 +540,7 @@ def init_domains(rp):
         # if the unit cells don't match right away, try if rotation matches
         if (all(abs(np.linalg.norm(bulkuc0[i]) - np.linalg.norm(bulkuc[i]))
                 < eps for i in range(0, 2))
-                and abs(angle(bulkuc[0], bulkuc[1])
-                        - angle(bulkuc0[0], bulkuc0[1])) < eps):
+                and abs(angle(*bulkuc) - angle(*bulkuc0)) < eps):
             logger.info(f"Bulk unit cells of domain {rp.domainParams[0].name} "
                         f"and domain {dp.name} are mismatched, but can be "
                         f"matched by rotating domain {dp.name}.")

@@ -14,10 +14,15 @@ __license__ = 'GPLv3+'
 import numpy as np
 
 
-def angle(v1, v2):
-    """Return the angle between two 2D vectors."""
+def angle(*vectors):
+    """Return the angle (in radians) between two (sequences of) 2D vectors."""
+    if len(vectors) != 2:
+        _wrong = 'many' if len(vectors) > 2 else 'few'
+        raise TypeError(f'Too {_wrong} arguments. Must be exactly two.')
     # Use cross product for sine, dot product for cosine
-    return np.arctan2(v1[0]*v2[1] - v1[1]*v2[0], v1[0]*v2[0] + v1[1]*v2[1])
+    _cross = np.cross(*vectors)
+    _dot = np.einsum('...i,...i->...', *vectors)
+    return np.arctan2(_cross, _dot)
 
 
 def cosvec(x, y):
