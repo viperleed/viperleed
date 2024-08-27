@@ -18,7 +18,6 @@ import numpy as np
 
 from viperleed.calc.lib.base import parseMathSqrt
 from viperleed.calc.lib.math_utils import angle
-from viperleed.calc.lib.math_utils import cosvec
 
 logger = logging.getLogger(__name__)
 
