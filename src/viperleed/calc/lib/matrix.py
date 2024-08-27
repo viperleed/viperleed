@@ -36,14 +36,30 @@ def ensure_integer_matrix(matrix, eps=1e-6):
 
 
 def rotation_matrix(angle, dim=2):
-    """Returns a (2x2) matrix for in-plane rotation of the given rotation
-    angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
-    if dim < 2:
+    """Return a matrix for in-plane rotation by `angle`.
+
+    Parameters
+    ----------
+    angle : float
+        The rotation angle in radians. Positive angles correspond to
+        counterclockwise rotations when the matrix returned operates
+        from the left on column vectors.
+    dim : int, optional
+        The size of the matrix to return. Default is 2.
+
+    Returns
+    -------
+    numpy.ndarray
+        Shape (`dim`, `dim`). The rotation part is in the top-left 2x2
+        corner.
+    """
+    if dim < 2:  # pylint: disable=magic-value-comparison  # Clear
         raise ValueError('Rotation matrix needs at least dimension 2')
-    m = np.eye(dim, dtype=float)
-    m[:2, :2] = np.array([[np.cos(angle), -np.sin(angle)],
-                          [np.sin(angle), np.cos(angle)]])
-    return m
+    _cos, _sin = np.cos(angle), np.sin(angle)
+    rotation = (_cos, -_sin), (_sin, _cos)
+    matrix = np.eye(dim, dtype=float)
+    matrix[:2, :2] = rotation
+    return matrix
 
 
 def rotation_matrix_order(order, dim=2):
