@@ -11,29 +11,37 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
+from functools import wraps
 import warnings
 
 import numpy as np
 
 
+def _with_two_args(func):
+    """Raise TypeError if `func` is not called with exactly 2 arguments."""
+    nargs = 2
+    @wraps(func)
+    def _wrapper(*args):
+        if len(args) != nargs:
+            _wrong = 'many' if len(args) > nargs else 'few'
+            raise TypeError(f'{func.__name__}: Too {_wrong} '
+                            'arguments. Must be exactly two.')
+        return func(*args)
+    return _wrapper
+
+
+@_with_two_args
 def angle(*vectors):
     """Return the angle (in radians) between two (sequences of) 2D vectors."""
-    nargs = 2
-    if len(vectors) != nargs:
-        _wrong = 'many' if len(vectors) > nargs else 'few'
-        raise TypeError(f'Too {_wrong} arguments. Must be exactly two.')
     # Use cross product for sine, dot product for cosine
     _cross = np.cross(*vectors)
     _dot = np.einsum('...i,...i->...', *vectors)
     return np.arctan2(_cross, _dot)
 
 
+@_with_two_args
 def cosvec(*vectors):
     """Return the cosine of the angle(s) between two (sequences of) vectors."""
-    nargs = 2
-    if len(vectors) != nargs:
-        _wrong = 'many' if len(vectors) > nargs else 'few'
-        raise TypeError(f'Too {_wrong} arguments. Must be exactly two.')
     _norms = np.linalg.norm(vectors, axis=-1)
     _dot = np.einsum('...i,...i->...', *vectors)
     with warnings.catch_warnings():  # Catch 0/0 --> norm == 0
@@ -68,10 +76,7 @@ def floor_eps(eps):
     return _floor
 
 
+@_with_two_args
 def lcm(*pair_of_integers):
     """Return the lowest common multiple of two (sequences of) integers."""
-    nargs = 2
-    if len(pair_of_integers) != nargs:
-        _wrong = 'many' if len(pair_of_integers) > nargs else 'few'
-        raise TypeError(f'Too {_wrong} arguments. Must be exactly two.')
     return np.prod(pair_of_integers, axis=0) // np.gcd(*pair_of_integers)
