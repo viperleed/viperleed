@@ -26,8 +26,12 @@ class SingularMatrixError(ValueError, ZeroDivisionError):
 def ensure_integer_matrix(matrix, eps=1e-6):
     """Return a rounded version of `matrix`. Raise if it isn't integer."""
     rounded = np.round(matrix)
-    if np.any(abs(matrix - rounded) > eps):
-        raise NonIntegerMatrixError(matrix)
+    if not np.isfinite(rounded).all():
+        raise NonIntegerMatrixError('Matrix contains non-finite '
+                                    f'values: {matrix}')
+    if not np.allclose(matrix, rounded, atol=eps, rtol=0):
+        raise NonIntegerMatrixError('Matrix contains non-integer values '
+                                    f'within tolerance of {eps}: {matrix}')
     return rounded
 
 

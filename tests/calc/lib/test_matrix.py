@@ -23,10 +23,18 @@ class TestEnsureIntegerMatrix:
 
     _valid = {
         'int': ([[1, 2], [3, 4]], [[1, 2], [3, 4]]),
+        'almost eps away': (
+            [[1 + 9.999e-7, 3 - 9.999e-7], [3 + 9.999e-7, 4]],
+            [[1, 3], [3, 4]],
+            ),
         'int as float': ([[1.0, 2.0], [3.0, 4.0]], [[1, 2], [3, 4]]),
         'less than eps': (
             [[1 + 5e-7, 2 - 5e-7], [3 + 5e-7, 4 + 8e-7]],
             [[1, 2], [3, 4]],
+            ),
+        'negative': (
+            [[-1 - 1e-7, -2 + 1e-7], [-3 - 9.999e-7, -5 + 7e-7]],
+            [[-1, -2], [-3, -5]],
             ),
         'some zero': (
             [[1e-7, 1 - 1e-7], [1e-7, -1 + 1e-7]],
@@ -49,7 +57,13 @@ class TestEnsureIntegerMatrix:
 
     _invalid = {
         'large': (np.random.rand(1000, 1000),),
+        'mixed inf nan': ([[np.nan, np.inf], [-np.inf, 4]],),
         'not integer': ([[1.1, 2.5], [3.7, 4.2]],),
+        'nan': ([[1, 2], [np.nan, 4]],),
+        'nan, small eps': ([[1, 2], [np.nan, 4]], 1e-12),
+        '+inf': ([[1, 2], [np.inf, 4]],),
+        '+inf, small eps': ([[1, 2], [np.inf, 4]],),
+        '-inf': ([[1, 2], [-np.inf, 4]],),
         'large eps': ([[1.1, 2.2], [3.3, 4.4]], 0.3),
         'small eps': ([[1 + 1e-6, 2 - 1e-7], [3, 4]], 1e-12),
         }
