@@ -1,4 +1,7 @@
-"""Contains generic functions used in the TensErLEED scripts."""
+"""Module base of viperleed.calc.lib.
+
+Contains generic functions used in the TensErLEED scripts.
+"""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
@@ -149,7 +152,7 @@ def dict_equal(d1, d2):                                                         
     return False
 
 
-def parseMathSqrt(s):
+def parseMathSqrt(s):                                                           # TODO: replace with guilib math parser after refactor
     try:
         f = float(s)
     except ValueError:
@@ -190,7 +193,7 @@ def parseMathSqrt(s):
     return f
 
 
-def dist_from_line(p1, p2, r):
+def dist_from_line(p1, p2, r):                                                  # TODO: will be removed in #51
     """
     Calculates the distance of a point from a line, with the line defined by
     two other points. Works in both 2 and 3 dimensions.
@@ -217,7 +220,7 @@ def dist_from_line(p1, p2, r):
     raise ValueError("Vector dimensions have to be either 2 or 3.")
 
 
-def readToExc(llist):                                                           # TODO: unused; could be an iterator
+def readToExc(llist):                                                           # TODO: remove after vibrocc refactor; could be an iterator
     """For reading PARAMETERS files; takes a list, returns elements until the
     first one that starts with an exclamation mark."""
     read = True
@@ -269,6 +272,7 @@ def splitSublists(llist, sep):                                                  
     return(newlist)
 
 
+# TODO: remove next in #51
 def addUnequalPoints(l1, l2, eps, uniqueLists=False):
     """Adds all points from l1 to l2, if they are not already in l2
     (+- epsilon)."""
