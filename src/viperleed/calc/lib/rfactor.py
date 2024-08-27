@@ -4,7 +4,7 @@ from functools import partial
 import jax
 from jax import numpy as jnp
 
-from otftleed import interpolation
+from viperleed_jax import interpolation
 
 
 def pendry_R(theo_spline,
