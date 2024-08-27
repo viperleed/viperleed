@@ -2,7 +2,7 @@
 import pytest
 
 from jax import numpy as jnp
-from otftleed import rfactor
+from viperleed_jax import rfactor
 
 
 def test_pendry_R_from_intensity_and_derivative():
