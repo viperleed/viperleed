@@ -21,7 +21,7 @@ import numpy as np
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import fortranContLine
+from viperleed.calc.lib.fortran_utils import fortranContLine
 from viperleed.calc.lib.string_utils import rsplit_once
 from viperleed.calc.lib.version import Version
 
