@@ -14,6 +14,8 @@ import itertools
 
 import numpy as np
 
+from viperleed.calc.lib.math_utils import floor_eps
+
 
 COLLAPSE_EPS = 1e-8  # Default for collapsing fractional coordinates
 
@@ -127,13 +129,6 @@ def collapse(cartesians, ucell, ucell_inv=None, method='floor'):
     return fractional.dot(ucell), fractional
 
 
-def _floor_eps(eps):
-    """Return the floored-int version of values after adding eps."""
-    def _floor(values):
-        return np.floor(values + eps)
-    return _floor
-
-
 def collapse_fractional(coordinates, method='floor',
                         eps=COLLAPSE_EPS, in_place=False):
     """Collapse fractional coordinates to the base cell.
@@ -169,7 +164,7 @@ def collapse_fractional(coordinates, method='floor',
     ValueError
         If method is not one of the valid methods.
     """
-    _methods = {'f': _floor_eps(eps), 'r': np.round}
+    _methods = {'f': floor_eps(eps), 'r': np.round}
     try:
         round_ = _methods[method[0]]
     except (TypeError, IndexError, KeyError) as exc:
