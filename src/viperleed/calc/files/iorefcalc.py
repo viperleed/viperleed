@@ -21,7 +21,7 @@ import numpy as np
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.fortran_utils import fortranContLine
+from viperleed.calc.lib.fortran_utils import wrap_fortran_line
 from viperleed.calc.lib.string_utils import rsplit_once
 from viperleed.calc.lib.version import Version
 
@@ -732,7 +732,7 @@ C  set real part of inner potential
                  "EEV+workfn+({:.2f}))))".format(*rp.V0_REAL))
     else:
         oline = "      VV = "+rp.V0_REAL
-    output += fortranContLine(oline) + "\n"
+    output += wrap_fortran_line(oline) + "\n"
     output += """
       write(6,*) workfn, EEV
       write(6,*) VV
@@ -745,15 +745,15 @@ c  set imaginary part of inner potential - energy independent value used here
 
 """
     oline = "      VPI = "+str(rp.V0_IMAG)
-    output += fortranContLine(oline) + "\n"
+    output += wrap_fortran_line(oline) + "\n"
     output += """
 C  set substrate / overlayer imaginary part of inner potential
 
 """
     oline = "      VPIS = "+str(rp.V0_IMAG)
-    output += fortranContLine(oline) + "\n"
+    output += wrap_fortran_line(oline) + "\n"
     oline = "      VPIO = "+str(rp.V0_IMAG)
-    output += fortranContLine(oline) + "\n"
+    output += wrap_fortran_line(oline) + "\n"
     output += """
       return
       end"""

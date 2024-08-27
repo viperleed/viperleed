@@ -12,18 +12,17 @@ __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
 
-def fortranContLine(s):
-    """Takes a sting that might be too long to fit on a single line of fortran
-    code and splits it into continuation lines as necessary. Returns a string
-    with ampersands and line breaks."""
-    limit = 72  # fortran line length limit
-    if len(s) <= limit:
-        return s
-    o = s[:6]
-    s = s[6:]
-    while len(s) > (limit-6):   # 6 characters for beginning of line
-        o += s[:(limit-6)]
-        o += "&\n     &"
-        s = s[(limit-6):]
-    o += s
-    return o
+_FORTRAN_LINE_LENGTH = 72  # FORTRAN line-length limit
+_F77_CONTINUATION_POS = 6  # Column of the continuation character
+
+
+def wrap_fortran_line(string):
+    """Wrap a FORTRAN string into continuation lines with ampersands."""
+    if len(string) <= _FORTRAN_LINE_LENGTH:
+        return string
+    head, rest = string[:_F77_CONTINUATION_POS], string[_F77_CONTINUATION_POS:]
+    chunk_size = _FORTRAN_LINE_LENGTH - _F77_CONTINUATION_POS
+    continuation_lines = (rest[i:i + chunk_size]
+                          for i in range(0, len(rest), chunk_size))
+    sep = f'&\n{"&":>{_F77_CONTINUATION_POS}}'
+    return head + sep.join(continuation_lines)

@@ -9,11 +9,11 @@ __license__ = 'GPLv3+'
 
 from pytest_cases import parametrize
 
-from viperleed.calc.lib.fortran_utils import fortranContLine
+from viperleed.calc.lib.fortran_utils import wrap_fortran_line
 
 
-class TestFortranContLine:
-    """Tests for the fortranContLine function."""
+class TestWrapFortranLine:
+    """Tests for the wrap_fortran_line function."""
 
     _valid = {
         'at limit': ('x' * 72, 'x' * 72),
@@ -52,4 +52,4 @@ class TestFortranContLine:
     @parametrize('string,expect', _valid.values(), ids=_valid)
     def test_valid(self, string, expect):
         """Check expected outcome with valid arguments."""
-        assert fortranContLine(string) == expect
+        assert wrap_fortran_line(string) == expect
