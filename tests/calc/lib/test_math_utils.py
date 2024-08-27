@@ -8,9 +8,56 @@ __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
 import numpy as np
+import pytest
 from pytest_cases import parametrize
 
+from viperleed.calc.lib.math_utils import angle
+from viperleed.calc.lib.math_utils import cosvec
 from viperleed.calc.lib.math_utils import floor_eps
+from viperleed.calc.lib.math_utils import lcm
+
+
+class TestAngle:
+    """Tests for the angle function."""
+
+    _valid = {
+        '45deg': (([1, 0], [1, 1]), np.pi / 4),
+        'opposite': (([1, 0], [-1, 0]), np.pi),
+        'orthogonal': (([1, 0], [0, 1]), np.pi / 2),
+        'parallel': (([1.3, 2.6], [4.2, 8.4]), 0),
+        'zero': (([0, 0], [1, 7]), 0),
+        }
+
+    @parametrize('vectors,expect', _valid.values(), ids=_valid)
+    def test_valid(self, vectors, expect):
+        """Check expected outcome for acceptable arguments."""
+        result = angle(*vectors)
+        assert result == pytest.approx(expect)
+
+
+class TestCosvec:
+    """Tests for the cosvec function."""
+
+    _valid = {
+        'opposite': (([1, 0], [-1, 0]), -1),
+        'orthogonal': (([1, 0], [0, 1]), 0),
+        'parallel': (([1.3, 2.6], [4.2, 8.4]), 1),
+        }
+
+    @parametrize('vectors,expect', _valid.values(), ids=_valid)
+    def test_valid(self, vectors, expect):
+        """Check expected outcome for acceptable arguments."""
+        result = cosvec(*vectors)
+        assert result == pytest.approx(expect)
+
+    _raises = {
+        }
+
+    @parametrize('vectors,exc', _raises.values(), ids=_raises)
+    def test_raises(self, vectors, exc):
+        """Check complaints for unacceptable arguments."""
+        with pytest.raises(exc):
+            cosvec(*vectors)
 
 
 class TestFloorEps:
@@ -61,3 +108,21 @@ class TestFloorEps:
         floor_div_result = values // 1
         np.testing.assert_array_equal(floor_div_result, expect_div)
         assert not np.allclose(floor_eps_result, floor_div_result)
+
+
+class TestLCM:
+    """Tests for the lcm function."""
+
+    _valid = {
+        'primes': ((5, 7), 35),
+        'same': ((7, 7), 7),
+        'simple': ((4, 6), 12),
+        'zero first': ((0, 10), 0),
+        'zero second': ((10, 0), 0),
+        }
+
+    @parametrize('values,expect', _valid.values(), ids=_valid)
+    def test_valid(self, values, expect):
+        """Check expected outcome for acceptable arguments."""
+        result = lcm(*values)
+        assert result == pytest.approx(expect)

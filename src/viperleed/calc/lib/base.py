@@ -127,26 +127,6 @@ def rotation_matrix_order(order, dim=2):
     return rotation_matrix(angle, dim=dim)
 
 
-def cosvec(x, y):
-    """
-    Returns the cosine of the angle between two vectors
-
-    Parameters
-    ----------
-    x : numpy.array
-        First vector
-    y : numpy.array
-        Second vector
-
-    Returns
-    -------
-    float
-        Cosine of the angle between the two vectors
-
-    """
-    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
-
-
 def dict_equal(d1, d2):                                                         # TODO: d1 == d2 works the same
     """
     Checks whether two dictionaries are equal, i.e. contain the same set of
@@ -167,11 +147,6 @@ def dict_equal(d1, d2):                                                         
     if len({k: d1[k] for k in d1 if k in d2 and d1[k] == d2[k]})-len(d1) == 0:
         return True
     return False
-
-
-def lcm(a, b):
-    "Calculate the lowest common multiple of two integers a and b"
-    return a * b // np.gcd(a, b)
 
 
 def parseMathSqrt(s):
@@ -213,12 +188,6 @@ def parseMathSqrt(s):
                                      + ' as float value')
                         raise
     return f
-
-
-def angle(v1, v2):
-    """Returns the angle between two 2D vectors"""
-    # Use cross product for sine, dot product for cosine
-    return np.arctan2(v1[0]*v2[1] - v1[1]*v2[0], v1[0]*v2[0] + v1[1]*v2[1])
 
 
 def dist_from_line(p1, p2, r):

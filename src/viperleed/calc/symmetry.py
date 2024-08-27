@@ -21,10 +21,10 @@ from viperleed.calc.classes.sym_entity import SymPlane
 from viperleed.calc.files import parameters
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import addUnequalPoints
-from viperleed.calc.lib.base import angle
 from viperleed.calc.lib.base import dist_from_line
 from viperleed.calc.lib.base import rotation_matrix
 from viperleed.calc.lib.base import rotation_matrix_order
+from viperleed.calc.lib.math_utils import angle
 
 logger = logging.getLogger(__name__)
 

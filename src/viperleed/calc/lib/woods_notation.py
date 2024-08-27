@@ -16,9 +16,12 @@ import re
 
 import numpy as np
 
-from viperleed.calc.lib.base import angle, cosvec, parseMathSqrt
+from viperleed.calc.lib.base import parseMathSqrt
+from viperleed.calc.lib.math_utils import angle
+from viperleed.calc.lib.math_utils import cosvec
 
 logger = logging.getLogger(__name__)
+
 
 def readWoodsNotation(s, ucell):
     """Takes a string that should contain the transformation from the bulk to
@@ -98,6 +101,7 @@ def readWoodsNotation(s, ucell):
         logger.warning("SUPERLATTICE values do not round to "
                        "integer values. Check SUPERLATTICE parameter.")
     return mat
+
 
 def writeWoodsNotation(ucell):
     """Takes a unit cell (as a (2x2) matrix) and attempts to write it in Woods

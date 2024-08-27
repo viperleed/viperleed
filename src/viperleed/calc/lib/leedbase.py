@@ -21,9 +21,9 @@ import numpy as np
 from quicktions import Fraction
 
 from viperleed.calc.lib.base import SingularMatrixError
-from viperleed.calc.lib.base import cosvec
 from viperleed.calc.lib.base import ensure_integer_matrix
-from viperleed.calc.lib.base import lcm
+from viperleed.calc.lib.math_utils import cosvec
+from viperleed.calc.lib.math_utils import lcm
 from viperleed.guilib import get_equivalent_beams
 
 
