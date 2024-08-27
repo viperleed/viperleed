@@ -293,7 +293,7 @@ def checkLattice(ab, eps=1e-3):
     if it is rhombic or hexagonal."""
     # Author: Michele Riva; slightly modified for consistency by FK
     t = np.array([[1, 0], [0, 1]])
-    c = cosvec(ab[0], ab[1])
+    c = cosvec(*ab)
     d = (np.linalg.norm(ab[0]) / np.linalg.norm(ab[1])) - 1
     if abs(c) < eps:  # angle is 90°
         if np.abs(d) < eps:
@@ -304,7 +304,7 @@ def checkLattice(ab, eps=1e-3):
         if c > eps:  # angle is acute -> redefine to make it obtuse
             t = np.dot(np.array([[0, -1], [1, 0]]), t)  # keeps the handedness
             ab = np.dot(t, ab)
-        c = cosvec(ab[0], ab[1])
+        c = cosvec(*ab)
         if abs(c + 1/2) < eps:
             lat = "hexagonal"
         else:
@@ -376,7 +376,7 @@ def reduceUnitCell(ab, eps=1e-3):
             t2 = swap
             ab = np.dot(swap, ab)
 
-            c = cosvec(ab[0], ab[1])
+            c = cosvec(*ab)
             t0 = [[-int(np.sign(c)), 1], [0, 1]]
             t2 = np.dot(t0, t2)
             ab = np.dot(t0, ab)

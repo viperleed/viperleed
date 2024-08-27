@@ -59,6 +59,11 @@ class TestCosvec:
         'opposite': (([1, 0], [-1, 0]), -1),
         'orthogonal': (([1, 0], [0, 1]), 0),
         'parallel': (([1.3, 2.6], [4.2, 8.4]), 1),
+        'multiple': (
+            ([[1, 0], [1, 0], [1.3, 2.6]],
+             [[-1, 0], [0, 1], [4.2, 8.4]]),
+            (-1, 0, 1),
+            ),
         }
     _valid_3d = {
         'arbitrary': (([1, 2, 3], [4, 5, 6]), pytest.approx(0.97463185)),
@@ -92,6 +97,11 @@ class TestCosvec:
         self.test_valid(vectors, expect)
 
     _raises = {
+        'zero norm 2d': (([0, 0], [1, 1]), ValueError),
+        'zero norm 3d': (([0, 0, 0], [1, 1, 1]), ValueError),
+        'multiple, one zero': ((([1, 0, 0], [0, 1, 0]),
+                               ([1, 0, 0], [0, 0, 0])),
+                               ValueError)
         }
 
     @parametrize('vectors,exc', _raises.values(), ids=_raises)

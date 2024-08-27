@@ -11,6 +11,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
+import warnings
+
 import numpy as np
 
 
@@ -26,22 +28,22 @@ def angle(*vectors):
     return np.arctan2(_cross, _dot)
 
 
-def cosvec(x, y):
-    """Return the cosine of the angle between two vectors.
-
-    Parameters
-    ----------
-    x : Sequence
-        First vector
-    y : Sequence
-        Second vector
-
-    Returns
-    -------
-    float
-        Cosine of the angle between the two vectors.
-    """
-    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+def cosvec(*vectors):
+    """Return the cosine of the angle(s) between two (sequences of) vectors."""
+    nargs = 2
+    if len(vectors) != nargs:
+        _wrong = 'many' if len(vectors) > nargs else 'few'
+        raise TypeError(f'Too {_wrong} arguments. Must be exactly two.')
+    _norms = np.linalg.norm(vectors, axis=-1)
+    _dot = np.einsum('...i,...i->...', *vectors)
+    with warnings.catch_warnings():  # Catch 0/0 --> norm == 0
+        warnings.filterwarnings('error',
+                                message=r'.*true_divide',
+                                category=RuntimeWarning)
+        try:
+            return _dot / np.prod(_norms, axis=0)
+        except RuntimeWarning:
+            raise ValueError('Some vector has zero norm') from None
 
 
 def floor_eps(eps):
