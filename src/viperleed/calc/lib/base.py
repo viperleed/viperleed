@@ -295,6 +295,9 @@ def addUnequalPoints(l1, l2, eps, uniqueLists=False):
     return nl2
 
 
+# TODO: consider using psutil instead. See
+# https://psutil.readthedocs.io/en/latest/index.html#psutil.cpu_count
+# Adapted from https://stackoverflow.com/questions/1006289/
 def available_cpu_count():
     """ Number of available virtual or physical CPUs on this system, i.e.
     user/real as output by time(1) when called with an optimally scaling
