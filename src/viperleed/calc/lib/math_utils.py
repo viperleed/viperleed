@@ -16,8 +16,9 @@ import numpy as np
 
 def angle(*vectors):
     """Return the angle (in radians) between two (sequences of) 2D vectors."""
-    if len(vectors) != 2:
-        _wrong = 'many' if len(vectors) > 2 else 'few'
+    nargs = 2
+    if len(vectors) != nargs:
+        _wrong = 'many' if len(vectors) > nargs else 'few'
         raise TypeError(f'Too {_wrong} arguments. Must be exactly two.')
     # Use cross product for sine, dot product for cosine
     _cross = np.cross(*vectors)
