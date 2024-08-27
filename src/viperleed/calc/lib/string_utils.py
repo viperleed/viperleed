@@ -13,7 +13,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
-
 import itertools
 import re
 
