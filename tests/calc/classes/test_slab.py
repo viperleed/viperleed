@@ -31,10 +31,11 @@ from viperleed.calc.classes.slab import surface_slab
 from viperleed.calc.classes.sym_entity import SymPlane
 from viperleed.calc.files.parameters.errors import InconsistentParameterError
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import NonIntegerMatrixError, SingularMatrixError
 from viperleed.calc.lib.coordinates import add_edges_and_corners
 from viperleed.calc.lib.coordinates import collapse
 from viperleed.calc.lib.itertools_utils import pairwise
+from viperleed.calc.lib.matrix import NonIntegerMatrixError
+from viperleed.calc.lib.matrix import SingularMatrixError
 
 from ...helpers import exclude_tags, not_raises
 from .. import cases_ase, poscar_slabs

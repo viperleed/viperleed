@@ -22,9 +22,9 @@ from viperleed.calc.files import parameters
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import addUnequalPoints
 from viperleed.calc.lib.base import dist_from_line
-from viperleed.calc.lib.base import rotation_matrix
-from viperleed.calc.lib.base import rotation_matrix_order
 from viperleed.calc.lib.math_utils import angle
+from viperleed.calc.lib.matrix import rotation_matrix
+from viperleed.calc.lib.matrix import rotation_matrix_order
 
 logger = logging.getLogger(__name__)
 

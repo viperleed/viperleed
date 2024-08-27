@@ -27,18 +27,6 @@ import scipy.spatial as sps
 logger = logging.getLogger(__name__)
 
 ###############################################
-#                EXCEPTIONS                   #
-###############################################
-
-class NonIntegerMatrixError(ValueError):                                         # TODO: move somewhere else
-    """A matrix that should have integer values does not."""
-
-
-class SingularMatrixError(ValueError, ZeroDivisionError):
-    """A matrix that needs inversion is singular."""
-
-
-###############################################
 #                 CLASSES                     #
 ###############################################
 
@@ -103,32 +91,6 @@ class BackwardsReader:                                                          
 ###############################################
 #                FUNCTIONS                    #
 ###############################################
-
-def ensure_integer_matrix(matrix, eps=1e-6):
-    """Return a rounded version of matrix. Raise if matrix isn't integer."""
-    rounded = np.round(matrix)
-    if np.any(abs(matrix - rounded) > eps):
-        raise NonIntegerMatrixError(matrix)
-    return rounded
-
-
-def rotation_matrix(angle, dim=2):
-    """Returns a (2x2) matrix for in-plane rotation of the given rotation
-    angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
-    if dim < 2:
-        raise ValueError('Rotation matrix needs at least dimension 2')
-    m = np.eye(dim, dtype=float)
-    m[:2, :2] = np.array([[np.cos(angle), -np.sin(angle)],
-                          [np.sin(angle), np.cos(angle)]])
-    return m
-
-
-def rotation_matrix_order(order, dim=2):
-    """Returns a (2x2) matrix for in-plane rotation of the given rotation
-    order. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
-    angle = 2*np.pi/order
-    return rotation_matrix(angle, dim=dim)
-
 
 def dict_equal(d1, d2):                                                         # TODO: d1 == d2 works the same
     """

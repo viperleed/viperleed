@@ -40,8 +40,8 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import rotation_matrix
-from viperleed.calc.lib.base import NonIntegerMatrixError
+from viperleed.calc.lib.matrix import NonIntegerMatrixError
+from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation

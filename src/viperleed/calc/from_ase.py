@@ -32,8 +32,8 @@ from viperleed.calc.files import iorfactor as rf_io
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.ivplot import plot_iv
-from viperleed.calc.lib.base import rotation_matrix
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.run import run_calc
 from viperleed.extensions.error_codes import check_ierr
 
