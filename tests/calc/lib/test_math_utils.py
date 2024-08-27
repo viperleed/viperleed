@@ -170,6 +170,11 @@ class TestLCM:
         'simple': ((4, 6), 12),
         'zero first': ((0, 10), 0),
         'zero second': ((10, 0), 0),
+        'multiple': (
+            ((5, 7, 4, 0, 10),
+             (7, 7, 6, 10, 0)),
+            (35, 7, 12, 0, 0),
+            )
         }
 
     @parametrize('values,expect', _valid.values(), ids=_valid)

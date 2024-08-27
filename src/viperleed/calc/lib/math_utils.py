@@ -68,6 +68,10 @@ def floor_eps(eps):
     return _floor
 
 
-def lcm(a, b):
-    """Return the lowest common multiple of two integers."""
-    return a * b // np.gcd(a, b)
+def lcm(*pair_of_integers):
+    """Return the lowest common multiple of two (sequences of) integers."""
+    nargs = 2
+    if len(pair_of_integers) != nargs:
+        _wrong = 'many' if len(pair_of_integers) > nargs else 'few'
+        raise TypeError(f'Too {_wrong} arguments. Must be exactly two.')
+    return np.prod(pair_of_integers, axis=0) // np.gcd(*pair_of_integers)
