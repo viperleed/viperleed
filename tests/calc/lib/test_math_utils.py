@@ -60,12 +60,36 @@ class TestCosvec:
         'orthogonal': (([1, 0], [0, 1]), 0),
         'parallel': (([1.3, 2.6], [4.2, 8.4]), 1),
         }
+    _valid_3d = {
+        'arbitrary': (([1, 2, 3], [4, 5, 6]), pytest.approx(0.97463185)),
+        'identical': (([3, 4, 5], [3, 4, 5]), 1),
+        'mixed components': (([1, -2, 3], [-3, 2, -1]),
+                             pytest.approx(-0.7142857)),
+        'near zero angle': (([2, 1, 1e-10], [2, 1, -1e-10]),
+                            pytest.approx(1)),
+        'near zero components': (
+            ([1e-10, 1e-10, 1e-10], [1e-15, 1e-15, 1e-15]),
+            pytest.approx(1)
+            ),
+        'negative': (([-1, -2, -3], [3, 2, 1]), pytest.approx(-0.7142857)),
+        'not unit vecs': (([3, 4, 0], [0, 8, 6]), 0.64),
+        'opposite': (([-1, -2, -3], [1, 2, 3]), -1),
+        'parallel': (([1, 4, 7], [2, 8, 14]), 1),
+        'xy': (([1, 0, 0], [0, 1, 0]), 0),
+        'xz': (([1, 0, 0], [0, 0, 1]), 0),
+        'yz': (([0, 1, 0], [0, 0, 1]), 0),
+        }
 
     @parametrize('vectors,expect', _valid.values(), ids=_valid)
     def test_valid(self, vectors, expect):
         """Check expected outcome for acceptable arguments."""
         result = cosvec(*vectors)
         assert result == pytest.approx(expect)
+
+    @parametrize('vectors,expect', _valid_3d.values(), ids=_valid_3d)
+    def test_valid_3d(self, vectors, expect):
+        """Check expected outcome for 3D vectors."""
+        self.test_valid(vectors, expect)
 
     _raises = {
         }
