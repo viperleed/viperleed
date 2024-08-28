@@ -51,6 +51,17 @@ class TestAngle:
         with pytest.raises(TypeError):
             angle(*args)
 
+    _wrong_shape = {
+        'empty': ([1, 2], []),
+        'different': ([1, 2], [1, 2, 3]),
+        }
+
+    @parametrize(vectors=_wrong_shape.values(), ids=_wrong_shape)
+    def test_raises_inconsistent_shape(self, vectors):
+        """Check complaints when vectors with different shape are given."""
+        with pytest.raises(ValueError):
+            angle(*vectors)
+
 
 class TestCosvec:
     """Tests for the cosvec function."""

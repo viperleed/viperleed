@@ -26,7 +26,11 @@ def _with_two_args(func):
             _wrong = 'many' if len(args) > nargs else 'few'
             raise TypeError(f'{func.__name__}: Too {_wrong} '
                             'arguments. Must be exactly two.')
-        return func(*args)
+        vec_1, vec_2 = (np.asanyarray(a) for a in args)
+        if vec_1.shape != vec_2.shape:
+            raise ValueError(f'{func.__name__}: Inconsistent shapes '
+                                f'{vec_1.shape} != {vec_2.shape}')
+        return func(vec_1, vec_2)
     return _wrapper
 
 
