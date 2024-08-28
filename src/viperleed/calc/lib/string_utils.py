@@ -182,6 +182,9 @@ def read_vector(string, ucell=None):
     """
     # pylint: disable-next=magic-value-comparison  # Clear enough
     _fractional = 'abc' in string
+    if _fractional and ucell is None:
+        raise TypeError(f'ucell is mandatory for {string!r} '
+                        'in fractional form.')
     _three_floats = r'\s+'.join(r'(-?\d+(?:\.\d+)?)' for _ in range(3))
     match_ = re.match(fr'\s*(?:xyz|abc)?\[\s*{_three_floats}\s*\]', string)
     if not match_:
@@ -194,9 +197,6 @@ def read_vector(string, ucell=None):
     except ValueError:
         raise ValueError(f'Failed to convert {match_.groups()} '
                          'to numeric values.') from None
-    if _fractional and ucell is None:
-        raise TypeError(f'ucell is mandatory for {string!r} '
-                        'in fractional form.')
     return vector.dot(ucell) if _fractional else vector
 
 

@@ -164,7 +164,7 @@ class TestReadVector:
     """Tests for the read_vector function."""
 
     _valid = {
-        'xyz': (('xyz[1 2 3]',), [1, 2, 3]),
+        'xyz': (('xyz[1   2 3 ]',), [1, 2, 3]),
         'abc': (('abc[1 2 3]', np.eye(3)), [1, 2, 3]),
         'abc, non-simple ucell': (
             ('abc[1 1 1]',
@@ -180,10 +180,18 @@ class TestReadVector:
         assert result == pytest.approx(expect)
 
     _invalid = {
+        '[ ]': ValueError,         # No items
         'xyz[1 2]': ValueError,    # Not enough items
         'abc[1 2 3]': TypeError,   # Missing ucell
         'xyz[a b c]': ValueError,  # Non-numeric items
-        'xyz[0.1.2 3 4]': ValueError,  # Non-numeric items
+        'xyz[1 2 ?]': ValueError,  # Non-numeric items
+        'pxyz[1 2 3]': ValueError,      # Invalid prefix
+        'xyz[1 2.a 3]': ValueError,     # Non-numeric items
+        'xyz[f1 f2 f3]': ValueError,    # Non-numeric items
+        'xyz[0.1.2 3 4]': ValueError,   # Non-numeric items
+        'xyz 1.0 2.0 3.0': ValueError,  # No brackets
+        # TODO: The next one currently passes. Do we want to complain?
+        # 'xyz[1.0 2.0 3.0] extra': ValueError,
         }
 
     @parametrize('string,exc', _invalid.items(), ids=_invalid)
