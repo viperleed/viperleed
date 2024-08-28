@@ -40,8 +40,9 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import angle, rotation_matrix
-from viperleed.calc.lib.base import NonIntegerMatrixError
+from viperleed.calc.lib.matrix import NonIntegerMatrixError
+from viperleed.calc.lib.matrix import rotation_matrix
+from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
@@ -539,8 +540,7 @@ def init_domains(rp):
         # if the unit cells don't match right away, try if rotation matches
         if (all(abs(np.linalg.norm(bulkuc0[i]) - np.linalg.norm(bulkuc[i]))
                 < eps for i in range(0, 2))
-                and abs(angle(bulkuc[0], bulkuc[1])
-                        - angle(bulkuc0[0], bulkuc0[1])) < eps):
+                and abs(angle(*bulkuc) - angle(*bulkuc0)) < eps):
             logger.info(f"Bulk unit cells of domain {rp.domainParams[0].name} "
                         f"and domain {dp.name} are mismatched, but can be "
                         f"matched by rotating domain {dp.name}.")
@@ -795,7 +795,7 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
     angle_between_first_uc_vec_and_x = sl.angle_between_ucell_and_coord_sys
     if angle_between_first_uc_vec_and_x > angle_eps and rp.THETA > angle_eps:
         logger.info(
-            f"Detected non-zero angle theta ({rp.THETA:.2f})° and"
+            f"Detected non-zero angle theta ({rp.THETA:.2f})° and "
             f"an angle of {angle_between_first_uc_vec_and_x:.2f}° "
             "between the first unit cell vector and the x direction of "
             "the coordinate system in the POSCAR file.\n"

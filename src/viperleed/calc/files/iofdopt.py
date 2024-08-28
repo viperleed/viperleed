@@ -28,7 +28,7 @@ if CAN_PLOT:
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)  # Mute matplotlib debug messages                 # TODO: perhaps nicer to use at_level only in the relevant spots? See also iorfactor and ivplot
 
 
 def write_fd_opt_csv(points, which, filename="FD_Optimization.csv", sep=","):

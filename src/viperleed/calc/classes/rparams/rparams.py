@@ -23,7 +23,6 @@ import os
 from pathlib import Path
 import random
 import shutil
-from timeit import default_timer as timer
 
 import numpy as np
 
@@ -32,16 +31,17 @@ from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
-from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
-from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import use_calc_style
+from viperleed.calc.lib.string_utils import parent_name
+from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
+from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
 from .limits import PARAM_LIMITS
@@ -147,7 +147,7 @@ class Rparams:
         self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
 
         # RUN VARIABLES
-        self.starttime = timer()
+        self.timer = ExecutionTimer()
         self.source_dir = None  # where to find 'tensorleed'
         # .workdir is the MAIN WORK DIRECTORY; where to find input
         self.workdir = Path.cwd().resolve()
@@ -376,7 +376,7 @@ class Rparams:
                 'source_dir is not set'
                 )
         source_tree = self.source_dir.resolve()
-        wanted_version = (Version(wanted_version) if wanted_version else 
+        wanted_version = (Version(wanted_version) if wanted_version else
                           self.TL_VERSION)
         sources = get_tenserleed_sources(source_tree)
         # sort sources by .version attribute
