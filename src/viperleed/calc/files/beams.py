@@ -246,7 +246,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                 with open(filename.with_suffix(''), 'r') as rf:
                     lines = [li[:-1] for li in rf.readlines()]
             else:
-                logger.error(f"Error reading {filename}.")
+                logger.error(f"Error reading {filename.name}.")
                 raise
 
     firstline = True
