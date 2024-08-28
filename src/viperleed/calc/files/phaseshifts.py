@@ -444,7 +444,7 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
             "using very light scatterers (e.g. hydrogen)."
             )
         rp.setHaltingLevel(1)
-        return
+        return set()
 
     affected_elements = set()
     ps_pairs = list(zip(atomic_numbers, ps_sites))
