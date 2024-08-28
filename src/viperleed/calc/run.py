@@ -24,7 +24,8 @@ from viperleed.calc import LOGGER as logger
 from viperleed.calc.classes import rparams
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
-from viperleed.calc.lib.base import CustomLogFormatter
+from viperleed.calc.lib.log_utils import close_all_handlers
+from viperleed.calc.lib.log_utils import prepare_calc_logger
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import prerun_clean
@@ -88,16 +89,9 @@ def run_calc(system_name=None,
     timestamp = DateTimeFormat.FILE_SUFFIX.now()
 
     log_name = f'{LOG_PREFIX}-{timestamp}.log'
-    logger.setLevel(logging.INFO)
-    logFormatter = CustomLogFormatter()
-    fileHandler = logging.FileHandler(log_name, mode="w")
-    fileHandler.setFormatter(logFormatter)
-    logger.addHandler(fileHandler)
-    if console_output:
-        consoleHandler = logging.StreamHandler()
-        consoleHandler.setFormatter(logFormatter)
-        logger.addHandler(consoleHandler)
-
+    prepare_calc_logger(logger,
+                        file_name=log_name,
+                        with_console=console_output)
     logger.info(f"Starting new log: {log_name}\nTime of execution: "
                 + DateTimeFormat.LOG_CONTENTS.now())
     logger.info(f"This is ViPErLEED version {__version__}\n")
@@ -210,7 +204,7 @@ def run_calc(system_name=None,
     exit_code, state_recorder = section_loop(rp, slab)
 
     # Finalize logging - if not done, will break unit testing
-    logger.handlers.clear()
+    close_all_handlers(logger)
     logging.shutdown()
 
     return exit_code, state_recorder

@@ -19,12 +19,12 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import numpy as np
 from scipy import interpolate
 
-from viperleed.calc.lib.base import max_diff
-from viperleed.calc.lib.base import range_to_str
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
+from viperleed.calc.lib.sequence_utils import max_diff
+from viperleed.calc.lib.string_utils import range_to_str
 
 if CAN_PLOT:
     prepare_matplotlib_for_calc()
@@ -32,7 +32,7 @@ if CAN_PLOT:
     import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)  # Mute matplotlib debug messages                 # TODO: perhaps nicer to use at_level only in the relevant spots? See also iorfactor and ivplot
 
 
 def extract_var_r(errors):
@@ -507,7 +507,7 @@ def make_errors_figs(errors, formatting=None):
         fig.tight_layout(rect=(0, 0, 1, 0.965))
         fig.suptitle(titles[mode])
         figs.append(fig)
-    logger.log(1, f'Number of error figures: {len(figs)}')
+    logger.log(1, f'Number of error figures: {len(figs)}')                      # TODO: This will never appear as we set INFO at the module level
     return figs
 
 def _error_legends(mode, mode_errors):

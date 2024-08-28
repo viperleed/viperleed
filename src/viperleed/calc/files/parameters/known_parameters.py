@@ -22,7 +22,7 @@ __license__ = 'GPLv3+'
 from difflib import get_close_matches
 import logging
 
-from viperleed.calc.lib.base import parent_name
+from viperleed.calc.lib.string_utils import parent_name
 
 from .errors import ParameterNotRecognizedError
 

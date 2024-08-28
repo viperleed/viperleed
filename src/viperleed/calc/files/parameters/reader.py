@@ -22,7 +22,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 import re
 
-from viperleed.calc.lib.base import strip_comments
+from viperleed.calc.lib.string_utils import strip_comments
 
 from .errors import MissingEqualsError
 from .errors import ParameterHasNoValueError

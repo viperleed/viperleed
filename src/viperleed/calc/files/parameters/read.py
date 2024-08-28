@@ -21,7 +21,7 @@ import logging
 from pathlib import Path
 
 from viperleed.calc.classes import rparams
-from viperleed.calc.lib.base import parent_name
+from viperleed.calc.lib.string_utils import parent_name
 
 from .errors import MissingEqualsError
 from .interpret import ParameterInterpreter
