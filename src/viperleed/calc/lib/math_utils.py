@@ -37,9 +37,15 @@ def _with_two_args(func):
 @_with_two_args
 def angle(*vectors):
     """Return the angle (in radians) between two (sequences of) 2D vectors."""
+    vec_1, vec_2 = vectors
+    if vec_1.shape and vec_1.shape[-1] != 2:
+        raise ValueError('angle: only accepts 2D vectors. '
+                         f'Found {vec_1.shape[-1]} ones')
     # Use cross product for sine, dot product for cosine
-    _cross = np.cross(*vectors)
-    _dot = np.einsum('...i,...i->...', *vectors)
+    # The cross product of 2D arrays via np.cross has been deprecated
+    # in NumPy 2.0. Use the one-line solution from NumPy #26620:
+    _cross = vec_1[..., 0] * vec_2[..., 1] - vec_1[..., 1] * vec_2[..., 0]
+    _dot = np.einsum('...i,...i->...', vec_1, vec_2)
     return np.arctan2(_cross, _dot)
 
 

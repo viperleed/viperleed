@@ -202,7 +202,7 @@ class TestSlabTransforms:
             if all(self.parallel(v, (0, 0, 1)) for v in (_before, _after)):
                 # Skip next for vectors along the rotation axis
                 continue
-            assert np.isclose(np.degrees(angle(_before, _after)),  # in-plane
+            assert np.isclose(np.degrees(angle(_before[:2], _after[:2])),
                               self._theta)
 
     def test_rot_mat_x(self, slab):

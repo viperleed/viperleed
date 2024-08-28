@@ -62,6 +62,21 @@ class TestAngle:
         with pytest.raises(ValueError):
             angle(*vectors)
 
+    _high_dim_vectors = {
+        '3d, one pair': ([1, 0, 0], [1, 1, 2]),
+        '3d, more pairs': ([[1, 0, 0], [2, 0, -1], [5, -3, 0]],
+                           [[1, 1, 2], [-1, 2, 3], [12, 0, 5]]),
+        '5d, one pair': ([1, 0, 0, -1, 5], [1, 1, 2, 3, 4]),
+        '5d, more pairs': ([[1, 0, 0, -1, 5], [1, 2, 3, 4, 5]],
+                           [[1, 1, 2, 3, 4], [0, -1, 2, 3, -7]]),
+        }
+
+    @parametrize(vectors=_high_dim_vectors.values(), ids=_high_dim_vectors)
+    def test_raises_high_dim_vectors(self, vectors):
+        """Check complaints when >2D vectors are given rather than 2D ones."""
+        with pytest.raises(ValueError):
+            angle(*vectors)
+
 
 class TestCosvec:
     """Tests for the cosvec function."""
