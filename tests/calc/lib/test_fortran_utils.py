@@ -12,7 +12,7 @@ from pytest_cases import parametrize
 from viperleed.calc.lib.fortran_utils import wrap_fortran_line
 
 
-class TestWrapFortranLine:
+class TestWrapFortranLine:  # pylint: disable=too-few-public-methods
     """Tests for the wrap_fortran_line function."""
 
     _valid = {

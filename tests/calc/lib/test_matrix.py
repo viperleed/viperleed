@@ -12,7 +12,6 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
-from viperleed.calc.lib.matrix import SingularMatrixError
 from viperleed.calc.lib.matrix import ensure_integer_matrix
 from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.lib.matrix import rotation_matrix_order

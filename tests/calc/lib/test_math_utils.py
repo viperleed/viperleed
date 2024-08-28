@@ -187,7 +187,7 @@ class TestFloorEps:
         assert not np.allclose(floor_eps_result, floor_div_result)
 
 
-class TestLCM:
+class TestLCM:  # pylint: disable=too-few-public-methods
     """Tests for the lcm function."""
 
     _valid = {

@@ -38,6 +38,7 @@ def _with_two_args(func):
 def angle(*vectors):
     """Return the angle (in radians) between two (sequences of) 2D vectors."""
     vec_1, vec_2 = vectors
+    # pylint: disable-next=magic-value-comparison  # Clear enough
     if vec_1.shape and vec_1.shape[-1] != 2:
         raise ValueError('angle: only accepts 2D vectors. '
                          f'Found {vec_1.shape[-1]} ones')
