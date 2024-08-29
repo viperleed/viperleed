@@ -34,6 +34,8 @@ def now_(datetime_format, use_gmt=False):
 
     Parameters
     ----------
+    datetime_format : str
+        Format string for time.strftime.
     use_gmt : bool, optional
         Whether the time should refer to the GMT time rather than
         the local time.

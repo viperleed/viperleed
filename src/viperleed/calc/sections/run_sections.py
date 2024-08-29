@@ -16,6 +16,7 @@ __license__ = 'GPLv3+'
 import logging
 import os
 
+from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files.displacements import readDISPLACEMENTS
@@ -234,12 +235,17 @@ def section_loop(rp, sl):
 
     Returns
     -------
-    int
+    exit_code : int
         0: exit without errors.
         1: clean exit through KeyboardInterrupt
-        2: exit due to Exception before entering main loop
         3: exit due to Exception during main loop
+    state_recorder : CalcStateRecorder
+        A record of the states of sl and rp at the end of each
+        executed section.
     """
+    # Create a record for states at end of each section
+    state_recorder = CalcStateRecorder()
+
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
     searchLoopR = None
     searchLoopLevel = 0
@@ -264,6 +270,9 @@ def section_loop(rp, sl):
                 sl = rp.pseudoSlab
             if rp.domainParams:
                 rp.setHaltingLevel(max(dp.rp.halt for dp in rp.domainParams))
+
+            # record state to the state recorder
+            state_recorder.record(sl, rp, sec)
 
             # Decide how to proceed
             next_section = next(iter(rp.RUN), None)
@@ -322,12 +331,12 @@ def section_loop(rp, sl):
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")
             cleanup(rp.manifest, rp)
-            return 1
+            return 1, state_recorder
         except Exception:
             logger.error("Exception during viperleed.calc execution: ",
                          exc_info=True)
             cleanup(rp.manifest, rp)
-            return 3
+            return 3, state_recorder
         if rp.halt >= rp.HALTING:
             if not initHalt:
                 logger.info(
@@ -341,4 +350,4 @@ def section_loop(rp, sl):
             logger.info("# Stopped by user STOP command.")
             break
     cleanup(rp.manifest, rp)
-    return 0
+    return 0, state_recorder

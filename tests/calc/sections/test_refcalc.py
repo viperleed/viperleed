@@ -17,6 +17,8 @@ class TestRefCalc:
     def test_successful_run(self, refcalc_files):
         """Check that refcalc exits without errors."""
         assert not refcalc_files.failed
+        assert refcalc_files.records is not None
+        assert refcalc_files.records.get_last_section_state('refcalc')
 
     @pytest.mark.parametrize('expected_file', ('THEOBEAMS.csv',))
     def test_refcalc_files_present(self, refcalc_files, expected_file):

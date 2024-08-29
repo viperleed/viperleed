@@ -23,7 +23,7 @@ import pkgutil
 import sys
 
 from viperleed import GLOBALS
-from viperleed.calc.lib.base import parent_name
+from viperleed.calc.lib.string_utils import parent_name
 
 
 # Default name of the submodules of package utilities

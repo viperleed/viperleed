@@ -233,21 +233,25 @@ class Assignment:
     @property
     def flag(self):
         """Return the leftmost flag as a string."""
+        # pylint: disable-next=unsubscriptable-object  # Can't infer
         return self.flags[0] if self.flags else ''
 
     @property
     def value(self):
         """Return the leftmost value as a string."""
+        # pylint: disable-next=unsubscriptable-object  # Can't infer
         return self.values[0] if self.values else ''
 
     @property
     def other_flags(self):
         """Return all the flags except for the first one."""
+        # pylint: disable-next=unsubscriptable-object  # Can't infer
         return self.flags[1:]
 
     @property
     def other_values(self):
         """Return all the values except for the first one (as strings)."""
+        # pylint: disable-next=unsubscriptable-object  # Can't infer
         return self.values[1:]
 
     @staticmethod

@@ -65,7 +65,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         os.chdir(work_path)
         exit_code = 2
         try:
-            exit_code = run_calc(
+            exit_code, _ = run_calc(
                 system_name=args.name,
                 source=args.tensorleed,
                 preset_params=presets,

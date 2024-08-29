@@ -302,7 +302,6 @@ def raises_test_exception(obj_or_dotted_name, attr=None):
         yield context
 
 
-
 # ###########################   FILTERS   #############################
 
 def exclude_tags(*tags):
@@ -323,7 +322,6 @@ def has_any_tag(*tags):
     if not tags:
         raise ValueError('Must select at least one tag')
     return CaseFilter(_filter)
-
 
 
 # ###########################   CLASSES   #############################

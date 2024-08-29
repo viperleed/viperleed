@@ -31,13 +31,13 @@ from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
-from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import use_calc_style
+from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
