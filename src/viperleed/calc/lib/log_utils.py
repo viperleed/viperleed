@@ -52,6 +52,48 @@ def debug_or_lower(logger, effective=True):
     return level <= DEBUG
 
 
+def get_handlers(logger, handler_type, **with_attrs):
+    """Yield handlers of a given type attached to `logger`.
+
+    Parameters
+    ----------
+    logger : logging.Logger
+        The logger whose handlers should be returned.
+    handler_type : logging.Handler or type(logging.Handler)
+        The type of handler to be returned.
+    **with_attrs : dict, optional
+        Optional attribute-value pairs to filter the handlers returned.
+
+    Yields
+    ------
+    handler : logging.Handler
+        All handlers of type `handler_type` attached to `logger` as
+        well as to any of its parents (unless logger is set to not
+        propagate). Only those whose attributes match `with_attrs`
+        are returned.
+    """
+    # Ensure handler_type is a type, not an instance
+    if isinstance(handler_type, logging.Handler):
+        handler_type = type(handler_type)
+
+    def matches(a_handler):
+        """Return whether `a_handler` should be yielded."""
+        if not isinstance(a_handler, handler_type):
+            return False
+        try:
+            return all(getattr(a_handler, attr) == value
+                       for attr, value in with_attrs.items())
+        except AttributeError:
+            return False
+
+    while logger:
+        handlers = (handler for handler in logger.handlers if matches(handler))
+        yield from handlers
+        if not logger.propagate:
+            break
+        logger = logger.parent
+
+
 @contextmanager
 def logging_silent(level=logging.CRITICAL):
     """Mute all logging messages with at least `level` for ALL loggers.
