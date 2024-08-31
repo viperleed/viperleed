@@ -341,6 +341,12 @@ class TestReplaceValues:
         assert getattr(new_instance, new_attr) != getattr(instance, new_attr)
         assert getattr(new_instance, skip) != getattr(instance, skip)
 
+    def test_invalid_attribute(self):
+        """Check complaints when trying to replace non-existing attributes."""
+        instance = SampleFrozenClass(1)
+        with pytest.raises(TypeError):
+            replace_values(instance, non_existent_attr=3)
+
 
 class TestSetFrozenAttr:
     """Tests for the set_frozen_attr function."""
