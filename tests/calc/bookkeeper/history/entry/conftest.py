@@ -7,6 +7,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-30'
 __license__ = 'GPLv3+'
 
+from enum import Enum
+
 from pytest_cases import fixture
 
 from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
@@ -15,6 +17,15 @@ from viperleed.calc.bookkeeper.history.entry.field import FieldBase
 from viperleed.calc.lib.dataclass_utils import frozen
 
 no_value = object()
+
+
+class MockFieldTag(Enum):
+    """A fake field tag, useful for tests only."""
+
+    TAG_1 = '# TAG_1'
+    TAG_2 = 'TAG_2:'
+    TAG_3 = '~ TAG_3 --'
+
 
 @fixture(name='make_field')
 def fixture_make_field():
@@ -38,7 +49,7 @@ def make_and_check_field(make_field):
 
 
 @fixture
-def make_concrete_field(request):
+def make_concrete_field(monkeypatch, request):
     """Return a concrete subclass of an abstract field."""
     def _make(abstract, tag):
         if abstract.tag is tag:
@@ -49,6 +60,11 @@ def make_concrete_field(request):
             del FieldBase._subclasses[tag]
 
         request.addfinalizer(cleanup)
+        if isinstance(tag, MockFieldTag):
+            monkeypatch.setattr(
+                'viperleed.calc.bookkeeper.history.entry.field.FieldTag',
+                MockFieldTag
+                )
         return frozen(type('_Concrete', (abstract,), {}, tag=tag))
     return _make
 

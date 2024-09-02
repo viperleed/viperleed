@@ -8,7 +8,6 @@ __created__ = '2024-08-30'
 __license__ = 'GPLv3+'
 
 from dataclasses import FrozenInstanceError
-from enum import Enum
 import functools
 import re
 from typing import Union
@@ -35,14 +34,7 @@ from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from .....helpers import not_raises
-
-
-class MockTag(Enum):
-    """A tag useful for tests only."""
-
-    TAG_1 = '# TAG_1'
-    TAG_2 = 'TAG_2:'
-    TAG_3 = '~ TAG_3 --'
+from .conftest import MockFieldTag
 
 
 class TestCommentlessField:
@@ -52,7 +44,7 @@ class TestCommentlessField:
     def fixture_commentless(self, make_concrete_field, make_and_check_field):
         """Return a concrete subclass of CommentLessField."""
         field_cls = make_concrete_field(CommentLessField,
-                                        tag=MockTag.TAG_1)
+                                        tag=MockFieldTag.TAG_1)
         return functools.partial(make_and_check_field, field_cls)
 
     _init = {
@@ -252,7 +244,7 @@ class TestFieldBase:
 
     _invalid_tag = (
         'INVALID_TAG',
-        MockTag.TAG_1,
+        MockFieldTag.TAG_1,
         )
 
     @parametrize(tag=_invalid_tag)
@@ -303,7 +295,7 @@ class TestFieldBase:
         @frozen
         class _Dummy(FieldBase):
             value: str = MissingField
-        field_cls = make_concrete_field(_Dummy, MockTag.TAG_1)
+        field_cls = make_concrete_field(_Dummy, MockFieldTag.TAG_1)
         field = make_and_check_field(field_cls, 123)
         assert not field.was_understood
 
@@ -415,22 +407,18 @@ class TestFieldBaseFromString:
     def test_from_string_cant_parse_case(self, make_concrete_field,
                                          remove_field_tag):
         """Check handling of case in tags."""
-        make_concrete_field(FieldBase, MockTag.TAG_1)
-        upper_str = f'{MockTag.TAG_1.value} abcde'
+        make_concrete_field(FieldBase, MockFieldTag.TAG_1)
+        upper_str = f'{MockFieldTag.TAG_1.value} abcde'
         remove_field_tag(FieldTag.UNKNOWN, raising=True)
         with pytest.raises(HistoryInfoError, match='No field can parse'):
             FieldBase.from_string(upper_str.lower())
 
-    @parametrize(tag=(*iter(FieldTag), *iter(MockTag)))
+    @parametrize(tag=(*iter(FieldTag), *iter(MockFieldTag)))
     def test_from_string_subclass(self, tag, make_concrete_field, monkeypatch):
         """Check correct string parsing via a FieldBase subclass."""
         try:
             field_cls = FieldBase.for_tag(tag)
         except ValueError:  # A mock
-            monkeypatch.setattr(
-                'viperleed.calc.bookkeeper.history.entry.field.FieldTag',
-                MockTag
-                )
             field_cls = make_concrete_field(FieldBase, tag)
         value = 'test_value'
         value_str = f'{tag.value}{value}'
@@ -452,7 +440,7 @@ class TestFieldBaseSubclasses:
             custom_: str = 'is customized:'
             def _format_string_value(self, value_str):
                 return f'{self.tag.value} {self.custom_} {value_str}'
-        field_cls = make_concrete_field(_CustomFormat, tag=MockTag.TAG_3)
+        field_cls = make_concrete_field(_CustomFormat, tag=MockFieldTag.TAG_3)
         return functools.partial(make_and_check_field, field_cls)
 
     @fixture(name='digit_str')
@@ -465,7 +453,7 @@ class TestFieldBaseSubclasses:
                 # pylint: disable-next=no-member  # Can't infer
                 if not self.value.isdigit():
                     raise EntrySyntaxError('Not a valid digit')
-        field_cls = make_concrete_field(_DigitOnly, tag=MockTag.TAG_2)
+        field_cls = make_concrete_field(_DigitOnly, tag=MockFieldTag.TAG_2)
         return functools.partial(make_and_check_field, field_cls)
 
     @fixture(name='store_str')
@@ -478,11 +466,7 @@ class TestFieldBaseSubclasses:
                 super()._check_str_value()
                 set_frozen_attr(self, '_value_str',
                                 f'custom+{self.value}+custom')
-        monkeypatch.setattr(  # Make .from_string work as expected
-            'viperleed.calc.bookkeeper.history.entry.field.FieldTag',
-            MockTag
-            )
-        field_cls = make_concrete_field(_StoresStr, tag=MockTag.TAG_1)
+        field_cls = make_concrete_field(_StoresStr, tag=MockFieldTag.TAG_1)
         return functools.partial(make_and_check_field, field_cls)
 
     @fixture(name='wrong_check')
@@ -496,7 +480,7 @@ class TestFieldBaseSubclasses:
                 self._check_str_value()
             def _check_int_value(self):
                 pass
-        field_cls = make_concrete_field(_WrongCheck, tag=MockTag.TAG_1)
+        field_cls = make_concrete_field(_WrongCheck, tag=MockFieldTag.TAG_1)
         return functools.partial(make_and_check_field, field_cls)
 
     def test_abstract_instance(self):
@@ -550,8 +534,8 @@ class TestFieldBaseSubclasses:
         assert str(value_str) != value_str.rstrip()  # Is customized
 
     _subclass = {
-        'mock tag 1': (type('MockField_1', (FieldBase,), {}), MockTag.TAG_1),
-        'mock tag 2': (type('MockField_2', (FieldBase,), {}), MockTag.TAG_2),
+        'mock 1': (type('MockField_1', (FieldBase,), {}), MockFieldTag.TAG_1),
+        'mock 2': (type('MockField_2', (FieldBase,), {}), MockFieldTag.TAG_2),
         'unknown': (UnknownField, FieldTag.UNKNOWN),
         }
 
@@ -600,7 +584,7 @@ class TestMultilineField:
     def fixture_multiline(self, make_concrete_field, make_and_check_field):
         """Return a concrete subclass of MultiLineField."""
         field_cls = make_concrete_field(MultiLineField,
-                                        tag=MockTag.TAG_1)
+                                        tag=MockFieldTag.TAG_1)
         return functools.partial(make_and_check_field, field_cls)
 
     _init = {
