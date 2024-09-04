@@ -30,8 +30,8 @@ class MockFieldTag(Enum):
 @fixture(name='make_field')
 def fixture_make_field():
     """Return a FieldBase instance with a given value."""
-    def _make(cls, value=no_value):
-        return cls() if value is no_value else cls(value)
+    def _make(cls, value=no_value, **kwargs):
+        return cls() if value is no_value else cls(value, **kwargs)
     return _make
 
 
