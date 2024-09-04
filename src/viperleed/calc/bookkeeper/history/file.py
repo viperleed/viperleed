@@ -13,7 +13,7 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 
-from viperleed.calc.lib.base import logging_silent
+from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 
