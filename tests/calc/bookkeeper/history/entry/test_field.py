@@ -335,6 +335,7 @@ class TestFieldBase:
         # pylint: disable-next=protected-access           # OK in tests
         with pytest.raises(EntrySyntaxError), field._register_errors():
             raise EntrySyntaxError(unfixable)
+        # pylint: disable-next=protected-access           # OK in tests
         with pytest.raises(FixableSyntaxError), field._register_errors():
             raise FixableSyntaxError(fixable)
         assert not field.was_understood
@@ -417,7 +418,7 @@ class TestFieldBaseFromString:
             FieldBase.from_string(upper_str.lower())
 
     @parametrize(tag=(*iter(FieldTag), *iter(MockFieldTag)))
-    def test_from_string_subclass(self, tag, make_concrete_field, monkeypatch):
+    def test_from_string_subclass(self, tag, make_concrete_field):
         """Check correct string parsing via a FieldBase subclass."""
         try:
             field_cls = FieldBase.for_tag(tag)
@@ -460,8 +461,7 @@ class TestFieldBaseSubclasses:
         return functools.partial(make_and_check_field, field_cls)
 
     @fixture(name='store_str')
-    def fixture_store_str(self, make_concrete_field, make_and_check_field,
-                          monkeypatch):
+    def fixture_store_str(self, make_concrete_field, make_and_check_field):
         """Return a subclass that remembers its string value."""
         @frozen
         class _StoresStr(FieldBase):

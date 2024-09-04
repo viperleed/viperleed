@@ -45,7 +45,7 @@ class CommonRegex(Enum):
     COMMA_SEPARATED_INTS = rf'\d+({SPACE}*,{SPACE}*\d+)*'
     COMMA_OR_SPACE_SEPARATED_INTS = rf'\d+({SPACE}*[,{SPACE}]?{SPACE}*\d+)*'
     FLOAT = r'\d+(.\d+)?'
-    MULTILINE = rf'(?:(?s:.)*)'  # Same as re.DOTALL
+    MULTILINE = r'(?:(?s:.)*)'  # Same as re.DOTALL
     ONE_LINE = ANY
     SPACE_SEPARATED_INTS = rf'\d+({SPACE}+\d+)*'
 
@@ -387,8 +387,11 @@ class MultiLineField(FieldBase):
         # This preserves the number of '\n' characters, contrary to
         # the base-class implementation, which would strip off empty
         # lines at the end.
+        # About the no-member disable: pylint can't infer we work
+        # on a string by now.
+        # pylint: disable-next=no-member
         cleaned = '\n'.join(line.rstrip() for line in self.value.splitlines())
-        if self.value.endswith('\n'):
+        if self.value.endswith('\n'):  # pylint: disable=no-member
             cleaned += '\n'
         set_frozen_attr(self, 'value', cleaned)
 
