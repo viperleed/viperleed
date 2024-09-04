@@ -38,6 +38,7 @@ from viperleed.guilib.measure.measurement import _meassettings as _settings
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 
 
+_INVOKE = qtc.QMetaObject.invokeMethod
 _QUEUED = qtc.Qt.QueuedConnection
 _UNIQUE = qtc.Qt.UniqueConnection
 
@@ -1110,12 +1111,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             disconnect(self._preparation_started, camera.start)
             disconnect(camera.stopped, self._finalize)
             disconnect(camera.image_saved, self._on_image_saved)
-            camera.disconnect_()
+            _INVOKE(camera, 'disconnect_')
 
     def _disconnect_controller(self, ctrl):
         """Disconnect a generic controller."""
         disconnect = base.safe_disconnect
-        ctrl.disconnect_()
+        _INVOKE(ctrl, 'disconnect_')
         disconnect(ctrl.data_ready, self._on_controller_data_ready)
         disconnect(self._request_stop_devices, ctrl.stop)
         disconnect(self._preparation_started, ctrl.begin_preparation)
