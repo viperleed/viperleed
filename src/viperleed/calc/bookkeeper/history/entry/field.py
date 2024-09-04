@@ -191,7 +191,7 @@ class FieldBase:
         EntrySyntaxError
             If the value is not acceptable.
         """
-        with self.register_errors():
+        with self._register_errors():
             self._check_value()
 
     @classmethod
@@ -255,7 +255,7 @@ class FieldBase:
         return instance
 
     @contextmanager
-    def register_errors(self):
+    def _register_errors(self):
         """Register EntrySyntaxError and FixableSyntaxError when executing."""
         try:
             yield

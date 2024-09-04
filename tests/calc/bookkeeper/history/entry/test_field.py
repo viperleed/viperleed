@@ -303,7 +303,8 @@ class TestFieldBase:
         """Check correct registering of fixable errors."""
         field = make_and_check_field(UnknownField)
         reason, fixed_value = 'Fixable', 'fixed'
-        with pytest.raises(FixableSyntaxError), field.register_errors():
+        # pylint: disable-next=protected-access           # OK in tests
+        with pytest.raises(FixableSyntaxError), field._register_errors():
             raise FixableSyntaxError(reason, fixed_value=fixed_value)
         assert field.needs_fixing
         assert field.was_understood
@@ -318,7 +319,8 @@ class TestFieldBase:
         """Check correct registering of unfixable errors."""
         field = make_and_check_field(UnknownField)
         reason = 'Unfixable'
-        with pytest.raises(EntrySyntaxError), field.register_errors():
+        # pylint: disable-next=protected-access           # OK in tests
+        with pytest.raises(EntrySyntaxError), field._register_errors():
             raise EntrySyntaxError(reason)
         assert not field.was_understood
         # pylint: disable-next=protected-access           # OK in tests
@@ -330,9 +332,10 @@ class TestFieldBase:
         field = make_and_check_field(UnknownField, value='OK')
         assert field.was_understood
         assert not field.needs_fixing
-        with pytest.raises(EntrySyntaxError), field.register_errors():
+        # pylint: disable-next=protected-access           # OK in tests
+        with pytest.raises(EntrySyntaxError), field._register_errors():
             raise EntrySyntaxError(unfixable)
-        with pytest.raises(FixableSyntaxError), field.register_errors():
+        with pytest.raises(FixableSyntaxError), field._register_errors():
             raise FixableSyntaxError(fixable)
         assert not field.was_understood
         assert field.needs_fixing
