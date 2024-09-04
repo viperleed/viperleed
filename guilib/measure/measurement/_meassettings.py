@@ -99,6 +99,11 @@ class DeviceEditor(SettingsDialogSectionBase):
     @qtc.pyqtSlot()
     def update_widgets(self):
         """Update collapsable lists."""
+        if not self.isVisible():
+            # If the widget is not visible, we do not want to create
+            # device objects that may occupy the serial as the
+            # showEvent will trigger the device population anyway.
+            return
         primary_settings = self._settings.getsequence(
             'devices', 'primary_controller', fallback=()
             )
