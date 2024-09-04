@@ -21,12 +21,13 @@ from PyQt5 import QtWidgets as qtw
 from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase
     )
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
+from viperleed.guilib.measure.hardwarebase import get_devices
+from viperleed.guilib.measure.hardwarebase import make_device
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
 from viperleed.guilib.widgets.basewidgets import QUncheckableButtonGroup
-from viperleed.guilib.measure.hardwarebase import get_devices
-from viperleed.guilib.measure.hardwarebase import make_device
 
 
 _ALIGN_CTR = qtc.Qt.AlignHCenter
@@ -39,7 +40,7 @@ def remove_spacing_and_margins(layout):
     layout.setContentsMargins(0, 0, 0, 0)
 
 
-class QuantitySelector(qtw.QWidget):                                            # TODO: make title and borders (QFrame?)
+class QuantitySelector(qtw.QFrame):
     """A widget that allows selection of quantities from settings."""
 
     # This is signal is emitted when the quantity selection changes.
@@ -48,15 +49,21 @@ class QuantitySelector(qtw.QWidget):                                            
     def __init__(self, settings, parent=None):
         """Initialise widget."""
         super().__init__(parent=parent)
+        self.setMidLineWidth(1)
+        self.setFrameStyle(self.Panel | self.Raised)
         self._selections = []
-        quantities = settings.get('controller', 'measurement_devices',
-                                  fallback=())
-        self._compose(literal_eval(quantities))
+        self._quantities = literal_eval(
+            settings.get('controller', 'measurement_devices', fallback=())
+            )
+        self._compose()
 
-    def _compose(self, all_quantities):
+    def _compose(self):
         """Compose quantity widgets."""
-        main_layout = qtw.QHBoxLayout()
-        for selections in all_quantities:
+        main_layout = qtw.QVBoxLayout()
+        label = qtw.QLabel('Measured Quantities')
+        main_layout.addWidget(label)
+        quantity_layout = qtw.QHBoxLayout()
+        for selections in self._quantities:
             layout = qtw.QVBoxLayout()
             group = QUncheckableButtonGroup()
             group.buttonClicked.connect(group.uncheck_if_clicked)
@@ -68,7 +75,8 @@ class QuantitySelector(qtw.QWidget):                                            
                 layout.addWidget(button)
             layout.addStretch(1)
             self._selections.append(group)
-            main_layout.addLayout(layout)
+            quantity_layout.addLayout(layout)
+        main_layout.addLayout(quantity_layout)
         self.setLayout(main_layout)
 
     def get_selected_quantities(self):
@@ -78,6 +86,20 @@ class QuantitySelector(qtw.QWidget):                                            
             if group.checkedButton():
                 quantities.append(group.checkedButton().text())
         return tuple(quantities)
+
+    def set_quantities(self, quantities):
+        """Set quantities from settings."""
+        buttons = tuple(btn for group in self._selections
+                        for btn in group.buttons())
+        for quantity in quantities:
+            button_not_found = True
+            for button in buttons:
+                if button.text() == quantity:
+                    button.click()
+                    button_not_found = False
+                    break
+            if button_not_found:
+                raise RuntimeError('Passed wrong quantities.')
 
 
 class CollapsableView(qtw.QWidget):
@@ -191,19 +213,35 @@ class CollapsableView(qtw.QWidget):
 class CollapsableDeviceView(CollapsableView):
     """A CollapsableView for measurement hardware."""
 
+    # This is signal is emitted when device settings stored
+    # in the measurement settings file change.
+    # (Measured quantities and the device settings file.)
+    settings_changed = qtc.pyqtSignal()
+
     def __init__(self, parent=None):
         """Initialise widget."""
         self._settings_folder = PathSelector(select_file=False)
-        self._settings_file = qtw.QComboBox()
+        self._settings_file_selector = qtw.QComboBox()
         super().__init__(parent=parent)
         self._device_cls = None
         self._device_info = None
         self._handler = None
+        self._enabled = False
+
+    @property
+    def device_info(self):
+        """Return the device info."""
+        return self._device_info
 
     @property
     def settings_file(self):
         """Return the path to the selected settings file."""
-        return self._settings_file.currentData()
+        return self._settings_file_selector.currentData()
+
+    @property
+    def settings_file_selector(self):
+        """Return the QComboBox holding the detected settings files."""
+        return self._settings_file_selector
 
     @qtc.pyqtSlot()
     def _build_device_settings(self):
@@ -232,21 +270,22 @@ class CollapsableDeviceView(CollapsableView):
     @qtc.pyqtSlot(int)
     def _check_for_handler(self):
         """Check if creating a handler is possible."""
-        if not self._settings_file.isEnabled():
+        if not self._enabled or not self._settings_file_selector.isEnabled():
             return
         self._get_settings_handler()
+        self.settings_changed.emit()
 
     def _compose_and_connect(self):
         """Compose and connect."""
         super()._compose_and_connect()
         self._settings_folder.path = Path().resolve()
         self.add_collapsable_item(self._settings_folder)
-        self.add_collapsable_item(self._settings_file)
+        self.add_collapsable_item(self._settings_file_selector)
         self._settings_folder.path_changed.connect(
             self._get_device_settings_files
             )
-        self._settings_file.setEnabled(False)
-        self._settings_file.currentIndexChanged.connect(
+        self._settings_file_selector.setEnabled(False)
+        self._settings_file_selector.currentIndexChanged.connect(
             self._check_for_handler
             )
 
@@ -265,8 +304,8 @@ class CollapsableDeviceView(CollapsableView):
     @qtc.pyqtSlot()
     def _get_device_settings_files(self):
         """Get settings files of the device handled by this view."""
-        self._settings_file.clear()
-        self._settings_file.setEnabled(False)
+        self._settings_file_selector.clear()
+        self._settings_file_selector.setEnabled(False)
         if not self._device_cls or self._settings_folder.path == Path():
             return
 
@@ -274,10 +313,11 @@ class CollapsableDeviceView(CollapsableView):
             self._device_info, self._settings_folder.path, False, False)
 
         for settings in matching_settings:
-            self._settings_file.addItem(settings.stem, userData=settings)
+            self._settings_file_selector.addItem(settings.stem,
+                                                 userData=settings)
         self._remove_handler()
         if any(matching_settings):
-            self._settings_file.setEnabled(True)
+            self._settings_file_selector.setEnabled(True)
             self._check_for_handler()
 
     def _make_handler_for_device(self, device):
@@ -303,8 +343,8 @@ class CollapsableDeviceView(CollapsableView):
     @qtc.pyqtSlot(bool)
     def enable_view(self, enable):
         """Collapse inner layout and remove handler when disabled."""
-        enable = bool(enable)
-        if not enable:
+        self._enabled = bool(enable)
+        if not self._enabled:
             self._remove_handler()
         else:
             self._check_for_handler()
@@ -348,9 +388,6 @@ class CollapsableCameraView(CollapsableDeviceView):
 class CollapsableControllerView(CollapsableDeviceView):
     """A CollapsableView for controllers."""
 
-    # This is signal is emitted when the quantity selection changes.
-    settings_changed = qtc.pyqtSignal()
-
     def __init__(self, parent=None):
         """Initialise widget."""
         super().__init__(parent=parent)
@@ -358,6 +395,14 @@ class CollapsableControllerView(CollapsableDeviceView):
         self._trying_to_get_settings = False
         self._primary_changed = False
         self._quantity_selector = None
+        self._quantities_to_set = ()
+
+    def set_quantities(self, quantities):
+        """Set the quantities to measure."""
+        self._quantities_to_set = quantities
+        if not self._quantity_selector:
+            return
+        self._quantity_selector.set_quantities(quantities)
 
     @property
     def selected_quantities(self):
@@ -374,6 +419,8 @@ class CollapsableControllerView(CollapsableDeviceView):
         # Get the layout in which the SettingsHandler widgets are contained.
         layout = self._frame.layout().itemAt(2).widget().layout()
         self._quantity_selector = QuantitySelector(settings)
+        if self._quantities_to_set:
+            self._quantity_selector.set_quantities(self._quantities_to_set)
         self._quantity_selector.settings_changed.connect(self.settings_changed)
         layout.addWidget(self._quantity_selector)
 
@@ -656,16 +703,45 @@ class CollapsableControllerList(CollapsableDeviceList):
                                    view.selected_quantities))
         return tuple(settings_files)
 
-    def set_controllers_from_settings(self, prim_settings, secon_settings):
+    def set_controllers_from_settings(self, meas_settings):
         """Attempt to select controllers from settings."""
         self._detect_devices()
-        self.set_primary_from_settings(prim_settings)
-        self.set_secondary_from_settings(secon_settings)
+        primary_settings = meas_settings.getsequence(
+            'devices', 'primary_controller', fallback=()
+            )
+        secondary_settings = meas_settings.getsequence(
+            'devices', 'secondary_controllers', fallback=()
+            )
+        self.set_primary_from_settings(primary_settings)
+        self.set_secondary_from_settings(secondary_settings)
 
     def set_primary_from_settings(self, primary_settings):
         """Attempt to select the primary controller from settings."""
-        # TODO
+        # TODO: select primary
+        self.set_controller_settings(primary_settings)
 
     def set_secondary_from_settings(self, secondary_settings):
         """Attempt to select the secondary controllers from settings."""
-        # TODO
+        for controller_settings in secondary_settings:
+            self.set_controller_settings(controller_settings)
+
+    def set_controller_settings(self, controller_settings):
+        """Set settings of controller."""
+        file, quantities = controller_settings
+        settings = ViPErLEEDSettings.from_settings(file)
+        device_name = settings.get('controller', 'device_name')
+        correct_view = None
+        for view in self.views:
+            if device_name == view.device_info.more['name']:
+                correct_view = view
+                break
+
+        if not correct_view:
+            # TODO: Create dummy controller here and notify user about missing controller.
+            return
+        correct_view.set_settings_folder(settings.last_file.parent)
+        correct_view.settings_file_selector.setCurrentText(
+            settings.last_file.stem
+            )
+        self._views[correct_view][0].setChecked(True)
+        correct_view.set_quantities(quantities)

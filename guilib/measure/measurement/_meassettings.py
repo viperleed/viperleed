@@ -115,9 +115,8 @@ class DeviceEditor(SettingsDialogSectionBase):
         camera_settings = self._settings.getsequence('devices', 'cameras',
                                                      fallback=())
         self._devices['cameras'] = camera_settings
-        # self._controllers.set_controllers_from_settings(primary_settings,
-                                                        # secondary_settings)
         # self._cameras.set_cameras_from_settings(camera_settings)
+        self._controllers.set_controllers_from_settings(self._settings)
 
 
 class StepProfileViewer(ButtonWithLabel):
