@@ -1275,7 +1275,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """
         controller = self.sender()
         self.data_points.add_data(data, controller)
-        self._missing_data[controller] -= 1
+        if controller.measures():
+            self._missing_data[controller] -= 1
         self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(tuple)
