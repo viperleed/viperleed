@@ -36,7 +36,7 @@ from ..errors import EntrySyntaxError
 from ..errors import FixableSyntaxError
 from ..errors import HistoryInfoError
 from ..errors import _PureCommentEntryError
-from .formats import TimestampFormat
+from .time_field import TimestampFormat
 
 
 _DISCARDED = 'DISCARDED'    # For entries marked via --discard
