@@ -20,14 +20,12 @@ from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from ..errors import EntrySyntaxError
 from ..errors import FixableSyntaxError
 from .enums import FieldTag
-from .field import DefaultMessage
-from .field import EmptyField
-from .field import FieldBase
+from .field import NoneIsEmptyField
 from .field import MissingField
 
 
 @frozen
-class StringField(FieldBase):
+class StringField(NoneIsEmptyField):
     """A string-only field."""
 
     value: str = MissingField
@@ -37,13 +35,6 @@ class StringField(FieldBase):
         """Return the string version of this field."""
         # It's always identical to value, unless this is missing
         return None if self.is_missing else self.value
-
-    def _check_not_empty(self):
-        """Complain if this field is empty."""
-        super()._check_not_empty()
-        if self.value is None:
-            set_frozen_attr(self, 'value', EmptyField)
-            raise EntrySyntaxError(DefaultMessage.EMPTY)
 
     def _check_str_value(self):
         """Check a string value."""

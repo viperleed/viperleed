@@ -368,6 +368,17 @@ class FieldBase:
 
 
 @frozen
+class CommentLessField(FieldBase):
+    """A field that stores its comments in the value."""
+
+    @staticmethod
+    def _strip_comments(string_value):
+        """Return non-commented and commented parts of `string_value`."""
+        # Include any comment in the overall value of this field
+        return string_value, ''
+
+
+@frozen
 class MultiLineField(FieldBase):
     """A field that spans multiple lines."""
 
@@ -396,15 +407,15 @@ class MultiLineField(FieldBase):
         set_frozen_attr(self, 'value', cleaned)
 
 
-@frozen
-class CommentLessField(FieldBase):
-    """A field that stores its comments in the value."""
+class NoneIsEmptyField(FieldBase):
+    """A field that considers a None value as an empty condition."""
 
-    @staticmethod
-    def _strip_comments(string_value):
-        """Return non-commented and commented parts of `string_value`."""
-        # Include any comment in the overall value of this field
-        return string_value, ''
+    def _check_not_empty(self):
+        """Complain if this field is empty."""
+        super()._check_not_empty()
+        if self.value is None:
+            set_frozen_attr(self, 'value', EmptyField)
+            raise EntrySyntaxError(DefaultMessage.EMPTY)
 
 
 @frozen

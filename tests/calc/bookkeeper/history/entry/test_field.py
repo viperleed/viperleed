@@ -29,6 +29,7 @@ from viperleed.calc.bookkeeper.history.entry.field import FieldBase
 from viperleed.calc.bookkeeper.history.entry.field import FixedFieldValue
 from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.bookkeeper.history.entry.field import MultiLineField
+from viperleed.calc.bookkeeper.history.entry.field import NoneIsEmptyField
 from viperleed.calc.bookkeeper.history.entry.field import UnknownField
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
@@ -626,6 +627,62 @@ class TestMultilineField:
         field = multiline('no line breaks')
         # pylint: disable-next=magic-value-comparison
         assert '\n' not in str(field)
+
+
+class TestNoneIsEmptyField:
+    """Tests for the NoneIsEmptyField abstract subclass of FieldBase."""
+
+    @fixture(name='none_empty_field')
+    def fixture_none_empty_field(self,
+                                 make_concrete_field,
+                                 make_and_check_field):
+        """Return an instance of a concrete subclass of NoneIsEmptyField."""
+        field_cls = make_concrete_field(NoneIsEmptyField,
+                                        tag=MockFieldTag.TAG_1)
+        return functools.partial(make_and_check_field, field_cls)
+
+    _init = {
+        'None': (
+            None,
+            {'value': EmptyField, 'is_empty': True, 'was_understood': False},
+            ),
+        'non-None string': (
+            'valid value',
+            {'value': 'valid value', 'is_empty': False,
+             'was_understood': True},
+            ),
+        'empty': (
+            '',
+            {'value': EmptyField, 'is_empty': True, 'was_understood': False},
+            ),
+        'empty dict': (
+            {},
+            {'value': {}, 'is_empty': False, 'was_understood': False},
+            ),
+        'empty list': (
+            [],
+            {'value': [], 'is_empty': False, 'was_understood': False},
+            ),
+        'empty tuple': (
+            (),
+            {'value': (), 'is_empty': False, 'was_understood': False},
+            ),
+        'false': (
+            False,
+            {'value': False, 'is_empty': False, 'was_understood': False},
+            ),
+        'zero': (
+            0,
+            {'value': 0, 'is_empty': False, 'was_understood': False},
+            ),
+        }
+
+    @parametrize('value,attrs', _init.values(), ids=_init)
+    def test_init(self, value, attrs, none_empty_field):
+        """Check attributes after initialization and checking."""
+        field = none_empty_field(value)
+        for attr, expect in attrs.items():
+            assert getattr(field, attr) == expect
 
 
 class TestUnknownField:
