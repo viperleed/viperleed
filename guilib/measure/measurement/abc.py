@@ -85,6 +85,9 @@ class MeasurementReusedError(Exception):
 class MeasurementABC(QObjectWithSettingsABC):                                   # TODO: doc about inner workings
     """Generic measurement class."""
 
+    # All cameras and controllers have been disconnected
+    devices_disconnected = qtc.pyqtSignal()
+
     # Whole measurement is over
     finished = qtc.pyqtSignal()
 
@@ -358,6 +361,16 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             values = tuple()
         return values
 
+    def disconnect_devices_and_notify(self):
+        """Disconnect devices and emit devices_disconnected."""
+        for device in self.devices:
+            base.safe_connect(device.connection_changed,
+                              self._check_if_all_devices_disconnected,
+                              type=_UNIQUE | qtc.Qt.QueuedConnection)
+        self._disconnect_devices()
+        if not any(device.connected for device in self.devices):
+            self.devices_disconnected.emit()
+
     @classmethod
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
         """Determine if the default settings file is for this measurement.
@@ -426,13 +439,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                                 fallback=None)
         return cls.__name__ == meas_class
 
-    @qtc.pyqtSlot()
-    def disconnect_devices(self):
-        """Disconnect all connected devices but keep them alive."""
-        self._disconnect_secondary_controllers()
-        self._disconnect_cameras()
-        self._disconnect_primary_controller()
-
     def set_settings(self, new_settings):
         """Change settings of the measurement.
 
@@ -442,6 +448,14 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         specified in the settings will be instantiated, told
         what they will be measuring, moved to their respective
         properties and connected to all necessary signals.
+        
+        In order to prevent attempting to connect to already
+        connected devices, it is only possible to set settings
+        after all devices have been disconnected. This means
+        disconnect_devices_and_notify has to be executed and the
+        devices_disconnected signal has to be received before
+        calling set_settings on a measurement object that was
+        used before.
 
         Parameters
         ----------
@@ -455,6 +469,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         Raises
         ------
+        RuntimeError
+            If any devices are still connected while attempting to
+            set new settings. Call disconnect_devices_and_notify
+            and wait for emission of devices_disconnected to
+            prevent this error.
         TypeError
             If new_settings is neither a dict, ConfigParser, string
             or path and if an element of the mandatory_settings is
@@ -468,6 +487,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
+        if any(device.connected for device in self.devices):
+            raise RuntimeError('Setting settings is only allowed after all '
+                               'devices have been disconnected. Make sure to '
+                               'disconnect them before attempting to set new '
+                               'settings. See help(measurement.set_settings).')
+
         self._aborted = False # Set False in case of abort through settings
 
         # Notice that we clear data even if the settings are not accepted.
@@ -479,12 +504,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         if not super().set_settings(new_settings):
             return False
-
-        # We have to disconnect controllers here because _make_primary_ctrl
-        # and _make_secondary_ctrls create controllers before disconnecting
-        # the old ones. If one tries to connect to the same physical devices
-        # there are two objects attempting to talk to the same hardware.
-        self.disconnect_devices()
 
         if not self._make_primary_ctrl():
             # Something went wrong (already reported in _make_primary)
@@ -684,6 +703,30 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._preparation_started.emit(
             (self.start_energy, primary.long_settle_time)
             )
+
+    @qtc.pyqtSlot(bool)
+    def _check_if_all_devices_disconnected(self, device_connected):
+        """Check and notify when all devices are disconnected.
+
+        Emits
+        -----
+        devices_disconnected
+            After all devices have been disconnected.
+        """
+        device = self.sender()
+        if device_connected or device.connected:
+            return
+        base.safe_disconnect(self.sender().connection_changed,
+                             self._check_if_all_devices_disconnected)
+        if any(device.connected for device in self.devices):
+            return
+        self.devices_disconnected.emit()
+
+    def _disconnect_devices(self):
+        """Disconnect all connected devices but keep them alive."""
+        self._disconnect_secondary_controllers()
+        self._disconnect_cameras()
+        self._disconnect_primary_controller()
 
     @abstractmethod
     def get_settings_handler(self):
@@ -1018,7 +1061,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             Emitted right before this method returns. All
             operations are done when this happens.
         """
-        self.disconnect_devices()
+        self._disconnect_devices()
         self._force_end_timer.stop()
         self.stop_threads()
         self.running = False
@@ -1172,7 +1215,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self._save_data()
         finally:
             # Disconnect all devices and their signals
-            self.disconnect_devices()
+            self._disconnect_devices()
 
             # Keep only the primary controller connected, so we can
             # set the LEED energy to zero (and detect it has been set)

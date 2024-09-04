@@ -578,7 +578,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._on_error_occurred
             )
         self._dialogs['measurement_selection'].measurement_selected.connect(
-            self._create_settings_dialog
+            self._create_measurement
             )
         self._dialogs['measurement_selection'].settings_not_found.connect(
             self._on_measurement_settings_not_found
@@ -824,7 +824,7 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _on_measurement_finished(self, *_):
         """Reset all after a measurement is over."""
         self._timestamps['finished'] = time.perf_counter()
-        self.measurement.disconnect_devices()
+        self.measurement.disconnect_devices_and_notify()
         self._switch_enabled(True)
         for viewer in self._dialogs['camera_viewers']:
             viewer.stop_on_close = True
@@ -851,12 +851,20 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._dialogs['measurement_settings'] = None
 
     @qtc.pyqtSlot(object, ViPErLEEDSettings)
-    def _create_settings_dialog(self, measurement_class, settings):
-        """Create measurement settings dialog."""
-        measurement = measurement_class(settings)
-        measurement.disconnect_devices()
-        dialog = MeasurementSettingsDialog(measurement, parent=self)
+    def _create_measurement(self, measurement_class, settings):
+        """Create measurement object for use in a measurement."""
+        self.measurement = measurement_class(settings)
+        self.measurement.devices_disconnected.connect(
+            self._create_settings_dialog
+            )
+        self.measurement.disconnect_devices_and_notify()
 
+    @qtc.pyqtSlot()
+    def _create_settings_dialog(self):
+        """Create measurement settings dialog."""
+        base.safe_disconnect(self.measurement.devices_disconnected,
+                             self._create_settings_dialog)
+        dialog = MeasurementSettingsDialog(self.measurement, parent=self)
         dialog.rejected.connect(self._measurement_cancelled)
         dialog.accepted.connect(self._on_settings_accepted)
         dialog.setModal(True)
@@ -913,7 +921,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         print("\n\nSTARTING\n")
         dialog = self.sender()
         assert dialog is self._dialogs['measurement_settings']
-        self.measurement = dialog.handled_object
         self.measurement.set_settings(dialog.settings.last_file)
 
         # It is necessary to call deleteLater(), otherwise the measurement
