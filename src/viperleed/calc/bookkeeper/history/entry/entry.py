@@ -26,9 +26,9 @@ import re
 from typing import Dict, List, Optional, Union
 
 from viperleed.calc.bookkeeper.log import LOGGER
-from viperleed.calc.lib.base import logging_silent
 from viperleed.calc.lib.dataclass_utils import is_optional_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+from viperleed.calc.lib.log_utils import logging_silent
 
 from ..constants import HISTORY_INFO_NAME
 from ..constants import HISTORY_INFO_SEPARATOR
