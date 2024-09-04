@@ -90,11 +90,6 @@ class CameraABC(DeviceABC):
     started = qtc.pyqtSignal()
     stopped = qtc.pyqtSignal()
 
-    # camera_connected is emitted any time the camera is connected
-    # or disconnected. It carries the connection state. May be emitted
-    # multiple times with the same connection state.
-    camera_connected = qtc.pyqtSignal(bool)
-
     # preparing is emitted every time a camera begins (True)
     # or finishes (False) any pre-acquisition tasks.
     preparing = qtc.pyqtSignal(bool)
@@ -296,11 +291,13 @@ class CameraABC(DeviceABC):
         """
         return self.__connected
 
-    @connected.setter
+    @connected.setter                                                           # TODO: Check if this is used outside of CameraABC. Replace with private set method
     def connected(self, is_connected):
         """Set whether the camera is currently connected. For internal use."""
+        was_connected = self.connected
         self.__connected = bool(is_connected)
-        self.camera_connected.emit(self.connected)
+        if was_connected != self.connected:
+            self.connection_changed.emit(self.connected)
 
     @property
     @abstractmethod

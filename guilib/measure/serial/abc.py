@@ -146,6 +146,9 @@ class SerialABC(HardwareABC):
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
 
+        # Keeps track of whether the serial port is open or not.
+        self._open = False
+
         self.set_settings(self._settings_to_load)
 
         # .unprocessed_messages is a list of all the messages
@@ -170,7 +173,6 @@ class SerialABC(HardwareABC):
         # after a .send_message()
         self.__got_unacceptable_response = False
 
-        self.__open = False
 
         if self.__init_errors:
             self.__init_err_timer.start(20)
@@ -194,7 +196,20 @@ class SerialABC(HardwareABC):
     @property
     def is_open(self):
         """Return whether this port is currently open."""
-        return self.__open
+        return self._open
+
+    def _set_is_open(self, open_status):
+        """Set whether this port is currently open.
+
+        Emits
+        -----
+        connection_changed
+            If the connection status of the port has changed.
+        """
+        was_open = self._open
+        self._open = open_status
+        if open_status != was_open:
+            self.connection_changed.emit(open_status)
 
     @property
     def msg_markers(self):
@@ -730,7 +745,7 @@ class SerialABC(HardwareABC):
         -------
         None.
         """
-        if not self.__open:
+        if not self.is_open:
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             return
 
@@ -770,10 +785,10 @@ class SerialABC(HardwareABC):
         if not self.port.open(self.port.ReadWrite):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             self.__print_port_config()
-            self.__open = False
+            self._set_is_open(False)
             return
 
-        self.__open = True
+        self._set_is_open(True)
         self.__set_up_serial_port()
 
         self.port.readyRead.connect(self.__on_bytes_ready_to_read)
@@ -784,7 +799,6 @@ class SerialABC(HardwareABC):
         """Disconnect from connected serial port."""
         self.clear_errors()
         self.port.close()
-        self.__open = False
         try:
             self.port.readyRead.disconnect(self.__on_bytes_ready_to_read)
         except TypeError:
@@ -792,6 +806,7 @@ class SerialABC(HardwareABC):
             pass
         else:
             self.port.errorOccurred.disconnect(self.__on_serial_error)
+        self._set_is_open(False)
 
     def __check_and_preprocess_message(self, message):
         """Check integrity of message.

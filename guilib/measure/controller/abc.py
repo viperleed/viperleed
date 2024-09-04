@@ -255,6 +255,11 @@ class ControllerABC(DeviceABC):
         super().set_busy(is_busy)
 
     @property
+    def connected(self):
+        """Return whetehr the controller hardware is connected."""
+        return self.serial.is_open
+
+    @property
     def energy_calibration_curve(self):
         """Return a callable for converting energies.
 
@@ -478,6 +483,7 @@ class ControllerABC(DeviceABC):
             self.__serial = serial_class(self._settings,
                                          port_name=self.__address)
             self.serial.error_occurred.connect(self.error_occurred)
+            self.serial.connection_changed.connect(self.connection_changed)
         else:
             # The next line will also check that self._settings contains
             # appropriate settings for the serial class used.

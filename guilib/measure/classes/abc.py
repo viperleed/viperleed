@@ -468,6 +468,10 @@ class HardwareABC(QObjectWithSettingsABC):
     # Emitted whenever the busy state of the device changes.
     # Contains the new busy state of the device.
     busy_changed = qtc.pyqtSignal(bool)
+    
+    # Emitted right after the hardware connection status has changed.
+    # Cointains the new connection status of the hardware.
+    connection_changed = qtc.pyqtSignal(bool)
 
     def __init__(self, *args, **kwargs):
         """Initialise instance."""
