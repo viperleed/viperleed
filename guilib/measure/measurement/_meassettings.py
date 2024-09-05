@@ -42,8 +42,6 @@ class DeviceEditor(SettingsDialogSectionBase):
         kwargs['tooltip'] = ('This section lists devices, allows their '
                              'selection, and the editing of their settings.')
         super().__init__(**kwargs)
-
-        self._devices = {}
         self._controllers = CollapsableControllerList()
         self._cameras = CollapsableCameraList()
         self._default_settings_folder = None
@@ -104,19 +102,10 @@ class DeviceEditor(SettingsDialogSectionBase):
             # device objects that may occupy the serial as the
             # showEvent will trigger the device population anyway.
             return
-        primary_settings = self._settings.getsequence(
-            'devices', 'primary_controller', fallback=()
-            )
-        self._devices['primary_controller'] = primary_settings
-        secondary_settings = self._settings.getsequence(
-            'devices', 'secondary_controllers', fallback=()
-            )
-        self._devices['secondary_controllers'] = secondary_settings
         camera_settings = self._settings.getsequence('devices', 'cameras',
                                                      fallback=())
-        self._devices['cameras'] = camera_settings
-        # self._cameras.set_cameras_from_settings(camera_settings)
         self._controllers.set_controllers_from_settings(self._settings)
+        self._cameras.set_cameras_from_settings(camera_settings)
 
 
 class StepProfileViewer(ButtonWithLabel):
