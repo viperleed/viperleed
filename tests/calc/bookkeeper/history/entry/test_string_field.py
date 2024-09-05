@@ -11,7 +11,6 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.bookkeeper.history.entry.field import EmptyField
 from viperleed.calc.bookkeeper.history.entry.field import MissingField
@@ -20,11 +19,18 @@ from viperleed.calc.bookkeeper.history.entry.string_field import JobNameField
 from viperleed.calc.bookkeeper.history.entry.string_field import StringField
 
 from .....helpers import not_raises
-from .conftest import MockFieldTag
+from .test_field import _TestFieldUtils
 
 
-class TestFolderField:
+class TestFolderField(_TestFieldUtils):
     """Tests for the FolderField class."""
+
+    test_cls = FolderField
+
+    @fixture(name='folder_field')
+    def fixture_folder_field(self, make_field_factory):
+        """Return a factory of FolderField instances."""
+        return make_field_factory(self.test_cls)
 
     _init = {
         'empty': (
@@ -142,11 +148,9 @@ class TestFolderField:
         }
 
     @parametrize('value,attrs', _init.values(), ids=_init)
-    def test_init(self, value, attrs, make_and_check_field):
+    def test_init(self, value, attrs, folder_field):
         """Check initialization."""
-        field = make_and_check_field(FolderField, value)
-        for attr, expect in attrs.items():
-            assert getattr(field, attr) == expect
+        self.check_attrs(folder_field, attrs, value)
 
     _other_job = (
         'no one has this',
@@ -156,9 +160,9 @@ class TestFolderField:
     @parametrize('value,attrs', _init.values(), ids=_init)
     @parametrize(other_job=_other_job)
     def test_check_has_job_name_different(self, value, attrs, other_job,
-                                          make_and_check_field):
+                                          folder_field):
         """Check complaints for inconsistent job names."""
-        field = make_and_check_field(FolderField, value)
+        field = folder_field(value)
         context = (pytest.raises if attrs.get('was_understood', True)
                    else not_raises)
         with context(FixableSyntaxError) as exc_info:
@@ -172,17 +176,16 @@ class TestFolderField:
             other_job_str = other_job
         assert f'_{other_job_str}' in fixed_value
         assert field.needs_fixing
-        fixed_field = make_and_check_field(FolderField, fixed_value)
+        fixed_field = folder_field(fixed_value)
         assert fixed_field.job_name == other_job_str
         if field.job_name:
             assert field.job_name not in fixed_value
         assert str(None) not in fixed_value
 
-    @parametrize('value,attrs', _init.values(), ids=_init)
-    def test_check_has_job_name_consistent(self, value, attrs,
-                                           make_and_check_field):
+    @parametrize('value,_', _init.values(), ids=_init)
+    def test_check_has_job_name_consistent(self, value, _, folder_field):
         """Check there are no complaints for consistent job names."""
-        field = make_and_check_field(FolderField, value)
+        field = folder_field(value)
         if not field.job_name:
             return
         with not_raises(FixableSyntaxError):
@@ -198,23 +201,22 @@ class TestFolderField:
         }
 
     @parametrize(invalid_job=_invalid_job.values(), ids=_invalid_job)
-    def test_check_has_job_name_raises(self, invalid_job,
-                                       make_and_check_field):
+    def test_check_has_job_name_raises(self, invalid_job, folder_field):
         """Check complaints when an invalid job_name is used for checking."""
-        field = make_and_check_field(FolderField, 't123.r456_000007-000008')
+        field = folder_field('t123.r456_000007-000008')
         with pytest.raises(ValueError):
             field.check_has_job_name(invalid_job)
 
-# def test_folder_field_deep_copy():
-    # import copy
-    # field = FolderField(value='t123.r456_789101-121314_myjob')
-    # copied_field = copy.deepcopy(field)
-    # assert copied_field.value == field.value
-    # assert copied_field.job_name == field.job_name
 
-
-class TestJobNameField:
+class TestJobNameField(_TestFieldUtils):
     """Tests for the JobNameField class."""
+
+    test_cls = JobNameField
+
+    @fixture(name='job_field')
+    def fixture_job_field(self, make_field_factory):
+        """Return a factory of JobNameField instances."""
+        return make_field_factory(self.test_cls)
 
     _init = {
         'empty': (
@@ -251,20 +253,20 @@ class TestJobNameField:
         }
 
     @parametrize('value,attrs', _init.values(), ids=_init)
-    def test_init(self, value, attrs, make_and_check_field):
+    def test_init(self, value, attrs, job_field):
         """Check initialization."""
-        field = make_and_check_field(JobNameField, value)
-        for attr, expect in attrs.items():
-            assert getattr(field, attr) == expect
+        self.check_attrs(job_field, attrs, value)
 
 
-class TestStringField:
+class TestStringField(_TestFieldUtils):
     """Tests for the StringField class."""
 
+    test_cls = StringField
+
     @fixture(name='string_field')
-    def fixture_string_field(self, make_concrete_field):
+    def fixture_string_field(self, make_concrete_field_instance):
         """Return a concrete StringField subclass."""
-        return make_concrete_field(StringField, MockFieldTag.TAG_1)
+        return make_concrete_field_instance(self.test_cls)
 
     _init = {
         'empty': (
@@ -326,10 +328,9 @@ class TestStringField:
         }
 
     @parametrize('value,attrs', _init.values(), ids=_init)
-    def test_init(self, value, attrs, string_field, make_and_check_field):
+    def test_init(self, value, attrs, string_field):
         """Check initialization."""
-        field = make_and_check_field(string_field, value)
-        for attr, expect in attrs.items():
-            assert getattr(field, attr) == expect
+        field = self.check_attrs(string_field, attrs, value)
         str_expect = field.value if not field.is_missing else None
+        # pylint: disable-next=protected-access           # OK in tests
         assert field._value_str is str_expect

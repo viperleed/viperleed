@@ -13,6 +13,7 @@ from enum import auto
 
 import pytest
 from pytest_cases import case
+from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
@@ -22,6 +23,12 @@ from viperleed.calc.bookkeeper.history.entry.time_field import TimestampFormat
 from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 
 from .....helpers import exclude_tags
+
+
+@fixture(name='make_time')
+def fixture_make_time(make_field_factory):
+    """Return a factory of TimestampField instances."""
+    return make_field_factory(TimestampField)
 
 
 class CasesTimestampField:
@@ -37,13 +44,6 @@ class CasesTimestampField:
         STR = auto()
         INVALID = auto()
 
-    @staticmethod
-    def make_field(make_and_check_field, value, fmt=None):
-        """Return a TimestampField instance with value and format."""
-        return make_and_check_field(TimestampField,
-                                    value=value,
-                                    time_format=fmt)
-
     _dates = {
         'future': datetime(2050, 1, 1),
         'long ago': datetime(1900, 1, 1),
@@ -56,17 +56,17 @@ class CasesTimestampField:
 
     @all_formats
     @parametrize(date_time=_dates.values(), ids=_dates)
-    def case_date(self, make_and_check_field, date_time, fmt):
+    def case_date(self, make_time, date_time, fmt):
         """Return a TimestampField with a given date-time."""
-        return self.make_field(make_and_check_field, date_time, fmt)
+        return make_time(date_time, time_format=fmt)
 
     _empty = ('', '    ')
 
     @parametrize(str_value=_empty)
     @case(tags=(Tag.STR, Tag.NO_FMT, Tag.INVALID))
-    def case_empty(self, make_and_check_field, str_value):
+    def case_empty(self, make_time, str_value):
         """Return an empty TimestampField."""
-        return self.make_field(make_and_check_field, str_value)
+        return make_time(str_value)
 
     _invalid_value = {
         'set': set(),
@@ -79,31 +79,31 @@ class CasesTimestampField:
 
     @parametrize(value=_invalid_value.values(), ids=_invalid_value)
     @case(tags=(Tag.NO_FMT, Tag.INVALID))
-    def case_invalid_value(self, make_and_check_field, value):
+    def case_invalid_value(self, make_time, value):
         """Return a TimestampField with an invalid value."""
-        return self.make_field(make_and_check_field, value)
+        return make_time(value)
 
     @all_formats
     @parametrize(value=_invalid_value.values(), ids=_invalid_value)
     @case(tags=Tag.INVALID)
-    def case_invalid_value_with_fmt(self, make_and_check_field, value, fmt):
+    def case_invalid_value_with_fmt(self, make_time, value, fmt):
         """Return a TimestampField with an invalid value."""
-        return self.make_field(make_and_check_field, value, fmt)
+        return make_time(value, time_format=fmt)
 
     @case(tags=(Tag.NO_FMT, Tag.INVALID))
-    def case_missing(self, make_and_check_field):
+    def case_missing(self, make_time):
         """Return a missing TimestampField."""
-        return make_and_check_field(TimestampField)
+        return make_time()
 
     @all_formats
-    def case_now(self, make_and_check_field, fmt):
+    def case_now(self, make_time, fmt):
         """Return a TimestampField with value of now."""
-        return self.make_field(make_and_check_field, datetime.now(), fmt)
+        return make_time(datetime.now(), time_format=fmt)
 
     @case(tags=(Tag.NO_FMT, Tag.INVALID))
-    def case_now_no_fmt(self, make_and_check_field):
+    def case_now_no_fmt(self, make_time):
         """Return a format-less TimestampField with value fo now."""
-        return self.case_now(make_and_check_field, None)
+        return self.case_now(make_time, None)
 
     _string_valid = {  # With recognizable format
         '28.07.24 15:32:45': TimestampFormat.GERMAN,
@@ -119,9 +119,9 @@ class CasesTimestampField:
 
     @parametrize(value=_string_valid)
     @case(tags=Tag.STR)
-    def case_string(self, make_and_check_field, value):
+    def case_string(self, make_time, value):
         """Return a TimestampField from a string value."""
-        return self.make_field(make_and_check_field, value)
+        return make_time(value)
 
     _string_invalid = {
         'spaces': 'invalid string with spaces',
@@ -147,9 +147,9 @@ class CasesTimestampField:
 
     @parametrize(value=_string_invalid.values(), ids=_string_invalid)
     @case(tags=(Tag.STR, Tag.NO_FMT, Tag.INVALID))
-    def case_string_invalid(self, make_and_check_field, value):
+    def case_string_invalid(self, make_time, value):
         """Return a TimestampField from a string value."""
-        return self.make_field(make_and_check_field, value)
+        return make_time(value)
 
     _inconsistent = {
         'empty': '',
@@ -160,9 +160,9 @@ class CasesTimestampField:
     @all_formats
     @parametrize(value=_inconsistent.values(), ids=_inconsistent)
     @case(tags=Tag.INVALID)
-    def case_value_fmt_inconsistent(self, make_and_check_field, value, fmt):
+    def case_value_fmt_inconsistent(self, make_time, value, fmt):
         """Return a field with inconsistent value and format."""
-        return self.make_field(make_and_check_field, value, fmt)
+        return make_time(value, time_format=fmt)
 
 
 all_cases = parametrize_with_cases('field', CasesTimestampField)
@@ -311,10 +311,10 @@ class TestTimestampField:
         same_field = field.with_format(field.time_format)
         assert same_field is field
 
-    def test_sanitize_string_value_invalid(self, make_and_check_field):
+    def test_sanitize_string_value_invalid(self, make_time):
         """Check no cleanup happens for a non-string value."""
         invalid = object()
-        field = make_and_check_field(TimestampField, invalid)
+        field = make_time(invalid)
         # pylint: disable-next=protected-access           # OK in tests
         field._sanitize_string_value()
         assert field.value is invalid

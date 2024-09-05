@@ -19,21 +19,17 @@ from viperleed.calc.bookkeeper.history.entry.rfactor_field import RRefField
 from viperleed.calc.bookkeeper.history.entry.rfactor_field import RSuperField
 from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 
-from .conftest import MockFieldTag
+from .test_field import _TestFieldUtils
 
 
 @fixture(name='rfactor_field')
 @parametrize(field_cls=(RFactorField, RRefField, RSuperField))
-def factory_rfactor_field(field_cls, make_concrete_field, make_and_check_field):
+def factory_rfactor_field(field_cls, make_concrete_field_instance):
     """Return an instance of an RRefField (sub)class with a value."""
-    tag = field_cls.tag or MockFieldTag.TAG_1
-    concrete = make_concrete_field(field_cls, tag)
-    def _make(value):
-        return make_and_check_field(concrete, value)
-    return _make
+    return make_concrete_field_instance(field_cls)
 
 
-class TestRFactorField:
+class TestRFactorField(_TestFieldUtils):
     """Base class for tests of RFactorField and its subclasses."""
 
     _init = {
@@ -104,9 +100,7 @@ class TestRFactorField:
     @parametrize('value,attrs', _init.values(), ids=_init)
     def test_init(self, value, attrs, rfactor_field):
         """Check result of initialization and value checking."""
-        field = rfactor_field(value)
-        for attr, expect in attrs.items():
-            assert getattr(field, attr) == expect
+        self.check_attrs(rfactor_field, attrs, value)
 
     _bounds = {
         'two, float': (

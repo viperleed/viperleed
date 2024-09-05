@@ -11,6 +11,7 @@ import functools
 from dataclasses import dataclass
 
 import pytest
+from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
@@ -23,6 +24,12 @@ from viperleed.calc.bookkeeper.history.entry.notes_field import _DISCARDED
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from .....helpers import not_raises
+
+
+@fixture(name='make_notes')
+def fixture_make_notes(make_field_factory):
+    """Return a factory of NotesField instances."""
+    return make_field_factory(NotesField)
 
 
 @dataclass
@@ -39,7 +46,7 @@ class CasesNotesField:
     """Cases for testing NotesField."""
 
     @staticmethod
-    def make_notes(value, make_and_check_field, info=None):
+    def make_notes_and_info(value, make_notes, info=None):
         """Return a NotesField and a NotesCaseInfo."""
         if info is None:
             info = NotesCaseInfo()
@@ -49,35 +56,34 @@ class CasesNotesField:
             info.str_ = value
         if not info.str_.startswith(FieldTag.NOTES.value):
             info.str_ = f'{FieldTag.NOTES.value} {info.str_}'
-        return make_and_check_field(NotesField, value), info
+        return make_notes(value), info
 
-    def make_discarded(self, value, make_and_check_field,
-                       info=None, newline=False):
+    def make_discarded(self, value, make_notes, info=None, newline=False):
         """Return a discarded NotesField and a NotesCaseInfo."""
         newline = newline and value
         discarded = value + '\n' if newline else value
-        notes, info = self.make_notes(discarded + _DISCARDED,
-                                      make_and_check_field, info)
+        notes, info = self.make_notes_and_info(discarded + _DISCARDED,
+                                               make_notes, info)
         info.value = value
         info.discarded = True
         return notes, info
 
-    def case_discarded(self, make_and_check_field):
+    def case_discarded(self, make_notes):
         """Return an empty, discarded NotesField."""
-        notes, info = self.case_empty(make_and_check_field)
+        notes, info = self.case_empty(make_notes)
         info.str_ = None  # Auto-compute
-        return self.make_discarded(notes.value, make_and_check_field, info)
+        return self.make_discarded(notes.value, make_notes, info)
 
-    def case_comment(self, make_and_check_field):
+    def case_comment(self, make_notes):
         """Return a one-line NotesField with comments in the value."""
-        return self.make_notes('Test note # plus some comment',
-                               make_and_check_field)
+        return self.make_notes_and_info('Test note # plus some comment',
+                                        make_notes)
 
-    def case_empty(self, make_and_check_field):
+    def case_empty(self, make_notes):
         """Return an empty NotesField."""
         info = NotesCaseInfo()
         info.bool_ = False
-        return self.make_notes('', make_and_check_field, info)
+        return self.make_notes_and_info('', make_notes, info)
 
     def case_missing(self):
         """Return a missing NotesField."""
@@ -89,22 +95,22 @@ class CasesNotesField:
 
     @parametrize(nlines=(2, 3, 5, 7))
     @parametrize(discarded=(True, False))
-    def case_multiline(self, nlines, discarded, make_and_check_field):
+    def case_multiline(self, nlines, discarded, make_notes):
         """Return a NotesField with multiple lines."""
         value = '\n'.join(f'Line {i+1}' for i in range(nlines))
-        make = (self.make_notes if not discarded
+        make = (self.make_notes_and_info if not discarded
                 else functools.partial(self.make_discarded, newline=True))
-        return make(value, make_and_check_field)
+        return make(value, make_notes)
 
-    def case_one_line(self, make_and_check_field):
+    def case_one_line(self, make_notes):
         """Return a single-line NotesField."""
-        return self.make_notes('Initial note', make_and_check_field)
+        return self.make_notes_and_info('Initial note', make_notes)
 
-    def case_one_line_discarded(self, make_and_check_field):
+    def case_one_line_discarded(self, make_notes):
         """Return a single-line, discarded NotesField."""
-        notes, info = self.case_one_line(make_and_check_field)
+        notes, info = self.case_one_line(make_notes)
         info.str_ = None  # Auto-compute again
-        return self.make_discarded(notes.value, make_and_check_field,
+        return self.make_discarded(notes.value, make_notes,
                                    info=info, newline=True)
 
 

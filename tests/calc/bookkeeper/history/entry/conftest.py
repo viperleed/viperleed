@@ -8,6 +8,7 @@ __created__ = '2024-08-30'
 __license__ = 'GPLv3+'
 
 from enum import Enum
+import functools
 
 from pytest_cases import fixture
 
@@ -35,8 +36,8 @@ def fixture_make_field():
     return _make
 
 
-@fixture
-def make_and_check_field(make_field):
+@fixture(name='make_and_check_field')
+def factory_make_and_check_field(make_field):
     """Return a FieldBase instance with a value after silently checking."""
     def _make(*args, **kwargs):
         field = make_field(*args, **kwargs)
@@ -48,8 +49,8 @@ def make_and_check_field(make_field):
     return _make
 
 
-@fixture
-def make_concrete_field(monkeypatch, request):
+@fixture(name='make_concrete_field')
+def factory_make_concrete_field(monkeypatch, request):
     """Return a concrete subclass of an abstract field."""
     def _make(abstract, tag):
         if abstract.tag is tag:
@@ -66,6 +67,25 @@ def make_concrete_field(monkeypatch, request):
                 MockFieldTag
                 )
         return frozen(type('_Concrete', (abstract,), {}, tag=tag))
+    return _make
+
+
+@fixture(name='make_field_factory')
+def factory_make_field_factory(make_and_check_field):
+    """Return a factory that produces instances of a field."""
+    def _make(field_cls):
+        return functools.partial(make_and_check_field, field_cls)
+    return _make
+
+
+@fixture
+def make_concrete_field_instance(make_concrete_field, make_field_factory):
+    """Return a factory that produces instances of a concrete field."""
+    def _make(base_cls, tag=None):
+        if tag is None:
+            tag = base_cls.tag or MockFieldTag.TAG_1
+        field_cls = make_concrete_field(base_cls, tag=tag)
+        return make_field_factory(field_cls)
     return _make
 
 

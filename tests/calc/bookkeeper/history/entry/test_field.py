@@ -8,7 +8,6 @@ __created__ = '2024-08-30'
 __license__ = 'GPLv3+'
 
 from dataclasses import FrozenInstanceError
-import functools
 import re
 from typing import Union
 
@@ -38,15 +37,52 @@ from .....helpers import not_raises
 from .conftest import MockFieldTag
 
 
-class TestCommentlessField:
+@fixture(name='unknown')
+def make_unknown(make_field_factory):
+    """Return a factory of UnknownField instances."""
+    return make_field_factory(UnknownField)
+
+
+class _TestFieldUtils:
+    """Collection of utility functions for testing FieldBase."""
+
+    test_cls = None
+
+    def check_attrs(self, field_factory, attrs, *args, **kwargs):
+        """Check that `field_factory(value)` has the given `attrs`.
+
+        Parameters
+        ----------
+        field_factory : callable
+            Takes *args, **kwargs and returns a FieldBase instance
+            on which check_value was run.
+        attrs : dict
+            Keys are attribute names, values their expected value.
+        *args : object
+            Positional arguments passed to `field_factory`.
+        **kwargs : object
+            Keyword arguments passed to `field_factory`.
+
+        Returns
+        -------
+        field : FieldBase
+            The result of field_factory(*args, **kwargs)
+        """
+        field = field_factory(*args, **kwargs)
+        for attr, expect in attrs.items():
+            assert getattr(field, attr) == expect
+        return field
+
+
+class TestCommentlessField(_TestFieldUtils):
     """Tests for (concrete subclasses of) CommentLessField."""
 
+    test_cls = CommentLessField
+
     @fixture(name='commentless')
-    def fixture_commentless(self, make_concrete_field, make_and_check_field):
+    def fixture_commentless(self, make_concrete_field_instance):
         """Return a concrete subclass of CommentLessField."""
-        field_cls = make_concrete_field(CommentLessField,
-                                        tag=MockFieldTag.TAG_1)
-        return functools.partial(make_and_check_field, field_cls)
+        return make_concrete_field_instance(self.test_cls)
 
     _init = {
         '': {'is_empty': True, 'was_understood': False, 'value': EmptyField},
@@ -64,11 +100,9 @@ class TestCommentlessField:
     @parametrize('value,expect', _init.items(), ids=_init)
     def test_init(self, value, expect, commentless):
         """Check attributes of a comment-less field with a value."""
-        field = commentless(value)
+        field = self.check_attrs(commentless, expect, value)
         assert not field.has_comments
         assert not field.needs_fixing
-        for attr, expected in expect.items():
-            assert getattr(field, attr) == expected
 
     def test_strip_comments(self, commentless):
         """Check correct (non-)stripping of comments."""
@@ -104,7 +138,7 @@ class TestCommonRegex:
         assert re.fullmatch(pattern, string) is None
 
 
-class TestFieldBase:
+class TestFieldBase(_TestFieldUtils):
     """Tests for the FieldBase class."""
 
     _init = {  # field_args, attrs_to_check
@@ -149,11 +183,10 @@ class TestFieldBase:
         }
 
     @parametrize('args,expect', _init.values(), ids=_init)
-    def test_init(self, args, expect, make_and_check_field):
+    def test_init(self, args, expect, make_field_factory):
         """Check initialization of a field."""
-        field = make_and_check_field(*args)
-        for attr, value in expect.items():
-            assert getattr(field, attr) == value
+        field_cls, *args = args
+        self.check_attrs(make_field_factory(field_cls), expect, *args)
 
     _invalid_value = {
         'None': ((UnknownField, None), DefaultMessage.NOT_STRING),
@@ -194,9 +227,9 @@ class TestFieldBase:
         }
 
     @parametrize(value=_big.values(), ids=_big)
-    def test_big_value(self, value, make_and_check_field):
+    def test_big_value(self, value, unknown):
         """Check handling of large values."""
-        field = make_and_check_field(UnknownField, value)
+        field = unknown(value)
         assert field.value == value
 
     _str = {
@@ -261,10 +294,9 @@ class TestFieldBase:
         }
 
     @parametrize('value,expect', _faulty.values(), ids=_faulty)
-    def test_format_faulty_non_mandatory(self, value, expect,
-                                         make_and_check_field):
+    def test_format_faulty_non_mandatory(self, value, expect, unknown):
         """Check formatting of faulty field."""
-        field = make_and_check_field(UnknownField, value=value)
+        field = unknown(value=value)
         assert field.format_faulty() == expect
 
     _faulty_mandatory = {
@@ -290,19 +322,18 @@ class TestFieldBase:
         with pytest.raises(FrozenInstanceError):
             field.value = 3
 
-    def test_invalid_type_hint(self, make_concrete_field,
-                               make_and_check_field):
+    def test_invalid_type_hint(self, make_concrete_field_instance):
         """Check complaints when an invalid type is given."""
         @frozen
         class _Dummy(FieldBase):
             value: str = MissingField
-        field_cls = make_concrete_field(_Dummy, MockFieldTag.TAG_1)
-        field = make_and_check_field(field_cls, 123)
+        factory = make_concrete_field_instance(_Dummy)
+        field = factory(123)
         assert not field.was_understood
 
-    def test_register_errors_fixable(self, make_and_check_field):
+    def test_register_errors_fixable(self, unknown):
         """Check correct registering of fixable errors."""
-        field = make_and_check_field(UnknownField)
+        field = unknown()
         reason, fixed_value = 'Fixable', 'fixed'
         # pylint: disable-next=protected-access           # OK in tests
         with pytest.raises(FixableSyntaxError), field._register_errors():
@@ -316,9 +347,9 @@ class TestFieldBase:
         fixed_field = field.as_fixed()
         assert fixed_field.value == fixed_value
 
-    def test_register_errors_unfixable(self, make_and_check_field):
+    def test_register_errors_unfixable(self, unknown):
         """Check correct registering of unfixable errors."""
-        field = make_and_check_field(UnknownField)
+        field = unknown()
         reason = 'Unfixable'
         # pylint: disable-next=protected-access           # OK in tests
         with pytest.raises(EntrySyntaxError), field._register_errors():
@@ -327,10 +358,10 @@ class TestFieldBase:
         # pylint: disable-next=protected-access           # OK in tests
         assert field._not_understood == reason
 
-    def test_register_errors_multiple(self, make_and_check_field):
+    def test_register_errors_multiple(self, unknown):
         """Check that multiple different exceptions are recorded."""
         fixable, unfixable = 'Fixable', 'Unfixable'
-        field = make_and_check_field(UnknownField, value='OK')
+        field = unknown(value='OK')
         assert field.was_understood
         assert not field.needs_fixing
         # pylint: disable-next=protected-access           # OK in tests
@@ -438,18 +469,18 @@ class TestFieldBaseSubclasses:
     """Tests for custom subclasses of FieldBase."""
 
     @fixture(name='custom_fmt')
-    def fixture_custom_fmt(self, make_concrete_field, make_and_check_field):
+    def fixture_custom_fmt(self, make_concrete_field_instance):
         """Return a subclass that modifies the standard string format."""
         @frozen
         class _CustomFormat(FieldBase):
             custom_: str = 'is customized:'
             def _format_string_value(self, value_str):
                 return f'{self.tag.value} {self.custom_} {value_str}'
-        field_cls = make_concrete_field(_CustomFormat, tag=MockFieldTag.TAG_3)
-        return functools.partial(make_and_check_field, field_cls)
+        return make_concrete_field_instance(_CustomFormat,
+                                            tag=MockFieldTag.TAG_3)
 
     @fixture(name='digit_str')
-    def fixture_digit_str(self, make_concrete_field, make_and_check_field):
+    def fixture_digit_str(self, make_concrete_field_instance):
         """Return a subclass that accepts only string with digit values."""
         @frozen
         class _DigitOnly(FieldBase):
@@ -458,11 +489,10 @@ class TestFieldBaseSubclasses:
                 # pylint: disable-next=no-member  # Can't infer
                 if not self.value.isdigit():
                     raise EntrySyntaxError('Not a valid digit')
-        field_cls = make_concrete_field(_DigitOnly, tag=MockFieldTag.TAG_2)
-        return functools.partial(make_and_check_field, field_cls)
+        return make_concrete_field_instance(_DigitOnly, tag=MockFieldTag.TAG_2)
 
     @fixture(name='store_str')
-    def fixture_store_str(self, make_concrete_field, make_and_check_field):
+    def fixture_store_str(self, make_concrete_field_instance):
         """Return a subclass that remembers its string value."""
         @frozen
         class _StoresStr(FieldBase):
@@ -470,11 +500,10 @@ class TestFieldBaseSubclasses:
                 super()._check_str_value()
                 set_frozen_attr(self, '_value_str',
                                 f'custom+{self.value}+custom')
-        field_cls = make_concrete_field(_StoresStr, tag=MockFieldTag.TAG_1)
-        return functools.partial(make_and_check_field, field_cls)
+        return make_concrete_field_instance(_StoresStr, tag=MockFieldTag.TAG_1)
 
     @fixture(name='wrong_check')
-    def fixture_wrong_check(self, make_concrete_field, make_and_check_field):
+    def fixture_wrong_check(self, make_concrete_field_instance):
         """Return a subclass that may call _check_str_value on non-strings."""
         @frozen
         class _WrongCheck(FieldBase):
@@ -484,8 +513,7 @@ class TestFieldBaseSubclasses:
                 self._check_str_value()
             def _check_int_value(self):
                 pass
-        field_cls = make_concrete_field(_WrongCheck, tag=MockFieldTag.TAG_1)
-        return functools.partial(make_and_check_field, field_cls)
+        return make_concrete_field_instance(_WrongCheck)
 
     def test_abstract_instance(self):
         """Check complaints when instantiating a tag-less subclass."""
@@ -544,13 +572,11 @@ class TestFieldBaseSubclasses:
         }
 
     @parametrize('field_cls, tag', _subclass.values(), ids=_subclass)
-    def test_subclass(self, field_cls, tag,
-                      make_concrete_field,
-                      make_and_check_field):
+    def test_subclass(self, field_cls, tag, make_concrete_field_instance):
         """Check subclassing of FieldBase."""
-        concrete_cls = make_concrete_field(field_cls, tag)
         value = 'value'
-        field = make_and_check_field(concrete_cls, value)
+        factory = make_concrete_field_instance(field_cls, tag=tag)
+        field = factory(value)
         assert field.tag is tag
         assert field.value == value
 
@@ -584,12 +610,12 @@ class TestFieldBaseSubclasses:
 class TestMultilineField:
     """Tests for (concrete subclasses of) MultiLineField."""
 
+    test_cls = MultiLineField
+
     @fixture(name='multiline')
-    def fixture_multiline(self, make_concrete_field, make_and_check_field):
+    def fixture_multiline(self, make_concrete_field_instance):
         """Return a concrete subclass of MultiLineField."""
-        field_cls = make_concrete_field(MultiLineField,
-                                        tag=MockFieldTag.TAG_1)
-        return functools.partial(make_and_check_field, field_cls)
+        return make_concrete_field_instance(self.test_cls)
 
     _init = {
         'two lines': 'line1\nline2',
@@ -629,17 +655,15 @@ class TestMultilineField:
         assert '\n' not in str(field)
 
 
-class TestNoneIsEmptyField:
+class TestNoneIsEmptyField(_TestFieldUtils):
     """Tests for the NoneIsEmptyField abstract subclass of FieldBase."""
 
+    test_cls = NoneIsEmptyField
+
     @fixture(name='none_empty_field')
-    def fixture_none_empty_field(self,
-                                 make_concrete_field,
-                                 make_and_check_field):
+    def fixture_none_empty_field(self, make_concrete_field_instance):
         """Return an instance of a concrete subclass of NoneIsEmptyField."""
-        field_cls = make_concrete_field(NoneIsEmptyField,
-                                        tag=MockFieldTag.TAG_1)
-        return functools.partial(make_and_check_field, field_cls)
+        return make_concrete_field_instance(self.test_cls)
 
     _init = {
         'None': (
@@ -680,24 +704,22 @@ class TestNoneIsEmptyField:
     @parametrize('value,attrs', _init.values(), ids=_init)
     def test_init(self, value, attrs, none_empty_field):
         """Check attributes after initialization and checking."""
-        field = none_empty_field(value)
-        for attr, expect in attrs.items():
-            assert getattr(field, attr) == expect
+        self.check_attrs(none_empty_field, attrs, value)
 
 
 class TestUnknownField:
     """Tests for the UnknownField subclass of FieldBase."""
 
-    def test_format_string_value(self, make_and_check_field):
+    def test_format_string_value(self, unknown):
         """Check expected outcome of _format_string_value."""
         value = '"unknown value" # and has ! comments'
-        field = make_and_check_field(UnknownField, value=value)
+        field = unknown(value=value)
         # pylint: disable-next=protected-access           # OK in tests
         formatted_value = field._format_string_value(field.value)
         assert formatted_value == value
 
-    def test_minimal_input(self, make_and_check_field):
+    def test_minimal_input(self, unknown):
         """Check correct handling of a short input value."""
         minimal_input = '?'
-        field = make_and_check_field(UnknownField, value=minimal_input)
+        field = unknown(value=minimal_input)
         assert str(field) == minimal_input
