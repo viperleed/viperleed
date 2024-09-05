@@ -575,7 +575,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
     def store_settings(self):
         """Store the settings of the selected devices."""
         try:
-            index = self._top_labels.index('Use')
+            index = self._top_labels.index('Use') - 1
         except ValueError:
             return
         for view, widgets in self.views.items():
