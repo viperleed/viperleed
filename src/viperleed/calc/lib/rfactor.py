@@ -167,8 +167,8 @@ def R_ms(theo_spline,
 def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
     numerator = first_derivative
     condition = second_derivative > 0
-    denominator = intensity**2 + 2*(first_derivative*0.5*v0_imag/e_step)**2
-    denominator += condition*(second_derivative*jnp.sqrt(0.1)*v0_imag/e_step)**2
+    denominator = intensity**2 + 0.5*(first_derivative*v0_imag)**2
+    denominator += condition*0.1*(second_derivative*v0_imag**2)**2
     denominator = jnp.sqrt(denominator)
     return numerator / denominator
 
