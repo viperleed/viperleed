@@ -230,7 +230,6 @@ class CollapsableDeviceView(CollapsableView):
         self._handler = None
         self._enabled = False
         self._original_settings = None
-        self._original_settings_changed = False
 
     @property
     def device_info(self):
@@ -246,7 +245,6 @@ class CollapsableDeviceView(CollapsableView):
     def original_settings(self, settings):
         """Set the original settings."""
         self._original_settings = settings
-        self._original_settings_changed = True
         self.set_settings_folder(settings.parent)
         self._settings_file_selector.setCurrentText(settings.stem)
 
@@ -257,10 +255,15 @@ class CollapsableDeviceView(CollapsableView):
 
     @qtc.pyqtSlot()
     def _build_device_settings(self):
-        """Get the handler widgets for the device settings."""
+        """Populate the device view with the settings of the device."""
         if not self._handler:
             return
         self._handler.update_widgets()
+        self._build_device_settings_widgets()
+        self._check_if_settings_changed()
+
+    def _build_device_settings_widgets(self):
+        """Get the handler widgets for the device settings."""
         new_widget = qtw.QWidget()
         layout = qtw.QVBoxLayout()
         for widget in self._handler.get_widgets_with_tags(
@@ -277,10 +280,6 @@ class CollapsableDeviceView(CollapsableView):
                 layout.addLayout(_form)
         new_widget.setLayout(layout)
         self.add_collapsable_item(new_widget)
-        if self._original_settings_changed:
-            self._original_settings_changed = False
-            return
-        self._check_if_settings_changed()
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
@@ -424,10 +423,10 @@ class CollapsableControllerView(CollapsableDeviceView):
         if not self._quantity_selector:
             return
         safe_disconnect(self._quantity_selector.settings_changed,
-                        self._check_if_settings_changed)
+                        self._check_if_quantities_changed)
         self._quantity_selector.set_quantities(quantities)
         safe_connect(self._quantity_selector.settings_changed,
-                     self._check_if_settings_changed,
+                     self._check_if_quantities_changed,
                      type=qtc.Qt.UniqueConnection)
 
     @property
@@ -438,17 +437,17 @@ class CollapsableControllerView(CollapsableDeviceView):
         return self._quantity_selector.get_selected_quantities()
 
     @qtc.pyqtSlot()
-    def _build_device_settings(self):
+    def _build_device_settings_widgets(self):
         """Get the handler and quantity widgets for the device settings."""
         settings = self.sender().settings
-        super()._build_device_settings()
+        super()._build_device_settings_widgets()
         # Get the layout in which the SettingsHandler widgets are contained.
         layout = self._frame.layout().itemAt(2).widget().layout()
         self._quantity_selector = QuantitySelector(settings)
         if self._quantities_to_set:
             self._quantity_selector.set_quantities(self._quantities_to_set)
         safe_connect(self._quantity_selector.settings_changed,
-                     self._check_if_settings_changed,
+                     self._check_if_quantities_changed,
                      type=qtc.Qt.UniqueConnection)
         layout.addWidget(self._quantity_selector)
 
@@ -459,10 +458,8 @@ class CollapsableControllerView(CollapsableDeviceView):
             self._primary_changed = False
             self._check_for_handler()
 
-    def _check_if_settings_changed(self):
+    def _check_if_quantities_changed(self):
         """Check if the current settings differ from the original settings."""
-        super()._check_if_settings_changed()
-        # TODO: check if automatic primary selection can overwrite selected quantities
         if self._quantities_to_set != self.selected_quantities:
             self._quantities_to_set = self.selected_quantities
             self.settings_changed.emit()
