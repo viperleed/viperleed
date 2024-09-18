@@ -7,7 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-09-01'
 __license__ = 'GPLv3+'
 
-from collections import defaultdict
 from random import shuffle
 
 import pytest
@@ -20,12 +19,16 @@ from viperleed.calc.bookkeeper.history.entry.field import FieldBase
 from viperleed.calc.bookkeeper.history.entry.field import UnknownField
 from viperleed.calc.bookkeeper.history.entry.field_collection import FieldList
 from viperleed.calc.bookkeeper.history.entry.list_of_int_field import (
+    JobIdsField,
+    RunInfoField,
     TensorNumsField,
     )
 from viperleed.calc.bookkeeper.history.entry.notes_field import NotesField
 from viperleed.calc.bookkeeper.history.entry.rfactor_field import RRefField
 from viperleed.calc.bookkeeper.history.entry.rfactor_field import RSuperField
 from viperleed.calc.bookkeeper.history.entry.string_field import FolderField
+from viperleed.calc.bookkeeper.history.entry.string_field import JobNameField
+from viperleed.calc.bookkeeper.history.entry.time_field import TimestampField
 from viperleed.calc.bookkeeper.history.errors import FieldsScrambledError
 
 from .....helpers import not_raises
@@ -393,6 +396,13 @@ class TestFieldListMethods:
         'hashable non field': ((), '123', ()),
         }
 
+    def test_find_exact_index_raises(self):
+        """Check complaints for index look-up of a non-existing value."""
+        fields = FieldList()
+        with pytest.raises(ValueError):
+            # pylint: disable-next=protected-access       # OK in tests
+            fields._find_exact_index(UnknownField())
+
     @parametrize('values,field,selected', _type.values(), ids=_type)
     def test_first_by_type(self, values, field, selected):
         """Check selection of the first filed with a given type."""
@@ -411,25 +421,75 @@ class TestFieldListMethods:
         fields.append(NotesField(''))
         assert not fields.has_only_pure_comments
 
-    _insert_sort = {  # new field, expected insertion index
-        'same type, right order': (TensorNumsField(''), 1),
-        'new type, last': (RSuperField(''), 4),
-        'same type, wrong order': (RRefField(''), 4),
-        'new type, in between': (FolderField(''), 2),
+    # Here some initialization items for testing insert_sorted:
+    _insert_sort_items = {
+        'unsorted': (TensorNumsField(),
+                     UnknownField(),
+                     NotesField(),
+                     RRefField()),  # Purposely at the wrong position
+        'unknown first': (UnknownField(),
+                          RRefField()),
+        'only optional': (UnknownField(),
+                          UnknownField(),
+                          JobNameField(),
+                          RunInfoField(),
+                          UnknownField(),
+                          RRefField(),
+                          RSuperField(),
+                          UnknownField()),
+        'unknown only': (UnknownField(),
+                         UnknownField()),
+        'no unknown': (TensorNumsField(),
+                       JobIdsField(),
+                       JobIdsField(),
+                       JobIdsField(),
+                       JobIdsField(),
+                       JobNameField()),
+        }
+    # And the items to insert
+    _insert_sort = {  # items, new field, expected insertion index
+        'same type, right order': ('unsorted', TensorNumsField(''), 1),
+        'new type, last': ('unsorted', RSuperField(''), 4),
+        'same type, wrong order': ('unsorted', RRefField(''), 4),
+        'new type, in between': ('unsorted', JobIdsField(''), 2),
+        'insert missing tensors': ('unknown first', TensorNumsField(), 1),
+        'insert missing notes': ('unknown first', NotesField(), 2),
+        'insert missing folder': ('only optional', FolderField(), 8),
+        'insert missing time': ('only optional', TimestampField(), 5),
+        'insert notes at end': ('only optional', NotesField(), 8),
+        'insert after unknown': ('unknown only', TensorNumsField(), 2),
+        'insert unknown': ('unknown first', UnknownField(), 1),
+        'insert unknown into unknown': ('unknown only', UnknownField(), 2),
+        'insert unknown at end': ('no unknown', UnknownField(), 6),
+        'insert same value': ('no unknown', JobIdsField(), 5),
         }
 
-    @parametrize('new_field,expect', _insert_sort.values(), ids=_insert_sort)
-    def test_insert_sorted(self, new_field, expect):
+    @parametrize('items_key,new_field,expect',
+                 _insert_sort.values(),
+                 ids=_insert_sort)
+    def test_insert_sorted(self, items_key, new_field, expect):
         """Check that insertion of a `new_field` works as expected."""
-        fields = FieldList(
-            TensorNumsField(),
-            UnknownField(),
-            NotesField(),
-            RRefField(),  # Purposely at the wrong position
-            )
+        fields = FieldList(*self._insert_sort_items[items_key])
         fields.insert_sorted(new_field)
-        new_ind = fields.index(new_field)
+        # pylint: disable-next=protected-access           # OK in tests
+        new_ind = fields._find_exact_index(new_field)
         assert new_ind == expect
+        # pylint: disable-next=magic-value-comparison
+        if items_key != 'unsorted':
+            with not_raises(FieldsScrambledError):
+                fields.check_sorted()
+
+    def test_insert_sorted_one_at_a_time(self):
+        """Check that unsorted insertion of items gives a sorted list."""
+        items = [FieldBase.for_tag(t)() for t in FieldTag
+                 if t is not FieldTag.UNKNOWN]
+        fields = FieldList()
+        indices = list(range(len(items)))
+        shuffle(indices)
+        for index in indices:
+            fields.insert_sorted(items[index])
+        with not_raises(FieldsScrambledError):
+            fields.check_sorted()
 
     _insert_sort_raises = {
         'has no .tag': '123',

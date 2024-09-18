@@ -15,7 +15,6 @@ from collections.abc import MutableSequence
 from copy import deepcopy
 from typing import Generator
 
-from viperleed.calc.lib.itertools_utils import pairwise
 from viperleed.calc.lib.sequence_utils import conditional_sort
 
 from ..errors import FieldsScrambledError
@@ -248,6 +247,13 @@ class FieldList(MutableSequence):
                 + ', '.join(f'{type(i).__name__}' for i in fields)
                 )
 
+    def _find_exact_index(self, value):
+        """Find the index of the item that is the same object as `value`."""
+        try:
+            return next(i for i, f in enumerate(self) if f is value)
+        except StopIteration:
+            raise ValueError(f'{value} not in {self}') from None
+
     def _find_sorted_insert_index(self, value):
         """Return an index for inserting `value` in a sorted manner."""
         by_tag = self._maps['by_tag']
@@ -258,22 +264,64 @@ class FieldList(MutableSequence):
 
         if with_same_tag:  # Goes last among those with the same tag
             previous_item = with_same_tag[-1]
-            return self.index(previous_item) + 1
+            return self._find_exact_index(previous_item) + 1
+        # None yet with the same tag. Find an appropriate insertion
+        # index by skimming through the rest of the items, but always
+        # insert after UnknownField rather than before.
+        index = self._find_sorted_insert_index_new_type(value)
+        while self[index].tag is FieldTag.UNKNOWN:
+            index += 1
+        return index
 
-        # None yet with the same tag. Find out the first item in self
-        # with the next tag. Find first the next 'bucket', that is, the
-        # first item in the by_tag map coming after this value that
-        # has at least one item. Notice that we do not iterate over
-        # by_tag.items(), as it has also non-tagged fields, which we
-        # want to always leave at the end.
+    def _find_sorted_insert_index_new_type(self, value):
+        """Return an index for inserting a `value` with a new type in order."""
+        by_tag = self._maps['by_tag']
+        # Find out the first item in self with the next tag. Find first
+        # the next 'bucket', that is, the first item in the by_tag map
+        # coming after this value that has at least one item. Notice
+        # that we do not iterate over by_tag.items(), as it has also
+        # non-tagged fields, which we want to always leave at the end.
+        # The correct bucket is the first one coming after the tag of
+        # this one, but may not be the one right after it, as we may
+        # be missing entirely items of the "next tag" too. Also, make
+        # sure to skip FieldTag.UNKNOWN fields in this search, as they
+        # may be anywhere and "do not matter".
+        if value.tag is FieldTag.UNKNOWN:
+            raise IndexError    # Goes last
+        tags = [t for t in FieldTag if t is not FieldTag.UNKNOWN]
+        start = tags.index(value.tag)
+        potential_indices = []  # items: (bucket_tag, insertion_index)
         try:
-            next_tag = next(tag_next
-                            for tag_this, tag_next in pairwise(FieldTag)
-                            if tag_this is value.tag and by_tag[tag_next])
-        except StopIteration:  # Should go last
+            next_tag = next(t for t in tags[start:] if by_tag[t])
+        except StopIteration:   # May need to go last
+            potential_indices.append((None, len(self)))
+        else:
+            next_items = by_tag[next_tag]
+            potential_indices.append((
+                next_tag,
+                self._find_exact_index(next_items[0]),
+                ))
+
+        # Now do the same with the previous tag
+        try:
+            previous_tag = next(t for t in reversed(tags[:start]) if by_tag[t])
+        except StopIteration:   # May need to go first
+            potential_indices.append((None, 0))
+        else:
+            previous_items = by_tag[previous_tag]
+            potential_indices.append((
+                previous_tag,
+                self._find_exact_index(previous_items[-1]) + 1,
+                ))
+        if all(t for t, _ in potential_indices):
+            # Take the one that is closest tag-wise
+            _, index = min((abs(start - tags.index(t)), ind)
+                           for t, ind in potential_indices)
+            return index
+        try:
+            return next(ind for t, ind in potential_indices if t)
+        except StopIteration:  # Last resort. Place it last
             raise IndexError from None
-        next_items = by_tag[next_tag]
-        return self.index(next_items[0])
 
     def _make_maps(self):
         """Populate self._maps."""
