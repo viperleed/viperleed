@@ -12,6 +12,7 @@ __license__ = 'GPLv3+'
 
 from collections import defaultdict
 from collections.abc import MutableSequence
+from copy import deepcopy
 from typing import Generator
 
 from viperleed.calc.lib.itertools_utils import pairwise
@@ -195,20 +196,24 @@ class FieldList(MutableSequence):
 
     def remove_fields(self, *fields):
         """Remove one of more fields from this FieldList."""
-        backup = self.copy()  # In cases of exceptions
+        # Store some backup values in case any fields are invalid
+        backup_seq = self._seq.copy()
+        backup_maps = deepcopy(self._maps)
         for field in fields:
-            # Don't use self.remove, as we would (i) potentially
-            # partially change the state of self in a manner that
-            # depends on the order of the arguments (e.g., first
-            # argument is there, second is not), and (ii) would
-            # re-make maps for each removal, which is redundant.
+            # We do the "expensive" item-by-item removal in order to
+            # ensure that the value-to-index maps are always up to
+            # date. This prevents us from having to (i) fiddle with
+            # keeping track of possible repeated indices in case of
+            # duplicates, (ii) doing the previous in case the state
+            # of duplication changes as a result of removal of some
+            # items, and (iii) making sure we remove the right fields
+            # (the map is out of date as soon as one item is removed).
             try:
-                ind = self.index(field)
+                self.remove(field)
             except ValueError:
-                self._seq = backup
+                self._seq = backup_seq
+                self._maps = backup_maps
                 raise
-            del self._seq[ind]
-        self._make_maps()
 
     def replace(self, old_field, new_field):
         """Replace (the first occurrence of) an item with another one."""

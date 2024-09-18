@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-09-01'
 __license__ = 'GPLv3+'
 
+from collections import defaultdict
 from random import shuffle
 
 import pytest
@@ -504,26 +505,49 @@ class TestFieldListMethods:
         'none': (),
         'first': (UnknownField('123'),),
         'two': (UnknownField('123'), UnknownField('123')),
+        'three': (UnknownField('123'), UnknownField('123'),
+                  UnknownField('123')),
+        'two, different, sorted differently': (
+            TensorNumsField('789'),
+            UnknownField('123'),
+            ),
+        'all of them' : (
+            UnknownField('456'),
+            UnknownField('123'),
+            UnknownField('123'),
+            TensorNumsField('789'),
+            UnknownField('123'),
+            ),
         }
 
     @parametrize(to_remove=_remove.values(), ids=_remove)
     def test_remove_fields(self, to_remove):
         """Check outcome of removal of fields."""
-        fields = FieldList(
+        items = (
             UnknownField('123'),
             UnknownField('456'),
             UnknownField('123'),
+            UnknownField('123'),
             TensorNumsField('789'),
             )
+        fields = FieldList(*items)
         len_before = len(fields)
         fields.remove_fields(*to_remove)
         assert len(fields) == len_before - len(to_remove)
+
+        # Check that the right items were removed
+        counts_expect = {f: items.count(f) for f in items}
+        for item in to_remove:
+            counts_expect[item] -= 1
+        counts_after = {f: fields.count(f) for f in items}
+        assert counts_after == counts_expect
 
     _remove_invalid = {
         'all not there': (TensorNumsField(),),
         'second not there': (UnknownField(), TensorNumsField()),
         'first not there': (TensorNumsField(), UnknownField()),
         'not a field': (UnknownField(), '123',),
+        'twice the same, but it is there only once': (UnknownField(),) * 2,
         }
 
     @parametrize(invalid=_remove_invalid.values(), ids=_remove_invalid)
