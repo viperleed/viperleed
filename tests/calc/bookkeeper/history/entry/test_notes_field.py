@@ -16,6 +16,7 @@ from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import EmptyField
 from viperleed.calc.bookkeeper.history.entry.field import FieldBase
 from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.bookkeeper.history.entry.field import UnknownField
@@ -60,8 +61,9 @@ class CasesNotesField:
 
     def make_discarded(self, value, make_notes, info=None, newline=False):
         """Return a discarded NotesField and a NotesCaseInfo."""
-        newline = newline and value
-        discarded = value + '\n' if newline else value
+        value_str = '' if value is EmptyField else value
+        newline = newline and value_str
+        discarded = value_str + '\n' if newline else value_str
         notes, info = self.make_notes_and_info(discarded + _DISCARDED,
                                                make_notes, info)
         info.value = value
@@ -83,7 +85,9 @@ class CasesNotesField:
         """Return an empty NotesField."""
         info = NotesCaseInfo()
         info.bool_ = False
-        return self.make_notes_and_info('', make_notes, info)
+        info.value = EmptyField
+        notes, info = self.make_notes_and_info('', make_notes, info)
+        return notes, info
 
     def case_missing(self):
         """Return a missing NotesField."""
@@ -129,9 +133,11 @@ class TestNotesField:
         assert notes.tag is FieldTag.NOTES
 
     _add = {
-        'string': 'Additional note',
+        'empty extra': NotesField(''),
+        'extra': UnknownField('Additional note'),
+        'missing extra': NotesField(),
         'notes field': NotesField('Additional note'),
-        'extra': UnknownField('Additional note')
+        'string': 'Additional note',
         }
 
     @all_notes
@@ -146,13 +152,14 @@ class TestNotesField:
             assert notes.is_discarded == ori_notes.is_discarded
             assert notes.is_discarded == info.discarded
         with subtests.test('Value OK'):
-            expect = '' if ori_notes.is_missing else ori_notes.value
-            if expect:
-                expect += '\n'
+            expect = '' if not ori_notes else ori_notes.value
             try:
-                extra_str = extra.value
+                extra_str = ('' if extra.is_empty or extra.is_missing
+                             else extra.value)
             except AttributeError:  # Already a string
                 extra_str = extra
+            if expect and extra_str:
+                expect += '\n'
             expect += extra_str
             assert notes.value == expect
 
@@ -198,6 +205,13 @@ class TestNotesField:
             assert discarded_version is notes
         else:
             assert discarded_version is not notes
+
+    def test_empty_notes_acceptable(self, make_notes):
+        """Check that an empty notes filed is not marked as problematic."""
+        notes, *_ = CasesNotesField().case_empty(make_notes)
+        assert notes.value is EmptyField
+        assert notes.was_understood
+        assert not notes.needs_fixing
 
     @all_notes
     # pylint: disable-next=unused-argument  # info, from decorator

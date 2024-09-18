@@ -17,9 +17,12 @@ from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
+from ..errors import EntrySyntaxError
 from .enums import FieldTag
-from .field import MultiLineField
 from .field import CommentLessField
+from .field import EmptyField
+from .field import MissingField
+from .field import MultiLineField
 from .field import UnknownField
 
 
@@ -52,11 +55,13 @@ class NotesField(MultiLineField, CommentLessField,
             notes.value if isinstance(notes, (NotesField, UnknownField))
             else notes
             )
+        if lines in (EmptyField, MissingField):
+            lines = ''
         try:
             lines += '' if lines.endswith('\n') else '\n'
         except AttributeError:
             return NotImplemented
-        value = self.value if not self.is_missing else ''
+        value = self.value if self else ''
         cls = type(self)
         instance = cls(f'{value}\n{lines}')
         set_frozen_attr(instance, 'is_discarded',
@@ -68,7 +73,7 @@ class NotesField(MultiLineField, CommentLessField,
 
     def __bool__(self):
         """Return whether there are any user notes."""
-        return not self.is_missing and bool(self.value)
+        return not self.is_missing and not self.is_empty and bool(self.value)
 
     def __str__(self):
         """Return a string version of these notes."""
@@ -92,7 +97,10 @@ class NotesField(MultiLineField, CommentLessField,
 
     def _check_not_empty(self):
         """Don't complain, as notes can be empty."""
-        # The parent class would raise an EntrySyntaxError otherwise.
+        try:
+            super()._check_not_empty()
+        except EntrySyntaxError:  # Notes can be empty
+            pass
 
     def _check_str_value(self):
         """Mark these notes as discarded as needed."""

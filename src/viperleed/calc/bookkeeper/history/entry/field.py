@@ -290,6 +290,7 @@ class FieldBase:
         # pylint: disable-next=no-member
         if isinstance(value, str) and not value.strip():
             set_frozen_attr(self, 'value', EmptyField)
+        if self.is_empty:
             raise EntrySyntaxError(DefaultMessage.EMPTY)
 
     def _check_str_value(self):
@@ -326,6 +327,8 @@ class FieldBase:
             self._check_not_missing()
         self._check_not_empty()
         if not self.is_mandatory and self.is_missing:
+            return
+        if self.is_empty:  # Complained already, or empty is acceptable
             return
         value_type = to_snake_case(type(self.value).__name__)
         try:

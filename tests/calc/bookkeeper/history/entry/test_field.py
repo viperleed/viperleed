@@ -491,6 +491,18 @@ class TestFieldBaseSubclasses:
                     raise EntrySyntaxError('Not a valid digit')
         return make_concrete_field_instance(_DigitOnly, tag=MockFieldTag.TAG_2)
 
+    @fixture(name='empty_ok')
+    def fixture_empty_ok(self, make_concrete_field_instance):
+        """Return a subclass that may call _check_str_value on non-strings."""
+        @frozen
+        class _EmptyOK(FieldBase):
+            def _check_not_empty(self):
+                try:
+                    super()._check_not_empty()
+                except EntrySyntaxError:
+                    pass
+        return make_concrete_field_instance(_EmptyOK)
+
     @fixture(name='store_str')
     def fixture_store_str(self, make_concrete_field_instance):
         """Return a subclass that remembers its string value."""
@@ -544,6 +556,13 @@ class TestFieldBaseSubclasses:
             field.check_value()
         field = digit_str(value='some text with 123 digits and words')
         with pytest.raises(EntrySyntaxError):
+            field.check_value()
+
+    def test_empty_ok_field(self, empty_ok):
+        """Check that there are no complaints for an empty acceptable field."""
+        field = empty_ok('')
+        assert field.is_empty
+        with not_raises(EntrySyntaxError):
             field.check_value()
 
     def test_store_str(self, store_str):
