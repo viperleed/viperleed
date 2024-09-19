@@ -479,17 +479,104 @@ class TestFieldListMethods:
             with not_raises(FieldsScrambledError):
                 fields.check_sorted()
 
-    def test_insert_sorted_one_at_a_time(self):
+    _insert_indices = {
+        # We can't really use all permutations, as they would be
+        # 9! == 362880 tests. Too many. Pick a few representative
+        # ones, plus have the test permute them again every time
+        # so we may spot problematic ones.
+        (0, 1, 2, 3, 4, 5, 6, 7, 8),
+        (0, 3, 4, 1, 7, 8, 6, 2, 5),
+        (0, 3, 5, 2, 8, 1, 7, 6, 4),
+        (0, 6, 5, 1, 8, 4, 7, 3, 2),
+        (0, 7, 8, 1, 4, 5, 3, 6, 2),
+        (1, 0, 2, 5, 6, 7, 4, 3, 8),
+        (1, 0, 5, 8, 4, 3, 2, 6, 7),
+        (1, 2, 5, 8, 4, 6, 0, 7, 3),
+        (1, 4, 2, 3, 6, 0, 5, 8, 7),
+        (1, 4, 2, 8, 3, 7, 0, 6, 5),
+        (1, 5, 3, 6, 8, 7, 0, 2, 4),
+        (2, 1, 4, 6, 0, 5, 7, 8, 3),
+        (2, 5, 8, 1, 4, 7, 3, 0, 6),
+        (3, 1, 4, 2, 0, 5, 6, 7, 8),
+        (3, 4, 7, 0, 8, 6, 2, 5, 1),
+        (3, 5, 2, 8, 1, 4, 6, 0, 7),
+        (3, 5, 4, 0, 7, 8, 1, 2, 6),
+        (4, 0, 5, 7, 8, 6, 3, 1, 2),
+        (4, 1, 3, 0, 5, 7, 2, 6, 8),
+        (4, 2, 3, 1, 8, 6, 7, 0, 5),
+        (4, 2, 5, 7, 1, 8, 0, 6, 3),
+        (4, 3, 6, 8, 0, 5, 2, 1, 7),
+        (4, 5, 0, 6, 2, 8, 1, 3, 7),
+        (4, 6, 2, 5, 0, 8, 3, 1, 7),
+        (4, 6, 2, 7, 5, 1, 8, 0, 3),
+        (4, 6, 8, 3, 7, 1, 5, 2, 0),
+        (5, 1, 8, 4, 6, 0, 7, 2, 3),
+        (5, 2, 3, 6, 0, 8, 7, 4, 1),
+        (5, 3, 8, 4, 6, 1, 7, 0, 2),
+        (5, 6, 1, 2, 8, 7, 3, 4, 0),
+        (5, 6, 7, 8, 3, 4, 0, 2, 1),
+        (5, 7, 3, 6, 0, 1, 4, 8, 2),
+        (6, 1, 7, 0, 2, 4, 3, 5, 8),
+        (6, 4, 8, 0, 2, 3, 1, 5, 7),
+        (7, 0, 2, 5, 6, 3, 8, 4, 1),
+        (7, 8, 3, 5, 1, 2, 4, 0, 6),
+        (8, 0, 3, 1, 7, 4, 2, 6, 5),
+        (8, 0, 6, 3, 1, 7, 4, 5, 2),
+        (0, 7, 2, 6, 5, 4, 3, 8, 1),
+        (2, 0, 7, 1, 6, 3, 4, 5, 8),
+        (2, 1, 7, 6, 5, 4, 8, 3, 0),
+        (2, 6, 7, 4, 1, 0, 3, 8, 5),
+        (3, 1, 0, 7, 8, 5, 2, 6, 4),
+        (5, 3, 2, 6, 7, 8, 4, 0, 1),
+        (5, 6, 7, 1, 0, 8, 2, 4, 3),
+        (5, 7, 3, 1, 0, 2, 8, 4, 6),
+        (6, 0, 5, 4, 2, 8, 7, 1, 3),
+        (6, 2, 1, 7, 3, 5, 4, 0, 8),
+        (6, 2, 5, 8, 3, 1, 0, 7, 4),
+        (6, 4, 8, 2, 1, 5, 3, 7, 0),
+        (6, 4, 8, 7, 0, 1, 2, 3, 5),
+        (7, 1, 2, 4, 5, 3, 8, 6, 0),
+        (7, 5, 0, 2, 4, 1, 8, 6, 3),
+        (7, 5, 2, 3, 8, 0, 1, 6, 4),
+        (7, 6, 5, 4, 3, 0, 1, 2, 8),
+        (7, 8, 5, 4, 6, 1, 0, 2, 3),
+        (8, 2, 0, 5, 6, 7, 4, 1, 3),
+        (8, 5, 7, 4, 2, 6, 0, 1, 3),
+        (8, 7, 6, 0, 3, 2, 4, 5, 1),
+        }
+
+    def _check_insert_one_at_a_time(self, items, indices):
+        """Check that insertion of fields one at a time is sorted."""
+        fields = FieldList()
+        sorted_items = [items[i] for i in indices]
+        for item in sorted_items:
+            fields.insert_sorted(item)
+        try:
+            fields.check_sorted()
+        except FieldsScrambledError:
+            reason = (f'Wrong sorting with {indices}.\nInserted\n   '
+                      + ',\n   '.join(type(f).__name__ for f in sorted_items)
+                      + f'\nAnd got {fields}')
+            pytest.fail(reason)
+
+    @parametrize(indices=_insert_indices)
+    def test_insert_sorted_one_at_a_time(self, indices):
         """Check that unsorted insertion of items gives a sorted list."""
         items = [FieldBase.for_tag(t)() for t in FieldTag
                  if t is not FieldTag.UNKNOWN]
-        fields = FieldList()
-        indices = list(range(len(items)))
-        shuffle(indices)
-        for index in indices:
-            fields.insert_sorted(items[index])
-        with not_raises(FieldsScrambledError):
-            fields.check_sorted()
+        if len(items) != len(indices):
+            raise ValueError(
+                f'Indices {indices} are out of date. Probably the number of '
+                'FieldTag items has changed. Please update indices so that '
+                f'len(indices) == {len(items)}'
+                )
+        indices = list(indices)
+        self._check_insert_one_at_a_time(items, indices)
+        for _ in range(100):  # Try 100 times to generate a new one
+            shuffle(indices)
+            if tuple(indices) not in self._insert_indices:
+                self._check_insert_one_at_a_time(items, indices)
+                return
 
     _insert_sort_raises = {
         'has no .tag': '123',

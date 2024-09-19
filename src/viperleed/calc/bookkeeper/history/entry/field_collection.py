@@ -351,13 +351,17 @@ class FieldList(MutableSequence):
         # make all of the tags, so they come already sorted correctly.
         map_ = {tag: [] for tag in FieldTag}
         map_[None] = []  # Non-tagged FieldBase always at the end
-        for field in self:
+        # Notice that we DO NOT use "for field in self"
+        # as that one may access an outdated map!
+        for field in self._seq:
             map_[field.tag].append(field)
         self._maps['by_tag'] = map_
 
     def _make_map_by_type(self):
         """Populate the internal mapping that stores fields by their type."""
         map_ = defaultdict(list)
-        for field in self:
+        # Notice that we DO NOT use "for field in self"
+        # as that one may access an outdated map!
+        for field in self._seq:
             map_[type(field)].append(field)
         self._maps['by_type'] = map_
