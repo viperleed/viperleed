@@ -27,6 +27,10 @@ class MockFieldTag(Enum):
     TAG_2 = 'TAG_2:'
     TAG_3 = '~ TAG_3 --'
 
+    def __str__(self):
+        """Return a string version of this fake tag."""
+        return self.value
+
 
 @fixture(name='make_field')
 def fixture_make_field():

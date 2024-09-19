@@ -72,6 +72,7 @@ _FAULTY_MARK_SEP = ' -> '
 _FAULTY_MARK_SPACING = len(_FAULTY_MARK_SEP) + max(
     len(f.value) for f in FaultyLabel
     )
+_HISTORY_INFO_SPACING = 12  # For FieldTag, i.e., the leftmost bit
 
 
 class DuplicateType(Enum):
@@ -100,6 +101,16 @@ class FieldTag(Enum):
     NOTES = 'Notes:'
 
     UNKNOWN = ''  # Unrecognized line
+
+    def __str__(self):
+        """Return a string version of this tag."""
+        if self is FieldTag.UNKNOWN:
+            # No added space at all here
+            return self.value
+        if self is FieldTag.NOTES:
+            # One white space to (potential) text
+            return self.value + ' '
+        return f'{self.value:<{_HISTORY_INFO_SPACING}}'
 
     @property
     def stripped(self):

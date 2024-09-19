@@ -34,8 +34,6 @@ from ..errors import HistoryInfoError
 from .enums import FaultyLabel
 from .enums import FieldTag
 
-_HISTORY_INFO_SPACING = 12  # For the leftmost field in an entry
-
 
 class CommonRegex(Enum):
     """Regular-expression patterns (and portions thereof) used for fields."""
@@ -344,7 +342,7 @@ class FieldBase:
 
     def _format_string_value(self, value_str):
         """Return a formatted and tagged version of `value_str`."""
-        return f'{self.tag.value:<{_HISTORY_INFO_SPACING}}{value_str}'
+        return f'{self.tag}{value_str}'.rstrip()
 
     def _get_string_value(self):
         """Return a string value from self."""
@@ -424,10 +422,3 @@ class NoneIsEmptyField(FieldBase):
 @frozen
 class UnknownField(CommentLessField, tag=FieldTag.UNKNOWN):
     """A dummy field for lines that have no tag."""
-
-    def _format_string_value(self, value_str):
-        """Return a string with tag containing `value_str`."""
-        # Override the base class behavior as there is no tag here.
-        # The base-class implementation would add extra space at the
-        # left that makes no sense in this case.
-        return value_str

@@ -107,11 +107,6 @@ class NotesField(MultiLineField, CommentLessField,
         super()._check_str_value()
         self._update_discarded()
 
-    def _format_string_value(self, value_str):
-        """Return a formatted and tagged version of `value_str`."""
-        # Notes don't have the extra white space after the colon
-        return f'{self.tag.value} {value_str}'
-
     def _update_discarded(self):
         """Update the .is_discarded attribute depending on the value."""
         if self.is_missing:

@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 import pytest
 from pytest_cases import parametrize
 
+from viperleed.calc.bookkeeper.history.entry.enums import _HISTORY_INFO_SPACING
 from viperleed.calc.bookkeeper.history.entry.enums import DuplicateType
 from viperleed.calc.bookkeeper.history.entry.enums import FaultyLabel
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
@@ -158,11 +159,19 @@ class TestFieldTag(_TestEnumBase):
         'UNKNOWN': '',
         }
 
+    _str = {k: f'{v:<{_HISTORY_INFO_SPACING}}' for k, v in values.items()}
+    _str['UNKNOWN'] = ''
+    _str['NOTES'] = 'Notes: '
     _stripped = {
         'TENSOR_NUMS': 'TENSORS',
         'UNKNOWN': '',
         'NOTES': 'Notes',
         }
+
+    @parametrize('member,expect', _str.items(), ids=_str)
+    def test_str(self, member, expect):
+        """Test the string version of FaultyLabel."""
+        assert str(self.get_member(member)) == expect
 
     @parametrize('member,expect', _stripped.items(), ids=_stripped)
     def test_stripped(self, member, expect):

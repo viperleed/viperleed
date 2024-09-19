@@ -54,9 +54,9 @@ class CasesNotesField:
         if info.value is None:
             info.value = value
         if info.str_ is None:
-            info.str_ = value
+            info.str_ = value.rstrip()
         if not info.str_.startswith(FieldTag.NOTES.value):
-            info.str_ = f'{FieldTag.NOTES.value} {info.str_}'
+            info.str_ = f'{FieldTag.NOTES}{info.str_}'.rstrip()
         return make_notes(value), info
 
     def make_discarded(self, value, make_notes, info=None, newline=False):
