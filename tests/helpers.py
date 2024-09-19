@@ -20,8 +20,12 @@ import os
 from pathlib import Path
 
 import pytest
+from pytest_cases import case as case_decorator
 from pytest_cases import fixture
-from pytest_cases.filters import get_case_tags
+from pytest_cases.case_funcs import CASE_FIELD
+from pytest_cases.case_funcs import get_case_tags
+from pytest_cases.case_funcs import is_case_class
+from pytest_cases.case_funcs import is_case_function
 from pytest_cases.filters import CaseFilter
 
 
@@ -100,6 +104,33 @@ def fixture_factory(*args, **fixture_kwargs):                                   
         return _fixture_wrapper(args[0])
     # Decorated as @fixture_factory(**kwargs)
     return _fixture_wrapper
+
+
+def with_case_tags(*tags):
+    """Attach `tags` to all cases defined in the decorated class."""
+    def _decorator(cls):
+        if is_case_function(cls):
+            raise ValueError(
+                'Cannot use with_case_tags on a case '
+                'function. Use the @case decorator instead'
+                )
+        if not is_case_class(cls):
+            raise ValueError('with_case_tags can only be applied to classes '
+                             'defining a collection of cases')
+        for case_name in dir(cls):
+            case_ = getattr(cls, case_name)
+            if not is_case_function(case_):  # Not a case
+                continue
+            try:
+                case_info = getattr(case_, CASE_FIELD)
+            except AttributeError:
+                # Not explicitly decorated with @case. Do so now.
+                case_ = case_decorator(case_)
+                case_info = getattr(case_, CASE_FIELD)
+            tags_to_add = tuple(t for t in tags if t not in case_info.tags)
+            case_info.add_tags(tags_to_add)
+        return cls
+    return _decorator
 
 
 # ##############################   FUNCTIONS   ################################
