@@ -236,7 +236,9 @@ class Bookkeeper:
     @property
     def all_cwd_logs(self):
         """Return paths to all the log files in the root directory."""
-        return sum(self.cwd_logs, start=tuple())
+        # tuple() is the start value. It would be nicer to specify
+        # it as a keyword, but this was only introduced in py38.
+        return sum(self.cwd_logs, tuple())
 
     @property
     def archiving_required(self):
