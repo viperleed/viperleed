@@ -28,8 +28,8 @@ from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
-from viperleed.calc.lib.base import logging_silent
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
+from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
