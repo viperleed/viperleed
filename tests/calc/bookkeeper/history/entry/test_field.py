@@ -440,8 +440,8 @@ class TestFieldBaseFromString:
         with pytest.raises(HistoryInfoError, match=reason):
             FieldBase.from_string('does not match')
 
-    def test_from_string_cant_parse_case(self, make_concrete_field,
-                                         remove_field_tag):
+    def test_from_string_cant_parse_lowercase(self, make_concrete_field,
+                                              remove_field_tag):
         """Check handling of case in tags."""
         make_concrete_field(FieldBase, MockFieldTag.TAG_1)
         upper_str = f'{MockFieldTag.TAG_1.value} abcde'
