@@ -145,6 +145,7 @@ classifiers = [
 addopts = [
     '--import-mode=importlib',
     '--cov=viperleed',
+    '--cov=tests',
     '--cov-report=html',
     '--cov-branch',
     ]
