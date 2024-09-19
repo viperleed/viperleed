@@ -571,7 +571,7 @@ class Bookkeeper:
         history folder have their own naming. Notice also that this
         is not necessarily the name of the history directory that is
         actually created. Use self.history_dir.name instead. See also
-        help(self._get_new_history_directory_name).
+        help(self._find_new_history_directory_name).
 
         Returns
         -------
