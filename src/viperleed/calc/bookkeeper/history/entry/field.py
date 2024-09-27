@@ -246,8 +246,16 @@ class FieldBase:
                 break
         else:
             raise HistoryInfoError(f'No field can parse {field_string!r}')
+        # Remove the tag and its trailing spaces. This way we
+        # catch only the real contents of the field, and prevent
+        # accumulation of leading white spaces that would end up
+        # in match_['field_value'].
+        raw_value = field_string.replace(str(tag), '', 1)
+        if raw_value == field_string and raw_value.startswith(tag.value):
+            # Probably the white space is missing
+            raw_value = raw_value.replace(tag.value, '', 1)
         # pylint: disable-next=protected-access  # It's a subclass
-        value_str, comments = subclass._strip_comments(match_['field_value'])
+        value_str, comments = subclass._strip_comments(raw_value)
         instance = subclass(value=value_str)
         set_frozen_attr(instance, '_comment', comments)
         return instance
