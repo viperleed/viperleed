@@ -350,7 +350,10 @@ class FieldBase:
 
     def _format_string_value(self, value_str):
         """Return a formatted and tagged version of `value_str`."""
-        return f'{self.tag}{value_str}'.rstrip()
+        tag_str = str(self.tag)
+        if not value_str.strip():
+            tag_str = tag_str.rstrip()
+        return f'{tag_str}{value_str}'
 
     def _get_string_value(self):
         """Return a string value from self."""
