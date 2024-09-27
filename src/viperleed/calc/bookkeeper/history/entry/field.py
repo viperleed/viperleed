@@ -18,6 +18,7 @@ import re
 from typing import Any
 from typing import ClassVar
 from typing import Dict
+from typing import Tuple
 from typing import Union
 
 from viperleed.calc.lib.dataclass_utils import check_types
@@ -391,8 +392,12 @@ class CommentLessField(FieldBase):
 
 
 @frozen
-class MultiLineField(FieldBase):
+class MultiLineField(CommentLessField):
     """A field that spans multiple lines."""
+
+    # Lines are stored as a tuple of strings. May also be
+    # a multi-line string before .check_value is called.
+    value: Union[Tuple[str], str, Any] = MissingField
 
     rgx_pattern: ClassVar[str] = CommonRegex.MULTILINE.value
 
@@ -405,18 +410,64 @@ class MultiLineField(FieldBase):
         indented_lines.extend(indent + line for line in lines[1:])
         return ''.join(indented_lines)
 
+    def _check_tuple_value(self):
+        """Make sure all items are strings."""
+        if not self.value:
+            set_frozen_attr(self, 'value', EmptyField)
+            return
+        if isinstance(self.value, str):
+            raise TypeError(f'{type(self).__name__}: Found unprocessed '
+                            'string value. Call check_value() or '
+                            '_cleanup_str_value() before')
+        if not isinstance(self.value, tuple):
+            raise EntrySyntaxError(
+                f'{type(self).__name__} only accepts \'str\' or \'tuple\'. '
+                f'Found {type(self.value).__name__!r} instead.'
+                )
+        # pylint: disable-next=not-an-iterable      # Can't infer tuple
+        if not all(isinstance(i, str) for i in self.value):
+            raise EntrySyntaxError(DefaultMessage.NOT_STRING)
+
     def _cleanup_str_value(self):
-        """Strip white spaces at the end of each line."""
-        # This preserves the number of '\n' characters, contrary to
-        # the base-class implementation, which would strip off empty
-        # lines at the end.
-        # About the no-member disable: pylint can't infer we work
-        # on a string by now.
-        # pylint: disable-next=no-member
-        cleaned = '\n'.join(line.rstrip() for line in self.value.splitlines())
-        if self.value.endswith('\n'):  # pylint: disable=no-member
-            cleaned += '\n'
-        set_frozen_attr(self, 'value', cleaned)
+        """Store a string value as a tuple of lines without trailing spaces."""
+        set_frozen_attr(self, 'value', self._convert_str_to_tuple(self.value))
+
+    @staticmethod
+    def _convert_str_to_tuple(value_str):
+        """Return a tuple of lines without trailing spaces from `value_str`."""
+        # This preserves the number of '\n' characters
+        lines = [line.rstrip() for line in value_str.splitlines()]
+        if value_str.endswith('\n'):  # Don't loose a final newline
+            lines.append('')
+        return tuple(lines)
+
+    def _get_string_value(self):
+        """Return a string version of the lines of this MultiLineField."""
+        lines = self._prepare_lines_for_str()
+        if lines is None:
+            return super()._get_string_value()
+        return '\n'.join(lines)
+
+    def _prepare_lines_for_str(self):
+        """Return a tuple of lines ready to '\n'-join. None otherwise."""
+        if not self.is_empty and not self.is_missing:
+            try:  # pylint: disable=too-many-try-statements
+                # Here we make sure to realize whether there are issues
+                # with the value. This may mean that .check_value was
+                # not called appropriately before attempting to make a
+                # string. We cannot place the "with" statement outside
+                # the try...except block, as we would miss the
+                # EntrySyntaxError that we want to register.
+                with self._register_errors():
+                    self._check_tuple_value()
+            except (TypeError, EntrySyntaxError):
+                # Something funny with the value
+                return None
+        # Notice that it is important to check emptiness now:
+        # _check_tuple_value above may set the value to empty.
+        if self.is_empty or self.is_missing:
+            return None
+        return self.value
 
 
 class NoneIsEmptyField(FieldBase):

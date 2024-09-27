@@ -462,7 +462,11 @@ class TestFieldBaseFromString:
         # pylint: disable-next=unidiomatic-typecheck
         assert type(field) is field_cls      # We want exact type match
         assert field.tag is tag
-        assert field.value == value
+        field_value = field.value
+        if issubclass(field_cls, MultiLineField):  # Value is a tuple
+            field_value, *rest = field_value
+            assert not rest
+        assert field_value == value
 
 
 class TestFieldBaseSubclasses:
@@ -626,7 +630,7 @@ class TestFieldBaseSubclasses:
             int_field.check_value()
 
 
-class TestMultilineField:
+class TestMultilineField(_TestFieldUtils):
     """Tests for (concrete subclasses of) MultiLineField."""
 
     test_cls = MultiLineField
@@ -639,10 +643,15 @@ class TestMultilineField:
     _init = {
         'two lines': 'line1\nline2',
         'special chars': 'line1\nline2\twith\tescape\\sequence',
-        'three lines, comment': 'line1\n line2\n line3',
+        'three lines, comment': 'line1   \n line2\n line3 # comment',
         'many lines': 'line\n' * 1000,
         'one line': 'single line without any line breaks',
         'empty': '',
+        'tuple multi lines': (
+            'line1', 'line2', '', 'line4 after an empty one',
+            '', '', 'line # with comments', '', '', ''
+            ),
+        'tuple empty': (),
         }
 
     @parametrize(value=_init.values(), ids=_init)
@@ -650,14 +659,55 @@ class TestMultilineField:
         """Check correct initialization of a multi-line field."""
         field = multiline(value)
         _empty = not value
-        _str = str(field)
-        sep = _str.replace(value.rstrip(), '').replace(field.tag.value, '')
-        assert field.value == (value or EmptyField)
-        assert _str.endswith(value.rstrip())
-        assert _str.startswith(field.tag.value)
-        assert not sep.strip()
+        _value = EmptyField if _empty else value
+        if isinstance(_value, str):
+            assert not _empty
+            # pylint: disable-next=redefined-variable-type
+            _value = tuple(line.rstrip() for line in value.splitlines())
+            _value += ('',) if value.endswith('\n') else ()
+        _value_as_str = '' if _empty else '\n'.join(_value)
+        assert field.value == _value
         assert not field.is_missing
         assert field.is_empty is _empty
+        self._check_string_value(field, _value_as_str)
+
+    _init_invalid = {
+        'wrong type, dict': ({}, {'was_understood': False}),
+        'wrong type, number': (1.234, {'was_understood': False}),
+        'tuple, not strings': ((1, 2, '3'), {'was_understood': False}),
+        }
+
+    @parametrize('value,attrs', _init_invalid.values(), ids=_init_invalid)
+    def test_init_invalid(self, value, attrs, multiline):
+        """Check complaints when initializing with an invalid value."""
+        self.check_attrs(multiline, attrs, value)
+
+    @parametrize('value,_', _init_invalid.values(), ids=_init_invalid)
+    def test_str_with_invalid_value(self, value, _, multiline):
+        """Check the string version of a MultiLineField with invalid value."""
+        field = multiline(value)
+        # pylint: disable-next=protected-access           # OK in tests
+        lines = field._prepare_lines_for_str()
+        assert lines is None
+
+    def test_check_tuple_too_early(self, multiline):
+        """Check complaints when _check_tuple_value is called on a string."""
+        value = 'abc'
+        field = multiline(value)
+        # Since multiline calls check_value, field is already OK.
+        # Simulate a missing call by resetting the value to a string
+        set_frozen_attr(field, 'value', value)
+        with pytest.raises(TypeError):
+            # pylint: disable-next=protected-access       # OK in tests
+            field._check_tuple_value()
+
+    def _check_string_value(self, field, value_as_str):
+        """Check expected form of the string version of a multi-line field."""
+        _str = str(field)
+        sep = _str.replace(value_as_str, '').replace(field.tag.value, '')
+        assert _str.endswith(value_as_str)
+        assert _str.startswith(field.tag.value)
+        assert not sep.strip()  # Only whitespace between tag and value
 
     def test_format_faulty(self, multiline):
         """Check formatting of faulty field."""
