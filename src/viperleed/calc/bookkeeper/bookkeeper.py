@@ -36,6 +36,7 @@ from .history.entry.entry import HistoryInfoEntry
 from .history.errors import CantRemoveEntryError
 from .history.errors import NoHistoryEntryError
 from .history.constants import HISTORY_INFO_NAME
+from .history.entry.field import MissingField
 from .history.file import HistoryInfoFile
 from .log import LOGGER
 from .mode import BookkeeperMode
@@ -537,18 +538,26 @@ class Bookkeeper:
         tensor_nums = self._move_and_cleanup_workhistory(discard)
         tensor_nums.add(self.tensor_number)                                     # TODO: how about sorting on tensor numbers?
 
-        self.history_info.append_entry(HistoryInfoEntry(
-            tensor_nums=list(tensor_nums),
-            job_nums=[self.max_job_for_tensor[tensor] + 1
-                      for tensor in tensor_nums],
-            timestamp=self.timestamp,
-            discarded=discard,
-            folder_name=self.history_dir.name,
-            notes=self._read_and_clear_notes_file(),
-            # Optional ones
-            job_name=self.job_name,
-            **self._infer_run_info_from_log()
-            ))
+        with logging_silent():
+            # It's OK to silence the logger here, as we will surely
+            # replace the timestamp format in append_entry. In fact,
+            # self.timestamp is just the one derived from the log file
+            # and needs to be updated to a writable one. When we will
+            # replace the format, logging messages for other faulty
+            # stuff will pop up.
+            new_info_entry = HistoryInfoEntry(
+                tensor_nums=list(tensor_nums),
+                job_nums=[self.max_job_for_tensor[tensor] + 1
+                          for tensor in tensor_nums],
+                timestamp=self.timestamp,
+                discarded_=discard,
+                folder_name=self.history_dir.name,
+                notes=self._read_and_clear_notes_file(),
+                # Optional ones
+                job_name=self.job_name or MissingField,
+                **self._infer_run_info_from_log()
+                )
+        self.history_info.append_entry(new_info_entry, fix_time_format=True)
 
     def _discard_workhistory_previous(self):
         """Remove 'previous'-labelled directories in work history."""

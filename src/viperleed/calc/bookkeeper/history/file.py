@@ -59,14 +59,17 @@ class HistoryInfoFile:
     @property
     def last_entry_was_discarded(self):
         """Return whether the last entry is labeled as DISCARDED."""
-        return getattr(self.last_entry, 'discarded', False)
+        return getattr(self.last_entry, 'is_discarded', False)
 
-    def append_entry(self, entry):
+    def append_entry(self, entry, fix_time_format=True):
         """Write `entry` to the history.info file."""
         skip_separator = (
             self.raw_contents.strip().endswith(HISTORY_INFO_SEPARATOR.strip())
             or not self.raw_contents.strip()
             )
+        if fix_time_format:
+            entry = entry.with_time_format(self._time_format or 'default')
+            self._time_format = entry.time_format
         with open(self.path, 'a', encoding='utf-8') as history_info:
             if not skip_separator:
                 history_info.write(HISTORY_INFO_SEPARATOR)
@@ -84,12 +87,12 @@ class HistoryInfoFile:
             LOGGER.warning('Cannot discard last entry. '
                            'It contains only comments.')
             return
-        if self.last_entry.discarded:
+        if self.last_entry.is_discarded:
             LOGGER.warning('Last entry is already discarded.')
             return
         discarded_entry = self.last_entry.as_discarded()
         self._do_remove_last_entry()
-        self.append_entry(discarded_entry)
+        self.append_entry(discarded_entry, fix_time_format=False)
 
     def may_remove_last_entry(self):
         """Raise if the last entry can't be removed."""
@@ -137,7 +140,8 @@ class HistoryInfoFile:
         if self._time_format:
             try:
                 entry = entry.with_time_format(self._time_format)
-            except AttributeError:  # Pure comment
+            except (AttributeError, EntrySyntaxError):
+                # Pure comment, or no timestamp to be edited
                 pass
         self.last_entry = entry
 

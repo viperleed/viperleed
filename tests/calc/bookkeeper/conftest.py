@@ -33,9 +33,10 @@ from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
-from . import cases_bookkeeper
-from .cases_bookkeeper import BookkeeperTag as Tag
-from .cases_bookkeeper import NOTES_TEST_CONTENT
+from .history import cases_history
+from .history.entry import cases_entry
+from .history.entry.cases_entry import NOTES_TEST_CONTENT
+from .tag import BookkeeperTag as Tag
 
 
 ALT_HISTORY_NAME = 'history_alt_name'
@@ -63,7 +64,7 @@ with_logs = parametrize(log_file_name=MOCK_LOG_FILES)
 @fixture(name='mock_tree_after_calc_execution')
 @with_logs
 @parametrize_with_cases('history_info_contents',
-                        cases=cases_bookkeeper,
+                        cases=(cases_entry, cases_history),
                         has_tag=Tag.BOOKKEEPER)
 def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
                                            history_info_contents):

@@ -66,7 +66,3 @@ class FixableSyntaxError(HistoryInfoError):
 
 class NoHistoryEntryError(HistoryInfoError):
     """There is no entry to process according to the criteria."""
-
-
-class _PureCommentEntryError(HistoryInfoError):
-    """Exception used internally to decide that an entry is comment only."""
