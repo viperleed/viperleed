@@ -14,6 +14,7 @@ __license__ = 'GPLv3+'
 from collections import namedtuple
 import copy
 import re
+from typing import ClassVar
 from typing import Tuple
 
 from viperleed.calc.lib.dataclass_utils import frozen
@@ -21,8 +22,8 @@ from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from ..errors import EntrySyntaxError
+from ..errors import FixableSyntaxError
 from .enums import FieldTag
-from .field import EmptyField
 from .field import MissingField
 from .field import MultiLineField
 from .field import UnknownField
@@ -30,7 +31,7 @@ from .field import UnknownField
 
 _DISCARDED = 'DISCARDED'    # For entries marked via --discard
 _DiscardedInfo = namedtuple('_DiscardedInfo', ('pos', 'line'))
-_DISCARDED_RE = re.compile(rf'\s*{_DISCARDED}\s*')
+_DISCARDED_RE = re.compile(rf'(\s*{_DISCARDED}\s*)')
 
 
 # A note that contains _DISCARDED in its string value is considered
@@ -42,7 +43,9 @@ _DISCARDED_RE = re.compile(rf'\s*{_DISCARDED}\s*')
 # non-empty line, but having it somewhere else does not cause the
 # field to be flagged as 'wrongly formatted'. This is to prevent
 # situations in which a user may first --discard, then add more
-# comments after the _DISCARDED line.
+# comments after the _DISCARDED line. If lines containing both
+# _DISCARDED and other non-white-space text are found, the field
+# is marked as "to be fixed" (but not as DISCARDED).
 
 
 @frozen
@@ -60,10 +63,16 @@ class NotesField(MultiLineField, tag=FieldTag.NOTES, mandatory=True):
     _discarded_info: _DiscardedInfo = non_init_field(
         default=_DiscardedInfo(None, None)
         )
+    # Make sure to skip is_discarded when fixing an instance, as it
+    # is updated via __post_init__ and we don't want to override it
+    _skip_when_fixing: ClassVar[set] = {
+        *MultiLineField._skip_when_fixing,
+        'is_discarded',
+        }
 
     def __post_init__(self):
         """See if these notes were discarded and mark them accordingly."""
-        self._update_discarded()
+        self._update_discarded(noisy=False)
 
     def __add__(self, notes):
         """Add more `notes` to this one as new lines."""
@@ -171,13 +180,36 @@ class NotesField(MultiLineField, tag=FieldTag.NOTES, mandatory=True):
             # May be turned to EmptyField by _check_tuple_value
             return None, None
 
-        indices_and_lines = reversed(tuple(enumerate(self.value)))
+        indices_and_lines = list(enumerate(self.value))
+        indices_and_lines.reverse()
         try:
             return next((ind, line.rstrip())
                         for (ind, line) in indices_and_lines
                         if _DISCARDED_RE.fullmatch(line))
         except StopIteration:
+            pass
+        # See if by chance there is a line that contains _DISCARDED
+        # but contains other stuff too. This is considered fixable.
+        try:
+            discarded_info = next(
+                (ind, line.rstrip())
+                for (ind, line) in indices_and_lines
+                if _DISCARDED_RE.search(line)
+                )
+        except StopIteration:  # None of them
             return None, None
+        # Found one. Fixing corresponds to splitting up the value
+        # at the first _DISCARDED, like so:
+        # before:  (..., 'DISCARDED line with DISCARDED stuff', ...)
+        # after:   (..., 'DISCARDED', 'line with DISCARDED stuff', ...)
+        ind, line = discarded_info
+        new_lines = (s.rstrip() for s in _DISCARDED_RE.split(line, maxsplit=1))
+        new_lines = (s for s in new_lines if s)
+        fixed_value = list(self.value)
+        fixed_value[ind:ind+1] = new_lines
+        reason = (f'Found {_DISCARDED!r} in a line containing '
+                  f'additional text (line {ind+1})')
+        raise FixableSyntaxError(reason=reason, fixed_value=tuple(fixed_value))
 
     def _prepare_lines_for_str(self):
         """Return a tuple of lines ready to '\n'-join. None otherwise."""
@@ -201,23 +233,27 @@ class NotesField(MultiLineField, tag=FieldTag.NOTES, mandatory=True):
         lines.insert(ind, line)
         return tuple(lines)
 
-    def _update_discarded(self):
+    def _update_discarded(self, noisy=True):
         """Update the .is_discarded attribute depending on the value."""
         try:
             self.check_value()
         except EntrySyntaxError:
             return
-        # For now, there is no FixableSyntaxError for notes.
-        # The next lines can be uncommented if we ever do.
-        # except FixableSyntaxError:
-            # pass
+        except FixableSyntaxError:
+            pass
 
         if self._is_empty_like:
             return
 
         # At this point self.value should be a tuple of strings.
         # Figure out which line (if any) is _DISCARDED.
-        ind, line = self._find_discarded_line()
+        try:
+            ind, line = self._find_discarded_line()
+        except FixableSyntaxError:
+            # _DISCARDED is in a line with other stuff
+            if noisy:
+                raise
+            return
         if ind is None:  # No line in self.value is _DISCARDED
             return
 

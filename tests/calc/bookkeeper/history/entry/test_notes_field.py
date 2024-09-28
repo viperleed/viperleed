@@ -370,6 +370,30 @@ class TestNotesField:
         assert discarded.value == expect_value
         assert str(discarded) == expect_str
 
+    _discard_midway = {
+        'one line, start': f'  {_DISCARDED} other text',
+        'one line, midway': f'some {_DISCARDED} text',
+        'one line, end': f'this line was {_DISCARDED}',
+        'more lines': f'first\nsecond\nthis is a {_DISCARDED} one\nlast',
+        }
+
+    @parametrize(value=_discard_midway.values(), ids=_discard_midway)
+    def test_discarded_midway(self, value, make_notes):
+        """Check correct identification of DISCARDED somewhere in a line."""
+        notes = make_notes(value)
+        assert not notes.is_discarded
+        assert notes.needs_fixing
+
+        notes_fixed = notes.as_fixed()
+        with not_raises(Exception):
+            notes_fixed.check_value()
+        assert notes_fixed.is_discarded
+        assert not notes_fixed.needs_fixing
+
+        n_lines_ori = len(notes.value)
+        n_lines_fix = len(notes_fixed.value)
+        assert n_lines_fix - n_lines_ori in {0, 1}
+
     empty_notes = parametrize_with_cases('notes, _',
                                          cases=CasesNotesField.case_empty)
 

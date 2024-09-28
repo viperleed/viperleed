@@ -84,11 +84,21 @@ class FieldBase:
     _needs_fix: FixedFieldValue = non_init_field()
     _not_understood: str = non_init_field()
 
-    is_mandatory: ClassVar[bool] = False  # Set in __init_subclass__
-    tag: ClassVar[FieldTag] = None  # Set in __init_subclass__
+    # Class attributes set in __init_subclass__
+    is_mandatory: ClassVar[bool] = False
+    tag: ClassVar[FieldTag] = None
+
+    # Pattern used for string matching in .from_string:
     rgx_pattern: ClassVar[str] = CommonRegex.ONE_LINE.value
+
     # A cache of know sub-classes:
     _subclasses: ClassVar[Dict[FieldTag,'FieldBase']] = {}
+
+    # Non-init attributes to be skipped when this field is being fixed:
+    _skip_when_fixing: ClassVar[set] = {
+        '_needs_fix',  # We're fixing the instance anyway
+        '_value_str',  # Assume it will be recomputed for a new one
+        }
 
     def __init_subclass__(cls, tag=None, mandatory=False):
         """Register subclasses with concrete tags."""
@@ -163,13 +173,8 @@ class FieldBase:
         if fixed_value is None:
             raise HistoryInfoError('No value for fixing field')
         assert self.was_understood
-
-        # Skip _value_str assuming that it will be recomputed from
-        # the new value passed. _needs_fix is not necessary, since
-        # we're fixing the instance anyway.
-        instance = replace_values(self, value=fixed_value,
-                                  skip={'_needs_fix', '_value_str'})
-        return instance
+        return replace_values(self, value=fixed_value,
+                              skip=self._skip_when_fixing)
 
     def check_value(self):
         """Raise if the value given at initialization is funny.
