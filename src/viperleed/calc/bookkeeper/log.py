@@ -23,7 +23,7 @@ BOOKIE_LOGFILE = 'bookkeeper.log'  # Persistent among runs
 LOGGER = logging.getLogger(parent_name(__name__))
 
 
-def add_bookeeper_logfile(at_path):
+def add_bookkeeper_logfile(at_path):
     """Attach a FileHandler to LOGGER for the bookkeeper log file."""
     bookkeeper_log = at_path / BOOKIE_LOGFILE
     has_log = get_handlers(LOGGER,

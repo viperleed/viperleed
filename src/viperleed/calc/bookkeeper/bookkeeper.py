@@ -736,7 +736,7 @@ class Bookkeeper:
             raise
 
         # Attach file handler for history/bookkeeper.log
-        log.add_bookeeper_logfile(self.top_level_history_path)
+        log.add_bookkeeper_logfile(self.top_level_history_path)
         LOGGER.info(  # Log only once per instance
             '\n### Bookeeper running at '
             f'{DateTimeFormat.LOG_CONTENTS.now()} ###'
