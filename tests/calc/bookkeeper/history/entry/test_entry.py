@@ -284,7 +284,7 @@ class TestHistoryEntry:
         entry = HistoryInfoEntry.from_string(entry_str)
         for _ in range(5):
             as_string = str(entry)
-            entry = HistoryInfoEntry.from_string(entry_str)
+            entry = HistoryInfoEntry.from_string(as_string)
         if as_string.startswith('\n') and not entry_str.startswith('\n'):
             # We always add one new-line character at the beginning
             # but it does not matter here. Checks concerning the
