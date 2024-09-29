@@ -17,14 +17,17 @@ from pytest_cases.filters import has_tags
 
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 from viperleed.calc.bookkeeper.history.entry.notes_field import _DISCARDED
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
 
 from ....helpers import exclude_tags
+from ....helpers import make_obj_raise
 from ..conftest import NOTES_TEST_CONTENT
 from ..tag import BookkeeperTag as Tag
 from . import cases_history
@@ -174,6 +177,14 @@ class TestHistoryInfoFile:
         n_entries_again = self._count_entries(history_info.path)
         assert n_entries_again == n_entries - 1
 
+    def test_infer_time_format_invalid_entry(self, make_history_file):
+        """Check that no time format is detected for invalid file contents."""
+        with make_obj_raise(HistoryInfoEntry, EntrySyntaxError, 'from_string'):
+            contents = cases_entry.CasesInfoEntryCorrect().case_no_notes()
+            info, *_ = make_history_file(contents)
+            info.read()
+        assert info._time_format is None
+
 
 class TestHistoryInfoRaises:
     """Tests for HistoryInfoFile conditions that raise exceptions."""
@@ -193,6 +204,6 @@ class TestHistoryInfoRaises:
         with pytest.raises(exc):
             info.read()
         # Disable as we really want to check the private member,
-        # since the @property returns a default value of unset
+        # since the @property returns a default value if unset
         # pylint: disable-next=protected-access
         assert info._time_format is None

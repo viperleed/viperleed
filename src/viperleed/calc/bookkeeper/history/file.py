@@ -166,7 +166,7 @@ class HistoryInfoFile:
         self.read()  # Re-read to update last_entry
 
     def _infer_time_format(self):
-        """Parse an entry to find out the format of TIME fields."""
+        """Parse all entries to find out the format of TIME fields."""
         if self._time_format:  # Only once
             return
         sep = HISTORY_INFO_SEPARATOR.strip()
