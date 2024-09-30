@@ -240,6 +240,8 @@ def make_obj_raise(obj_or_dotted_name, exc, attr=None):
         obj_name = obj_or_dotted_name.__name__
     elif isinstance(obj_or_dotted_name, str):  # Likely a dotted name
         obj_name = obj_or_dotted_name
+    elif inspect.isclass(obj_or_dotted_name):
+        obj_name = obj_or_dotted_name.__name__
     else:
         obj_name = type(obj_or_dotted_name).__name__
 
@@ -258,7 +260,7 @@ def make_obj_raise(obj_or_dotted_name, exc, attr=None):
     def _replaced(*args, **kwargs):
         patched = f'Replaced {obj_name}'
         if attr is not None:
-            patched += attr
+            patched += f'.{attr}'
         raise exc(f'{patched} was called with args={args}, kwargs={kwargs}')
 
     monkeypatch = pytest.MonkeyPatch
