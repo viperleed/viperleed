@@ -53,9 +53,8 @@ class HistoryInfoFile:
             self.path.touch()
 
         self.raw_contents = ''
-        self._entries = []  # The HistoryInfoEntry from raw_contents
-        self._time_format = None  # To keep consistency
-        self.read()
+        self._entries = []  # The HistoryInfoEntry(s) from raw_contents
+        self._time_format = None  # To keep entries consistent
 
     @property
     def last_entry(self):

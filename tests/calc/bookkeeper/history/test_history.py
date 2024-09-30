@@ -54,6 +54,13 @@ def factory_history_file(tmp_path_factory):
     return _make
 
 
+@fixture(name='simple_info_file')
+def fixture_simple_info_file(make_history_file):
+    """Return a HistoryInfoFile and file contents with a single entry."""
+    sample = cases_entry.CasesInfoEntryCorrect().case_no_notes()
+    return make_history_file(sample)
+
+
 @fixture(name='history_info_file')
 @parametrize_with_cases(
     'contents',
@@ -126,6 +133,23 @@ class TestHistoryInfoFile:
         else:
             assert history_info.last_entry is not last_entry
 
+    def test_init_does_not_read(self, simple_info_file):
+        """Check that making a HistoryInfoFile does not read file contents."""
+        info, contents = simple_info_file
+        assert not info.raw_contents
+        assert not info.last_entry
+        # pylint: disable-next=protected-access           # OK in tests
+        assert not info._time_format
+        assert info.raw_contents != contents
+
+        # Now read and check again
+        info.read()
+        assert info.raw_contents
+        assert info.last_entry
+        # pylint: disable-next=protected-access           # OK in tests
+        assert info._time_format
+        assert info.raw_contents == contents
+
     @staticmethod
     def _check_linewise_equal(to_check, expected):
         """Test equality line by line, excluding trailing spaces."""
@@ -134,11 +158,10 @@ class TestHistoryInfoFile:
         assert to_check == expected
 
     @parametrize(exc=(EntrySyntaxError, FixableSyntaxError))
-    def test_read_not_raises(self, exc, make_history_file):
+    def test_read_not_raises(self, exc, simple_info_file):
         """Check that .read catches no exceptions."""
         with make_obj_raise(HistoryInfoEntry, exc, 'from_string'):
-            contents = cases_entry.CasesInfoEntryCorrect().case_no_notes()
-            info, *_ = make_history_file(contents)
+            info, *_ = simple_info_file
             with pytest.raises(exc):
                 # Ensure exception is not caught. HistoryInfoEntry
                 # does not normally raise anything: it logs instead.
