@@ -203,7 +203,6 @@ class TestHistoryInfoRaises:
         info, *_ = make_history_file(contents)
         with pytest.raises(exc):
             info.read()
-        # Disable as we really want to check the private member,
-        # since the @property returns a default value if unset
+        # Disable as we really want to check the private member
         # pylint: disable-next=protected-access
         assert info._time_format is None
