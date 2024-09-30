@@ -586,13 +586,13 @@ class TestBookkeeperOthers:
             assert (not file.exists() if PREVIOUS_LABEL in file.name
                     else file.is_dir())
         assert all(f.exists() for f in invalid_history_stuff)
-        assert history_dir.is_dir()
+        assert history_dir.is_dir()                                             # TODO: this sometimes fails??? Failed once with -x --durations=10
         assert history_info.path.read_bytes()
 
         # Now discard should remove workhistory and all the stuff
         bookkeeper.run('discard_full')
         assert not_collected_log.exists()
-        assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()
+        assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()                     # TODO: this sometimes fails too???
         assert not history_dir.exists()
         assert not history_info.path.read_bytes()
 
