@@ -183,7 +183,4 @@ class HistoryInfoFile:
             return
         sep = HISTORY_INFO_SEPARATOR.strip()
         for entry_str in self.raw_contents.split(sep):
-            try:
-                self._entries.append(HistoryInfoEntry.from_string(entry_str))
-            except EntrySyntaxError:  # Not a valid entry                       # TODO: this should never happen. If it does it's probably a bug
-                pass
+            self._entries.append(HistoryInfoEntry.from_string(entry_str))

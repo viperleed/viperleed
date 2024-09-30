@@ -12,6 +12,7 @@ import re
 
 import pytest
 from pytest_cases import fixture
+from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 from pytest_cases.filters import has_tags
 
@@ -22,6 +23,7 @@ from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 from viperleed.calc.bookkeeper.history.entry.notes_field import _DISCARDED
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
@@ -177,12 +179,19 @@ class TestHistoryInfoFile:
         n_entries_again = self._count_entries(history_info.path)
         assert n_entries_again == n_entries - 1
 
-    def test_infer_time_format_invalid_entry(self, make_history_file):
+    @parametrize(exc=(EntrySyntaxError, FixableSyntaxError))
+    def test_infer_time_format_invalid_entry(self, exc, make_history_file):
         """Check that no time format is detected for invalid file contents."""
-        with make_obj_raise(HistoryInfoEntry, EntrySyntaxError, 'from_string'):
+        with make_obj_raise(HistoryInfoEntry, exc, 'from_string'):
             contents = cases_entry.CasesInfoEntryCorrect().case_no_notes()
             info, *_ = make_history_file(contents)
-            info.read()
+            with pytest.raises(exc):
+                # Ensure exception is not caught. HistoryInfoEntry
+                # does not normally raise anything: it logs instead.
+                # It's a bug to catch it, as it may mean that we do
+                # not log an exception. This is for future-proofing
+                # of implementation changes.
+                info.read()
         assert info._time_format is None
 
 
