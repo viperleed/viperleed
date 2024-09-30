@@ -33,6 +33,7 @@ from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from . import log
 from .history.entry.entry import HistoryInfoEntry
+from .history.errors import CantDiscardEntryError
 from .history.errors import CantRemoveEntryError
 from .history.errors import NoHistoryEntryError
 from .history.constants import HISTORY_INFO_NAME
