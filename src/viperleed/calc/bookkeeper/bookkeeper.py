@@ -998,9 +998,11 @@ class Bookkeeper:
         self._run_discard_common()
         try:
             self.history_info.discard_last_entry()
-        except NoHistoryEntryError as exc:
-            LOGGER.error('Error: Failed to mark last entry as '
-                         f'discarded in {HISTORY_INFO_NAME}: {exc}')
+        except (NoHistoryEntryError, CantDiscardEntryError) as exc:
+            emit_log = (LOGGER.error if isinstance(exc, NoHistoryEntryError)
+                        else LOGGER.warning)
+            emit_log('Failed to mark last entry as discarded '
+                     f'in {HISTORY_INFO_NAME}: {exc}')
             return BookkeeperExitCode.FAIL
         return BookkeeperExitCode.SUCCESS
 

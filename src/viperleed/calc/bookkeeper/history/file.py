@@ -20,6 +20,7 @@ from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 from ..log import LOGGER
 from .constants import HISTORY_INFO_NAME
 from .constants import HISTORY_INFO_SEPARATOR
+from .errors import CantDiscardEntryError
 from .errors import CantRemoveEntryError
 from .errors import EntrySyntaxError
 from .errors import NoHistoryEntryError
@@ -89,19 +90,25 @@ class HistoryInfoFile:
 
     def discard_last_entry(self):
         """Mark the last entry in the history.info file as discarded."""
+        self.may_discard_last_entry()
+        last_entry = self.last_entry
+        discarded_entry = last_entry.as_discarded()
+        if discarded_entry is last_entry:  # Already discarded
+            return
+        self._do_remove_last_entry()
+        self.append_entry(discarded_entry, fix_time_format=False)
+
+    def may_discard_last_entry(self):
+        """Raise if the last entry cannot be discarded."""
         last_entry = self.last_entry
         if last_entry is None:
             raise NoHistoryEntryError('No entries to discard.')
-        if isinstance(self.last_entry, PureCommentEntry):
-            LOGGER.warning('Cannot discard last entry. '
-                           'It contains only comments.')
-            return
+        if isinstance(last_entry, PureCommentEntry):
+            raise CantDiscardEntryError('It contains only comments.')
         if last_entry.is_discarded:
+            # This is not really a case for an exception. The entry
+            # is discarded already so we simply don't have to bother
             LOGGER.warning('Last entry is already discarded.')
-            return
-        discarded_entry = last_entry.as_discarded()
-        self._do_remove_last_entry()
-        self.append_entry(discarded_entry, fix_time_format=False)
 
     def may_remove_last_entry(self):
         """Raise if the last entry can't be removed."""

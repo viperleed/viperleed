@@ -17,6 +17,10 @@ class HistoryInfoError(Exception):
     """Base class for all errors related to the history.info file."""
 
 
+class CantDiscardEntryError(HistoryInfoError):
+    """An entry cannot be marked as DISCARDED."""
+
+
 class CantRemoveEntryError(HistoryInfoError):
     """An entry cannot be removed."""
 

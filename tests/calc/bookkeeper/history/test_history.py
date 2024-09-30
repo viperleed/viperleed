@@ -21,6 +21,7 @@ from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 from viperleed.calc.bookkeeper.history.entry.notes_field import _DISCARDED
+from viperleed.calc.bookkeeper.history.errors import CantDiscardEntryError
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
@@ -129,15 +130,17 @@ class TestHistoryInfoFile:
         """Check we can discard the last history.info entry."""
         history_info, *_ = history_info_file
         last_entry = history_info.last_entry
-        if not last_entry:
-            with pytest.raises(NoHistoryEntryError):
+        _is_comment = isinstance(last_entry, PureCommentEntry)
+        exc = (
+            NoHistoryEntryError if not last_entry
+            else CantDiscardEntryError if _is_comment else None
+            )
+        if exc:
+            with pytest.raises(exc):
                 history_info.discard_last_entry()
             return
+        was_discarded = last_entry.is_discarded
         history_info.discard_last_entry()
-        try:
-            was_discarded = last_entry.is_discarded
-        except AttributeError:
-            return
         assert history_info.last_entry_was_discarded
         if was_discarded:
             # pylint: disable-next=magic-value-comparison
