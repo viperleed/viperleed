@@ -150,6 +150,20 @@ class TestHistoryInfoFile:
         assert info._time_format
         assert info.raw_contents == contents
 
+    def test_infer_time_only_once(self, simple_info_file):
+        """Check that _infer_time_format only does so once."""
+        info, contents = simple_info_file
+        info.read()
+        # pylint: disable-next=protected-access           # OK in tests
+        format_before = info._time_format
+        assert format_before
+
+        # Now erase the file and read again.
+        info.path.write_text('', encoding='utf-8')
+        info.read()
+        # pylint: disable-next=protected-access           # OK in tests
+        assert info._time_format is format_before
+
     @staticmethod
     def _check_linewise_equal(to_check, expected):
         """Test equality line by line, excluding trailing spaces."""
