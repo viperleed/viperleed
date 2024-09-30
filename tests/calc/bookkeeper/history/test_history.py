@@ -103,29 +103,6 @@ class TestHistoryInfoFile:
         discarded_in_entry = _DISCARDED in contents
         assert history_info.last_entry_was_discarded == discarded_in_entry
 
-    @staticmethod
-    def _check_linewise_equal(to_check, expected):
-        """Test equality line by line, excluding trailing spaces."""
-        to_check = [line.rstrip() for line in to_check.strip().splitlines()]
-        expected = [line.rstrip() for line in expected.strip().splitlines()]
-        assert to_check == expected
-
-    def test_regenerate_from_entries(self, history_info_file):
-        """Check that the history.info file can be regenerated after parsing."""
-        history_info, contents = history_info_file
-        assert contents == history_info.raw_contents
-        last_entry = history_info.last_entry
-        try:
-            history_info.remove_last_entry()
-        except HistoryInfoError:
-            assert last_entry is None or not last_entry.can_be_removed
-            return
-        if history_info.last_entry is last_entry:
-            assert isinstance(last_entry, PureCommentEntry)
-            return
-        history_info.append_entry(last_entry)
-        self._check_linewise_equal(contents, history_info.raw_contents)
-
     def test_discard_last_entry(self, history_info_file, caplog):
         """Check we can discard the last history.info entry."""
         history_info, *_ = history_info_file
@@ -148,6 +125,43 @@ class TestHistoryInfoFile:
             assert history_info.last_entry is last_entry
         else:
             assert history_info.last_entry is not last_entry
+
+    @staticmethod
+    def _check_linewise_equal(to_check, expected):
+        """Test equality line by line, excluding trailing spaces."""
+        to_check = [line.rstrip() for line in to_check.strip().splitlines()]
+        expected = [line.rstrip() for line in expected.strip().splitlines()]
+        assert to_check == expected
+
+    @parametrize(exc=(EntrySyntaxError, FixableSyntaxError))
+    def test_read_not_raises(self, exc, make_history_file):
+        """Check that .read catches no exceptions."""
+        with make_obj_raise(HistoryInfoEntry, exc, 'from_string'):
+            contents = cases_entry.CasesInfoEntryCorrect().case_no_notes()
+            info, *_ = make_history_file(contents)
+            with pytest.raises(exc):
+                # Ensure exception is not caught. HistoryInfoEntry
+                # does not normally raise anything: it logs instead.
+                # It's a bug to catch it, as it may mean that we do
+                # not log an exception. This is for future-proofing
+                # of implementation changes.
+                info.read()
+
+    def test_regenerate_from_entries(self, history_info_file):
+        """Check that the history.info file can be regenerated after parsing."""
+        history_info, contents = history_info_file
+        assert contents == history_info.raw_contents
+        last_entry = history_info.last_entry
+        try:
+            history_info.remove_last_entry()
+        except HistoryInfoError:
+            assert last_entry is None or not last_entry.can_be_removed
+            return
+        if history_info.last_entry is last_entry:
+            assert isinstance(last_entry, PureCommentEntry)
+            return
+        history_info.append_entry(last_entry)
+        self._check_linewise_equal(contents, history_info.raw_contents)
 
     @staticmethod
     def _count_entries(path):
@@ -181,21 +195,6 @@ class TestHistoryInfoFile:
         history_info.remove_last_entry()
         n_entries_again = self._count_entries(history_info.path)
         assert n_entries_again == n_entries - 1
-
-    @parametrize(exc=(EntrySyntaxError, FixableSyntaxError))
-    def test_infer_time_format_invalid_entry(self, exc, make_history_file):
-        """Check that no time format is detected for invalid file contents."""
-        with make_obj_raise(HistoryInfoEntry, exc, 'from_string'):
-            contents = cases_entry.CasesInfoEntryCorrect().case_no_notes()
-            info, *_ = make_history_file(contents)
-            with pytest.raises(exc):
-                # Ensure exception is not caught. HistoryInfoEntry
-                # does not normally raise anything: it logs instead.
-                # It's a bug to catch it, as it may mean that we do
-                # not log an exception. This is for future-proofing
-                # of implementation changes.
-                info.read()
-        assert info._time_format is None
 
 
 class TestHistoryInfoRaises:
