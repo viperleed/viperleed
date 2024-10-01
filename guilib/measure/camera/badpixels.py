@@ -1354,15 +1354,21 @@ class BadPixels:
             raise RuntimeError(f"{self.__class__.__name__}: No "
                                "bad pixel coordinates to write.")
 
-        # Prepare the column contents
-        columns = [
-            ['Bad pixels',
-             *(f"{tuple(b)}" for b in self.__bad_coords),
-             *(f"{tuple(b)}" for b in self.__uncorrectable)],
-            ['Replacements',
-             *(f"{tuple(r)}" for r in self.__replacements),
-             *(['NaN']*len(self.__uncorrectable))]
-            ]
+        # Since numpy 2.0 (numpy/numpy/pull/22449), numpy data types
+        # are printed out together with scalars. This means that
+        # str(np.int(x)) == 'np.int(x)' rather than 'x'. Reverting the
+        # behavior to the v1.25 one ensures that we can then read the
+        # information back using ast.
+        with np.printoptions(legacy='1.25'):
+            # Prepare the column contents
+            columns = [
+                ['Bad pixels',
+                 *(f"{tuple(b)}" for b in self.__bad_coords),
+                 *(f"{tuple(b)}" for b in self.__uncorrectable)],
+                ['Replacements',
+                 *(f"{tuple(r)}" for r in self.__replacements),
+                 *(['NaN']*len(self.__uncorrectable))]
+                ]
 
         # Find padding lengths:
         bad_width = max(len('# Bad pixels'), *(len(row) for row in columns[0]))
