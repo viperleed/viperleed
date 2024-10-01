@@ -1371,8 +1371,7 @@ class BadPixels:
                 ]
 
         # Find padding lengths:
-        bad_width = max(len('# Bad pixels'),
-                        *(len(row) for row in columns[0]))
+        bad_width = max(len('# Bad pixels'), *(len(row) for row in columns[0]))
         repl_width = max(len(row) for row in columns[1])
 
         # And format the lines
@@ -1396,7 +1395,7 @@ class BadPixels:
             comment += f"# Of these, {n_uncorr} cannot be corrected.\n"
         comment += ("# Bad pixel coordinates are (row number, column "
                     "number), i.e., (y, x).\n#\n")
-        
+
         with open(filename, 'w', encoding='utf-8') as bad_px_file:
             bad_px_file.write(comment)
             bad_px_file.write(lines)
