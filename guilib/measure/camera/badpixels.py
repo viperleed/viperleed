@@ -1354,10 +1354,11 @@ class BadPixels:
             raise RuntimeError(f"{self.__class__.__name__}: No "
                                "bad pixel coordinates to write.")
 
-        # Since numpy 2.0, numpy data types are printed out together
-        # with scalars. This means that str(np.int(x)) == 'np.int(x)'
-        # rather than 'x'. Reverting the behavior to the v1.25 one
-        # ensures that we can then read the information back using ast.
+        # Since numpy 2.0 (numpy/numpy/pull/22449), numpy data types
+        # are printed out together with scalars. This means that
+        # str(np.int(x)) == 'np.int(x)' rather than 'x'. Reverting the
+        # behavior to the v1.25 one ensures that we can then read the
+        # information back using ast.
         with np.printoptions(legacy='1.25'):
             # Prepare the column contents
             columns = [
@@ -1369,32 +1370,32 @@ class BadPixels:
                  *(['NaN']*len(self.__uncorrectable))]
                 ]
 
-            # Find padding lengths:
-            bad_width = max(len('# Bad pixels'),
-                            *(len(row) for row in columns[0]))
-            repl_width = max(len(row) for row in columns[1])
+        # Find padding lengths:
+        bad_width = max(len('# Bad pixels'),
+                        *(len(row) for row in columns[0]))
+        repl_width = max(len(row) for row in columns[1])
 
-            # And format the lines
-            columns[0][0] = f"#{columns[0][0]:>{bad_width-1}}"
-            columns[0][1:] = [f"{row:>{bad_width}}" for row in columns[0][1:]]
-            columns[1] = [f"{row:>{repl_width}}" for row in columns[1]]
-            lines = '\n'.join(f'{bad}, {repl}' for bad, repl in zip(*columns))
+        # And format the lines
+        columns[0][0] = f"#{columns[0][0]:>{bad_width-1}}"
+        columns[0][1:] = [f"{row:>{bad_width}}" for row in columns[0][1:]]
+        columns[1] = [f"{row:>{repl_width}}" for row in columns[1]]
+        lines = '\n'.join(f'{bad}, {repl}' for bad, repl in zip(*columns))
 
-            filepath = Path(filepath)
-            if not filepath.exists():
-                filepath.mkdir(parents=True)
-            filename = filepath / f"{self.__base_name}.badpx"
+        filepath = Path(filepath)
+        if not filepath.exists():
+            filepath.mkdir(parents=True)
+        filename = filepath / f"{self.__base_name}.badpx"
 
-            width, height, *_ = self.__camera.image_info
-            n_bad = self.n_bad_pixels_sensor
-            n_uncorr = self.n_uncorrectable_sensor
-            comment = (f"# Bad pixels file for camera {self.__camera.name}. \n"
-                       f"# Total number of bad pixels: {n_bad}, i.e., "
-                       f"{100*n_bad/(width*height):.2f}% of the sensor.\n")
-            if n_uncorr:
-                comment += f"# Of these, {n_uncorr} cannot be corrected.\n"
-            comment += ("# Bad pixel coordinates are (row number, column "
-                        "number), i.e., (y, x).\n#\n")
+        width, height, *_ = self.__camera.image_info
+        n_bad = self.n_bad_pixels_sensor
+        n_uncorr = self.n_uncorrectable_sensor
+        comment = (f"# Bad pixels file for camera {self.__camera.name}. \n"
+                   f"# Total number of bad pixels: {n_bad}, i.e., "
+                   f"{100*n_bad/(width*height):.2f}% of the sensor.\n")
+        if n_uncorr:
+            comment += f"# Of these, {n_uncorr} cannot be corrected.\n"
+        comment += ("# Bad pixel coordinates are (row number, column "
+                    "number), i.e., (y, x).\n#\n")
         
         with open(filename, 'w', encoding='utf-8') as bad_px_file:
             bad_px_file.write(comment)
