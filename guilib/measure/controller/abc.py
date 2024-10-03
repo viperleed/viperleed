@@ -130,14 +130,14 @@ class ControllerABC(DeviceABC):
             settings file.
         """
         super().__init__(settings=settings, parent=parent)
-        self.__sets_energy = sets_energy
-        self.__serial = None
-        self.__hash = -1
+        self._sets_energy = sets_energy
+        self._serial = None
+        self._hash = -1
 
-        self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(self)
-        self.__init_err_timer.setSingleShot(True)
-        self.__init_err_timer.timeout.connect(self.__report_init_errors)
+        self._init_errors = []  # Report these with a little delay
+        self._init_err_timer = qtc.QTimer(self)
+        self._init_err_timer.setSingleShot(True)
+        self._init_err_timer.timeout.connect(self.__report_init_errors)
 
         # Use to force sending a .stop even if the serial is busy,
         # as it may be waiting for an OK. This can happen before
@@ -184,24 +184,24 @@ class ControllerABC(DeviceABC):
         # alternating order) to be set during the preparation.
         self.first_energies_and_times = []
 
-        # __unsent_messages is a list of messages that have been
+        # _unsent_messages is a list of messages that have been
         # stored by the controller because it was not yet possible
         # to send them to the hardware controller. New messages
-        # will automatically be appended to __unsent_messages if
+        # will automatically be appended to _unsent_messages if
         # the serial is still waiting for a response from the
-        # hardware. All messages in __unsent_messages are processed
+        # hardware. All messages in _unsent_messages are processed
         # in the order they arrive at. When the serial receives
         # a valid answer from the hardware it will automatically
         # trigger an attempt to send the next message in
-        # __unsent_messages. Each element of unsent_messages is
+        # _unsent_messages. Each element of unsent_messages is
         # a tuple whose first element is the command and its associated
         # data, and the second element is the timeout parameter.
-        self.__unsent_messages = []
+        self._unsent_messages = []
         if self.serial:
             self.serial.busy_changed.connect(self.send_unsent_messages,
                                              type=_QUEUED_UNIQUE)
-        if self.__init_errors:
-            self.__init_err_timer.start(20)
+        if self._init_errors:
+            self._init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
 
     def __deepcopy__(self, memo):
@@ -213,9 +213,9 @@ class ControllerABC(DeviceABC):
 
     def __hash__(self):
         """Return modified hash of self."""
-        if self.__hash == -1:
-            self.__hash = hash((id(self), self.name))
-        return self.__hash
+        if self._hash == -1:
+            self._hash = hash((id(self), self.name))
+        return self._hash
 
     def get_busy(self):
         """Return whether the controller is busy.
@@ -251,7 +251,7 @@ class ControllerABC(DeviceABC):
         busy_changed
             If the busy state of the controller changed.
         """
-        if self.__unsent_messages:
+        if self._unsent_messages:
             return
         if self.serial and self.serial.busy:
             is_busy = True
@@ -443,12 +443,12 @@ class ControllerABC(DeviceABC):
     @property
     def serial(self):
         """Return the serial instance used."""
-        return self.__serial
+        return self._serial
 
     @property
     def sets_energy(self):
         """Return whether the controller sets the energy."""
-        return self.__sets_energy
+        return self._sets_energy
 
     @sets_energy.setter
     def sets_energy(self, energy_setter):
@@ -459,7 +459,7 @@ class ControllerABC(DeviceABC):
         energy_setter : bool
             True if the controller sets the energy.
         """
-        self.__sets_energy = bool(energy_setter)
+        self._sets_energy = bool(energy_setter)
 
     @property
     def time_to_trigger(self):
@@ -486,8 +486,8 @@ class ControllerABC(DeviceABC):
                                                  'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             serial_class = base.class_from_name('serial', serial_cls_name)
-            self.__serial = serial_class(self._settings,
-                                         port_name=self.__address)
+            self._serial = serial_class(self._settings,
+                                        port_name=self._address)
             self.serial.error_occurred.connect(self.error_occurred)
             self.serial.connection_changed.connect(self.connection_changed)
         else:
@@ -502,7 +502,7 @@ class ControllerABC(DeviceABC):
         if self._address:
             self.serial.connect_()
         self._time_to_trigger = 0
-        self.__hash = -1
+        self._hash = -1
 
     def set_settings(self, new_settings):
         """Set new settings for this controller.
@@ -652,7 +652,7 @@ class ControllerABC(DeviceABC):
         # preparation will not be sent till the end of the whole
         # preparation. This excludes a call to .stop(), which is
         # always done as soon as possible.
-        self.__unsent_messages = []
+        self._unsent_messages = []
         self.__can_continue_preparation = False
 
         self.busy = True
@@ -707,7 +707,7 @@ class ControllerABC(DeviceABC):
 
     def flush(self):
         """Clear unsent messages and set not busy."""
-        self.__unsent_messages = []
+        self._unsent_messages = []
         self.busy = False
 
     @abstractmethod
@@ -881,8 +881,8 @@ class ControllerABC(DeviceABC):
         -------
         None.
         """
-        if self.__unsent_messages or self.serial.busy:
-            self.__unsent_messages.append((data, kwargs))
+        if self._unsent_messages or self.serial.busy:
+            self._unsent_messages.append((data, kwargs))
             return
         self.serial.send_message(*data, **kwargs)
 
@@ -903,8 +903,8 @@ class ControllerABC(DeviceABC):
         """
         if serial_busy:
             return
-        if self.__unsent_messages:
-            data, kwargs = self.__unsent_messages.pop(0)
+        if self._unsent_messages:
+            data, kwargs = self._unsent_messages.pop(0)
             self.serial.send_message(*data, **kwargs)
 
     @abstractmethod
@@ -1060,14 +1060,14 @@ class ControllerABC(DeviceABC):
     @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
-        self.__init_errors.append(err)
+        self._init_errors.append(err)
 
     @qtc.pyqtSlot()
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
-        for error in self.__init_errors:
+        for error in self._init_errors:
             self.error_occurred.emit(error)
-        self.__init_errors = []
+        self._init_errors = []
 
 
 class MeasureControllerABC(ControllerABC):
