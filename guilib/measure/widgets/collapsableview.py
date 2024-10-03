@@ -32,6 +32,7 @@ from viperleed.guilib.measure.hardwarebase import safe_connect
 from viperleed.guilib.measure.hardwarebase import safe_disconnect
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
+from viperleed.guilib.widgets.basewidgets import QNoDefaultIconButton
 from viperleed.guilib.widgets.basewidgets import QUncheckableButtonGroup
 
 
@@ -113,7 +114,7 @@ class CollapsableView(qtw.QWidget):
     def __init__(self, parent=None):
         """Initialise widget."""
         super().__init__(parent=parent)
-        self._button = QNoDefaultPushButton()
+        self._button = QNoDefaultIconButton()
         self._outer_layout = qtw.QHBoxLayout()
         self._frame = qtw.QFrame(parent=self)
         self._compose_and_connect()
@@ -123,12 +124,23 @@ class CollapsableView(qtw.QWidget):
         """Return the main button."""
         return self._button
 
+    def _adjust_button_icon(self, button_up):
+        """Change in which direction the icon is pointing."""
+        if button_up:
+            icon = qtw.QStyle.SP_TitleBarShadeButton
+        else:
+            icon = qtw.QStyle.SP_TitleBarUnshadeButton
+        self.button.setIcon(self.style().standardIcon(icon))
+
     def _compose_and_connect(self):
         """Compose and connect."""
         layout = qtw.QVBoxLayout()
         remove_spacing_and_margins(layout)
-        layout.addWidget(self._button)
-        policy = self._button.sizePolicy()
+        layout.addWidget(self.button)
+        policy = self.button.sizePolicy()
+        self.button.setIcon(
+            self.style().standardIcon(qtw.QStyle.SP_TitleBarUnshadeButton)
+            )
 
         inner_layout = qtw.QVBoxLayout()
         remove_spacing_and_margins(inner_layout)
@@ -142,19 +154,20 @@ class CollapsableView(qtw.QWidget):
         frame_layout.addSpacing(1)
         layout.addLayout(frame_layout)
         policy.setHorizontalPolicy(policy.Expanding)
-        self._button.setSizePolicy(policy)
+        self.button.setSizePolicy(policy)
 
         layout.addStretch(1)
         remove_spacing_and_margins(self._outer_layout)
         self._outer_layout.addLayout(layout)
         self.setLayout(self._outer_layout)
 
-        self._button.clicked.connect(self._change_frame_visibility)
+        self.button.clicked.connect(self._change_frame_visibility)
 
     @qtc.pyqtSlot()
     def _change_frame_visibility(self):
         """Switch frame visibility on and off."""
         self._frame.setVisible(not self._frame.isVisible())
+        self._adjust_button_icon(self._frame.isVisible())
 
     def add_collapsable_item(self, item):
         """Add widget to the widgets in the inner collapsable layout."""
@@ -191,6 +204,7 @@ class CollapsableView(qtw.QWidget):
         enable = bool(enable)
         self.button.setEnabled(enable)
         self._frame.setVisible(enable)
+        self._adjust_button_icon(enable)
 
     def set_top_widget_geometry(self, widget, width=None, align=_ALIGN_CTR):
         """Set top widget geometry to the given parameters."""
@@ -416,6 +430,7 @@ class CollapsableCameraView(CollapsableDeviceView):
     def _get_settings_handler(self):
         """Get the settings handler of the handled device."""
         device = self._make_device()
+        # TODO: handle cameras from settings that are not connected
         if not device:
             return
         device.connect_()
