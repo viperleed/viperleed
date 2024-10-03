@@ -55,28 +55,7 @@ class SettingsFileReader(AbstractContextManager, Iterator):
             pass
         return super().__exit__(exc_type, exc_value, traceback)
 
+    @abstractmethod
     def __next__(self):
         """Return the next understandable information in the file."""
-        for line in self._file_obj:
-            self._current_line += 1
-            param, *rest = self._read_one_line(line)
-            if not param:
-                continue
-            return (param, *rest)
-        raise StopIteration
-
-    @abstractmethod
-    def _read_one_line(self, line):
-        """Return a parameter and other custom information from one line."""
-        pass
-
-    @abstractmethod
-    def _parse_line(self, line):
-        """Return a parameter string and an Assignment from line."""
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def _tokenize_line(line):
-        """Split up line into tokens."""
-        pass
+        raise NotImplementedError
