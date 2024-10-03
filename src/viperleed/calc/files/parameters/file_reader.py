@@ -34,7 +34,7 @@ class SettingsFileReader(AbstractContextManager, Iterator):
     """A context manager that iterates the contents of a settings file
     (e.g PARAMETERS)."""
 
-    def __init__(self, filename, noisy=True):
+    def __init__(self, filename, noisy=True):                                   # TODO: it would be nice to support passing file contents via a StringIO or similar
         """Initialize instance.
 
         Parameters
