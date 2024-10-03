@@ -757,6 +757,7 @@ class CameraABC(DeviceABC):
         self.load_camera_settings()
         self.connected = True
 
+    @qtc.pyqtSlot()
     def disconnect_(self):
         """Disconnect the device."""
         self.__reported_errors = set()
