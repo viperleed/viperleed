@@ -253,7 +253,7 @@ class WindowsCamera:
         _dll = windll.LoadLibrary(str(dll_path / "tisgrabber_x64.dll"))
     else:
         windll.LoadLibrary(str(dll_path / "TIS_UDSHL11.dll"))
-        _dll = windll.LoadLibrary("tisgrabber.dll")
+        _dll = windll.LoadLibrary(str(dll_path / "tisgrabber.dll"))
 
     __initalized = False
 
