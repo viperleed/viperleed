@@ -27,53 +27,16 @@ from viperleed.calc.lib.string_utils import strip_comments
 from .errors import MissingEqualsError
 from .errors import ParameterHasNoValueError
 from .errors import ParameterNotRecognizedError
+from .file_reader import SettingsFileReader
 from .known_parameters import did_you_mean
 from .known_parameters import from_alias
 from .utils import Assignment
 
-
-class ParametersReader(AbstractContextManager, Iterator):
+class ParametersReader(SettingsFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
 
     def __init__(self, filename, noisy=True):
-        """Initialize instance.
-
-        Parameters
-        ----------
-        filename : str or Path
-            Path to the file to be read.
-        noisy : bool, optional
-            Whether the reader will emit logging messages and raise
-            errors if unknown or malformed parameters are encountered.
-        """
-        self.filename = Path(filename)
-        self.noisy = noisy
-        self._file_obj = None
-        self._current_line = 0
-
-    def __enter__(self):
-        """Enter context."""
-        self._file_obj = self.filename.open('r', encoding='utf-8')
-        self._current_line = 0
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Close file, then return control to caller to handle exceptions."""
-        try:
-            self._file_obj.close()
-        except AttributeError:
-            pass
-        return super().__exit__(exc_type, exc_value, traceback)
-
-    def __next__(self):
-        """Return the next understandable information in the file."""
-        for line in self._file_obj:
-            self._current_line += 1
-            param, *rest = self._read_one_line(line)
-            if not param:
-                continue
-            return (param, *rest)
-        raise StopIteration
+        super().__init__(filename, noisy)
 
     def _complain_about_line_parse_errors(self, line, exc):
         """Re-raise an exception occurred while line was being parsed."""
