@@ -98,6 +98,30 @@ class QNoDefaultPushButton(qtw.QPushButton):
         self.setAutoDefault(False)
 
 
+class QNoDefaultIconButton(QNoDefaultPushButton):
+    """QNoDefaultPushButton with right-aligned icons."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialise button."""
+        super().__init__(*args, **kwargs)
+        self.setLayout(qtw.QHBoxLayout())
+        self._label = qtw.QLabel()
+        self._label.setAlignment(qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
+        self._label.setAttribute(qtc.Qt.WA_TransparentForMouseEvents, True)
+        self.layout().addWidget(self._label)
+
+    def setIcon(self, icon):
+        """Set the desired icon on the button.
+
+        Parameters
+        ----------
+        icon : QIcon
+            The icon to be added to the button.
+        """
+        icon_size_real = icon.actualSize(self.sizeHint()*0.5)
+        self._label.setPixmap(icon.pixmap(icon_size_real))
+
+
 class QUncheckableButtonGroup(qtw.QButtonGroup):
     """QButtonGroup that can be unchecked."""
 
