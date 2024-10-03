@@ -149,6 +149,8 @@ class CameraABC(DeviceABC):
             Other unused keyword arguments.
         """
         super().__init__(settings=settings, parent=parent)
+        if not driver:
+            raise RuntimeError('No camera driver given!')
         self.driver = driver
         self.__connected = False
         self.__bad_pixels = None
