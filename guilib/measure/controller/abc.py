@@ -34,6 +34,8 @@ from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 _UNIQUE = qtc.Qt.UniqueConnection
 _QUEUED_UNIQUE = qtc.Qt.QueuedConnection | _UNIQUE
 
+NO_HARDWARE_INTERFACE = object()
+
 
 def ensure_connected(method):
     """Execute a bound method only if its instance connected.
@@ -106,14 +108,15 @@ class ControllerABC(DeviceABC):
             The controller settings. If not given, it should be set
             via the .settings property before the controller can
             be used.
-        address : str, optional
+        address : str, NO_HARDWARE_INTERFACE, optional
             Address (e.g., serial port) to be used to communicate with
             the controller. If this is given, it will also be stored
             in the settings file, overriding the value that may be
             there. If not given and no value is present in the
             "controller/address" field, an address should be set
-            explicitly via the .address property. Default is an
-            empty string.
+            explicitly via the .address property. If the value is
+            NO_HARDWARE_INTERFACE, then the controller will not attempt
+            to connect to hardware. Default is an empty string.
         sets_energy : bool, optional
             Used to determine whether this controller is responsible
             for setting the electron energy by communicating with the
@@ -145,7 +148,7 @@ class ControllerABC(DeviceABC):
         self.__force_stop_timer.setInterval(200)
         self.__force_stop_timer.timeout.connect(self.send_unsent_messages)
 
-        self.__address = address
+        self._address = address
         self.__energy_calibration = None
 
         # Set in self.set_energy to the sum of the waiting times
@@ -423,11 +426,14 @@ class ControllerABC(DeviceABC):
     @address.setter
     def address(self, address):
         """Set the address for this controller."""
-        if not isinstance(address, str):
-            raise TypeError("address must be a string")
+        no_hardware = address is NO_HARDWARE_INTERFACE
+        if not (isinstance(address, str) or no_hardware):
+            raise TypeError("Address must be a string.")
         if address == self.address:
             return
-        self.__address = address
+        self._address = address
+        if no_hardware:
+            return
         if self.settings:
             self.settings.set('controller', 'address', address)
         if not self.serial:
@@ -488,12 +494,12 @@ class ControllerABC(DeviceABC):
             # The next line will also check that self._settings contains
             # appropriate settings for the serial class used.
             self.serial.settings = self._settings
-            self.serial.port_name = self.__address
+            self.serial.port_name = self._address
 
         # Notice that the .connect_() will run anyway, even if the
         # settings are invalid (i.e., missing mandatory fields for
         # the serial)!
-        if self.__address:
+        if self._address:
             self.serial.connect_()
         self._time_to_trigger = 0
         self.__hash = -1
@@ -536,16 +542,21 @@ class ControllerABC(DeviceABC):
         if not super().set_settings(new_settings):
             return False
 
+        if self._address is NO_HARDWARE_INTERFACE:
+            # Bypass setting the serial in case the controller object
+            # is not supposed to communicate with hardware.
+            return True
+
         # Take care of the address, syncing the contents of
-        # the future settings and the value in self.__address.
+        # the future settings and the value in self._address.
         # Also, save changes to file, unless we have been reading
         # from the default configuration.
         _settings_serial = self._settings.get('controller', 'address',
-                                              fallback=self.__address)
-        if not self.__address:
-            self.__address = _settings_serial
+                                              fallback=self._address)
+        if not self._address:
+            self._address = _settings_serial
         else:
-            self._settings['controller']['address'] = self.__address
+            self._settings['controller']['address'] = self._address
             if not self.uses_default_settings:
                 self._settings.update_file()
         try:
@@ -657,7 +668,7 @@ class ControllerABC(DeviceABC):
     @qtc.pyqtSlot()
     def connect_(self):
         """Connect serial."""
-        # TODO: should we complain if .__address is False-y?
+        # TODO: should we complain if ._address is False-y?
         if not self.serial or self.serial.is_open:
             # Invalid or already connected
             return
