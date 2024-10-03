@@ -19,16 +19,7 @@ from abc import abstractmethod
 from collections.abc import Iterator
 from contextlib import AbstractContextManager
 from pathlib import Path
-import re
 
-from viperleed.calc.lib.string_utils import strip_comments
-
-from .errors import MissingEqualsError
-from .errors import ParameterHasNoValueError
-from .errors import ParameterNotRecognizedError
-from .known_parameters import did_you_mean
-from .known_parameters import from_alias
-from .utils import Assignment
 
 class SettingsFileReader(AbstractContextManager, Iterator):
     """A context manager that iterates the contents of a settings file
