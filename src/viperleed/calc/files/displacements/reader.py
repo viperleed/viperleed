@@ -80,13 +80,14 @@ class DisplacementsReader(SettingsFileReader):
     def _parse_line(self, line):
         """Get content from line."""
         # Decide based on the current section
-        if self.current_section is DisplacementFileSections.GEO_DELTA:
+        section = DisplacementFileSections[self.current_section]
+        if section is DisplacementFileSections.GEO_DELTA:
             return self._parse_geo_delta_line(line)
-        elif self.current_section == DisplacementFileSections.VIB_DELTA:
+        elif section is DisplacementFileSections.VIB_DELTA:
             return self._parse_vib_delta_line(line)
-        elif self.current_section == DisplacementFileSections.OCC_DELTA:
+        elif section is DisplacementFileSections.OCC_DELTA:
             return self._parse_occ_delta_line(line)
-        elif self.current_section == DisplacementFileSections.CONSTRAIN:
+        elif section is DisplacementFileSections.CONSTRAIN:
             return self._parse_constraints_line(line)
         else:
             raise ValueError(
