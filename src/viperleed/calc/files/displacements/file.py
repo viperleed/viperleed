@@ -24,6 +24,22 @@ class SearchBlock:
             raise ValueError(f"Invalid section: {section}")
         self.sections[section].append(line)
 
+    @property
+    def geo_delta(self):
+        return self.sections[DisplacementFileSections.GEO_DELTA]
+
+    @property
+    def vib_delta(self):
+        return self.sections[DisplacementFileSections.VIB_DELTA]
+
+    @property
+    def occ_delta(self):
+        return self.sections[DisplacementFileSections.OCC_DELTA]
+
+    @property
+    def constrain(self):
+        return self.sections[DisplacementFileSections.CONSTRAIN]
+
     def __repr__(self):
         return f"SearchBlock(label={self.label}, sections={self.sections})"
 
