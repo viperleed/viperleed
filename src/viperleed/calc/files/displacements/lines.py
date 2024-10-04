@@ -2,7 +2,7 @@ from collections import namedtuple
 
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
 SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
-SectionLine = namedtuple('SectionLine', ['section', 'line'])
+SectionHeaderLine = namedtuple('SectionHeaderLine', ['section', 'line'])
 
 class GeoDeltaLine:
     def __init__(self, label, which, direction, start, stop, step):

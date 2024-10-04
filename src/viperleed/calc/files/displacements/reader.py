@@ -12,7 +12,7 @@ from .regex import match_vib_line
 from .regex import match_occ_line
 from .regex import match_constrain_line
 from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine
-from .lines import LoopMarkerLine, SearchHeaderLine, SectionLine
+from .lines import LoopMarkerLine, SearchHeaderLine, SectionHeaderLine
 
 DisplacementFileSections = Enum('DisplacementFileSections', [
     'GEO_DELTA',
