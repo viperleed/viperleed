@@ -86,7 +86,7 @@ class DisplacementsReader(SettingsFileReader):
             return self._parse_vib_delta_line(line)
         elif self.current_section == DisplacementFileSections.OCC_DELTA:
             return self._parse_occ_delta_line(line)
-        elif self.current_section == DisplacementFileSections.CONSTRAINTS:
+        elif self.current_section == DisplacementFileSections.CONSTRAIN:
             return self._parse_constraints_line(line)
         else:
             raise ValueError(
