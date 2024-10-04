@@ -13,6 +13,7 @@ TEST_LINES_SECTION = {
     "VIB_DELTA": "VIB_DELTA",
     "OCC_DELTA": "OCC_DELTA",
     "CONSTRAIN": "CONSTRAIN",
+    "= GEO_DELTA": "GEO_DELTA",
     "NOT_A_SECTION": None,
     "GEO_DELTA_EXTRA": None,
 }
