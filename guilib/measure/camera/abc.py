@@ -484,7 +484,7 @@ class CameraABC(DeviceABC):
         if n_frames < min_n or n_frames > max_n:
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                f"{n_frames} [out of range ({min_n}, {max_n})]",
+                f'{n_frames} [out of range ({min_n}, {max_n})]',
                 'measurement_settings/n_frames', 1
                 )
             n_frames = 1
