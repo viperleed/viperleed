@@ -272,6 +272,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         if not files_and_scores:
             return []
+        # Sort by score, best first, and discard the scores
         obj_settings_files, _ = zip(
             *sorted(files_and_scores, key=itemgetter(1), reverse=True)
             )
