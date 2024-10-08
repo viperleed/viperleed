@@ -585,7 +585,7 @@ class SettingsInfo:
     unique_name : str
         Unique name identifying the device.
     more : dict
-        Extra, optional, information about the discovered device.
+        Extra, optional, information about the device.
     """
     unique_name: str
     more: dict = field(default_factory=dict)
