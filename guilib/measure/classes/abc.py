@@ -559,7 +559,7 @@ class DeviceABC(HardwareABC):
         """List all devices of this class.
 
         This method must return a list of SettingsInfo instances. Each
-        controller is represented by a single SettingsInfo instance. The
+        device is represented by a single SettingsInfo instance. The
         SettingsInfo object must contain a .unique_name and can contain
         .more information as a dict. The information contained within
         a SettingsInfo must be enough to determine a suitable settings
