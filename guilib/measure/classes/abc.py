@@ -583,7 +583,7 @@ class SettingsInfo:
     Attributes
     ----------
     unique_name : str
-        Unique name identifying the discovered device
+        Unique name identifying the device.
     more : dict
         Extra, optional, information about the discovered device.
     """
