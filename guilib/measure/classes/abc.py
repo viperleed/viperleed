@@ -125,7 +125,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         settings : dict or ConfigParser or str or Path or ViPErLEEDSettings or
                    None, optional
             The object settings. If not given or None,
-            a suitable default is searched.
+            a suitable default is searched. Default it None.
         **kwargs : object
             Unused keyword arguments.
         """
