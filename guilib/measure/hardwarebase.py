@@ -320,10 +320,9 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
     directory = kwargs.get('directory', DEFAULTS_PATH)
     match_exactly = kwargs.get('match_exactly', False)
     parent_widget = kwargs.get('parent_widget', None)
-    default = True if directory is DEFAULTS_PATH else False
 
     device_config_files = obj_cls.find_matching_settings_files(
-        obj_info, directory, match_exactly, default
+        obj_info, directory, match_exactly,
         )
 
     if device_config_files and len(device_config_files) == 1:

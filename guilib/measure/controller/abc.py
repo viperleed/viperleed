@@ -158,7 +158,7 @@ class ControllerABC(DeviceABC):
 
         self.error_occurred.connect(self.__on_init_errors)
 
-        self.set_settings(self._settings_to_load)
+        self.set_settings(self.settings_to_load)
 
         # self.time_stamp is used to calculate times of measurements.
         # Even a non-measuring primary controller needs it to enable

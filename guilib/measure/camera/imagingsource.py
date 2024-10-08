@@ -623,7 +623,7 @@ class ImagingSourceCamera(abc.CameraABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        self.check_before_getting_settings_handler()
+        self.check_creating_settings_handler_is_possible()
         handler = SettingsHandler(self.settings, display_config=True)
         handler.add_from_handler(super().get_settings_handler())
 
