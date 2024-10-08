@@ -34,13 +34,13 @@ from PyQt5 import QtWidgets as qtw
 from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.guilib.measure.hardwarebase import emit_error
-from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
-from viperleed.guilib.measure.classes.settings import NoSettingsError
-from viperleed.guilib.measure.classes.settings import SettingsError
 from viperleed.guilib.measure.classes.settings import (
-    TooManyDefaultSettingsError
+    NoDefaultSettingsError,
+    NoSettingsError,
+    SettingsError,
+    TooManyDefaultSettingsError,
+    ViPErLEEDSettings,
     )
-from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 
