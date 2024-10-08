@@ -296,7 +296,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         Parameters
         ----------
         obj_info : SettingsInfo or None
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
