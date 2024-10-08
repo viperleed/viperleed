@@ -291,7 +291,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         known. Therefore, all information to compare to must come
         from the object class itself. If match_exactly is true, the
         default has to be a perfect match. Only one default at a time
-        can fulfill this criteria.
+        can fulfill this criterion.
 
         Parameters
         ----------
