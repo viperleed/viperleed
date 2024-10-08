@@ -480,7 +480,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 # DISABLE: seems a bug in pylint. This is also an ABC.
 # pylint: disable-next=abstract-method
 class HardwareABC(QObjectWithSettingsABC):
-    """Abstract base class of hardware related objects."""
+    """Abstract base class of hardware-related objects."""
 
     # Emitted whenever the busy state of the device changes.
     # Contains the new busy state of the device.
