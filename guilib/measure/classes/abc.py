@@ -352,6 +352,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
                 f'obj_info should be of type SettingsInfo '
                 f'but is of type {type(obj_info).__name__}.'
                 )
+        return tuple()
 
     @classmethod
     @abstractmethod
