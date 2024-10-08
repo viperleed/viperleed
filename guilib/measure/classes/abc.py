@@ -316,7 +316,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     @classmethod
     @abstractmethod
     def is_matching_user_settings(cls, obj_info, config, match_exactly):
-        """Determine if the settings file is for this instance.
+        """Determine if a `config` file is for this instance.
 
         This method must use obj_info to determine if a config is
         suitable for the instance. To perform this check one can
