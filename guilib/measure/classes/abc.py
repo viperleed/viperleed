@@ -195,7 +195,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             a TypeError will be raised.
         match_exactly : bool, optional
             Whether find_from should be matched exactly. False means
-            the matching of settings files will be less strict. E.g., 
+            the matching of settings files will be less strict. E.g.,
             firmware versions with lower minors may be allowed.
             Default is False.
 
@@ -503,6 +503,16 @@ class HardwareABC(QObjectWithSettingsABC):
 
         Note that 'self.busy =' will be performed in the calling
         thread. To avoid this, one can invoke the set_busy slot.
+
+        Parameters
+        ----------
+        is_busy : bool
+            True if the instance is busy.
+
+        Emits
+        -----
+        busy_changed
+            If the busy state of the instance changed.
         """
         self.set_busy(is_busy)
 
