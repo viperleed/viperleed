@@ -534,6 +534,7 @@ class ImagingSourceCamera(abc.CameraABC):
         self.driver.close()
 
     @classmethod
+    # pylint: disable-next=unused-argument  # From base-class signature
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
         """Determine if the default settings file is for this camera.
 
