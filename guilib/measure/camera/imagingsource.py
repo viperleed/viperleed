@@ -23,8 +23,10 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure.camera import imagingsourcecalibration as is_cal
 from viperleed.guilib.measure.camera.drivers.imagingsource import (
-    ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
-    ImagingSourceError, SinkFormat,
+    ISCamera as ImagingSourceDriver,
+    FrameReadyCallbackType,
+    ImagingSourceError,
+    SinkFormat,
     )
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
@@ -541,7 +543,7 @@ class ImagingSourceCamera(abc.CameraABC):
         Parameters
         ----------
         obj_info : SettingsInfo or None
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
