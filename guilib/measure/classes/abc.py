@@ -152,7 +152,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         self.set_settings(new_settings)
 
     def check_creating_settings_handler_is_possible(self):
-        """Check if getting a SettingsHandler is possible."""
+        """Raise if it is not possible to produce a SettingsHandler."""
         if not self.settings:
             # Remember to catch this exception before catching
             # SettingsError. Otherwise NoSettingsError will be
