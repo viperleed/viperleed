@@ -178,9 +178,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         find_from : SettingsInfo or None, optional
             find_from contains information to look for in the
             configuration files. The way to determine the correct
-            settings is up to the reimplementation of
-            is_settings_for_this_class and is_matching_default_settings
-            in self. Default is None.
+            settings is up to the is_settings_for_this_class() and
+            is_matching_default_settings() methods. Default is None.
         match_exactly : bool, optional
             Whether find_from should be matched exactly. False means
             the matching of settings files will be less strict. E.g., 
