@@ -96,6 +96,14 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         a configuration file for it to be valid. To see how a configration
         file should look like, look at the .ini files in the _defaults
         folder. Do not edit the files in the _defaults folder!
+        Each element of the _mandatory_settings should be a tuple with
+        the structure (<section>, <option>, (<value1>, <value2>, ...)).
+        Section and option detail the required entries in the .ini file,
+        while the values are the states the specified option can assume.
+        Every mandatory setting must contain a section, and for values
+        to be present, an option must be specified too. The allowed
+        tuples are therefore: (<section>), (<section>, <option>), and
+        (<section>, <option>, (<value1>, <value2>, ...)).
     settings_to_load : ViPErLEEDSettings
         settings_to_load are the settings that should be loaded
         into _settings via set_settings. If no settings is given,
