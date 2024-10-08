@@ -121,13 +121,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         Parameters
         ----------
         *args : object
-            Unused positional arguments.
+            Positional arguments passed on to the parent class.
         settings : dict or ConfigParser or str or Path or ViPErLEEDSettings or
                    None, optional
             The object settings. If not given or None,
             a suitable default is searched. Default it None.
         **kwargs : object
-            Unused keyword arguments.
+            Keyword arguments passed on to the parent class.
         """
         # To get the settings of any QObjectWithSettingsABC use the
         # settings property. In a similar manner, to set settings either
@@ -180,6 +180,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             configuration files. The way to determine the correct
             settings is up to the is_settings_for_this_class() and
             is_matching_default_settings() methods. Default is None.
+            If it is None, subclasses must attempt to determine suitable
+            settings without additional information, when searching for
+            default settings via is_matching_default_settings(). When
+            looking for user settings with is_matching_user_settings()
+            a TypeError will be raised.
         match_exactly : bool, optional
             Whether find_from should be matched exactly. False means
             the matching of settings files will be less strict. E.g., 
@@ -224,9 +229,10 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Parameters
         ----------
-        obj_info : SettingsInfo
+        obj_info : SettingsInfo or None
             The additional information that should be used to find
-            appropriate settings.
+            appropriate settings. It can only be None when looking for
+            default settings, otherwise a TypeError will be raised.
         directory : str or Path
             The location in which to look for configuration files.
             If directory is the directory containing the default
