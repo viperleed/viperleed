@@ -322,7 +322,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         suitable for the instance. To perform this check one can
         .get values from config and compare the information from
         obj_info.more and obj_info.unique_name to it. If
-        match_exactly is true, the config has to be a perfect match
+        match_exactly is True, the config has to be a perfect match
         and must allow full functionality of the connected hardware.
 
         Parameters
