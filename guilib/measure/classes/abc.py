@@ -246,7 +246,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         Returns
         -------
         obj_settings_files : list
-            A list of the found settings paths that contain appropriate
+            A list of the paths to settings files that contain appropriate
             settings sorted by how well the settings match from best to
             worst.
         """
