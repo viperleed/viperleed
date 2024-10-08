@@ -464,7 +464,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """
         try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
-        except(ValueError, NoSettingsError):
+        except (ValueError, NoSettingsError):
             emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS)
             return False
         invalid = self.are_settings_invalid(new_settings)
