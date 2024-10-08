@@ -693,8 +693,8 @@ class CameraABC(DeviceABC):
             return False
 
         error_msg = error_msg.replace('_', ' ')
-        if (error is QObjectSettingsErrors.INVALID_SETTINGS and
-            "bad pixel" in error_msg):
+        if (error is QObjectSettingsErrors.INVALID_SETTINGS
+                and 'bad pixel' in error_msg):
             return True
         return False
 
