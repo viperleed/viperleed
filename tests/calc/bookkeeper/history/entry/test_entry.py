@@ -77,31 +77,6 @@ class TestHistoryEntry:
         with not_raises(FieldsScrambledError):
             attributes.check_sorted()
 
-    @parametrize(discard=(True, False))
-    def test_discarded_at_init(self, discard):
-        """Check correct initialization of an entry with discarding info."""
-        entry = HistoryInfoEntry(discarded_=discard)
-        assert entry.is_discarded == discard
-        assert not entry.has_notes  # Despite the .is_discarded state
-
-    def test_discarded_with_missing_notes(self):
-        """Check correct formatting of a discarded entry without notes."""
-        missing = cases_entry.case_missing_field(FieldTag.NOTES)
-        entry = HistoryInfoEntry.from_string(missing)
-        discarded = entry.as_discarded()
-        assert FieldTag.NOTES.value not in str(entry)
-        assert FieldTag.NOTES.value in str(discarded)
-        assert discarded.is_discarded
-
-    def test_discard_twice(self):
-        """Ensure correct behavior of discarding an entry twice."""
-        contents = CorrectEntry().case_no_notes()
-        entry = HistoryInfoEntry.from_string(contents)
-        assert not entry.is_discarded
-        discarded_entry = entry.as_discarded()
-        assert discarded_entry.is_discarded
-        assert discarded_entry.as_discarded() is discarded_entry
-
     @auto_fix
     def test_format_problematic_fields_auto_fix(self, entry_str):
         """Check that no problematic fields are marked."""
@@ -302,6 +277,35 @@ class TestHistoryEntry:
             pytest.xfail(reason=('Not sure yet if we should really mark '       # TODO
                                  'those as such. We currently do not'))
             assert entry_edited.needs_fixing
+
+
+class TestHistoryEntryDiscard:
+    """Collection of tests concerning discarding and discarded entries."""
+
+    @parametrize(discard=(True, False))
+    def test_discarded_at_init(self, discard):
+        """Check correct initialization of an entry with discarding info."""
+        entry = HistoryInfoEntry(discarded_=discard)
+        assert entry.is_discarded == discard
+        assert not entry.has_notes  # Despite the .is_discarded state
+
+    def test_discarded_with_missing_notes(self):
+        """Check correct formatting of a discarded entry without notes."""
+        missing = cases_entry.case_missing_field(FieldTag.NOTES)
+        entry = HistoryInfoEntry.from_string(missing)
+        discarded = entry.as_discarded()
+        assert FieldTag.NOTES.value not in str(entry)
+        assert FieldTag.NOTES.value in str(discarded)
+        assert discarded.is_discarded
+
+    def test_discard_twice(self):
+        """Ensure correct behavior of discarding an entry twice."""
+        contents = CorrectEntry().case_no_notes()
+        entry = HistoryInfoEntry.from_string(contents)
+        assert not entry.is_discarded
+        discarded_entry = entry.as_discarded()
+        assert discarded_entry.is_discarded
+        assert discarded_entry.as_discarded() is discarded_entry
 
 
 class TestHistoryEntryFix:
