@@ -442,8 +442,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If new_settings is neither a dict, ConfigParser, str,
             or Path
         TypeError
-            If an element of the mandatory settings is None or has
-            a length greater than 3.
+            If an element of the mandatory settings is None or
+            is not a Sequence with length <= 3.
 
         Emits
         -----
