@@ -357,7 +357,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     @classmethod
     @abstractmethod
     def is_settings_for_this_class(cls, config):
-        """Determine if the settings file is for this class.
+        """Determine if a `config` file is for this class.
 
         This method must use cls attributes to determine if
         a config is suitable for the class.
