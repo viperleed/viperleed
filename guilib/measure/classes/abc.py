@@ -235,6 +235,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             default settings, otherwise a TypeError will be raised.
         directory : str or Path
             The location in which to look for configuration files.
+            Settings files are searched in directory and all its subfolders.
             If directory is the directory containing the default
             settings, is_matching_default_settings is used to determine
             whether a configuration file is appropriate. If it is a
