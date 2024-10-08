@@ -170,8 +170,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def find_default_settings(self, find_from=None, match_exactly=False):
         """Find default settings for this object.
 
-        To extend the functionality of this method, reimplement the
-        method and call super().find_default_settings in the end.
+        This method may be extended in subclasses. Make
+        sure to call super().find_default_settings at the end.
 
         Parameters
         ----------
