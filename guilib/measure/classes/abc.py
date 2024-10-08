@@ -493,7 +493,7 @@ class HardwareABC(QObjectWithSettingsABC):
     def busy(self, is_busy):
         """Set busy state of instance.
 
-        Note that 'busy =' will be performed in the calling
+        Note that 'self.busy =' will be performed in the calling
         thread. To avoid this, one can invoke the set_busy slot.
         """
         self.set_busy(is_busy)
