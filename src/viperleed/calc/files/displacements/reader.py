@@ -21,8 +21,10 @@ DisplacementFileSections = Enum('DisplacementFileSections', [
     'CONSTRAIN'
 ])
 
-LOOP_START_MARKER = 'LOOP_START'
-LOOP_END_MARKER = 'LOOP_END'
+LoopMarker = Enum('LoopMarker', [
+    'LOOP_START',
+    'LOOP_END'
+])
 
 from viperleed.calc.files.parameters.file_reader import SettingsFileReader
 from viperleed.calc.lib.string_utils import strip_comments
@@ -55,10 +57,10 @@ class DisplacementsReader(SettingsFileReader):
         # check for loop markers
         if stripped_line == r"<loop>":
             self.current_section = None
-            return LoopMarkerLine('LOOP_START_MARKER')
+            return LoopMarkerLine(LoopMarker.LOOP_START)
         elif stripped_line == r"<\loop>":
             self.current_section = None
-            return LoopMarkerLine('LOOP_END_MARKER')
+            return LoopMarkerLine(LoopMarker.LOOP_END)
 
         # check for search header
         search_header_match = re.match(SEARCH_HEADER_PATTERN, line)

@@ -1,5 +1,5 @@
 from .errors import InvalidSearchLoopError
-from .reader import LOOP_START_MARKER, LOOP_END_MARKER
+from .reader import LoopMarker
 from .reader import DisplacementsReader
 from .reader import DisplacementFileSections
 from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine
@@ -56,9 +56,9 @@ class DisplacementsFile:
     def unclosed_loop(self):
         # Check if there is a loop that was started but not closed
         for block in reversed(self.blocks):
-            if block == LOOP_START_MARKER:
+            if block == LoopMarker.LOOP_START:
                 return True
-            elif block == LOOP_END_MARKER:
+            elif block == LoopMarker.LOOP_END:
                 break
         return False
 
@@ -84,11 +84,11 @@ class DisplacementsFile:
                     break
 
                 if isinstance(read, LoopMarkerLine):
-                    if read.type == LOOP_START_MARKER and self.unclosed_loop:
+                    if read.type == LoopMarker.LOOP_START and self.unclosed_loop:
                         raise InvalidSearchLoopError(
                             "Loop started before the previous loop was closed."
                         )
-                    if read.type == LOOP_END_MARKER and not self.unclosed_loop:
+                    if read.type == LoopMarker.LOOP_END and not self.unclosed_loop:
                         raise InvalidSearchLoopError(
                             "Loop ended without a matching start."
                         )
