@@ -468,8 +468,8 @@ class ControllerABC(DeviceABC):
     def _update_serial_from_settings(self):
         """Set serial settings from new controller settings."""
         serial_cls_name = self.settings.get('controller', 'serial_class',
-                                             fallback='')                       # TODO: remove fallback in 1.0
-        if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
+                                             fallback='')                       # TODO: #<242> (remove fallback in 1.0)
+        if not serial_cls_name:                                                 # TODO: #<242> (only here for backwards compatibility, remove in 1.0)
             serial_cls_name = self.settings.get('controller',
                                                  'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
@@ -533,10 +533,10 @@ class ControllerABC(DeviceABC):
         # the future settings and the value in self.__address.
         # Also, save changes to file, unless we have been reading
         # from the default configuration.
-        _settings_serial = self._settings.get('controller', 'address',
-                                              fallback=self.__address)
+        _settings_address = self._settings.get('controller', 'address',
+                                               fallback=self.__address)
         if not self.__address:
-            self.__address = _settings_serial
+            self.__address = _settings_address
         else:
             self._settings['controller']['address'] = self.__address
             if not self.uses_default_settings:
@@ -588,7 +588,7 @@ class ControllerABC(DeviceABC):
         invalid_settings = settings.has_settings(*self._mandatory_settings,
                                                  *extra_mandatory)
 
-        # Backwards compatibility fix
+        # Backwards compatibility fix                                           # TODO: #<242>
         new = (
             ('measurement_settings', 'nr_samples'),
             ('controller', 'serial_class'),
