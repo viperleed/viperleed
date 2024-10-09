@@ -89,6 +89,13 @@ class QObjectWithError(qtc.QObject):                                            
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     """Abstract base class of measurement objects with settings.
 
+    Attributes
+    ----------
+    uses_default_settings : bool
+        uses_default_settings remembers if a default settings was
+        loaded and can be used during runtime to adjust behaviour
+        according to this.
+
     Private attributes
     ------------------
     _mandatory_settings : list
@@ -109,10 +116,6 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         into _settings via set_settings. If no settings is given,
         _settings_to_load will automatically be the best matching
         suitable default settings file.
-    uses_default_settings : bool
-        uses_default_settings remembers if a default settings was
-        loaded and can be used during runtime to adjust behaviour
-        according to this.
     """
 
     _mandatory_settings = []
