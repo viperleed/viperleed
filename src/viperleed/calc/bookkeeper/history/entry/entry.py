@@ -595,6 +595,7 @@ class HistoryInfoEntry:
             missing = (f for f in self if f.is_missing)
             for field in missing:
                 fields.insert_sorted(field)
+        is_unsorted = FixAction.SORTING in self._fix_todos
         for field in fields:
             try:
                 fix_action = next(
@@ -611,6 +612,8 @@ class HistoryInfoEntry:
                 # fields (as we would with a set). IdentitySet handles
                 # them gracefully.
                 label = FaultyLabel.for_action(fix_action, field)
+            if label is FaultyLabel.OK and is_unsorted:
+                label = FaultyLabel.SORTING
             yield field, label
 
     @classmethod

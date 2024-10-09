@@ -21,6 +21,7 @@ from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 from viperleed.calc.bookkeeper.history.entry.entry import SyntaxErrorLogger
+from viperleed.calc.bookkeeper.history.entry.enums import _FAULTY_MARK_SEP
 from viperleed.calc.bookkeeper.history.entry.enums import FaultyLabel
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.field import FieldBase
@@ -341,6 +342,16 @@ class TestHistoryEntryFormatProblematicFields:
         cases=(cases_entry.CasesHistoryInfoFunny.case_field_and_entry_fix,
                cases_entry.CasesHistoryInfoFunny.case_sorting_messed_up)
         )
+
+    @_scrambled
+    def test_scrambled(self, entry_str, make_entry):
+        """Check that scrambled fields are labeled as such."""
+        entry = make_entry(entry_str)
+        problems = entry.format_problematic_fields().splitlines()
+        assert problems
+        assert all(_FAULTY_MARK_SEP in line for line in problems)
+        assert any(FaultyLabel.SORTING.value in line
+                   for line in problems)
 
 
 class TestHistoryEntryFix:
