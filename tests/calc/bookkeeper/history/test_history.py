@@ -15,7 +15,6 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
-from pytest_cases.filters import has_tags
 
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
@@ -32,6 +31,7 @@ from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
 
 from ....helpers import exclude_tags
 from ....helpers import make_obj_raise
+from ....helpers import raises_exception
 from ..conftest import NOTES_TEST_CONTENT
 from ..tag import BookkeeperTag as Tag
 from . import cases_history
@@ -246,11 +246,11 @@ class TestHistoryInfoRaises:
 
     @parametrize_with_cases('contents,exc',
                             cases=all_history_cases,
-                            filter=has_tags(Tag.RAISES, Tag.HISTORY))
+                            has_tag=Tag.RAISES)
     def test_file_with_invalid_entry(self, contents, exc, make_history_file):
         """Check complaints when reading a info file with invalid entries."""
         info, *_ = make_history_file(contents)
-        with pytest.raises(exc):
+        with raises_exception(HistoryInfoEntry, exc, 'from_string'):
             info.read()
         # Disable as we really want to check the private member
         # pylint: disable-next=protected-access
