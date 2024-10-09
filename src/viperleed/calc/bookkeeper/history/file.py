@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
+from enum import Enum
 from pathlib import Path
 
 from viperleed.calc.lib.log_utils import logging_silent
@@ -24,6 +25,35 @@ from .errors import CantDiscardEntryError
 from .errors import CantRemoveEntryError
 from .errors import EntrySyntaxError
 from .errors import NoHistoryEntryError
+
+
+class CantRemoveReason(Enum):
+    """Error messages explaining why an entry can't be removed."""
+
+    FIXABLE = ('Contains fields with non-standard format (run '
+               'bookkeeper --fixup to automatically fix this).')
+    HAS_COMMENTS = 'Contains fields with user comments.'
+    IS_COMMENT = 'Is a comment-only entry.'
+    MISSES_FIELDS = 'Some expected fields were deleted.'
+    NOT_UNDERSTOOD = 'Contains invalid fields that could not be interpreted.'
+
+    def __str__(self):
+        """Return the reason for removal as a message."""
+        return self.value
+
+    @classmethod
+    def for_entry(cls, entry):
+        """Return a reason suitable for a faulty `entry`."""
+        if isinstance(entry, PureCommentEntry):
+            return cls.IS_COMMENT
+        if entry.has_comments:
+            return cls.HAS_COMMENTS
+        # This has to come before .was_understood as it's a subset
+        if entry.misses_mandatory_fields:
+            return cls.MISSES_FIELDS
+        if not entry.was_understood:  # Can't be auto-fixed
+            return cls.NOT_UNDERSTOOD
+        return cls.FIXABLE
 
 
 class HistoryInfoFile:
@@ -129,20 +159,10 @@ class HistoryInfoFile:
                 'remove the notes first.'
                 )
 
-        if is_comment:
-            err_ = 'is a comment-only field'
-        elif last_entry.misses_mandatory_fields:
-            # This has to come before .was_understood as it's a subset
-            err_ = 'some expected fields were deleted'
-        elif not last_entry.was_understood:  # Can't be auto-fixed
-            err_ = 'contains invalid fields that could not be interpreted'
-        else:    # Needs fixing, but can be done in --fixup mode                # TODO: implement
-            assert not last_entry.has_notes  # Checked above
-            err_ = ('contains fields with non-standard format (run '
-                    'bookkeeper --fixup to automatically fix it)')
+        err_ = CantRemoveReason.for_entry(last_entry)
         raise CantRemoveEntryError('Failed to remove last entry from '
-                                   f'{self.path.name}: {err_}. Please '
-                                   'proceed manually.')
+                                   f'{self.path.name}: {err_} '
+                                   'Please proceed manually.')
 
     def read(self):
         """Read the current contents of the history.info file."""
