@@ -111,11 +111,17 @@ This is a comment line without a hash. TENSORS is missing
 # R SUPER   1.234
 -- Here another comment line. TIME is also missing'''
 
+    _multi = {
+        'non-empty notes': 'case_notes',
+        'empty notes': 'case_no_notes',
+        }
+
     @case(tags=(Tag.HISTORY, Tag.AUTO_FIX_ENTRY))
     @parametrize(with_notes=(True, False))
-    def case_multi_entries_no_separator(self, with_notes):
+    @parametrize(one_entry_name=_multi.values(), ids=_multi)
+    def case_multi_entries_no_separator(self, one_entry_name, with_notes):
         """Return contents of more than one entry, without a separator."""
-        one_entry = CasesInfoEntryCorrect().case_notes()
+        one_entry = getattr(CasesInfoEntryCorrect(), one_entry_name)()
         if not with_notes:
             one_entry = re.sub(r'Notes:\s*(.*\n)*', '', one_entry)
         return '\n'.join(one_entry for _ in range(3))
