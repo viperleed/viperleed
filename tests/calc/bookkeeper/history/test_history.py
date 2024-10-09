@@ -31,7 +31,6 @@ from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
 
 from ....helpers import exclude_tags
 from ....helpers import has_any_tag
-from ....helpers import make_obj_raise
 from ....helpers import raises_exception
 from ..conftest import NOTES_TEST_CONTENT
 from ..tag import BookkeeperTag as Tag
@@ -176,18 +175,17 @@ class TestHistoryInfoFile:
     @parametrize(exc=(EntrySyntaxError, FixableSyntaxError))
     def test_read_not_raises(self, exc, simple_info_file):
         """Check that .read catches no exceptions."""
-        with make_obj_raise(HistoryInfoEntry, exc, 'from_string'):
-            info, *_ = simple_info_file
-            with pytest.raises(exc):
-                # Ensure exception is not caught. HistoryInfoEntry
-                # does not normally raise anything: it logs instead.
-                # It's a bug to catch it, as it may mean that we do
-                # not log an exception. This is for future-proofing
-                # of implementation changes.
-                info.read()
+        info, *_ = simple_info_file
+        with raises_exception(HistoryInfoEntry, exc, 'from_string'):
+            # Ensure exception is not caught. HistoryInfoEntry
+            # does not normally raise anything: it logs instead.
+            # It's a bug to catch it, as it may mean that we do
+            # not log an exception. This is for future-proofing
+            # of implementation changes.
+            info.read()
 
     def test_regenerate_from_entries(self, history_info_file):
-        """Check that the history.info file can be regenerated after parsing."""
+        """Check that an history.info file can be regenerated after parsing."""
         history_info, contents = history_info_file
         assert contents == history_info.raw_contents
         last_entry = history_info.last_entry
