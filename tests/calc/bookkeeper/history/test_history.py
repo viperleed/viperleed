@@ -226,7 +226,17 @@ class TestHistoryInfoFile:
                 history_info.discard_last_entry()
             return
         assert last_entry is not None
-        if not last_entry.can_be_removed:
+        try:
+            is_removable = (
+                last_entry.can_be_removed
+                or (last_entry.is_only_outdated and n_entries == 1)
+                or (last_entry.is_only_outdated
+                    and last_entry.time_format is history_info._time_format)
+                )
+        except AttributeError as exc:
+            assert isinstance(last_entry, PureCommentEntry)
+            is_removable = False
+        if not is_removable:
             with pytest.raises(CantRemoveEntryError):
                 history_info.remove_last_entry()
             return

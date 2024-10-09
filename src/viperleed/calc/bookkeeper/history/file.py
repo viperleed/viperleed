@@ -159,6 +159,16 @@ class HistoryInfoFile:
                 'remove the notes first.'
                 )
 
+        # Allow removing entries that have out-of-date format
+        # but are consistent with the rest of the file
+        is_consistent = (
+            not is_comment  # PureCommentEntry has no .is_only_outdated
+            and last_entry.is_only_outdated
+            and last_entry.time_format is self._time_format
+            )
+        if is_consistent:
+            return
+
         err_ = CantRemoveReason.for_entry(last_entry)
         raise CantRemoveEntryError('Failed to remove last entry from '
                                    f'{self.path.name}: {err_} '
