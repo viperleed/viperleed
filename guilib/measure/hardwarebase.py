@@ -244,11 +244,12 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     obj_name = obj_info.unique_name
     msg_box = qtw.QMessageBox(parent=parent_widget)
     msg_box.setWindowTitle("No settings file found")
-    msg_box.setText(
-        f"Directory {directory} and its subfolders do not contain "
-        f"any settings file for device {obj_name}. Select "
-        "a different directory."
-        )
+    msg = (f'Directory {directory} and its subfolders do not contain '
+           f'any settings file for device {obj_name}. Select a '
+           'different directory.')
+    if third_btn_text:
+        msg += f' Alternatively you can {third_btn_text.lower()}.'
+    msg_box.setText(msg)
     msg_box.setIcon(msg_box.Warning)
     btn = msg_box.addButton("Select path", msg_box.ActionRole)
     third_btn = None
