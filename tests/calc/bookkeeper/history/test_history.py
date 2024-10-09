@@ -8,6 +8,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+from contextlib import nullcontext
 import re
 
 import pytest
@@ -112,26 +113,26 @@ class TestHistoryInfoFile:
 
     def test_discard_last_entry(self, history_info_file, caplog):
         """Check we can discard the last history.info entry."""
-        history_info, *_ = history_info_file
-        last_entry = history_info.last_entry
+        info, *_ = history_info_file
+        was_discarded = info.last_entry_was_discarded
+        last_entry = info.last_entry
         _is_comment = isinstance(last_entry, PureCommentEntry)
         exc = (
             NoHistoryEntryError if not last_entry
             else CantDiscardEntryError if _is_comment else None
             )
+        context = pytest.raises(exc) if exc else nullcontext()
+        with context:
+            info.discard_last_entry()
         if exc:
-            with pytest.raises(exc):
-                history_info.discard_last_entry()
             return
-        was_discarded = last_entry.is_discarded
-        history_info.discard_last_entry()
-        assert history_info.last_entry_was_discarded
+        assert info.last_entry_was_discarded
         if was_discarded:
             # pylint: disable-next=magic-value-comparison
             assert 'already' in caplog.text
-            assert history_info.last_entry is last_entry
+            assert info.last_entry is last_entry
         else:
-            assert history_info.last_entry is not last_entry
+            assert info.last_entry is not last_entry
 
     def test_init_does_not_read(self, simple_info_file):
         """Check that making a HistoryInfoFile does not read file contents."""
