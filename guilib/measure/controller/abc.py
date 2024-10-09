@@ -467,20 +467,20 @@ class ControllerABC(DeviceABC):
 
     def _update_serial_from_settings(self):
         """Set serial settings from new controller settings."""
-        serial_cls_name = self._settings.get('controller', 'serial_class',
+        serial_cls_name = self.settings.get('controller', 'serial_class',
                                              fallback='')                       # TODO: remove fallback in 1.0
         if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
-            serial_cls_name = self._settings.get('controller',
+            serial_cls_name = self.settings.get('controller',
                                                  'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             serial_class = base.class_from_name('serial', serial_cls_name)
-            self.__serial = serial_class(self._settings,
+            self.__serial = serial_class(self.settings,
                                          port_name=self.__address)
             self.serial.error_occurred.connect(self.error_occurred)
         else:
-            # The next line will also check that self._settings contains
+            # The next line will also check that self.settings contains
             # appropriate settings for the serial class used.
-            self.serial.settings = self._settings
+            self.serial.settings = self.settings
             self.serial.port_name = self.__address
 
         # Notice that the .connect_() will run anyway, even if the
