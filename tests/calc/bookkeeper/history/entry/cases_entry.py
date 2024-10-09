@@ -491,8 +491,8 @@ class CasesInfoEntryPureComment:
         one_entry = self.case_pure_comment_entry()
         return HISTORY_INFO_SEPARATOR.join(one_entry for _ in range(2))
 
-    comment = object()
-    entry = object()
+    comment = '_comment_'
+    entry = '_entry_'
 
     @parametrize(which_ones=(
         (comment, entry),
