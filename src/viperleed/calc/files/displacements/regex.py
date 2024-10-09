@@ -8,20 +8,20 @@ GEO_LINE_PATTERN = re.compile(
     r"(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(\s+\d+)*))?"
     r"\s+(?P<dir>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?)"
     r"\s*=\s*(?P<start>-?\d+(\.\d+)?)"
-    r"(?:\s+(?P<stop>-?\d+(\.\d+)?))?"
+    r"\s+(?P<stop>-?\d+(\.\d+)?)"
     r"(?:\s+(?P<step>-?\d+(\.\d+)?))?$"
 )
 VIB_LINE_PATTERN = re.compile(
     r"^(?P<label>\w+)(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(\s+\d+)*))?"
     r"\s*=\s*(?P<start>-?\d+(\.\d+)?)"
-    r"(?:\s+(?P<stop>-?\d+(\.\d+)?)"
-    r"(?:\s+(?P<step>-?\d+(\.\d+)?))?)?$"
+    r"\s+(?P<stop>-?\d+(\.\d+)?)"
+    r"(?:\s+(?P<step>-?\d+(\.\d+)?))?$"
 )
 OCC_LINE_PATTERN = re.compile(
     r"^(?P<label>\w+)"
     r"(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(\s+\d+)*))?"
     r"\s*=\s*(?P<chem_blocks>(?P<chem>\w+)\s+(?P<start>-?\d+(\.\d+)?)"
-    r"(?:\s+(?P<stop>-?\d+(\.\d+)?)(?:\s+(?P<step>-?\d+(\.\d+)?))?)?"
+    r"\s+(?P<stop>-?\d+(\.\d+)?)(?:\s+(?P<step>-?\d+(\.\d+)?))?"
     r"(?:\s*,\s*(?P<additional_blocks>.+))?)$"
 )
 CONSTRAIN_LINE_PATTERN = re.compile(
@@ -107,4 +107,3 @@ def match_constrain_line(line):
     value = float(value) if value != "linked" else value
 
     return constraint_type, parameters, value
-
