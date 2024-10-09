@@ -33,7 +33,7 @@ class FaultyLabel(Enum):
         label = self.value
         if label:
             label += _FAULTY_MARK_SEP
-        return f'{label:<{_FAULTY_MARK_SPACING}}'
+        return f'{label:>{_FAULTY_MARK_SPACING}}'
 
     @classmethod
     def for_action(cls, action, field):
