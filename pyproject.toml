@@ -135,6 +135,7 @@ classifiers = [
 
     [tool.coverage.report]
     show_missing = true
+    skip_empty = true
     precision = 2
 
 
