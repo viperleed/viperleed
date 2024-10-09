@@ -33,9 +33,19 @@ from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
 
 
 _MANDATORY_CMD_NAMES = (
-    'PC_AUTOGAIN', 'PC_CONFIGURATION', 'PC_SET_UP_ADCS', 'PC_OK', 'PC_RESET',
-    'PC_SET_VOLTAGE', 'PC_ERROR', 'PC_CALIBRATION', 'PC_MEASURE_ONLY',
-    'PC_CHANGE_MEAS_MODE', 'PC_STOP', 'PC_SET_VOLTAGE_ONLY', 'PC_SET_SERIAL_NR'
+    'PC_AUTOGAIN',
+    'PC_CALIBRATION',
+    'PC_CHANGE_MEAS_MODE',
+    'PC_CONFIGURATION',
+    'PC_ERROR',
+    'PC_MEASURE_ONLY',
+    'PC_OK',
+    'PC_RESET',
+    'PC_SET_SERIAL_NR'
+    'PC_SET_UP_ADCS',
+    'PC_SET_VOLTAGE',
+    'PC_SET_VOLTAGE_ONLY',
+    'PC_STOP',
     )
 
 _INVOKE = qtc.QMetaObject.invokeMethod
