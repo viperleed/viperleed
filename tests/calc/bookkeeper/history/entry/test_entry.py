@@ -127,9 +127,17 @@ class TestHistoryEntry:
         with pytest.raises(TypeError):
             HistoryInfoEntry.from_string(tuple())
 
-    def test_from_string_only_comments(self, make_entry):
+    _pure_comment = (
+        '# this is just a comment',
+        '',
+        '    ',
+        '\n'*3,
+        )
+
+    @parametrize('value', _pure_comment)
+    def test_from_string_only_comments(self, value, make_entry):
         """Check correct parsing of a comment-only string."""
-        entry = make_entry('# this is just a comment')
+        entry = make_entry(value)
         assert isinstance(entry, PureCommentEntry)
 
     @parametrize(pos=(0, 1, 2))

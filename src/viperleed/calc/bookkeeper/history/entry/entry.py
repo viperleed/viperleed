@@ -368,7 +368,7 @@ class HistoryInfoEntry:
             lines.append('')
         fields = (FieldBase.from_string(line) for line in lines)
         raw_fields = FieldList(*cls._join_adjacent_note_lines(fields))
-        if raw_fields.has_only_pure_comments:
+        if not raw_fields or raw_fields.has_only_pure_comments:
             return PureCommentEntry(entry_str)
 
         # Collect the first occurrence of each field as value
