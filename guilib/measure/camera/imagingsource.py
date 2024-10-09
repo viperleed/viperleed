@@ -538,9 +538,6 @@ class ImagingSourceCamera(abc.CameraABC):
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
         """Determine if the default settings file is for this camera.
 
-        Note that we can just return matching here, as we already
-        know that the class matches.
-
         Parameters
         ----------
         obj_info : SettingsInfo or None
@@ -560,6 +557,10 @@ class ImagingSourceCamera(abc.CameraABC):
             to determine the best-matching settings files when
             multiple files are found.
         """
+        # Note that we can just return matching here, as we already
+        # know that the class matches. The reason for this is that the
+        # relevant camara attributes taken from the settings files do
+        # not change between the various cameras handled by this class.
         return (1,)
 
     @classmethod
