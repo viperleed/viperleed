@@ -33,6 +33,19 @@ MOCK_TIME_GERMAN = '03.02.01 04:03:06'
 class CasesHistoryInfoFunny:
     """Test cases for contents of history.info likely edited by users."""
 
+    # The next one is auto-fixable because all notes are identical
+    @case(tags=(Tag.HISTORY, Tag.AUTO_FIX_ENTRY))
+    def case_duplicate_notes(self):
+        """Return entry contents with multiple identical Notes fields."""
+        base = f'''\
+# TENSORS   1, 2, 29
+# JOB ID    24, 37, 99
+# RUN       1 2 3
+# TIME      {MOCK_TIME_ISO}
+# FOLDER    t003.r001_010203-040506'''
+        notes = f'Notes: {NOTES_TEST_CONTENT}'
+        return base + '\n' + '\n'.join(notes for _ in range(5))
+
     @case(tags=Tag.AUTO_FIX_ENTRY)
     def case_extra_lines(self):
         """Return an entry with intermixed comment lines."""

@@ -300,11 +300,9 @@ class TestHistoryEntry:
 
     def test_multiple_notes_no_extras(self, make_entry):
         """Check that an entry with repeated notes has no UnknownField."""
-        base = CorrectEntry().case_no_notes()
-        base, _ = base.rsplit('\n', 1)
-        notes = f'{FieldTag.NOTES} This is a test\n   on multiple lines'
-        entry_str = base + '\n' + '\n'.join(notes for _ in range(5))
+        entry_str = cases_entry.CasesHistoryInfoFunny().case_duplicate_notes()
         entry = make_entry(entry_str)
+        # pylint: disable-next=protected-access           # OK in tests
         assert not any(isinstance(f, UnknownField) for f in entry._raw_fields)
 
 
