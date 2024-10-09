@@ -57,17 +57,6 @@ Notes:'''
 Notes:
 # TIME      {MOCK_TIME_ISO}'''
 
-    @case(tags=(Tag.HISTORY, Tag.AUTO_FIX))
-    def case_mixed_tensors_separators(self):
-        """Return entry contents with mixed separators for TENSORS & JOB ID."""
-        return f'''\
-# TENSORS   1, 2  29
-# JOB ID    33 24, 12
-# RUN       1 2 3
-# TIME      {MOCK_TIME_ISO}
-# FOLDER    t003.r001_010203-040506
-Notes:'''
-
     @case(tags=Tag.CANT_FIX)
     def case_missing_and_fewer_extra_than_n_fields(self):
         """Return an entry with intermixed comment lines and missing fields."""
@@ -217,6 +206,41 @@ Notes: {NOTES_TEST_CONTENT}'''
         return contents, ValueError
 
 
+@with_case_tags(Tag.AUTO_FIX)
+class CasesInfoEntryAutoFixFields:
+    """Collection of entries that can be automatically fixed."""
+
+    def case_german_datetime(self):
+        """Return one full history.info entry without notes."""
+        return f'''\
+# TENSORS   1, 2, 29
+# JOB ID    24, 37, 99
+# RUN       1 2 3
+# TIME      {MOCK_TIME_GERMAN}
+# FOLDER    t003.r001_010203-040506
+Notes:'''
+
+    @case(tags=Tag.HISTORY)
+    def case_mixed_tensors_separators(self):
+        """Return entry contents with mixed separators for TENSORS & JOB ID."""
+        return f'''\
+# TENSORS   1, 2  29
+# JOB ID    33 24, 12
+# RUN       1 2 3
+# TIME      {MOCK_TIME_ISO}
+# FOLDER    t003.r001_010203-040506
+Notes:'''
+
+    @case(tags=Tag.CANT_FIX)
+    def case_missing_and_autofix(self):
+        """Return entry contents with a fixable field and missing TIME."""
+        return f'''\
+# TENSORS   1, 2  29
+# JOB ID    33 24, 12
+# RUN       1 2 3
+# FOLDER    t003.r001_010203-040506
+Notes:'''
+
 
 @with_case_tags(Tag.NO_ISSUES, Tag.HISTORY)
 class CasesInfoEntryCommented:
@@ -263,11 +287,10 @@ Notes:'''
 Notes:'''
 
 
-@with_case_tags(Tag.HISTORY)
+@with_case_tags(Tag.HISTORY, Tag.NEEDS_NO_FIX)
 class CasesInfoEntryCorrect:
     """Collection of cases for non-user-edited history.info entries."""
 
-    @case(tags=Tag.NEEDS_NO_FIX)
     def case_no_notes(self):
         """Return one full history.info entry without notes."""
         return f'''\
@@ -278,18 +301,6 @@ class CasesInfoEntryCorrect:
 # FOLDER    t003.r001_010203-040506
 Notes:'''
 
-    @case(tags=Tag.AUTO_FIX)
-    def case_german_datetime(self):
-        """Return one full history.info entry without notes."""
-        return f'''\
-# TENSORS   1, 2, 29
-# JOB ID    24, 37, 99
-# RUN       1 2 3
-# TIME      {MOCK_TIME_GERMAN}
-# FOLDER    t003.r001_010203-040506
-Notes:'''
-
-    @case(tags=Tag.NEEDS_NO_FIX)
     def case_jobname_and_notes(self):
         """Return one full entry with notes and a specific job name."""
         return f'''\
@@ -300,7 +311,6 @@ Notes:'''
 # FOLDER    t003.r001_010203-040506_test_jobname
 Notes: {NOTES_TEST_CONTENT}'''
 
-    @case(tags=Tag.NEEDS_NO_FIX)
     def case_discarded(self):
         """Return the contents of an entry marked as DISCARDED."""
         return f'''\
@@ -312,7 +322,6 @@ Notes: {NOTES_TEST_CONTENT}'''
 Notes: {NOTES_TEST_CONTENT}
 {_DISCARDED}'''
 
-    @case(tags=Tag.NEEDS_NO_FIX)
     def case_notes(self):
         """Return a full entry with user notes."""
         return f'''\
@@ -322,7 +331,6 @@ Notes: {NOTES_TEST_CONTENT}
 # FOLDER    t003.r001_010203-040506
 Notes: {NOTES_TEST_CONTENT}'''
 
-    @case(tags=Tag.NEEDS_NO_FIX)
     def case_newline_notes(self):
         """Return a full entry with a newline-only note."""
         return f'''\
@@ -333,7 +341,6 @@ Notes: {NOTES_TEST_CONTENT}'''
 Notes:
 '''
 
-    @case(tags=Tag.NEEDS_NO_FIX)
     def case_r_ref(self):
         """Return a full entry with REFCALC R-factor info."""
         return f'''\
@@ -344,7 +351,6 @@ Notes:
 # FOLDER    t003.r001_010203-040506
 Notes:'''
 
-    @case(tags=Tag.NEEDS_NO_FIX)
     def case_r_super(self):
         """Return a full entry with SUPERPOS R-factor info."""
         return f'''\
@@ -355,7 +361,6 @@ Notes:'''
 # FOLDER    t003.r001_010203-040506
 Notes:'''
 
-    @case(tags=Tag.NEEDS_NO_FIX)
     def case_run_info(self):
         """Return a full entry with RUN information."""
         return f'''\
@@ -366,7 +371,7 @@ Notes:'''
 # FOLDER    t003.r001_010203-040506
 Notes:'''
 
-    @case(tags=(Tag.BOOKKEEPER, Tag.ENTRY, Tag.NEEDS_NO_FIX))
+    @case(tags=(Tag.BOOKKEEPER, Tag.ENTRY))
     def case_tensors_none(self):
         """Return an entry where no TENSORS were used."""
         return f'''\
