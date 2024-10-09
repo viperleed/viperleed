@@ -358,7 +358,7 @@ class HistoryInfoEntry:
         if not isinstance(entry_str, str):
             raise TypeError('Invalid entry_str. Expected \'str\', '
                             f'Found {type(entry_str).__name__!r}.')
-        if HISTORY_INFO_SEPARATOR.strip() in entry_str:                         # TODO: This, and the splitting we do in HistoryInfoFile, does not cover cases in which users may have used the stripped separator in other spots.
+        if HISTORY_INFO_SEPARATOR.rstrip() in entry_str:
             raise ValueError('Found multiple entries. Split them at '
                              'HISTORY_INFO_SEPARATOR beforehand')
         cleaned_str = entry_str.lstrip()

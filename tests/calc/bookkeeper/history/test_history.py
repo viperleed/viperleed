@@ -17,6 +17,7 @@ from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_SEPARATOR
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
@@ -37,8 +38,6 @@ from ..tag import BookkeeperTag as Tag
 from . import cases_history
 from .entry import cases_entry
 
-
-# TODO: test that remaking multiple separated entries preserves spacing
 
 all_history_cases = cases_history, cases_entry
 
@@ -195,13 +194,6 @@ class TestHistoryInfoFile:
         # pylint: disable-next=protected-access           # OK in tests
         assert info._time_format is format_before
 
-    @staticmethod
-    def _check_linewise_equal(to_check, expected):
-        """Test equality line by line, excluding trailing spaces."""
-        to_check = [line.rstrip() for line in to_check.strip().splitlines()]
-        expected = [line.rstrip() for line in expected.strip().splitlines()]
-        assert to_check == expected
-
     @parametrize(exc=(EntrySyntaxError, FixableSyntaxError))
     def test_read_not_raises(self, exc, simple_info_file):
         """Check that .read catches no exceptions."""
@@ -224,11 +216,11 @@ class TestHistoryInfoFile:
         except HistoryInfoError:
             assert last_entry is None or not last_entry.can_be_removed
             return
-        if history_info.last_entry is last_entry:
-            assert isinstance(last_entry, PureCommentEntry)
-            return
         history_info.append_entry(last_entry)
-        self._check_linewise_equal(contents, history_info.raw_contents)
+        clean_contents = re.sub(rf'{HISTORY_INFO_SEPARATOR}$', '', contents, 1)
+        clean_contents = re.sub(rf'{HISTORY_INFO_SEPARATOR.rstrip()}$', '',
+                                clean_contents, count=1)
+        assert history_info.raw_contents == clean_contents
 
     @staticmethod
     def _count_entries(path):

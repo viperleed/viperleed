@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 
 from enum import Enum
 from pathlib import Path
+import re
 
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
@@ -103,21 +104,19 @@ class HistoryInfoFile:
 
     def append_entry(self, entry, fix_time_format=True):
         """Write `entry` to the history.info file."""
-        skip_separator = (
-            self.raw_contents.strip().endswith(HISTORY_INFO_SEPARATOR.strip())
-            or not self.raw_contents.strip()
-            )
         if fix_time_format:
             entry = entry.with_time_format(self._time_format or 'default')
             self._time_format = entry.time_format
+        new_text = self._new_separator
+        entry_text = str(entry)
+        if not self._entries:
+            # Remove the leading newline for the first entry
+            entry_text = entry_text[1:]
+        new_text += entry_text
         self._entries.append(entry)
+        self.raw_contents += new_text
         with open(self.path, 'a', encoding='utf-8') as history_info:
-            if not skip_separator:
-                history_info.write(HISTORY_INFO_SEPARATOR)
-                self.raw_contents += HISTORY_INFO_SEPARATOR
-            entry_text = str(entry)
-            history_info.write(entry_text)
-            self.raw_contents += entry_text
+            history_info.write(new_text)
 
     def discard_last_entry(self):
         """Mark the last entry in the history.info file as discarded."""
@@ -140,8 +139,11 @@ class HistoryInfoFile:
                 fixed = entry
             fixed_entries.append(fixed)
         self._entries = fixed_entries
-        self.raw_contents = HISTORY_INFO_SEPARATOR.join(str(e)
-                                                        for e in self._entries)
+        old_raw = self.raw_contents
+        new_raw = HISTORY_INFO_SEPARATOR.join(str(e) for e in self._entries)
+        if not old_raw.startswith('\n') and new_raw.startswith('\n'):
+            new_raw = new_raw[1:]
+        self.raw_contents = new_raw
         self._time_format = None  # So that we can _infer_time_format
         self._infer_time_format()
         self.path.write_text(self.raw_contents, encoding='utf-8')
@@ -204,18 +206,31 @@ class HistoryInfoFile:
         self.may_remove_last_entry()
         self._do_remove_last_entry()
 
+    @property
+    def _new_separator(self):
+        """Return a separator useful for appending a new entry."""
+        if not self.raw_contents.strip():
+            # First entry
+            return ''
+        if self.raw_contents.endswith(HISTORY_INFO_SEPARATOR):
+            # There's already a separator
+            return ''
+        missing = HISTORY_INFO_SEPARATOR
+        if self.raw_contents.endswith(HISTORY_INFO_SEPARATOR.rstrip()):
+            # There's part of a separator. Return what's missing
+            return re.sub(rf'^{missing.rstrip()}', '', missing, count=1)
+        return missing
+
     def _do_remove_last_entry(self):
         """Actually remove the last entry assuming its possible."""
         self._entries.pop()
         if self._entries:
             content_without_last, *_ = self.raw_contents.rsplit(
-                HISTORY_INFO_SEPARATOR.strip(),
+                HISTORY_INFO_SEPARATOR,
                 maxsplit=1
                 )
         else:  # Nothing left
             content_without_last = ''
-        if content_without_last.endswith('\n'):
-            content_without_last = content_without_last[:-len('\n')]
         # Clear file and write back entries
         self.path.write_text(content_without_last, encoding='utf-8')
         self.raw_contents = content_without_last
@@ -236,6 +251,16 @@ class HistoryInfoFile:
         self._entries.clear()
         if not self.raw_contents:
             return
-        sep = HISTORY_INFO_SEPARATOR.strip()
-        for entry_str in self.raw_contents.split(sep):
-            self._entries.append(HistoryInfoEntry.from_string(entry_str))
+        entries_str = self.raw_contents.split(HISTORY_INFO_SEPARATOR)
+        for i, entry_str in enumerate(entries_str, 1):
+            try:
+                self._entries.append(HistoryInfoEntry.from_string(entry_str))
+            except ValueError:  # Some bits of a separator
+                if i < len(entries_str):
+                    # Only acceptable at the last one
+                    raise
+                assert entry_str.endswith(HISTORY_INFO_SEPARATOR.rstrip())
+                # The last entry has some bits of a separator at the end
+                entry_str = re.sub(rf'{HISTORY_INFO_SEPARATOR.rstrip()}$', '',
+                                   entry_str, count=1)
+                self._entries.append(HistoryInfoEntry.from_string(entry_str))

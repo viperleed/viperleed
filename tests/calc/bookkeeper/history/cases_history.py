@@ -20,6 +20,7 @@ from .entry.cases_entry import MOCK_TIME_GERMAN
 from .entry.cases_entry import MOCK_TIME_ISO
 from .entry.cases_entry import NOTES_TEST_CONTENT
 
+_NO_NOTES = cases_entry.CasesInfoEntryCorrect().case_no_notes()
 
 class CasesHistoryInfo:
     """Collection of test cases for bookkeeper.history tests."""
@@ -97,6 +98,16 @@ Notes:'''
     def case_whitespace_only(self, char):
         """Return the contents of a history.info file with only white space."""
         return char*5
+
+    @case(tags=Tag.HISTORY)
+    def case_separator_at_end(self):
+        """Return the contents of a history.info file with only white space."""
+        return _NO_NOTES + HISTORY_INFO_SEPARATOR
+
+    @case(tags=Tag.HISTORY)
+    def case_separator_at_end_edited(self):
+        """Return the contents of an history file with an edited separator."""
+        return _NO_NOTES + HISTORY_INFO_SEPARATOR.rstrip()
 
     @case(tags=(Tag.HISTORY, Tag.EMPTY))
     @parametrize(whitespace=('', ' '*5, '\n'*5))
