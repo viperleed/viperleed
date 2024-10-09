@@ -153,6 +153,10 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
 
         Parameters
         ----------
+        config : ViPErLEEDSettings
+            The settings from which the handler will be generated.
+        parent : QObject
+            The parent QObject of this handler.
         display_config : bool, optional
             Whether the name of the settings file (and path to the file)
             should be displayed. Default is False.
