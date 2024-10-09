@@ -33,7 +33,7 @@ class CasesHistoryInfo:
         """Return the contents of an empty file."""
         return ''
 
-    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY, Tag.AUTO_FIX))
     def case_mixed_time_formats(self):
         """Return two valid entries with mixed time-stamp formats."""
         return f'''\
@@ -49,7 +49,7 @@ Notes:
 # FOLDER    t003.r004_010203-040506
 Notes:'''
 
-    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY, Tag.AUTO_FIX))
     def case_mixed_time_formats_with_notes(self):
         """Return two valid entries with mixed time-stamp formats."""
         return f'''\
@@ -65,7 +65,7 @@ Notes:{NOTES_TEST_CONTENT}
 # FOLDER    t003.r004_010203-040506
 Notes:{NOTES_TEST_CONTENT}'''
 
-    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY, Tag.AUTO_FIX))
     def case_old_time_formats(self):
         """Return two valid entries with old-style time-stamp formats."""
         return f'''\

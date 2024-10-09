@@ -127,6 +127,23 @@ class HistoryInfoFile:
         self._do_remove_last_entry()
         self.append_entry(discarded_entry, fix_time_format=False)
 
+    def fix(self):
+        """Save to file fixed versions of all the fixable entries."""
+        fixed_entries = []
+        for entry in self._entries:
+            try:
+                fixed = entry.as_fixed()
+            except AttributeError:
+                assert isinstance(entry, PureCommentEntry)
+                fixed = entry
+            fixed_entries.append(fixed)
+        self._entries = fixed_entries
+        self.raw_contents = HISTORY_INFO_SEPARATOR.join(str(e)
+                                                        for e in self._entries)
+        self._time_format = None  # So that we can _infer_time_format
+        self._infer_time_format()
+        self.path.write_text(self.raw_contents, encoding='utf-8')
+
     def may_discard_last_entry(self):
         """Raise if the last entry cannot be discarded."""
         last_entry = self.last_entry

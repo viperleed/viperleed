@@ -30,6 +30,7 @@ from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
 
 from ....helpers import exclude_tags
+from ....helpers import has_any_tag
 from ....helpers import make_obj_raise
 from ....helpers import raises_exception
 from ..conftest import NOTES_TEST_CONTENT
@@ -243,6 +244,45 @@ class TestHistoryInfoFile:
         history_info.remove_last_entry()
         n_entries_again = self._count_entries(history_info.path)
         assert n_entries_again == n_entries - 1
+
+
+class TestHistoryInfoFileFix:
+    """Tests for fixing the contents of a history.info file."""
+
+    @staticmethod
+    def needs_fix(file):
+        """Return whether any entry needs fixing."""
+        return any(entry.needs_fixing
+                   for entry in file._entries
+                   if not isinstance(entry, PureCommentEntry))
+
+    _fixable = parametrize_with_cases(
+        'contents',
+        cases=all_history_cases,
+        filter=has_any_tag(Tag.AUTO_FIX, Tag.AUTO_FIX_ENTRY)
+        )
+
+    @_fixable
+    def test_fixable(self, contents, make_history_file):
+        """Check fixing of a history.info file."""
+        info, *_ = make_history_file(contents)
+        info.read()
+        assert self.needs_fix(info)
+        info.fix()
+        assert not self.needs_fix(info)
+
+    @parametrize_with_cases('contents',
+                            cases=cases_entry.CasesInfoEntryPureComment)
+    def test_pure_comment(self, contents, make_history_file):
+        """Check (no) fixing of comment-only entries."""
+        info, *_ = make_history_file(contents)
+        info.read()
+        assert not self.needs_fix(info)
+        entries_before = info._entries.copy()
+        info.fix()
+        assert not self.needs_fix(info)
+        assert all(e_after is e_before
+                   for e_after, e_before in zip(info._entries, entries_before))
 
 
 class TestHistoryInfoRaises:
