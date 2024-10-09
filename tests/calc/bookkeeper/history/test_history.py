@@ -87,6 +87,36 @@ class TestHistoryInfoFile:
         assert actual_file.exists()
         assert history_info.path == actual_file
 
+    def test_append_entry(self, history_info_file):
+        """Check correct result of appending an entry."""
+        entry_str = cases_entry.CasesInfoEntryCorrect().case_no_notes()
+        new_entry = HistoryInfoEntry.from_string(entry_str)
+        info, contents = history_info_file
+        info.append_entry(new_entry, fix_time_format=False)
+        *_, last_entry_raw = info.raw_contents.split(HISTORY_INFO_SEPARATOR)
+        expect = str(new_entry)
+        if not contents:
+            expect = expect[1:]  # Skip leading newline
+        elif not contents.strip():
+            expect = contents + expect
+        assert info.last_entry is new_entry
+        assert last_entry_raw == expect
+
+    _empty = parametrize_with_cases('contents',
+                                    cases=cases_history,
+                                    has_tag=Tag.EMPTY)
+
+    @_empty
+    def test_empty_file(self, contents, make_history_file):
+        """Check that an empty history.info file is handled correctly."""
+        if contents is None:
+            pytest.skip('Not the contents of a file, but a non-existing one')
+        info, *_ = make_history_file(contents)
+        entries = info._entries
+        only_comments = all(isinstance(e, PureCommentEntry)
+                            for e in entries)
+        assert only_comments if contents else not entries
+
     def test_entry_parsing(self, history_info_file):
         """Check correct parsing of a one-entry history.info file."""
         history_info, contents = history_info_file
@@ -272,10 +302,10 @@ class TestHistoryInfoFileFix:
         info.fix()
         assert not self.needs_fix(info)
 
-    @parametrize_with_cases('contents',
-                            cases=cases_entry.CasesInfoEntryPureComment)
-    def test_pure_comment(self, contents, make_history_file):
-        """Check (no) fixing of comment-only entries."""
+    @parametrize_with_cases('contents', cases=all_history_cases,
+                            has_tag=Tag.NEEDS_NO_FIX)
+    def test_needs_no_fix(self, contents, make_history_file):
+        """Check fixing of stuff that needs no fix."""
         info, *_ = make_history_file(contents)
         info.read()
         assert not self.needs_fix(info)
@@ -286,6 +316,13 @@ class TestHistoryInfoFileFix:
         assert all(e_after is e_before
                    # pylint: disable-next=protected-access  # OK in tests
                    for e_after, e_before in zip(info._entries, entries_before))
+        assert info.raw_contents == contents
+
+    @parametrize_with_cases('contents',
+                            cases=cases_entry.CasesInfoEntryPureComment)
+    def test_pure_comment(self, contents, make_history_file):
+        """Check (no) fixing of comment-only entries."""
+        self.test_needs_no_fix(contents, make_history_file)
 
 
 class TestHistoryInfoRaises:
