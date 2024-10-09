@@ -193,7 +193,7 @@ class CameraABC(DeviceABC):
         self.__calibration_tasks = {'bad_pixels': [], 'starting': []}
 
         try:
-            self.set_settings(self.settings_to_load)
+            self.set_settings(self._settings_to_load)
         except self.exceptions:
             # Start a short QTimer to report errors that occurred here
             # AFTER the whole __init__ is done, i.e., when we suppose

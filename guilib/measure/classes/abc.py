@@ -104,10 +104,10 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         to be present, an option must be specified too. The allowed
         tuples are therefore: (<section>), (<section>, <option>), and
         (<section>, <option>, (<value1>, <value2>, ...)).
-    settings_to_load : ViPErLEEDSettings
-        settings_to_load are the settings that should be loaded
+    _settings_to_load : ViPErLEEDSettings
+        _settings_to_load are the settings that should be loaded
         into _settings via set_settings. If no settings is given,
-        settings_to_load will automatically be the best matching
+        _settings_to_load will automatically be the best matching
         suitable default settings file.
     uses_default_settings : bool
         uses_default_settings remembers if a default settings was
@@ -123,8 +123,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         This __init__ should be executed at the beginning of
         subclasses. If this is not possible, it has to be executed
         before the settings of an instance are set, i.e., before
-        self.settings = self.settings_to_load (or, equivalently,
-        self.set_settings(self.settings_to_load).
+        self.settings = self._settings_to_load (or, equivalently,
+        self.set_settings(self._settings_to_load).
 
         Parameters
         ----------
@@ -141,11 +141,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         # settings property. In a similar manner, to set settings either
         # use the settings property or the set_settings method.
         self._settings = ViPErLEEDSettings()
-        self.settings_to_load = settings
+        self._settings_to_load = settings
         self.uses_default_settings = False
         if not settings:
             # Look for a default only if no settings are given.
-            self.settings_to_load = self.find_default_settings()
+            self._settings_to_load = self.find_default_settings()
             self.uses_default_settings = True
         super().__init__(*args, **kwargs)
 

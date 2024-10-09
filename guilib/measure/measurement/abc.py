@@ -142,7 +142,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__force_end_timer.setInterval(4500)
         self.__force_end_timer.timeout.connect(self.__cleanup_and_end)
 
-        self.set_settings(self.settings_to_load)
+        self.set_settings(self._settings_to_load)
 
         if self.__init_errors:
             self.__init_err_timer.start(20)

@@ -146,7 +146,7 @@ class SerialABC(HardwareABC):
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
 
-        self.set_settings(self.settings_to_load)
+        self.set_settings(self._settings_to_load)
 
         # .unprocessed_messages is a list of all the messages
         # that came on the serial line and that have not been
