@@ -111,7 +111,7 @@ class TestHistoryEntry:
             assert all(t.value in problems for t in mandatory)
 
         # Check also that all the extra fields are present
-        # pylint: disable-next=not-an-iterable,protected-access
+        # pylint: disable-next=protected-access
         extras = [f for f in entry._raw_fields if isinstance(f, UnknownField)]
         with subtests.test('all extra lines'):
             assert all(str(e) in problems for e in extras)
@@ -169,6 +169,7 @@ class TestHistoryEntry:
         }
 
     @parametrize('field,value', invalid_field.items(), ids=invalid_field)
+    # pylint: disable-next=too-many-arguments  # 3 fixtures
     def test_init_wrong_type(self, field, value, make_entry, caplog, re_match):
         """Check complaints for a HistoryInfoEntry with invalid field type."""
         # We have to use caplog, as HistoryInfoEntry does not raise

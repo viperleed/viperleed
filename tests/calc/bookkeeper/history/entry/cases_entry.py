@@ -235,7 +235,7 @@ Notes:'''
     @case(tags=Tag.CANT_FIX)
     def case_missing_and_autofix(self):
         """Return entry contents with a fixable field and missing TIME."""
-        return f'''\
+        return '''\
 # TENSORS   1, 2  29
 # JOB ID    33 24, 12
 # RUN       1 2 3

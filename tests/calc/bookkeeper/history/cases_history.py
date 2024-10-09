@@ -9,7 +9,6 @@ __created__ = '2024-07-19'
 __license__ = 'GPLv3+'
 
 
-import pytest
 from pytest_cases import case
 
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_SEPARATOR

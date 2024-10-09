@@ -74,7 +74,7 @@ class TestEnsureHasStreamHandler:
         ensure_has_stream_handler()
         assert logger.handlers == handlers_before
 
-    def test_not_there(self, logger, tmp_path):
+    def test_not_there(self, logger):
         """Check addition of a console handler to stdout."""
         assert not logger.handlers
         ensure_has_stream_handler()

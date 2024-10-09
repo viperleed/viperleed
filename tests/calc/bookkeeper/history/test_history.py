@@ -154,7 +154,7 @@ class TestHistoryInfoFile:
 
     def test_infer_time_only_once(self, simple_info_file):
         """Check that _infer_time_format only does so once."""
-        info, contents = simple_info_file
+        info, *_ = simple_info_file
         info.read()
         # pylint: disable-next=protected-access           # OK in tests
         format_before = info._time_format
@@ -232,9 +232,10 @@ class TestHistoryInfoFile:
                 last_entry.can_be_removed
                 or (last_entry.is_only_outdated and n_entries == 1)
                 or (last_entry.is_only_outdated
+                    # pylint: disable-next=protected-access  # OK in test
                     and last_entry.time_format is history_info._time_format)
                 )
-        except AttributeError as exc:
+        except AttributeError:
             assert isinstance(last_entry, PureCommentEntry)
             is_removable = False
         if not is_removable:
@@ -252,8 +253,10 @@ class TestHistoryInfoFileFix:
     @staticmethod
     def needs_fix(file):
         """Return whether any entry needs fixing."""
+        # pylint: disable-next=protected-access           # OK in tests
+        entries = file._entries
         return any(entry.needs_fixing
-                   for entry in file._entries
+                   for entry in entries
                    if not isinstance(entry, PureCommentEntry))
 
     _fixable = parametrize_with_cases(
@@ -278,10 +281,12 @@ class TestHistoryInfoFileFix:
         info, *_ = make_history_file(contents)
         info.read()
         assert not self.needs_fix(info)
+        # pylint: disable-next=protected-access           # OK in tests
         entries_before = info._entries.copy()
         info.fix()
         assert not self.needs_fix(info)
         assert all(e_after is e_before
+                   # pylint: disable-next=protected-access  # OK in tests
                    for e_after, e_before in zip(info._entries, entries_before))
 
 

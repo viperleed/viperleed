@@ -14,7 +14,6 @@ __license__ = 'GPLv3+'
 from enum import Enum
 from pathlib import Path
 
-from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 
@@ -23,7 +22,6 @@ from .constants import HISTORY_INFO_NAME
 from .constants import HISTORY_INFO_SEPARATOR
 from .errors import CantDiscardEntryError
 from .errors import CantRemoveEntryError
-from .errors import EntrySyntaxError
 from .errors import NoHistoryEntryError
 
 
