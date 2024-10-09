@@ -218,7 +218,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
 
     Parameters
     ----------
-    obj_cls : object
+    obj_cls : type
         The class of the object to get settings for.
     obj_info : SettingsInfo
         This SettingsInfo is necessary to determine the correct
