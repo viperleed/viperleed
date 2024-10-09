@@ -201,7 +201,7 @@ class TestHistoryEntry:
     non_iso_time = parametrize_with_cases(
         'entry_str',
         cases=(
-            CorrectEntry.case_german_datetime,
+            cases_entry.CasesInfoEntryAutoFixFields.case_german_datetime,
             ),
         )
 
@@ -315,6 +315,7 @@ class TestHistoryEntryDiscard:
         discarded_entry = entry.as_discarded()
         assert discarded_entry.is_discarded
         assert discarded_entry.as_discarded() is discarded_entry
+
 
 class TestHistoryEntryFix:
     """Collection of tests for fixing various format issues in entries."""
