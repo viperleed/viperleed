@@ -32,6 +32,7 @@ class CantRemoveReason(Enum):
                'bookkeeper --fixup to automatically fix this).')
     HAS_COMMENTS = 'Contains fields with user comments.'
     IS_COMMENT = 'Is a comment-only entry.'
+    IS_EMPTY = 'Has no contents.'
     MISSES_FIELDS = 'Some expected fields were deleted.'
     NOT_UNDERSTOOD = 'Contains invalid fields that could not be interpreted.'
 
@@ -42,7 +43,10 @@ class CantRemoveReason(Enum):
     @classmethod
     def for_entry(cls, entry):
         """Return a reason suitable for a faulty `entry`."""
-        if isinstance(entry, PureCommentEntry):
+        is_comment = isinstance(entry, PureCommentEntry)
+        if is_comment and not entry.raw_comment.strip():
+            return cls.IS_EMPTY
+        if is_comment:
             return cls.IS_COMMENT
         if entry.has_comments:
             return cls.HAS_COMMENTS

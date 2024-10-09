@@ -10,6 +10,7 @@ __license__ = 'GPLv3+'
 
 
 from pytest_cases import case
+from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_SEPARATOR
 
@@ -79,3 +80,9 @@ Notes:
 # TIME      {MOCK_TIME_GERMAN}
 # FOLDER    t003.r004_010203-040506
 Notes:'''
+
+    @case(tags=(Tag.HISTORY, Tag.EMPTY))
+    @parametrize(char=' \n')
+    def case_whitespace_only(self, char):
+        """Return the contents of a history.info file with only white space."""
+        return char*5
