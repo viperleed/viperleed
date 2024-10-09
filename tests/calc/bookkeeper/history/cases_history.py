@@ -33,19 +33,50 @@ class CasesHistoryInfo:
         """Return the contents of an empty file."""
         return ''
 
-    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY, Tag.CANT_FIX))
-    @pytest.mark.skip(reason='needs implementation of file fix')
-    def case_entries_mixed_time_formats(self):                                  # TODO: 
-        """Return the contents of two consecutive valid entries."""
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
+    def case_mixed_time_formats(self):
+        """Return two valid entries with mixed time-stamp formats."""
+        return f'''\
+# TENSORS   1, 2, 3
+# JOB ID    1, 2, 3
+# TIME      {MOCK_TIME_ISO}
+# FOLDER    t003.r001_010203-040506
+Notes:
+{HISTORY_INFO_SEPARATOR}
+# TENSORS   3
+# JOB ID    4
+# TIME      {MOCK_TIME_GERMAN}
+# FOLDER    t003.r004_010203-040506
+Notes:'''
+
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
+    def case_mixed_time_formats_with_notes(self):
+        """Return two valid entries with mixed time-stamp formats."""
+        return f'''\
+# TENSORS   1, 2, 3
+# JOB ID    1, 2, 3
+# TIME      {MOCK_TIME_ISO}
+# FOLDER    t003.r001_010203-040506
+Notes:{NOTES_TEST_CONTENT}
+{HISTORY_INFO_SEPARATOR}
+# TENSORS   3
+# JOB ID    4
+# TIME      {MOCK_TIME_GERMAN}
+# FOLDER    t003.r004_010203-040506
+Notes:{NOTES_TEST_CONTENT}'''
+
+    @case(tags=(Tag.HISTORY, Tag.MULTI_ENTRY))
+    def case_old_time_formats(self):
+        """Return two valid entries with old-style time-stamp formats."""
         return f'''\
 # TENSORS   1, 2, 3
 # JOB ID    1, 2, 3
 # TIME      {MOCK_TIME_GERMAN}
 # FOLDER    t003.r001_010203-040506
-Notes: {NOTES_TEST_CONTENT}
+Notes:
 {HISTORY_INFO_SEPARATOR}
 # TENSORS   3
 # JOB ID    4
-# TIME      {MOCK_TIME_ISO}
+# TIME      {MOCK_TIME_GERMAN}
 # FOLDER    t003.r004_010203-040506
-Notes: {NOTES_TEST_CONTENT}'''
+Notes:'''
