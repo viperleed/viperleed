@@ -161,7 +161,7 @@ class HistoryInfoFile:
     def may_remove_last_entry(self):
         """Raise if the last entry can't be removed."""
         last_entry = self.last_entry
-        if not last_entry:
+        if not last_entry or not self.raw_contents.strip():
             raise NoHistoryEntryError('No entries to remove.')
 
         if last_entry.can_be_removed:

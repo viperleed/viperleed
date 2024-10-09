@@ -237,7 +237,7 @@ class TestHistoryInfoFile:
             assert isinstance(last_entry, PureCommentEntry)
             is_removable = False
         if not is_removable:
-            with pytest.raises(CantRemoveEntryError):
+            with pytest.raises((CantRemoveEntryError, HistoryInfoError)):
                 history_info.remove_last_entry()
             return
         history_info.remove_last_entry()
