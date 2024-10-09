@@ -213,7 +213,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             # Seems a pylint bug.
             meas_f = 50.0
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            f"adc_update_rate/{update_rate_raw}", '')
+                            f'adc_update_rate/{update_rate_raw}', '')
         return 1000 / meas_f
 
     @property
