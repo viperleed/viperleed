@@ -595,6 +595,7 @@ class HistoryInfoEntry:
             missing = (f for f in self if f.is_missing)
             for field in missing:
                 fields.insert_sorted(field)
+        # pylint: disable-next=unsupported-membership-test       # 7437
         is_unsorted = FixAction.SORTING in self._fix_todos
         for field in fields:
             try:

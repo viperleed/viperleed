@@ -111,6 +111,7 @@ class TestHistoryInfoFile:
         if contents is None:
             pytest.skip('Not the contents of a file, but a non-existing one')
         info, *_ = make_history_file(contents)
+        # pylint: disable-next=protected-access           # OK in tests
         entries = info._entries
         only_comments = all(isinstance(e, PureCommentEntry)
                             for e in entries)
