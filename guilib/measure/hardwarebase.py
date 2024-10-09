@@ -296,7 +296,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         match_exactly : bool, optional
             Whether settings in obj_info should be looked up exactly
             or not. What this entails is up to the implementation of
-            find_matching_settings_files. Default is False.
+            obj_cls.find_matching_settings_files. Default is False.
         parent_widget : QWidget or None, optional
             The parent widget of the pop up. Unless parent_widget
             is None, the pop up will be blocking user events for
