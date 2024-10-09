@@ -757,7 +757,7 @@ class ControllerABC(DeviceABC):
         """List all devices of this class.
 
         This method must return a list of SettingsInfo instances. The
-        SettingsInfo class is located in the hardwarebase module. Each
+        SettingsInfo class is located in the classes abc module. Each
         controller is represented by a single SettingsInfo instance. The
         SettingsInfo object must contain a .unique_name, and a dict
         holding .more information about the device. .unique_name may

@@ -912,7 +912,7 @@ class CameraABC(DeviceABC):
         """Return a list of available devices.
 
         This method must return a list of SettingsInfo instances. The
-        SettingsInfo class is located in the hardwarebase module. Each
+        SettingsInfo class is located in the classes abc module. Each
         camera is represented by a single SettingsInfo instance. The
         SettingsInfo object contains the uninque device name and a dict
         holding additional information about the device. If there is
