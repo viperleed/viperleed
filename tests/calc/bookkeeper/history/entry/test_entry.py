@@ -342,7 +342,7 @@ class TestHistoryEntryFix:
         if entry.needs_fixing:
             # Some form of fixing performed at the whole-entry level
             # pylint: disable-next=protected-access       # OK in tests
-            assert not entry._needs_fix_for_fields
+            assert not fixed._needs_fix_for_fields
             assert fixed is not entry
         else:
             assert fixed is entry
