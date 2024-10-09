@@ -374,7 +374,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             base.safe_connect(self.__request_continuous_mode,
                               ctrl.set_continuous_mode, type=_UNIQUE)
         except AttributeError:
-            # Not a MeasureController or called during super().__init__
+            # Not a MeasureControllerABC or
+            # called during super().__init__
             pass
 
     def _disconnect_controller(self, ctrl):

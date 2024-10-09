@@ -9,7 +9,7 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains the definition of the ControllerABC and the
-MeasureController class abstract base classes used for giving basic
+MeasureControllerABC abstract base classes used for giving basic
 commands to the LEED electronics.
 """
 
@@ -166,7 +166,7 @@ class ControllerABC(DeviceABC):
         self.time_stamp = None
 
         # These dictionaries must be filled in subclasses.
-        # They must contain all functions the MeasureController has
+        # They must contain all functions the MeasureControllerABC has
         # to call in the order to bring the controller into a state
         # ready for setting the energy/taking measurements.
         # begin_prepare_todos contains everything that has to be

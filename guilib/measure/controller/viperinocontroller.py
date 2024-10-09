@@ -566,12 +566,12 @@ class ViPErinoController(abc.MeasureControllerABC):
 
     @classmethod
     def is_matching_user_settings(cls, obj_info, config, match_exactly):
-        """Determine if the settings file is for this controller.
+        """Determine if a `config` file is for this controller.
 
         Parameters
         ----------
         obj_info : SettingsInfo
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
             .more must contain the 'name' of the controller and the
             installed 'firmware' version.
         config : ConfigParser
@@ -610,7 +610,7 @@ class ViPErinoController(abc.MeasureControllerABC):
 
     @classmethod
     def is_settings_for_this_class(cls, config):
-        """Determine if the settings file is for this controller.
+        """Determine if a `config` file is for this controller.
 
         Parameters
         ----------

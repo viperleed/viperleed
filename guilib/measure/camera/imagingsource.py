@@ -536,7 +536,7 @@ class ImagingSourceCamera(abc.CameraABC):
     @classmethod
     # pylint: disable-next=unused-argument  # From base-class signature
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
-        """Determine if the default settings file is for this camera.
+        """Determine if the default `config` file is for this camera.
 
         Parameters
         ----------
@@ -565,7 +565,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
     @classmethod
     def is_matching_user_settings(cls, obj_info, config, match_exactly):
-        """Determine if the settings file is for this camera.
+        """Determine if a `config` file is for this camera.
 
         Parameters
         ----------
@@ -600,7 +600,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
     @classmethod
     def is_settings_for_this_class(cls, config):
-        """Determine if the settings file is for this camera.
+        """Determine if a `config` file is for this camera.
 
         Parameters
         ----------
