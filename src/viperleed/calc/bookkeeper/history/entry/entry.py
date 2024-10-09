@@ -217,6 +217,34 @@ class HistoryInfoEntry:
         return self.notes.is_discarded
 
     @property
+    def is_only_outdated(self):
+        """Return whether the only fix reason is a legacy-format issue."""
+        if not self.needs_fixing:
+            return False
+        if self._needs_fix_for_entry:
+            return False
+        other_reasons = (
+            not self.was_understood
+            or self.has_notes
+            or self.has_comments
+            )
+        if other_reasons:
+            return False
+        # Only fields need fixing
+        fields_to_fix = {f for f in self if f.needs_fixing}
+        assert fields_to_fix
+
+        # The only out-of-date field that we currently have is
+        # timestamp, with a non-default time format
+        out_of_date_fields = {self.timestamp}
+        also_other_fields = any(f in fields_to_fix
+                                for f in self
+                                if f not in out_of_date_fields)
+        if also_other_fields:
+            return False
+        return True
+
+    @property
     def has_comments(self):
         """Return whether any field was edited by adding comments."""
         return any(f.has_comments for f in self)

@@ -210,6 +210,7 @@ Notes: {NOTES_TEST_CONTENT}'''
 class CasesInfoEntryAutoFixFields:
     """Collection of entries that can be automatically fixed."""
 
+    @case(tags=Tag.OLD)
     def case_german_datetime(self):
         """Return one full history.info entry without notes."""
         return f'''\

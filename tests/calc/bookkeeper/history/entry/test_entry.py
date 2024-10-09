@@ -15,6 +15,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
+from pytest_cases.filters import has_tag
 
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
@@ -405,6 +406,39 @@ class TestHistoryEntryFix:
         assert not entry.needs_fixing
         assert entry.as_fixed() is entry
         assert not entry.misses_mandatory_fields
+
+
+class TestHistoryEntryOutdated:
+    """Collection of tests for the .is_only_outdated property."""
+
+    @auto_fix
+    def test_auto_fixable(self, entry_str, make_entry, current_cases):
+        """Check correct outdated state of fixable entries."""
+        case = next(iter(current_cases.values())).func
+        is_outdated = has_tag(Tag.OLD)
+        entry = make_entry(entry_str)
+        assert entry.is_only_outdated == is_outdated(case)
+
+        fixed = entry.as_fixed()
+        assert not fixed.is_only_outdated
+
+    @need_no_fix
+    def test_no_fix_needed(self, entry_str, make_entry):
+        """Check that non-faulty entries are up to date."""
+        entry = make_entry(entry_str)
+        assert not entry.is_only_outdated
+
+    @cant_fix
+    def test_unfixable(self, entry_str, make_entry):
+        """Check that faulty entries are considered up to date."""
+        entry = make_entry(entry_str)
+        assert not entry.is_only_outdated
+
+    @parametrize_with_cases('entry_str', cases=cases_entry.case_missing_field)
+    def test_missing(self, entry_str, make_entry):
+        """Check that entries with missing fields are not outdated."""
+        entry = make_entry(entry_str)
+        assert not entry.is_only_outdated
 
 
 class TestHistoryEntryRaises:

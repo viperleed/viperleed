@@ -27,4 +27,5 @@ class BookkeeperTag(IntEnum):
     NEEDS_NO_FIX = auto()    # Entry fields do not require any fixing
     NO_ISSUES = auto()       # Case has no problems at all
     NOT_PRESERVED = auto()   # Contents are not maintained
+    OLD = auto()             # Entry has some legacy format
     RAISES = auto()          # Entry causes exceptions when parsed
