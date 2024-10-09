@@ -503,8 +503,9 @@ class HistoryInfoEntry:
         try:
             # pylint: disable-next=no-member         # See pylint #7437
             self._raw_fields.check_sorted()
-        except FieldsScrambledError:
+        except FieldsScrambledError as exc:
             reason = _FIX_RAW_MSG.format(faulty='incorrectly sorted')
+            reason += f' {exc}'
             action = FixAction.SORTING
             raise FixableSyntaxError(reason, action=action) from None
 
