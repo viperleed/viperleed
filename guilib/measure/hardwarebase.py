@@ -286,7 +286,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         The class of the object to get settings for.
     obj_info : SettingsInfo
         This SettingsInfo is necessary to determine the correct
-        settings. How exactly is up to the reimplementation of
+        settings. How exactly is up to the implementation of
         find_matching_settings_files in obj_cls.
     **kwargs : dict, optional
         directory : str or Path, optional
