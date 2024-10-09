@@ -88,40 +88,6 @@ class TestHistoryEntry:
         with not_raises(FieldsScrambledError):
             attributes.check_sorted()
 
-    @auto_fix
-    def test_format_problematic_fields_auto_fix(self, entry_str, make_entry):
-        """Check that no problematic fields are marked."""
-        entry = make_entry(entry_str)
-        formatted = entry.format_problematic_fields()
-        assert FaultyLabel.FIXABLE.value in formatted
-
-    @cant_fix
-    def test_format_problematic_fields_cant_fix(self, entry_str,
-                                                make_entry, subtests):
-        """Check that no problematic fields are marked."""
-        entry = make_entry(entry_str)
-        problems = entry.format_problematic_fields()
-        with subtests.test('edited or missing'):
-            assert any(label.value in problems
-                       for label in (FaultyLabel.EDITED, FaultyLabel.MISSING))
-
-        # Check that all the mandatory fields are present
-        mandatory = [t for t in FieldTag if FieldBase.for_tag(t).is_mandatory]
-        with subtests.test('all mandatory'):
-            assert all(t.value in problems for t in mandatory)
-
-        # Check also that all the extra fields are present
-        # pylint: disable-next=protected-access
-        extras = [f for f in entry._raw_fields if isinstance(f, UnknownField)]
-        with subtests.test('all extra lines'):
-            assert all(str(e) in problems for e in extras)
-
-    @need_no_fix
-    def test_format_problematic_fields_no_fix(self, entry_str, make_entry):
-        """Check that no problematic fields are marked."""
-        entry = make_entry(entry_str)
-        assert not entry.format_problematic_fields()
-
     def test_from_string_not_string(self):
         """Check complaints when from_string is called with a non-string."""
         with pytest.raises(TypeError):
@@ -332,6 +298,49 @@ class TestHistoryEntryDiscard:
         discarded_entry = entry.as_discarded()
         assert discarded_entry.is_discarded
         assert discarded_entry.as_discarded() is discarded_entry
+
+
+class TestHistoryEntryFormatProblematicFields:
+    """Collection of tests for entries with issues and their marking."""
+
+    @auto_fix
+    def test_auto_fix(self, entry_str, make_entry):
+        """Check that no problematic fields are marked."""
+        entry = make_entry(entry_str)
+        formatted = entry.format_problematic_fields()
+        assert FaultyLabel.FIXABLE.value in formatted
+
+    @cant_fix
+    def test_cant_fix(self, entry_str, make_entry, subtests):
+        """Check that no problematic fields are marked."""
+        entry = make_entry(entry_str)
+        problems = entry.format_problematic_fields()
+        with subtests.test('edited or missing'):
+            assert any(label.value in problems
+                       for label in (FaultyLabel.EDITED, FaultyLabel.MISSING))
+
+        # Check that all the mandatory fields are present
+        mandatory = [t for t in FieldTag if FieldBase.for_tag(t).is_mandatory]
+        with subtests.test('all mandatory'):
+            assert all(t.value in problems for t in mandatory)
+
+        # Check also that all the extra fields are present
+        # pylint: disable-next=protected-access
+        extras = [f for f in entry._raw_fields if isinstance(f, UnknownField)]
+        with subtests.test('all extra lines'):
+            assert all(str(e) in problems for e in extras)
+
+    @need_no_fix
+    def test_nothing_to_fix(self, entry_str, make_entry):
+        """Check that no problematic fields are marked."""
+        entry = make_entry(entry_str)
+        assert not entry.format_problematic_fields()
+
+    _scrambled = parametrize_with_cases(
+        'entry_str',
+        cases=(cases_entry.CasesHistoryInfoFunny.case_field_and_entry_fix,
+               cases_entry.CasesHistoryInfoFunny.case_sorting_messed_up)
+        )
 
 
 class TestHistoryEntryFix:
