@@ -570,11 +570,13 @@ class ImagingSourceCamera(abc.CameraABC):
         Parameters
         ----------
         obj_info : SettingsInfo
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
-            Whether obj_info should be matched exactly.
+            Whether obj_info should be matched exactly. The unique_name
+            in obj_info must match the name of the camera exactly if
+            match_exactly is True.
 
         Returns
         -------
