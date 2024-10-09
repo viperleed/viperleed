@@ -298,6 +298,15 @@ class TestHistoryEntry:
                                  'those as such. We currently do not'))
             assert entry_edited.needs_fixing
 
+    def test_multiple_notes_no_extras(self, make_entry):
+        """Check that an entry with repeated notes has no UnknownField."""
+        base = CorrectEntry().case_no_notes()
+        base, _ = base.rsplit('\n', 1)
+        notes = f'{FieldTag.NOTES} This is a test\n   on multiple lines'
+        entry_str = base + '\n' + '\n'.join(notes for _ in range(5))
+        entry = make_entry(entry_str)
+        assert not any(isinstance(f, UnknownField) for f in entry._raw_fields)
+
 
 class TestHistoryEntryDiscard:
     """Collection of tests concerning discarding and discarded entries."""

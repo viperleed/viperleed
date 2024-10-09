@@ -632,6 +632,11 @@ class HistoryInfoEntry:
                 yield notes_field
                 continue
             for next_field in fields:
+                if isinstance(next_field, NotesField):
+                    # Yield the previous one, then go on with this one
+                    yield notes_field
+                    notes_field = next_field
+                    continue
                 if not isinstance(next_field, UnknownField):
                     yield notes_field  # The notes from before
                     yield next_field   # The one we already pulled
