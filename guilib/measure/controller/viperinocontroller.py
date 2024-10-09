@@ -535,14 +535,15 @@ class ViPErinoController(abc.MeasureControllerABC):
 
     @classmethod
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
-        """Determine if the default settings file is for this controller.
+        """Determine if the default `config` file is for this controller.
 
         Parameters
         ----------
         obj_info : SettingsInfo or None
-            The information that should be used to check 'config'.
-            If not None, then the 'firmware' version of the controller
-            is matched against the 'firmware_version' of the config.
+            The information that should be used to check `config`.
+            If not None, then obj_info.more['firmware'], i.e., the
+            firmware version stored in the box, is matched against
+            the 'firmware_version' of `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool

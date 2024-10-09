@@ -289,7 +289,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     @classmethod
     @abstractmethod
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
-        """Determine if a default `config` is for this instance.
+        """Determine if a default `config` file is for this instance.
 
         This method must use obj_info to determine if a config is
         suitable for the instance. To perform this check one can
