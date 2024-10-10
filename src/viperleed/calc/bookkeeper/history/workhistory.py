@@ -59,6 +59,18 @@ class WorkhistoryHandler:
         """Return the time-stamp of the current run."""
         return self.bookkeeper.timestamp
 
+    def discard_workhistory_root(self):
+        """Remove the top-level workhistory folder and all its contents."""
+        if not self.path.is_dir():
+            return
+        try:
+            shutil.rmtree(self.path)
+        except OSError:
+            is_empty = not any(self.path.iterdir())
+            err_ = f'Failed to {{}} {self.path.name} folder'
+            err_ = err_.format('delete empty' if is_empty else 'discard')
+            LOGGER.error(err_, exc_info=True)
+
     def find_current_directories(self, contains=''):
         """Return a generator of subfolders in the current workhistory folder.
 
@@ -80,16 +92,14 @@ class WorkhistoryHandler:
         directories = self._find_directories(contains=contains)
         return (d for d in directories if PREVIOUS_LABEL not in d.name)
 
-    def move_and_cleanup(self, discard):
+    def move_and_cleanup(self):
         """Move files from the current work-history folder, then clean up.
 
-        If the current work-history folder is empty, it is always
-        deleted. Otherwise, only if `discard` is True.
-
-        Parameters
-        ----------
-        discard : bool
-            Whether files should only be deleted, without copying them.
+        Any subfolder of workhistory that is labeled as "previous"
+        (i.e., corresponding to an earlier run of viperleed.calc) is
+        always removes. If the current work-history folder is empty
+        (after removal of the "previous" folders and moving the new
+        ones) it is deleted.
 
         Returns
         -------
@@ -103,16 +113,10 @@ class WorkhistoryHandler:
 
         # Always remove any 'previous'-labelled folders
         self._discard_previous()
-        if not discard:
-            tensor_nums = self._move_folders_to_history()
+        tensor_nums = self._move_folders_to_history()
         is_empty = not any(self.path.iterdir())
-        if is_empty or discard:
-            try:
-                shutil.rmtree(self.path)
-            except OSError:
-                err_ = f'Failed to {{}} {self.path.name} folder'
-                err_ = err_.format('discard' if discard else 'delete empty')
-                LOGGER.error(err_, exc_info=True)
+        if is_empty:
+            self.discard_workhistory_root()
         return tensor_nums
 
     def _discard_previous(self):

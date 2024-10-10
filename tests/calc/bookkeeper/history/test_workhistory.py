@@ -94,20 +94,27 @@ class TestWorkhistoryHandler:
 
     @patch_rmtree
     @parametrize(folders=_nothing_to_move.values(), ids=_nothing_to_move)
-    def test_move_and_cleanup_discard(self, mock_rmtree, folders,
+    def test_discard_workhistory_root(self, mock_rmtree, folders,
                                       workhistory, patched_path):
-        """Test move_and_cleanup with discard == True."""
+        """Test discard_workhistory_root."""
         mock_path = patched_path(is_dir=True, iterdir=iter(folders))
-        tensor_nums = workhistory.move_and_cleanup(discard=True)
-        assert not tensor_nums
+        workhistory.discard_workhistory_root()
         mock_rmtree.assert_called_once_with(mock_path)
+
+    @patch_rmtree
+    def test_discard_workhistory_root_not_there(self, mock_rmtree,
+                                                workhistory, patched_path):
+        """Test discard_workhistory_root when no folder is present."""
+        patched_path(is_dir=False)
+        workhistory.discard_workhistory_root()
+        mock_rmtree.assert_not_called()
 
     @patch_rmtree
     def test_move_and_cleanup_nonexistent_folder(self, mock_rmtree,
                                                  workhistory, patched_path):
         """Test move_and_cleanup when the folder doesn't exist."""
         patched_path(is_dir=False)
-        tensor_nums = workhistory.move_and_cleanup(discard=False)
+        tensor_nums = workhistory.move_and_cleanup()
         assert not tensor_nums
         mock_rmtree.assert_not_called()
 
@@ -121,7 +128,7 @@ class TestWorkhistoryHandler:
                                  '_move_folders_to_history',
                                  return_value=tensors_expect)
         with mock_move:
-            tensor_nums = workhistory.move_and_cleanup(discard=False)
+            tensor_nums = workhistory.move_and_cleanup()
             assert tensor_nums == tensors_expect
             mock_rmtree.assert_not_called()
 
@@ -192,7 +199,7 @@ class TestWorkhistoryHandlerRaises:
         # Make sure we don't raise OSError at _discard_previous
         mock_previous = patch.object(workhistory, '_discard_previous')
         with mock_previous, make_obj_raise('shutil.rmtree', OSError):
-            workhistory.move_and_cleanup(discard=True)
+            workhistory.move_and_cleanup()
         self.check_has_error(caplog)
 
     def test_discard_previous(self, workhistory, caplog):

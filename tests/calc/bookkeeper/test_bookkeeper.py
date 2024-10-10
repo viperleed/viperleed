@@ -658,7 +658,7 @@ class TestBookkeeperRaises:
         '_copy_out_and_supp': ('shutil.copytree', logs),
         '_workhistory._discard_previous': ('shutil.rmtree', logs),
         '_make_and_copy_to_history': ('pathlib.Path.mkdir', raises),
-        '_workhistory.move_and_cleanup(True)': ('shutil.rmtree', logs),
+        '_workhistory.move_and_cleanup': ('shutil.rmtree', logs),
         '_read_and_clear_notes_file-read': ('pathlib.Path.read_text', logs),
         '_read_and_clear_notes_file-write': ('pathlib.Path.write_text', logs),
         '_read_most_recent_log': ('pathlib.Path.open', skips),

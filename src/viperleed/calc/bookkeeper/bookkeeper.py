@@ -495,7 +495,7 @@ class Bookkeeper:
             except OSError:
                 LOGGER.error(f'Failed to copy {name} directory to history.')
 
-    def _deal_with_workhistory_and_history_info(self, discard=False):
+    def _deal_with_workhistory_and_history_info(self, mark_discarded=False):
         """Move work-history subfolders and update the history.info file."""
         tensor_nums = self._workhistory.move_and_cleanup(discard)
         tensor_nums.add(self.tensor_number)
@@ -513,7 +513,7 @@ class Bookkeeper:
                 job_nums=[self.max_job_for_tensor[tensor] + 1
                           for tensor in sorted_tensors],
                 timestamp=self.timestamp,
-                discarded_=discard,
+                discarded_=mark_discarded,
                 folder_name=self.history_dir.name,
                 notes=self._read_and_clear_notes_file(),
                 # Optional ones
@@ -734,7 +734,7 @@ class Bookkeeper:
         self._update_state_files_from_out()
 
         # workhistory and history.info
-        self._deal_with_workhistory_and_history_info(discard=False)
+        self._deal_with_workhistory_and_history_info(mark_discarded=False)
 
         return BookkeeperExitCode.SUCCESS
 
@@ -745,7 +745,7 @@ class Bookkeeper:
             self._make_and_copy_to_history(use_ori=True)
 
             # workhistory and history.info
-            self._deal_with_workhistory_and_history_info(discard=False)
+            self._deal_with_workhistory_and_history_info(mark_discarded=False)
 
         # remove OUT, SUPP, logs and _ori files
         self._remove_log_files()
@@ -758,9 +758,6 @@ class Bookkeeper:
         """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
         # replace input files from _ori
         self._replace_state_files_from_ori()
-
-        if self.tensor_number not in self.max_job_for_tensor:
-            self._remove_tensors_and_deltas()
 
         # remove OUT, SUPP and logs
         self._remove_log_files()
@@ -787,7 +784,7 @@ class Bookkeeper:
             return BookkeeperExitCode.FAIL
 
         # Clean up workhistory in root
-        self._workhistory.move_and_cleanup(discard=True)
+        self._workhistory.discard_workhistory_root()
 
         # Remove history folder
         try:
@@ -796,6 +793,12 @@ class Bookkeeper:
             LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
             return BookkeeperExitCode.FAIL
         self._run_discard_common()
+
+        # Tensors and Deltas
+        if self.tensor_number not in self.max_job_for_tensor:
+            # Tensor is new.
+            self._remove_tensors_and_deltas()
+
         # And the history entry from history.info
         self.history_info.remove_last_entry()
         return BookkeeperExitCode.SUCCESS
@@ -807,7 +810,7 @@ class Bookkeeper:
             self._make_and_copy_to_history(use_ori=False)
 
             # workhistory and history.info
-            self._deal_with_workhistory_and_history_info(discard=True)
+            self._deal_with_workhistory_and_history_info(mark_discarded=True)
 
         self._run_discard_common()
         try:
