@@ -453,11 +453,11 @@ class Bookkeeper:
         """Copy input files to the history subfolder.
 
         The files are preferentially collected from the original_inputs
-        subfolder of SUPP, only if they are not found, they are taken
-        from the root directory (unless they are auto-generated ones).
-        If the root directory contains a newer version of the file
-        than in original_inputs, warn the user (but still copy the one
-        from original_inputs).
+        subfolder of SUPP. Only if they are not found there, they are
+        taken from the root directory (unless they are auto-generated
+        ones). If the root directory contains a newer version of the
+        file than in original_inputs, warn the user (but still copy
+        the one from original_inputs).
 
         Parameters
         ----------
@@ -601,7 +601,7 @@ class Bookkeeper:
 
         # Now that we have a base name, we can also check if there
         # are already history folders with the same base name.
-        self._state_info['history_with_same_base_name_exists'] = any(           # TODO: would it be enough to use the info above? We already know if there is a folder with the same base name.
+        self._state_info['history_with_same_base_name_exists'] = any(
             self._get_conflicting_history_subfolders()
             )
 
@@ -846,7 +846,7 @@ class Bookkeeper:
     def _read_most_recent_log(self):
         """Read timestamp and lines from the most-recent calc log file."""
         last_log_lines = []
-        split_logs = {}
+        split_logs = {}  # Path to most recent log for each prefix
         for prefix in CALC_LOG_PREFIXES:  # newest to oldest
             # Note on the disable: pylint does not recognize that we
             # dynamically set the _paths['calc_logs'] to be a tuple.
