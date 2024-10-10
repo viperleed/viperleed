@@ -41,7 +41,7 @@ _MANDATORY_CMD_NAMES = (
     'PC_MEASURE_ONLY',
     'PC_OK',
     'PC_RESET',
-    'PC_SET_SERIAL_NR'
+    'PC_SET_SERIAL_NR',
     'PC_SET_UP_ADCS',
     'PC_SET_VOLTAGE',
     'PC_SET_VOLTAGE_ONLY',
@@ -669,8 +669,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         for port in port_names:
             ctrl = ViPErinoController(address=port)
             if not ctrl.has_valid_settings:
-                # Something is wrong with the default configuration file.
-                return []
+                raise RuntimeError(
+                    'The default settings are corrupted. Please '
+                    'contact the ViPErLEED developers.'
+                    )
             if not ctrl.serial.is_open:
                 # Port is already in use
                 continue
