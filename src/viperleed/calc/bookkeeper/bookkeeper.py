@@ -28,9 +28,9 @@ from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
-from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from . import log
+from .constants import HISTORY_FOLDER_RE
 from .history.entry.entry import HistoryInfoEntry
 from .history.errors import CantDiscardEntryError
 from .history.errors import CantRemoveEntryError
@@ -38,6 +38,7 @@ from .history.errors import NoHistoryEntryError
 from .history.constants import HISTORY_INFO_NAME
 from .history.entry.field import MissingField
 from .history.info import HistoryInfoFile
+from .history.workhistory import WorkhistoryHandler
 from .log import LOGGER
 from .mode import BookkeeperMode
 
@@ -47,9 +48,6 @@ CALC_LOG_PREFIXES = (
     # The next ones are for backwards compatibility. Must
     # be in historical order of use: Most recent first!
     'tleedm',
-    )
-HIST_FOLDER_RE = re.compile(
-    r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})(?P<rest>_.*)'
     )
 STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
@@ -189,7 +187,6 @@ class Bookkeeper:
         """
         self._folder_names = {
             'top_level_history': history_name,
-            'workhistory': work_history_name,
             'history_dir_base_name': None,   # Set in update_from_cwd
             'history_dir': None,             # Set in update_from_cwd
             }
@@ -211,6 +208,8 @@ class Bookkeeper:
             'timestamp': None,            # str
             'history_with_same_base_name_exists': None,  # bool
             }
+        self._workhistory = WorkhistoryHandler(self.cwd / work_history_name,
+                                               self)
 
     # Simple dynamic @properties
     cwd = _make_property('_paths[cwd]')
@@ -286,11 +285,6 @@ class Bookkeeper:
     def top_level_history_path(self):
         """Return the path to the 'history' folder."""
         return self.cwd / self._folder_names['top_level_history']
-
-    @property
-    def work_history_path(self):
-        """Return the path to the 'workhistory' folder."""
-        return self.cwd / self._folder_names['workhistory']
 
     def run(self, mode):
         """Run the bookkeeper in the given mode.
@@ -392,7 +386,7 @@ class Bookkeeper:
         kwargs = {
             'job_name': self.job_name,
             'history_name': self._folder_names['top_level_history'],
-            'work_history_name': self._folder_names['workhistory'],
+            'work_history_name': self._workhistory.path.name,
             'cwd': self.cwd
             }
         logger_prepared = self._state_info['logger_prepared']
@@ -418,7 +412,7 @@ class Bookkeeper:
             # Any calc logs
             *self._paths['calc_logs'],
             # And workhistory folders
-            *self._get_current_workhistory_directories(contains='r'),
+            *self._workhistory.find_current_directories(contains='r'),
             )
         self._paths['to_be_archived'] = tuple(p for p in files_to_archive
                                               if p.is_file() or p.is_dir())
@@ -440,7 +434,7 @@ class Bookkeeper:
         history_path = self.top_level_history_path
         max_jobs = defaultdict(int)  # max. job number per tensor number
         for directory in history_path.iterdir():
-            match = HIST_FOLDER_RE.match(directory.name)
+            match = HISTORY_FOLDER_RE.match(directory.name)
             if not directory.is_dir() or not match:
                 continue
             tensor_num = int(match['tensor_num'])
@@ -534,7 +528,7 @@ class Bookkeeper:
 
     def _deal_with_workhistory_and_history_info(self, discard=False):
         """Move work-history subfolders and update the history.info file."""
-        tensor_nums = self._move_and_cleanup_workhistory(discard)
+        tensor_nums = self._workhistory.move_and_cleanup(discard)
         tensor_nums.add(self.tensor_number)
 
         sorted_tensors = sorted(tensor_nums)
@@ -558,19 +552,6 @@ class Bookkeeper:
                 **self._infer_run_info_from_log()
                 )
         self.history_info.append_entry(new_info_entry, fix_time_format=True)
-
-    def _discard_workhistory_previous(self):
-        """Remove 'previous'-labelled directories in work history."""
-        work_hist_prev = self._get_workhistory_directories(
-            contains=PREVIOUS_LABEL
-            )
-        for directory in work_hist_prev:
-            try:
-                shutil.rmtree(directory)
-            except OSError:
-                LOGGER.error(f'Failed to delete {directory} directory '
-                             f'from {self.work_history_path}',
-                             exc_info=True)
 
     def _find_base_name_for_history_subfolder(self):
         """Store internally the potential name of the history subfolder.
@@ -645,54 +626,6 @@ class Bookkeeper:
             )
         return (f for f in folders if f.is_dir())
 
-    def _get_current_workhistory_directories(self, contains=''):
-        """Return a generator of subfolders in the current workhistory folder.
-
-        As compared with _get_workhistory_directories, only those
-        directories not marked as 'previous' are returned.
-
-        Parameters
-        ----------
-        contains : str, optional
-            Select only those subfolders whose name contains this
-            string. Default is an empty string, corresponding to
-            no filtering other than the one described in Returns.
-
-        Returns
-        -------
-        subfolders : generator
-            When iterated over, it yields paths to the immediate
-            subfolders of the current workhistory folder whose name
-            matches the HIST_FOLDER_RE regular expression, contains
-            `contains`, but does not contain 'previous'.
-        """
-        directories = self._get_workhistory_directories(contains=contains)
-        return (d for d in directories if PREVIOUS_LABEL not in d.name)
-
-    def _get_workhistory_directories(self, contains=''):
-        """Return a generator of subfolders in the current workhistory folder.
-
-        Parameters
-        ----------
-        contains : str, optional
-            Select only those subdirectories whose name contains this
-            string. Default is an empty string, corresponding to no
-            filtering other than the one described in Returns.
-
-        Returns
-        -------
-        subfolders : generator
-            When iterated over, it yields paths to the immediate
-            subdirectories of the current work-history folder whose
-            name matches the HIST_FOLDER_RE regular expression, and
-            whose name include `contains`.
-        """
-        work_history_path = self.work_history_path
-        globbed = (work_history_path.glob(f'*{contains}*') if contains
-                   else work_history_path.iterdir())
-        return (d for d in globbed
-                if d.is_dir() and HIST_FOLDER_RE.match(d.name))
-
     @_needs_update_for_attr('_state_info[last_log_lines]')
     def _infer_run_info_from_log(self):
         """Return a dictionary of information read from the calc log."""
@@ -740,88 +673,6 @@ class Bookkeeper:
             f'{DateTimeFormat.LOG_CONTENTS.now()} ###'
             )
         self._state_info['logger_prepared'] = True
-
-    def _move_and_cleanup_workhistory(self, discard):
-        """Move files from the current work-history folder, then clean up.
-
-        If the current work-history folder is empty, it is always
-        deleted. Otherwise, only if `discard` is True.
-
-        Parameters
-        ----------
-        discard : bool
-            Whether files should only be deleted, without copying them.
-
-        Returns
-        -------
-        tensor_nums : set of int
-            Indices of tensors found in the current work-history folder
-            that have been moved to history as new history entries.
-        """
-        workhistory = self.work_history_path
-        tensor_nums = set()
-        if not workhistory.is_dir():
-            return tensor_nums
-
-        # Always remove any 'previous'-labelled folders
-        self._discard_workhistory_previous()
-        if not discard:
-            tensor_nums = self._move_workhistory_folders()
-        is_empty = not any(workhistory.iterdir())
-        if is_empty or discard:
-            try:
-                shutil.rmtree(workhistory)
-            except OSError:
-                err_ = f'Failed to {{}} {workhistory.name} folder'
-                err_ = err_.format('discard' if discard else 'delete empty')
-                LOGGER.error(err_, exc_info=True)
-        return tensor_nums
-
-    def _move_workhistory_folders(self):
-        """Move relevant folders from the current work history to history.
-
-        Returns
-        -------
-        tensor_nums : set
-            The tensor numbers of the folders that have been moved.
-
-        Raises
-        ------
-        FileExistsError
-            If moving one of the work-history directories fails because
-            there already is a history directory with the same name.
-        """
-        tensor_nums = set()
-        directories = self._get_current_workhistory_directories(
-            contains=self.timestamp
-            )
-        # Work-history directories have the following naming convention
-        # [see cleanup.move_oldruns(rp, prerun=False)]:
-        #    tTTT.rSSS[_<short_labels_of_sections>]_<log_timestamp>
-        # Here we 'shift' the SSS part further down the line, to make
-        # folders of the form
-        #    tTTT.rRRR.SSS[_<short_labels_of_sections>]_<log_timestamp>
-        for directory in directories:
-            match = HIST_FOLDER_RE.match(directory.name)
-            tensor_num = int(match['tensor_num'])
-            search_num = int(match['job_num'])  # Misuse the job_num
-            job_num = self.max_job_for_tensor[tensor_num] + 1
-            newname = (
-                f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
-                + match['rest']
-                )
-            target = self.top_level_history_path / newname
-            try:
-                directory.replace(target)
-            except FileExistsError:
-                LOGGER.error(f'Error: Failed to move {directory} to {target}: '
-                             'Target path already exists. Stopping...')
-                raise
-            except OSError:
-                LOGGER.error(f'Error: Failed to move {directory}.',
-                             exc_info=True)
-            tensor_nums.add(tensor_num)
-        return tensor_nums
 
     def _read_and_clear_notes_file(self):
         """Return notes read from file. Clear the file contents."""

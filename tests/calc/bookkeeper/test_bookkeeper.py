@@ -12,6 +12,7 @@ import ast
 from enum import Enum
 import functools
 import logging
+from operator import attrgetter
 from pathlib import Path
 import shutil
 import time
@@ -655,9 +656,9 @@ class TestBookkeeperRaises:
     skips = object()
     _os_error = {
         '_copy_out_and_supp': ('shutil.copytree', logs),
-        '_discard_workhistory_previous': ('shutil.rmtree', logs),
+        '_workhistory._discard_previous': ('shutil.rmtree', logs),
         '_make_and_copy_to_history': ('pathlib.Path.mkdir', raises),
-        '_move_and_cleanup_workhistory(True)': ('shutil.rmtree', logs),
+        '_workhistory.move_and_cleanup(True)': ('shutil.rmtree', logs),
         '_read_and_clear_notes_file-read': ('pathlib.Path.read_text', logs),
         '_read_and_clear_notes_file-write': ('pathlib.Path.write_text', logs),
         '_read_most_recent_log': ('pathlib.Path.open', skips),
@@ -668,8 +669,7 @@ class TestBookkeeperRaises:
 
     @parametrize(method_name=_os_error)
     def test_oserror(self, method_name, tmp_path, caplog):
-        """Check expected outcome of calling a method on a bookkeeper."""
-
+        """Check complaints when functions raise OSError."""
         workhistory = tmp_path/DEFAULT_WORK_HISTORY
         workhistory.mkdir()
         (workhistory/f't001.r002_some_{PREVIOUS_LABEL}_folder').mkdir()
@@ -689,7 +689,10 @@ class TestBookkeeperRaises:
             args = ast.literal_eval(args)
         else:
             args = tuple()
-        method = getattr(bookkeeper, method_name)
+
+        # Notice the use of operator.attrgetter instead of getattr,
+        # as the latter does not handle dotted attributes
+        method = attrgetter(method_name)(bookkeeper)
         with raises_test_exception(to_patch):
             method(*args)
 
