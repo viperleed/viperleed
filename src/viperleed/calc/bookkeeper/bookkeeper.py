@@ -821,7 +821,7 @@ class Bookkeeper:
             return BookkeeperExitCode.FAIL
 
         # Clean up workhistory in root
-        self._move_and_cleanup_workhistory(discard=True)
+        self._workhistory.move_and_cleanup(discard=True)
 
         # Remove history folder
         try:
