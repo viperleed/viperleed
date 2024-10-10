@@ -98,11 +98,11 @@ class CameraABC(DeviceABC):
     # the processing thread
     __process_frame = qtc.pyqtSignal(np.ndarray)
 
-    _mandatory_settings = [
+    _mandatory_settings = (
             ('camera_settings', 'class_name'),
             ('camera_settings', 'device_name'),
             ('measurement_settings', 'exposure'),
-            ]
+            )
 
     # _abstract is a list of features for which setter and getter
     # methods must always be overridden in concrete classes
@@ -484,7 +484,7 @@ class CameraABC(DeviceABC):
         if n_frames < min_n or n_frames > max_n:
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                f"{n_frames} [out of range ({min_n}, {max_n})]",
+                f'{n_frames} [out of range ({min_n}, {max_n})]',
                 'measurement_settings/n_frames', 1
                 )
             n_frames = 1
@@ -693,8 +693,8 @@ class CameraABC(DeviceABC):
             return False
 
         error_msg = error_msg.replace('_', ' ')
-        if (error is QObjectSettingsErrors.INVALID_SETTINGS and
-            "bad pixel" in error_msg):
+        if (error is QObjectSettingsErrors.INVALID_SETTINGS
+                and 'bad pixel' in error_msg):
             return True
         return False
 
@@ -917,7 +917,7 @@ class CameraABC(DeviceABC):
         """Return a list of available devices.
 
         This method must return a list of SettingsInfo instances. The
-        SettingsInfo class is located in the hardwarebase module. Each
+        SettingsInfo class is located in the classes.abc module. Each
         camera is represented by a single SettingsInfo instance. The
         SettingsInfo object contains the uninque device name and a dict
         holding additional information about the device. If there is

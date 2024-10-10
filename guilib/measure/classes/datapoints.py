@@ -836,7 +836,9 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
                     if quantity in _EXCEPTIONAL:
                         # images and energies, already processed
                         continue
-                    for measurement in ctrl_dict.values():
+                    for ctrl, measurement in ctrl_dict.items():
+                        if not ctrl.measures():
+                            continue
                         extra_length = max_length - len(measurement)
                         data.append(measurement + [NAN]*extra_length)
                 for line in zip(*data):
@@ -1021,8 +1023,8 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
             if quantity in _EXCEPTIONAL:
                 # cameras and energy, already processed
                 continue
-            for controller in controllers:
-                header.append(
-                    f"{quantity.label}({controller.name})"
-                    )
+            for ctrl in controllers:
+                if not ctrl.measures():
+                    continue
+                header.append(f"{quantity.label}({ctrl.name})")
         return header

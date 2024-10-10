@@ -22,8 +22,10 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure.camera import imagingsourcecalibration as is_cal
 from viperleed.guilib.measure.camera.drivers.imagingsource import (
-    ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
-    ImagingSourceError, SinkFormat,
+    ISCamera as ImagingSourceDriver,
+    FrameReadyCallbackType,
+    ImagingSourceError,
+    SinkFormat,
     )
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
@@ -80,7 +82,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
         a numpy array with a copy of the image data.
     """
     camera = process_info.camera
-    if not camera.connected:
+    if not camera or not camera.connected:
         return
 
     process_info.frame_times.append(timer())
@@ -257,12 +259,12 @@ def _color_format_mapper(formats):
 class ImagingSourceCamera(abc.CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
-    _mandatory_settings = [
+    _mandatory_settings = (
         # pylint: disable=protected-access
         # Needed for extending
         *abc.CameraABC._mandatory_settings,
         ('camera_settings', 'black_level'),
-        ]
+        )
 
     abort_trigger_burst = qtc.pyqtSignal()                                      # TODO: could be done with QMetaObject.invokeMethod
 
@@ -532,16 +534,14 @@ class ImagingSourceCamera(abc.CameraABC):
         self.driver.close()
 
     @classmethod
+    # pylint: disable-next=unused-argument  # From base-class signature
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
-        """Determine if the default settings file is for this camera.
-
-        Note that we can just return matching here, as we already
-        know that the class matches.
+        """Determine if the default `config` file is for this camera.
 
         Parameters
         ----------
         obj_info : SettingsInfo or None
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
@@ -557,20 +557,26 @@ class ImagingSourceCamera(abc.CameraABC):
             to determine the best-matching settings files when
             multiple files are found.
         """
+        # Note that we can just return matching here, as we already
+        # know that the class matches. The reason for this is that the
+        # relevant camara attributes taken from the settings files do
+        # not change between the various cameras handled by this class.
         return (1,)
 
     @classmethod
     def is_matching_user_settings(cls, obj_info, config, match_exactly):
-        """Determine if the settings file is for this camera.
+        """Determine if a `config` file is for this camera.
 
         Parameters
         ----------
         obj_info : SettingsInfo
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
-            Whether obj_info should be matched exactly.
+            Whether obj_info should be matched exactly. The unique_name
+            in obj_info must match the name of the camera exactly if
+            match_exactly is True.
 
         Returns
         -------
@@ -594,7 +600,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
     @classmethod
     def is_settings_for_this_class(cls, config):
-        """Determine if the settings file is for this camera.
+        """Determine if a `config` file is for this camera.
 
         Parameters
         ----------
@@ -623,8 +629,8 @@ class ImagingSourceCamera(abc.CameraABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        self.check_before_getting_settings_handler()
-        handler = SettingsHandler(self.settings, display_config=True)
+        self.check_creating_settings_handler_is_possible()
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
         handler.add_from_handler(super().get_settings_handler())
 
         # pylint: disable=redefined-variable-type

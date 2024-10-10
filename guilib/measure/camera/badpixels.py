@@ -13,6 +13,7 @@ from a camera and computes a pixel-badness array.
 
 from ast import literal_eval
 from collections.abc import MutableSequence
+from contextlib import nullcontext
 from datetime import datetime
 import functools
 from pathlib import Path
@@ -23,6 +24,7 @@ from scipy import ndimage
 
 from PyQt5 import QtCore as qtc
 
+from viperleed import NUMPY2_OR_LATER
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import tifffile
 from viperleed.guilib.measure.camera import cameracalibration as _calib
@@ -1354,15 +1356,25 @@ class BadPixels:
             raise RuntimeError(f"{self.__class__.__name__}: No "
                                "bad pixel coordinates to write.")
 
-        # Prepare the column contents
-        columns = [
-            ['Bad pixels',
-             *(f"{tuple(b)}" for b in self.__bad_coords),
-             *(f"{tuple(b)}" for b in self.__uncorrectable)],
-            ['Replacements',
-             *(f"{tuple(r)}" for r in self.__replacements),
-             *(['NaN']*len(self.__uncorrectable))]
-            ]
+        # Since numpy 2.0 (numpy/numpy/pull/22449), numpy data types
+        # are printed out together with scalars. This means that
+        # str(np.int(x)) == 'np.int(x)' rather than 'x'. Reverting the
+        # behavior to the v1.25 one ensures that we can then read the
+        # information back using ast.
+        print_np_scalar_as_number = (
+            np.printoptions(legacy='1.25') if NUMPY2_OR_LATER
+            else nullcontext()
+            )
+        with print_np_scalar_as_number:
+            # Prepare the column contents
+            columns = [
+                ['Bad pixels',
+                 *(f"{tuple(b)}" for b in self.__bad_coords),
+                 *(f"{tuple(b)}" for b in self.__uncorrectable)],
+                ['Replacements',
+                 *(f"{tuple(r)}" for r in self.__replacements),
+                 *(['NaN']*len(self.__uncorrectable))]
+                ]
 
         # Find padding lengths:
         bad_width = max(len('# Bad pixels'), *(len(row) for row in columns[0]))

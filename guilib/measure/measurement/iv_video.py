@@ -24,9 +24,11 @@ class IVVideo(MeasurementABC):
     """Measurement class for LEED I(V) videos."""
 
     display_name = 'I(V) video'
-    _mandatory_settings = [*MeasurementABC._mandatory_settings,
-                           ('measurement_settings', 'end_energy'),
-                           ('measurement_settings', 'delta_energy'),]
+    _mandatory_settings = (
+        *MeasurementABC._mandatory_settings,
+        ('measurement_settings', 'end_energy'),
+        ('measurement_settings', 'delta_energy'),
+        )
 
     @property
     def _delta_energy(self):

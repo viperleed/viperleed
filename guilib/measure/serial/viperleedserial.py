@@ -97,11 +97,15 @@ class ViPErLEEDSerial(SerialABC):
 
     debug_info_arrived = qtc.pyqtSignal(str)
 
-    _mandatory_settings = [*SerialABC._mandatory_settings,
-                           ('hardware_bits',), ('available_commands',),
-                           ('arduino_states',), ('error_bytes',),
-                           ('controller', 'FIRMWARE_VERSION'),
-                           ('serial_port_settings', 'special_byte'),]
+    _mandatory_settings = (
+        *SerialABC._mandatory_settings,
+        ('hardware_bits',),
+        ('available_commands',),
+        ('arduino_states',),
+        ('error_bytes',),
+        ('controller', 'FIRMWARE_VERSION'),
+        ('serial_port_settings', 'special_byte'),
+        )
 
     def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.
@@ -153,8 +157,8 @@ class ViPErLEEDSerial(SerialABC):
         cmd_names = ['PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
                      'PC_CALIBRATION', 'PC_SET_UP_ADCS',
                      'PC_SET_VOLTAGE_ONLY', 'PC_SET_SERIAL_NR']
-        if self.firmware_version >= "0.7":
-            cmd_names.append("PC_DEBUG")
+        if self.firmware_version >= '0.7':
+            cmd_names.append('PC_DEBUG')
 
         _cmds = self.settings['available_commands']
         return [_cmds[name] for name in cmd_names]

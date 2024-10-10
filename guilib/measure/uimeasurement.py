@@ -210,6 +210,7 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog
     )
+from viperleed.guilib.measure.dialogs.constants import DIALOG_DISMISSED
 from viperleed.guilib.measure.dialogs.firmwareupgradedialog import (
     FirmwareUpgradeDialog
     )
@@ -376,6 +377,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             return
 
         self._dialogs['sys_settings'].close()
+        self._dialogs['firmware_upgrade'].close()
         super().closeEvent(event)
 
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
@@ -670,7 +672,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                   "third_btn_text": "Create a new settings file"}
         config = base.get_object_settings(device_cls, settings_info, **kwargs)
 
-        if not config:  # pylint: disable=C1901
+        if config is DIALOG_DISMISSED:
             # Did not find one, and user dismissed the dialog.
             return None
 
@@ -699,6 +701,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             section = "controller"
         elif issubclass(device_cls, CameraABC):
             section = "camera_settings"
+        else:
+            raise TypeError('Unknown device class detected. Please '
+                            'contact the ViPErLEED developers.')
 
         device_name = settings_info.more['name'] or settings_info.unique_name
         device.settings[section]['device_name'] = device_name
@@ -738,7 +743,6 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _on_camera_clicked(self, *_):                                           # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
-        cam_cls, cam_info = self.sender().data()
 
         # Decide whether we can take the camera object
         # (and its settings) from the known camera viewers
@@ -748,7 +752,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 return
 
         # Not already available. Make a new camera.
-        camera = self._make_device(cam_cls, cam_info)
+        camera = self._make_device(*self.sender().data())
         if not camera:
             return
 

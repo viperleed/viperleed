@@ -189,18 +189,22 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
     settings_changed = qtc.pyqtSignal()
     redraw_needed = qtc.pyqtSignal()  # Should trigger redraw of dialog
 
-    def __init__(self, config, parent=None, display_config=False):
+    def __init__(self, config, parent=None, show_path_to_config=False):
         """Initialize instance.
 
         Parameters
         ----------
-        display_config : bool, optional
+        config : ViPErLEEDSettings
+            The settings from which the handler will be generated.
+        parent : QObject
+            The parent QObject of this handler.
+        show_path_to_config : bool, optional
             Whether the name of the settings file (and path to the file)
             should be displayed. Default is False.
 
         Returns
         -------
-        None
+        None.
         """
         super(qtc.QObject, self).__init__(parent)
         self.__dict = collections.defaultdict(dict)
@@ -218,14 +222,14 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         self.__updated_timer.setSingleShot(True)
         self.__updated_timer.timeout.connect(self.redraw_needed)
 
-        if display_config:
+        if show_path_to_config:
             widget = qtw.QLabel()
             file = config.last_file
             widget.setText(file.stem if file else 'None')
             self.add_static_option(
                 'File', 'config', widget,
                 display_name='Settings file',
-                tooltip=str(file) if file else None,
+                tooltip=str(file) if file else '',
                 tags=Tag.REGULAR
                 )
 
@@ -382,19 +386,15 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         else:
             self.__widgets.append(option)
 
-    def add_static_section(self, section_name):
-        """Add a static section that may not come from settings."""
-        section = SettingsDialogSection(section_name)
-        self.__sections[section_name] = section
-        self.__widgets.append(section)
-
     def add_section(self, section_name, **kwargs):
         """Add a titled section to self."""
         if section_name not in self.__config:
             raise ValueError(f"No section {section_name} in config file")
-        section = SettingsDialogSection(section_name, **kwargs)
-        self.__sections[section_name] = section
-        self.__widgets.append(section)
+        self._add_section(section_name, **kwargs)
+
+    def add_static_section(self, section_name):
+        """Add a static section that may not come from settings."""
+        self._add_section(section_name)
 
     def get_widgets_with_tags(self, tags):
         """Return all widgets with a specific tag."""
@@ -432,6 +432,12 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 option.set_(self.__config[sec_name][opt_name])
         for section in self.__complex_sections:
             section.update_widgets()
+
+    def _add_section(self, section_name, **kwargs):
+        """Add section to self."""
+        section = SettingsDialogSection(section_name, **kwargs)
+        self.__sections[section_name] = section
+        self.__widgets.append(section)
 
     def __guess_handler_from_value(self, value):
         """Return a handler widget guessed from a config value."""
@@ -533,7 +539,7 @@ class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
         self._update_handler_from_read_only()
 
         self.display_name = self._make_label_widget(display_name, tooltip,
-                                                     v_align)
+                                                    v_align)
         if not self.has_tag(Tag.REGULAR):
             self.setVisible(False)
 
@@ -1189,7 +1195,7 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             The widget instance or widget class to be used to
             display the option. If a class, an instance is created.
         *args : object
-            Other positional arguments  passed on to handler_widget
+            Other positional arguments passed on to `handler_widget`
             if only a QWidget class is given.
         display_name : str, optional
             The name of this section when displayed in a SettingsDialog.
@@ -1212,7 +1218,7 @@ class StaticSettingsDialogOption(SettingsDialogOption):
                 SettingsTag.READ_ONLY
                     Option contains read-only settings.
             SettingsTag.READ_ONLY must be present, otherwise a
-            RuntimeError is raised.
+            ValueError is raised.
         label_alignment : {'top', 'centre', 'bottom'}
             Vertical alignment of label field relative to handler_widget.
             Only the first character matters. Any character other than 'c'
@@ -1227,14 +1233,14 @@ class StaticSettingsDialogOption(SettingsDialogOption):
 
         Raises
         ------
-        RuntimeError
+        ValueError
             read_only is not True. Indicates wrong
             use of StaticSettingsDialogOption.
         """
         tags = kwargs.get('tags', Tag(0))
         if Tag.READ_ONLY not in tags:
-            raise RuntimeError(
-                'A StaticSettingsDialogOption may only be read_only. You '
+            raise ValueError(
+                'A StaticSettingsDialogOption may only be read only. You '
                 'are seeing this message due to a faulty implementation.'
                 )
         super().__init__(option_name, handler_widget, *args, **kwargs)

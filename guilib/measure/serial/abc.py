@@ -98,10 +98,10 @@ class SerialABC(HardwareABC):
 
     __move_to_thread_requested = qtc.pyqtSignal(bool)  # True==connect          # TODO: Can be done with QMetaObject.invokeMethod
 
-    _mandatory_settings = [
+    _mandatory_settings = (
             ('serial_port_settings', 'MSG_END'),
             ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
-            ]
+            )
 
     def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.
@@ -297,33 +297,33 @@ class SerialABC(HardwareABC):
 
     @classmethod
     def is_matching_default_settings(*_):
-        """Raise RuntimeError."""
+        """Raise TypeError."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        raise RuntimeError(f'{(self).__name__} was asked to perform a '
-                           'settings check. Serials should never determine '
-                           'appropriate settings on their own.')
+        raise TypeError(f'{(self).__name__} was asked to perform a '
+                        'settings check. Serials should never determine '
+                        'appropriate settings on their own.')
 
     @classmethod
     def is_matching_user_settings(*_):
-        """Raise RuntimeError."""
+        """Raise TypeError."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        raise RuntimeError(f'{(self).__name__} was asked to perform a '
-                           'settings check. Serials should never determine '
-                           'appropriate settings on their own.')
+        raise TypeError(f'{(self).__name__} was asked to perform a '
+                        'settings check. Serials should never determine '
+                        'appropriate settings on their own.')
 
     @classmethod
     def is_settings_for_this_class(*_):
-        """Raise RuntimeError."""
+        """Raise TypeError."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        raise RuntimeError(f'{(self).__name__} was asked to perform a '
-                           'settings check. Serials should never determine '
-                           'appropriate settings on their own.')
+        raise TypeError(f'{(self).__name__} was asked to perform a '
+                        'settings check. Serials should never determine '
+                        'appropriate settings on their own.')
 
     def set_settings(self, new_settings):
         """Change settings of the port.
@@ -480,8 +480,8 @@ class SerialABC(HardwareABC):
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
-        self.check_before_getting_settings_handler()
-        handler = SettingsHandler(self.settings, display_config=True)
+        self.check_creating_settings_handler_is_possible()
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
         return handler
 
     @abstractmethod

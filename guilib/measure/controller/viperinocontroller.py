@@ -34,9 +34,19 @@ from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
 
 
 _MANDATORY_CMD_NAMES = (
-    'PC_AUTOGAIN', 'PC_CONFIGURATION', 'PC_SET_UP_ADCS', 'PC_OK', 'PC_RESET',
-    'PC_SET_VOLTAGE', 'PC_ERROR', 'PC_CALIBRATION', 'PC_MEASURE_ONLY',
-    'PC_CHANGE_MEAS_MODE', 'PC_STOP', 'PC_SET_VOLTAGE_ONLY', 'PC_SET_SERIAL_NR'
+    'PC_AUTOGAIN',
+    'PC_CALIBRATION',
+    'PC_CHANGE_MEAS_MODE',
+    'PC_CONFIGURATION',
+    'PC_ERROR',
+    'PC_MEASURE_ONLY',
+    'PC_OK',
+    'PC_RESET',
+    'PC_SET_SERIAL_NR',
+    'PC_SET_UP_ADCS',
+    'PC_SET_VOLTAGE',
+    'PC_SET_VOLTAGE_ONLY',
+    'PC_STOP',
     )
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -96,14 +106,14 @@ class ViPErinoController(abc.MeasureControllerABC):
     box_id = 1
 
     cls_lock = threading.RLock()  # Thread safe access to class properties
-    _mandatory_settings = [
+    _mandatory_settings = (
         # pylint: disable=protected-access
         *abc.MeasureControllerABC._mandatory_settings,
         ('available_commands',),
         ('controller', 'measurement_devices'),
         ('controller', 'firmware_version'),  # also mandatory on serial
         ('energy_calibration', 'v_ref_dac'),
-        ]
+        )
 
     hardware_info_arrived = qtc.pyqtSignal()
 
@@ -204,7 +214,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             # Seems a pylint bug.
             meas_f = 50.0
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            f"adc_update_rate/{update_rate_raw}", '')
+                            f'adc_update_rate/{update_rate_raw}', '')
         return 1000 / meas_f
 
     @property
@@ -349,8 +359,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         # than the one of self to prevent mandatory settings from
         # newer firmware versions to stay if settings for earlier
         # versions are loaded.
-        self._mandatory_settings = [*self.__class__._mandatory_settings,
-                                    *mandatory_commands]
+        self._mandatory_settings = (*self.__class__._mandatory_settings,
+                                    *mandatory_commands)
 
         invalid_settings.extend(super().are_settings_invalid(settings))
         return invalid_settings
@@ -510,8 +520,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        self.check_before_getting_settings_handler()
-        handler = SettingsHandler(self.settings, display_config=True)
+        self.check_creating_settings_handler_is_possible()
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
                            display_name='Firmware version',
@@ -538,14 +548,15 @@ class ViPErinoController(abc.MeasureControllerABC):
 
     @classmethod
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
-        """Determine if the default settings file is for this controller.
+        """Determine if the default `config` file is for this controller.
 
         Parameters
         ----------
         obj_info : SettingsInfo or None
-            The information that should be used to check 'config'.
-            If not None, then the 'firmware' version of the controller
-            is matched against the 'firmware_version' of the config.
+            The information that should be used to check `config`.
+            If not None, then obj_info.more['firmware'], i.e., the
+            firmware version stored in the box, is matched against
+            the 'firmware_version' of `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
@@ -579,12 +590,12 @@ class ViPErinoController(abc.MeasureControllerABC):
 
     @classmethod
     def is_matching_user_settings(cls, obj_info, config, match_exactly):
-        """Determine if the settings file is for this controller.
+        """Determine if a `config` file is for this controller.
 
         Parameters
         ----------
         obj_info : SettingsInfo
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
             .more must contain the 'name' of the controller and the
             installed 'firmware' version.
         config : ConfigParser
@@ -623,7 +634,7 @@ class ViPErinoController(abc.MeasureControllerABC):
 
     @classmethod
     def is_settings_for_this_class(cls, config):
-        """Determine if the settings file is for this controller.
+        """Determine if a `config` file is for this controller.
 
         Parameters
         ----------
@@ -671,8 +682,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         for port in port_names:
             ctrl = ViPErinoController(address=port)
             if not ctrl.has_valid_settings:
-                # Something is wrong with the default configuration file.
-                return []
+                raise RuntimeError(
+                    'The default settings are corrupted. Please '
+                    'contact the ViPErLEED developers.'
+                    )
             if not ctrl.serial.is_open:
                 # Port is already in use
                 continue

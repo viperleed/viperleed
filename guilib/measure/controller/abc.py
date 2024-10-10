@@ -9,7 +9,7 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains the definition of the ControllerABC and the
-MeasureController class abstract base classes used for giving basic
+MeasureControllerABC abstract base classes used for giving basic
 commands to the LEED electronics.
 """
 
@@ -93,10 +93,10 @@ class ControllerABC(DeviceABC):
     # is initiated in a call to prepare_to_show_settings().
     ready_to_show_settings = qtc.pyqtSignal()
 
-    _mandatory_settings = [
+    _mandatory_settings = (
         ('controller', 'serial_class'),
         ('controller', 'device_name'),
-        ]
+        )
 
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):
@@ -170,7 +170,7 @@ class ControllerABC(DeviceABC):
         self.time_stamp = None
 
         # These dictionaries must be filled in subclasses.
-        # They must contain all functions the MeasureController has
+        # They must contain all functions the MeasureControllerABC has
         # to call in the order to bring the controller into a state
         # ready for setting the energy/taking measurements.
         # begin_prepare_todos contains everything that has to be
@@ -479,21 +479,21 @@ class ControllerABC(DeviceABC):
 
     def _update_serial_from_settings(self):
         """Set serial settings from new controller settings."""
-        serial_cls_name = self._settings.get('controller', 'serial_class',
-                                             fallback='')                       # TODO: remove fallback in 1.0
-        if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
-            serial_cls_name = self._settings.get('controller',
-                                                 'serial_port_class')
+        serial_cls_name = self.settings.get('controller', 'serial_class',
+                                            fallback='')                       # TODO: #242 (remove fallback in 1.0)
+        if not serial_cls_name:                                                 # TODO: #242 (only here for backwards compatibility, remove in 1.0)
+            serial_cls_name = self.settings.get('controller',
+                                                'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             serial_class = base.class_from_name('serial', serial_cls_name)
-            self._serial = serial_class(self._settings,
+            self._serial = serial_class(self.settings,
                                         port_name=self._address)
             self.serial.error_occurred.connect(self.error_occurred)
             self.serial.connection_changed.connect(self.connection_changed)
         else:
-            # The next line will also check that self._settings contains
+            # The next line will also check that self.settings contains
             # appropriate settings for the serial class used.
-            self.serial.settings = self._settings
+            self.serial.settings = self.settings
             self.serial.port_name = self._address
 
         # Notice that the .connect_() will run anyway, even if the
@@ -551,10 +551,10 @@ class ControllerABC(DeviceABC):
         # the future settings and the value in self._address.
         # Also, save changes to file, unless we have been reading
         # from the default configuration.
-        _settings_serial = self._settings.get('controller', 'address',
-                                              fallback=self._address)
+        _settings_address = self._settings.get('controller', 'address',
+                                               fallback=self._address)
         if not self._address:
-            self._address = _settings_serial
+            self._address = _settings_address
         else:
             self._settings['controller']['address'] = self._address
             if not self.uses_default_settings:
@@ -606,7 +606,7 @@ class ControllerABC(DeviceABC):
         invalid_settings = settings.has_settings(*self._mandatory_settings,
                                                  *extra_mandatory)
 
-        # Backwards compatibility fix
+        # Backwards compatibility fix                                           # TODO: #242
         new = (
             ('measurement_settings', 'nr_samples'),
             ('controller', 'serial_class'),
@@ -780,7 +780,7 @@ class ControllerABC(DeviceABC):
         """List all devices of this class.
 
         This method must return a list of SettingsInfo instances. The
-        SettingsInfo class is located in the hardwarebase module. Each
+        SettingsInfo class is located in the classes.abc module. Each
         controller is represented by a single SettingsInfo instance. The
         SettingsInfo object must contain a .unique_name, and a dict
         holding .more information about the device. .unique_name may
@@ -1047,7 +1047,8 @@ class ControllerABC(DeviceABC):
 
         # Disconnect signal: will be reconnected
         # during the call to continue_preparation
-        self.serial.busy_changed.disconnect(self.__do_preparation_step)
+        base.safe_disconnect(self.serial.busy_changed,
+                             self.__do_preparation_step)
         if self.__can_continue_preparation:
             # The whole preparation is now over.
             # Guarantee that any unsent message that may have come
@@ -1073,10 +1074,10 @@ class ControllerABC(DeviceABC):
 class MeasureControllerABC(ControllerABC):
     """Controller class for measurement controllers."""
 
-    _mandatory_settings = [
+    _mandatory_settings = (
         *ControllerABC._mandatory_settings,
         ('measurement_settings', 'nr_samples'),
-        ]
+        )
 
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):

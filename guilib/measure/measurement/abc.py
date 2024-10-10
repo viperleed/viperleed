@@ -109,10 +109,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     # completed the first segment of their preparation
     _preparation_continued = qtc.pyqtSignal()                                   # TODO: Could use QMetaObject.invokeMethod
 
-    _mandatory_settings = [
+    _mandatory_settings = (
         ('devices', 'primary_controller'),
         ('measurement_settings', 'start_energy'),
-        ]
+        )
 
     def __init__(self, settings):
         """Initialise measurement instance."""
@@ -373,12 +373,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     @classmethod
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
-        """Determine if the default settings file is for this measurement.
+        """Determine if the default `config` file is for a measurement.
 
         Parameters
         ----------
         obj_info : SettingsInfo or None
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
@@ -398,12 +398,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     @classmethod
     def is_matching_user_settings(cls, obj_info, config, match_exactly):
-        """Determine if the settings file is for this measurement.
+        """Determine if the `config` file is for a measurement.
 
         Parameters
         ----------
-        obj_info : SettingsInfo or None
-            The information that should be used to check 'config'.
+        obj_info : SettingsInfo
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
@@ -423,7 +423,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     @classmethod
     def is_settings_for_this_class(cls, config):
-        """Determine if the settings file is for this measurement.
+        """Determine if the `config` file is for this measurement.
 
         Parameters
         ----------
@@ -448,7 +448,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         specified in the settings will be instantiated, told
         what they will be measuring, moved to their respective
         properties and connected to all necessary signals.
-        
+
         In order to prevent attempting to connect to already
         connected devices, it is only possible to set settings
         after all devices have been disconnected. This means
@@ -754,8 +754,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             The handler used in a SettingsDialog to display the
             settings of this measurement to users.
         """
-        self.check_before_getting_settings_handler()
-        handler = SettingsHandler(self.settings, display_config=True)
+        self.check_creating_settings_handler_is_possible()
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
         sys_config = SystemSettings()
         settings_path = sys_config.paths['configuration']
 
@@ -1036,7 +1036,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if any(device.busy for device in self.devices):
             return
         for device in self.devices:
-            device.busy_changed.disconnect(self._check_preparation_finished)
+            base.safe_disconnect(device.busy_changed,
+                                 self._check_preparation_finished)
 
         # Finally, reconnect all devices to
         # be ready to actually take measurements
@@ -1087,7 +1088,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             return
 
         # Use the controller.busy_changed to move from this segment
-        # of the preparation to the exit point of the preparation,
+        # of the preparation to the exit point of the preparation
         # that will later start the measurement loop.
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.busy_changed,
@@ -1381,13 +1382,18 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # Later on, this check will only happen if the unique name
         # of the controller in the settings file that was passed
         # is not found in the device list.
+        # Backwards compatibility fix for port_name:
+        address = 'address'
         invalid = config.has_settings(('controller', 'address'))
+        if invalid:
+            address = 'port_name'
+            invalid = config.has_settings(('controller', 'port_name'))
         if invalid:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/address',
                             f'No address in {config.last_file}')
             raise RuntimeError
-        address = config.get('controller', 'address')
+        address = config.get('controller', address)
         if not address:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/address',
@@ -1547,7 +1553,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         controller = self.sender()
         self.data_points.add_data(data, controller)
-        self._missing_data[controller] -= 1
+        if controller.measures():
+            self._missing_data[controller] -= 1
         self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(tuple)
@@ -1625,6 +1632,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         -------
         None.
         """
+        if self.aborted:
+            return
         if any(device.busy for device in self.devices):
             return
         if any(miss < 0 for miss in self._missing_data.values()):
