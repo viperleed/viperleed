@@ -169,9 +169,9 @@ class Bookkeeper:
         self._paths = {
             'cwd': Path(cwd),
             # The next ones are set in update_from_cwd
-            'calc_logs': None,      # tuple
-            'other_logs': None,     # tuple
-            'to_be_archived': None  # tuple
+            'calc_logs': None,       # tuple
+            'other_logs': None,      # tuple
+            'to_be_archived': None,  # tuple
             }
         self._state_info = {
             'logger_prepared': False,
