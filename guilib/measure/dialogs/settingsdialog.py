@@ -148,7 +148,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
     settings_changed = qtc.pyqtSignal()
     redraw_needed = qtc.pyqtSignal()  # Should trigger redraw of dialog
 
-    def __init__(self, config, parent=None, display_config=False):
+    def __init__(self, config, parent=None, show_path_to_config=False):
         """Initialize instance.
 
         Parameters
@@ -157,13 +157,13 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
             The settings from which the handler will be generated.
         parent : QObject
             The parent QObject of this handler.
-        display_config : bool, optional
+        show_path_to_config : bool, optional
             Whether the name of the settings file (and path to the file)
             should be displayed. Default is False.
 
         Returns
         -------
-        None
+        None.
         """
         super(qtc.QObject, self).__init__(parent)
         self.__dict = collections.defaultdict(dict)
@@ -181,7 +181,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         self.__updated_timer.setSingleShot(True)
         self.__updated_timer.timeout.connect(self.redraw_needed)
 
-        if display_config:
+        if show_path_to_config:
             widget = qtw.QLabel()
             file = config.last_file
             widget.setText(file.stem if file else 'None')
@@ -341,19 +341,15 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         else:
             self.__widgets.append(option)
 
-    def add_static_section(self, section_name):
-        """Add a static section that may not come from settings."""
-        section = SettingsDialogSection(section_name)
-        self.__sections[section_name] = section
-        self.__widgets.append(section)
-
     def add_section(self, section_name, **kwargs):
         """Add a titled section to self."""
         if section_name not in self.__config:
             raise ValueError(f"No section {section_name} in config file")
-        section = SettingsDialogSection(section_name, **kwargs)
-        self.__sections[section_name] = section
-        self.__widgets.append(section)
+        self._add_section(section_name, **kwargs)
+
+    def add_static_section(self, section_name):
+        """Add a static section that may not come from settings."""
+        self._add_section(section_name)
 
     def has_advanced_options(self):
         """Return whether self contains any advanced option."""
@@ -387,6 +383,12 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 option.set_(self.__config[sec_name][opt_name])
         for section in self.__complex_sections:
             section.update_widgets()
+
+    def _add_section(self, section_name, **kwargs):
+        """Add section to self."""
+        section = SettingsDialogSection(section_name, **kwargs)
+        self.__sections[section_name] = section
+        self.__widgets.append(section)
 
     def __guess_handler_from_value(self, value):
         """Return a handler widget guessed from a config value."""

@@ -630,7 +630,7 @@ class ImagingSourceCamera(abc.CameraABC):
             settings of this controller to users.
         """
         self.check_creating_settings_handler_is_possible()
-        handler = SettingsHandler(self.settings, display_config=True)
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
         handler.add_from_handler(super().get_settings_handler())
 
         # pylint: disable=redefined-variable-type

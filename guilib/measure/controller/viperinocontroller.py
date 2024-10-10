@@ -520,7 +520,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             settings of this controller to users.
         """
         self.check_creating_settings_handler_is_possible()
-        handler = SettingsHandler(self.settings, display_config=True)
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
                            display_name='Firmware version', read_only=True)

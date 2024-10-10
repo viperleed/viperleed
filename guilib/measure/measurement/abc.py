@@ -1476,5 +1476,5 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
         self.check_creating_settings_handler_is_possible()
-        handler = SettingsHandler(self.settings, display_config=True)
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
         return handler
