@@ -9,6 +9,7 @@ __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
 from contextlib import nullcontext
+import logging
 import re
 
 import pytest
@@ -26,12 +27,14 @@ from viperleed.calc.bookkeeper.history.errors import CantDiscardEntryError
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixFailedError
 from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
 
 from ....helpers import exclude_tags
 from ....helpers import has_any_tag
+from ....helpers import make_obj_raise
 from ....helpers import raises_exception
 from ..conftest import NOTES_TEST_CONTENT
 from ..tag import BookkeeperTag as Tag
@@ -294,6 +297,20 @@ class TestHistoryInfoFileFix:
         assert self.needs_fix(info)
         info.fix()
         assert not self.needs_fix(info)
+
+    def test_fix_fails(self, caplog, simple_info_file):
+        """Check that failing to fix an entry logs an error message."""
+        with caplog.at_level(logging.CRITICAL):
+            info, *_ = simple_info_file
+        caplog.clear()
+        # pylint: disable-next=protected-access           # OK in tests
+        entries_before = info._entries.copy()
+        with make_obj_raise(HistoryInfoEntry, FixFailedError, 'as_fixed'):
+            info.fix()
+        assert any(r for r in caplog.records if r.level == logging.ERROR)
+        assert all(e_after is e_before
+                   # pylint: disable-next=protected-access  # OK in tests
+                   for e_after, e_before in zip(info._entries, entries_before))
 
     @parametrize_with_cases('contents', cases=all_history_cases,
                             has_tag=Tag.NEEDS_NO_FIX)

@@ -23,6 +23,7 @@ from .constants import HISTORY_INFO_NAME
 from .constants import HISTORY_INFO_SEPARATOR
 from .errors import CantDiscardEntryError
 from .errors import CantRemoveEntryError
+from .errors import FixFailedError
 from .errors import NoHistoryEntryError
 
 
@@ -136,6 +137,9 @@ class HistoryInfoFile:
                 fixed = entry.as_fixed()
             except AttributeError:
                 assert isinstance(entry, PureCommentEntry)
+                fixed = entry
+            except FixFailedError as exc:
+                LOGGER.error(str(exc))
                 fixed = entry
             fixed_entries.append(fixed)
         self._entries = fixed_entries

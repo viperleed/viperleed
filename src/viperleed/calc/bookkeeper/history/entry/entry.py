@@ -33,6 +33,7 @@ from ..constants import HISTORY_INFO_SEPARATOR
 from ..errors import EntrySyntaxError
 from ..errors import FieldsScrambledError
 from ..errors import FixableSyntaxError
+from ..errors import FixFailedError
 from ..errors import HistoryInfoError
 from .enums import DuplicateType
 from .enums import FaultyLabel
@@ -302,8 +303,8 @@ class HistoryInfoEntry:
     def fix_entry_issues(self):
         """Fix problems at the level of the whole entry."""
         if self._needs_fix_for_fields:  # Safeguard for the future
-            raise HistoryInfoError('Failed to fix fields for entry:\n'
-                                   + self.format_problematic_fields())
+            raise FixFailedError('Failed to fix fields for entry:\n'
+                                 + self.format_problematic_fields())
         # pylint: disable-next=no-member             # See pylint #7437
         self._fix_todos.pop(FixAction.FIX_FIELDS, None)
         if not self._needs_fix_for_entry:
@@ -320,8 +321,8 @@ class HistoryInfoEntry:
         self._fix_todos.pop(FixAction.NO_ACTION, None)
         # By now, we should be left only with UNFIXABLE stuff
         if self._needs_fix_for_entry:
-            raise HistoryInfoError('Failed to fix entry:\n'
-                                   + self.format_problematic_fields())
+            raise FixFailedError('Failed to fix entry:\n'
+                                 + self.format_problematic_fields())
 
     def format_problematic_fields(self):
         """Return a string with problematic fields highlighted."""

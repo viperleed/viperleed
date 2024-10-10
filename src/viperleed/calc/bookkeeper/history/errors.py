@@ -68,5 +68,9 @@ class FixableSyntaxError(HistoryInfoError):
         super().__init__(reason)
 
 
+class FixFailedError(HistoryInfoError):
+    """Failed to fix an entry or its fields."""
+
+
 class NoHistoryEntryError(HistoryInfoError):
     """There is no entry to process according to the criteria."""
