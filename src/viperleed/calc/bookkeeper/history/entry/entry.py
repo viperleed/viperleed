@@ -34,7 +34,6 @@ from ..errors import EntrySyntaxError
 from ..errors import FieldsScrambledError
 from ..errors import FixableSyntaxError
 from ..errors import FixFailedError
-from ..errors import HistoryInfoError
 from .enums import DuplicateType
 from .enums import FaultyLabel
 from .enums import FixAction
