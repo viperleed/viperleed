@@ -594,10 +594,9 @@ class Bookkeeper:
         # If there is already a folder with the same name and correct
         # timestamp/suffix, we take that, otherwise, we increase the
         # job number: it's a new run.
-        dir_name = dir_name_fmt.format(job=job_number)
-        if not (self.top_level_history_path / dir_name).is_dir():
-            job_number += 1
         base_name = dir_name_fmt.format(job=job_number)
+        if not (self.top_level_history_path / base_name).is_dir():
+            base_name = dir_name_fmt.format(job=job_number + 1)
         self._folder_names['history_dir_base_name'] = base_name
 
         # Now that we have a base name, we can also check if there
