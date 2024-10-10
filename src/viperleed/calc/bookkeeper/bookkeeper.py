@@ -538,6 +538,7 @@ class Bookkeeper:
         tensor_nums = self._move_and_cleanup_workhistory(discard)
         tensor_nums.add(self.tensor_number)                                     # TODO: how about sorting on tensor numbers?
 
+        sorted_tensors = sorted(tensor_nums)
         with logging_silent():
             # It's OK to silence the logger here, as we will surely
             # replace the timestamp format in append_entry. In fact,
@@ -546,9 +547,9 @@ class Bookkeeper:
             # replace the format, logging messages for other faulty
             # stuff will pop up.
             new_info_entry = HistoryInfoEntry(
-                tensor_nums=list(tensor_nums),
+                tensor_nums=sorted_tensors,
                 job_nums=[self.max_job_for_tensor[tensor] + 1
-                          for tensor in tensor_nums],
+                          for tensor in sorted_tensors],
                 timestamp=self.timestamp,
                 discarded_=discard,
                 folder_name=self.history_dir.name,
