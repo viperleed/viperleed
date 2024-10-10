@@ -188,7 +188,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
             self.add_static_option(
                 'File', 'config', widget,
                 display_name='Settings file',
-                tooltip=str(file) if file else None,
+                tooltip=str(file) if file else '',
                 )
 
     def __delitem__(self, item):
@@ -333,8 +333,8 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
-        option = StaticSettingsDialogOption(option_name, handler_widget, *args,
-                                            read_only=True, **kwargs)
+        option = StaticSettingsDialogOption(option_name, handler_widget,
+                                            *args, **kwargs)
         self[section_name][option_name] = option
         if self.has_section(section_name):
             self.__sections[section_name].add_option(option)
@@ -487,7 +487,7 @@ class SettingsDialogOption(qtc.QObject):
         self._update_handler_from_read_only()
 
         self.display_name = self._make_label_widget(display_name, tooltip,
-                                                     v_align)
+                                                    v_align)
 
     def __iter__(self):
         """Return the label and the handler for this option."""
@@ -1117,10 +1117,11 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             when hovering over, or clicking on the info icon. If it
             is an empty string, no tooltip is shown. Default is an
             empty string.
-        read_only : bool
+        read_only : bool, optional
             Whether the user is allowed to change the ViPErLEEDSettings
             by interacting with the handler of this SettingsDialogOption.
-            Must be True, otherwise a RuntimeError is raised.
+            Must be True, otherwise a ValueError is raised.
+            Default is True.
         is_advanced : bool, optional
             Whether this option is to be displayed only in "Advanced"
             mode. Default is False.
@@ -1138,12 +1139,13 @@ class StaticSettingsDialogOption(SettingsDialogOption):
 
         Raises
         ------
-        RuntimeError
+        ValueError
             read_only is not True. Indicates wrong
             use of StaticSettingsDialogOption.
         """
-        if kwargs.get('read_only') != True:
-            raise RuntimeError(
+        kwargs.setdefault('read_only', True)
+        if kwargs['read_only'] != True:
+            raise ValueError(
                 'A StaticSettingsDialogOption may only be read_only. You '
                 'are seeing this message due to a faulty implementation.'
                 )
