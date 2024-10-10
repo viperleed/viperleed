@@ -406,7 +406,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             '<section>/<option>', or
             '<section>/<option> not one of <value1>, <value2>, ...'.
             Further entries, added by reimplementations, are
-            information on what is wrong with the setttings.
+            information on what is wrong with the settings.
         """
         return [(invalid,) for invalid in
                 new_settings.has_settings(*self._mandatory_settings)]
