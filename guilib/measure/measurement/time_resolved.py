@@ -69,12 +69,12 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         trigger.timeout.connect(self._on_one_measurement_triggered)
 
         # A third timer that attempts to trigger again if
-        # __trigger_one_measurement failed to do so.
+        # _trigger_one_measurement failed to do so.
         self._retry_triggering = qtc.QTimer(parent=self)
         self._retry_triggering.setSingleShot(True)
         self._retry_triggering.setInterval(10)
         self._retry_triggering.timeout.connect(
-            self.__on_one_measurement_triggered
+            self._on_one_measurement_triggered
             )
 
         # Finally, set the _camera_timer interval to zero, so
@@ -617,7 +617,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 continue
             _INVOKE(camera, 'trigger_now', _QUEUED)
             self._missing_data[camera] += 1
-        self.__trigger_one_measurement.start()
+        self._trigger_one_measurement.start()
 
     def _prepare_continuous_mode(self):
         """Adjust the preparations to fit continuous mode.
