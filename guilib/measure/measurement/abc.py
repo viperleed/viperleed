@@ -255,12 +255,12 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
     @classmethod
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
-        """Determine if the default settings file is for a measurement.
+        """Determine if the default `config` file is for a measurement.
 
         Parameters
         ----------
         obj_info : SettingsInfo or None
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
@@ -268,19 +268,24 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         Returns
         -------
-        is_suitable : bool
-            True if the settings file is suitable.
+        sorting_info : tuple
+            A tuple that can be used the sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the items in the tuple is the
+            order of their significance. This return value is used
+            to determine the best-matching settings files when
+            multiple files are found.
         """
         return ()
 
     @classmethod
     def is_matching_user_settings(cls, obj_info, config, match_exactly):
-        """Determine if the settings file is for a measurement.
+        """Determine if the `config` file is for a measurement.
 
         Parameters
         ----------
         obj_info : SettingsInfo
-            The information that should be used to check 'config'.
+            The information that should be used to check `config`.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
@@ -288,15 +293,20 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         Returns
         -------
-        is_suitable : bool
-            True if the settings file is suitable.
+        sorting_info : tuple
+            A tuple that can be used the sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the items in the tuple is the
+            order of their significance. This return value is used
+            to determine the best-matching settings files when
+            multiple files are found.
         """
         super().is_matching_user_settings(obj_info, config, match_exactly)
         return ()                                                               # TODO: Implement
 
     @classmethod
     def is_settings_for_this_class(cls, config):
-        """Determine if the settings file is for this measurement.
+        """Determine if the `config` file is for this measurement.
 
         Parameters
         ----------
@@ -842,7 +852,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             return
 
         # Use the controller.busy_changed to move from this segment
-        # of the preparation to the exit point of the preparation,
+        # of the preparation to the exit point of the preparation
         # that will later start the measurement loop.
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.busy_changed,
