@@ -39,9 +39,7 @@ from .history.entry.cases_entry import NOTES_TEST_CONTENT
 from .tag import BookkeeperTag as Tag
 
 
-ALT_HISTORY_NAME = 'history_alt_name'
 MOCK_INPUT_CONTENT = 'This is a test input file.'
-MOCK_JOB_NAMES = (None, 'test_jobname')
 MOCK_ORIG_CONTENT = 'This is a test original input file.'
 MOCK_OUT_CONTENT = 'This is a test output file.'
 MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
@@ -54,10 +52,6 @@ MOCK_WORKHISTORY = {  # name in workhistory: name in history
     }
 
 
-with_history_name = parametrize(
-    history_name=(DEFAULT_HISTORY, ALT_HISTORY_NAME)
-    )
-with_jobs = parametrize(job_name=MOCK_JOB_NAMES)
 with_logs = parametrize(log_file_name=MOCK_LOG_FILES)
 
 
@@ -80,8 +74,8 @@ def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
         out_path,
         supp_path,
         original_inputs_path,
-        tmp_path / ALT_HISTORY_NAME / 't001.r001_20xxxx-xxxxxx',
-        tmp_path / ALT_HISTORY_NAME / 't002.r002_20xxxx-xxxxxx',
+        tmp_path / DEFAULT_HISTORY / 't001.r001_20xxxx-xxxxxx',
+        tmp_path / DEFAULT_HISTORY / 't002.r002_20xxxx-xxxxxx',
         ]
     directories.extend(tmp_path/DEFAULT_WORK_HISTORY/f
                        for f in MOCK_WORKHISTORY)
@@ -127,18 +121,10 @@ def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
 
 
 @fixture
-@with_jobs
-@with_history_name
-def after_calc_execution(mock_tree_after_calc_execution,
-                         job_name, history_name):
+def after_calc_execution(mock_tree_after_calc_execution):
     """Return the bookkeeper, and the path to the history subfolder."""
-    bookkeeper = Bookkeeper(cwd=mock_tree_after_calc_execution,
-                            job_name=job_name,
-                            history_name=history_name)
+    bookkeeper = Bookkeeper(cwd=mock_tree_after_calc_execution)
     bookkeeper.update_from_cwd(silent=True)
-    history_path = bookkeeper.cwd / history_name
-    dir_name = f't003.r001_{MOCK_TIMESTAMP}'
-    if job_name is not None:
-        dir_name += f'_{job_name}'
-    history_run_path = history_path / dir_name
+    history_path = bookkeeper.cwd / DEFAULT_HISTORY
+    history_run_path = history_path / f't003.r001_{MOCK_TIMESTAMP}'
     return bookkeeper, history_run_path

@@ -49,12 +49,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         presets = {}  # Replace selected PARAMETERS
         _verbosity_to_log_level(args, presets)
 
-        # NB: job_name is None, as we're cleaning up the previous run
-        bookkeeper = Bookkeeper(
-            job_name=args.job_name,
-            history_name=args.history_name,
-            work_history_name=args.work_history_name,
-            )
+        bookkeeper = Bookkeeper()
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
 
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
@@ -112,7 +107,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             )
 
         # PATHS
-        parser.add_argument(                                                    # TODO: bookkeeper always assumes DEFAULT_WORK!
+        parser.add_argument(
             '-w', '--work',
             help='specify execution work directory',
             type=str
@@ -122,31 +117,6 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             help=('specify the path to the folder containing '
                   'the TensErLEED and EEASISSS source codes'),
             type=str
-            )
-
-        # BOOKKEPER
-        parser.add_argument(                                                    # TODO: implement (for cont at end; warn if called with --no_cont)
-            '-j', '--job-name',
-            help=('define a name for the current run. Will be appended to the '
-                  'name of the history folder that is created, and is logged '
-                  'in history.info. Passed along to the bookkeeper'),
-            type=str
-            )
-        parser.add_argument(
-            '--history-name',
-            help=('define the name of the history folder that is '
-                  'created/used. Passed along to the bookkeeper. '
-                  f'Default is {DEFAULT_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_HISTORY
-            )
-        parser.add_argument(
-            '--work-history-name',
-           help=('define the name of the workhistory folder that '
-                 'is created/used. Passed along to the bookkeeper. '
-                 f'Default is {DEFAULT_WORK_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_WORK_HISTORY
             )
 
         # CREATING/DELETING DIRECTORIES

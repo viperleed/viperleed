@@ -36,7 +36,6 @@ from .history.errors import CantDiscardEntryError
 from .history.errors import CantRemoveEntryError
 from .history.errors import NoHistoryEntryError
 from .history.constants import HISTORY_INFO_NAME
-from .history.entry.field import MissingField
 from .history.info import HistoryInfoFile
 from .history.workhistory import WorkhistoryHandler
 from .log import LOGGER
@@ -160,33 +159,9 @@ class BookkeeperExitCode(IntEnum):
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
 
-    def __init__(self,
-                 job_name=None,
-                 history_name=DEFAULT_HISTORY,
-                 work_history_name=DEFAULT_WORK_HISTORY,
-                 cwd=Path.cwd()):
-        """Initialize the bookkeeper.
-
-        Parameters
-        ----------
-        job_name : str or None, optional
-            Custom name to append to the stored folder and to
-            history.info. If not given or None, no extra name
-            is added. Default is None.
-        history_name : str, optional
-            The name of the folder in the current directory where the
-            most recent run should be archived. Default is 'history'.
-        work_history_name : str, optional
-            The name of the workhistory subfolder of the current
-            directory where intermediate runs may have been stored.
-            Results are also copied from here to ./history_name.
-            Default is 'workhistory'.
-        cwd : Path, optional
-            The current working directory. Default is the current
-            directory.
-        """
+    def __init__(self, cwd=Path.cwd()):
+        """Initialize the bookkeeper using `cwd` as the root folder."""
         self._folder_names = {
-            'top_level_history': history_name,
             'history_dir_base_name': None,   # Set in update_from_cwd
             'history_dir': None,             # Set in update_from_cwd
             }
@@ -199,7 +174,6 @@ class Bookkeeper:
             'to_be_archived': None  # tuple
             }
         self._state_info = {
-            'job_name': job_name,
             'logger_prepared': False,
             # The next ones are set in update_from_cwd
             'last_log_lines': None,       # tuple
@@ -208,8 +182,10 @@ class Bookkeeper:
             'timestamp': None,            # str
             'history_with_same_base_name_exists': None,  # bool
             }
-        self._workhistory = WorkhistoryHandler(self.cwd / work_history_name,
-                                               self)
+        self._workhistory = WorkhistoryHandler(
+            work_history_path=self.cwd / DEFAULT_WORK_HISTORY,
+            bookkeeper=self,
+            )
 
     # Simple dynamic @properties
     cwd = _make_property('_paths[cwd]')
@@ -224,7 +200,6 @@ class Bookkeeper:
         '_state_info[history_with_same_base_name_exists]',
         needs_update=True,
         )
-    job_name = _make_property('_state_info[job_name]')
     max_job_for_tensor = _make_property('_state_info[max_job_for_tensor]',
                                         needs_update=True)
     tensor_number = _make_property('_state_info[tensor_number]',
@@ -284,7 +259,7 @@ class Bookkeeper:
     @property
     def top_level_history_path(self):
         """Return the path to the 'history' folder."""
-        return self.cwd / self._folder_names['top_level_history']
+        return self.cwd / DEFAULT_HISTORY
 
     def run(self, mode):
         """Run the bookkeeper in the given mode.
@@ -383,12 +358,6 @@ class Bookkeeper:
         -------
         None.
         """
-        kwargs = {
-            'job_name': self.job_name,
-            'history_name': self._folder_names['top_level_history'],
-            'work_history_name': self._workhistory.path.name,
-            'cwd': self.cwd
-            }
         logger_prepared = self._state_info['logger_prepared']
 
         # Note on the disable: while it is indeed not very elegant to
@@ -399,7 +368,7 @@ class Bookkeeper:
         # method both in __init__ and here. This seems a lot of
         # complication just to reset (almost) everything to None.
         # pylint: disable-next=unnecessary-dunder-call
-        self.__init__(**kwargs)
+        self.__init__(cwd=self.cwd)
         self._state_info['logger_prepared'] = logger_prepared
 
     @_needs_update_for_attr('_paths[calc_logs]')
@@ -548,7 +517,6 @@ class Bookkeeper:
                 folder_name=self.history_dir.name,
                 notes=self._read_and_clear_notes_file(),
                 # Optional ones
-                job_name=self.job_name or MissingField,
                 **self._infer_run_info_from_log()
                 )
         self.history_info.append_entry(new_info_entry, fix_time_format=True)
@@ -567,8 +535,7 @@ class Bookkeeper:
         -------
         None.
         """
-        suffix = (self.timestamp +
-                  ('' if self.job_name is None else f'_{self.job_name}'))
+        suffix = self.timestamp
         job_number = self.max_job_for_tensor[self.tensor_number]
         dir_name_fmt = f't{self.tensor_number:03d}.r{{job:03d}}_{suffix}'
         # If there is already a folder with the same name and correct
@@ -594,18 +561,17 @@ class Bookkeeper:
         It may be:
         - if there was a log file, and the folder is not
           present in history:
-              <log_timestamp>[_<job_name>]
+              <log_timestamp>
         - if there was a log file, but there is already a folder
-          in history with the same timestamp and job_name (typically
-          that means that bookkeeper was called multiple times with
-          the same job_name on the same run):
-              <log_timestamp>[_<job_name>]_moved-<bookie_timestamp>
+          in history with the same timestamp (typically that means
+          that bookkeeper was called multiple times on the same run):
+              <log_timestamp>_moved-<bookie_timestamp>
         - if there was no log file:
-              moved-<bookie_timestamp>[_<job_name>]
+              moved-<bookie_timestamp>
         - in the unlikely event that the folder in the previous point
           already exists (this would mean that the bookkeeper is called
-          twice with the same job_name within one second):
-              moved-<bookie_timestamp>[_<job_name>]_moved-<bookie_timestamp2>
+          twice within one second):
+              moved-<bookie_timestamp>_moved-<bookie_timestamp2>
           where <bookie_timestamp2> may be slightly later than
           <bookie_timestamp>, but is most likely the same.
 

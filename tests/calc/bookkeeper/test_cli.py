@@ -23,12 +23,6 @@ def fixture_bookkeeper_parser():
 class TestBookkeeperParser:
     """Tests for parsing CLI arguments of viperleed.calc.bookkeeper."""
 
-    @parametrize(flag=('-j', '--job-name'))
-    def test_parser_job_name(self, bookkeeper_parser, flag):
-        """Check interpretation of --job-name flag."""
-        job = 'test'
-        assert bookkeeper_parser.parse_args([flag, job]).job_name == job
-
     @parametrize(flag=('-a', '--archive'))
     def test_parser_archive(self, bookkeeper_parser, flag):
         """Check interpretation of --archive mode."""

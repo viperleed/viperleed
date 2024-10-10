@@ -16,9 +16,6 @@ __license__ = 'GPLv3+'
 from argparse import Action
 from pathlib import Path
 
-from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.cli_base import ViPErLEEDCLI
 
 from .bookkeeper import Bookkeeper
@@ -98,36 +95,10 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
                   'happened. The discarded run is removed from history.'),
             action=StoreBookkeeperMode,
             )
-        parser.add_argument(
-            '-j', '--job-name',
-            help=('define a string to be appended to the name '
-                  'of the history folder that is created, and '
-                  f'is logged in {HISTORY_INFO_NAME}'),
-            type=str
-            )
-        parser.add_argument(
-            '--history-name',
-            help=('define the name of the history folder that is '
-                  f'created/used. Default is {DEFAULT_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_HISTORY
-            )
-        parser.add_argument(
-            '--work-history-name',
-            help=('define the name of the workhistory folder that is '
-                  f'created/used. Default is {DEFAULT_WORK_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_WORK_HISTORY
-            )
 
     def __call__(self, args=None):
         """Call the bookkeeper with command-line args."""
         parsed_args = self.parse_cli_args(args)
-        bookkeeper = Bookkeeper(
-            job_name=parsed_args.job_name,
-            history_name=parsed_args.history_name,
-            work_history_name=parsed_args.work_history_name,
-            cwd=Path.cwd().resolve()
-            )
+        bookkeeper = Bookkeeper(cwd=Path.cwd().resolve())
         mode = getattr(parsed_args, 'mode', BookkeeperMode.ARCHIVE)
         return bookkeeper.run(mode)
