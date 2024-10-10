@@ -159,7 +159,6 @@ class BookkeeperExitCode(IntEnum):
     FAIL = 1
 
 
-# TODO: catch errors from history.info, at .read()
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
 
