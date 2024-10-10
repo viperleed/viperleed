@@ -1,4 +1,4 @@
-"""Tests for module history of viperleed.calc.bookkeeper."""
+"""Tests for module info of viperleed.calc.bookkeeper.history."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
@@ -30,7 +30,7 @@ from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.bookkeeper.history.errors import FixFailedError
 from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
-from viperleed.calc.bookkeeper.history.file import HistoryInfoFile
+from viperleed.calc.bookkeeper.history.info import HistoryInfoFile
 
 from ....helpers import exclude_tags
 from ....helpers import has_any_tag

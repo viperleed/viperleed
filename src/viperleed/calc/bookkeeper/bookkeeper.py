@@ -37,7 +37,7 @@ from .history.errors import CantRemoveEntryError
 from .history.errors import NoHistoryEntryError
 from .history.constants import HISTORY_INFO_NAME
 from .history.entry.field import MissingField
-from .history.file import HistoryInfoFile
+from .history.info import HistoryInfoFile
 from .log import LOGGER
 from .mode import BookkeeperMode
 

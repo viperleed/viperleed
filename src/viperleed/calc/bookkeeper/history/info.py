@@ -1,4 +1,4 @@
-"""Module file of viperleed.calc.bookkeeper.history.
+"""Module info of viperleed.calc.bookkeeper.history.
 
 Defines the HistoryInfoFile class, a handler for the history.info file.
 """
