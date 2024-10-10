@@ -22,6 +22,7 @@ from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.dialogs.constants import DIALOG_DISMISSED
 from viperleed.guilib.widgetslib import change_control_text_color
 
 
@@ -443,7 +444,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             )
 
         # Signal errors by picking an invalid entry
-        if not config_name:
+        if not config_name or config_name is DIALOG_DISMISSED:
             self.__ctrls['camera'].setCurrentIndex(-1)
             self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
             self.active_camera = None

@@ -210,6 +210,7 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog
     )
+from viperleed.guilib.measure.dialogs.constants import DIALOG_DISMISSED
 from viperleed.guilib.measure.dialogs.firmwareupgradedialog import (
     FirmwareUpgradeDialog
     )
@@ -653,7 +654,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                   "third_btn_text": "Create a new settings file"}
         config = base.get_object_settings(device_cls, settings_info, **kwargs)
 
-        if config == "":  # pylint: disable=C1901
+        if config is DIALOG_DISMISSED:
             # Did not find one, and user dismissed the dialog.
             return None
 

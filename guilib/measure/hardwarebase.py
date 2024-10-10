@@ -22,6 +22,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.dialogs.dropdowndialog import DropdownDialog
+from viperleed.guilib.measure.dialogs.constants import DIALOG_DISMISSED
 
 # TODO: not nice. Also, there's two places where the _defaults
 # path is used. Here and in classes.settings. However, due to circular
@@ -270,7 +271,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
             return get_object_settings(obj_cls, obj_info, **kwargs)
     if third_btn and _clicked is not third_btn:
         # User had another option but dismissed the dialog
-        return ""
+        return DIALOG_DISMISSED
     return None
 
 
@@ -314,7 +315,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         The path to the only settings file successfully found or the
         file that has been selected by the user. None if no settings
         file was found. None is returned if the user dismissed the
-        pop-up. The empty string is returned if an alternative option
+        pop-up. DIALOG_DISMISSED is returned if an alternative option
         was given as a third_btn_text parameter, but the user anyway
         dismissed the dialog.
     """
