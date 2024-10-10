@@ -17,7 +17,6 @@ from operator import attrgetter
 from pathlib import Path
 import re
 import shutil
-import time
 
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK_HISTORY
@@ -636,8 +635,7 @@ class Bookkeeper:
         """
         dir_name = self.history_dir_base_name
         if (self.top_level_history_path / dir_name).is_dir():
-            bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
-                                                 time.localtime())
+            bookkeeper_timestamp = DateTimeFormat.FILE_SUFFIX.now()
             dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
         self._folder_names['history_dir'] = dir_name
 
@@ -862,8 +860,7 @@ class Bookkeeper:
         try:
             most_recent_log = next(iter(split_logs.values()))
         except StopIteration:  # No log files
-            timestamp = time.strftime('%y%m%d-%H%M%S', time.localtime())
-            old_timestamp = f'moved-{timestamp}'
+            old_timestamp = f'moved-{DateTimeFormat.FILE_SUFFIX.now()}'
             return old_timestamp, last_log_lines
 
         old_timestamp = most_recent_log.name[-17:-4]
