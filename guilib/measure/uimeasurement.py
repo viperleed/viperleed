@@ -682,6 +682,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             section = "controller"
         elif issubclass(device_cls, CameraABC):
             section = "camera_settings"
+        else:
+            raise TypeError('Unknown device class detected. Please '
+                            'contact the ViPErLEED developers.')
 
         device_name = settings_info.more['name'] or settings_info.unique_name
         device.settings[section]['device_name'] = device_name
@@ -721,7 +724,6 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
-        cam_cls, cam_info = self.sender().data()
 
         # Decide whether we can take the camera object
         # (and its settings) from the known camera viewers
@@ -731,7 +733,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 return
 
         # Not already available. Make a new camera.
-        camera = self.__make_device(cam_cls, cam_info)
+        camera = self.__make_device(*self.sender().data())
         if not camera:
             return
 

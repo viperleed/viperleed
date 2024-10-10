@@ -153,8 +153,8 @@ class ViPErLEEDSerial(SerialABC):
         cmd_names = ['PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
                      'PC_CALIBRATION', 'PC_SET_UP_ADCS',
                      'PC_SET_VOLTAGE_ONLY', 'PC_SET_SERIAL_NR']
-        if self.firmware_version >= "0.7":
-            cmd_names.append("PC_DEBUG")
+        if self.firmware_version >= '0.7':
+            cmd_names.append('PC_DEBUG')
 
         _cmds = self.settings['available_commands']
         return [_cmds[name] for name in cmd_names]

@@ -282,33 +282,33 @@ class SerialABC(HardwareABC):
 
     @classmethod
     def is_matching_default_settings(*_):
-        """Raise RuntimeError."""
+        """Raise TypeError."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        raise RuntimeError(f'{(self).__name__} was asked to perform a '
-                           'settings check. Serials should never determine '
-                           'appropriate settings on their own.')
+        raise TypeError(f'{(self).__name__} was asked to perform a '
+                        'settings check. Serials should never determine '
+                        'appropriate settings on their own.')
 
     @classmethod
     def is_matching_user_settings(*_):
-        """Raise RuntimeError."""
+        """Raise TypeError."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        raise RuntimeError(f'{(self).__name__} was asked to perform a '
-                           'settings check. Serials should never determine '
-                           'appropriate settings on their own.')
+        raise TypeError(f'{(self).__name__} was asked to perform a '
+                        'settings check. Serials should never determine '
+                        'appropriate settings on their own.')
 
     @classmethod
     def is_settings_for_this_class(*_):
-        """Raise RuntimeError."""
+        """Raise TypeError."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        raise RuntimeError(f'{(self).__name__} was asked to perform a '
-                           'settings check. Serials should never determine '
-                           'appropriate settings on their own.')
+        raise TypeError(f'{(self).__name__} was asked to perform a '
+                        'settings check. Serials should never determine '
+                        'appropriate settings on their own.')
 
     def set_settings(self, new_settings):
         """Change settings of the port.
