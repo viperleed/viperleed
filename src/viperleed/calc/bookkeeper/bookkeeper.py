@@ -411,15 +411,15 @@ class Bookkeeper:
     @_needs_update_for_attr('_paths[calc_logs]')
     def _collect_files_to_archive(self):
         """Scan the root directory for files to be stored to history."""
-        # Check for OUT and SUPP
-        files_to_archive = [self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP]
-        # Any calc logs
-        files_to_archive.extend(self._paths['calc_logs'])
-        # Workhistory folders
-        if self.work_history_path.is_dir():
-            files_to_archive.extend(
-                self._get_current_workhistory_directories(contains='r')
-                )
+        files_to_archive = (
+            # OUT and SUPP, if present
+            self.cwd / DEFAULT_OUT,
+            self.cwd / DEFAULT_SUPP,
+            # Any calc logs
+            *self._paths['calc_logs'],
+            # And workhistory folders
+            *self._get_current_workhistory_directories(contains='r'),
+            )
         self._paths['to_be_archived'] = tuple(p for p in files_to_archive
                                               if p.is_file() or p.is_dir())
 
