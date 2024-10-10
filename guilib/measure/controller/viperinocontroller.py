@@ -105,14 +105,14 @@ class ViPErinoController(abc.MeasureControllerABC):
     box_id = 1
 
     cls_lock = threading.RLock()  # Thread safe access to class properties
-    _mandatory_settings = [
+    _mandatory_settings = (
         # pylint: disable=protected-access
         *abc.MeasureControllerABC._mandatory_settings,
         ('available_commands',),
         ('controller', 'measurement_devices'),
         ('controller', 'firmware_version'),  # also mandatory on serial
         ('energy_calibration', 'v_ref_dac'),
-        ]
+        )
 
     hardware_info_arrived = qtc.pyqtSignal()
 
@@ -358,8 +358,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         # than the one of self to prevent mandatory settings from
         # newer firmware versions to stay if settings for earlier
         # versions are loaded.
-        self._mandatory_settings = [*self.__class__._mandatory_settings,
-                                    *mandatory_commands]
+        self._mandatory_settings = (*self.__class__._mandatory_settings,
+                                    *mandatory_commands)
 
         invalid_settings.extend(super().are_settings_invalid(settings))
         return invalid_settings
