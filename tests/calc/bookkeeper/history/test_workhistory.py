@@ -12,7 +12,6 @@ import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
 
-import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
@@ -107,7 +106,7 @@ class TestWorkhistoryHandler:
     def test_move_and_cleanup_nonexistent_folder(self, mock_rmtree,
                                                  workhistory, patched_path):
         """Test move_and_cleanup when the folder doesn't exist."""
-        mock_path = patched_path(is_dir=False)
+        patched_path(is_dir=False)
         tensor_nums = workhistory.move_and_cleanup(discard=False)
         assert not tensor_nums
         mock_rmtree.assert_not_called()
@@ -134,6 +133,7 @@ class TestWorkhistoryHandler:
                                  '_find_directories',
                                  return_value=previous_dirs)
         with mock_find:
+            # pylint: disable-next=protected-access       # OK in tests
             workhistory._discard_previous()
             calls = [call(directory) for directory in previous_dirs]
             mock_rmtree.assert_has_calls(calls, any_order=True)
@@ -148,6 +148,7 @@ class TestWorkhistoryHandler:
                                  'find_current_directories',
                                  return_value=(directory,))
         with mock_find, mock_replace:
+            # pylint: disable-next=protected-access       # OK in tests
             tensor_nums = workhistory._move_folders_to_history()
             fake_replace.assert_called_once()
             assert tensor_nums == {987}
@@ -158,6 +159,7 @@ class TestWorkhistoryHandler:
         for directory in directories:
             directory.name = 'does not match'
         mock_path = patched_path(glob=directories, iterdir=directories)
+        # pylint: disable-next=protected-access           # OK in tests
         result = list(workhistory._find_directories())
         assert not result  # No matching name
         mock_path.glob.assert_not_called()
@@ -170,6 +172,7 @@ class TestWorkhistoryHandler:
         for i, directory in enumerate(directories):
             directory.name = f't123.r456_{contains}_{i}'
         mock_path = patched_path(glob=directories)
+        # pylint: disable-next=protected-access           # OK in tests
         result = list(workhistory._find_directories(contains=contains))
         assert result == directories
         mock_path.glob.assert_called_once_with(f'*{contains}*')
@@ -185,10 +188,10 @@ class TestWorkhistoryHandlerRaises:
 
     def test_move_and_cleanup(self, workhistory, patched_path, caplog):
         """Check that failed removal of the workhistory logs errors."""
-        mock_path = patched_path(iterdir=tuple())
+        patched_path(iterdir=tuple())
         # Make sure we don't raise OSError at _discard_previous
         mock_previous = patch.object(workhistory, '_discard_previous')
-        with make_obj_raise('shutil.rmtree', OSError):
+        with mock_previous, make_obj_raise('shutil.rmtree', OSError):
             workhistory.move_and_cleanup(discard=True)
         self.check_has_error(caplog)
 
@@ -198,6 +201,7 @@ class TestWorkhistoryHandlerRaises:
                                  '_find_directories',
                                  return_value=(1,))
         with mock_find, make_obj_raise('shutil.rmtree', OSError):
+            # pylint: disable-next=protected-access       # OK in tests
             workhistory._discard_previous()
         self.check_has_error(caplog)
 
@@ -210,6 +214,7 @@ class TestWorkhistoryHandlerRaises:
                                  return_value=(directory,))
         raises_ = raises_exception(directory, FileExistsError, 'replace')
         with patch_rmtree, mock_find, raises_:
+            # pylint: disable-next=protected-access       # OK in tests
             workhistory._move_folders_to_history()
         self.check_has_error(caplog)
 
@@ -222,6 +227,7 @@ class TestWorkhistoryHandlerRaises:
                                  return_value=(directory,))
         raises_ = make_obj_raise(directory, OSError, 'replace')
         with mock_find, raises_:
+            # pylint: disable-next=protected-access       # OK in tests
             tensor_nums = workhistory._move_folders_to_history()
             assert not tensor_nums
         self.check_has_error(caplog)
