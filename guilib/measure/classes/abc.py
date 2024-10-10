@@ -31,6 +31,7 @@ from pathlib import Path
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.guilib.measure import hardwarebase
 from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.guilib.measure.hardwarebase import emit_error
