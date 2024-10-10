@@ -85,6 +85,8 @@ class QObjectWithError(qtc.QObject):                                            
     # information about the error in the form (code, message).
     error_occurred = qtc.pyqtSignal(tuple)
 
+    emit_error = hardwarebase.emit_error
+
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     """Abstract base class of measurement objects with settings.
