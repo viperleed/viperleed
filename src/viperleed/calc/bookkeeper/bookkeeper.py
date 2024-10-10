@@ -535,7 +535,7 @@ class Bookkeeper:
     def _deal_with_workhistory_and_history_info(self, discard=False):
         """Move work-history subfolders and update the history.info file."""
         tensor_nums = self._move_and_cleanup_workhistory(discard)
-        tensor_nums.add(self.tensor_number)                                     # TODO: how about sorting on tensor numbers?
+        tensor_nums.add(self.tensor_number)
 
         sorted_tensors = sorted(tensor_nums)
         with logging_silent():
