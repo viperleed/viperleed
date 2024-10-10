@@ -588,7 +588,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                 pass
             # Measurements that may still be delivered during
             # preparation should be discarded:
-            ctrl.data_ready.disconnect(self._on_controller_data_ready)
+            base.safe_disconnect(ctrl.data_ready,
+                                 self._on_controller_data_ready)
 
             # When controllers will turn "not busy" at the end of
             # this first preparation segment, go to second segment
@@ -800,7 +801,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         if any(device.busy for device in self.devices):
             return
         for device in self.devices:
-            device.busy_changed.disconnect(self.__check_preparation_finished)
+            base.safe_disconnect(device.busy_changed,
+                                 self.__check_preparation_finished)
 
         # Finally, reconnect all devices to
         # be ready to actually take measurements
@@ -1145,13 +1147,18 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         # Later on, this check will only happen if the unique name
         # of the controller in the settings file that was passed
         # is not found in the device list.
+        # Backwards compatibility fix for port_name:
+        address = 'address'
         invalid = config.has_settings(('controller', 'address'))
+        if invalid:
+            address = 'port_name'
+            invalid = config.has_settings(('controller', 'port_name'))
         if invalid:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/address',
                             f'No address in {config.last_file}')
             raise RuntimeError
-        address = config.get('controller', 'address')
+        address = config.get('controller', address)
         if not address:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/address',
@@ -1316,7 +1323,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """
         controller = self.sender()
         self.data_points.add_data(data, controller)
-        self._missing_data[controller] -= 1
+        if controller.measures():
+            self._missing_data[controller] -= 1
         self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(tuple)
@@ -1394,6 +1402,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         -------
         None.
         """
+        if self.aborted:
+            return
         if any(device.busy for device in self.devices):
             return
         if any(miss < 0 for miss in self._missing_data.values()):

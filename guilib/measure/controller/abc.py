@@ -1024,7 +1024,8 @@ class ControllerABC(DeviceABC):
 
         # Disconnect signal: will be reconnected
         # during the call to continue_preparation
-        self.serial.busy_changed.disconnect(self.__do_preparation_step)
+        base.safe_disconnect(self.serial.busy_changed,
+                             self.__do_preparation_step)
         if self.__can_continue_preparation:
             # The whole preparation is now over.
             # Guarantee that any unsent message that may have come

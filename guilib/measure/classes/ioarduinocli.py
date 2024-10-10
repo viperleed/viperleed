@@ -152,7 +152,7 @@ class ArduinoCLI(qtc.QObject):
             The version of the Arduino CLI.
         """
         try:
-            cli = self.get_arduino_cli()
+            cli = str(self.get_arduino_cli())
         except FileNotFoundError:
             return '0.0.0'
 
@@ -206,7 +206,7 @@ class ArduinoCLI(qtc.QObject):
             If the Arduino CLI failed to detect installed cores.
         """
         try:
-            cli = self.get_arduino_cli()
+            cli = str(self.get_arduino_cli())
         except FileNotFoundError:
             base.emit_error(
                 self,
@@ -455,7 +455,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             If any error_occurred.
         """
         try:
-            cli = self.get_arduino_cli()
+            cli = str(self.get_arduino_cli())
         except FileNotFoundError:
             base.emit_error(
                 self,
@@ -496,7 +496,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             If any error_occurred.
         """
         try:
-            cli = self.get_arduino_cli()
+            cli = str(self.get_arduino_cli())
         except FileNotFoundError:
             base.emit_error(
                 self,
@@ -638,7 +638,7 @@ class FirmwareUploader(ArduinoCLI):
             If the Arduino CLI process failed.
         """
         try:
-            cli = self.get_arduino_cli()
+            cli = str(self.get_arduino_cli())
         except FileNotFoundError:
             base.emit_error(
                 self,
@@ -703,7 +703,7 @@ class FirmwareUploader(ArduinoCLI):
         """
         self.progress_occurred.emit(0)
         try:
-            cli = self.get_arduino_cli()
+            cli = str(self.get_arduino_cli())
         except FileNotFoundError:
             base.emit_error(
                 self,
