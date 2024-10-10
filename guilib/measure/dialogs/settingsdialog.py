@@ -1106,7 +1106,7 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             The widget instance or widget class to be used to
             display the option. If a class, an instance is created.
         *args : object
-            Other positional arguments  passed on to handler_widget
+            Other positional arguments passed on to `handler_widget`
             if only a QWidget class is given.
         display_name : str, optional
             The name of this section when displayed in a SettingsDialog.
