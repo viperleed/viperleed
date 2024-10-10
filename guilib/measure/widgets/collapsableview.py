@@ -356,7 +356,7 @@ class CollapsableDeviceView(CollapsableView):
                 matching_settings = ()
         else:
             matching_settings = self._device_cls.find_matching_settings_files(
-                self._device_info, self._settings_folder.path, False, False
+                self._device_info, self._settings_folder.path, False,
                 )
 
         for settings in matching_settings:

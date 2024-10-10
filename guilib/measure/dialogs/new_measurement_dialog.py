@@ -102,7 +102,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         if not settings_folder or settings_folder == Path():
             return
         matching_settings = cls.find_matching_settings_files(
-                                None, settings_folder, False, False
+                                None, settings_folder, False,
                                 )
         for settings in matching_settings:
             self._ctrls['settings_file'].addItem(settings.stem, settings)
@@ -150,7 +150,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         cls = self._ctrls['type_selection'].currentData()
         settings_path = self._ctrls['settings_file'].currentData()
         default_path = cls.find_matching_settings_files(None, DEFAULTS_PATH,
-                                                        False, True)[0]
+                                                        False,)[0]
 
         if not settings_path or settings_path in ('default', default_path):
             settings_path = self._clone_and_return_settings(cls, default_path)
