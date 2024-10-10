@@ -302,12 +302,13 @@ class TestHistoryInfoFileFix:
         """Check that failing to fix an entry logs an error message."""
         with caplog.at_level(logging.CRITICAL):
             info, *_ = simple_info_file
+            info.read()
         caplog.clear()
         # pylint: disable-next=protected-access           # OK in tests
         entries_before = info._entries.copy()
         with make_obj_raise(HistoryInfoEntry, FixFailedError, 'as_fixed'):
             info.fix()
-        assert any(r for r in caplog.records if r.level == logging.ERROR)
+        assert any(r for r in caplog.records if r.levelno == logging.ERROR)
         assert all(e_after is e_before
                    # pylint: disable-next=protected-access  # OK in tests
                    for e_after, e_before in zip(info._entries, entries_before))
