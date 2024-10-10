@@ -103,7 +103,7 @@ class TestFaultyLabel(_TestEnumBase):
         }
 
     _str = {
-        'EDITED': 'edited? ->   ',
+        'EDITED': '  edited? -> ',
         'OK': ' ' * 13,
         }
 
