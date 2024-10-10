@@ -32,9 +32,11 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
     display_name = 'Time resolved'
 
-    _mandatory_settings = [*MeasurementABC._mandatory_settings,
-                           ('measurement_settings', 'is_continuous'),
-                           ('measurement_settings', 'energy_step_duration'),]
+    _mandatory_settings = (
+        *MeasurementABC._mandatory_settings,
+        ('measurement_settings', 'is_continuous'),
+        ('measurement_settings', 'energy_step_duration'),
+        )
 
     __request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                 # TODO: could be done with QMetaObject.invokeMethod
 

@@ -97,11 +97,15 @@ class ViPErLEEDSerial(SerialABC):
 
     debug_info_arrived = qtc.pyqtSignal(str)
 
-    _mandatory_settings = [*SerialABC._mandatory_settings,
-                           ('hardware_bits',), ('available_commands',),
-                           ('arduino_states',), ('error_bytes',),
-                           ('controller', 'FIRMWARE_VERSION'),
-                           ('serial_port_settings', 'special_byte'),]
+    _mandatory_settings = (
+        *SerialABC._mandatory_settings,
+        ('hardware_bits',),
+        ('available_commands',),
+        ('arduino_states',),
+        ('error_bytes',),
+        ('controller', 'FIRMWARE_VERSION'),
+        ('serial_port_settings', 'special_byte'),
+        )
 
     def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.

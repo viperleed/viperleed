@@ -100,7 +100,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
     Private attributes
     ------------------
-    _mandatory_settings : list
+    _mandatory_settings : tuple
         The _mandatory_settings are the settings that must be present in
         a configuration file for it to be valid. To see how a configration
         file should look like, look at the .ini files in the _defaults
@@ -111,7 +111,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         while the values are the states the specified option can assume.
         Every mandatory setting must contain a section, and for values
         to be present, an option must be specified too. The allowed
-        tuples are therefore: (<section>), (<section>, <option>), and
+        tuples are therefore: (<section>,), (<section>, <option>), and
         (<section>, <option>, (<value1>, <value2>, ...)).
     _settings_to_load : ViPErLEEDSettings
         _settings_to_load are the settings that should be loaded
@@ -120,7 +120,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         suitable default settings file.
     """
 
-    _mandatory_settings = []
+    _mandatory_settings = ()
 
     def __init__(self, *args, settings=None, **kwargs):
         """Initialise instance.

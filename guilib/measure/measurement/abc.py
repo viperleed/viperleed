@@ -93,10 +93,10 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
     # completed the first segment of their preparation
     __preparation_continued = qtc.pyqtSignal()                                  # TODO: Could use QMetaObject.invokeMethod
 
-    _mandatory_settings = [
+    _mandatory_settings = (
         ('devices', 'primary_controller'),
         ('measurement_settings', 'start_energy'),
-        ]
+        )
 
     def __init__(self, settings):
         """Initialise measurement instance."""

@@ -98,10 +98,10 @@ class SerialABC(HardwareABC):
 
     __move_to_thread_requested = qtc.pyqtSignal(bool)  # True==connect          # TODO: Can be done with QMetaObject.invokeMethod
 
-    _mandatory_settings = [
+    _mandatory_settings = (
             ('serial_port_settings', 'MSG_END'),
             ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
-            ]
+            )
 
     def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.

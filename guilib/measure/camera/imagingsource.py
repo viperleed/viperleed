@@ -259,12 +259,12 @@ def _color_format_mapper(formats):
 class ImagingSourceCamera(abc.CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
-    _mandatory_settings = [
+    _mandatory_settings = (
         # pylint: disable=protected-access
         # Needed for extending
         *abc.CameraABC._mandatory_settings,
         ('camera_settings', 'black_level'),
-        ]
+        )
 
     abort_trigger_burst = qtc.pyqtSignal()                                      # TODO: could be done with QMetaObject.invokeMethod
 
