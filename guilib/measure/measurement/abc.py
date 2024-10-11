@@ -1143,11 +1143,11 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                             f'No controller_class in {config.last_file}')
             raise RuntimeError
 
-        # For now, check that the address is in the settings.                 # TODO: add getting address from device list
+        # For now, check that the address is in the settings.                   # TODO: add getting address from device list
         # Later on, this check will only happen if the unique name
         # of the controller in the settings file that was passed
         # is not found in the device list.
-        # Backwards compatibility fix for port_name:
+        # Backwards compatibility fix for port_name:                            # TODO: #242
         address = 'address'
         invalid = config.has_settings(('controller', 'address'))
         if invalid:
