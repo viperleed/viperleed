@@ -230,13 +230,13 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
 
     Returns
     -------
-    path_to_config : Path, "", or None
+    path_to_config : Path or None or DIALOG_DISMISSED
         The path to the only configuration file successfully
-        found. None or "" if no configuration file was found.
-        None is always returned if the user dismissed the pop-up.
-        The empty string is returned if an alternative option was
-        given as a third_btn_text parameter, but the user anyway
-        dismissed the dialog.
+        found. None or DIALOG_DISMISSED if no configuration file
+        was found. None is always returned if the user dismissed
+        the pop-up. DIALOG_DISMISSED is returned if an alternative
+        option was given as a third_btn_text parameter, but the user
+        anyway dismissed the dialog.
     """
     parent_widget = kwargs.get("parent_widget", None)
     directory = kwargs.get("directory", DEFAULTS_PATH)
@@ -311,7 +311,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
 
     Returns
     -------
-    path_to_config : Path or None
+    path_to_config : Path or None or DIALOG_DISMISSED
         The path to the only settings file successfully found or the
         file that has been selected by the user. None if no settings
         file was found. None is returned if the user dismissed the
