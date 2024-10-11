@@ -354,7 +354,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             Larger values in the tuple indicate a higher degree of
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used

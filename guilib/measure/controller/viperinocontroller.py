@@ -552,7 +552,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             The firmware minor of matching settings is returned as an
             indicator of how well the firmware matches. If an exact
             match is required, the firmware version has to be exactly
@@ -593,7 +593,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             The firmware minor of matching settings is returned as an
             indicator of how well the firmware matches. If an exact
             match is required, the firmware version has to be exactly
