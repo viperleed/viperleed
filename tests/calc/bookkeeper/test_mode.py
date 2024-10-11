@@ -25,3 +25,4 @@ def test_uses_ori_files():
     assert not BookkeeperMode.ARCHIVE.uses_ori_files_as_fallback
     assert not BookkeeperMode.DISCARD_FULL.uses_ori_files_as_fallback
     assert BookkeeperMode.CLEAR.uses_ori_files_as_fallback
+    assert BookkeeperMode.DISCARD.uses_ori_files_as_fallback

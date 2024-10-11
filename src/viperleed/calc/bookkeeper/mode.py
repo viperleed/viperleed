@@ -46,4 +46,4 @@ class BookkeeperMode(Enum):
     @property
     def uses_ori_files_as_fallback(self):
         """Return whether '*_ori' files are used as fallback for archiving."""
-        return self is BookkeeperMode.CLEAR
+        return self in (BookkeeperMode.CLEAR, BookkeeperMode.DISCARD)
