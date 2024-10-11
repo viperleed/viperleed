@@ -495,6 +495,7 @@ class Bookkeeper:
                 cwd_file = self.cwd / f'{file}_ori'
 
             copy_file, with_name = None, None                                   # TODO: do we want to maintain the _ori suffix?? If not we can replace the second None with file.
+            copy_file, with_name = None, file
             if original_file.is_file() and cwd_file.is_file():
                 # Copy original, but warn if cwd is newer
                 copy_file = original_file
