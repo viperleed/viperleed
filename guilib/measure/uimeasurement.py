@@ -210,7 +210,7 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog
     )
-from viperleed.guilib.measure.dialogs.constants import DIALOG_DISMISSED
+from viperleed.guilib.measure.constants import DIALOG_DISMISSED
 from viperleed.guilib.measure.dialogs.firmwareupgradedialog import (
     FirmwareUpgradeDialog
     )

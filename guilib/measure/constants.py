@@ -1,4 +1,4 @@
-"""Module constants of viperleed.guilib.measure.dialogs.
+"""Module constants of viperleed.guilib.measure.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -8,7 +8,7 @@ Created: 2024-10-10
 Author: Michele Riva
 Author: Florian Doerr
 
-Defines constants used in the other ViPErLEED modules.
+Defines dialog-related constants used in the other ViPErLEED modules.
 """
 
 
