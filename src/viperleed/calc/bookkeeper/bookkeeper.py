@@ -166,6 +166,7 @@ class Bookkeeper:
             'history_dir': None,             # Set in update_from_cwd
             }
         self._history_info = None   # Set in update_from_cwd
+        self._mode = None           # Set in run
         self._paths = {
             'cwd': Path(cwd),
             # The next ones are set in update_from_cwd
@@ -295,6 +296,7 @@ class Bookkeeper:
             raise NotImplementedError from exc
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
+        self._mode = mode
         self.update_from_cwd()
         try:
             return runner()
@@ -347,6 +349,66 @@ class Bookkeeper:
 
             # Collect all the necessary files
             self._collect_files_to_archive()
+
+    def _add_history_info_entry(self, tensor_nums):
+        """Add a new entry to the history.info file.
+
+        Parameters
+        ----------
+        tensor_nums : iterable
+            Progressive identification numbers of the Tensor files
+            for which new history subfolders were created during
+            this bookkeeper run.
+
+        Returns
+        -------
+        None.
+        """
+        sorted_tensors = sorted(tensor_nums)
+        with logging_silent():
+            # It's OK to silence the logger here, as we will surely
+            # replace the timestamp format in append_entry. In fact,
+            # self.timestamp is just the one derived from the log file
+            # and needs to be updated to a writable one. When we will
+            # replace the format, logging messages for other faulty
+            # stuff will pop up.
+            new_info_entry = HistoryInfoEntry(
+                tensor_nums=sorted_tensors,
+                job_nums=[self.max_job_for_tensor[tensor] + 1
+                          for tensor in sorted_tensors],
+                timestamp=self.timestamp,
+                discarded_=self._mode is BookkeeperMode.DISCARD,
+                folder_name=self.history_dir.name,
+                notes=self._read_and_clear_notes_file(),
+                # Optional ones
+                **self._infer_run_info_from_log()
+                )
+        self.history_info.append_entry(new_info_entry, fix_time_format=True)
+
+    def _archive_to_history_and_add_info_entry(self):
+        """Store all relevant files in root to history, add a new entry.
+
+        This method does not check whether any archiving is indeed
+        necessary. Make sure to check if self.archiving_required
+        beforehand. After this method executes, the root folder
+        still contains the output produced by viperleed.calc,
+        except for those workhistory folders that were archived
+        to history. The workhistory folder itself is cleaned-up
+        of "previous" runs, and may not exist anymore if it was
+        empty a the end of the archiving. A new entry is added
+        to the history.info file.
+
+        Returns
+        -------
+        None.
+        """
+        # Create the new 'primary' history directory...
+        self._make_and_copy_to_history()
+        # ...move workhistory folders...
+        tensor_nums = self._workhistory.move_and_cleanup()
+        tensor_nums.add(self.tensor_number)
+        # ...and add a history.info entry
+        self._add_history_info_entry(tensor_nums)
 
     def _clean_state(self):
         """Rebuild (almost) the same state as after __init__.
@@ -411,7 +473,7 @@ class Bookkeeper:
             max_jobs[tensor_num] = max(max_jobs[tensor_num], job_num)
         self._state_info['max_job_for_tensor'] = max_jobs
 
-    def _copy_input_files_from_original_inputs_or_cwd(self, use_ori=False):
+    def _copy_input_files_from_original_inputs_or_cwd(self):
         """Copy input files to the history subfolder.
 
         The files are preferentially collected from the original_inputs
@@ -421,16 +483,11 @@ class Bookkeeper:
         file than in original_inputs, warn the user (but still copy
         the one from original_inputs).
 
-        Parameters
-        ----------
-        use_ori : bool, optional
-            Whether '_ori'-suffixed files should be copied rather
-            than 'bare' ones. Default is False.
-
         Returns
         -------
         None.
         """
+        use_ori = self._mode.uses_ori_files_as_fallback
         for file in ALL_INPUT_FILES:
             original_file = self.orig_inputs_dir / file
             cwd_file = self.cwd / file
@@ -495,31 +552,25 @@ class Bookkeeper:
             except OSError:
                 LOGGER.error(f'Failed to copy {name} directory to history.')
 
-    def _deal_with_workhistory_and_history_info(self, mark_discarded=False):
-        """Move work-history subfolders and update the history.info file."""
-        tensor_nums = self._workhistory.move_and_cleanup(discard)
-        tensor_nums.add(self.tensor_number)
+    def _do_prerun_archiving(self):
+        """If needed, archive files from root to history.
 
-        sorted_tensors = sorted(tensor_nums)
-        with logging_silent():
-            # It's OK to silence the logger here, as we will surely
-            # replace the timestamp format in append_entry. In fact,
-            # self.timestamp is just the one derived from the log file
-            # and needs to be updated to a writable one. When we will
-            # replace the format, logging messages for other faulty
-            # stuff will pop up.
-            new_info_entry = HistoryInfoEntry(
-                tensor_nums=sorted_tensors,
-                job_nums=[self.max_job_for_tensor[tensor] + 1
-                          for tensor in sorted_tensors],
-                timestamp=self.timestamp,
-                discarded_=mark_discarded,
-                folder_name=self.history_dir.name,
-                notes=self._read_and_clear_notes_file(),
-                # Optional ones
-                **self._infer_run_info_from_log()
-                )
-        self.history_info.append_entry(new_info_entry, fix_time_format=True)
+        This is a simple wrapper around the
+        _archive_to_history_and_add_info_entry
+        method that does nothing if no archiving
+        is needed, logs an info message otherwise.
+
+        Returns
+        -------
+        did_archive : bool
+            Whether anything was archived at all.
+        """
+        if not self.archiving_required:
+            return False
+        LOGGER.info(f'History folder {self.history_dir} does not '
+                    'exist yet. Running archive mode first.')
+        self._archive_to_history_and_add_info_entry()
+        return True
 
     def _find_base_name_for_history_subfolder(self):
         """Store internally the potential name of the history subfolder.
@@ -606,7 +657,7 @@ class Bookkeeper:
                 break
         return {k: match[k] for k, match in matched.items() if match}
 
-    def _make_and_copy_to_history(self, use_ori=False):
+    def _make_and_copy_to_history(self):
         """Create new history subfolder and copy all files there."""
         try:
             self.history_dir.mkdir()
@@ -615,7 +666,7 @@ class Bookkeeper:
                          f'{self.history_dir}\n Stopping...')
             raise
         self._copy_out_and_supp()
-        self._copy_input_files_from_original_inputs_or_cwd(use_ori)
+        self._copy_input_files_from_original_inputs_or_cwd()
         self._copy_log_files()
 
     def _make_history_and_prepare_logger(self):
@@ -710,14 +761,22 @@ class Bookkeeper:
         """Replace input files with their '_ori'-suffixed version."""
         for file in STATE_FILES:
             ori_file = self.cwd / f'{file}_ori'
-            if ori_file.is_file():
-                try:
-                    ori_file.replace(self.cwd / file)
-                except OSError:
-                    LOGGER.error(f'Failed to move {ori_file} to {file}.')
-                    raise
+            try:
+                ori_file.replace(self.cwd / file)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                LOGGER.error(f'Failed to move {ori_file} to {file}.')
+                raise
+
+    def _revert_root_to_previous(self):
+        """Remove files generated by the previous calc run in self.cwd."""
+        self._replace_state_files_from_ori()
+        self._remove_log_files()
+        self._remove_out_and_supp()
 
     def _run_archive_mode(self):
+        """Execute bookkeeper in ARCHIVE mode."""
         if self.history_with_same_base_name_exists:
             LOGGER.info(
                 f'History directory for run {self.history_dir_base_name} '
@@ -728,40 +787,20 @@ class Bookkeeper:
             LOGGER.info('No files to be moved to history. Exiting '
                         'without doing anything.')
             return BookkeeperExitCode.NOTHING_TO_DO
-        self._make_and_copy_to_history(use_ori=False)
 
-        # move old files to _ori and replace from OUT
+        # Copy all relevant files to history, add an entry...
+        self._archive_to_history_and_add_info_entry()
+        # ...and move old inputs to _ori, replacing them from OUT
         self._update_state_files_from_out()
-
-        # workhistory and history.info
-        self._deal_with_workhistory_and_history_info(mark_discarded=False)
-
         return BookkeeperExitCode.SUCCESS
 
     def _run_clear_mode(self):
-        if self.archiving_required:
-            LOGGER.info(f'History folder {self.history_dir} does not '
-                        'yet exist. Running archive mode first.')
-            self._make_and_copy_to_history(use_ori=True)
-
-            # workhistory and history.info
-            self._deal_with_workhistory_and_history_info(mark_discarded=False)
-
-        # remove OUT, SUPP, logs and _ori files
+        """Execute bookkeeper in CLEAR mode."""
+        self._do_prerun_archiving()
         self._remove_log_files()
         self._remove_out_and_supp()
         self._remove_ori_files()
-
         return BookkeeperExitCode.SUCCESS
-
-    def _run_discard_common(self):
-        """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
-        # replace input files from _ori
-        self._replace_state_files_from_ori()
-
-        # remove OUT, SUPP and logs
-        self._remove_log_files()
-        self._remove_out_and_supp()
 
     def _run_discard_full_mode(self):
         try:
@@ -792,7 +831,7 @@ class Bookkeeper:
         except OSError:
             LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
             return BookkeeperExitCode.FAIL
-        self._run_discard_common()
+        self._revert_root_to_previous()
 
         # Tensors and Deltas
         if self.tensor_number not in self.max_job_for_tensor:
@@ -804,15 +843,14 @@ class Bookkeeper:
         return BookkeeperExitCode.SUCCESS
 
     def _run_discard_mode(self):
-        if self.archiving_required:
-            LOGGER.info(f'History folder {self.history_dir} does not '
-                        'yet exist. Running archive mode first.')
-            self._make_and_copy_to_history(use_ori=False)
-
-            # workhistory and history.info
-            self._deal_with_workhistory_and_history_info(mark_discarded=True)
-
-        self._run_discard_common()
+        """Execute bookkeeper in DISCARD mode."""
+        did_archive = self._do_prerun_archiving()
+        self._revert_root_to_previous()
+        if did_archive:
+            # We had to archive the contents of the root directory.
+            # This means that we have already marked the entry as
+            # discarded and we don't have to bother.
+            return BookkeeperExitCode.SUCCESS
         try:
             self.history_info.discard_last_entry()
         except (NoHistoryEntryError, CantDiscardEntryError) as exc:

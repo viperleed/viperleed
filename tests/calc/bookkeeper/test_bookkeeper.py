@@ -775,6 +775,8 @@ class TestBookkeeperComplaints:
 
         bookkeeper.update_from_cwd()
         # pylint: disable-next=protected-access  # OK in tests
+        bookkeeper._mode = Mode.ARCHIVE
+        # pylint: disable-next=protected-access  # OK in tests
         bookkeeper._copy_input_files_from_original_inputs_or_cwd()
         # pylint: disable-next=magic-value-comparison
         assert 'is newer' in caplog.text
