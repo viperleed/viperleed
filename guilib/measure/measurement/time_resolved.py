@@ -45,11 +45,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
     def __init__(self, measurement_settings):
         """Initialise measurement class."""
         super().__init__(measurement_settings)
-        self._end_energy = 0                                                    # --> generator; It can happen that there is no proper "end energy" (endless measurement, e.g., wiggle)
-        self._delta_energy = 1                                                  # --> generator; There may not be a delta_energy (e.g., I(t) at fixed energy)
-        self._endless = False                                                   # --> generator;
-        self._constant_energy = False                                           # --> generator;
-
         # One timer to trigger a change of electron energy: we will
         # sit at each energy for self.energy_step_duration millisecs.
         self._energy_step_timer = qtc.QTimer(parent=self)
@@ -86,20 +81,78 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # If not, we can just disconnect _camera_timer, and we
         # should also not invoke in _on_one_measurement_triggered
 
-        if self.settings:
-            # pylint: disable=redefined-variable-type
-            self._delta_energy = self.settings.getfloat(
-                'measurement_settings', 'delta_energy', fallback=10
-                )
-            self._end_energy = self.settings.getfloat(
-                'measurement_settings', 'end_energy', fallback=10
-                )
-            self._endless = self.settings.getboolean(
-                'measurement_settings', 'endless', fallback=False
-                )
-            self._constant_energy = self.settings.getboolean(
-                'measurement_settings', 'constant_energy', fallback=False
-                )
+    @property
+    def _constant_energy(self):
+        """Return whether the measurement has a static energy."""
+        fallback = False
+        if not self.settings:
+            return fallback
+        try:
+            constant_energy = self.settings.getboolean('measurement_settings',
+                                                       'constant_energy')
+        except (TypeError, ValueError):
+            # Not a bool
+            constant_energy = fallback
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/constant_energy', '')
+        return constant_energy
+
+    @property
+    def _delta_energy(self):
+        """Return the amplitude of an energy step in eV."""
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+
+        # Eventually, this will be an attribute of an energy generator,
+        # and it is unclear whether we will actually need it.
+        fallback = 10
+        if not self.settings:
+            return fallback
+        try:
+            delta = self.settings.getfloat('measurement_settings',
+                                           'delta_energy')
+        except (TypeError, ValueError):
+            # Not a float
+            delta = fallback
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/delta_energy', '')
+        return delta
+
+    @property
+    def _endless(self):
+        """Return whether the measurement is endless."""
+        fallback = False
+        if not self.settings:
+            return fallback
+        try:
+            endless = self.settings.getboolean('measurement_settings',
+                                               'endless')
+        except (TypeError, ValueError):
+            # Not a bool
+            endless = fallback
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/endless', '')
+        return endless
+
+    @property
+    def _end_energy(self):
+        """Return the energy (in eV) at which the energy ramp ends."""
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+
+        # Eventually, this will be an attribute of an energy generator,
+        # and it is unclear whether we will actually need it.
+        fallback = 10
+        if not self.settings:
+            return fallback
+        try:
+            egy = self.settings.getfloat('measurement_settings', 'end_energy')
+        except (TypeError, ValueError):
+            # Not a float
+            egy = fallback
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/end_energy', '')
+        return egy
 
     @property
     def _n_digits(self):
