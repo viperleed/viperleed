@@ -468,8 +468,8 @@ class ControllerABC(DeviceABC):
     def _update_serial_from_settings(self):
         """Set serial settings from new controller settings."""
         serial_cls_name = self.settings.get('controller', 'serial_class',
-                                            fallback='')                       # TODO: #242 (remove fallback in 1.0)
-        if not serial_cls_name:                                                 # TODO: #242 (only here for backwards compatibility, remove in 1.0)
+                                            fallback='')                        # TODO: #242
+        if not serial_cls_name:                                                 # TODO: #242
             serial_cls_name = self.settings.get('controller',
                                                 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
