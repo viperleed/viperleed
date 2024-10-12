@@ -18,7 +18,6 @@ from configparser import NoSectionError, NoOptionError
 from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
@@ -83,8 +82,8 @@ class MeasureEnergyCalibration(MeasurementABC):
         except (TypeError, ValueError, NoSectionError, NoOptionError):
             # Not a float or not present
             delta = fallback
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/delta_energy', fallback
                 )
         return delta
@@ -105,8 +104,8 @@ class MeasureEnergyCalibration(MeasurementABC):
         except (TypeError, ValueError, NoSectionError, NoOptionError):
             # Not a float or not present
             egy = fallback
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/end_energy', fallback
                 )
         return egy                                                              # TODO: warn if end == 1000
@@ -144,8 +143,8 @@ class MeasureEnergyCalibration(MeasurementABC):
                                              'coefficients', '(0, 1)')
 
         if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
                 'devices/primary_controller or devices/secondary_controllers',
                 '\nCannot run an energy calibration if no '
                 'controller measures the beam energy.'
@@ -157,8 +156,8 @@ class MeasureEnergyCalibration(MeasurementABC):
 
         if egy_range < 10:
             # Require at least 10 eV for a reasonable calibration
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
                 'measurement_settings/start_energy and /end_energy',
                 f"\nToo small energy range ({abs(egy_range)} eV) for "
                 "calibration. It should be at least 10 eV."
@@ -167,8 +166,8 @@ class MeasureEnergyCalibration(MeasurementABC):
 
         if n_steps < 10:
             # Require at least 10 data points for a decent fit
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
                 'measurement_settings/start_energy, /end_energy, '
                 'and /delta_energy',
                 f"\nToo few energies ({n_steps}) for a reasonable fit "
@@ -238,8 +237,8 @@ class MeasureEnergyCalibration(MeasurementABC):
                                                   fallback=(-10, 1100))
         except NotASequenceError:
             domain = (-10, 1100)
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'energy_calibration/domain', domain
                 )
 
@@ -253,8 +252,8 @@ class MeasureEnergyCalibration(MeasurementABC):
         if (abs(offs) > 50               # Can't be more than 50 eV off
             or gain < 1e-3 or gain > 50  # Gain should be >0 and small
                 or residuals > 100):     # Most of the time < 1
-            base.emit_error(
-                self, MeasurementErrors.RUNTIME_ERROR,
+            self.emit_error(
+                MeasurementErrors.RUNTIME_ERROR,
                 "Energy calibration fit failed, or fit coefficients "
                 f"are poor:\n\nCoefficients=({offs:.2f}, {gain:.2f}) "
                 f"[expected ~(0, 1)]\nSum of residuals={residuals[0]:.2f}"
@@ -279,7 +278,7 @@ class MeasureEnergyCalibration(MeasurementABC):
                                                      'primary_controller')
         except (NotASequenceError, ValueError):
             # Something wrong with the settings?
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/primary_controller', '')
             return
 

@@ -14,7 +14,6 @@ which gives commands to the controller classes.
 
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.measurement.abc import MeasurementErrors
@@ -47,7 +46,7 @@ class IVVideo(MeasurementABC):
         except (TypeError, ValueError):
             # Not a float
             delta = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/delta_energy', '')
         return delta
 
@@ -67,7 +66,7 @@ class IVVideo(MeasurementABC):
         except (TypeError, ValueError):
             # Not a float
             egy = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/end_energy', '')
         return egy
 
@@ -109,7 +108,7 @@ class IVVideo(MeasurementABC):
         if not super().are_runtime_settings_ok():
             return False
         if not self.cameras:
-            base.emit_error(self, MeasurementErrors.MISSING_CAMERA)
+            self.emit_error(MeasurementErrors.MISSING_CAMERA)
             return False
         return True
 

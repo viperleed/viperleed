@@ -241,8 +241,8 @@ class CameraABC(DeviceABC):
 
         min_bin, max_bin = self.get_binning_limits()
         if binning_factor < min_bin or binning_factor > max_bin:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 f'{binning_factor} '
                 f'[out of range ({min_bin}, {max_bin})]',
                 'camera_settings/binning', 1
@@ -338,7 +338,7 @@ class CameraABC(DeviceABC):
 
         min_exp, max_exp = self.get_exposure_limits()
         if exposure_time < min_exp or exposure_time > max_exp:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/exposure',
                             f'\nInfo: out of range ({min_exp}, {max_exp})')
             exposure_time = min_exp
@@ -395,7 +395,7 @@ class CameraABC(DeviceABC):
 
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/gain',
                             f'\nInfo: out of range ({min_gain}, {max_gain})')
             gain = min_gain
@@ -457,8 +457,8 @@ class CameraABC(DeviceABC):
                                  fallback='triggered')
 
         if mode not in ('live', 'triggered'):
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 mode, 'camera_settings/mode', 'triggered'
                 )
             mode = 'triggered'
@@ -482,8 +482,8 @@ class CameraABC(DeviceABC):
 
         min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 f'{n_frames} [out of range ({min_n}, {max_n})]',
                 'measurement_settings/n_frames', 1
                 )
@@ -552,7 +552,7 @@ class CameraABC(DeviceABC):
         full_roi = 0, 0, *size_max
 
         if not self.__is_valid_roi(roi, limits):
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/roi', '\nInfo: ROI is invalid. '
                             f'You can use the full sensor: roi = {full_roi}')
             self.settings.set('camera_settings', 'roi', 'None')
@@ -753,7 +753,7 @@ class CameraABC(DeviceABC):
     def connect_(self):
         """Connect to the camera."""
         if not self.open():
-            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
+            self.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             self.connected = False
             return
         self.load_camera_settings()
@@ -1006,14 +1006,14 @@ class CameraABC(DeviceABC):
         bad_pix_path = self.settings.get("camera_settings", "bad_pixels_path",
                                          fallback='')
         if not bad_pix_path:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
                             '\nInfo: No bad_pixels_path found.')
             return
         try:
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
                             f'\nInfo: {err}')
             return
@@ -1548,7 +1548,7 @@ class CameraABC(DeviceABC):
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
         """
         if self.mode != 'triggered':
-            base.emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
+            self.emit_error(CameraErrors.UNSUPPORTED_OPERATION,
                             'trigger', 'live')
             return False
         self.busy = True
@@ -1578,7 +1578,7 @@ class CameraABC(DeviceABC):
             self.settings.set('camera_settings', 'roi', str(roi))
             return roi
 
-        base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+        self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                         'camera_settings/roi',
                         f'\nInfo: ROI {roi} is invalid after '
                         'adjusting top-left corner position')
@@ -1602,7 +1602,7 @@ class CameraABC(DeviceABC):
         error = (CameraErrors.BINNING_ROI_MISMATCH,
                  roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
         if not self.__already_reported(error):
-            # base.emit_error(self, *error)                                     # TODO: make this a non-critical warning!
+            # self.emit_error(*error)                                           # TODO: make this a non-critical warning!
             self.__reported_errors.add(error)
 
         # Update the ROI in the settings only if the
@@ -1749,7 +1749,7 @@ class CameraABC(DeviceABC):
     @qtc.pyqtSlot()
     def __on_timed_out(self):
         """Report a timeout error while in triggered mode."""
-        base.emit_error(self, CameraErrors.TIMEOUT, self.name, 5)
+        self.emit_error(CameraErrors.TIMEOUT, self.name, 5)
 
     @qtc.pyqtSlot()
     def __report_init_errors(self):

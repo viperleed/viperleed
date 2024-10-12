@@ -24,6 +24,7 @@ from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.guilib.widgets.basewidgets import QCheckBoxInvertedSignal
 from viperleed.guilib.widgetslib import retain_size_when_hidden
 
+
 _INVOKE = qtc.QMetaObject.invokeMethod
 _QUEUED = qtc.Qt.QueuedConnection
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -93,7 +94,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except (TypeError, ValueError):
             # Not a bool
             constant_energy = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/constant_energy', '')
         return constant_energy
 
@@ -114,7 +115,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except (TypeError, ValueError):
             # Not a float
             delta = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/delta_energy', '')
         return delta
 
@@ -130,7 +131,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except (TypeError, ValueError):
             # Not a bool
             endless = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/endless', '')
         return endless
 
@@ -150,7 +151,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except (TypeError, ValueError):
             # Not a float
             egy = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/end_energy', '')
         return egy
 
@@ -175,13 +176,13 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             'energy_step_duration')
         except (TypeError, ValueError):
             # Not an int
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/energy_step_duration', '')
             interval = min_t
 
         if interval < min_t:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 f'{interval} (too short)',
                 'measurement_settings/energy_step_duration', min_t
                 )
@@ -216,7 +217,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             'is_continuous')
         except ValueError:
             # Not a valid boolean
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/is_continuous', '')
             return False
 
@@ -235,15 +236,15 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             fallback=min_t)
         except (TypeError, ValueError):
             # Not an int
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/measurement_interval', '')
             interval = min_t
 
         if interval < min_t:
             txt = f"{interval} (too short)"
             interval = min_t
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 txt, 'measurement_settings/measurement_interval', interval
                 )
             self.settings.set('measurement_settings', 'measurement_interval',

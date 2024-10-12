@@ -10,11 +10,10 @@ Author: Florian Doerr
 
 This module contains QObjectSettingsErrors, DeviceABCErrors,
 QObjectWithError, QObjectWithSettingsABC, HardwareABC and DeviceABC.
-QObjectWithError is the base class of QObjectWithSettingsABC,
-CalibrationTask, and DataPoints. QObjectWithSettingsABC is the base
-class of HardwareABC and MeasurementABC. HardwareABC is the base class
-of DeviceABC and SerialABC. DeviceABC is the base class of ControllerABC
-and CameraABC.
+QObjectWithError is the base class of QObjectWithSettingsABC.
+QObjectWithSettingsABC is the base class of HardwareABC and
+MeasurementABC. HardwareABC is the base class of DeviceABC and
+SerialABC. DeviceABC is the base class of ControllerABC and CameraABC.
 
 Note that all of the classes defined in this module are subclasses of
 QObject. Any subclass of a QObject cannot inherit from a second QObject,
@@ -31,10 +30,7 @@ from pathlib import Path
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.guilib.measure import hardwarebase
-from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
-from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.guilib.measure.hardwarebase import emit_error
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.settings import (
     NoDefaultSettingsError,
     NoSettingsError,
@@ -49,7 +45,7 @@ class QMetaABC(ABCMeta, type(qtc.QObject)):
     """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
 
 
-class DeviceABCErrors(ViPErLEEDErrorEnum):
+class DeviceABCErrors(base.ViPErLEEDErrorEnum):
     """Errors of ViPErLEED devices."""
 
     DEVICE_NOT_FOUND = (
@@ -60,7 +56,7 @@ class DeviceABCErrors(ViPErLEEDErrorEnum):
         )
 
 
-class QObjectSettingsErrors(ViPErLEEDErrorEnum):
+class QObjectSettingsErrors(base.ViPErLEEDErrorEnum):
     """Settings errors of ViPErLEED objects."""
 
     MISSING_SETTINGS = (100,
@@ -86,7 +82,7 @@ class QObjectWithError(qtc.QObject):                                            
     # information about the error in the form (code, message).
     error_occurred = qtc.pyqtSignal(tuple)
 
-    emit_error = hardwarebase.emit_error
+    emit_error = base.emit_error
 
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
@@ -220,7 +216,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             and an exact match was asked for.
         """
         settings = self.find_matching_settings_files(
-            find_from, DEFAULTS_PATH, match_exactly,
+            find_from, base.DEFAULTS_PATH, match_exactly,
             )
         if not settings:
             # No default settings was found.
@@ -265,7 +261,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             settings sorted by how well the settings match from best to
             worst.
         """
-        default = True if directory is DEFAULTS_PATH else False
+        default = True if directory is base.DEFAULTS_PATH else False
         settings_files = Path(directory).resolve().glob('**/*.ini')
         if not default:
             # Filter out default settings.
@@ -475,11 +471,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except (ValueError, NoSettingsError):
-            emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS)
+            self.emit_error(QObjectSettingsErrors.MISSING_SETTINGS)
             return False
         invalid = self.are_settings_invalid(new_settings)
         for missing, *info in invalid:
-            emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                        missing, ' '.join(info))
             return False
 

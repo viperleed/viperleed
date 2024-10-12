@@ -29,7 +29,6 @@ from viperleed.guilib.measure.classes.abc import HardwareABC
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.guilib.measure.hardwarebase import emit_error
 
 
 SERIAL_ERROR_MESSAGES = {
@@ -746,7 +745,7 @@ class SerialABC(HardwareABC):
         None.
         """
         if not self.is_open:
-            emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
+            self.emit_error(ExtraSerialErrors.PORT_NOT_OPEN)
             return
 
         all_messages = (message, *other_messages)
@@ -783,7 +782,7 @@ class SerialABC(HardwareABC):
         if self.is_open:
             return
         if not self.port.open(self.port.ReadWrite):
-            emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
+            self.emit_error(ExtraSerialErrors.PORT_NOT_OPEN)
             self.__print_port_config()
             self._set_is_open(False)
             return
@@ -842,19 +841,19 @@ class SerialABC(HardwareABC):
             is a MSG_START in self.settings.
         """
         if not message:
-            emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
+            self.emit_error(ExtraSerialErrors.NO_MESSAGE_ERROR)
             return bytearray()
 
         start_marker = self.msg_markers['START']
         if start_marker is not None:
             # Protocol uses a start marker
             if message[:1] != start_marker:
-                emit_error(self, ExtraSerialErrors.NO_START_MARKER_ERROR)
+                self.emit_error(ExtraSerialErrors.NO_START_MARKER_ERROR)
                 return bytearray()
             message = message[1:]
 
         if not message:
-            emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
+            self.emit_error(ExtraSerialErrors.NO_MESSAGE_ERROR)
             return bytearray()
         return bytearray(message)
 
@@ -933,7 +932,7 @@ class SerialABC(HardwareABC):
         """
         if error_code == qts.QSerialPort.NoError:
             return
-        emit_error(self, (error_code, SERIAL_ERROR_MESSAGES[error_code]),
+        self.emit_error((error_code, SERIAL_ERROR_MESSAGES[error_code]),
                    self.port_name)
         self.clear_errors()
 
@@ -951,7 +950,7 @@ class SerialABC(HardwareABC):
             Always
         """
         timeout = self.settings.getint('serial_port_settings', 'timeout')
-        emit_error(self, ExtraSerialErrors.TIMEOUT_ERROR,
+        self.emit_error(ExtraSerialErrors.TIMEOUT_ERROR,
                    round(timeout/1000, 1))
 
     def __set_up_serial_port(self):

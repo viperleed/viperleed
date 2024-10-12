@@ -60,7 +60,7 @@ def ensure_connected(method):
                 ) from None
         self.connect_()
         if not self.serial or not self.serial.is_open:
-            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
+            self.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             return None
         try:
             return method(*args, **kwargs)
@@ -280,8 +280,8 @@ class ControllerABC(DeviceABC):
                                                  fallback=(0, 1))
             except _m_settings.NotASequenceError:
                 coef = (0, 1)
-                base.emit_error(
-                    self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                self.emit_error(
+                    QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                     '', 'energy_calibration/coefficients', coef
                     )
             try:
@@ -322,7 +322,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/hv_settle_time', '')
         return settle_t
 
@@ -344,7 +344,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/i0_settle_time', '')
         return settle_t
 
@@ -383,7 +383,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/i0_settle_time', '')
         return settle_t
 
@@ -562,7 +562,7 @@ class ControllerABC(DeviceABC):
         try:
             self._update_serial_from_settings()
         except ValueError:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/serial_class', '')
             return False
         return True
@@ -1146,8 +1146,8 @@ class MeasureControllerABC(ControllerABC):
         except (TypeError, ValueError):
             # Not a float
             delay = fallback
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'controller/initial_delay', delay
                 )
         return delay
@@ -1188,13 +1188,13 @@ class MeasureControllerABC(ControllerABC):
                                               'nr_samples')
         except (TypeError, ValueError):
             nr_samples = 1
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/nr_samples', nr_samples
                 )
         if nr_samples <= 0:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 nr_samples, 'measurement_settings/nr_samples', 1
                 )
             nr_samples = 1
