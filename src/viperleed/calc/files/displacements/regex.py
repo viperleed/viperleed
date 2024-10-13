@@ -2,7 +2,7 @@ import re
 
 SEARCH_HEADER_PATTERN = re.compile(r"^==\s+(?i:search)\s+(.*)$")
 SECTION_HEADER_PATTERN = re.compile(
-    r"^=?\s*(GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$"
+    r"^=?\s*(OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$"
 )
 
 OFFSETS_LINE_PATTERN = re.compile(
