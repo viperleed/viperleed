@@ -142,3 +142,24 @@ def match_constrain_line(line):
     value = float(value) if value != "linked" else value
 
     return constraint_type, parameters, value
+
+
+def match_offsets_line(line):
+    """Match and parse an OFFSETS line, returning the type, parameters, and value."""
+    match = OFFSETS_LINE_PATTERN.match(line)
+    if match is None:
+        return None
+
+    offset_type = match.group("type")  # Type can be 'geo', 'vib', or 'occ'
+    parameters = match.group(
+        "parameters"
+    ).strip()  # Single targeting instruction
+    value = match.group("value")
+
+    # Convert `value` to float if it's a number; otherwise, keep it as a string
+    try:
+        value = float(value)
+    except ValueError:
+        pass  # Keep value as a string if it is not a float
+
+    return offset_type, parameters, value
