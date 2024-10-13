@@ -463,7 +463,7 @@ class Bookkeeper:
     def _collect_max_run_per_tensor(self):
         """Find the maximum run numbers for all directories in history."""
         history_path = self.top_level_history_path
-        max_jobs = defaultdict(int)  # max. job number per tensor number
+        max_jobs = defaultdict(int)  # Max. job nr. per tensor number
         for directory in history_path.iterdir():
             match = HISTORY_FOLDER_RE.match(directory.name)
             if not directory.is_dir() or not match:
@@ -803,6 +803,7 @@ class Bookkeeper:
         return BookkeeperExitCode.SUCCESS
 
     def _run_discard_full_mode(self):
+        """Execute bookkeeper in DISCARD_FULL mode."""
         try:
             self.history_info.may_remove_last_entry()
         except NoHistoryEntryError as exc:
