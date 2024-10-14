@@ -129,7 +129,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         This __init__ should be executed at the beginning of
         subclasses. If this is not possible, it has to be executed
         before the settings of an instance are set, i.e., before
-        self.settings = self._settings_to_load (or, equivalently,
+        self.settings = self._settings_to_load, or, equivalently,
         self.set_settings(self._settings_to_load).
 
         Parameters
