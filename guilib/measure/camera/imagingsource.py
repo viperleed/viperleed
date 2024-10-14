@@ -631,9 +631,9 @@ class ImagingSourceCamera(abc.CameraABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        self.check_creating_settings_handler_is_possible()
+        base_handler = super().get_settings_handler()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
-        handler.add_from_handler(super().get_settings_handler())
+        handler.add_from_handler(base_handler)
 
         # pylint: disable=redefined-variable-type
         # Triggered for _widget. While this is true, it is clear what
