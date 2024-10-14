@@ -50,7 +50,7 @@ from .conftest import MOCK_WORKHISTORY
 from .conftest import NOTES_TEST_CONTENT
 
 
-_UPDATE_METHOD = 'update_from_cwd'
+_UPDATE_METHODS = 'update_from_cwd', 'run'
 raises_oserror = functools.partial(raises_exception, exc=OSError)
 make_raise_oserror = functools.partial(make_obj_raise, exc=OSError)
 not_raises_oserror = functools.partial(not_raises, exc=OSError)

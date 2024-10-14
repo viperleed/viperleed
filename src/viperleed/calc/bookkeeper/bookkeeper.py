@@ -12,8 +12,6 @@ __license__ = 'GPLv3+'
 from collections import defaultdict
 from contextlib import nullcontext
 from enum import IntEnum
-from functools import wraps
-from operator import attrgetter
 from pathlib import Path
 import re
 import shutil
@@ -41,6 +39,8 @@ from .history.meta import BookkeeperMetaFile
 from .history.workhistory import WorkhistoryHandler
 from .log import LOGGER
 from .mode import BookkeeperMode
+from .utils import make_property
+from .utils import needs_update_for_attr
 
 
 CALC_LOG_PREFIXES = (
@@ -70,80 +70,6 @@ _LOG_FILE_RE = {
         ),
     }
 
-
-def _get_attr_or_dict_item(attr):
-    """Return an attribute getter for 'attr_name' or 'dict_name[item_name]'.
-
-    Parameters
-    ----------
-    attr : str
-        The attribute of self to be looked up. If the value is None,
-        the decorated function raises AttributeError suggesting to
-        call update_from_cwd beforehand. `attr` may also have the form
-        'dict_name[dict_item]'. In this case, self.dict_name[dict_item]
-        is looked up instead.
-
-    Returns
-    -------
-    getter : callable
-        A function that returns `attr` from its first argument.
-    cleaned_attr : str
-        'attr_name' or 'item_name', depending on the form of `attr`.
-    """
-    if '[' in attr:  # pylint: disable=magic-value-comparison
-        dict_, attr = attr.split('[')
-        attr = attr.replace(']', '')
-        def _getattr(self):
-            container = getattr(self, dict_)
-            return container[attr]
-    else:
-        def _getattr(self):
-            return getattr(self, attr)
-    return _getattr, attr
-
-
-def _make_property(attr, needs_update=False):
-    """Return a property getter that looks up `attr`."""
-    getter, property_name = _get_attr_or_dict_item(attr)
-    if needs_update:
-        getter = _needs_update_for_attr(attr, attr_name=property_name)(getter)
-    return property(getter)
-
-
-def _needs_update_for_attr(attr, attr_name=None):
-    """Return a decorator that complains if `attr` is None.
-
-    Parameters
-    ----------
-    attr : str
-        The attribute of self to be looked up. If the value is None,
-        the decorated function raises AttributeError suggesting to
-        call update_from_cwd beforehand. `attr` may also have the form
-        'dict_name[dict_item]'. In this case, self.dict_name[dict_item]
-        is looked up instead.
-    attr_name : str, optional
-        The name of the decorated function. Automatically fetched from
-        the decorated function if not given. Default is None.
-
-    Returns
-    -------
-    _decorator : callable
-        A decorator to apply to a function that raises AttributeError
-        before calling the function if `attr` is None.
-    """
-    _getattr, *_ = _get_attr_or_dict_item(attr)
-    def _decorator(func):
-        func_name = attr_name or func.__name__
-        @wraps(func)
-        def _wrapper(self, *args, **kwargs):
-            if _getattr(self) is None:
-                raise AttributeError(
-                    f'{type(self).__name__} has no {func_name} yet. '
-                    'Call update_from_cwd() beforehand.'
-                    )
-            return func(self, *args, **kwargs)
-        return _wrapper
-    return _decorator
 
 
 class _FileNotOlderError(Exception):
@@ -190,24 +116,18 @@ class Bookkeeper:
             )
 
     # Simple dynamic @properties
-    cwd = _make_property('_paths[cwd]')
-    history_dir_base_name = _make_property(
+    cwd = make_property('_root.path')
+    history_dir_base_name = make_property(
         # Notice that this is not necessarily the name of the
         # history subfolder that is created. Use .history_dir
         # for that.
         '_folder_names[history_dir_base_name]',
         needs_update=True,
         )
-    history_with_same_base_name_exists = _make_property(
+    history_with_same_base_name_exists = make_property(
         '_state_info[history_with_same_base_name_exists]',
         needs_update=True,
         )
-    max_job_for_tensor = _make_property('_state_info[max_job_for_tensor]',
-                                        needs_update=True)
-    tensor_number = _make_property('_state_info[tensor_number]',
-                                   needs_update=True)
-    timestamp = _make_property('_state_info[timestamp]',
-                               needs_update=True)
 
     @property
     def all_cwd_logs(self):
@@ -215,6 +135,11 @@ class Bookkeeper:
         # tuple() is the start value. It would be nicer to specify
         # it as a keyword, but this was only introduced in py38.
         return sum(self.cwd_logs, tuple())
+    max_job_for_tensor = make_property('_state_info[max_job_for_tensor]',
+                                       needs_update=True)
+    tensor_number = make_property('_state_info[tensor_number]',
+                                  needs_update=True)
+    timestamp = make_property('_state_info[timestamp]', needs_update=True)
 
     @property
     def archiving_required(self):
@@ -223,19 +148,19 @@ class Bookkeeper:
                 and not self.history_with_same_base_name_exists)
 
     @property
-    @_needs_update_for_attr('_paths[calc_logs]')
+    @needs_update_for_attr('_paths[calc_logs]')
     def cwd_logs(self):
         """Return log files, split into those of calc and all the others."""
         return self._paths['calc_logs'], self._paths['other_logs']
 
     @property
-    @_needs_update_for_attr('_paths[to_be_archived]')
+    @needs_update_for_attr('_paths[to_be_archived]')
     def files_need_archiving(self):
         """Check if there are any files that need archiving."""
         return bool(self._paths['to_be_archived'])
 
     @property
-    @_needs_update_for_attr('_folder_names[history_dir]')
+    @needs_update_for_attr('_folder_names[history_dir]')
     def history_dir(self):
         """Return the path to the history subfolder that we deal with.
 
@@ -248,7 +173,7 @@ class Bookkeeper:
         return self.top_level_history_path / self._folder_names['history_dir']
 
     @property
-    @_needs_update_for_attr('_history_info')
+    @needs_update_for_attr('_history_info')
     def history_info(self):
         """Return the HistoryInfoFile handling history.info."""
         return self._history_info
@@ -434,7 +359,7 @@ class Bookkeeper:
         self.__init__(cwd=self.cwd)
         self._state_info['logger_prepared'] = logger_prepared
 
-    @_needs_update_for_attr('_paths[calc_logs]')
+    @needs_update_for_attr('_paths[calc_logs]')
     def _collect_files_to_archive(self):
         """Scan the root directory for files to be stored to history."""
         files_to_archive = (
@@ -474,6 +399,7 @@ class Bookkeeper:
             max_jobs[tensor_num] = max(max_jobs[tensor_num], job_num)
         self._state_info['max_job_for_tensor'] = max_jobs
 
+    @needs_update_for_attr('_mode', updater='run')
     def _copy_input_files_from_original_inputs_or_cwd(self):
         """Copy input files to the history subfolder.
 
@@ -529,7 +455,7 @@ class Bookkeeper:
         for file in self.all_cwd_logs:
             self._copy_one_file_to_history(file)
 
-    @_needs_update_for_attr('_folder_names[history_dir]')
+    @needs_update_for_attr('_folder_names[history_dir]')
     def _copy_one_file_to_history(self, file_path, with_name=None):
         """Copy `file_path` to history, optionally renaming."""
         dest_name = with_name or file_path.name
@@ -538,7 +464,7 @@ class Bookkeeper:
         except OSError:
             LOGGER.error(f'Failed to copy {file_path} to history.')
 
-    @_needs_update_for_attr('_folder_names[history_dir]')
+    @needs_update_for_attr('_folder_names[history_dir]')
     def _copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
         for name in (DEFAULT_SUPP, DEFAULT_OUT):
@@ -644,7 +570,7 @@ class Bookkeeper:
             )
         return (f for f in folders if f.is_dir())
 
-    @_needs_update_for_attr('_state_info[last_log_lines]')
+    @needs_update_for_attr('_state_info[last_log_lines]')
     def _infer_run_info_from_log(self):
         """Return a dictionary of information read from the calc log."""
         matched = {k: False for k in _LOG_FILE_RE}
@@ -728,7 +654,7 @@ class Bookkeeper:
                          'file after reading.', exc_info=True)
         return notes
 
-    @_needs_update_for_attr('_paths[calc_logs]')
+    @needs_update_for_attr('_paths[calc_logs]')
     def _read_most_recent_log(self):
         """Read timestamp and lines from the most-recent calc log file."""
         last_log_lines = []
