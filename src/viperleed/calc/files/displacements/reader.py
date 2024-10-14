@@ -4,15 +4,16 @@ import re
 
 from .errors import InvalidSyntaxError
 from .errors import SymmetryViolationError
-
+from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine
+from .lines import ConstraintLine, OffsetsLine
+from .lines import LoopMarkerLine, SearchHeaderLine, SectionHeaderLine
+from .regex import match_constrain_line
+from .regex import match_geo_line
+from .regex import match_occ_line
+from .regex import match_offsets_line
+from .regex import match_vib_line
 from .regex import SEARCH_HEADER_PATTERN
 from .regex import SECTION_HEADER_PATTERN
-from .regex import match_geo_line
-from .regex import match_vib_line
-from .regex import match_occ_line
-from .regex import match_constrain_line
-from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine
-from .lines import LoopMarkerLine, SearchHeaderLine, SectionHeaderLine
 
 DisplacementFileSections = Enum('DisplacementFileSections', [
     'GEO_DELTA',
