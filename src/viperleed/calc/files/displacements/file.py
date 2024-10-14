@@ -43,6 +43,16 @@ class SearchBlock:
     def __repr__(self):
         return f"SearchBlock(label={self.label}, sections={self.sections})"
 
+class OffsetsBlock:
+    """Class to hold all information for the (optional) OFFSETS block."""
+    
+    def __init__(self):
+        self.lines = []
+
+    def add_line(self, line):
+        """Add a line to the corresponding section."""
+        self.lines.append(line)
+
 
 class DisplacementsFile:
 
@@ -51,6 +61,9 @@ class DisplacementsFile:
         self.current_search_block = None
         self.current_section_lines = []
         self.has_been_read = False
+        # an OFFSETS block is only allowed at the very beginning of the file
+        # we check this by setting this flag to False after the first block
+        self.offsets_block_allowed = True
 
     @property
     def unclosed_loop(self):
@@ -67,6 +80,13 @@ class DisplacementsFile:
         if self.current_search_block is not None:
             self.blocks.append(self.current_search_block)
             self.current_search_block = None
+
+    def check_valid(self):
+        """Check that the read file is valid."""
+        # Syntax and logic checks
+        # check for unclosed loops
+        if self.unclosed_loop():
+            raise False
 
 
     def read(self, filename):
@@ -112,6 +132,11 @@ class DisplacementsFile:
 
                 else:
                     raise ValueError("Unexpected line type")
+                
+                # OFFSETS block is only allowed in the first search block, thus
+                # 
+                # 
+                self.offsets_block_allowed = False
 
     def parse(self):
         # After reading, process the blocks, e.g., validate the structure or check symmetry.
