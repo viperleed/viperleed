@@ -82,3 +82,24 @@ class ConstraintLine:
         return (f"ConstraintLine(constraint_type={self.constraint_type}, "
                 f"parameters={self.parameters}, value={self.value})")
 
+
+class OffsetsLine:
+    def __init__(self, offset_type, parameters, value):
+        self.offset_type = offset_type
+        self.parameters = parameters
+        self.value = value
+
+    def __eq__(self, other):
+        if isinstance(other, ConstraintLine):
+            return (
+                self.offset_type == other.constraint_type
+                and self.parameters == other.parameters
+                and self.value == other.value
+            )
+        return False
+
+    def __repr__(self):
+        return (
+            f"ConstraintLine(constraint_type={self.offset_type}, "
+            f"parameters={self.parameters}, value={self.value})"
+        )
