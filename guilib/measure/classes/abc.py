@@ -472,7 +472,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If any element of the new_settings does
             not fit the mandatory settings.
         """
-        try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
+        try:                                                                    # TODO: #242 make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except (ValueError, NoSettingsError):
             emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS)
