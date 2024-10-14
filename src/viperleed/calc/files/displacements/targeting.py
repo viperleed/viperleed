@@ -2,7 +2,7 @@ import re
 import numpy as np
 
 
-class ASESubtarget:
+class BSSubtarget:
     def __init__(self, target_str):
         self.target_str = target_str
         self.element = None
@@ -102,7 +102,7 @@ class ASESubtarget:
         return mask
 
 
-class ASETarget:
+class BSTarget:
     def __init__(self, target_str):
         self.subtargets = []
         self._parse_target(target_str)
@@ -110,7 +110,7 @@ class ASETarget:
     def _parse_target(self, target_str):
         """Parse multiple subtargets separated by commas."""
         subtarget_strs = target_str.split(",")
-        self.subtargets = [ASESubtarget(sub.strip()) for sub in subtarget_strs]
+        self.subtargets = [BSSubtarget(sub.strip()) for sub in subtarget_strs]
 
     def select(self, base_scatterers):
         """Take the 'or' of all subtargets, combining masks."""
