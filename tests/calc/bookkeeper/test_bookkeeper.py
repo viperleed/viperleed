@@ -30,6 +30,7 @@ from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.notes_field import _DISCARDED
+from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
@@ -113,10 +114,15 @@ class _TestBookkeeperRunBase:
 
     mode = None
 
+    def check_metadata_exists(self, history_folder):
+        """Test that the metadata file is present in `history_folder`."""
+        assert (history_folder / _METADATA_NAME).is_file()
+
     def check_history_exists(self, bookkeeper, history_run_path):
         """Test that history_path and directory/history.info exist."""
         assert history_run_path.is_dir()
         assert (bookkeeper.cwd / HISTORY_INFO_NAME).exists()
+        self.check_metadata_exists(history_run_path)
 
     def check_history_folder_empty(self, bookkeeper, *_):
         """Test that an empty history folder exists, except bookkeeper.log."""
@@ -656,15 +662,15 @@ class TestBookkeeperRaises:
     skips = object()
     _os_error = {
         '_copy_out_and_supp': ('shutil.copytree', logs),
-        '_workhistory._discard_previous': ('shutil.rmtree', logs),
         '_make_and_copy_to_history': ('pathlib.Path.mkdir', raises),
-        '_workhistory.move_and_cleanup': ('shutil.rmtree', logs),
         '_read_and_clear_notes_file-read': ('pathlib.Path.read_text', logs),
         '_read_and_clear_notes_file-write': ('pathlib.Path.write_text', logs),
         '_read_most_recent_log': ('pathlib.Path.open', skips),
         '_remove_log_files': ('pathlib.Path.unlink', logs),
         '_remove_out_and_supp': ('shutil.rmtree', logs),
         '_replace_state_files_from_ori': ('pathlib.Path.replace', raises),
+        '_workhistory._discard_previous': ('shutil.rmtree', logs),
+        '_workhistory.move_and_cleanup(None)': ('shutil.rmtree', logs),
         }
 
     @parametrize(method_name=_os_error)

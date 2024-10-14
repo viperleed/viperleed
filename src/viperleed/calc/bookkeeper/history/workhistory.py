@@ -25,6 +25,7 @@ from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ..constants import HISTORY_FOLDER_RE
 from ..log import LOGGER
+from .meta import BookkeeperMetaFile
 
 
 class WorkhistoryHandler:
@@ -92,7 +93,7 @@ class WorkhistoryHandler:
         directories = self._find_directories(contains=contains)
         return (d for d in directories if PREVIOUS_LABEL not in d.name)
 
-    def move_and_cleanup(self):
+    def move_and_cleanup(self, main_metadata):
         """Move files from the current work-history folder, then clean up.
 
         Any subfolder of workhistory that is labeled as "previous"
@@ -100,6 +101,14 @@ class WorkhistoryHandler:
         always removes. If the current work-history folder is empty
         (after removal of the "previous" folders and moving the new
         ones) it is deleted.
+
+        Parameters
+        ----------
+        main_metadata : BookkeeperMetaFile
+            The metadata file of the primary history folder created
+            by bookkeeper. Used to label the workhistory folders
+            moved to history as being created 'together' with the
+            primary folder.
 
         Returns
         -------
@@ -111,9 +120,9 @@ class WorkhistoryHandler:
         if not self.path.is_dir():
             return tensor_nums
 
-        # Always remove any 'previous'-labelled folders
+        # Always remove any 'previous'-labeled folders
         self._discard_previous()
-        tensor_nums = self._move_folders_to_history()
+        tensor_nums = self._move_folders_to_history(main_metadata)
         is_empty = not any(self.path.iterdir())
         if is_empty:
             self.discard_workhistory_root()
@@ -152,8 +161,16 @@ class WorkhistoryHandler:
         return (d for d in globbed
                 if d.is_dir() and HISTORY_FOLDER_RE.match(d.name))
 
-    def _move_folders_to_history(self):
+    def _move_folders_to_history(self, main_metadata):
         """Move relevant folders from the current work history to history.
+
+        Parameters
+        ----------
+        main_metadata : BookkeeperMetaFile
+            The metadata file of the primary history folder created
+            by bookkeeper. Used to label the workhistory folders
+            moved to history as being created 'together' with the
+            primary folder.
 
         Returns
         -------
@@ -196,4 +213,10 @@ class WorkhistoryHandler:
                              exc_info=True)
                 continue
             tensor_nums.add(tensor_num)
+
+            # Add metadata file to the folder we have just moved.
+            meta = BookkeeperMetaFile(target)
+            meta.compute_hash()
+            meta.collect_from(main_metadata)
+            meta.write()
         return tensor_nums

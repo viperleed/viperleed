@@ -10,7 +10,9 @@ __license__ = 'GPLv3+'
 from collections import defaultdict
 import logging
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
+from unittest.mock import patch
+from unittest.mock import call
 
 from pytest_cases import fixture
 from pytest_cases import parametrize
@@ -108,7 +110,7 @@ class TestWorkhistoryHandler:
                                                  workhistory, patched_path):
         """Test move_and_cleanup when the folder doesn't exist."""
         patched_path(is_dir=False)
-        tensor_nums = workhistory.move_and_cleanup()
+        tensor_nums = workhistory.move_and_cleanup(None)
         assert not tensor_nums
         mock_rmtree.assert_not_called()
 
@@ -122,7 +124,7 @@ class TestWorkhistoryHandler:
                                  '_move_folders_to_history',
                                  return_value=tensors_expect)
         with mock_move:
-            tensor_nums = workhistory.move_and_cleanup()
+            tensor_nums = workhistory.move_and_cleanup(None)
             assert tensor_nums == tensors_expect
             mock_rmtree.assert_not_called()
 
@@ -139,7 +141,7 @@ class TestWorkhistoryHandler:
             calls = [call(directory) for directory in previous_dirs]
             mock_rmtree.assert_has_calls(calls, any_order=True)
 
-    def test_move_folders_to_history(self, workhistory):
+    def test_move_folders_to_history(self, workhistory, monkeypatch):
         """Test _move_folders_to_history."""
         directory = MagicMock()
         directory.name = f't987.r001.003_{workhistory.timestamp}'
@@ -148,11 +150,23 @@ class TestWorkhistoryHandler:
         mock_find = patch.object(workhistory,
                                  'find_current_directories',
                                  return_value=(directory,))
+        mock_meta_cls = MagicMock()
+        monkeypatch.setattr(
+            'viperleed.calc.bookkeeper.history.workhistory.BookkeeperMetaFile',
+            mock_meta_cls,
+            )
+        main_meta = MagicMock()
         with mock_find, mock_replace:
             # pylint: disable-next=protected-access       # OK in tests
-            tensor_nums = workhistory._move_folders_to_history()
+            tensor_nums = workhistory._move_folders_to_history(main_meta)
             fake_replace.assert_called_once()
             assert tensor_nums == {987}
+            mock_meta_cls.assert_called_once()  # Created metadata file
+            mock_meta = mock_meta_cls.return_value
+            # Metadata file processed and written
+            mock_meta.compute_hash.assert_called_once()
+            mock_meta.collect_from.assert_called_once_with(main_meta)
+            mock_meta.write.assert_called_once()
 
     def test_find_any_directory(self, workhistory, patched_path):
         """Test _find_directories."""
@@ -193,7 +207,7 @@ class TestWorkhistoryHandlerRaises:
         # Make sure we don't raise OSError at _discard_previous
         mock_previous = patch.object(workhistory, '_discard_previous')
         with mock_previous, make_obj_raise('shutil.rmtree', OSError):
-            workhistory.move_and_cleanup()
+            workhistory.move_and_cleanup(None)
         self.check_has_error(caplog)
 
     def test_discard_previous(self, workhistory, caplog):
@@ -216,7 +230,7 @@ class TestWorkhistoryHandlerRaises:
         raises_ = raises_exception(directory, FileExistsError, 'replace')
         with patch_rmtree, mock_find, raises_:
             # pylint: disable-next=protected-access       # OK in tests
-            workhistory._move_folders_to_history()
+            workhistory._move_folders_to_history(None)
         self.check_has_error(caplog)
 
     def test_move_folders_os_error(self, workhistory, caplog):
@@ -229,6 +243,6 @@ class TestWorkhistoryHandlerRaises:
         raises_ = make_obj_raise(directory, OSError, 'replace')
         with mock_find, raises_:
             # pylint: disable-next=protected-access       # OK in tests
-            tensor_nums = workhistory._move_folders_to_history()
+            tensor_nums = workhistory._move_folders_to_history(None)
             assert not tensor_nums
         self.check_has_error(caplog)

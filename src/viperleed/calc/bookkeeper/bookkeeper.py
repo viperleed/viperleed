@@ -37,6 +37,7 @@ from .history.errors import CantRemoveEntryError
 from .history.errors import NoHistoryEntryError
 from .history.constants import HISTORY_INFO_NAME
 from .history.info import HistoryInfoFile
+from .history.meta import BookkeeperMetaFile
 from .history.workhistory import WorkhistoryHandler
 from .log import LOGGER
 from .mode import BookkeeperMode
@@ -403,10 +404,10 @@ class Bookkeeper:
         None.
         """
         # Create the new 'primary' history directory...
-        self._make_and_copy_to_history()
+        metadata = self._make_and_copy_to_history()
         # ...move workhistory folders...
-        tensor_nums = self._workhistory.move_and_cleanup()
         tensor_nums.add(self.tensor_number)
+        tensor_nums = self._workhistory.move_and_cleanup(metadata)
         # ...and add a history.info entry
         self._add_history_info_entry(tensor_nums)
 
@@ -658,7 +659,19 @@ class Bookkeeper:
         return {k: match[k] for k, match in matched.items() if match}
 
     def _make_and_copy_to_history(self):
-        """Create new history subfolder and copy all files there."""
+        """Create new history subfolder and copy all files there.
+
+        Returns
+        -------
+        meta : BookkeeperMetaFile
+            The handler to the metadata file created with the
+            new history subfolder.
+
+        Raises
+        ------
+        OSError
+            If creating the new history subfolder fails.
+        """
         try:
             self.history_dir.mkdir()
         except OSError:
@@ -668,6 +681,12 @@ class Bookkeeper:
         self._copy_out_and_supp()
         self._copy_input_files_from_original_inputs_or_cwd()
         self._copy_log_files()
+
+        # Now that all files are in place, add the metadata file
+        meta = BookkeeperMetaFile(self.history_dir)
+        meta.compute_hash()
+        meta.write()
+        return meta
 
     def _make_history_and_prepare_logger(self):
         """Make history folder and add handlers to the bookkeeper logger."""
