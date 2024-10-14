@@ -16,6 +16,7 @@ from .regex import SEARCH_HEADER_PATTERN
 from .regex import SECTION_HEADER_PATTERN
 
 DisplacementFileSections = Enum('DisplacementFileSections', [
+    'OFFSETS',
     'GEO_DELTA',
     'VIB_DELTA',
     'OCC_DELTA',
@@ -84,7 +85,9 @@ class DisplacementsReader(SettingsFileReader):
         """Get content from line."""
         # Decide based on the current section
         section = DisplacementFileSections[self.current_section]
-        if section is DisplacementFileSections.GEO_DELTA:
+        if section is DisplacementFileSections.OFFSETS
+            return self._parse_offsets_line(line)
+        elif section is DisplacementFileSections.GEO_DELTA:
             return self._parse_geo_delta_line(line)
         elif section is DisplacementFileSections.VIB_DELTA:
             return self._parse_vib_delta_line(line)
@@ -96,6 +99,15 @@ class DisplacementsReader(SettingsFileReader):
             raise ValueError(
                 f"Cannot parse line '{line}' without a section header."
             )
+
+    def _parse_offsets_line(self, line):
+        """Parse a line in the OFFSETS section."""
+        match = match_offsets_line(line)
+        if match is None:
+            raise InvalidSyntaxError(f"Cannot parse line '{line}' "
+                                     "in OFFSETS section.")
+        offset_type, parameters, value = match
+        return OffsetsLine(offset_type, parameters, value)
 
     def _parse_geo_delta_line(self, line):
         """Parse a line in the GEO_DELTA section."""
