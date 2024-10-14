@@ -21,8 +21,8 @@ import sys
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.guilib.dialogs.constants import DIALOG_DISMISSED
 from viperleed.guilib.dialogs.dropdowndialog import DropdownDialog
-from viperleed.guilib.measure.constants import DIALOG_DISMISSED
 
 # TODO: not nice. Also, there's two places where the _defaults
 # path is used. Here and in classes.settings. However, due to circular

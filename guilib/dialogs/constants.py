@@ -1,4 +1,4 @@
-"""Module constants of viperleed.guilib.measure.
+"""Module constants of viperleed.guilib.dialogs.
 
 ========================================
    ViPErLEED Graphical User Interface

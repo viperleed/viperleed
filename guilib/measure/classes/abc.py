@@ -196,9 +196,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             is_matching_default_settings() methods. Default is None.
             If it is None, subclasses must attempt to determine suitable
             settings without additional information, when searching for
-            default settings via is_matching_default_settings(). When
-            looking for user settings with is_matching_user_settings()
-            a TypeError will be raised.
+            default settings via is_matching_default_settings().
         match_exactly : bool, optional
             Whether find_from should be matched exactly. False means
             the matching of settings files will be less strict. E.g.,
@@ -245,8 +243,12 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         ----------
         obj_info : SettingsInfo or None
             The additional information that should be used to find
-            appropriate settings. It can only be None when looking for
-            default settings, otherwise a TypeError will be raised.
+            appropriate settings. If it is None, subclasses must attempt
+            to determine suitable settings without additional
+            information, when searching for default settings via
+            is_matching_default_settings(). When looking for user
+            settings with is_matching_user_settings(), a TypeError will
+            be raised if obj_info is None.
         directory : str or Path
             The location in which to look for configuration files.
             Settings files are searched in directory and all its
@@ -324,7 +326,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found.
+            multiple files are found. An empty tuple signifies no
+            `config` file matches the requirements.
         """
 
     @classmethod
@@ -359,7 +362,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found.
+            multiple files are found. An empty tuple signifies no
+            `config` file matches the requirements.
         """
         if not isinstance(obj_info, SettingsInfo):
             raise TypeError(

@@ -557,7 +557,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             indicator of how well the firmware matches. If an exact
             match is required, the firmware version has to be exactly
             the same. If no exact match is required, the highest
-            firmware minor will be preferred.
+            firmware minor will be preferred. An empty tuple signifies
+            no `config` file matches the requirements.
         """
         ver = base.Version(
             config.get('controller', 'firmware_version', fallback='0.0')
@@ -600,6 +601,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             the same, so all matching files will return the same
             sorting value. If no exact match is required, the highest
             firmware minor with a matching major will be preferred.
+            An empty tuple signifies no `config` file matches the
+            requirements.
         """
         super().is_matching_user_settings(obj_info, config, match_exactly)
         controller_name = config.get('controller', 'device_name',

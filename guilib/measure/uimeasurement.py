@@ -198,6 +198,7 @@ import PyQt5.QtWidgets as qtw
 
 # ViPErLEED modules
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
+from viperleed.guilib.dialogs.constants import DIALOG_DISMISSED
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
@@ -210,7 +211,6 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog
     )
-from viperleed.guilib.measure.constants import DIALOG_DISMISSED
 from viperleed.guilib.measure.dialogs.firmwareupgradedialog import (
     FirmwareUpgradeDialog
     )
