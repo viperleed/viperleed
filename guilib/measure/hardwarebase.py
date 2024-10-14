@@ -207,7 +207,7 @@ def device_name_re(name):
         _patterns.append(''.join(_pattern3))
     # All patterns should match towards the end of the line,
     # and can have any characters before
-    return re.compile("|".join(r'^.*' + p + r'\s*$' for p in _patterns))
+    return re.compile('|'.join(rf'^\s*{p}\s*$' for p in _patterns))
 
 
 def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
