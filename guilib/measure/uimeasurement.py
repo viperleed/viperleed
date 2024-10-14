@@ -268,13 +268,11 @@ class Measure(ViPErLEEDPluginBase):                                             
             'sys_settings':
                 SettingsDialog(handled_obj=SystemSettings(),
                                title="System settings"),
-            'bad_px_finder':
-                BadPixelsFinderDialog(),
+            'bad_px_finder': BadPixelsFinderDialog(),
             'camera_viewers': [],
             'error_box': _QMSG(self),                                           # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
             'device_settings': {},     # keys: unique names; No cameras
-            'firmware_upgrade':
-                FirmwareUpgradeDialog(self),
+            'firmware_upgrade': FirmwareUpgradeDialog(self),
             }
         self._glob = {
             'plot': MeasurementPlot(),
