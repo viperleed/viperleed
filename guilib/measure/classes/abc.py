@@ -578,7 +578,7 @@ class DeviceABC(HardwareABC):
         Returns
         -------
         devices : list
-            Each element is a SettingsInfo instance containing the name
+            Each item is a SettingsInfo instance containing the name
             of a device and additional information as a dict.
         """
 
