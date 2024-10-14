@@ -601,7 +601,7 @@ class ImagingSourceCamera(abc.CameraABC):
         return (1,) if camera_name_re.match(obj_info.unique_name) else ()
 
     @classmethod
-    def is_settings_for_this_class(cls, config):
+    def is_settings_for_this_class(cls, config):                                # TODO: Move to CameraABC?
         """Determine if a `config` file is for this camera.
 
         Parameters
