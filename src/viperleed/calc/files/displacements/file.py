@@ -65,7 +65,6 @@ class DisplacementsFile:
         # we check this by setting this flag to False after the first block
         self.offsets_block_allowed = True
 
-    @property
     def unclosed_loop(self):
         # Check if there is a loop that was started but not closed
         for block in reversed(self.blocks):
@@ -104,11 +103,11 @@ class DisplacementsFile:
                     break
 
                 if isinstance(read, LoopMarkerLine):
-                    if read.type == LoopMarker.LOOP_START and self.unclosed_loop:
+                    if read.type == LoopMarker.LOOP_START and self.unclosed_loop():
                         raise InvalidSearchLoopError(
                             "Loop started before the previous loop was closed."
                         )
-                    if read.type == LoopMarker.LOOP_END and not self.unclosed_loop:
+                    if read.type == LoopMarker.LOOP_END and not self.unclosed_loop():
                         raise InvalidSearchLoopError(
                             "Loop ended without a matching start."
                         )
