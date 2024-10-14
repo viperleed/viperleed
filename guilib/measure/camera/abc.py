@@ -625,6 +625,7 @@ class CameraABC(DeviceABC):
                 pass
 
         # Checking of non-mandatory data is done in property getters.
+        # The base-class implementation takes care of _mandatory_settings.
         if not super().set_settings(new_settings):
             return False
 
