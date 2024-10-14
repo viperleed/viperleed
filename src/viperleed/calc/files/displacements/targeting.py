@@ -1,6 +1,3 @@
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__created__ = "2024-10-14"
-
 import re
 import numpy as np
 
@@ -23,7 +20,7 @@ class ASESubtarget:
         site_str = parts[0]
 
         if site_str.endswith("*"):
-            # It's an inexact site label
+            # It's an inexact element label
             self.partial_label = site_str[:-1]
         elif "_" in site_str:
             self.exact_label = site_str
@@ -76,9 +73,15 @@ class ASESubtarget:
 
         # If nums are specified, apply the selection based on nums
         if self.nums is not None:
+            # check range for nums
+            if any(num < 1 or num > len(base_scatterers) for num in self.nums):
+                raise ValueError(
+                    "Invalid atom number for subtarget: " f"{self.target_str}"
+                )
             num_mask = np.array([bs.num in self.nums for bs in base_scatterers])
             # check if any of the given nums have the wrong label
-            if np.any(np.logical_xor(mask, num_mask)):
+            wrong_label = np.logical_and(num_mask, ~label_mask)
+            if np.any(wrong_label):
                 raise ValueError(
                     "Atom numbers do not match label for subtarget: "
                     f"{self.target_str}"
