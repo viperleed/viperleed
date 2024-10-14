@@ -37,7 +37,7 @@ class SearchBlock:
         return self.sections[DisplacementFileSections.OCC_DELTA]
 
     @property
-    def constrain(self):
+    def explicit_constraints(self):
         return self.sections[DisplacementFileSections.CONSTRAIN]
 
     def __repr__(self):
