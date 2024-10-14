@@ -410,8 +410,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             The first entry in each tuple can be either '<section>',
             '<section>/<option>', or
             '<section>/<option> not one of <value1>, <value2>, ...'.
-            Further entries, added by reimplementations, are
-            information on what is wrong with the settings.
+            Further optional entries may be added by subclasses. They
+            specify additional information on what is wrong with each
+            invalid setting.
         """
         return [(invalid,) for invalid in
                 new_settings.has_settings(*self._mandatory_settings)]
