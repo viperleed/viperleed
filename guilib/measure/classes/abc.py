@@ -77,7 +77,9 @@ class QObjectSettingsErrors(ViPErLEEDErrorEnum):
         '{!r}. Using {} instead. Consider fixing your configuration file.'
         )
     DEFAULT_SETTINGS_CORRUPTED = (103,
-                                  'Default settings corrupted. {!r}')
+                                  'Default settings corrupted. {!r} '
+                                  'Contact the ViPErLEED team to fix '
+                                  'your default settings.')
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
@@ -114,6 +116,15 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         to be present, an option must be specified too. The allowed
         tuples are therefore: (<section>,), (<section>, <option>), and
         (<section>, <option>, (<value1>, <value2>, ...)).
+        To extend the mandatory settings of a class, unpack the
+        _mandatory_settings of the parent class into a new
+        _mandatory_settings tuple and add the new settings to
+        the new tuple like:
+        _mandatory_settings = (
+            *parent._mandatory_settings,
+            (<section>, <option>, (<value1>, <value2>, ...)),
+            ...
+            )
     _settings_to_load : ViPErLEEDSettings
         _settings_to_load are the settings that should be loaded
         into _settings via set_settings. If no settings is given,
@@ -183,9 +194,6 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
     def find_default_settings(self, find_from=None, match_exactly=False):
         """Find default settings for this object.
-
-        This method may be extended in subclasses. Make
-        sure to call super().find_default_settings at the end.
 
         Parameters
         ----------
@@ -267,8 +275,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             settings sorted by how well the settings match from best to
             worst.
         """
-        default = True if directory is DEFAULTS_PATH else False
-        settings_files = Path(directory).resolve().glob('**/*.ini')
+        directory = Path(directory).resolve()
+        default = True if directory == DEFAULTS_PATH else False
+        settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
             settings_files = [file for file in settings_files
@@ -394,7 +403,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def are_settings_invalid(self, new_settings):
         """Check if there are any invalid settings.
 
-        Reimplementations can add additional mandatory settings at
+        Subclasses may add additional mandatory settings at
         runtime. The base implementation will check if all of the
         _mandatory_settings are present in the provided settings.
 
@@ -506,7 +515,7 @@ class HardwareABC(QObjectWithSettingsABC):
     @property
     def busy(self):
         """Return busy state of instance."""
-        return self.get_busy()
+        return self._get_busy()
 
     @busy.setter
     def busy(self, is_busy):
@@ -527,7 +536,7 @@ class HardwareABC(QObjectWithSettingsABC):
         """
         self.set_busy(is_busy)
 
-    def get_busy(self):
+    def _get_busy(self):
         """Return whether the instance is busy.
 
         Note that this method is called in the getter of the busy
@@ -573,8 +582,8 @@ class DeviceABC(HardwareABC):
         device is represented by a single SettingsInfo instance. The
         SettingsInfo object must contain a .unique_name and can contain
         .more information as a dict. The information contained within
-        a SettingsInfo must be enough to determine a suitable settings
-        file for the device from it.
+        a SettingsInfo must be enough to determine settings files that
+        contain the correct settings for this device.
 
         Returns
         -------

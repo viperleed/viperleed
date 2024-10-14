@@ -627,8 +627,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         except SettingsError as err:
             base.emit_error(self,
                             QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
-                            str(err) + ' Contact the ViPErLEED team '
-                            'to fix your default settings.')
+                            str(err))
         return detected_devices
 
     def __make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
@@ -768,11 +767,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Show settings of the controller selected."""
         full_name = self.sender().text()
         ctrl_cls, ctrl_info = self.sender().data()
-        # Note that ctrl_name may be different from
-        # the displayed controller name full_name.
-        ctrl_name = ctrl_info.more['name']
 
         if full_name not in self._dialogs['device_settings']:
+            # Note that ctrl_name may be different from
+            # the displayed controller name full_name.
+            ctrl_name = ctrl_info.more['name']
             self.__delete_outdated_ctrl_dialog(ctrl_name)
             self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_info)
 

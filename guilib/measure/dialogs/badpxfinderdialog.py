@@ -474,8 +474,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # create the active_camera without settings, and give
             # it settings shortly afterwards.
             return
-        if (error is QObjectSettingsErrors.INVALID_SETTINGS
-                and "bad_pixel" in error_msg.replace(" ", "_")):
+        if self.active_camera.is_bad_pixels_error(error_info):
             # Swallow bad-pixels path errors that may occur
             # before the calibration is started
             return

@@ -305,9 +305,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         third_btn_text : str, optional
             If given and not empty, the string is used as the text
             for an extra button with "accept role" in the did-not-
-            find-a-config case. This function may return an empty
-            string only if this is given and if the user dismisses
-            the dialog. Default is an empty string.
+            find-a-config case. Default is an empty string.
 
     Returns
     -------

@@ -543,7 +543,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         Returns
         -------
         invalid_settings : list of tuples
-            Invalid required_settings of self as a list of tuples.
+            Invalid required settings of self as a list of tuples.
             The first entry in each tuple can be either '<section>',
             '<section>/<option>', or
             '<section>/<option> not one of <value1>, <value2>, ...'.

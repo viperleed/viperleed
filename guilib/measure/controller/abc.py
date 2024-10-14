@@ -213,7 +213,7 @@ class ControllerABC(DeviceABC):
             self.__hash = hash((id(self), self.name))
         return self.__hash
 
-    def get_busy(self):
+    def _get_busy(self):
         """Return whether the controller is busy.
 
         If the serial is busy, the controller is always busy.

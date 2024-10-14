@@ -23,6 +23,7 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 from viperleed.guilib.measure.controller import abc
@@ -656,6 +657,11 @@ class ViPErinoController(abc.MeasureControllerABC):
                 'firmware' : Version
                     The firmware version that is installed
                     on the controller.
+        
+        Raises
+        ------
+        DefaultSettingsError
+            If the default settings are corrupted.
         """
         # TODO: When detecting controllers we will have to run list_devices
         # for each firmware major once and after having detected controllers
@@ -672,9 +678,9 @@ class ViPErinoController(abc.MeasureControllerABC):
         for port in port_names:
             ctrl = ViPErinoController(address=port)
             if not ctrl.has_valid_settings:
-                raise RuntimeError(
-                    'The default settings are corrupted. Please '
-                    'contact the ViPErLEED developers.'
+                raise DefaultSettingsError(
+                    'The default settings are insufficient '
+                    'to make a controller.'
                     )
             if not ctrl.serial.is_open:
                 # Port is already in use
