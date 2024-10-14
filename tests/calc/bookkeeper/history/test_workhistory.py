@@ -38,12 +38,6 @@ def fixture_mock_bookkeeper():
     return bookkeeper
 
 
-@fixture(name='mock_path')
-def fixture_mock_path():
-    """Fixture to mock the workhistory path."""
-    return MagicMock(spec=Path)
-
-
 @fixture(name='workhistory')
 def fixture_workhistory(mock_path, mock_bookkeeper):
     """Fixture for WorkhistoryHandler instance."""
