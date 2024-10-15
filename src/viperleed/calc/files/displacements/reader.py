@@ -2,7 +2,7 @@ from enum import Enum
 from collections import namedtuple
 import re
 
-from .errors import InvalidSyntaxError
+from .errors import InvalidDisplacementsSyntaxError
 from .errors import SymmetryViolationError
 from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine
 from .lines import ConstraintLine, OffsetsLine
@@ -104,7 +104,7 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the OFFSETS section."""
         match = match_offsets_line(line)
         if match is None:
-            raise InvalidSyntaxError(f"Cannot parse line '{line}' "
+            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
                                      "in OFFSETS section.")
         offset_type, parameters, value = match
         return OffsetsLine(offset_type, parameters, value)
@@ -113,7 +113,7 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the GEO_DELTA section."""
         match = match_geo_line(line)
         if match is None:
-            raise InvalidSyntaxError(f"Cannot parse line '{line}' "
+            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
                                      "in GEO_DELTA section.")
 
         label, which, direction, start, stop, step = match
@@ -123,7 +123,7 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the VIB_DELTA section."""
         match = match_vib_line(line)
         if match is None:
-            raise InvalidSyntaxError(f"Cannot parse line '{line}' "
+            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
                                      "in VIB_DELTA section.")
 
         label, which, start, stop, step = match
@@ -133,7 +133,7 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the OCC_DELTA section."""
         match = match_occ_line(line)
         if match is None:
-            raise InvalidSyntaxError(f"Cannot parse line '{line}' "
+            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
                                      "in OCC_DELTA section.")
 
         label, which, chem_blocks = match
@@ -143,7 +143,7 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the CONSTRAIN section."""
         match = match_constrain_line(line)
         if match is None:
-            raise InvalidSyntaxError(f"Cannot parse line '{line}' "
+            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
                                      "in CONSTRAIN section.")
 
         constraint_type, parameters, value = match
