@@ -81,21 +81,21 @@ class DisplacementsReader(SettingsFileReader):
         # Decide based on the current section
         section = DisplacementFileSections[self.current_section]
         if section is DisplacementFileSections.OFFSETS:
-            return self._parse_offsets_line(line)
+            return self._read_offsets_line(line)
         elif section is DisplacementFileSections.GEO_DELTA:
-            return self._parse_geo_delta_line(line)
+            return self._read_geo_delta_line(line)
         elif section is DisplacementFileSections.VIB_DELTA:
-            return self._parse_vib_delta_line(line)
+            return self._read_vib_delta_line(line)
         elif section is DisplacementFileSections.OCC_DELTA:
-            return self._parse_occ_delta_line(line)
+            return self._read_occ_delta_line(line)
         elif section is DisplacementFileSections.CONSTRAIN:
-            return self._parse_constraints_line(line)
+            return self._read_constraints_line(line)
         else:
             raise ValueError(
                 f"Cannot parse line '{line}' without a section header."
             )
 
-    def _parse_offsets_line(self, line):
+    def _read_offsets_line(self, line):
         """Parse a line in the OFFSETS section."""
         match = match_offsets_line(line)
         if match is None:
@@ -105,7 +105,7 @@ class DisplacementsReader(SettingsFileReader):
         offset_type, parameters, value = match
         return OffsetsLine(offset_type, parameters, value)
 
-    def _parse_geo_delta_line(self, line):
+    def _read_geo_delta_line(self, line):
         """Parse a line in the GEO_DELTA section."""
         match = match_geo_line(line)
         if match is None:
@@ -116,7 +116,7 @@ class DisplacementsReader(SettingsFileReader):
         label, which, direction, start, stop, step = match
         return GeoDeltaLine(label, which, direction, start, stop, step)
 
-    def _parse_vib_delta_line(self, line):
+    def _read_vib_delta_line(self, line):
         """Parse a line in the VIB_DELTA section."""
         match = match_vib_line(line)
         if match is None:
@@ -127,7 +127,7 @@ class DisplacementsReader(SettingsFileReader):
         label, which, start, stop, step = match
         return VibDeltaLine(label, which, start, stop, step)
 
-    def _parse_occ_delta_line(self, line):
+    def _read_occ_delta_line(self, line):
         """Parse a line in the OCC_DELTA section."""
         match = match_occ_line(line)
         if match is None:
@@ -138,7 +138,7 @@ class DisplacementsReader(SettingsFileReader):
         label, which, chem_blocks = match
         return OccDeltaLine(label, which, chem_blocks)
 
-    def _parse_constraints_line(self, line):
+    def _read_constraints_line(self, line):
         """Parse a line in the CONSTRAIN section."""
         match = match_constrain_line(line)
         if match is None:
