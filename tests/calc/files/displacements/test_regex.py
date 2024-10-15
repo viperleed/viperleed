@@ -67,6 +67,19 @@ TEST_LINES_CONSTRAIN = {
     "occ Fe L(3), Ni = linked": ('occ', ['Fe L(3)', 'Ni'], 'linked'),
 }
 
+# Test cases for OFFSETS lines
+TEST_LINES_OFFSETS = {
+    "geo O L(1-2) z = 0.05": ("geo", "O L(1-2) z", 0.05),
+    "geo Ir_top x = -0.02": ("geo", "Ir_top x", -0.02),
+    "vib Si 1 = 0.01": ("vib", "Si 1", 0.01),
+    "vib O_top = -0.005": ("vib", "O_top", -0.005),
+    "occ Fe 1 = 0.3": ("occ", "Fe 1", 0.3),
+    "occ M_top = Fe 0.6, Ni 0.4": (
+        "occ",
+        "M_top",
+        "Fe 0.6, Ni 0.4",
+    ),  # Complex value (not float)
+}
 @pytest.mark.parametrize("input, expected", TEST_LINES_GEOMETRY.items(),
                          ids=TEST_LINES_GEOMETRY.keys())
 def test_geo_line_regex(input, expected):
@@ -142,5 +155,19 @@ def test_constrain_line_regex(input, expected):
     constraint_type, parameters, value = match
     e_constraint_type, e_parameters, e_value = expected
     assert constraint_type == e_constraint_type
+    assert parameters == e_parameters
+    assert value == e_value
+
+
+@pytest.mark.parametrize(
+    "input, expected", TEST_LINES_OFFSETS.items(), ids=TEST_LINES_OFFSETS.keys()
+)
+def test_offsets_line_regex(input, expected):
+    """Check that the regex for OFFSETS lines works as expected."""
+    match = match_offsets_line(input)
+    assert match is not None
+    offset_type, parameters, value = match
+    e_offset_type, e_parameters, e_value = expected
+    assert offset_type == e_offset_type
     assert parameters == e_parameters
     assert value == e_value
