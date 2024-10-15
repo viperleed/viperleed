@@ -491,6 +491,7 @@ class ControllerABC(DeviceABC):
         self._time_to_trigger = 0
         self.__hash = -1
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Set new settings for this controller.
 
@@ -764,6 +765,8 @@ class ControllerABC(DeviceABC):
         contain the controller name and it's address to make it unique.
         The information contained within a SettingsInfo must be enough
         to determine a suitable settings file for the device from it.
+        Subclasses should raise a DefaultSettingsError if they fail
+        to create instances from the settings in the DEFAULTS_PATH.
 
         Returns
         -------
@@ -1439,6 +1442,7 @@ class MeasureControllerABC(ControllerABC):
             # Probably arrived here due to an __init__ error
             pass
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Set new settings for this controller.
 

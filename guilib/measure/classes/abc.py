@@ -430,7 +430,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.
 
-        This method should be extended in subclasses, i.e., do
+        This method must be extended in subclasses, i.e., do
         handler = super().get_settings_handler(), and then add
         appropriate sections and/or options to it using the
         handler.add_section, and handler.add_option methods.
@@ -448,6 +448,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         handler = SettingsHandler(self.settings)
         return handler
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Set new settings for this instance.
 
@@ -583,7 +584,9 @@ class DeviceABC(HardwareABC):
         SettingsInfo object must contain a .unique_name and can contain
         .more information as a dict. The information contained within
         a SettingsInfo must be enough to determine settings files that
-        contain the correct settings for this device.
+        contain the correct settings for this device. Subclasses should
+        raise a DefaultSettingsError if they fail to create instances
+        from the settings in the DEFAULTS_PATH.
 
         Returns
         -------

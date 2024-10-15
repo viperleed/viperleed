@@ -171,6 +171,7 @@ class IVVideo(MeasurementABC):
         super().abort()
     # pylint: enable=useless-super-delegation
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement.
 

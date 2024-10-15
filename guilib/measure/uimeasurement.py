@@ -198,13 +198,14 @@ import PyQt5.QtWidgets as qtw
 
 # ViPErLEED modules
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
-from viperleed.guilib.dialogs.constants import DIALOG_DISMISSED
+from viperleed.guilib.dialogs.errors import DialogDismissedError
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import DataPoints
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import MissingSettingsFileError
-from viperleed.guilib.measure.classes.settings import SettingsError
+from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import ControllerABC
@@ -625,7 +626,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         detected_devices = []
         try:
             detected_devices = base.get_devices(device_type).items()
-        except SettingsError as err:
+        except DefaultSettingsError as err:
             base.emit_error(self,
                             QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
                             str(err))
@@ -651,9 +652,14 @@ class Measure(ViPErLEEDPluginBase):                                             
         _cfg_dir = self.system_settings.paths['configuration']
         kwargs = {"directory": _cfg_dir, "parent_widget": self,
                   "third_btn_text": "Create a new settings file"}
-        config = base.get_object_settings(device_cls, settings_info, **kwargs)
-
-        if config is DIALOG_DISMISSED:
+        
+        try:
+            config = base.get_object_settings(device_cls, settings_info,
+                                              **kwargs)
+        except NoSettingsError:
+            # No settings
+            config = None
+        except DialogDismissedError:
             # Did not find one, and user dismissed the dialog.
             return None
 

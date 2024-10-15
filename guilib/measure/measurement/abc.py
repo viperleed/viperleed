@@ -324,6 +324,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                                 fallback=None)
         return cls.__name__ == meas_class
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):                                       # TODO: check what happens if trying to make a controller that already exists
         """Change settings of the measurement.
 
