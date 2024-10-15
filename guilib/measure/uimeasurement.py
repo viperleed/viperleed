@@ -449,7 +449,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             # The get_devices method does return the device name,
             # class and, additional information. The class and
             # additional information are returned as a tuple.
-            for device_name, cls_and_info in detected_devices:
+            for device_name, cls_and_info in detected_devices.items():
                 act = menu.addAction(device_name)
                 act.setData(cls_and_info)
                 act.triggered.connect(slot)
@@ -661,7 +661,7 @@ class Measure(ViPErLEEDPluginBase):                                             
     @_emit_default_faulty
     def _detect_devices(self, device_type):
         """Detect and return devices of a certain type."""
-        return base.get_devices(device_type).items()
+        return base.get_devices(device_type)
 
     def _make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
         """Make a new settings dialog for a controller."""
