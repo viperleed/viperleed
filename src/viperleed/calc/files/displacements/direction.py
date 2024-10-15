@@ -59,7 +59,7 @@ class Direction:
         raise ValueError(f"Invalid direction format: {direction_str}")
 
     def _get_basis_vector(self, direction, dir_labels):
-        """Return the 3D basis vector or a placeholder for fractional 
+        """Return the 3D basis vector or a placeholder for fractional
         coordinates 'a', 'b', 'c'."""
         basis_vectors = {
             "x": [1, 0, 0],
@@ -131,7 +131,19 @@ class Direction:
             ]
         )
 
+    def __eq__(self, other):
+        """Compare two Direction objects for equality."""
+        if not isinstance(other, Direction):
+            return False
+        return (
+            np.allclose(self._vectors, other._vectors)
+            and self._fractional == other._fractional
+            and self.num_free_directions == other.num_free_directions
+        )
+
     def __repr__(self):
-        return (f"Direction(vectors={self._vectors}, "
-                f"num_free_directions={self.num_free_directions}, "
-                f"fractional={self._fractional})")
+        return (
+            f"Direction(vectors={self._vectors}, "
+            f"num_free_directions={self.num_free_directions}, "
+            f"fractional={self._fractional})"
+        )
