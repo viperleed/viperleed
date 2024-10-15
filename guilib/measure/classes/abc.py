@@ -272,7 +272,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             worst.
         """
         directory = Path(directory).resolve()
-        default = True if directory == DEFAULTS_PATH else False
+        default = True if directory == base.DEFAULTS_PATH else False
         settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
