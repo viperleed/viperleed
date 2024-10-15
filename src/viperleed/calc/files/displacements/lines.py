@@ -3,6 +3,7 @@ from collections import namedtuple
 
 from .targeting import BSTarget
 from .direction import Direction
+from .range import DisplacementsRange
 
 
 LoopMarkerLine = namedtuple("LoopMarkerLine", ["type"])
@@ -21,50 +22,41 @@ class GeoDeltaLine:
     def __init__(self, label, which, direction, start, stop, step):
         self.target = _get_target(label, which)
         self.direction = Direction(direction)
-        self.start = start
-        self.stop = stop
-        self.step = step
+        self.range = DisplacementsRange(start, stop, step)
 
     def __eq__(self, other):
         if isinstance(other, GeoDeltaLine):
             return (
                 self.target == other.target
                 and self.direction == other.direction
-                and self.start == other.start
-                and self.stop == other.stop
-                and self.step == other.step
+                and self.range == other.range
             )
         return False
 
     def __repr__(self):
         return (
             f"GeoDeltaLine(target={self.target}, "
-            f"direction={self.direction}, start={self.start}, stop={self.stop}, step={self.step})"
+            f"direction={self.direction}, range={self.range})"
         )
 
 
 class VibDeltaLine:
     def __init__(self, label, which, start, stop, step):
         self.target = _get_target(label, which)
-        self.start = start
-        self.stop = stop
-        self.step = step
+        self.range = DisplacementsRange(start, stop, step)
 
     def __eq__(self, other):
         if isinstance(other, VibDeltaLine):
             return (
                 self.target == other.target
                 and self.direction == other.direction
-                and self.start == other.start
-                and self.stop == other.stop
-                and self.step == other.step
+                and self.range == other.range
             )
         return False
 
     def __repr__(self):
         return (
-            f"VibDeltaLine(target={self.target}, "
-            f"start={self.start}, stop={self.stop}, step={self.step})"
+            f"VibDeltaLine(target={self.target}, range={self.range})"
         )
 
 
