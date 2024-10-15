@@ -39,6 +39,7 @@ from .history.meta import BookkeeperMetaFile
 from .history.workhistory import WorkhistoryHandler
 from .log import LOGGER
 from .mode import BookkeeperMode
+from .utils import discard_files
 from .utils import make_property
 from .utils import needs_update_for_attr
 
@@ -685,22 +686,22 @@ class Bookkeeper:
 
     def _remove_log_files(self):
         """Delete all log files in root."""
-        _discard_files(*self.all_cwd_logs)
+        discard_files(*self._root.logs.files)
 
     def _remove_tensors_and_deltas(self):
         """Delete the most recent tensor and delta files."""
         tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
         delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
-        _discard_files(self.cwd / tensor_file, self.cwd / delta_file)
+        discard_files(self.cwd / tensor_file, self.cwd / delta_file)
 
     def _remove_ori_files(self):
         """Delete '_ori'-suffixed files from root."""
         ori_files = (self.cwd / f'{file}_ori' for file in STATE_FILES)
-        _discard_files(*ori_files)
+        discard_files(*ori_files)
 
     def _remove_out_and_supp(self):
         """Delete the SUPP and OUT directories from root."""
-        _discard_files(self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP)
+        discard_files(self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP)
 
     def _replace_state_files_from_ori(self):
         """Replace input files with their '_ori'-suffixed version."""
@@ -832,21 +833,3 @@ def _check_newer(older, newer):
     older_timestamp = older.stat().st_mtime
     if newer_timestamp < older_timestamp:
         raise _FileNotOlderError
-
-
-def _discard_files(*file_paths):
-    """Delete files at `file_paths`. Log if they can't be deleted."""
-    for file in file_paths:
-        if not file.exists():
-            continue
-        if file.is_file():
-            try:
-                file.unlink()
-            except OSError:
-                LOGGER.error(f'Failed to discard file {file.name}.')
-            continue
-        assert file.is_dir()  # Should be a directory
-        try:
-            shutil.rmtree(file)
-        except OSError:
-            LOGGER.error(f'Failed to discard directory {file.name}.')

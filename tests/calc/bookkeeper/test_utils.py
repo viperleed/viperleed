@@ -7,8 +7,14 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
-import pytest
+from pathlib import Path
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
+import pytest
+from pytest_cases import fixture
+
+from viperleed.calc.bookkeeper.utils import discard_files
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.bookkeeper.utils import _get_attr_or_dict_item
@@ -38,6 +44,87 @@ class MockClass:
     def other_update(self):
         """Set attr_value to _OTHER_UPDATED_VALUE."""
         self.attr_value = _OTHER_UPDATED_VALUE
+
+
+class TestDiscardFiles:
+    """Tests for the discard_files function."""
+
+    @fixture(name='make_fake_path')
+    def factory_make_fake_path(self):
+        """Return a fake, existing path."""
+        def _make():
+            mock_path = MagicMock(spec=Path)
+            mock_path.exists.return_value = True
+            return mock_path
+        return _make
+
+    @fixture(name='mock_dir')
+    def fixture_mock_dir(self, make_fake_path):
+        """Return a fake path to a directory."""
+        mock_dir = make_fake_path()
+        mock_dir.is_file.return_value = False
+        mock_dir.is_dir.return_value = True
+        return mock_dir
+
+    @fixture(name='mock_file')
+    def fixture_mock_file(self, make_fake_path):
+        """Return a fake path to a file."""
+        mock_file = make_fake_path()
+        mock_file.is_file.return_value = True
+        return mock_file
+
+    @fixture(name='mock_log_error')
+    def fixture_mock_log_error(self):
+        """Return a fake LOGGER.error."""
+        patch_ = patch('viperleed.calc.bookkeeper.utils.LOGGER.error')
+        with patch_ as mock_log_error:
+            yield mock_log_error
+
+    @fixture(name='mock_rmtree')
+    def fixture_mock_rmtree(self):
+        """Return a fake shutil.rmtree."""
+        patch_ = patch('viperleed.calc.bookkeeper.utils.shutil.rmtree')
+        with patch_ as mock_rmtree:
+            yield mock_rmtree
+
+    def test_deletion_not_exists(self, mock_file, mock_dir, mock_rmtree):
+        """Test deletion of non-existing files/directories."""
+        for mock_ in (mock_file, mock_dir):
+            mock_.exists.return_value = False
+        discard_files(mock_file, mock_dir)
+        mock_file.unlink.assert_not_called()
+        mock_rmtree.assert_not_called()
+
+    def test_directory_deletion(self, mock_dir, mock_rmtree):
+        """Check successful deletion of a directory."""
+        discard_files(mock_dir)
+        mock_rmtree.assert_called_once_with(mock_dir)
+
+    def test_file_deletion(self, mock_file):
+        """Check successful deletion of a single file."""
+        discard_files(mock_file)
+        mock_file.unlink.assert_called_once()
+
+    def test_file_deletion_fails(self, mock_file, mock_log_error):
+        """Test a failing file deletion."""
+        # Test failed file deletion with logging
+        mock_file.unlink.side_effect = OSError
+        discard_files(mock_file)
+        mock_log_error.assert_called_once()
+
+    def test_directory_deletion_fails(self, mock_dir,
+                                      mock_log_error,
+                                      mock_rmtree):
+        """Test failure to discard a directory."""
+        mock_rmtree.side_effect = OSError
+        discard_files(mock_dir)
+        mock_log_error.assert_called_once()
+
+    def test_multiple_deletion(self, mock_file, mock_dir, mock_rmtree):
+        """Test deletion of multiple files/directories."""
+        discard_files(mock_file, mock_dir)
+        mock_file.unlink.assert_called_once()
+        mock_rmtree.assert_called_once_with(mock_dir)
 
 
 class TestMakeProperty:
