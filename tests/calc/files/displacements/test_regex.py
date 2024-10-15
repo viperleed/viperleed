@@ -6,6 +6,7 @@ from viperleed_jax.files.displacements.regex import match_geo_line
 from viperleed_jax.files.displacements.regex import match_vib_line
 from viperleed_jax.files.displacements.regex import match_occ_line
 from viperleed_jax.files.displacements.regex import match_constrain_line
+from viperleed_jax.files.displacements.regex import match_offsets_line
 
 # Test cases for SECTION_HEADER_PATTERN
 TEST_LINES_SECTION = {
@@ -44,8 +45,6 @@ TEST_LINES_GEOMETRY = {
 TEST_LINES_VIB = {
     "O 1 = -0.05 0.05 0.02": ('O', '1', -0.05, 0.05, 0.02),
     "Ir_top = -0.05 0.05 0.01": ('Ir_top', None, -0.05, 0.05, 0.01),
-    "O 1 = 0.02": ('O', '1', 0.02, None, None),  # Single value offset
-    "Si = 0.1": ('Si', None, 0.1, None, None),  # Single value offset without which
     "H 5 = -0.03 0.03": ('H', '5', -0.03, 0.03, None),  # No step
     "C L(1-4) = -0.1 0.1 0.05": ('C', 'L(1-4)', -0.1, 0.1, 0.05),  # With L(1-4)
 }
@@ -55,8 +54,6 @@ TEST_LINES_OCC = {
     "O 1 = O 0.8 1.0 0.05": ('O', '1', [('O', 0.8, 1.0, 0.05)]),
     "M_top = Fe 0.4 0.6 0.05, Ni 0.6 0.4 0.05": ('M_top', None, [('Fe', 0.4, 0.6, 0.05), ('Ni', 0.6, 0.4, 0.05)]),
     "M_top = Fe 0.3 0.5, Ni 0.6 0.4, Ti 0.1": ('M_top', None, [('Fe', 0.3, 0.5, None), ('Ni', 0.6, 0.4, None), ('Ti', 0.1, None, None)]),  # Missing steps
-    "O 1 = O 0.8": ('O', '1', [('O', 0.8, None, None)]),  # offset only
-    "M_top = Fe 0.6, Ni 0.4": ('M_top', None, [('Fe', 0.6, None, None), ('Ni', 0.4, None, None)]),  # Fixed values
     "Si 1 = Si 0.2 0.5, Ge 0.5": ('Si', '1', [('Si', 0.2, 0.5, None), ('Ge', 0.5, None, None)]),
     "Cu = Cu 0.6 1.0, Zn 0.4 0.0": ('Cu', None, [('Cu', 0.6, 1.0, None), ('Zn', 0.4, 0.0, None)]),
 }
