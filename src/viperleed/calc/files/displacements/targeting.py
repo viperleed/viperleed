@@ -101,6 +101,14 @@ class BSSubtarget:
 
         return mask
 
+    def __eq__(self, other):
+        # Technically, different strings could refer to the same targets due to
+        # implicit symmetry, but we'll ignore that for now
+        if not isinstance(other, BSSubtarget):
+            return False
+        if self.target_str != other.target_str:
+            return False
+
 
 class BSTarget:
     def __init__(self, target_str):
@@ -118,3 +126,13 @@ class BSTarget:
         for subtarget in self.subtargets:
             combined_mask = combined_mask | subtarget.select(base_scatterers)
         return combined_mask
+
+    def __eq__(self, other):
+        if not isinstance(other, BSTarget):
+            return False
+        if len(self.subtargets) != len(other.subtargets):
+            return False
+        for sub1, sub2 in zip(self.subtargets, other.subtargets):
+            if sub1 != sub2:
+                return False
+        return True
