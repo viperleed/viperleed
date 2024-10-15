@@ -287,8 +287,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         is_matching = (cls.is_matching_default_settings if default
                        else cls.is_matching_user_settings)
         for settings_file in settings_files:
-            config = ConfigParser()
-            config.read(settings_file)
+            config = ViPErLEEDSettings.from_settings(settings_file)
             if not cls.is_settings_for_this_class(config):
                 continue
             conformity = is_matching(obj_info, config, match_exactly)
