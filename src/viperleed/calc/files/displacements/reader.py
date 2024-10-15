@@ -100,7 +100,7 @@ class DisplacementsReader(SettingsFileReader):
         match = match_offsets_line(line)
         if match is None:
             raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' " "in OFFSETS section."
+                f"Cannot parse line '{line}' in OFFSETS section."
             )
         offset_type, parameters, value = match
         return OffsetsLine(offset_type, parameters, value)
@@ -110,7 +110,7 @@ class DisplacementsReader(SettingsFileReader):
         match = match_geo_line(line)
         if match is None:
             raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' " "in GEO_DELTA section."
+                f"Cannot parse line '{line}' in GEO_DELTA section."
             )
 
         label, which, direction, start, stop, step = match
@@ -121,7 +121,7 @@ class DisplacementsReader(SettingsFileReader):
         match = match_vib_line(line)
         if match is None:
             raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' " "in VIB_DELTA section."
+                f"Cannot parse line '{line}' in VIB_DELTA section."
             )
 
         label, which, start, stop, step = match
@@ -132,7 +132,7 @@ class DisplacementsReader(SettingsFileReader):
         match = match_occ_line(line)
         if match is None:
             raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' " "in OCC_DELTA section."
+                f"Cannot parse line '{line}' in OCC_DELTA section."
             )
 
         label, which, chem_blocks = match
@@ -143,7 +143,7 @@ class DisplacementsReader(SettingsFileReader):
         match = match_constrain_line(line)
         if match is None:
             raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' " "in CONSTRAIN section."
+                f"Cannot parse line '{line}' in CONSTRAIN section."
             )
 
         constraint_type, parameters, value = match
