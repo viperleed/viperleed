@@ -198,19 +198,21 @@ import PyQt5.QtWidgets as qtw
 
 # ViPErLEED modules
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
+from viperleed.guilib.dialogs.errors import DialogDismissedError
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import DataPoints
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import MissingSettingsFileError
-from viperleed.guilib.measure.classes.settings import SettingsError
+from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
+from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog
     )
-from viperleed.guilib.measure.dialogs.constants import DIALOG_DISMISSED
 from viperleed.guilib.measure.dialogs.firmwareupgradedialog import (
     FirmwareUpgradeDialog
     )
@@ -234,6 +236,20 @@ TITLE = 'Measure LEED-IV'
 
 _TIME_CRITICAL = qtc.QThread.TimeCriticalPriority
 _QMSG = qtw.QMessageBox
+
+
+def _emit_default_faulty(func):
+    """Emit an error_occurred when a _defaults settings file is wrong."""
+    @functools.wraps(func)
+    def _wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except (DefaultSettingsError, NoDefaultSettingsError) as exc:
+            base.emit_error(self,
+                            QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
+                            str(exc))
+            raise
+    return _wrapper
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -273,8 +289,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             'sys_settings':
                 SettingsDialog(handled_obj=SystemSettings(),
                                title="System settings"),
-            'bad_px_finder':
-                BadPixelsFinderDialog(),
+            'bad_px_finder': BadPixelsFinderDialog(),
             'camera_viewers': [],
             'error_box': _QMSG(self),                                           # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
             'device_settings': {},     # keys: unique names; No cameras
@@ -417,22 +432,27 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def update_device_lists(self):
         """Update entries in "Devices" menu."""
-        menu = self._ctrls['menus']['devices']
-        cameras, controllers = [a.menu() for a in menu.actions()]
+        devices_menu = self._ctrls['menus']['devices']
+        cameras, controllers = [a.menu() for a in devices_menu.actions()]
         cameras.clear()
         controllers.clear()
 
-        # The get_devices method does return the device name, class and,
-        # additional information. The class and additional information
-        # are returned as a tuple.
-        for cam_name, cls_and_info in self._detect_devices('camera'):
-            act = cameras.addAction(cam_name)
-            act.setData(cls_and_info)
-            act.triggered.connect(self._on_camera_clicked)
-        for ctrl_name, cls_and_info in self._detect_devices('controller'):
-            act = controllers.addAction(ctrl_name)
-            act.setData(cls_and_info)
-            act.triggered.connect(self._on_controller_clicked)
+        devices_and_slots = {
+            'camera': (cameras, self._on_camera_clicked),
+            'controller': (controllers, self._on_controller_clicked),
+            }
+        for device, (menu, slot) in devices_and_slots.items():
+            try:
+                detected_devices = self._detect_devices(device)
+            except (DefaultSettingsError, NoDefaultSettingsError):
+                continue
+            # The get_devices method does return the device name,
+            # class and, additional information. The class and
+            # additional information are returned as a tuple.
+            for device_name, cls_and_info in detected_devices:
+                act = menu.addAction(device_name)
+                act.setData(cls_and_info)
+                act.triggered.connect(slot)
 
         # Leave enabled only those containing entries
         cameras.setEnabled(bool(cameras.actions()))
@@ -638,23 +658,17 @@ class Measure(ViPErLEEDPluginBase):                                             
             dialog.deleteLater()
             del self._dialogs['device_settings'][full_name]
 
+    @_emit_default_faulty
     def _detect_devices(self, device_type):
         """Detect and return devices of a certain type."""
-        detected_devices = []
-        try:
-            detected_devices = base.get_devices(device_type).items()
-        except SettingsError as err:
-            base.emit_error(self,
-                            QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
-                            str(err) + ' Contact the ViPErLEED team '
-                            'to fix your default settings.')
-        return detected_devices
+        return base.get_devices(device_type).items()
 
     def _make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
         """Make a new settings dialog for a controller."""
         address = ctrl_info.more['address']
-        ctrl = self._make_device(ctrl_cls, ctrl_info, address=address)
-        if not ctrl:
+        try:
+            ctrl = self._make_device(ctrl_cls, ctrl_info, address=address)
+        except DefaultSettingsError:
             return
 
         dialog = SettingsDialog(ctrl, parent=self)                              # TODO: modal?
@@ -663,6 +677,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         full_name = ctrl_info.unique_name
         self._dialogs['device_settings'][full_name] = dialog
 
+    @_emit_default_faulty
     def _make_device(self, device_cls, settings_info, **other_info):
         """React to the selection of a device."""
         # Find an appropriate settings file, searching in the user
@@ -670,9 +685,14 @@ class Measure(ViPErLEEDPluginBase):                                             
         _cfg_dir = self.system_settings.paths['configuration']
         kwargs = {"directory": _cfg_dir, "parent_widget": self,
                   "third_btn_text": "Create a new settings file"}
-        config = base.get_object_settings(device_cls, settings_info, **kwargs)
 
-        if config is DIALOG_DISMISSED:
+        try:
+            config = base.get_object_settings(device_cls, settings_info,
+                                              **kwargs)
+        except NoSettingsError:
+            # No settings
+            config = None
+        except DialogDismissedError:
             # Did not find one, and user dismissed the dialog.
             return None
 
@@ -694,7 +714,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         device = device_cls(**other_info)
         if not device.has_valid_settings:
             # Something is wrong with the default configuration file.
-            return None
+            raise DefaultSettingsError
 
         # Edit the device name in the settings, then save to file
         if issubclass(device_cls, ControllerABC):
@@ -752,8 +772,9 @@ class Measure(ViPErLEEDPluginBase):                                             
                 return
 
         # Not already available. Make a new camera.
-        camera = self._make_device(*self.sender().data())
-        if not camera:
+        try:
+            camera = self._make_device(*self.sender().data())
+        except DefaultSettingsError:
             return
 
         camera.error_occurred.connect(self._on_camera_error)
@@ -787,11 +808,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Show settings of the controller selected."""
         full_name = self.sender().text()
         ctrl_cls, ctrl_info = self.sender().data()
-        # Note that ctrl_name may be different from
-        # the displayed controller name full_name.
-        ctrl_name = ctrl_info.more['name']
 
         if full_name not in self._dialogs['device_settings']:
+            # Note that ctrl_name may be different from
+            # the displayed controller name full_name.
+            ctrl_name = ctrl_info.more['name']
             self._delete_outdated_ctrl_dialog(ctrl_name)
             self._make_ctrl_settings_dialog(ctrl_cls, ctrl_info)
 

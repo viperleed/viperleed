@@ -392,7 +392,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found.
+            multiple files are found. An empty tuple signifies no
+            `config` file matches the requirements.
         """
         return (1,)
 
@@ -417,7 +418,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found.
+            multiple files are found. An empty tuple signifies no
+            `config` file matches the requirements.
         """
         return (1,)
 
@@ -439,6 +441,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                                 fallback=None)
         return cls.__name__ == meas_class
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement.
 
@@ -641,7 +644,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         Returns
         -------
         invalid_settings : list of tuples
-            Invalid required_settings of self as a list of tuples.
+            Invalid required settings of self as a list of tuples.
             The first entry in each tuple can be either '<section>',
             '<section>/<option>', or
             '<section>/<option> not one of <value1>, <value2>, ...'.
@@ -1382,7 +1385,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # Later on, this check will only happen if the unique name
         # of the controller in the settings file that was passed
         # is not found in the device list.
-        # Backwards compatibility fix for port_name:
+        # Backwards compatibility fix for port_name:                            # TODO: #242
         address = 'address'
         invalid = config.has_settings(('controller', 'address'))
         if invalid:

@@ -550,12 +550,13 @@ class ImagingSourceCamera(abc.CameraABC):
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             Larger values in the tuple indicate a higher degree of
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found.
+            multiple files are found. An empty tuple signifies no
+            `config` file matches the requirements.
         """
         # Note that we can just return matching here, as we already
         # know that the class matches. The reason for this is that the
@@ -581,12 +582,13 @@ class ImagingSourceCamera(abc.CameraABC):
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             Larger values in the tuple indicate a higher degree of
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found.
+            multiple files are found. An empty tuple signifies no
+            `config` file matches the requirements.
         """
         super().is_matching_user_settings(obj_info, config, match_exactly)
         camera_name = config.get('camera_settings', 'device_name',
@@ -599,7 +601,7 @@ class ImagingSourceCamera(abc.CameraABC):
         return (1,) if camera_name_re.match(obj_info.unique_name) else ()
 
     @classmethod
-    def is_settings_for_this_class(cls, config):
+    def is_settings_for_this_class(cls, config):                                # TODO: Move to CameraABC?
         """Determine if a `config` file is for this camera.
 
         Parameters
@@ -629,9 +631,9 @@ class ImagingSourceCamera(abc.CameraABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        self.check_creating_settings_handler_is_possible()
+        base_handler = super().get_settings_handler()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
-        handler.add_from_handler(super().get_settings_handler())
+        handler.add_from_handler(base_handler)
 
         # pylint: disable=redefined-variable-type
         # Triggered for _widget. While this is true, it is clear what

@@ -17,12 +17,13 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.dialogs.busywindow import BusyWindow
+from viperleed.guilib.dialogs.errors import DialogDismissedError
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import badpixels
+from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
-from viperleed.guilib.measure.dialogs.constants import DIALOG_DISMISSED
 from viperleed.guilib.widgetslib import change_control_text_color
 
 
@@ -438,13 +439,13 @@ class BadPixelsFinderDialog(qtw.QDialog):
         camera_cls, camera_info = self.__available_cameras[camera_name]
 
         # New camera selected.
-        config_name = base.get_object_settings(
-            camera_cls, camera_info, directory=_user_config_path(),
-            parent_widget=self
-            )
-
-        # Signal errors by picking an invalid entry
-        if not config_name or config_name is DIALOG_DISMISSED:
+        try:
+            config_name = base.get_object_settings(
+                camera_cls, camera_info, directory=_user_config_path(),
+                parent_widget=self
+                )
+        except (DialogDismissedError, NoSettingsError):
+            # Signal errors by picking an invalid entry
             self.__ctrls['camera'].setCurrentIndex(-1)
             self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
             self.active_camera = None
@@ -474,8 +475,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # create the active_camera without settings, and give
             # it settings shortly afterwards.
             return
-        if (error is QObjectSettingsErrors.INVALID_SETTINGS
-                and "bad_pixel" in error_msg.replace(" ", "_")):
+        if self.active_camera.is_bad_pixels_error(error_info):
             # Swallow bad-pixels path errors that may occur
             # before the calibration is started
             return

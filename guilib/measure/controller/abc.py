@@ -217,7 +217,7 @@ class ControllerABC(DeviceABC):
             self._hash = hash((id(self), self.name))
         return self._hash
 
-    def get_busy(self):
+    def _get_busy(self):
         """Return whether the controller is busy.
 
         If the serial is busy, the controller is always busy.
@@ -480,8 +480,8 @@ class ControllerABC(DeviceABC):
     def _update_serial_from_settings(self):
         """Set serial settings from new controller settings."""
         serial_cls_name = self.settings.get('controller', 'serial_class',
-                                            fallback='')                       # TODO: #242 (remove fallback in 1.0)
-        if not serial_cls_name:                                                 # TODO: #242 (only here for backwards compatibility, remove in 1.0)
+                                            fallback='')                        # TODO: #242
+        if not serial_cls_name:                                                 # TODO: #242
             serial_cls_name = self.settings.get('controller',
                                                 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
@@ -504,6 +504,7 @@ class ControllerABC(DeviceABC):
         self._time_to_trigger = 0
         self._hash = -1
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Set new settings for this controller.
 
@@ -787,6 +788,8 @@ class ControllerABC(DeviceABC):
         contain the controller name and it's address to make it unique.
         The information contained within a SettingsInfo must be enough
         to determine a suitable settings file for the device from it.
+        Subclasses should raise a DefaultSettingsError if they fail
+        to create instances from the settings in the DEFAULTS_PATH.
 
         Returns
         -------
@@ -1467,6 +1470,7 @@ class MeasureControllerABC(ControllerABC):
             # Probably arrived here due to an __init__ error
             pass
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Set new settings for this controller.
 

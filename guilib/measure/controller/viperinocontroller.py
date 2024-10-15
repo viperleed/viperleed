@@ -23,6 +23,7 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 from viperleed.guilib.measure.controller import abc
@@ -562,12 +563,13 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             The firmware minor of matching settings is returned as an
             indicator of how well the firmware matches. If an exact
             match is required, the firmware version has to be exactly
             the same. If no exact match is required, the highest
-            firmware minor will be preferred.
+            firmware minor will be preferred. An empty tuple signifies
+            no `config` file matches the requirements.
         """
         ver = base.Version(
             config.get('controller', 'firmware_version', fallback='0.0')
@@ -603,13 +605,15 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             The firmware minor of matching settings is returned as an
             indicator of how well the firmware matches. If an exact
             match is required, the firmware version has to be exactly
             the same, so all matching files will return the same
             sorting value. If no exact match is required, the highest
             firmware minor with a matching major will be preferred.
+            An empty tuple signifies no `config` file matches the
+            requirements.
         """
         super().is_matching_user_settings(obj_info, config, match_exactly)
         controller_name = config.get('controller', 'device_name',
@@ -663,6 +667,11 @@ class ViPErinoController(abc.MeasureControllerABC):
                 'firmware' : Version
                     The firmware version that is installed
                     on the controller.
+        
+        Raises
+        ------
+        DefaultSettingsError
+            If the default settings are corrupted.
         """
         # TODO: When detecting controllers we will have to run list_devices
         # for each firmware major once and after having detected controllers
@@ -679,9 +688,9 @@ class ViPErinoController(abc.MeasureControllerABC):
         for port in port_names:
             ctrl = ViPErinoController(address=port)
             if not ctrl.has_valid_settings:
-                raise RuntimeError(
-                    'The default settings are corrupted. Please '
-                    'contact the ViPErLEED developers.'
+                raise DefaultSettingsError(
+                    'The default settings are insufficient '
+                    'to make a controller.'
                     )
             if not ctrl.serial.is_open:
                 # Port is already in use

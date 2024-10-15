@@ -421,6 +421,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         return handler
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement."""
         settings_ok = super().set_settings(new_settings)

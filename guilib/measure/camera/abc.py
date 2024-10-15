@@ -625,6 +625,7 @@ class CameraABC(DeviceABC):
                 pass
 
         # Checking of non-mandatory data is done in property getters.
+        # The base-class implementation takes care of _mandatory_settings.
         if not super().set_settings(new_settings):
             return False
 
@@ -924,7 +925,8 @@ class CameraABC(DeviceABC):
         no additional information about the camera, then this dict can
         be empty. The information contained within a SettingsInfo must
         be enough to determine a suitable settings file for the device
-        from it.
+        from it. Subclasses should raise a DefaultSettingsError if they
+        fail to create instances from the settings in the DEFAULTS_PATH.
 
         Returns
         -------

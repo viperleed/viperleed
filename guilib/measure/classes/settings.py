@@ -77,6 +77,10 @@ class SettingsError(Exception):
     """Base exception for all settings-related errors."""
 
 
+class DefaultSettingsError(SettingsError):
+    """Exception raised when the default settings are corrupted."""
+
+
 class MissingSettingsFileError(SettingsError):
     """Exception raised when failed to read settings file(s)."""
 

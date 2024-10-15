@@ -22,7 +22,8 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.dialogs.dropdowndialog import DropdownDialog
-from viperleed.guilib.measure.dialogs.constants import DIALOG_DISMISSED
+from viperleed.guilib.dialogs.errors import DialogDismissedError
+from viperleed.guilib.measure.classes.settings import NoSettingsError
 
 # TODO: not nice. Also, there's two places where the _defaults
 # path is used. Here and in classes.settings. However, due to circular
@@ -207,7 +208,7 @@ def device_name_re(name):
         _patterns.append(''.join(_pattern3))
     # All patterns should match towards the end of the line,
     # and can have any characters before
-    return re.compile("|".join(r'^.*' + p + r'\s*$' for p in _patterns))
+    return re.compile('|'.join(rf'^\s*{p}\s*$' for p in _patterns))
 
 
 def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
@@ -230,13 +231,19 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
 
     Returns
     -------
-    path_to_config : Path, "", or None
-        The path to the only configuration file successfully
-        found. None or "" if no configuration file was found.
-        None is always returned if the user dismissed the pop-up.
-        The empty string is returned if an alternative option was
+    path_to_config : Path
+        The path to the only settings file successfully found or the
+        file that has been selected by the user.
+
+    Raises
+    ------
+    DialogDismissedError
+        If no settings file was found and an alternative option was
         given as a third_btn_text parameter, but the user anyway
         dismissed the dialog.
+    NoSettingsError
+        If no settings file was found and no alternative option was
+        given.
     """
     parent_widget = kwargs.get("parent_widget", None)
     directory = kwargs.get("directory", DEFAULTS_PATH)
@@ -271,8 +278,8 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
             return get_object_settings(obj_cls, obj_info, **kwargs)
     if third_btn and _clicked is not third_btn:
         # User had another option but dismissed the dialog
-        return DIALOG_DISMISSED
-    return None
+        raise DialogDismissedError('Failed to get device settings.')
+    raise NoSettingsError('Failed to get device settings.')
 
 
 def get_object_settings(obj_cls, obj_info, **kwargs):
@@ -305,19 +312,23 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         third_btn_text : str, optional
             If given and not empty, the string is used as the text
             for an extra button with "accept role" in the did-not-
-            find-a-config case. This function may return an empty
-            string only if this is given and if the user dismisses
-            the dialog. Default is an empty string.
+            find-a-config case. Default is an empty string.
 
     Returns
     -------
-    path_to_config : Path or None
+    path_to_config : Path
         The path to the only settings file successfully found or the
-        file that has been selected by the user. None if no settings
-        file was found. None is returned if the user dismissed the
-        pop-up. DIALOG_DISMISSED is returned if an alternative option
-        was given as a third_btn_text parameter, but the user anyway
+        file that has been selected by the user.
+
+    Raises
+    ------
+    DialogDismissedError
+        If no settings file was found and an alternative option was
+        given as a third_btn_text parameter, but the user anyway
         dismissed the dialog.
+    NoSettingsError
+        If no settings file was found and no alternative option was
+        given.
     """
     directory = kwargs.get('directory', DEFAULTS_PATH)
     match_exactly = kwargs.get('match_exactly', False)
@@ -342,10 +353,9 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
             "Select which one should be used:",
             names, parent=parent_widget
             )
-        config = None
         if dropdown.exec_() == dropdown.Apply:
-            config = device_config_files[names.index(dropdown.selection)]
-        return config
+            return device_config_files[names.index(dropdown.selection)]
+        raise NoSettingsError('No device settings selected.')
     return _get_object_settings_not_found(obj_cls, obj_info, **kwargs)
 
 
@@ -374,6 +384,8 @@ def get_devices(package):
     ------
     AttributeError
         If package is not one of the guilib.measure subpackages.
+    DefaultSettingsError
+        If the default settings are corrupted.
     """
     try:
         getattr(sys.modules[__package__], package)
