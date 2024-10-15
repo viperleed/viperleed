@@ -114,6 +114,7 @@ class BSSubtarget:
 
 class BSTarget:
     def __init__(self, target_str):
+        self.target_str = target_str
         self.subtargets = []
         self._parse_target(target_str)
 
@@ -138,3 +139,6 @@ class BSTarget:
             if sub1 != sub2:
                 return False
         return True
+
+    def __repr__(self):
+        return f"BSTarget({self.target_str})"
