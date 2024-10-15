@@ -19,7 +19,8 @@ def _get_target(label, which):
 
 
 class GeoDeltaLine:
-    def __init__(self, label, which, direction, start, stop, step):
+    def __init__(self, line, label, which, direction, start, stop, step):
+        self.line = line
         self.target = _get_target(label, which)
         self.direction = Direction(direction)
         self.range = DisplacementsRange(start, stop, step)
@@ -34,14 +35,11 @@ class GeoDeltaLine:
         return False
 
     def __repr__(self):
-        return (
-            f"GeoDeltaLine(target={self.target}, "
-            f"direction={self.direction}, range={self.range})"
-        )
-
+        return self.line
 
 class VibDeltaLine:
-    def __init__(self, label, which, start, stop, step):
+    def __init__(self, line, label, which, start, stop, step):
+        self.line = line
         self.target = _get_target(label, which)
         self.range = DisplacementsRange(start, stop, step)
 
@@ -55,13 +53,12 @@ class VibDeltaLine:
         return False
 
     def __repr__(self):
-        return (
-            f"VibDeltaLine(target={self.target}, range={self.range})"
-        )
+        return self.line
 
 
 class OccDeltaLine:
-    def __init__(self, label, which, chem_blocks):
+    def __init__(self, line, label, which, chem_blocks):
+        self.line = line
         self.target = _get_target(label, which)
         self.chem_blocks = chem_blocks
 
@@ -74,14 +71,12 @@ class OccDeltaLine:
         return False
 
     def __repr__(self):
-        return (
-            f"OccDeltaLine(target={self.target}, "
-            f"chem_blocks={self.chem_blocks})"
-        )
+        return self.line
 
 
 class ConstraintLine:
-    def __init__(self, constraint_type, parameters, value):
+    def __init__(self, line, constraint_type, targets, direction, value):
+        self.line = line
         self.constraint_type = constraint_type
         self.parameters = parameters
         self.value = value
@@ -96,14 +91,12 @@ class ConstraintLine:
         return False
 
     def __repr__(self):
-        return (
-            f"ConstraintLine(constraint_type={self.constraint_type}, "
-            f"parameters={self.parameters}, value={self.value})"
-        )
+        return self.line
 
 
 class OffsetsLine:
-    def __init__(self, offset_type, parameters, value):
+    def __init__(self, line, offset_type, parameters, value):
+        self.line = line
         self.offset_type = offset_type
         self.parameters = parameters
         self.value = value
@@ -118,7 +111,4 @@ class OffsetsLine:
         return False
 
     def __repr__(self):
-        return (
-            f"ConstraintLine(constraint_type={self.offset_type}, "
-            f"parameters={self.parameters}, value={self.value})"
-        )
+        return self.line
