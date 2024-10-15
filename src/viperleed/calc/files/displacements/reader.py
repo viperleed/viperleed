@@ -15,21 +15,16 @@ from .regex import match_vib_line
 from .regex import SEARCH_HEADER_PATTERN
 from .regex import SECTION_HEADER_PATTERN
 
-DisplacementFileSections = Enum('DisplacementFileSections', [
-    'OFFSETS',
-    'GEO_DELTA',
-    'VIB_DELTA',
-    'OCC_DELTA',
-    'CONSTRAIN'
-])
+DisplacementFileSections = Enum(
+    "DisplacementFileSections",
+    ["OFFSETS", "GEO_DELTA", "VIB_DELTA", "OCC_DELTA", "CONSTRAIN"],
+)
 
-LoopMarker = Enum('LoopMarker', [
-    'LOOP_START',
-    'LOOP_END'
-])
+LoopMarker = Enum("LoopMarker", ["LOOP_START", "LOOP_END"])
 
 from viperleed.calc.files.parameters.file_reader import SettingsFileReader
 from viperleed.calc.lib.string_utils import strip_comments
+
 
 class DisplacementsReader(SettingsFileReader):
     """Reader for the DISPLACEMENTS file based on SettingsFileReader."""
@@ -85,7 +80,7 @@ class DisplacementsReader(SettingsFileReader):
         """Get content from line."""
         # Decide based on the current section
         section = DisplacementFileSections[self.current_section]
-        if section is DisplacementFileSections.OFFSETS
+        if section is DisplacementFileSections.OFFSETS:
             return self._parse_offsets_line(line)
         elif section is DisplacementFileSections.GEO_DELTA:
             return self._parse_geo_delta_line(line)
@@ -104,8 +99,9 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the OFFSETS section."""
         match = match_offsets_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
-                                     "in OFFSETS section.")
+            raise InvalidDisplacementsSyntaxError(
+                f"Cannot parse line '{line}' " "in OFFSETS section."
+            )
         offset_type, parameters, value = match
         return OffsetsLine(offset_type, parameters, value)
 
@@ -113,8 +109,9 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the GEO_DELTA section."""
         match = match_geo_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
-                                     "in GEO_DELTA section.")
+            raise InvalidDisplacementsSyntaxError(
+                f"Cannot parse line '{line}' " "in GEO_DELTA section."
+            )
 
         label, which, direction, start, stop, step = match
         return GeoDeltaLine(label, which, direction, start, stop, step)
@@ -123,8 +120,9 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the VIB_DELTA section."""
         match = match_vib_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
-                                     "in VIB_DELTA section.")
+            raise InvalidDisplacementsSyntaxError(
+                f"Cannot parse line '{line}' " "in VIB_DELTA section."
+            )
 
         label, which, start, stop, step = match
         return VibDeltaLine(label, which, start, stop, step)
@@ -133,8 +131,9 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the OCC_DELTA section."""
         match = match_occ_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
-                                     "in OCC_DELTA section.")
+            raise InvalidDisplacementsSyntaxError(
+                f"Cannot parse line '{line}' " "in OCC_DELTA section."
+            )
 
         label, which, chem_blocks = match
         return OccDeltaLine(label, which, chem_blocks)
@@ -143,8 +142,9 @@ class DisplacementsReader(SettingsFileReader):
         """Parse a line in the CONSTRAIN section."""
         match = match_constrain_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(f"Cannot parse line '{line}' "
-                                     "in CONSTRAIN section.")
+            raise InvalidDisplacementsSyntaxError(
+                f"Cannot parse line '{line}' " "in CONSTRAIN section."
+            )
 
         constraint_type, parameters, value = match
         return ConstraintLine(constraint_type, parameters, value)
