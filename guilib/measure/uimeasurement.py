@@ -217,6 +217,7 @@ from viperleed.guilib.measure.dialogs.firmwareupgradedialog import (
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsDialog
 from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.serial.abc import SerialABC
 from viperleed.guilib.measure.widgets.cameraviewer import CameraViewer
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.pluginsbase import ViPErLEEDPluginBase
