@@ -559,7 +559,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             match is required, the firmware version has to be exactly
             the same. If no exact match is required, the highest
             firmware minor will be preferred. An empty tuple signifies
-            no `config` file matches the requirements.
+            that `config` does not match the requirements.
         """
         ver = base.Version(
             config.get('controller', 'firmware_version', fallback='0.0')
