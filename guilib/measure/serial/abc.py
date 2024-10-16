@@ -83,8 +83,6 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                                  'Command {} is not supported '
                                  'by the controller. Check implementation '
                                  'and/or your configuration file.')
-    # The following two are fatal errors, and should make the GUI
-    # essentially unusable, apart from loading appropriate settings
     PORT_NOT_OPEN = (54,
                      'Serial port could not be opened.')
 
