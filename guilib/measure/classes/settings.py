@@ -196,8 +196,7 @@ class ViPErLEEDSettings(ConfigParser):
         except (TypeError, MissingSettingsFileError) as exc:
             raise NoSettingsError(f'{cls.__name__}: could not '
                                   'load settings.') from exc
-        else:
-            return config
+        return config
 
     def __bool__(self):
         """Return True if there is any section."""
