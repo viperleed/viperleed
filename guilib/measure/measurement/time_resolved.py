@@ -16,10 +16,10 @@ from math import ceil
 
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
-                                                      MeasurementErrors)
-from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.classes.datapoints import QuantityInfo
+from viperleed.guilib.measure.measurement.abc import MeasurementABC
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -32,9 +32,11 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
     display_name = 'Time resolved'
 
-    _mandatory_settings = [*MeasurementABC._mandatory_settings,
-                           ('measurement_settings', 'is_continuous'),
-                           ('measurement_settings', 'energy_step_duration'),]
+    _mandatory_settings = (
+        *MeasurementABC._mandatory_settings,
+        ('measurement_settings', 'is_continuous'),
+        ('measurement_settings', 'energy_step_duration'),
+        )
 
     __request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                 # TODO: could be done with QMetaObject.invokeMethod
 
@@ -140,13 +142,13 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             'energy_step_duration')
         except (TypeError, ValueError):
             # Not an int
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/energy_step_duration', '')
             interval = min_t
 
         if interval < min_t:
             base.emit_error(
-                self, MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 f'{interval} (too short)',
                 'measurement_settings/energy_step_duration', min_t
                 )
@@ -181,7 +183,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             'is_continuous')
         except ValueError:
             # Not a valid boolean
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/is_continuous', '')
             return False
 
@@ -200,7 +202,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             fallback=min_t)
         except (TypeError, ValueError):
             # Not an int
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/measurement_interval', '')
             interval = min_t
 
@@ -208,7 +210,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             txt = f"{interval} (too short)"
             interval = min_t
             base.emit_error(
-                self, MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 txt, 'measurement_settings/measurement_interval', interval
                 )
             self.settings.set('measurement_settings', 'measurement_interval',
@@ -295,6 +297,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 energy = self.start_energy
         return energy
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement."""
         settings_ok = super().set_settings(new_settings)
@@ -370,7 +373,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         -------
         None.
         """
-        base.safe_disconnect(self.primary_controller.controller_busy,
+        base.safe_disconnect(self.primary_controller.busy_changed,
                              self.__check_is_finished)
         if self.aborted:
             # We entered this call after the measurement was aborted,
@@ -385,7 +388,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             base.safe_connect(self.__request_continuous_mode,
                               ctrl.set_continuous_mode, type=_UNIQUE)
         except AttributeError:
-            # Not a MeasureController or called during super().__init__
+            # Not a MeasureControllerABC or
+            # called during super().__init__
             pass
 
     def _disconnect_controller(self, ctrl):
@@ -576,10 +580,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         __request_continuous_mode(False)
             Tell the controller to turn continuous mode off.
         """
-        # First disconnect controller_busy from slots that may be
-        # inadvertently called in the super() call below
+        # First disconnect controller busy_changed from slots that may
+        # be inadvertently called in the super() call below.
         for ctrl in self.controllers:
-            base.safe_disconnect(ctrl.controller_busy,
+            base.safe_disconnect(ctrl.busy_changed,
                                  self.__check_is_finished)
 
         # Disconnect other signals that we will not need any longer.
@@ -631,5 +635,5 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # sure it properly turns "not busy" when it is done stopping.
         primary = self.primary_controller
         primary.busy = True
-        primary.controller_busy.connect(self.__check_is_finished, type=_UNIQUE)
+        primary.busy_changed.connect(self.__check_is_finished, type=_UNIQUE)
         primary.stop()

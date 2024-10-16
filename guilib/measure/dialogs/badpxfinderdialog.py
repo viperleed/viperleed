@@ -13,14 +13,18 @@ while finding bad pixels for a camera.
 
 from pathlib import Path
 
-from PyQt5 import (QtWidgets as qtw,
-                   QtCore as qtc)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
-from viperleed.guilib import dialogs
+from viperleed.guilib.dialogs.busywindow import BusyWindow
+from viperleed.guilib.dialogs.errors import DialogDismissedError
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure import camera as _m_camera
+from viperleed.guilib.measure.camera import badpixels
+from viperleed.guilib.measure.classes.settings import NoSettingsError
+from viperleed.guilib.measure.classes.settings import SystemSettings
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.widgetslib import change_control_text_color
-from viperleed.guilib.measure.classes import settings as _m_settings
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -30,8 +34,8 @@ NOT_SET = "\u2014"
 NO_BAD_PX_PATH = "None selected"
 
 
-def _default_config_path():
-    return _m_settings.SystemSettings().paths['configuration']
+def _user_config_path():
+    return SystemSettings().paths['configuration']
 
 
 class BadPixelsFinderDialog(qtw.QDialog):
@@ -82,9 +86,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 'delay_busy_hide': (qtc.QTimer(self), 100),
                 },
             'dialogs': {
-                'camera_busy': dialogs.BusyWindow(parent=self,
-                                                  text="Preparing camera...",
-                                                  max_onscreen_time=10)
+                'camera_busy': BusyWindow(parent=self,
+                                          text="Preparing camera...",
+                                          max_onscreen_time=10)
                 }
             }
 
@@ -388,7 +392,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if not previous:
             bad_px = cam.bad_pixels
         else:
-            bad_px = _m_camera.badpixels.BadPixels(cam)
+            bad_px = badpixels.BadPixels(cam)
             try:
                 bad_px.read(self.__ctrls['bad_px_path'].text(),
                             most_recent=False)
@@ -432,25 +436,26 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if self.active_camera and self.active_camera.name == camera_name:
             # Same selection
             return
+        camera_cls, camera_info = self.__available_cameras[camera_name]
 
         # New camera selected.
-        config_name = base.get_device_config(camera_name,
-                                             directory=_default_config_path(),
-                                             parent_widget=self)
-
-        # Signal errors by picking an invalid entry
-        if not config_name:
+        try:
+            config_name = base.get_object_settings(
+                camera_cls, camera_info, directory=_user_config_path(),
+                parent_widget=self
+                )
+        except (DialogDismissedError, NoSettingsError):
+            # Signal errors by picking an invalid entry
             self.__ctrls['camera'].setCurrentIndex(-1)
             self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
             self.active_camera = None
             return
-        settings = _m_settings.ViPErLEEDSettings.from_settings(config_name)
+        settings = ViPErLEEDSettings.from_settings(config_name)
         settings['camera_settings']['device_name'] = camera_name
 
         if not self.__camera_busy.isVisible():
             self.__camera_busy.show()
-        cls, _ = self.__available_cameras[camera_name]
-        self.active_camera = cls()
+        self.active_camera = camera_cls()
         self.active_camera.error_occurred.connect(self.__on_error_occurred)
         self.active_camera.started.connect(self.adjustSize)
         self.active_camera.preparing.connect(self.__on_camera_preparing)
@@ -462,16 +467,15 @@ class BadPixelsFinderDialog(qtw.QDialog):
         """React to an error situation."""
         error_code, error_msg = error_info
         try:
-            error = _m_camera.abc.CameraErrors.from_code(error_code)
+            error = QObjectSettingsErrors.from_code(error_code)
         except AttributeError:
             error = None
-        if error is _m_camera.abc.CameraErrors.MISSING_SETTINGS:
+        if error is QObjectSettingsErrors.MISSING_SETTINGS:
             # Swallow a MISSING_SETTINGS error since we always
             # create the active_camera without settings, and give
             # it settings shortly afterwards.
             return
-        if (error is _m_camera.abc.CameraErrors.INVALID_SETTINGS
-                and "bad_pixel" in error_msg.replace(" ", "_")):
+        if self.active_camera.is_bad_pixels_error(error_info):
             # Swallow bad-pixels path errors that may occur
             # before the calibration is started
             return
@@ -645,7 +649,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # bars properly shown immediately.
         qtw.qApp.processEvents()
 
-        self.__finder = _m_camera.badpixels.BadPixelsFinder(self.active_camera)
+        self.__finder = badpixels.BadPixelsFinder(self.active_camera)
         self.__finder.progress_occurred.connect(self.__on_progress)
         self.__finder.done.connect(self.__on_finder_done)
         self.__finder.done.connect(self.__finder.deleteLater)

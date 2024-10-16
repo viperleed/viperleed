@@ -19,10 +19,11 @@ from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
-                                                      MeasurementErrors)
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
+from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.measurement.abc import MeasurementErrors
 
 
 _MEASURED_EGY = QuantityInfo.HV
@@ -83,9 +84,10 @@ class MeasureEnergyCalibration(MeasurementABC):
         except (TypeError, ValueError, NoSectionError, NoOptionError):
             # Not a float or not present
             delta = fallback
-            base.emit_error(self,
-                            MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
-                            '', 'measurement_settings/delta_energy', fallback)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'measurement_settings/delta_energy', fallback
+                )
         return delta
 
     @property
@@ -104,9 +106,10 @@ class MeasureEnergyCalibration(MeasurementABC):
         except (TypeError, ValueError, NoSectionError, NoOptionError):
             # Not a float or not present
             egy = fallback
-            base.emit_error(self,
-                            MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
-                            '', 'measurement_settings/end_energy', fallback)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'measurement_settings/end_energy', fallback
+                )
         return egy                                                              # TODO: warn if end == 1000
 
     @qtc.pyqtSlot()
@@ -126,7 +129,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         """
         if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
             base.emit_error(
-                self, MeasurementErrors.INVALID_SETTINGS,
+                self, QObjectSettingsErrors.INVALID_SETTINGS,
                 'devices/primary_controller or devices/secondary_controllers',
                 '\nCannot run an energy calibration if no '
                 'controller measures the beam energy.'
@@ -139,7 +142,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         if egy_range < 10:
             # Require at least 10 eV for a reasonable calibration
             base.emit_error(
-                self, MeasurementErrors.INVALID_SETTINGS,
+                self, QObjectSettingsErrors.INVALID_SETTINGS,
                 'measurement_settings/start_energy and /end_energy',
                 f"\nToo small energy range ({abs(egy_range)} eV) for "
                 "calibration. It should be at least 10 eV."
@@ -149,7 +152,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         if n_steps < 10:
             # Require at least 10 data points for a decent fit
             base.emit_error(
-                self, MeasurementErrors.INVALID_SETTINGS,
+                self, QObjectSettingsErrors.INVALID_SETTINGS,
                 'measurement_settings/start_energy, /end_energy, '
                 'and /delta_energy',
                 f"\nToo few energies ({n_steps}) for a reasonable fit "
@@ -247,9 +250,10 @@ class MeasureEnergyCalibration(MeasurementABC):
                                                   fallback=(-10, 1100))
         except NotASequenceError:
             domain = (-10, 1100)
-            base.emit_error(self,
-                            MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
-                            "", 'energy_calibration/domain', domain)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'energy_calibration/domain', domain
+                )
 
         fit_polynomial, (residuals, *_) = (
             Polynomial.fit(measured_energies, nominal_energies, deg=1,
@@ -287,7 +291,7 @@ class MeasureEnergyCalibration(MeasurementABC):
                                                      'primary_controller')
         except (NotASequenceError, ValueError):
             # Something wrong with the settings?
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/primary_controller', '')
             return
 

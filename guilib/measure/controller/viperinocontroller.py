@@ -12,28 +12,41 @@ This module contains the definition of the ViPErinoController
 class and its associated ViPErLEEDErrorEnum class ViPErinoErrors
 which gives commands to the ViPErinoSerialWorker class.
 """
-import threading
 import re
+import threading
 import time
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
-from viperleed.guilib.measure.controller import abc
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
+from viperleed.guilib.measure.controller import abc
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 # For settings dialog:
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
 
 
 _MANDATORY_CMD_NAMES = (
-    "PC_AUTOGAIN", "PC_CONFIGURATION", "PC_SET_UP_ADCS", "PC_OK", "PC_RESET",
-    "PC_SET_VOLTAGE", "PC_ERROR", "PC_CALIBRATION", "PC_MEASURE_ONLY",
-    "PC_CHANGE_MEAS_MODE", "PC_STOP", "PC_SET_VOLTAGE_ONLY", "PC_SET_SERIAL_NR"
+    'PC_AUTOGAIN',
+    'PC_CALIBRATION',
+    'PC_CHANGE_MEAS_MODE',
+    'PC_CONFIGURATION',
+    'PC_ERROR',
+    'PC_MEASURE_ONLY',
+    'PC_OK',
+    'PC_RESET',
+    'PC_SET_SERIAL_NR',
+    'PC_SET_UP_ADCS',
+    'PC_SET_VOLTAGE',
+    'PC_SET_VOLTAGE_ONLY',
+    'PC_STOP',
     )
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -93,14 +106,14 @@ class ViPErinoController(abc.MeasureControllerABC):
     box_id = 1
 
     cls_lock = threading.RLock()  # Thread safe access to class properties
-    _mandatory_settings = [
+    _mandatory_settings = (
         # pylint: disable=protected-access
         *abc.MeasureControllerABC._mandatory_settings,
         ('available_commands',),
         ('controller', 'measurement_devices'),
         ('controller', 'firmware_version'),  # also mandatory on serial
         ('energy_calibration', 'v_ref_dac'),
-        ]
+        )
 
     hardware_info_arrived = qtc.pyqtSignal()
 
@@ -170,7 +183,7 @@ class ViPErinoController(abc.MeasureControllerABC):
 
         # The thermocouple.Thermocouple instance for this unit.
         # None if not present (or if TEMPERATURE was not measured)
-        self.__thermocouple = None
+        self._thermocouple = None
 
     @property
     def initial_delay(self):
@@ -200,8 +213,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             # pylint: disable=redefined-variable-type
             # Seems a pylint bug.
             meas_f = 50.0
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
-                            f"adc_update_rate/{update_rate_raw}", "")
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            f'adc_update_rate/{update_rate_raw}', '')
         return 1000 / meas_f
 
     @property
@@ -244,9 +257,9 @@ class ViPErinoController(abc.MeasureControllerABC):
         with self.lock:
             version = self.hardware.get("firmware", None)
         if version is None:
-            # Get it from the settings. Notice that the are_settings_ok
-            # extension already checks that the firmware version in the
-            # settings is present and valid
+            # Get it from the settings. Notice that the
+            # are_settings_invalid extension already checks that the
+            # firmware version in the settings is present and valid
             version = base.Version(
                 self.settings.get("controller", "firmware_version")
                 )
@@ -262,7 +275,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             Returns None in case it was not possible to derive
             the correct thermocouple from the settings.
         """
-        if self.__thermocouple is None:
+        if self._thermocouple is None:
             tc_type = self.settings.get('conversions', 'thermocouple_type',
                                         fallback=None)
             if tc_type is None:
@@ -271,27 +284,27 @@ class ViPErinoController(abc.MeasureControllerABC):
                                 '\nInfo: missing entry in settings.')
                 return None
             try:
-                self.__thermocouple = Thermocouple(tc_type)
+                self._thermocouple = Thermocouple(tc_type)
             except ValueError as err:
                 # Unknown thermocouple type
                 base.emit_error(self,
                                 ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
                                 f'\nInfo: {err}.')
                 return None
-        return self.__thermocouple
+        return self._thermocouple
 
     @thermocouple.setter
     def thermocouple(self, new_tc):
         """Set a new thermocouple. The type is stored in settings."""
         if new_tc is None or isinstance(new_tc, Thermocouple):
-            self.__thermocouple = new_tc
+            self._thermocouple = new_tc
         else:
             try:
-                self.__thermocouple = Thermocouple(new_tc)
+                self._thermocouple = Thermocouple(new_tc)
             except (ValueError, TypeError):
                 return
         try:
-            type_ = self.__thermocouple.type_
+            type_ = self._thermocouple.type_
         except AttributeError:  # None
             type_ = 'None'
         self.settings.set('conversions', 'thermocouple_type', type_)
@@ -301,29 +314,45 @@ class ViPErinoController(abc.MeasureControllerABC):
         """Return the interval between trigger and 1st measurement (msec)."""
         return (self.nr_samples + 2) * self.measurement_interval
 
-    def are_settings_ok(self, settings):
-        """Return whether a ViPErLEEDSettings is compatible with self."""
-        invalid = settings.has_settings(("controller", "firmware_version"))
-        if invalid:
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
-                            "controller/firmware_version",
-                            "Info: Entry is missing.")
-            return False
+    def are_settings_invalid(self, settings):
+        """Check if there are any invalid settings.
 
-        try:
-            version = base.Version(settings["controller"]["firmware_version"])
-        except (TypeError, ValueError) as err:
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
-                            "controller/firmware_version",
-                            f"Info: Value is invalid -- {err}")
-            return False
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The new settings.
 
-        self.__thermocouple = None  # In case it changed
+        Returns
+        -------
+        invalid_settings : list of tuples
+            Invalid _mandatory_settings of self as a list of tuples.
+            The first entry in each tuple can be either '<section>',
+            '<section>/<option>', or
+            '<section>/<option> not one of <value1>, <value2>, ...'.
+            Further optional entries may be added by subclasses. They
+            specify additional information on what is wrong with each
+            invalid setting.
+        """
+        invalid_settings = settings.has_settings(('controller',
+                                                  'firmware_version'))
+        if not invalid_settings:
+            try:
+                version = base.Version(
+                    settings['controller']['firmware_version']
+                    )
+            except (TypeError, ValueError) as err:
+                invalid_settings.append(('controller/firmware_version',
+                                         f'Info: Value is invalid -- {err}'))
+        else:
+            invalid_settings = [(invalid,) for invalid in invalid_settings]
+        if invalid_settings:
+            return invalid_settings
+        self._thermocouple = None  # In case it changed
 
         mandatory_cmd_names = list(_MANDATORY_CMD_NAMES)
-        if version >= "0.7":
-            mandatory_cmd_names.append("PC_DEBUG")
-        mandatory_commands = (("available_commands", cmd)
+        if version and version >= '0.7':
+            mandatory_cmd_names.append('PC_DEBUG')
+        mandatory_commands = (('available_commands', cmd)
                               for cmd in mandatory_cmd_names)
 
         # pylint: disable=protected-access
@@ -331,10 +360,11 @@ class ViPErinoController(abc.MeasureControllerABC):
         # than the one of self to prevent mandatory settings from
         # newer firmware versions to stay if settings for earlier
         # versions are loaded.
-        self._mandatory_settings = [*self.__class__._mandatory_settings,
-                                    *mandatory_commands]
+        self._mandatory_settings = (*self.__class__._mandatory_settings,
+                                    *mandatory_commands)
 
-        return super().are_settings_ok(settings)
+        invalid_settings.extend(super().are_settings_invalid(settings))
+        return invalid_settings
 
     def available_adcs(self):
         """Return a list of available ADC measurements.
@@ -427,7 +457,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                                                'adc_update_rate', fallback=4)
         except (TypeError, ValueError):
             # Cannot convert to int
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/adc_update_rate', '')
             return
         with self.lock:
@@ -491,20 +521,121 @@ class ViPErinoController(abc.MeasureControllerABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        # Start by adding info that we want shown on top
-        handler = SettingsHandler(self.settings)
+        self.check_creating_settings_handler_is_possible()
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
-                           display_name="Firmware version", read_only=True)
+                           display_name='Firmware version', read_only=True)
         handler.add_option('controller', 'device_name',
                            handler_widget=_settings.SerialNumberEditor(self),
-                           display_name="Serial No.")
+                           display_name='Serial No.')
+        handler.add_from_handler(super().get_settings_handler())
         handler.add_complex_section(
             _settings.HardwareConfigurationEditor(controller=self)              # TODO: add ADC_update rate for measurement
             )
-        # And add info from super() ['measurement_settings']
-        handler.add_from_handler(super().get_settings_handler())
         return handler
+
+    @classmethod
+    def is_matching_default_settings(cls, obj_info, config, match_exactly):
+        """Determine if the default `config` file is for this controller.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo or None
+            The information that should be used to check `config`.
+            If not None, then obj_info.more['firmware'], i.e., the
+            firmware version stored in the box, is matched against
+            the 'firmware_version' of `config`.
+        config : ConfigParser
+            The settings to check.
+        match_exactly : bool
+            Whether the firmware version should match exactly or not.
+
+        Returns
+        -------
+        sorting_info : tuple
+            A tuple that can be used to sort the detected settings.
+            The firmware minor of matching settings is returned as an
+            indicator of how well the firmware matches. If an exact
+            match is required, the firmware version has to be exactly
+            the same. If no exact match is required, the highest
+            firmware minor will be preferred. An empty tuple signifies
+            that `config` does not match the requirements.
+        """
+        ver = cls._get_version(config)
+        firmware_matches = (obj_info.more.get('firmware') == ver if obj_info
+                            else False)
+        if not match_exactly or firmware_matches:                               # TODO: check major in the future (compare class major to settings file major)
+            # If match_exactly is False we are looking for any default
+            # that may satisfy the requirements of the controller while
+            # likely not knowing the firmware version of the controller.
+            # If match_exactly is True, then we are looking for a
+            # default that does specifically match the firmware of
+            # the device we are looking at.
+            return (ver.minor,)
+        return ()
+
+    @classmethod
+    def is_matching_user_settings(cls, obj_info, config, match_exactly):
+        """Determine if a `config` file is for this controller.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo
+            The information that should be used to check `config`.
+            .more must contain the 'name' of the controller and the
+            installed 'firmware' version.
+        config : ConfigParser
+            The settings to check.
+        match_exactly : bool
+            Whether the firmware version should match exactly or not.
+
+        Returns
+        -------
+        sorting_info : tuple
+            A tuple that can be used to sort the detected settings.
+            The firmware minor of matching settings is returned as an
+            indicator of how well the firmware matches. If an exact
+            match is required, the firmware version has to be exactly
+            the same, so all matching files will return the same
+            sorting value. If no exact match is required, the highest
+            firmware minor with a matching major will be preferred.
+            An empty tuple signifies that `config` does not match
+            the requirements.
+        """
+        super().is_matching_user_settings(obj_info, config, match_exactly)
+        controller_name = config.get('controller', 'device_name',
+                                     fallback=None)
+        ver = cls._get_version(config)
+        if obj_info.more['name'] != controller_name:
+            return ()
+        if obj_info.more['firmware'] == ver:
+            return (ver.minor,)
+        if (not match_exactly
+              and obj_info.more['firmware'].major == ver.major):
+            # For a tolerant match checking the firmware major
+            # is good enough, as settings with the same major
+            # are bound to be at least partially compatible.
+            return (ver.minor,)
+        return ()
+
+    @classmethod
+    def is_settings_for_this_class(cls, config):
+        """Determine if a `config` file is for this controller.
+
+        Parameters
+        ----------
+        config : ConfigParser
+            The settings to check.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is for this controller.
+        """
+        controller_class = config.get('controller', 'controller_class',
+                                      fallback=None)
+        return cls.__name__ == controller_class
 
     def list_devices(self):  # too-complex, too-many-branches
         """List Arduino Micro VipErLEED hardware -- can be slow.
@@ -512,7 +643,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         device_list : list
-            Each element is a DeviceInfo instance containing the unique
+            Each element is a SettingsInfo instance containing the unique
             name of a controller and .more information as a dict.
             The .more dict contains the following keys:
                 'name' : str
@@ -522,7 +653,18 @@ class ViPErinoController(abc.MeasureControllerABC):
                 'firmware' : Version
                     The firmware version that is installed
                     on the controller.
+        
+        Raises
+        ------
+        DefaultSettingsError
+            If the default settings are corrupted.
         """
+        # TODO: When detecting controllers we will have to run list_devices
+        # for each firmware major once and after having detected controllers
+        # we have to return the SettingsInfo for each controller from the
+        # best matching firmware version (on serial side). This means
+        # we will discard the SettingsInfo obtained with serials running
+        # on a different major if .unique_name matches.
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
 
@@ -532,8 +674,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         for port in port_names:
             ctrl = ViPErinoController(address=port)
             if not ctrl.has_valid_settings:
-                print("Something is wrong with the ViPErino default settings")
-                return []
+                raise DefaultSettingsError(
+                    'The default settings are insufficient '
+                    'to make a controller.'
+                    )
             if not ctrl.serial.is_open:
                 # Port is already in use
                 continue
@@ -556,7 +700,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 more_info = {k: hardware[k] for k in ('firmware', )}
                 more_info['address'] = ctrl.address
                 more_info['name'] = ctrl.name
-                device_list.append(base.DeviceInfo(txt, more_info))
+                device_list.append(SettingsInfo(txt, more_info))
             else:
                 print("Not a ViPErLEED controller at", ctrl.address,
                       hardware, flush=True)
@@ -712,8 +856,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             v_ref_dac = self.settings.getfloat('energy_calibration',
                                                'v_ref_dac')
         except (TypeError, ValueError):
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
-                            'energy_calibration/v_ref_dac', "")
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'energy_calibration/v_ref_dac', '')
             v_ref_dac = 2.5
 
         dac_out_vs_nominal_energy = 10/1000  # 10 V / 1000 eV
@@ -741,8 +885,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             timeout = self.settings.getint("serial_port_settings", "timeout",
                                            fallback=0)
         except (TypeError, ValueError):
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
-                            'serial_port_settings/timeout', "")
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'serial_port_settings/timeout', '')
             timeout = 0
         timeout = max(timeout, 0) + sum(energies_and_times[1::2])
         self.send_message(cmd, energies_and_times, timeout=timeout)
@@ -770,11 +914,11 @@ class ViPErinoController(abc.MeasureControllerABC):
         try:
             available_adcs = self.available_adcs()
         except NotASequenceError:
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/measurement_devices', '')
             return
         except (KeyError, ValueError, TypeError, RuntimeError) as err:
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller', err)
             return
 
@@ -898,7 +1042,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         try:
             super().stop()
         except AttributeError:
-            # super().stop accesses serial_busy, which may
+            # super().stop accesses serial.busy_changed, which may
             # not exist if settings are somewhat funky.
             return
         stop = self.settings.get('available_commands', 'PC_STOP')
@@ -989,6 +1133,12 @@ class ViPErinoController(abc.MeasureControllerABC):
             self.thermocouple.temperature(v, t0)
             for v, t0 in zip(tc_voltages, cjc_temperatures)
             ]
+
+    @classmethod
+    def _get_version(cls, config):
+        """Get the firmware version of the hardware from `config`."""
+        ver = config.get('controller', 'firmware_version', fallback='0.0')
+        return base.Version(ver)
 
     @staticmethod
     def __is_adc(name):

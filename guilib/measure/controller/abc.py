@@ -9,8 +9,7 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains the definition of the ControllerABC and the
-MeasureController class abstract base classes and their associated
-ViPErLEEDErrorEnum class ControllerErrors used for giving basic
+MeasureControllerABC abstract base classes used for giving basic
 commands to the LEED electronics.
 """
 
@@ -21,12 +20,13 @@ import functools
 
 from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes import settings as _m_settings
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.classes.abc import DeviceABC
+from viperleed.guilib.measure.classes.abc import DeviceABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
 
 
@@ -57,8 +57,7 @@ def ensure_connected(method):
                 ) from None
         self.connect_()
         if not self.serial or not self.serial.is_open:
-            base.emit_error(self, ControllerErrors.NOT_CONNECTED,
-                            method.__name__, self.name, self.address)
+            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             return None
         try:
             return method(*args, **kwargs)
@@ -68,45 +67,10 @@ def ensure_connected(method):
     return _wrapper
 
 
-class ControllerErrors(base.ViPErLEEDErrorEnum):
-    """Class for controller errors."""
-
-    # The following three are fatal errors, and should make the GUI
-    # essentially unusable, apart from allowing to load appropriate
-    # settings.
-    INVALID_SETTINGS = (100,
-                        "Invalid controller settings: Required "
-                        "settings {} missing or values "
-                        "inappropriate. Check configuration file.\n{}")
-    MISSING_SETTINGS = (101,
-                        "Controller cannot operate without settings. "
-                        "Load an appropriate settings file before "
-                        "proceeding.")
-    DEFAULT_SETTINGS_CORRUPTED = (102,
-                                  "No or multiple default settings "
-                                  "found for controller class {!r}.")
-    CANNOT_MEASURE = (103,
-                      "A subclass of ControllerABC is not supposed to "
-                      "measure any quantities. Subclass MeasureControllerABC "
-                      "instead.")
-    INVALID_SETTING_WITH_FALLBACK = (
-        104,
-        "Invalid/unreadable controller settings value {} for setting {!r}. "
-        "Using {} instead. Consider fixing your configuration file."
-        )
-    NOT_CONNECTED = (
-        105,
-        "Impossible to execute {} on controller {}. "
-        "Device at address {} could not be opened."
-        )
-
-
 # too-many-public-methods
 # too-many-instance-attributes
-class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
+class ControllerABC(DeviceABC):
     """Base class for giving orders to the LEED electronics."""
-
-    error_occurred = qtc.pyqtSignal(tuple)
 
     # This signal is only used by the primary controller which
     # sets the energy. If the primary controller does not take
@@ -121,17 +85,15 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     # empty dictionary.
     data_ready = qtc.pyqtSignal(dict)
 
-    controller_busy = qtc.pyqtSignal(bool)
-
     # Emitted when the controller has performed all the tasks necessary
     # to provide the user with a complete set of settings. The process
     # is initiated in a call to prepare_to_show_settings().
     ready_to_show_settings = qtc.pyqtSignal()
 
-    _mandatory_settings = [
+    _mandatory_settings = (
         ('controller', 'serial_class'),
         ('controller', 'device_name'),
-        ]
+        )
 
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):
@@ -163,9 +125,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             If no address is given, and none was present in the
             settings file.
         """
-        super().__init__(parent=parent)
+        super().__init__(settings=settings, parent=parent)
         self.__sets_energy = sets_energy
-        self.__settings = _m_settings.ViPErLEEDSettings()
         self.__serial = None
         self.__hash = -1
 
@@ -197,11 +158,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         self.error_occurred.connect(self.__on_init_errors)
 
-        self.set_settings(settings)
-
-        # Is used to determine if the next step
-        # in the measurement cycle can be done.
-        self.__busy = False
+        self.set_settings(self._settings_to_load)
 
         # self.time_stamp is used to calculate times of measurements.
         # Even a non-measuring primary controller needs it to enable
@@ -209,7 +166,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.time_stamp = None
 
         # These dictionaries must be filled in subclasses.
-        # They must contain all functions the MeasureController has
+        # They must contain all functions the MeasureControllerABC has
         # to call in the order to bring the controller into a state
         # ready for setting the energy/taking measurements.
         # begin_prepare_todos contains everything that has to be
@@ -237,8 +194,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # data, and the second element is the timeout parameter.
         self.__unsent_messages = []
         if self.serial:
-            self.serial.serial_busy.connect(self.send_unsent_messages,
-                                            type=_QUEUED_UNIQUE)
+            self.serial.busy_changed.connect(self.send_unsent_messages,
+                                             type=_QUEUED_UNIQUE)
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
@@ -256,11 +213,19 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             self.__hash = hash((id(self), self.name))
         return self.__hash
 
-    def __get_busy(self):  # pylint: disable=unused-private-member
-        """Return whether the controller is busy."""
+    def _get_busy(self):
+        """Return whether the controller is busy.
+
+        If the serial is busy, the controller is always busy.
+
+        Returns
+        -------
+        busy : bool
+            True if the controller is busy.
+        """
         if self.serial and self.serial.busy:
             return True
-        return self.__busy
+        return super()._get_busy()
 
     @qtc.pyqtSlot(bool)
     def set_busy(self, is_busy):
@@ -279,20 +244,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         Emits
         -----
-        controller_busy
+        busy_changed
             If the busy state of the controller changed.
         """
         if self.__unsent_messages:
             return
-        was_busy = self.busy
-        is_busy = bool(is_busy)
         if self.serial and self.serial.busy:
             is_busy = True
-        self.__busy = is_busy
-        if was_busy is not is_busy:
-            self.controller_busy.emit(self.busy)
-
-    busy = property(__get_busy, set_busy)
+        super().set_busy(is_busy)
 
     @property
     def energy_calibration_curve(self):
@@ -313,7 +272,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             except _m_settings.NotASequenceError:
                 coef = (0, 1)
                 base.emit_error(
-                    self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                    self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                     '', 'energy_calibration/coefficients', coef
                     )
             try:
@@ -354,8 +313,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'measurement_settings/hv_settle_time')
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/hv_settle_time', '')
         return settle_t
 
     @property
@@ -376,8 +335,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'measurement_settings/i0_settle_time')
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/i0_settle_time', '')
         return settle_t
 
     @property
@@ -415,8 +374,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'measurement_settings/i0_settle_time')
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/i0_settle_time', '')
         return settle_t
 
     @property
@@ -491,16 +450,6 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__sets_energy = bool(energy_setter)
 
     @property
-    def settings(self):
-        """Return the current settings used as a ConfigParser."""
-        return self.__settings
-
-    @settings.setter
-    def settings(self, new_settings):
-        """Set new settings for this controller."""
-        self.set_settings(new_settings)
-
-    @property
     def time_to_trigger(self):
         """Return the time required for triggering measurements.
 
@@ -516,7 +465,34 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             return 0
         return self._time_to_trigger
 
-    def set_settings(self, new_settings):  # too-complex
+    def _update_serial_from_settings(self):
+        """Set serial settings from new controller settings."""
+        serial_cls_name = self.settings.get('controller', 'serial_class',
+                                            fallback='')                        # TODO: #242
+        if not serial_cls_name:                                                 # TODO: #242
+            serial_cls_name = self.settings.get('controller',
+                                                'serial_port_class')
+        if self.serial.__class__.__name__ != serial_cls_name:
+            serial_class = base.class_from_name('serial', serial_cls_name)
+            self.__serial = serial_class(self.settings,
+                                         port_name=self.__address)
+            self.serial.error_occurred.connect(self.error_occurred)
+        else:
+            # The next line will also check that self.settings contains
+            # appropriate settings for the serial class used.
+            self.serial.settings = self.settings
+            self.serial.port_name = self.__address
+
+        # Notice that the .connect_() will run anyway, even if the
+        # settings are invalid (i.e., missing mandatory fields for
+        # the serial)!
+        if self.__address:
+            self.serial.connect_()
+        self._time_to_trigger = 0
+        self.__hash = -1
+
+    @qtc.pyqtSlot(object)
+    def set_settings(self, new_settings):
         """Set new settings for this controller.
 
         Settings are accepted and loaded only if they are valid.
@@ -530,15 +506,18 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or None
-            The new settings. If False-y, an attempt to retrieve
-            settings from a default file will be made. new_settings
-            (or the default) will be checked for the following
-            mandatory sections/options:
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
+            The new settings. new_settings will be checked
+            for the following mandatory sections/options:
                 'controller'/'serial_class'
             (if self.sets_energy:
                 'measurement_settings'/'i0_settle_time'
                 'measurement_settings'/'hv_settle_time')
+
+        Returns
+        -------
+        settings_valid : bool
+            True if the new settings given were accepted.
 
         Emits
         -----
@@ -548,86 +527,44 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             or if the serial class specified in the settings could not
             be instantiated.
         """
-        # Look for a default only if no settings are given
-        _name = self.__class__.__name__ if not new_settings else None
-        try:
-            new_settings = _m_settings.ViPErLEEDSettings.from_settings(
-                new_settings,
-                find_from=_name
-                )
-        except _m_settings.NoDefaultSettingsError:
-            base.emit_error(self, ControllerErrors.DEFAULT_SETTINGS_CORRUPTED,
-                            _name)
-            return
-        except _m_settings.NoSettingsError:
-            base.emit_error(self, ControllerErrors.MISSING_SETTINGS)
-            return
-
-        if not self.are_settings_ok(new_settings):
-            return
+        if not super().set_settings(new_settings):
+            return False
 
         # Take care of the address, syncing the contents of
         # the future settings and the value in self.__address.
         # Also, save changes to file, unless we have been reading
         # from the default configuration.
-        _settings_serial = new_settings.get('controller', 'address',
-                                            fallback=self.__address)
+        _settings_address = self._settings.get('controller', 'address',
+                                               fallback=self.__address)
         if not self.__address:
-            self.__address = _settings_serial
+            self.__address = _settings_address
         else:
-            new_settings['controller']['address'] = self.__address
-            if _name is None:  # Not read from _defaults
-                new_settings.update_file()
-
-        serial_cls_name = new_settings.get('controller', 'serial_class',
-                                           fallback='')                         # TODO: remove fallback in 1.0
-        if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
-            serial_cls_name = new_settings.get('controller',
-                                               'serial_port_class')
-        if self.serial.__class__.__name__ != serial_cls_name:
-            try:
-                serial_class = base.class_from_name('serial', serial_cls_name)
-            except ValueError:
-                base.emit_error(
-                    self, ControllerErrors.INVALID_SETTINGS,
-                    'controller/serial_class', ''
-                    )
-                return
-            self.__serial = serial_class(new_settings,
-                                         port_name=self.__address)
-            self.serial.error_occurred.connect(self.error_occurred)
-        else:
-            # The next line will also check that new_settings contains
-            # appropriate settings for the serial class used.
-            self.serial.port_settings = new_settings
-            self.serial.port_name = self.__address
-
-        # Notice that the .connect_() will run anyway, even if the
-        # settings are invalid (i.e., missing mandatory fields for
-        # the serial)!
-        if self.__address:
-            self.serial.connect_()
-        self.__settings = self.serial.port_settings
-        self._time_to_trigger = 0
-        self.__hash = -1
+            self._settings['controller']['address'] = self.__address
+            if not self.uses_default_settings:
+                self._settings.update_file()
+        try:
+            self._update_serial_from_settings()
+        except ValueError:
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'controller/serial_class', '')
+            return False
+        return True
 
     @abstractmethod
-    def are_settings_ok(self, settings):
-        """Return whether a ViPErLEEDSettings is compatible with self.
+    def are_settings_invalid(self, settings):
+        """Check if there are any invalid settings.
 
-        This method should be extended in subclasses, i.e., it
-        should return False if super().are_settings_ok(settings)
-        returns False. This method is guaranteed to be called
-        once each time new settings are loaded, either via
-        .set_settings() or via the .settings property. It is
+        This method should be extended in subclasses. This method is
+        guaranteed to be called once each time new settings are loaded,
+        either via .set_settings() or via the .settings property. It is
         always passed a ViPErLEEDSettings instance. Settings will
-        be loaded successfully only if this method returns True.
-        The base implementation automatically checks for the
+        be loaded successfully only if this method returns no invalid
+        settings. The base implementation automatically checks for the
         presence of all _mandatory_settings. Thus, subclasses
         may simply extend _mandatory_settings, then call super().
-
-        Subclasses should emit self.error_occured to inform users
-        of invalid settings.
+        See the documentation of the _mandatory_settings attribute
+        in measure.classes.abc.QObjectWithSettingsABC for how to
+        do this safely.
 
         Parameters
         ----------
@@ -636,8 +573,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         Returns
         -------
-        settings_ok : bool
-            True if settings are ok.
+        invalid_settings : list of tuples
+            Invalid _mandatory_settings of self as a list of tuples.
+            The first entry in each tuple can be either '<section>',
+            '<section>/<option>', or
+            '<section>/<option> not one of <value1>, <value2>, ...'.
+            Further optional entries may be added by subclasses. They
+            specify additional information on what is wrong with each
+            invalid setting.
         """
         # The next extra settings are mandatory only for a
         # controller that sets the LEED energy on the optics
@@ -647,10 +590,10 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                                ('measurement_settings', 'hv_settle_time'),
                                ('measurement_settings', 'first_settle_time'))
 
-        invalid = settings.has_settings(*self._mandatory_settings,
-                                        *extra_mandatory)
+        invalid_settings = settings.has_settings(*self._mandatory_settings,
+                                                 *extra_mandatory)
 
-        # Backwards compatibility fix
+        # Backwards compatibility fix                                           # TODO: #242
         new = (
             ('measurement_settings', 'nr_samples'),
             ('controller', 'serial_class'),
@@ -660,26 +603,22 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             ('controller', 'serial_port_class'),
             )
         for new_setting, old_setting in zip(new, old):
-            if '/'.join(new_setting) in invalid:
+            if '/'.join(new_setting) in invalid_settings:
                 old_missing = settings.has_settings(old_setting)
                 if not old_missing:
                     settings.set(*new_setting, settings.get(*old_setting))
                     settings.remove_option(*old_setting)
                     settings.update_file()
-                    invalid.remove('/'.join(new_setting))
+                    invalid_settings.remove('/'.join(new_setting))
 
-        if invalid:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            ', '.join(invalid), '')
-            return False
-        return True
+        return [(invalid,) for invalid in invalid_settings]
 
     @qtc.pyqtSlot(tuple)
     def begin_preparation(self, energies_and_times):
         """Trigger the first step in the preparation for measurements.
 
         Set self.busy to True, reset all begin_prepare_todos and start
-        first step of the preparation. The .controller_busy() signal
+        first step of the preparation. The .busy_changed() signal
         will be emitted carrying False once all steps are complete.
 
         Parameters
@@ -704,12 +643,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__can_continue_preparation = False
 
         self.busy = True
-        base.safe_disconnect(self.serial.serial_busy,
+        base.safe_disconnect(self.serial.busy_changed,
                              self.send_unsent_messages)
         # Note that here we do not need to use a _QUEUED_UNIQUE
         # connection, as preparation steps never cause the
         # accumulation of unsent messages
-        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
+        base.safe_connect(self.serial.busy_changed, self.__do_preparation_step,
                           type=_UNIQUE)
         self.__do_preparation_step()
 
@@ -736,12 +675,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__can_continue_preparation = True
 
         self.busy = True
-        base.safe_disconnect(self.serial.serial_busy,
+        base.safe_disconnect(self.serial.busy_changed,
                              self.send_unsent_messages)
         # Note that here we do not need to use a _QUEUED_UNIQUE
         # connection, as preparation steps never cause the
         # accumulation of unsent messages
-        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
+        base.safe_connect(self.serial.busy_changed, self.__do_preparation_step,
                           type=_UNIQUE)
         self.__do_preparation_step()
 
@@ -765,7 +704,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         This method should be extended in subclasses, i.e., do
         handler = super().get_settings_handler(), and then add
         appropriate sections and/or options to it using the
-        handler.add_section, and handler.add_option methods
+        handler.add_section, and handler.add_option methods.
 
         The base-class implementation returns a handler that
         already contains the following settings:
@@ -785,7 +724,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        handler = SettingsHandler(self.settings)
+        handler = super().get_settings_handler()
         if not self.sets_energy:
             return handler
 
@@ -822,17 +761,21 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     def list_devices(self):
         """List all devices of this class.
 
-        This method must return a list of DeviceInfo instances. The
-        DeviceInfo class is located in the hardwarebase module. Each
-        controller is represented by a single DeviceInfo instance. The
-        DeviceInfo object must contain a .unique_name, and a dict
-        holding .more information about the device. .unique_name can
-        be the controller name and it's address to make it unique.
+        This method must return a list of SettingsInfo instances. The
+        SettingsInfo class is located in the classes.abc module. Each
+        controller is represented by a single SettingsInfo instance. The
+        SettingsInfo object must contain a .unique_name, and a dict
+        holding .more information about the device. .unique_name may
+        contain the controller name and it's address to make it unique.
+        The information contained within a SettingsInfo must be enough
+        to determine a suitable settings file for the device from it.
+        Subclasses should raise a DefaultSettingsError if they fail
+        to create instances from the settings in the DEFAULTS_PATH.
 
         Returns
         -------
         devices : list
-            Each element is a DeviceInfo instance containing the name
+            Each element is a SettingsInfo instance containing the name
             of a controller and additional information as a dict.
             The .more dict must contain the following keys:
                 'name':
@@ -997,7 +940,10 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_measurements(self, quantities):
         """Set measured_quantities property."""
         if quantities:
-            base.emit_error(self, ControllerErrors.CANNOT_MEASURE)
+            raise TypeError(
+                'A subclass of ControllerABC is not supposed to measure '
+                'any quantities. Subclass MeasureControllerABC instead.'
+                )
 
     @abstractmethod
     @qtc.pyqtSlot()
@@ -1011,7 +957,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         None.
         """
-        serial_busy = self.serial.serial_busy
+        serial_busy = self.serial.busy_changed
         base.safe_disconnect(serial_busy, self.__do_preparation_step)
         base.safe_connect(serial_busy, self.send_unsent_messages,
                           type=_QUEUED_UNIQUE)
@@ -1085,13 +1031,13 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Disconnect signal: will be reconnected
         # during the call to continue_preparation
-        base.safe_disconnect(self.serial.serial_busy,
+        base.safe_disconnect(self.serial.busy_changed,
                              self.__do_preparation_step)
         if self.__can_continue_preparation:
             # The whole preparation is now over.
             # Guarantee that any unsent message that may have come
             # while the preparation was running is now sent.
-            base.safe_connect(self.serial.serial_busy,
+            base.safe_connect(self.serial.busy_changed,
                               self.send_unsent_messages,
                               type=_QUEUED_UNIQUE)
         self.busy = False
@@ -1112,10 +1058,10 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 class MeasureControllerABC(ControllerABC):
     """Controller class for measurement controllers."""
 
-    _mandatory_settings = [
+    _mandatory_settings = (
         *ControllerABC._mandatory_settings,
         ('measurement_settings', 'nr_samples'),
-        ]
+        )
 
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):
@@ -1184,9 +1130,10 @@ class MeasureControllerABC(ControllerABC):
         except (TypeError, ValueError):
             # Not a float
             delay = fallback
-            base.emit_error(self,
-                            ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                            '', 'controller/initial_delay', delay)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'controller/initial_delay', delay
+                )
         return delay
 
     @property
@@ -1226,12 +1173,12 @@ class MeasureControllerABC(ControllerABC):
         except (TypeError, ValueError):
             nr_samples = 1
             base.emit_error(
-                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/nr_samples', nr_samples
                 )
         if nr_samples <= 0:
             base.emit_error(
-                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 nr_samples, 'measurement_settings/nr_samples', 1
                 )
             nr_samples = 1
@@ -1271,7 +1218,7 @@ class MeasureControllerABC(ControllerABC):
         This method should be extended in subclasses, i.e., do
         handler = super().get_settings_handler(), and then add
         appropriate sections and/or options to it using the
-        handler.add_section, and handler.add_option methods
+        handler.add_section, and handler.add_option methods.
 
         The base-class implementation returns a handler that
         already contains the following settings:
@@ -1298,7 +1245,7 @@ class MeasureControllerABC(ControllerABC):
         widget = InfIntSpinBox()
         widget.setMinimum(1)
         tip = ("<nobr>The number of measurements the controller should"
-               "</nobr> average over before returning a value to the PC")
+               "</nobr> average over before returning a value to the PC.")
         handler.add_option('measurement_settings', 'nr_samples',
                            handler_widget=widget, display_name='No. samples',
                            tooltip=tip)
@@ -1479,9 +1426,9 @@ class MeasureControllerABC(ControllerABC):
         Subclasses must extend this method. If continuous is True the
         controller has to continue measuring and return data without
         receiving further instructions. The base-class implementation
-        connects the serial_busy with self.busy: when the hardware
-        acknowledges the receipt of the command the controller should
-        turn "not busy".
+        connects the serial.busy_changed with self.busy: when the
+        hardware acknowledges the receipt of the command the controller
+        should turn "not busy".
 
         Parameters
         ----------
@@ -1493,12 +1440,13 @@ class MeasureControllerABC(ControllerABC):
         None.
         """
         try:
-            base.safe_connect(self.serial.serial_busy, self.set_busy,
+            base.safe_connect(self.serial.busy_changed, self.set_busy,
                               type=_QUEUED_UNIQUE)
         except AttributeError:
             # Probably arrived here due to an __init__ error
             pass
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Set new settings for this controller.
 
@@ -1509,10 +1457,15 @@ class MeasureControllerABC(ControllerABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             The new settings. Will be checked for the following
             mandatory sections/options:
                 'controller'/'serial_class'
+
+        Returns
+        -------
+        settings_valid : bool
+            True if the new settings given were accepted.
 
         Emits
         -----
@@ -1522,7 +1475,8 @@ class MeasureControllerABC(ControllerABC):
             or if the serial class specified in the settings could not
             be instantiated.
         """
-        super().set_settings(new_settings)
+        if not super().set_settings(new_settings):
+            return False
 
         if self.serial is not None:
             # Connect data_received signal from the serial to
@@ -1534,3 +1488,4 @@ class MeasureControllerABC(ControllerABC):
             # about_to_trigger signal.
             base.safe_connect(self.serial.about_to_trigger,
                               self.about_to_trigger, type=_UNIQUE)
+        return True

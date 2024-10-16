@@ -24,15 +24,17 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
-                                                          ImageProcessInfo)
+from viperleed.guilib.measure.camera.imageprocess import ImageProcessInfo
+from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.classes import settings as _m_settings
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.classes.abc import DeviceABC
+from viperleed.guilib.measure.classes.abc import DeviceABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
-from viperleed.guilib.measure.widgets.spinboxes import (InfIntSpinBox,
-                                                        TolerantCommaSpinBox)
+from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
+from viperleed.guilib.measure.widgets.spinboxes import TolerantCommaSpinBox
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -46,47 +48,24 @@ from viperleed.guilib.measure.widgets.spinboxes import (InfIntSpinBox,
 class CameraErrors(base.ViPErLEEDErrorEnum):
     """Data class for base camera errors."""
 
-    INVALID_SETTINGS = (200,
-                        "Invalid camera settings: Required settings "
-                        "{!r} missing or values inappropriate. "
-                        "Check configuration file.\n{}")
-    MISSING_SETTINGS = (201,
-                        "Camera cannot operate without settings. Load "
-                        "an appropriate settings file before proceeding.")
-    CAMERA_NOT_FOUND = (202,
-                        "Could not find camera {}.\n\nMake sure the camera "
-                        "is connected, has power, and is not currently in "
-                        "use in an other program.\n\nTry (re-)plugging it, "
-                        "and give the camera enough time to boot up.")
-    SETTINGS_MISMATCH = (203,
-                         "Different {} settings found in camera and "
-                         "configuration file: camera={}, settings={}.")
-    INVALID_SETTING_WITH_FALLBACK = (204,
-                                     "Invalid camera settings value {} for "
-                                     "setting {!r}. Using {} instead. Consider"
-                                     " fixing your configuration file.")
-    UNSUPPORTED_OPERATION = (205, "Cannot {} in {} mode. Switch mode before.")
-    BINNING_ROI_MISMATCH = (206,
-                            "Region of interest size ({} x {}) is incompatible"
-                            " with binning factor {}. Reducing region of "
-                            "interest to ({} x {}). A few pixels on the "
-                            "lower-right corner may be removed.")
-    UNSUPPORTED_WHILE_BUSY = (207, "Cannot {} while camera is busy.")
-    TIMEOUT = (208,   # Only in triggered mode
-               "No frames returned by camera {} in the last {} seconds. "
-               "Check that the camera is plugged in and powered. If it "
-               "is, try rebooting the camera.")
-    DEFAULT_SETTINGS_CORRUPTED = (
-        209,
-        "No or multiple default settings found for camera class {!r}."
-        )
+    SETTINGS_MISMATCH = (200,
+                         'Different {} settings found in camera and '
+                         'configuration file: camera={}, settings={}.')
+    UNSUPPORTED_OPERATION = (201, 'Cannot {} in {} mode. Switch mode before.')
+    BINNING_ROI_MISMATCH = (202,
+                            'Region of interest size ({} x {}) is incompatible'
+                            ' with binning factor {}. Reducing region of '
+                            'interest to ({} x {}). A few pixels on the '
+                            'lower-right corner may be removed.')
+    UNSUPPORTED_WHILE_BUSY = (203, 'Cannot {} while camera is busy.')
+    TIMEOUT = (204,   # Only in triggered mode
+               'No frames returned by camera {} in the last {} seconds. '
+               'Check that the camera is plugged in and powered. If it '
+               'is, try rebooting the camera.')
 
 
-class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
+class CameraABC(DeviceABC):
     """Abstract base class for ViPErLEED cameras."""
-
-    camera_busy = qtc.pyqtSignal(bool)
-    error_occurred = qtc.pyqtSignal(tuple)
 
     # frame_ready should be emitted in any callback function that the
     # camera may call. If the camera does not allow to call a callback
@@ -123,11 +102,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     # the processing thread
     __process_frame = qtc.pyqtSignal(np.ndarray)
 
-    _mandatory_settings = [
+    _mandatory_settings = (
             ('camera_settings', 'class_name'),
             ('camera_settings', 'device_name'),
             ('measurement_settings', 'exposure'),
-            ]
+            )
 
     # _abstract is a list of features for which setter and getter
     # methods must always be overridden in concrete classes
@@ -173,11 +152,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         **kwargs : object
             Other unused keyword arguments.
         """
-        super().__init__(parent=parent)
+        super().__init__(settings=settings, parent=parent)
         self.driver = driver
-        self.__busy = False
         self.__connected = False
-        self.__settings = _m_settings.ViPErLEEDSettings()
         self.__bad_pixels = None
         self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
@@ -216,7 +193,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__calibration_tasks = {'bad_pixels': [], 'starting': []}
 
         try:
-            self.set_settings(settings)
+            self.set_settings(self._settings_to_load)
         except self.exceptions:
             # Start a short QTimer to report errors that occurred here
             # AFTER the whole __init__ is done, i.e., when we suppose
@@ -266,45 +243,16 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         min_bin, max_bin = self.get_binning_limits()
         if binning_factor < min_bin or binning_factor > max_bin:
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            f"{binning_factor} "
-                            f"[out of range ({min_bin}, {max_bin})]",
-                            'camera_settings/binning', 1)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                f'{binning_factor} '
+                f'[out of range ({min_bin}, {max_bin})]',
+                'camera_settings/binning', 1
+                )
             binning_factor = 1
             self.settings.set('camera_settings', 'binning', '1')
         self.__properties['binning'] = binning_factor
         return binning_factor
-
-    @property
-    def busy(self):
-        """Return whether the camera is busy.
-
-        Returns
-        -------
-        busy : bool
-            True if the camera is busy. A camera is to be considered
-            busy after a measurement started and until the last frame
-            requested arrived back to the PC.
-        """
-        return self.__busy
-
-    @busy.setter
-    def busy(self, is_busy):
-        """Set the busy state of the camera.
-
-        If the busy state of the camera changes, the camera_busy
-        signal will be emitted, carrying the current busy state.
-
-        Emits
-        -----
-        camera_busy(self.busy)
-            If the busy state changes.
-        """
-        was_busy = self.busy
-        is_busy = bool(is_busy)
-        if was_busy is not is_busy:
-            self.__busy = is_busy
-            self.camera_busy.emit(self.busy)
 
     @property
     def calibration_tasks(self):
@@ -390,7 +338,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         min_exp, max_exp = self.get_exposure_limits()
         if exposure_time < min_exp or exposure_time > max_exp:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/exposure',
                             f'\nInfo: out of range ({min_exp}, {max_exp})')
             exposure_time = min_exp
@@ -447,7 +395,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/gain',
                             f'\nInfo: out of range ({min_gain}, {max_gain})')
             gain = min_gain
@@ -509,8 +457,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                                  fallback='triggered')
 
         if mode not in ('live', 'triggered'):
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            mode, 'camera_settings/mode', 'triggered')
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                mode, 'camera_settings/mode', 'triggered'
+                )
             mode = 'triggered'
             self.settings.set('camera_settings', 'mode', mode)
         return mode
@@ -532,9 +482,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            f"{n_frames} [out of range ({min_n}, {max_n})]",
-                            'measurement_settings/n_frames', 1)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                f'{n_frames} [out of range ({min_n}, {max_n})]',
+                'measurement_settings/n_frames', 1
+                )
             n_frames = 1
             self.settings.set('measurement_settings', 'n_frames', '1')
         self.__properties['n_frames'] = n_frames
@@ -600,7 +552,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         full_roi = 0, 0, *size_max
 
         if not self.__is_valid_roi(roi, limits):
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/roi', '\nInfo: ROI is invalid. '
                             f'You can use the full sensor: roi = {full_roi}')
             self.settings.set('camera_settings', 'roi', 'None')
@@ -632,16 +584,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return self.get_roi_size_limits()[1]
 
-    @property
-    def settings(self):
-        """Return the settings used for the camera."""
-        return self.__settings
-
-    @settings.setter
-    def settings(self, new_settings):
-        """Set new settings for the camera."""
-        self.set_settings(new_settings)
-
     # .settings setter
     @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
@@ -654,13 +596,16 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         image acquisition or image processing step, as this could
         potentially stall the camera.
 
+        Returns
+        -------
+        settings_valid : bool
+            True if the new settings given were accepted.
+
         Parameters
         ----------
-        new_settings : object or None
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             Whatever can be used to create a ViPErLEEDSettings.
-            If None or False-y, will look for a default settings
-            file in the _defaults directory. The following
-            sections/options are mandatory:
+            The following sections/options are mandatory:
             'camera_settings'/'class_name'
                 Name of the concrete class that implements
                 the abstract methods of CameraABC.
@@ -671,29 +616,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 Exposure time in milliseconds to be used for
                 acquiring each frame.
         """
-        # Look for a default only if no settings are given
-        _name = self.__class__.__name__ if not new_settings else None
-        try:
-            new_settings = _m_settings.ViPErLEEDSettings.from_settings(
-                new_settings,
-                find_from=_name
-                )
-        except _m_settings.NoDefaultSettingsError:
-            base.emit_error(self, CameraErrors.DEFAULT_SETTINGS_CORRUPTED,
-                            _name)
-            return
-        except _m_settings.NoSettingsError:
-            base.emit_error(self, CameraErrors.MISSING_SETTINGS)
-            return
-
-        # Checking of non-mandatory data is done in property getters
-        invalid = new_settings.has_settings(*self._mandatory_settings)
-        if invalid:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            ', '.join(invalid), '')
-            return
-
-        # Will recalculate bad pixel coordinates if ROI changes
+        # Will recalculate bad pixel coordinates if ROI changes.
         old_roi = tuple()
         if self.settings:
             try:
@@ -701,18 +624,23 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             except self.exceptions:
                 pass
 
-        self.__settings = new_settings
+        # Checking of non-mandatory data is done in property getters.
+        # The base-class implementation takes care of _mandatory_settings.
+        if not super().set_settings(new_settings):
+            return False
+
         self.disconnect_()
 
-        if _name:
+        if self.uses_default_settings:
             # When loading from default settings, there's no point in           # TODO: should also clear bad pixels if present
-            # trying to connect: the device name is certainly wrong
-            return
+            # trying to connect: the device name is certainly wrong.
+            return True
 
-        self.connect_()  # Also loads self.settings to camera
+        self.connect_()  # Also loads self.settings to camera.
 
         if self.roi != old_roi and self.bad_pixels:
             self.bad_pixels.apply_roi()
+        return True
 
     @property
     @abstractmethod
@@ -761,12 +689,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """Return whether error_info relates to 'bad pixels'."""
         error_code, error_msg = error_info
         try:
-            error = CameraErrors.from_code(error_code)
+            error = QObjectSettingsErrors.from_code(error_code)
         except AttributeError:
             return False
 
         error_msg = error_msg.replace('_', ' ')
-        if error is CameraErrors.INVALID_SETTINGS and "bad pixel" in error_msg:
+        if (error is QObjectSettingsErrors.INVALID_SETTINGS
+                and 'bad pixel' in error_msg):
             return True
         return False
 
@@ -825,7 +754,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def connect_(self):
         """Connect to the camera."""
         if not self.open():
-            base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
+            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             self.connected = False
             return
         self.load_camera_settings()
@@ -862,7 +791,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        handler = SettingsHandler(self.settings)
+        handler = super().get_settings_handler()
         handler.add_option('camera_settings', 'mode',
                            handler_widget=qtw.QLabel,
                            read_only=True)
@@ -983,18 +912,21 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def list_devices(self):
         """Return a list of available devices.
 
-        This method must return a list of DeviceInfo instances. The
-        DeviceInfo class is located in the hardwarebase module. Each
-        camera is represented by a single DeviceInfo instance. The
-        DeviceInfo object contains the uninque device name and a dict
+        This method must return a list of SettingsInfo instances. The
+        SettingsInfo class is located in the classes.abc module. Each
+        camera is represented by a single SettingsInfo instance. The
+        SettingsInfo object contains the uninque device name and a dict
         holding additional information about the device. If there is
         no additional information about the camera, then this dict can
-        be empty.
+        be empty. The information contained within a SettingsInfo must
+        be enough to determine a suitable settings file for the device
+        from it. Subclasses should raise a DefaultSettingsError if they
+        fail to create instances from the settings in the DEFAULTS_PATH.
 
         Returns
         -------
         devices : list
-            Each element is a DeviceInfo instance containing the
+            Each element is a SettingsInfo instance containing the
             name of a camera and additional information as a dict.
         """
         return
@@ -1061,24 +993,24 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         Emits
         -----
-        error_occurred(CameraErrors.INVALID_SETTINGS)
+        error_occurred(QObjectSettingsErrors.INVALID_SETTINGS)
             If settings file does not have a 'bad_pixels_path' option
             in section 'camera_settings'.
-        error_occurred(CameraErrors.INVALID_SETTINGS)
+        error_occurred(QObjectSettingsErrors.INVALID_SETTINGS)
             If the path specified does not contain a valid bad-pixels
             file for this camera.
         """
         bad_pix_path = self.settings.get("camera_settings", "bad_pixels_path",
                                          fallback='')
         if not bad_pix_path:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
                             '\nInfo: No bad_pixels_path found.')
             return
         try:
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
                             f'\nInfo: {err}')
             return
@@ -1643,7 +1575,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             self.settings.set('camera_settings', 'roi', str(roi))
             return roi
 
-        base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+        base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                         'camera_settings/roi',
                         f'\nInfo: ROI {roi} is invalid after '
                         'adjusting top-left corner position')

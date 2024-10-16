@@ -74,20 +74,32 @@ def _interpolate_config_path(filenames):
             filenames[i] = fname.replace("__CONFIG__", _sys_path)
 
 
-class MissingSettingsFileError(Exception):
+class SettingsError(Exception):
+    """Base exception for all settings-related errors."""
+
+
+class DefaultSettingsError(SettingsError):
+    """Exception raised when the default settings are corrupted."""
+
+
+class MissingSettingsFileError(SettingsError):
     """Exception raised when failed to read settings file(s)."""
 
 
-class NoSettingsError(Exception):
+class NoSettingsError(SettingsError):
     """Exception raised when failed to read settings file(s)."""
 
 
-class NoDefaultSettingsError(Exception):
+class NoDefaultSettingsError(DefaultSettingsError):
     """Exception raised when no default settings file was found."""
 
 
-class NotASequenceError(Exception):
+class NotASequenceError(SettingsError):
     """Exception raised when getsequence fails to return a sequence."""
+
+
+class TooManyDefaultSettingsError(DefaultSettingsError):
+    """Exception raised when too many default settings files were found."""
 
 
 class ViPErLEEDSettings(ConfigParser):
@@ -146,25 +158,15 @@ class ViPErLEEDSettings(ConfigParser):
         """Return a simple string representation of self."""
         return str(self.as_dict())
 
-    @classmethod  # too-complex
-    def from_settings(cls, settings, find_from=None, tolerant_match=False):
+    @classmethod
+    def from_settings(cls, settings):
         """Return a ViPErLEEDSettings from the settings passed.
 
         Parameters
         ----------
-        settings : str or os.PathLike or ViPErLEEDSettings or None
-            The settings to load from. If settings is None,
-            find_from will be used to search for a default settings.
+        settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
+            The settings to load from.
             If a ViPErLEEDSettings, no copy is made.
-        find_from : str or None, optional
-            The string to look for in a configuration file to
-            be loaded and returned. If None, no search will be
-            performed.
-        tolerant_match : bool, optional
-            Whether matching of find_from should be performed in
-            a tolerant way, i.e., neglecting parts of find_from
-            between square brackets. Default is False, i.e., use
-            the whole string given.
 
         Returns
         -------
@@ -174,21 +176,15 @@ class ViPErLEEDSettings(ConfigParser):
         Raises
         ------
         ValueError
-            If settings is not a ViPErLEEDSettings, it is
-            False-y and find_from is False-y.
+            If there are no settings to create a ViPErLEEDSettings from.
         NoSettingsError
-            If settings is invalid and find_from was not given.
-        NoDefaultSettingsError
-            If settings is invalid, and looking for default settings
-            failed.
+            If settings is invalid.
         """
-        if settings is None and not find_from:
-            raise ValueError(f"{cls.__name__}: cannot create from nothing.")
+        if not settings:
+            raise ValueError(f'{cls.__name__}: cannot create from nothing.')
+
         if isinstance(settings, cls):
             return settings
-
-        if not settings and not find_from:
-            raise ValueError(f"{cls.__name__}: cannot create from nothing.")
 
         config = cls()
         if isinstance(settings, (dict, ConfigParser)):
@@ -197,31 +193,10 @@ class ViPErLEEDSettings(ConfigParser):
 
         try:
             config.read(settings)
-        except (TypeError, MissingSettingsFileError):
-            pass
-        else:
-            return config
-
-        if not find_from:
-            raise NoSettingsError(
-                f"{cls.__name__}: could not load settings, and "
-                "no find_from was provided to look for a default."
-                )
-
-        # Failed to read from settings. Try with find_from.
-        get_cfg = gl.measure.hardwarebase.get_device_config
-        settings = get_cfg(find_from, prompt_if_invalid=False,
-                           tolerant_match=tolerant_match)
-        if settings:
-            try:
-                config.read(settings)
-            except MissingSettingsFileError:
-                pass
-            else:
-                return config
-        raise NoDefaultSettingsError(
-            f"{cls.__name__}: could not find (or load) a suitable default."
-            )
+        except (TypeError, MissingSettingsFileError) as exc:
+            raise NoSettingsError(f'{cls.__name__}: could not '
+                                  'load settings.') from exc
+        return config
 
     def __bool__(self):
         """Return True if there is any section."""

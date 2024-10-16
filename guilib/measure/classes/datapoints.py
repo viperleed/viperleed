@@ -20,9 +20,10 @@ import enum
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
-from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum, emit_error, QMetaABC
-    )
+from viperleed.guilib.measure.classes.abc import QMetaABC
+from viperleed.guilib.measure.classes.abc import QObjectWithError
+from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
+from viperleed.guilib.measure.hardwarebase import emit_error
 
 
 _ALIASES = {
@@ -45,13 +46,13 @@ class DataErrors(ViPErLEEDErrorEnum):
     """Errors that might occur during a measurement cycle."""
 
     INVALID_MEASUREMENT = (400,
-                           "The returned data dictionary contained a key "
-                           "that was not specified in the DataPoints class.")
+                           'The returned data dictionary contained a key '
+                           'that was not specified in the DataPoints class.')
     UNKNOWN_QUANTITIES = (401,
-                         "Unknown quantity/quantities {} will be ignored")
+                         'Unknown quantity/quantities {} will be ignored')
     NO_DATA_FOR_CONTROLLER = (402,
-                              "Controller at {} did not return any data. "
-                              "Consider increasing energy_step_duration.")
+                              'Controller at {} did not return any data. '
+                              'Consider increasing energy_step_duration.')
 
 
 class QuantityInfo(enum.Enum):
@@ -202,10 +203,8 @@ _EXCEPTIONAL = (QuantityInfo.IMAGES, QuantityInfo.ENERGY,
 
 
 # too-many-instance-attributes
-class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
+class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
     """Data storage class."""
-
-    error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, *args, primary_controller=None, time_resolved=None,
                  continuous=None, parent=None):

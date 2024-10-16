@@ -15,17 +15,20 @@ which gives commands to the controller classes.
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
-                                                      MeasurementErrors)
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.measurement.abc import MeasurementErrors
 
 
 class IVVideo(MeasurementABC):
     """Measurement class for LEED I(V) videos."""
 
     display_name = 'I(V) video'
-    _mandatory_settings = [*MeasurementABC._mandatory_settings,
-                           ('measurement_settings', 'end_energy'),
-                           ('measurement_settings', 'delta_energy'),]
+    _mandatory_settings = (
+        *MeasurementABC._mandatory_settings,
+        ('measurement_settings', 'end_energy'),
+        ('measurement_settings', 'delta_energy'),
+        )
 
     def __init__(self, measurement_settings):
         """Initialise measurement instance."""
@@ -49,8 +52,8 @@ class IVVideo(MeasurementABC):
         except (TypeError, ValueError):
             # Not a float
             delta = fallback
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
-                            'measurement_settings/delta_energy')
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/delta_energy', '')
         return delta
 
     @property
@@ -69,8 +72,8 @@ class IVVideo(MeasurementABC):
         except (TypeError, ValueError):
             # Not a float
             egy = fallback
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
-                            'measurement_settings/end_energy')
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/end_energy', '')
         return egy
 
     @property
@@ -168,6 +171,7 @@ class IVVideo(MeasurementABC):
         super().abort()
     # pylint: enable=useless-super-delegation
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement.
 
@@ -183,7 +187,7 @@ class IVVideo(MeasurementABC):
 
         Parameters
         ----------
-        new_settings : dict, ConfigParser, string or path
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             Configuration of the measurement.
 
         Returns
@@ -200,9 +204,9 @@ class IVVideo(MeasurementABC):
 
         Emits
         -----
-        MeasurementErrors.MISSING_SETTINGS
+        QObjectSettingsErrors.MISSING_SETTINGS
             If new_settings is missing.
-        MeasurementErrors.INVALID_SETTINGS
+        QObjectSettingsErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
         MeasurementErrors.MISSING_CAMERA

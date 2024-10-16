@@ -12,17 +12,18 @@ This module contains utility functions and classes shared
 by multiple ViPErLEED hardware objects.
 """
 
-from abc import ABCMeta
-from dataclasses import dataclass, field
 import enum
 import inspect
 from pathlib import Path
 import re
 import sys
 
-from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
-from viperleed.guilib import dialogs
+from viperleed.guilib.dialogs.dropdowndialog import DropdownDialog
+from viperleed.guilib.dialogs.errors import DialogDismissedError
+from viperleed.guilib.measure.classes.settings import NoSettingsError
 
 # TODO: not nice. Also, there's two places where the _defaults
 # path is used. Here and in classes.settings. However, due to circular
@@ -155,7 +156,7 @@ _MATCH_SQUARES = re.compile(r'(\[)(\[*(?:[^\[\]]*|\[[^\]]*\])*\]*)(\])')
 # )
 # (\])                 # closed bracket capture group
 
-def _device_name_re(name):
+def device_name_re(name):
     """Return a re.Pattern object that matches name tolerantly.
 
     Returns
@@ -207,70 +208,57 @@ def _device_name_re(name):
         _patterns.append(''.join(_pattern3))
     # All patterns should match towards the end of the line,
     # and can have any characters before
-    return re.compile("|".join(r'^.*' + p + r'\s*$' for p in _patterns))
+    return re.compile('|'.join(rf'^\s*{p}\s*$' for p in _patterns))
 
 
-def _find_matching_configs(device_name, directory, tolerant_match):
-    """Find .ini files for device_name in the tree starting at directory."""
-    def _comment(line):
-        line = line.strip()
-        return any(line.startswith(c) for c in '#;')
-
-    dev_re = _device_name_re(device_name)
-
-    def _device_name_found(config_file):
-        """Return whether device_name is found in config."""
-        if tolerant_match:
-            return any(dev_re.match(l) for l in config_file if not _comment(l))
-        return any(device_name in l for l in config_file if not _comment(l))
-
-    directory = Path(directory).resolve()
-    config_files = directory.glob('**/*.ini')
-    device_config_files = []
-    for config_name in config_files:
-        with open(config_name, 'r', encoding='utf-8') as config_file:
-            if _device_name_found(config_file):
-                device_config_files.append(config_name)
-    return device_config_files
-
-
-def _get_device_config_not_found(device_name, **kwargs):
+def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     """Return a device config when it was not found in the original path.
 
-    This function is only called as part of get_device_config
-    in case the no config file was found with the original arguments
-    given to get_device_config. Prompts the user for an action.
+    This function is only called as part of get_object_settings
+    in case no settings file was found with the original arguments
+    given to get_object_settings. Prompts the user for an action.
 
     Parameters
     ----------
-    device_name : str
-        String to be looked up in the configuration files
-        to identify that a file is meant for the device.
+    obj_cls : type
+        The class of the object to get settings for.
+    obj_info : SettingsInfo
+        This SettingsInfo is necessary to determine the correct
+        settings. How exactly is up to the implementation of
+        find_matching_settings_files in obj_cls.
     **kwargs : dict
-        The same arguments given to get_device_config
+        The same arguments given to get_object_settings. See
+        help(get_object_settings) for more information.
 
     Returns
     -------
-    path_to_config : Path, "", or None
-        The path to the only configuration file successfully
-        found. None or "" if no configuration file was found.
-        None is always returned if prompt_if_invalid is False,
-        or because the user dismissed the pop-up. The empty
-        string is returned if an alternative option was given
-        as a third_btn_text parameter, but the user anyway
+    path_to_config : Path
+        The path to the only settings file successfully found or the
+        file that has been selected by the user.
+
+    Raises
+    ------
+    DialogDismissedError
+        If no settings file was found and an alternative option was
+        given as a third_btn_text parameter, but the user anyway
         dismissed the dialog.
+    NoSettingsError
+        If no settings file was found and no alternative option was
+        given.
     """
     parent_widget = kwargs.get("parent_widget", None)
     directory = kwargs.get("directory", DEFAULTS_PATH)
     third_btn_text = kwargs.get("third_btn_text", "")
 
+    obj_name = obj_info.unique_name
     msg_box = qtw.QMessageBox(parent=parent_widget)
     msg_box.setWindowTitle("No settings file found")
-    msg_box.setText(
-        f"Directory {directory} and its subfolders do not contain "
-        f"any settings file for device {device_name}. Select "
-        "a different directory."
-        )
+    msg = (f'Directory {directory} and its subfolders do not contain '
+           f'any settings file for device {obj_name}. Select a '
+           'different directory.')
+    if third_btn_text:
+        msg += f' Alternatively, you can {third_btn_text.lower()}.'
+    msg_box.setText(msg)
     msg_box.setIcon(msg_box.Warning)
     btn = msg_box.addButton("Select path", msg_box.ActionRole)
     third_btn = None
@@ -280,103 +268,97 @@ def _get_device_config_not_found(device_name, **kwargs):
     msg_box.exec_()
     msg_box.setParent(None)  # py garbage collector will take care
     _clicked = msg_box.clickedButton()
-    if msg_box.clickedButton() is btn:
+    if _clicked is btn:
         new_path = qtw.QFileDialog.getExistingDirectory(
             parent=parent_widget,
             caption="Choose directory of device settings",
-            directory=str(directory)
+            directory=str(directory),
             )
         if new_path:
             kwargs["directory"] = new_path
-            return get_device_config(device_name, **kwargs)
+            return get_object_settings(obj_cls, obj_info, **kwargs)
     if third_btn and _clicked is not third_btn:
         # User had another option but dismissed the dialog
-        return ""
-    return None
+        raise DialogDismissedError('Failed to get device settings.')
+    raise NoSettingsError('Failed to get device settings.')
 
 
-def get_device_config(device_name, **kwargs):
-    """Return the configuration file for a specific device.
+def get_object_settings(obj_cls, obj_info, **kwargs):
+    """Return the settings file for a specific device.
 
-    Only configuration files with a .ini suffix are considered.
+    Only settings files with a .ini suffix are considered.
+    This function must be executed in the main GUI thread.
 
     Parameters
     ----------
-    device_name : str
-        String to be looked up in the configuration files
-        to identify that a file is meant for the device.
+    obj_cls : type
+        The class of the object to get settings for.
+    obj_info : SettingsInfo
+        This SettingsInfo is necessary to determine the correct
+        settings. How exactly is up to the implementation of
+        find_matching_settings_files in obj_cls.
     **kwargs : dict, optional
         directory : str or Path, optional
-            The base of the directory tree in which the
-            configuration file should be looked for. The
-            search is recursive. Default is the path to
-            the _defaults directory.
-        tolerant_match : bool, optional
-            Whether device_name should be looked up tolerantly
-            or not. If False, device_name is matched exactly,
-            otherwise parts of device_name within square brackets
-            are ignored. Default is True.
-        prompt_if_invalid : bool, optional
-            In case the search for a config file failed, pop up
-            a dialog asking the user for input. The search is
-            considered failed in case no config file was found,
-            or if multiple config files matched the criterion.
-            Default is True.
+            The base of the directory tree in which the settings file
+            should be looked for. The search is recursive. Default is
+            the path to the _defaults directory.
+        match_exactly : bool, optional
+            Whether settings in obj_info should be looked up exactly
+            or not. What this entails is up to the implementation of
+            obj_cls.find_matching_settings_files. Default is False.
         parent_widget : QWidget or None, optional
             The parent widget of the pop up. Unless parent_widget
             is None, the pop up will be blocking user events for
-            parent_widget till the user closes it. Used only
-            if prompt_if_invalid is True. Default is None.
+            parent_widget till the user closes it. Default is None.
         third_btn_text : str, optional
             If given and not empty, the string is used as the text
             for an extra button with "accept role" in the did-not-
-            find-a-config case. This function may return an empty
-            string only if this is given and if the user dismisses
-            the dialog. Default is an empty string.
+            find-a-config case. Default is an empty string.
 
     Returns
     -------
-    path_to_config : Path, "", or None
-        The path to the only configuration file successfully
-        found. None or "" if no configuration file was found.
-        None is always returned if prompt_if_invalid is False,
-        or because the user dismissed the pop-up. The empty
-        string is returned if an alternative option was given
-        as a third_btn_text parameter, but the user anyway
-        dismissed the dialog.
-    """
-    directory = kwargs.get("directory", DEFAULTS_PATH)
-    tolerant_match = kwargs.get("tolerant_match", True)
-    prompt_if_invalid = kwargs.get("prompt_if_invalid", True)
-    parent_widget = kwargs.get("parent_widget", None)
+    path_to_config : Path
+        The path to the only settings file successfully found or the
+        file that has been selected by the user.
 
-    device_config_files = _find_matching_configs(device_name, directory,
-                                                 tolerant_match)
+    Raises
+    ------
+    DialogDismissedError
+        If no settings file was found and an alternative option was
+        given as a third_btn_text parameter, but the user anyway
+        dismissed the dialog.
+    NoSettingsError
+        If no settings file was found and no alternative option was
+        given, or if multiple files were found but the user did not
+        pick one.
+    """
+    directory = kwargs.get('directory', DEFAULTS_PATH)
+    match_exactly = kwargs.get('match_exactly', False)
+    parent_widget = kwargs.get('parent_widget', None)
+
+    device_config_files = obj_cls.find_matching_settings_files(
+        obj_info, directory, match_exactly,
+        )
 
     if device_config_files and len(device_config_files) == 1:
-        # Found exactly one config file
+        # Found exactly one config file.
         return device_config_files[0]
 
-    if not prompt_if_invalid:
-        return None
-
-    if not device_config_files:
-        return _get_device_config_not_found(device_name, **kwargs)
-
-    # Found multiple config files that match.
-    # Let the user pick which one to use
-    names = [f.name for f in device_config_files]
-    dropdown = dialogs.DropdownDialog(
-        "Found multiple settings files",
-        "Found multiple settings files for device "
-        f"{device_name} in {directory} and subfolders.\n"
-        "Select which one should be used:",
-        names, parent=parent_widget
-        )
-    config = None
-    if dropdown.exec_() == dropdown.Apply:
-        config = device_config_files[names.index(dropdown.selection)]
-    return config
+    if device_config_files:
+        # Found multiple config files that match.
+        # Let the user pick which one to use.
+        names = [f.name for f in device_config_files]
+        dropdown = DropdownDialog(
+            "Found multiple settings files",
+            "Found multiple settings files for "
+            f"{obj_info.unique_name} in {directory} and subfolders.\n"
+            "Select which one should be used:",
+            names, parent=parent_widget
+            )
+        if dropdown.exec_() == dropdown.Apply:
+            return device_config_files[names.index(dropdown.selection)]
+        raise NoSettingsError('Multiple setting files found. None selected.')
+    return _get_object_settings_not_found(obj_cls, obj_info, **kwargs)
 
 
 def get_devices(package):
@@ -398,13 +380,14 @@ def get_devices(package):
         Dictionary of available, supported devices. Keys are
         names of available devices, values are tuples containing
         the driver classes that can be used to handle the devices
-        (one class per device) and additional information about the
-        device as a dict.
+        (one class per device) and the SettingsInfo from list_devices.
 
     Raises
     ------
     AttributeError
         If package is not one of the guilib.measure subpackages.
+    DefaultSettingsError
+        If the default settings are corrupted.
     """
     try:
         getattr(sys.modules[__package__], package)
@@ -418,9 +401,11 @@ def get_devices(package):
                                      inspect.isclass):
         if hasattr(cls, 'list_devices'):
             dummy_instance = cls()
+            # list_devices raises a DefaultSettingsError if the default
+            # settings do not suffice to make and detect devices.
             dev_list = dummy_instance.list_devices()
             for device in dev_list:
-                devices[device.unique_name] = (cls, device.more)
+                devices[device.unique_name] = (cls, device)
     return devices
 
 
@@ -457,31 +442,6 @@ def safe_disconnect(signal, *slot):
 
 
 ################################### CLASSES ###################################
-
-
-@dataclass
-class DeviceInfo:
-    """A container for information about discovered devices.
-
-    Attributes
-    ----------
-    unique_name : str
-        Unique name identifying the discovered device
-    more : dict
-        Extra, optional, information about the discovered device.
-    """
-    unique_name: str
-    more: dict = field(default_factory=dict)
-
-    def __post_init__(self):
-        """Check that we have a string unique_name."""
-        if not isinstance(self.unique_name, str):
-            raise TypeError(f'{type(self).__name__}: '
-                            'unique_name must be a string')
-
-
-class QMetaABC(ABCMeta, type(qtc.QObject)):
-    """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
 
 
 class ViPErLEEDErrorEnum(tuple, enum.Enum):
