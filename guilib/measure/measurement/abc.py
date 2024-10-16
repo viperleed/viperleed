@@ -274,8 +274,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies no
-            `config` file matches the requirements.
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
         """
         return ()
 
