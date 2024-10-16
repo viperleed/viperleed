@@ -435,7 +435,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 detected_devices = self._detect_devices(device)
             except (DefaultSettingsError, NoDefaultSettingsError):
                 continue
-            # The get_devices method does return the device name,
+            # The _detect_devices method returns the device name,
             # class and, additional information. The class and
             # additional information are returned as a tuple.
             for device_name, cls_and_info in detected_devices:
