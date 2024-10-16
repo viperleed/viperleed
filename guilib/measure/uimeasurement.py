@@ -673,7 +673,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             config = base.get_object_settings(device_cls, settings_info,
                                               **kwargs)
         except NoSettingsError:
-            # No settings
+            # No settings selected. Will make a new one from defaults.
             config = None
         except DialogDismissedError:
             # Did not find one, and user dismissed the dialog.
