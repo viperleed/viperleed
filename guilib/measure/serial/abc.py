@@ -279,35 +279,18 @@ class SerialABC(HardwareABC):
         self.connect_()
 
     @classmethod
-    def is_matching_default_settings(*_):
-        """Raise TypeError."""
+    def _cannot_check_settings(cls, *_):
+        """Raise TypeError as SerialABC settings come from controllers."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        raise TypeError(f'{(self).__name__} was asked to perform a '
+        raise TypeError(f'{cls.__name__} was asked to perform a '
                         'settings check. Serials should never determine '
                         'appropriate settings on their own.')
 
-    @classmethod
-    def is_matching_user_settings(*_):
-        """Raise TypeError."""
-        # Generally speaking controllers have to find the approriate
-        # settings for their serial. Therefore this method should never
-        # be called.
-        raise TypeError(f'{(self).__name__} was asked to perform a '
-                        'settings check. Serials should never determine '
-                        'appropriate settings on their own.')
-
-    @classmethod
-    def is_settings_for_this_class(*_):
-        """Raise TypeError."""
-        # Generally speaking controllers have to find the approriate
-        # settings for their serial. Therefore this method should never
-        # be called.
-        raise TypeError(f'{(self).__name__} was asked to perform a '
-                        'settings check. Serials should never determine '
-                        'appropriate settings on their own.')
-
+    is_matching_default_settings = _cannot_check_settings
+    is_matching_user_settings = _cannot_check_settings
+    is_settings_for_this_class = _cannot_check_settings
     @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the port.
