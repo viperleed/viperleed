@@ -560,7 +560,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """
         # Note that we can just return matching here, as we already
         # know that the class matches. The reason for this is that the
-        # relevant camara attributes taken from the settings files do
+        # relevant camera attributes taken from the settings files do
         # not change between the various cameras handled by this class.
         return (1,)
 
