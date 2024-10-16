@@ -707,7 +707,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             raise TypeError('Unknown device class detected. Please '
                             'contact the ViPErLEED developers.')
 
-        device_name = settings_info.more['name'] or settings_info.unique_name
+        device_name = settings_info.more.get('name') or settings_info.unique_name
         device.settings[section]['device_name'] = device_name
         new_cfg_path = Path(_cfg_dir) / f"{device.name_clean}.ini"
         if new_cfg_path.exists():
