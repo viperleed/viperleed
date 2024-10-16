@@ -205,7 +205,6 @@ from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import MissingSettingsFileError
-from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
@@ -239,12 +238,12 @@ _QMSG = qtw.QMessageBox
 
 
 def _emit_default_faulty(func):
-    """Emit an error_occurred when a _defaults settings file is wrong."""
+    """Emit an error_occurred when a _defaults settings file has problems."""
     @functools.wraps(func)
     def _wrapper(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
-        except (DefaultSettingsError, NoDefaultSettingsError) as exc:
+        except DefaultSettingsError as exc:
             base.emit_error(self,
                             QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
                             str(exc))
@@ -444,9 +443,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         for device, (menu, slot) in devices_and_slots.items():
             try:
                 detected_devices = self._detect_devices(device)
-            except (DefaultSettingsError, NoDefaultSettingsError):
+            except DefaultSettingsError:
                 continue
-            # The get_devices method does return the device name,
+            # The _detect_devices method returns the device name,
             # class and, additional information. The class and
             # additional information are returned as a tuple.
             for device_name, cls_and_info in detected_devices.items():
@@ -690,7 +689,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             config = base.get_object_settings(device_cls, settings_info,
                                               **kwargs)
         except NoSettingsError:
-            # No settings
+            # No settings selected. Will make a new one from defaults.
             config = None
         except DialogDismissedError:
             # Did not find one, and user dismissed the dialog.
@@ -725,7 +724,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             raise TypeError('Unknown device class detected. Please '
                             'contact the ViPErLEED developers.')
 
-        device_name = settings_info.more['name'] or settings_info.unique_name
+        device_name = (settings_info.more.get('name')
+                       or settings_info.unique_name)
         device.settings[section]['device_name'] = device_name
         new_cfg_path = Path(_cfg_dir) / f"{device.name_clean}.ini"
         if new_cfg_path.exists():
@@ -1103,7 +1103,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             elif isinstance(sender, ControllerABC):
                 source = f'controller {sender.name} at {sender.address}'
             elif isinstance(sender, MeasurementABC):
-                source = f'measurement {sender.__class__.__name__}'
+                source = f'measurement {type(sender).__name__}'
             elif isinstance(sender, SerialABC):
                 # Theoretically we should only receive error
                 # messages from controller instances.

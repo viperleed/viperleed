@@ -387,13 +387,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             Larger values in the tuple indicate a higher degree of
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies no
-            `config` file matches the requirements.
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
         """
         return (1,)
 
@@ -413,13 +413,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         Returns
         -------
         sorting_info : tuple
-            A tuple that can be used the sort the detected settings.
+            A tuple that can be used to sort the detected settings.
             Larger values in the tuple indicate a higher degree of
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies no
-            `config` file matches the requirements.
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
         """
         return (1,)
 
@@ -644,12 +644,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         Returns
         -------
         invalid_settings : list of tuples
-            Invalid required settings of self as a list of tuples.
+            Invalid _mandatory_settings of self as a list of tuples.
             The first entry in each tuple can be either '<section>',
             '<section>/<option>', or
             '<section>/<option> not one of <value1>, <value2>, ...'.
-            Further entries are information on what is wrong with
-            the setttings.
+            Further optional entries may be added by subclasses. They
+            specify additional information on what is wrong with each
+            invalid setting.
         """
         invalid_settings = settings.has_settings(
             *self._mandatory_settings,

@@ -227,7 +227,8 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
         settings. How exactly is up to the implementation of
         find_matching_settings_files in obj_cls.
     **kwargs : dict
-        The same arguments given to get_object_settings
+        The same arguments given to get_object_settings. See
+        help(get_object_settings) for more information.
 
     Returns
     -------
@@ -256,7 +257,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
            f'any settings file for device {obj_name}. Select a '
            'different directory.')
     if third_btn_text:
-        msg += f' Alternatively you can {third_btn_text.lower()}.'
+        msg += f' Alternatively, you can {third_btn_text.lower()}.'
     msg_box.setText(msg)
     msg_box.setIcon(msg_box.Warning)
     btn = msg_box.addButton("Select path", msg_box.ActionRole)
@@ -271,7 +272,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
         new_path = qtw.QFileDialog.getExistingDirectory(
             parent=parent_widget,
             caption="Choose directory of device settings",
-            directory=str(directory)
+            directory=str(directory),
             )
         if new_path:
             kwargs["directory"] = new_path
@@ -328,7 +329,8 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         dismissed the dialog.
     NoSettingsError
         If no settings file was found and no alternative option was
-        given.
+        given, or if multiple files were found but the user did not
+        pick one.
     """
     directory = kwargs.get('directory', DEFAULTS_PATH)
     match_exactly = kwargs.get('match_exactly', False)
@@ -355,7 +357,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
             )
         if dropdown.exec_() == dropdown.Apply:
             return device_config_files[names.index(dropdown.selection)]
-        raise NoSettingsError('No device settings selected.')
+        raise NoSettingsError('Multiple setting files found. None selected.')
     return _get_object_settings_not_found(obj_cls, obj_info, **kwargs)
 
 
@@ -399,6 +401,8 @@ def get_devices(package):
                                      inspect.isclass):
         if hasattr(cls, 'list_devices'):
             dummy_instance = cls()
+            # list_devices raises a DefaultSettingsError if the default
+            # settings do not suffice to make and detect devices.
             dev_list = dummy_instance.list_devices()
             for device in dev_list:
                 devices[device.unique_name] = (cls, device)

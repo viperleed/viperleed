@@ -555,12 +555,12 @@ class ImagingSourceCamera(abc.CameraABC):
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies no
-            `config` file matches the requirements.
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
         """
         # Note that we can just return matching here, as we already
         # know that the class matches. The reason for this is that the
-        # relevant camara attributes taken from the settings files do
+        # relevant camera attributes taken from the settings files do
         # not change between the various cameras handled by this class.
         return (1,)
 
@@ -587,8 +587,8 @@ class ImagingSourceCamera(abc.CameraABC):
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies no
-            `config` file matches the requirements.
+            multiple files are found. An empty tuple signifies that
+            `config` does no match the requirements.
         """
         super().is_matching_user_settings(obj_info, config, match_exactly)
         camera_name = config.get('camera_settings', 'device_name',

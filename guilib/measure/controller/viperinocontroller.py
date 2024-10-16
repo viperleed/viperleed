@@ -324,12 +324,13 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         invalid_settings : list of tuples
-            Invalid required_settings of self as a list of tuples.
+            Invalid _mandatory_settings of self as a list of tuples.
             The first entry in each tuple can be either '<section>',
             '<section>/<option>', or
             '<section>/<option> not one of <value1>, <value2>, ...'.
-            Further entries are information on what is wrong with
-            the setttings.
+            Further optional entries may be added by subclasses. They
+            specify additional information on what is wrong with each
+            invalid setting.
         """
         invalid_settings = settings.has_settings(('controller',
                                                   'firmware_version'))
@@ -569,12 +570,9 @@ class ViPErinoController(abc.MeasureControllerABC):
             match is required, the firmware version has to be exactly
             the same. If no exact match is required, the highest
             firmware minor will be preferred. An empty tuple signifies
-            no `config` file matches the requirements.
+            that `config` does not match the requirements.
         """
-        ver = base.Version(
-            config.get('controller', 'firmware_version', fallback='0.0')
-            )
-
+        ver = self._get_version()
         firmware_matches = (obj_info.more.get('firmware') == ver if obj_info
                             else False)
         if not match_exactly or firmware_matches:                               # TODO: check major in the future (compare class major to settings file major)
@@ -612,15 +610,13 @@ class ViPErinoController(abc.MeasureControllerABC):
             the same, so all matching files will return the same
             sorting value. If no exact match is required, the highest
             firmware minor with a matching major will be preferred.
-            An empty tuple signifies no `config` file matches the
-            requirements.
+            An empty tuple signifies that `config` does not match
+            the requirements.
         """
         super().is_matching_user_settings(obj_info, config, match_exactly)
         controller_name = config.get('controller', 'device_name',
                                      fallback=None)
-        ver = base.Version(
-            config.get('controller', 'firmware_version', fallback='0.0')
-            )
+        ver = self._get_version()
         if obj_info.more['name'] != controller_name:
             return ()
         if obj_info.more['firmware'] == ver:
@@ -1144,6 +1140,11 @@ class ViPErinoController(abc.MeasureControllerABC):
             self.thermocouple.temperature(v, t0)
             for v, t0 in zip(tc_voltages, cjc_temperatures)
             ]
+
+    def _get_version(self):
+        """Get the firmware version of the hardware from `config`."""
+        ver = config.get('controller', 'firmware_version', fallback='0.0')
+        return base.Version(ver)
 
     @staticmethod
     def __is_adc(name):

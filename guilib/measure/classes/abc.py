@@ -121,10 +121,16 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             (<section>, <option>, (<value1>, <value2>, ...)),
             ...
             )
+        To add _mandatory_settings for an instance at runtime, use:
+        self._mandatory_settings = (
+            *type(self)._mandatory_settings,
+            (<section>, <option>, (<value1>, <value2>, ...)),
+            ...
+            )
     _settings_to_load : ViPErLEEDSettings
         _settings_to_load are the settings that should be loaded
         into _settings via set_settings. If no settings is given,
-        _settings_to_load will automatically be the best matching
+        _settings_to_load will automatically be the best-matching
         suitable default settings file.
     """
 
@@ -172,7 +178,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
 
-    def check_creating_settings_handler_is_possible(self):
+    def check_creating_settings_handler_is_possible(self):                      # TODO: make private and rather use super().get_settings_handler() for implicit check in subclasses
         """Raise if it is not possible to produce a SettingsHandler."""
         if not self.settings:
             # Remember to catch this exception before catching
@@ -199,7 +205,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             settings is up to the is_settings_for_this_class() and
             is_matching_default_settings() methods. Default is None.
             If it is None, subclasses must attempt to determine suitable
-            settings without additional information, when searching for
+            settings without additional information when searching for
             default settings via is_matching_default_settings().
         match_exactly : bool, optional
             Whether find_from should be matched exactly. False means
@@ -249,7 +255,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             The additional information that should be used to find
             appropriate settings. If it is None, subclasses must attempt
             to determine suitable settings without additional
-            information, when searching for default settings via
+            information when searching for default settings via
             is_matching_default_settings(). When looking for user
             settings with is_matching_user_settings(), a TypeError will
             be raised if obj_info is None.
@@ -286,9 +292,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             config = ViPErLEEDSettings.from_settings(settings_file)
             if not cls.is_settings_for_this_class(config):
                 continue
-            conformity = is_matching(obj_info, config, match_exactly)
-            if conformity:
-                files_and_scores.append((settings_file, conformity))
+            score = is_matching(obj_info, config, match_exactly)
+            if score:
+                files_and_scores.append((settings_file, score))
 
         if not files_and_scores:
             return []
@@ -309,7 +315,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         obj_info.more to it. In contrast to is_matching_user_settings,
         this method can be called before the connected hardware is
         known. Therefore, all information to compare to must come
-        from the object class itself. If match_exactly is true, the
+        from the object class itself. If match_exactly is True, the
         default has to be a perfect match. Only one default at a time
         can fulfill this criterion.
 
@@ -330,8 +336,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies no
-            `config` file matches the requirements.
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
         """
 
     @classmethod
@@ -366,8 +372,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             conformity. The order of the items in the tuple is the
             order of their significance. This return value is used
             to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies no
-            `config` file matches the requirements.
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
         """
         if not isinstance(obj_info, SettingsInfo):
             raise TypeError(
@@ -399,8 +405,10 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Check if there are any invalid settings.
 
         Subclasses may add additional mandatory settings at
-        runtime. The base implementation will check if all of the
-        _mandatory_settings are present in the provided settings.
+        runtime. See the documentation of the _mandatory_settings
+        attribute for how to do this. The base implementation will
+        check if all of the _mandatory_settings are present in the
+        provided settings.
 
         Parameters
         ----------
@@ -428,7 +436,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         This method must be extended in subclasses, i.e., do
         handler = super().get_settings_handler(), and then add
         appropriate sections and/or options to it using the
-        handler.add_section, and handler.add_option methods.
+        handler.add_section and handler.add_option methods.
 
         The base-class implementation returns a handler that
         contains the location of the settings file.

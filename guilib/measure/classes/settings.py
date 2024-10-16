@@ -89,7 +89,7 @@ class NoSettingsError(SettingsError):
     """Exception raised when failed to read settings file(s)."""
 
 
-class NoDefaultSettingsError(SettingsError):
+class NoDefaultSettingsError(DefaultSettingsError):
     """Exception raised when no default settings file was found."""
 
 
@@ -97,7 +97,7 @@ class NotASequenceError(SettingsError):
     """Exception raised when getsequence fails to return a sequence."""
 
 
-class TooManyDefaultSettingsError(SettingsError):
+class TooManyDefaultSettingsError(DefaultSettingsError):
     """Exception raised when too many default settings files were found."""
 
 
