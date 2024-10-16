@@ -319,7 +319,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         obj_info.more to it. In contrast to is_matching_user_settings,
         this method can be called before the connected hardware is
         known. Therefore, all information to compare to must come
-        from the object class itself. If match_exactly is true, the
+        from the object class itself. If match_exactly is True, the
         default has to be a perfect match. Only one default at a time
         can fulfill this criterion.
 
