@@ -233,7 +233,7 @@ _QMSG = qtw.QMessageBox
 
 
 def _emit_default_faulty(func):
-    """Emit an error_occurred when a _defaults settings file is wrong."""
+    """Emit an error_occurred when a _defaults settings file has problems."""
     @functools.wraps(func)
     def _wrapper(self, *args, **kwargs):
         try:
