@@ -125,6 +125,12 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             (<section>, <option>, (<value1>, <value2>, ...)),
             ...
             )
+        To add _mandatory_settings for an instance at runtime, use:
+        self._mandatory_settings = (
+            *type(self)._mandatory_settings,
+            (<section>, <option>, (<value1>, <value2>, ...)),
+            ...
+            )
     _settings_to_load : ViPErLEEDSettings
         _settings_to_load are the settings that should be loaded
         into _settings via set_settings. If no settings is given,
