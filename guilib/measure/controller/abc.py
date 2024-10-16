@@ -562,6 +562,9 @@ class ControllerABC(DeviceABC):
         settings. The base implementation automatically checks for the
         presence of all _mandatory_settings. Thus, subclasses
         may simply extend _mandatory_settings, then call super().
+        See the documentation of the _mandatory_settings attribute
+        in measure.classes.abc.QObjectWithSettingsABC for how to
+        do this safely.
 
         Parameters
         ----------
