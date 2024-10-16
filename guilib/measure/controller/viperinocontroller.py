@@ -663,7 +663,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 'firmware' : Version
                     The firmware version that is installed
                     on the controller.
-        
+
         Raises
         ------
         DefaultSettingsError
