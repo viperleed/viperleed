@@ -73,7 +73,7 @@ class QObjectSettingsErrors(base.ViPErLEEDErrorEnum):
         '{!r}. Using {} instead. Consider fixing your configuration file.'
         )
     DEFAULT_SETTINGS_CORRUPTED = (103,
-                                  'Default settings corrupted. {!r} '
+                                  'Default settings corrupted. {} '
                                   'Contact the ViPErLEED team to fix '
                                   'your default settings.')
 
@@ -513,7 +513,7 @@ class HardwareABC(QObjectWithSettingsABC):
     # Emitted whenever the busy state of the device changes.
     # Contains the new busy state of the device.
     busy_changed = qtc.pyqtSignal(bool)
-    
+
     # Emitted right after the hardware connection status has changed.
     # Cointains the new connection status of the hardware.
     connection_changed = qtc.pyqtSignal(bool)

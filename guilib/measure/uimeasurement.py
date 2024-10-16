@@ -201,8 +201,8 @@ from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 from viperleed.guilib.dialogs.errors import DialogDismissedError
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.abc import CameraABC
-from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import DataPoints
+from viperleed.guilib.measure.classes.decorators import emit_default_faulty
 from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import MissingSettingsFileError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
@@ -235,20 +235,6 @@ TITLE = 'Measure LEED-IV'
 
 _TIME_CRITICAL = qtc.QThread.TimeCriticalPriority
 _QMSG = qtw.QMessageBox
-
-
-def _emit_default_faulty(func):
-    """Emit an error_occurred when a _defaults settings file has problems."""
-    @functools.wraps(func)
-    def _wrapper(self, *args, **kwargs):
-        try:
-            return func(self, *args, **kwargs)
-        except DefaultSettingsError as exc:
-            base.emit_error(self,
-                            QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
-                            str(exc))
-            raise
-    return _wrapper
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -598,6 +584,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._dialogs['firmware_upgrade'].error_occurred.connect(
             self._on_error_occurred
             )
+        self._dialogs['bad_px_finder'].error_occurred.connect(
+            self._on_error_occurred
+            )
         self._dialogs['measurement_selection'].measurement_selected.connect(
             self._create_measurement
             )
@@ -657,9 +646,10 @@ class Measure(ViPErLEEDPluginBase):                                             
             dialog.deleteLater()
             del self._dialogs['device_settings'][full_name]
 
-    @_emit_default_faulty
+    @emit_default_faulty
     def _detect_devices(self, device_type):
         """Detect and return devices of a certain type."""
+        # Notice that self is used by emit_default_faulty.
         return base.get_devices(device_type)
 
     def _make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
@@ -676,7 +666,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         full_name = ctrl_info.unique_name
         self._dialogs['device_settings'][full_name] = dialog
 
-    @_emit_default_faulty
+    @emit_default_faulty
     def _make_device(self, device_cls, settings_info, **other_info):
         """React to the selection of a device."""
         # Find an appropriate settings file, searching in the user
@@ -1110,6 +1100,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                 source = f'{type(sender).__name__} at {sender.port_name}'
             elif isinstance(sender, FirmwareUpgradeDialog):
                 source = 'firmware upgrade dialog'
+            elif isinstance(sender, BadPixelsFinderDialog):
+                source = 'bad pixels finder dialog'
             else:
                 source = 'system or unknown'
 

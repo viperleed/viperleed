@@ -36,6 +36,8 @@ from PyQt5 import QtNetwork as qtn
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes import settings
 from viperleed.guilib.measure.classes.abc import QObjectWithError
+from viperleed.guilib.measure.classes.decorators import emit_default_faulty
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 
 
 NOT_SET = '\u2014'
@@ -595,6 +597,11 @@ class FirmwareUploader(ArduinoCLI):
         self.controllers_detected.emit(available_ctrls)
         return True
 
+    @emit_default_faulty
+    def _detect_controllers(self):
+        """Detect and return controllers."""
+        return base.get_devices('controller')
+
     def _get_boards(self):
         """Get a list of the available Arduino boards.
 
@@ -811,7 +818,12 @@ class FirmwareUploader(ArduinoCLI):
             return ctrl_dict
 
         # Detect ViPErLEED controllers.
-        for name, (cls, info) in base.get_devices('controller').items():
+        try:
+            controllers = self._detect_controllers()
+        except DefaultSettingsError:
+            controllers = {}
+
+        for name, (cls, info) in controllers.items():
             port = info.more.get('address')
             ctrl = next(self.ctrls_with_port(ctrl_dict, port), None)
             if not ctrl:
