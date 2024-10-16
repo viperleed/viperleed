@@ -291,6 +291,7 @@ class SerialABC(HardwareABC):
     is_matching_default_settings = _cannot_check_settings
     is_matching_user_settings = _cannot_check_settings
     is_settings_for_this_class = _cannot_check_settings
+
     @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the port.
