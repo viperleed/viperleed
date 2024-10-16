@@ -296,9 +296,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             config = ViPErLEEDSettings.from_settings(settings_file)
             if not cls.is_settings_for_this_class(config):
                 continue
-            conformity = is_matching(obj_info, config, match_exactly)
-            if conformity:
-                files_and_scores.append((settings_file, conformity))
+            score = is_matching(obj_info, config, match_exactly)
+            if score:
+                files_and_scores.append((settings_file, score))
 
         if not files_and_scores:
             return []
