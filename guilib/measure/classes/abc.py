@@ -182,7 +182,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
 
-    def check_creating_settings_handler_is_possible(self):
+    def check_creating_settings_handler_is_possible(self):                      # TODO: make private and rather use super().get_settings_handler() for implicit check in subclasses
         """Raise if it is not possible to produce a SettingsHandler."""
         if not self.settings:
             # Remember to catch this exception before catching
