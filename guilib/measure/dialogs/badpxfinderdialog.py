@@ -20,10 +20,12 @@ from viperleed.guilib.dialogs.busywindow import BusyWindow
 from viperleed.guilib.dialogs.errors import DialogDismissedError
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import badpixels
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.classes.decorators import emit_default_faulty
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
-from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.widgetslib import change_control_text_color
 
 
@@ -40,6 +42,8 @@ def _user_config_path():
 
 class BadPixelsFinderDialog(qtw.QDialog):
     """Dialog to handle user interaction when finding bad pixels."""
+
+    error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, parent=None):
         """Initialize dialog."""
@@ -128,7 +132,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
         """Update the list of available cameras."""
         camera_combo = self.__ctrls['camera']
         old_selection = camera_combo.currentText()
-        self.__available_cameras = base.get_devices('camera')
+        try:
+            self.__available_cameras = self._detect_cameras()
+        except DefaultSettingsError:
+            self.__available_cameras = {}
         old_items = set(camera_combo.itemText(i)
                         for i in range(camera_combo.count()))
         if old_items != set(self.__available_cameras.keys()):
@@ -313,6 +320,11 @@ class BadPixelsFinderDialog(qtw.QDialog):
         timer, _ = self.__timers['delay_busy_hide']
         timer.setSingleShot(True)
         timer.timeout.connect(self.__camera_busy.hide)
+
+    @emit_default_faulty
+    def _detect_cameras(self):
+        """Detect and return cameras."""
+        return base.get_devices('camera')
 
     def __enable_controls(self, enabled):
         """Enable or disable controls."""

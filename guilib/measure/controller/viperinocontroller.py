@@ -28,6 +28,7 @@ from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 from viperleed.guilib.measure.controller import abc
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 
 # For settings dialog:
 from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
@@ -213,7 +214,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             # pylint: disable=redefined-variable-type
             # Seems a pylint bug.
             meas_f = 50.0
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             f'adc_update_rate/{update_rate_raw}', '')
         return 1000 / meas_f
 
@@ -279,16 +280,14 @@ class ViPErinoController(abc.MeasureControllerABC):
             tc_type = self.settings.get('conversions', 'thermocouple_type',
                                         fallback=None)
             if tc_type is None:
-                base.emit_error(self,
-                                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                self.emit_error(ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
                                 '\nInfo: missing entry in settings.')
                 return None
             try:
                 self._thermocouple = Thermocouple(tc_type)
             except ValueError as err:
                 # Unknown thermocouple type
-                base.emit_error(self,
-                                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                self.emit_error(ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
                                 f'\nInfo: {err}.')
                 return None
         return self._thermocouple
@@ -457,15 +456,14 @@ class ViPErinoController(abc.MeasureControllerABC):
                                                'adc_update_rate', fallback=4)
         except (TypeError, ValueError):
             # Cannot convert to int
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/adc_update_rate', '')
             return
         with self.lock:
             hardware = self.hardware.copy()
         if not hardware:
-            base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
-                'calibrate the ADCs'
-                )
+            self.emit_error(ViPErinoErrors.HARDWARE_INFO_MISSING,
+                            'calibrate the ADCs')
             return
         lm35_idx = list(hardware.keys()).index('lm35')
         message = [update_rate, *self.__adc_channels[:lm35_idx]]
@@ -511,8 +509,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             used to transform measurements into physical values.
             This whole complex section is "advanced", and will be
             shown only if there is something missing.
-        'measurement_settings'/'adc_update_rate'                                # TODO
-            Advanced
+        'measurement_settings'/'adc_update_rate'
+            Allows selecting the ADC update rate from given values.
         All the settings handled by MeasureControllerABC.
 
         Returns
@@ -525,14 +523,26 @@ class ViPErinoController(abc.MeasureControllerABC):
         handler = SettingsHandler(self.settings, show_path_to_config=True)
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
-                           display_name='Firmware version', read_only=True)
+                           display_name='Firmware version',
+                           tags=SettingsTag.READ_ONLY | SettingsTag.REGULAR)
         handler.add_option('controller', 'device_name',
                            handler_widget=_settings.SerialNumberEditor(self),
-                           display_name='Serial No.')
+                           display_name='Serial No.',
+                           tags=SettingsTag.REGULAR)
         handler.add_from_handler(super().get_settings_handler())
         handler.add_complex_section(
-            _settings.HardwareConfigurationEditor(controller=self)              # TODO: add ADC_update rate for measurement
+            _settings.HardwareConfigurationEditor(controller=self)
             )
+        widget = _settings.UpdateRateSelector(self)
+        tooltip = ('<nobr>The frequency at which the </nobr>controller '
+                  'acquires measurements. For regular measurements it is '
+                  'preferable to set the measurement frequency to the '
+                  'line frequency.')
+        handler.add_option(
+            'measurement_settings', 'adc_update_rate', handler_widget=widget,
+            display_name='Measurement frequency', tooltip=tooltip
+            )
+
         return handler
 
     @classmethod
@@ -653,7 +663,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 'firmware' : Version
                     The firmware version that is installed
                     on the controller.
-        
+
         Raises
         ------
         DefaultSettingsError
@@ -856,7 +866,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             v_ref_dac = self.settings.getfloat('energy_calibration',
                                                'v_ref_dac')
         except (TypeError, ValueError):
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'energy_calibration/v_ref_dac', '')
             v_ref_dac = 2.5
 
@@ -885,7 +895,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             timeout = self.settings.getint("serial_port_settings", "timeout",
                                            fallback=0)
         except (TypeError, ValueError):
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'serial_port_settings/timeout', '')
             timeout = 0
         timeout = max(timeout, 0) + sum(energies_and_times[1::2])
@@ -914,11 +924,11 @@ class ViPErinoController(abc.MeasureControllerABC):
         try:
             available_adcs = self.available_adcs()
         except NotASequenceError:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/measurement_devices', '')
             return
         except (KeyError, ValueError, TypeError, RuntimeError) as err:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller', err)
             return
 
@@ -926,7 +936,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.__adc_measurement_types = [None]*n_devices
         self.__adc_channels = [0]*n_devices
         if len(quantities) > n_devices:
-            base.emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES,
+            self.emit_error(ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES,
                             n_devices, len(quantities))
             return
         for quantity in quantities:
@@ -935,8 +945,8 @@ class ViPErinoController(abc.MeasureControllerABC):
                 if _quantity not in measurable_quantities:
                     continue
                 if self.__adc_measurement_types[i] is not None:
-                    base.emit_error(
-                        self, ViPErinoErrors.OVERLAPPING_MEASUREMENTS,
+                    self.emit_error(
+                        ViPErinoErrors.OVERLAPPING_MEASUREMENTS,
                         quantity, self.__adc_measurement_types[i].label
                         )
                     return
@@ -944,7 +954,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 self.__adc_measurement_types[i] = _quantity
                 break
             else:
-                base.emit_error(self, ViPErinoErrors.UNSUPPORTED_QUANTITY, quantity)
+                self.emit_error(ViPErinoErrors.UNSUPPORTED_QUANTITY, quantity)
                 return
 
         # Now see if we should also measure the cold-junction
@@ -979,9 +989,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         with self.lock:
             hardware = self.hardware.copy()
         if not hardware:
-            base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
-                'set up the ADCs'
-                )
+            self.emit_error(ViPErinoErrors.HARDWARE_INFO_MISSING,
+                            'set up the ADCs')
             return
         lm35_idx = list(hardware.keys()).index('lm35')
         message = [self.nr_samples, *self.__adc_channels[:lm35_idx]]
@@ -1077,10 +1086,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             return
         arduino_id = hardware.get('box_id')
         if arduino_id and arduino_id != self.box_id:
-            base.emit_error(self,
-                            ViPErinoErrors.ERROR_WRONG_BOX_ID,
-                            arduino_id=arduino_id,
-                            local_id=self.box_id)
+            self.emit_error(ViPErinoErrors.ERROR_WRONG_BOX_ID,
+                            arduino_id=arduino_id, local_id=self.box_id)
 
     def __check_measurements_possible(self):
         """Check that it is possible to measure stuff, given the hardware."""
@@ -1099,7 +1106,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 # We would have liked to measure it even if user did
                 # not ask, but it is not possible. Do not complain.
                 continue
-            base.emit_error(self, ViPErinoErrors.REQUESTED_ADC_OFFLINE,
+            self.emit_error(ViPErinoErrors.REQUESTED_ADC_OFFLINE,
                             qty.label)
         if (self.measures(QuantityInfo.TEMPERATURE)
                 and not self.measures(QuantityInfo.COLD_JUNCTION)):

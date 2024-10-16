@@ -17,7 +17,6 @@ from ctypes import POINTER, c_ubyte, cast as c_cast
 
 import numpy as np
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import abc
@@ -31,9 +30,10 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.hardwarebase import device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
-
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 
 _CUSTOM_NAME_RE = re.compile(r"\[.*\]")
 
@@ -442,8 +442,8 @@ class ImagingSourceCamera(abc.CameraABC):
 
         _min, _max = self.get_black_level_limits()
         if black_level < _min or black_level > _max:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
                 'camera_settings/black_level',
                 f"{black_level} [out of range ({_min}, {_max})]",
                 )
@@ -462,8 +462,8 @@ class ImagingSourceCamera(abc.CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 color_fmt_s, 'camera_settings/color_format', 'Y16'
                 )
             color_fmt = SinkFormat.Y16
@@ -478,8 +478,8 @@ class ImagingSourceCamera(abc.CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 color_fmt, 'camera_settings/color_format', 'Y16'
                 )
             color_fmt = SinkFormat.Y16
@@ -640,8 +640,8 @@ class ImagingSourceCamera(abc.CameraABC):
         # _widget is used for in each portion of filling the handler
 
         # Black level
-        _widget = qtw.QSpinBox()
-        _widget.setRange(*self.get_black_level_limits())
+        _widget = CoercingSpinBox(soft_range=self.get_black_level_limits())
+        _widget.setMinimum(0)
         _widget.setAccelerated(True)
         _tip = (
             "<nobr>Dark Level, Black Level, or Brightness is a measure of"
@@ -655,7 +655,8 @@ class ImagingSourceCamera(abc.CameraABC):
             )
         handler.add_option('camera_settings', 'black_level',
                            handler_widget=_widget, tooltip=_tip,
-                           is_advanced=True, display_name="Dark Level")
+                           tags=SettingsTag.ADVANCED,
+                           display_name="Dark Level")
 
         # Color format
         _tip = (
@@ -670,7 +671,7 @@ class ImagingSourceCamera(abc.CameraABC):
         _widget.notify_ = _widget.currentIndexChanged
         handler.add_option('camera_settings', 'color_format',
                            handler_widget=_widget, tooltip=_tip,
-                           is_advanced=True)
+                           tags=SettingsTag.ADVANCED)
         return handler
 
     def list_devices(self):

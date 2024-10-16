@@ -27,11 +27,14 @@ from viperleed.guilib.measure.classes.abc import DeviceABC
 from viperleed.guilib.measure.classes.abc import DeviceABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
-from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
 _QUEUED_UNIQUE = qtc.Qt.QueuedConnection | _UNIQUE
+
+NO_HARDWARE_INTERFACE = object()
 
 
 def ensure_connected(method):
@@ -57,7 +60,7 @@ def ensure_connected(method):
                 ) from None
         self.connect_()
         if not self.serial or not self.serial.is_open:
-            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
+            self.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             return None
         try:
             return method(*args, **kwargs)
@@ -105,14 +108,15 @@ class ControllerABC(DeviceABC):
             The controller settings. If not given, it should be set
             via the .settings property before the controller can
             be used.
-        address : str, optional
+        address : str, NO_HARDWARE_INTERFACE, optional
             Address (e.g., serial port) to be used to communicate with
             the controller. If this is given, it will also be stored
             in the settings file, overriding the value that may be
             there. If not given and no value is present in the
             "controller/address" field, an address should be set
-            explicitly via the .address property. Default is an
-            empty string.
+            explicitly via the .address property. If the value is
+            NO_HARDWARE_INTERFACE, then the controller will not attempt
+            to connect to hardware. Default is an empty string.
         sets_energy : bool, optional
             Used to determine whether this controller is responsible
             for setting the electron energy by communicating with the
@@ -126,14 +130,14 @@ class ControllerABC(DeviceABC):
             settings file.
         """
         super().__init__(settings=settings, parent=parent)
-        self.__sets_energy = sets_energy
-        self.__serial = None
-        self.__hash = -1
+        self._sets_energy = sets_energy
+        self._serial = None
+        self._hash = -1
 
-        self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(self)
-        self.__init_err_timer.setSingleShot(True)
-        self.__init_err_timer.timeout.connect(self.__report_init_errors)
+        self._init_errors = []  # Report these with a little delay
+        self._init_err_timer = qtc.QTimer(self)
+        self._init_err_timer.setSingleShot(True)
+        self._init_err_timer.timeout.connect(self.__report_init_errors)
 
         # Use to force sending a .stop even if the serial is busy,
         # as it may be waiting for an OK. This can happen before
@@ -144,7 +148,7 @@ class ControllerABC(DeviceABC):
         self.__force_stop_timer.setInterval(200)
         self.__force_stop_timer.timeout.connect(self.send_unsent_messages)
 
-        self.__address = address
+        self._address = address
         self.__energy_calibration = None
 
         # Set in self.set_energy to the sum of the waiting times
@@ -180,24 +184,24 @@ class ControllerABC(DeviceABC):
         # alternating order) to be set during the preparation.
         self.first_energies_and_times = []
 
-        # __unsent_messages is a list of messages that have been
+        # _unsent_messages is a list of messages that have been
         # stored by the controller because it was not yet possible
         # to send them to the hardware controller. New messages
-        # will automatically be appended to __unsent_messages if
+        # will automatically be appended to _unsent_messages if
         # the serial is still waiting for a response from the
-        # hardware. All messages in __unsent_messages are processed
+        # hardware. All messages in _unsent_messages are processed
         # in the order they arrive at. When the serial receives
         # a valid answer from the hardware it will automatically
         # trigger an attempt to send the next message in
-        # __unsent_messages. Each element of unsent_messages is
+        # _unsent_messages. Each element of unsent_messages is
         # a tuple whose first element is the command and its associated
         # data, and the second element is the timeout parameter.
-        self.__unsent_messages = []
+        self._unsent_messages = []
         if self.serial:
             self.serial.busy_changed.connect(self.send_unsent_messages,
                                              type=_QUEUED_UNIQUE)
-        if self.__init_errors:
-            self.__init_err_timer.start(20)
+        if self._init_errors:
+            self._init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
 
     def __deepcopy__(self, memo):
@@ -209,9 +213,9 @@ class ControllerABC(DeviceABC):
 
     def __hash__(self):
         """Return modified hash of self."""
-        if self.__hash == -1:
-            self.__hash = hash((id(self), self.name))
-        return self.__hash
+        if self._hash == -1:
+            self._hash = hash((id(self), self.name))
+        return self._hash
 
     def _get_busy(self):
         """Return whether the controller is busy.
@@ -247,11 +251,16 @@ class ControllerABC(DeviceABC):
         busy_changed
             If the busy state of the controller changed.
         """
-        if self.__unsent_messages:
+        if self._unsent_messages:
             return
         if self.serial and self.serial.busy:
             is_busy = True
         super().set_busy(is_busy)
+
+    @property
+    def connected(self):
+        """Return whetehr the controller hardware is connected."""
+        return self.serial.is_open
 
     @property
     def energy_calibration_curve(self):
@@ -271,8 +280,8 @@ class ControllerABC(DeviceABC):
                                                  fallback=(0, 1))
             except _m_settings.NotASequenceError:
                 coef = (0, 1)
-                base.emit_error(
-                    self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                self.emit_error(
+                    QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                     '', 'energy_calibration/coefficients', coef
                     )
             try:
@@ -313,7 +322,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/hv_settle_time', '')
         return settle_t
 
@@ -335,7 +344,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/i0_settle_time', '')
         return settle_t
 
@@ -374,7 +383,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/i0_settle_time', '')
         return settle_t
 
@@ -417,11 +426,14 @@ class ControllerABC(DeviceABC):
     @address.setter
     def address(self, address):
         """Set the address for this controller."""
-        if not isinstance(address, str):
-            raise TypeError("address must be a string")
+        no_hardware = address is NO_HARDWARE_INTERFACE
+        if not (isinstance(address, str) or no_hardware):
+            raise TypeError("Address must be a string.")
         if address == self.address:
             return
-        self.__address = address
+        self._address = address
+        if no_hardware:
+            return
         if self.settings:
             self.settings.set('controller', 'address', address)
         if not self.serial:
@@ -431,12 +443,12 @@ class ControllerABC(DeviceABC):
     @property
     def serial(self):
         """Return the serial instance used."""
-        return self.__serial
+        return self._serial
 
     @property
     def sets_energy(self):
         """Return whether the controller sets the energy."""
-        return self.__sets_energy
+        return self._sets_energy
 
     @sets_energy.setter
     def sets_energy(self, energy_setter):
@@ -447,7 +459,7 @@ class ControllerABC(DeviceABC):
         energy_setter : bool
             True if the controller sets the energy.
         """
-        self.__sets_energy = bool(energy_setter)
+        self._sets_energy = bool(energy_setter)
 
     @property
     def time_to_trigger(self):
@@ -474,22 +486,23 @@ class ControllerABC(DeviceABC):
                                                 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             serial_class = base.class_from_name('serial', serial_cls_name)
-            self.__serial = serial_class(self.settings,
-                                         port_name=self.__address)
+            self._serial = serial_class(self.settings,
+                                        port_name=self._address)
             self.serial.error_occurred.connect(self.error_occurred)
+            self.serial.connection_changed.connect(self.connection_changed)
         else:
             # The next line will also check that self.settings contains
             # appropriate settings for the serial class used.
             self.serial.settings = self.settings
-            self.serial.port_name = self.__address
+            self.serial.port_name = self._address
 
         # Notice that the .connect_() will run anyway, even if the
         # settings are invalid (i.e., missing mandatory fields for
         # the serial)!
-        if self.__address:
+        if self._address:
             self.serial.connect_()
         self._time_to_trigger = 0
-        self.__hash = -1
+        self._hash = -1
 
     @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
@@ -530,22 +543,27 @@ class ControllerABC(DeviceABC):
         if not super().set_settings(new_settings):
             return False
 
+        if self._address is NO_HARDWARE_INTERFACE:
+            # Bypass setting the serial in case the controller object
+            # is not supposed to communicate with hardware.
+            return True
+
         # Take care of the address, syncing the contents of
-        # the future settings and the value in self.__address.
+        # the future settings and the value in self._address.
         # Also, save changes to file, unless we have been reading
         # from the default configuration.
         _settings_address = self._settings.get('controller', 'address',
-                                               fallback=self.__address)
-        if not self.__address:
-            self.__address = _settings_address
+                                               fallback=self._address)
+        if not self._address:
+            self._address = _settings_address
         else:
-            self._settings['controller']['address'] = self.__address
+            self._settings['controller']['address'] = self._address
             if not self.uses_default_settings:
                 self._settings.update_file()
         try:
             self._update_serial_from_settings()
         except ValueError:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/serial_class', '')
             return False
         return True
@@ -639,7 +657,7 @@ class ControllerABC(DeviceABC):
         # preparation will not be sent till the end of the whole
         # preparation. This excludes a call to .stop(), which is
         # always done as soon as possible.
-        self.__unsent_messages = []
+        self._unsent_messages = []
         self.__can_continue_preparation = False
 
         self.busy = True
@@ -655,7 +673,7 @@ class ControllerABC(DeviceABC):
     @qtc.pyqtSlot()
     def connect_(self):
         """Connect serial."""
-        # TODO: should we complain if .__address is False-y?
+        # TODO: should we complain if ._address is False-y?
         if not self.serial or self.serial.is_open:
             # Invalid or already connected
             return
@@ -694,7 +712,7 @@ class ControllerABC(DeviceABC):
 
     def flush(self):
         """Clear unsent messages and set not busy."""
-        self.__unsent_messages = []
+        self._unsent_messages = []
         self.busy = False
 
     @abstractmethod
@@ -709,6 +727,10 @@ class ControllerABC(DeviceABC):
         The base-class implementation returns a handler that
         already contains the following settings:
         - the handler of self.serial                                            # TODO! Probably all settings are advanced, except, perhaps the port name
+
+        Use the QNoDefaultPushButton from the basewidgets module
+        in order to prevent any button from being set as the
+        default button of the dialog.
 
         and, if self.sets_energy:
         - 'measurement_settings'/'i0_settle_time'
@@ -728,28 +750,29 @@ class ControllerABC(DeviceABC):
         if not self.sets_energy:
             return handler
 
-        handler.add_section('measurement_settings')
+        handler.add_section('measurement_settings',
+                            tags=SettingsTag.MEASUREMENT)
         info = (
             ('i0_settle_time', 'I<sub>0</sub> settle time',
-             "<nobr>The time intervally required for the I<sub>0</sub> "
-             "current</nobr> to reach a stable value after a new energy "
-             "has been set. This should be calibrated for a typical step "
-             "size (e.g., 0.5 eV)."),
+             '<nobr>The time interval required for the I<sub>0</sub> '
+             'current</nobr> to reach a stable value after a new energy '
+             'has been set. This should be calibrated for a typical step '
+             'size (e.g., 0.5 eV).'),
             ('hv_settle_time', 'Energy settle time',
-             "<nobr>The time intervally required for the true beam "
-             "energy</nobr> to reach a stable value after a new "
-             "energy has been set. This should be calibrated for "
-             "a typical step size (e.g., 0.5 eV)."),
+             '<nobr>The time interval required for the true beam '
+             'energy</nobr> to reach a stable value after a new '
+             'energy has been set. This should be calibrated for '
+             'a typical step size (e.g., 0.5 eV).'),
             ('first_settle_time', 'First-energy settle time',
-             "<nobr>The time intervally required for the true beam energy</nobr>"
-             " to reach a stable value when the first energy of a ramp is set."
-             " This is usually significantly longer than the one used during"
-             " a ramp, as setting the first energy requires a large step.")
+             '<nobr>The time interval required for the true beam '
+             'energy</nobr> to reach a stable value when the first energy '
+             'of a ramp is set. This is usually significantly longer than '
+             'the one used during a ramp, as setting the first energy '
+             'requires a large step.')
             )
         for option_name, display_name, tip in info:
-            widget = InfIntSpinBox()
-            widget.setSuffix(' ms')
-            widget.setSingleStep(10)
+            widget = CoercingSpinBox(step=10, suffix=' ms')
+            widget.setMinimum(0)
             handler.add_option(
                 'measurement_settings', option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip
@@ -865,8 +888,8 @@ class ControllerABC(DeviceABC):
         -------
         None.
         """
-        if self.__unsent_messages or self.serial.busy:
-            self.__unsent_messages.append((data, kwargs))
+        if self._unsent_messages or self.serial.busy:
+            self._unsent_messages.append((data, kwargs))
             return
         self.serial.send_message(*data, **kwargs)
 
@@ -887,8 +910,8 @@ class ControllerABC(DeviceABC):
         """
         if serial_busy:
             return
-        if self.__unsent_messages:
-            data, kwargs = self.__unsent_messages.pop(0)
+        if self._unsent_messages:
+            data, kwargs = self._unsent_messages.pop(0)
             self.serial.send_message(*data, **kwargs)
 
     @abstractmethod
@@ -1045,14 +1068,14 @@ class ControllerABC(DeviceABC):
     @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
-        self.__init_errors.append(err)
+        self._init_errors.append(err)
 
     @qtc.pyqtSlot()
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
-        for error in self.__init_errors:
+        for error in self._init_errors:
             self.error_occurred.emit(error)
-        self.__init_errors = []
+        self._init_errors = []
 
 
 class MeasureControllerABC(ControllerABC):
@@ -1130,8 +1153,8 @@ class MeasureControllerABC(ControllerABC):
         except (TypeError, ValueError):
             # Not a float
             delay = fallback
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'controller/initial_delay', delay
                 )
         return delay
@@ -1172,13 +1195,13 @@ class MeasureControllerABC(ControllerABC):
                                               'nr_samples')
         except (TypeError, ValueError):
             nr_samples = 1
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/nr_samples', nr_samples
                 )
         if nr_samples <= 0:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 nr_samples, 'measurement_settings/nr_samples', 1
                 )
             nr_samples = 1
@@ -1224,6 +1247,10 @@ class MeasureControllerABC(ControllerABC):
         already contains the following settings:
         - the handler of self.serial
 
+        Use the QNoDefaultPushButton from the basewidgets module
+        in order to prevent any button from being set as the
+        default button of the dialog.
+
         and, if self.sets_energy:
         - 'measurement_settings'/'i0_settle_time'
         - 'measurement_settings'/'hv_settle_time'
@@ -1241,9 +1268,10 @@ class MeasureControllerABC(ControllerABC):
         """
         handler = super().get_settings_handler()
         if not handler.has_section('measurement_settings'):
-            handler.add_section('measurement_settings')
-        widget = InfIntSpinBox()
-        widget.setMinimum(1)
+            handler.add_section('measurement_settings',
+                                tags=SettingsTag.MEASUREMENT)
+        widget = CoercingSpinBox(soft_range=(1, float('inf')))
+        widget.setMinimum(0)
         tip = ("<nobr>The number of measurements the controller should"
                "</nobr> average over before returning a value to the PC.")
         handler.add_option('measurement_settings', 'nr_samples',
