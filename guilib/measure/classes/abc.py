@@ -134,7 +134,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     _settings_to_load : ViPErLEEDSettings
         _settings_to_load are the settings that should be loaded
         into _settings via set_settings. If no settings is given,
-        _settings_to_load will automatically be the best matching
+        _settings_to_load will automatically be the best-matching
         suitable default settings file.
     """
 
