@@ -409,8 +409,10 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Check if there are any invalid settings.
 
         Subclasses may add additional mandatory settings at
-        runtime. The base implementation will check if all of the
-        _mandatory_settings are present in the provided settings.
+        runtime. See the documentation of the _mandatory_settings
+        attribute for how to do this. The base implementation will
+        check if all of the _mandatory_settings are present in the
+        provided settings.
 
         Parameters
         ----------
