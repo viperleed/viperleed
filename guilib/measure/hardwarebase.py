@@ -256,7 +256,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
            f'any settings file for device {obj_name}. Select a '
            'different directory.')
     if third_btn_text:
-        msg += f' Alternatively you can {third_btn_text.lower()}.'
+        msg += f' Alternatively, you can {third_btn_text.lower()}.'
     msg_box.setText(msg)
     msg_box.setIcon(msg_box.Warning)
     btn = msg_box.addButton("Select path", msg_box.ActionRole)
