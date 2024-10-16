@@ -225,7 +225,7 @@ class ControllerABC(DeviceABC):
         """
         if self.serial and self.serial.busy:
             return True
-        return self._busy
+        return super()._get_busy()
 
     @qtc.pyqtSlot(bool)
     def set_busy(self, is_busy):
