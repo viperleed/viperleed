@@ -357,7 +357,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
             )
         if dropdown.exec_() == dropdown.Apply:
             return device_config_files[names.index(dropdown.selection)]
-        raise NoSettingsError('No device settings selected.')
+        raise NoSettingsError('Multiple setting files found. None selected.')
     return _get_object_settings_not_found(obj_cls, obj_info, **kwargs)
 
 
