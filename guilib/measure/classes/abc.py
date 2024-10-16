@@ -259,7 +259,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             The additional information that should be used to find
             appropriate settings. If it is None, subclasses must attempt
             to determine suitable settings without additional
-            information, when searching for default settings via
+            information when searching for default settings via
             is_matching_default_settings(). When looking for user
             settings with is_matching_user_settings(), a TypeError will
             be raised if obj_info is None.
