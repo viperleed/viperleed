@@ -205,7 +205,6 @@ from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import MissingSettingsFileError
-from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
@@ -239,7 +238,7 @@ def _emit_default_faulty(func):
     def _wrapper(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
-        except (DefaultSettingsError, NoDefaultSettingsError) as exc:
+        except DefaultSettingsError as exc:
             base.emit_error(self,
                             QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
                             str(exc))
@@ -433,7 +432,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         for device, (menu, slot) in devices_and_slots.items():
             try:
                 detected_devices = self._detect_devices(device)
-            except (DefaultSettingsError, NoDefaultSettingsError):
+            except DefaultSettingsError:
                 continue
             # The _detect_devices method returns the device name,
             # class and, additional information. The class and
