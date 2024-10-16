@@ -562,10 +562,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             firmware minor will be preferred. An empty tuple signifies
             that `config` does not match the requirements.
         """
-        ver = base.Version(
-            config.get('controller', 'firmware_version', fallback='0.0')
-            )
-
+        ver = self._get_version()
         firmware_matches = (obj_info.more.get('firmware') == ver if obj_info
                             else False)
         if not match_exactly or firmware_matches:                               # TODO: check major in the future (compare class major to settings file major)
@@ -609,9 +606,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         super().is_matching_user_settings(obj_info, config, match_exactly)
         controller_name = config.get('controller', 'device_name',
                                      fallback=None)
-        ver = base.Version(
-            config.get('controller', 'firmware_version', fallback='0.0')
-            )
+        ver = self._get_version()
         if obj_info.more['name'] != controller_name:
             return ()
         if obj_info.more['firmware'] == ver:
@@ -1138,6 +1133,11 @@ class ViPErinoController(abc.MeasureControllerABC):
             self.thermocouple.temperature(v, t0)
             for v, t0 in zip(tc_voltages, cjc_temperatures)
             ]
+
+    def _get_version(self):
+        """Get the firmware version of the hardware from `config`."""
+        ver = config.get('controller', 'firmware_version', fallback='0.0')
+        return base.Version(ver)
 
     @staticmethod
     def __is_adc(name):
