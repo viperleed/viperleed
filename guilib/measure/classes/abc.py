@@ -209,7 +209,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             settings is up to the is_settings_for_this_class() and
             is_matching_default_settings() methods. Default is None.
             If it is None, subclasses must attempt to determine suitable
-            settings without additional information, when searching for
+            settings without additional information when searching for
             default settings via is_matching_default_settings().
         match_exactly : bool, optional
             Whether find_from should be matched exactly. False means
