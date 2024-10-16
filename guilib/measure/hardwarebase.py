@@ -401,6 +401,8 @@ def get_devices(package):
                                      inspect.isclass):
         if hasattr(cls, 'list_devices'):
             dummy_instance = cls()
+            # list_devices raises a DefaultSettingsError if the default
+            # settings do not suffice to make and detect devices.
             dev_list = dummy_instance.list_devices()
             for device in dev_list:
                 devices[device.unique_name] = (cls, device)

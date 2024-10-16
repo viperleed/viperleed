@@ -574,12 +574,13 @@ class ControllerABC(DeviceABC):
         Returns
         -------
         invalid_settings : list of tuples
-            Invalid required_settings of self as a list of tuples.
+            Invalid _mandatory_settings of self as a list of tuples.
             The first entry in each tuple can be either '<section>',
             '<section>/<option>', or
             '<section>/<option> not one of <value1>, <value2>, ...'.
-            Further entries are information on what is wrong with
-            the setttings.
+            Further optional entries may be added by subclasses. They
+            specify additional information on what is wrong with each
+            invalid setting.
         """
         # The next extra settings are mandatory only for a
         # controller that sets the LEED energy on the optics
