@@ -227,7 +227,8 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
         settings. How exactly is up to the implementation of
         find_matching_settings_files in obj_cls.
     **kwargs : dict
-        The same arguments given to get_object_settings
+        The same arguments given to get_object_settings. See
+        help(get_object_settings) for more information.
 
     Returns
     -------
