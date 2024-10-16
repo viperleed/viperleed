@@ -1069,7 +1069,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             elif isinstance(sender, ControllerABC):
                 source = f'controller {sender.name} at {sender.address}'
             elif isinstance(sender, MeasurementABC):
-                source = f'measurement {sender.__class__.__name__}'
+                source = f'measurement {type(sender).__name__}'
             elif isinstance(sender, SerialABC):
                 # Theoretically we should only receive error
                 # messages from controller instances.
