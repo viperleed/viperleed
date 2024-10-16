@@ -329,7 +329,8 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         dismissed the dialog.
     NoSettingsError
         If no settings file was found and no alternative option was
-        given.
+        given, or if multiple files were found but the user did not
+        pick one.
     """
     directory = kwargs.get('directory', DEFAULTS_PATH)
     match_exactly = kwargs.get('match_exactly', False)
