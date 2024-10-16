@@ -440,7 +440,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         This method must be extended in subclasses, i.e., do
         handler = super().get_settings_handler(), and then add
         appropriate sections and/or options to it using the
-        handler.add_section, and handler.add_option methods.
+        handler.add_section and handler.add_option methods.
 
         The base-class implementation returns a handler that
         contains the location of the settings file.
