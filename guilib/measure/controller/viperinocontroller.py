@@ -602,8 +602,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             the same, so all matching files will return the same
             sorting value. If no exact match is required, the highest
             firmware minor with a matching major will be preferred.
-            An empty tuple signifies no `config` file matches the
-            requirements.
+            An empty tuple signifies that `config` does not match
+            the requirements.
         """
         super().is_matching_user_settings(obj_info, config, match_exactly)
         controller_name = config.get('controller', 'device_name',
