@@ -271,7 +271,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
         new_path = qtw.QFileDialog.getExistingDirectory(
             parent=parent_widget,
             caption="Choose directory of device settings",
-            directory=str(directory)
+            directory=str(directory),
             )
         if new_path:
             kwargs["directory"] = new_path
