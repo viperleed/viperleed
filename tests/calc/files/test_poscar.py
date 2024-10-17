@@ -15,7 +15,7 @@ from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import symmetry
 from viperleed.calc.files import poscar
-from viperleed.calc.lib.base import pairwise
+from viperleed.calc.lib.itertools_utils import pairwise
 
 from ...helpers import exclude_tags
 from ..poscar_slabs import CasePOSCARSlabs

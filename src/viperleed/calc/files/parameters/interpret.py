@@ -18,6 +18,7 @@ __created__ = '2020-08-18'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
+from contextlib import nullcontext
 import copy
 from functools import partialmethod, wraps
 import logging
@@ -40,9 +41,11 @@ from viperleed.calc.classes.rparams import SymmetryEps
 from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
-from viperleed.calc.lib.base import parent_name
-from viperleed.calc.lib.base import readIntRange, readVector
-from viperleed.calc.lib.base import recombineListElements, splitSublists
+from viperleed.calc.lib.log_utils import logger_silent
+from viperleed.calc.lib.sequence_utils import recombine_items
+from viperleed.calc.lib.string_utils import parent_name
+from viperleed.calc.lib.string_utils import read_int_range
+from viperleed.calc.lib.string_utils import read_vector
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.sections.calc_section import CalcSection as Section
@@ -218,23 +221,19 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         self.slab = slab
         self._search_conv_read = False
 
-        _backup_log_level = _LOGGER.level
-        if silent:
-            _LOGGER.setLevel(logging.ERROR)
+        log_context = (logger_silent(_LOGGER, logging.ERROR) if silent
+                       else nullcontext)
+        with log_context():
+            self._update_param_order()
+            for param, assignment in self._get_param_assignments():
+                self._complain_if_invalid_param_in_domain_calc(param)
+                self._interpret_param(param, assignment)
+                _LOGGER.log(_BELOW_DEBUG,
+                            f'Successfully interpreted parameter {param}')
 
-        self._update_param_order()
-        for param, assignment in self._get_param_assignments():
-            self._complain_if_invalid_param_in_domain_calc(param)
-            self._interpret_param(param, assignment)
-            _LOGGER.log(_BELOW_DEBUG,
-                        f'Successfully interpreted parameter {param}')
-
-        # Make sure there is no inconsistent combination of parameters
-        checker = ParametersChecker()
-        checker.check_parameter_conflicts(self.rpars)
-
-        # Finally set the log level back to what it was
-        _LOGGER.setLevel(_backup_log_level)
+            # Make sure there is no inconsistent combination of parameters
+            checker = ParametersChecker()
+            checker.check_parameter_conflicts(self.rpars)
 
     # ----------------  Helper methods for interpret() ----------------
     def _complain_if_invalid_param_in_domain_calc(self, param):
@@ -581,10 +580,12 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         bulk_repeat_str = assignment.values_str.lower()
         # (1) Vector
         if '[' in bulk_repeat_str:
-            vec = readVector(bulk_repeat_str, self.slab.ucell)
-            if vec is None:
-                raise ParameterParseError(parameter=param)
-            self.rpars.BULK_REPEAT = vec
+            try:
+                self.rpars.BULK_REPEAT = read_vector(bulk_repeat_str,
+                                                     self.slab.ucell.T)
+            except ValueError as exc:
+                raise ParameterParseError(parameter=param,
+                                          message=str(exc)) from None
             return
 
         # (2) Z distance
@@ -1466,9 +1467,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         """
         atnums = []
         for site_spec in site_specs:
-            extra_atom_numbers = readIntRange(site_spec)
-            if extra_atom_numbers:
-                atnums.extend(extra_atom_numbers)
+            try:
+                atnums.extend(read_int_range(site_spec))
+            except ValueError:  # Not integer nor range of integers
+                pass
+            else:
                 continue
             if 'top(' in site_spec:
                 n_top = int(site_spec.split('(')[1].split(')')[0])
@@ -1669,7 +1672,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         # with the bracketed part as optional and 'value' either
         # zero or one (or a bool that can be translated to those)
         rgx = re.compile(r'\s*((?P<repeats>\d+)\s*[*])?\s*(?P<value>[01])\s*$')
-        tokens = recombineListElements(assignment.values, '*')
+        tokens = recombine_items(assignment.values, '*')
         for token in tokens:
             token_01 = re.sub(r'[Tt](rue|RUE)?', '1', token)
             token_01 = re.sub(r'[Ff](alse|ALSE)?', '0', token_01)
@@ -1766,7 +1769,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             wood = self._read_woods_notation(param, assignment)
             setattr(self.rpars, param, wood)
         else:
-            matrix = self._read_matrix_notation(param, assignment.values)
+            matrix = self._read_matrix_notation(param, assignment.values_str)
             setattr(self.rpars, param, matrix)
 
     # ------------------------ Helper methods -------------------------
@@ -1931,11 +1934,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterNeedsSlabError(param, message)
         return readWoodsNotation(assignment.values_str, self.slab.ucell)
 
-    def _read_matrix_notation(self, param, values):
-        """Try interpreting values as a 2x2 matrix."""
-        matrix = splitSublists(values, ',')
+    def _read_matrix_notation(self, param, value_str):
+        """Try interpreting value_str as a 2x2 matrix."""
+        matrix = [row.split() for row in value_str.split(',')]
         if len(matrix) != 2:
-            message = 'Number of lines in matrix is not equal to 2'
+            message = 'Number of rows in matrix is not equal to 2'
             self.rpars.setHaltingLevel(2)
             raise ParameterParseError(param, message)
         if any(len(row) != 2 for row in matrix):

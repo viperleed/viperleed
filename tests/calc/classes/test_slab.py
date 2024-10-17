@@ -31,8 +31,11 @@ from viperleed.calc.classes.slab import surface_slab
 from viperleed.calc.classes.sym_entity import SymPlane
 from viperleed.calc.files.parameters.errors import InconsistentParameterError
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import NonIntegerMatrixError, SingularMatrixError
-from viperleed.calc.lib.base import add_edges_and_corners, collapse, pairwise
+from viperleed.calc.lib.coordinates import add_edges_and_corners
+from viperleed.calc.lib.coordinates import collapse
+from viperleed.calc.lib.itertools_utils import pairwise
+from viperleed.calc.lib.matrix import NonIntegerMatrixError
+from viperleed.calc.lib.matrix import SingularMatrixError
 
 from ...helpers import exclude_tags, not_raises
 from .. import cases_ase, poscar_slabs
@@ -912,7 +915,7 @@ class TestCoordinates:
         slab.collapse_cartesian_coordinates()
         assert atom.cartpos == pytest.approx(expect, abs=1e-8)
 
-    def test_collapse_fractional(self, manual_slab_3_atoms):                    # TODO: will have to add a test for calc.lib.base in which we use both 'floor' and 'round' methods. Find especially cases that are 'problematic' with %1.0: e.g., 1-1e-8, 1-1e-9, 1-1e-15
+    def test_collapse_fractional(self, manual_slab_3_atoms):
         """Check that fractional coordinates are correctly collapsed."""
         slab = manual_slab_3_atoms
         atom = slab.atlist[0]

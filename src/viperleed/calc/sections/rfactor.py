@@ -17,7 +17,6 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc.files import iorfactor
 from viperleed.calc.files import iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
@@ -77,7 +76,7 @@ def _fetch_and_check_spectra(rp, index, name):
     directory = None
     path = None
     if fn.is_file():
-        directory = DEFAULT_WORK
+        directory = rp.workdir.name
         path = fn
     elif ("OUT" / fn).is_file():
         directory = "OUT"
@@ -501,7 +500,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     try:
         with rfaclogname.open("w") as log:
             subprocess.run(
-                Path(rfacname).resolve(),
+                str(Path(rfacname).resolve()),
                 input=theospec,
                 encoding="ascii",
                 stdout=log,
@@ -550,7 +549,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     rp.best_v0r = v0rshift
     dir_list = [Path(), Path("OUT")]
     for dir_name in dir_list:
-        for f_name in dir_name.glob(f"R_OUT_{rp.timestamp}*"):
+        for f_name in dir_name.glob(f"R_OUT*"):
             if not f_name.is_file():
                 continue
             try:  # delete old R_OUT files
@@ -566,7 +565,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
             "you can ignore this warning."
             )
 
-    f_name = f"R_OUT_{name}_{rp.timestamp}_R={rfac:.4f}"
+    f_name = f"R_OUT_{name}_R={rfac:.4f}"
     rp.last_R = rfac
     rp.stored_R[name] = (rfac, r_int, r_frac)
     try:

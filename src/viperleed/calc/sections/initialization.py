@@ -40,8 +40,9 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import angle, rotation_matrix
-from viperleed.calc.lib.base import NonIntegerMatrixError
+from viperleed.calc.lib.matrix import NonIntegerMatrixError
+from viperleed.calc.lib.matrix import rotation_matrix
+from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
@@ -51,11 +52,19 @@ from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 logger = logging.getLogger(__name__)
 
 
+OPTIONAL_INPUT_FILES = ('BEAMLIST',)
+
+
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
         rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
+
+    # preserve unmodified input files to original_inputs directory
+    if not subdomain:
+        rp.inputs_dir = rp.workdir / ORIGINAL_INPUTS_DIR_NAME
+        _preserve_original_input(rp, origin_dir=Path.cwd().resolve())
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
         init_domains(rp)
@@ -126,11 +135,11 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
-        poscar.write(tmpslab, filename='POSCAR', comments='all')
+        poscar.write(tmpslab,
+                     filename=rp.workdir/'POSCAR_OUT', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
-    rp.manifest.append('POSCAR')
     # generate POSCAR_oricell
     tmpslab.revert_unit_cell()
     try:
@@ -380,8 +389,6 @@ def initialization(sl, rp, subdomain=False):
     # Create directory compile_logs in which logs from compilation will be saved
     make_compile_logs_dir(rp)
 
-    # At the end of initialization preserve the original input files
-    _preserve_original_input(rp, logger)
     return
 
 
@@ -481,12 +488,19 @@ def init_domains(rp):
             os.chdir(target)
             logger.info(f"Reading input files for domain {name}")
             try:
-                dp.sl = poscar.read()
-                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
-                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
+
+                # run _preserve_original_input separately for each domain
+                dp.rp.inputs_dir = dp.rp.workdir / ORIGINAL_INPUTS_DIR_NAME / name
+                _preserve_original_input(dp.rp, origin_dir=Path.cwd().resolve())
+
+                dp.sl = poscar.read(dp.rp.inputs_dir / "POSCAR")
+                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
+                dp.rp.inputs_dir = Path.cwd().resolve()
+
                 parameters.interpret(dp.rp, slab=dp.sl,
                                      silent=rp.LOG_LEVEL > logging.DEBUG)
                 dp.sl.full_update(dp.rp)
@@ -515,6 +529,7 @@ def init_domains(rp):
                              f"PARAMETERS for domain {name}")
                 raise
             logger.info(f"Running initialization for domain {name}")
+
             try:
                 initialization(dp.sl, dp.rp, subdomain=True)
             except Exception:
@@ -539,8 +554,7 @@ def init_domains(rp):
         # if the unit cells don't match right away, try if rotation matches
         if (all(abs(np.linalg.norm(bulkuc0[i]) - np.linalg.norm(bulkuc[i]))
                 < eps for i in range(0, 2))
-                and abs(angle(bulkuc[0], bulkuc[1])
-                        - angle(bulkuc0[0], bulkuc0[1])) < eps):
+                and abs(angle(*bulkuc) - angle(*bulkuc0)) < eps):
             logger.info(f"Bulk unit cells of domain {rp.domainParams[0].name} "
                         f"and domain {dp.name} are mismatched, but can be "
                         f"matched by rotating domain {dp.name}.")
@@ -705,16 +719,14 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def _preserve_original_input(rp, init_logger, path=""):
-    """Create original_inputs directory and copies the input files there."""
-    path = Path(path)
-    orig_inputs_path = path / ORIGINAL_INPUTS_DIR_NAME
+def _preserve_original_input(rp, origin_dir):
+    """Create the original_inputs directory and copy input files there."""
     try:
-        orig_inputs_path.mkdir(parents=True, exist_ok=True)
+        rp.inputs_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        raise RuntimeError(f"Could not create directory "
-                           f"{ORIGINAL_INPUTS_DIR_NAME}. "
-                           "Check disk permissions.") from exc
+        raise RuntimeError(f'Could not create directory '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}. '
+                           'Check disk permissions.') from exc
 
     # We will copy all files that have potentially been used as
     # inputs. Make sure the correct version of EXPBEAMS is stored
@@ -723,21 +735,24 @@ def _preserve_original_input(rp, init_logger, path=""):
     if rp.expbeams_file_name:
         files_to_preserve.add(rp.expbeams_file_name)
 
+
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:
         # save under name EXPBEAMS.csv
-        file_path = path / file
+        file_path = origin_dir / file
         if not file_path.is_file():
-            init_logger.warning(f"Could not find file {file}. "
-                                    "It will not be stored in "
-                                    f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            if file in OPTIONAL_INPUT_FILES:
+                continue
+            logger.warning(f'Could not find file {file}. '
+                           'It will not be stored in '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rp.setHaltingLevel(1)
             return
         try:
-            shutil.copy2(file_path, orig_inputs_path)
+            shutil.copy2(file_path, rp.inputs_dir)
         except OSError:
-            init_logger.warning(f"Could not copy file {file} to "
-                                f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            logger.warning(f'Could not copy file {file} to '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rp.setHaltingLevel(1)
 
 
@@ -795,7 +810,7 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
     angle_between_first_uc_vec_and_x = sl.angle_between_ucell_and_coord_sys
     if angle_between_first_uc_vec_and_x > angle_eps and rp.THETA > angle_eps:
         logger.info(
-            f"Detected non-zero angle theta ({rp.THETA:.2f})° and"
+            f"Detected non-zero angle theta ({rp.THETA:.2f})° and "
             f"an angle of {angle_between_first_uc_vec_and_x:.2f}° "
             "between the first unit cell vector and the x direction of "
             "the coordinate system in the POSCAR file.\n"

@@ -17,7 +17,7 @@ import logging
 
 import numpy as np
 
-from viperleed.calc.lib.base import range_to_str
+from viperleed.calc.lib.string_utils import range_to_str
 
 
 logger = logging.getLogger(__name__)

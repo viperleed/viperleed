@@ -1,6 +1,8 @@
 # This file contains a list of the required python packages for
-# running tests for viperleed.
+# running tests for viperleed. See pyproject.toml for details
+# concerning version restrictions. 
 ase            # Used for testing the ASE interface
 pytest<8       # Till Issue #337 of pytest-cases is fixed
-pytest-cases
+pytest-cases>=3.8.1
+pytest-cov>=2.5
 pytest-subtests

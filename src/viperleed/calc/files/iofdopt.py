@@ -13,25 +13,22 @@ import logging
 import numpy as np
 from numpy.polynomial import Polynomial
 
-try:
-    import matplotlib
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    plt.style.use('viperleed.calc')
-    from matplotlib import cm
-except Exception:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
-
 from viperleed.calc.files.iorfactor import read_rfactor_columns
 from viperleed.calc.files.ivplot import plot_iv
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import close_figures
+from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
+from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
+
+if CAN_PLOT:
+    prepare_matplotlib_for_calc()
+    from matplotlib.backends.backend_pdf import PdfPages
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)  # Mute matplotlib debug messages                 # TODO: perhaps nicer to use at_level only in the relevant spots? See also iorfactor and ivplot
 
 
 def write_fd_opt_csv(points, which, filename="FD_Optimization.csv", sep=","):
@@ -74,6 +71,7 @@ def write_fd_opt_csv(points, which, filename="FD_Optimization.csv", sep=","):
     return
 
 
+@log_without_matplotlib(logger, msg='Skipping error plotting.')
 def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
                      parabola=None):
     """
@@ -95,16 +93,13 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
     None.
 
     """
-
-    global _CAN_PLOT
-    if not _CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "error plotting.")
-        return
     title = which
     if which in ["a", "b", "c", "ab", "abc"]:
         title += " scaling"
 
+    # Pylint can't tell that we will not execute this,
+    # as per decorator, if we fail to import matplotlib
+    # pylint: disable-next=possibly-used-before-assignment
     fig = plt.figure(figsize=(5.8, 4.1))
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel(title)
@@ -130,6 +125,9 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
 
     # write
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(filename)
         pdf.savefig(fig)
     except PermissionError:
@@ -144,13 +142,10 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
             pdf.close()
         except Exception:
             pass
-    try:
-        plt.close(fig)
-    except Exception:
-        pass
-    return
+    close_figures(plt, fig)
 
 
+@log_without_matplotlib(logger, msg='Skipping error plotting.')
 def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
                            filename="FD_Optimization_beams.pdf"):
     """
@@ -176,13 +171,6 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
     None.
 
     """
-
-    global _CAN_PLOT
-    if not _CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "error plotting.")
-        return
-
     new_order = points[:, 0].argsort()
     tmpdirs = list(np.array(tmpdirs)[new_order])
     points = points[new_order]
@@ -221,6 +209,9 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
               for b in rp.expbeams]
     formatting = copy.deepcopy(rp.PLOT_IV)  # use to set colors
     formatting['colors'] = (
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         list(cm.get_cmap('viridis', len(points)).colors)
         + [np.array([0, 0, 0, 1])])
     formatting['curve_line_widths'] = [0.5] * len(points) + [1.]

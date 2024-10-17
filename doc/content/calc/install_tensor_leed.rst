@@ -106,8 +106,8 @@ can use to locate the :ref:`tensor-LEED code<install_tensorleed>`.
 
         .. code-block:: bash
 
-            echo '# Set environment variable for viperleed-tensorleed' > ~/.bashrc
-            echo 'export VIPERLEED_TENSORLEED="<path/to/your/local/copy/of/viperleed-tensorleed>"' > ~/.bashrc
+            echo '# Set environment variable for viperleed-tensorleed' >> ~/.bashrc
+            echo 'export VIPERLEED_TENSORLEED="<path/to/your/local/copy/of/viperleed-tensorleed>"' >> ~/.bashrc
 
   .. tab-item:: Windows, via CMD
 
