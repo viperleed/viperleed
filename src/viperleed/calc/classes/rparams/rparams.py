@@ -42,6 +42,8 @@ from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
+from viperleed.calc.sections.cleanup import DEFAULT_OUT
+from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 
 from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
 from .limits import PARAM_LIMITS
@@ -163,7 +165,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = ['SUPP', 'OUT']
+        self.manifest = [DEFAULT_SUPP, DEFAULT_OUT]
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
             'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,
