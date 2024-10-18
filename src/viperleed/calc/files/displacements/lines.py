@@ -105,10 +105,10 @@ class ConstraintLine:
 
 
 class OffsetsLine:
-    def __init__(self, line, offset_type, parameters, direction, value):
+    def __init__(self, line, offset_type, targets, direction, value):
         self.line = line
         self.offset_type = offset_type
-        self.parameters = parameters
+        self.targets = BSTarget(targets)
         self.value = value
         if self.offset_type == "geo":
             if direction is not None:
