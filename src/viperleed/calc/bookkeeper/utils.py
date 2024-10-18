@@ -12,6 +12,27 @@ __license__ = 'GPLv3+'
 
 from functools import wraps
 from operator import attrgetter
+import shutil
+
+from .log import LOGGER
+
+
+def discard_files(*file_paths):
+    """Delete files at `file_paths`. Log if they can't be deleted."""
+    for file in file_paths:
+        if not file.exists():
+            continue
+        if file.is_file():
+            try:
+                file.unlink()
+            except OSError:
+                LOGGER.error(f'Failed to discard file {file.name}.')
+            continue
+        assert file.is_dir()  # Should be a directory
+        try:
+            shutil.rmtree(file)
+        except OSError:
+            LOGGER.error(f'Failed to discard directory {file.name}.')
 
 
 def make_property(attr, needs_update=False, updater='update_from_cwd'):

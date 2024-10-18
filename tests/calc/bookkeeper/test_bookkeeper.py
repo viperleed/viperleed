@@ -50,7 +50,7 @@ from .conftest import MOCK_WORKHISTORY
 from .conftest import NOTES_TEST_CONTENT
 
 
-_UPDATE_METHODS = 'update_from_cwd', 'run'
+_UPDATE_METHODS = 'update_from_cwd', 'run', 'collect', 'collect_info'
 raises_oserror = functools.partial(raises_exception, exc=OSError)
 make_raise_oserror = functools.partial(make_obj_raise, exc=OSError)
 not_raises_oserror = functools.partial(not_raises, exc=OSError)
@@ -495,15 +495,16 @@ class TestBookkeeperOthers:
         bookkeeper = Bookkeeper(cwd=tmp_path)
         bookkeeper.update_from_cwd(silent=True)
         # pylint: disable-next=protected-access   # OK in tests
-        log_info = bookkeeper._infer_run_info_from_log()
-        assert bookkeeper.all_cwd_logs
+        logs = bookkeeper._root.logs
+        log_info = logs.infer_run_info()
+        assert logs.files
         assert log_info == expect
 
     def test_no_state_files_in_out(self):
         """Check correct behavior when there is no file in OUT to be used."""
         bookkeeper = Bookkeeper()
-        # pylint: disable-next=protected-access   # OK in tests
-        bookkeeper._update_state_files_from_out()  # There's no out
+        # pylint: disable-next=protected-access           # OK in tests
+        bookkeeper._root.update_state_files_from_out()    # No OUT dir
         assert not any(Path(f).exists() for f in MOCK_STATE_FILES)
 
     def test_remove_tensors_deltas(self, tmp_path):
@@ -575,15 +576,17 @@ class TestBookkeeperOthers:
         bookkeeper.update_from_cwd(silent=True)
         history_dir = bookkeeper.history_dir
         history_info = bookkeeper.history_info
+        # pylint: disable-next=protected-access   # OK in tests
+        logs = bookkeeper._root.logs.files
         assert tensor_num_unused not in bookkeeper.max_job_for_tensor
-        assert not_collected_log not in bookkeeper.all_cwd_logs
+        assert not_collected_log not in logs
 
         # About the disables: W0212 (protected-access) is OK in a test;
         # E1135 (unsupported-membership-test) is a pylint problem, as
         # it cannot infer that by the time we reach this one we have
         # a tuple in _paths['to_be_archived'].
         # pylint: disable-next=E1135,W0212
-        assert not any(f in bookkeeper._paths['to_be_archived']
+        assert not any(f in bookkeeper._root._files_to_archive
                        for f in not_collected_dirs)
 
         bookkeeper.run('archive')
@@ -663,12 +666,16 @@ class TestBookkeeperRaises:
     _os_error = {
         '_copy_out_and_supp': ('shutil.copytree', logs),
         '_make_and_copy_to_history': ('pathlib.Path.mkdir', raises),
-        '_read_and_clear_notes_file-read': ('pathlib.Path.read_text', logs),
-        '_read_and_clear_notes_file-write': ('pathlib.Path.write_text', logs),
-        '_read_most_recent_log': ('pathlib.Path.open', skips),
-        '_remove_log_files': ('pathlib.Path.unlink', logs),
-        '_remove_out_and_supp': ('shutil.rmtree', logs),
-        '_replace_state_files_from_ori': ('pathlib.Path.replace', raises),
+        '_root.read_and_clear_notes_file-read': ('pathlib.Path.read_text',
+                                                 logs),
+        '_root.read_and_clear_notes_file-write': ('pathlib.Path.write_text',
+                                                  logs),
+        '_root.logs._read_most_recent': ('pathlib.Path.open', skips),
+        '_root.logs.discard': ('pathlib.Path.unlink', logs),
+        '_root._remove_out_and_supp': ('shutil.rmtree', logs),
+        '_root._remove_ori_files': ('pathlib.Path.unlink', logs),
+        '_root._replace_state_files_from_ori': ('pathlib.Path.replace',
+                                                raises),
         '_workhistory._discard_previous': ('shutil.rmtree', logs),
         '_workhistory.move_and_cleanup(None)': ('shutil.rmtree', logs),
         }
@@ -714,9 +721,7 @@ class TestBookkeeperRaises:
                        if r.levelno >= logging.WARNING)
 
     _attr_needs_update = (
-        'all_cwd_logs',
         'archiving_required',
-        'cwd_logs',
         'files_need_archiving',
         'history_dir',
         'history_dir_base_name',
@@ -725,46 +730,43 @@ class TestBookkeeperRaises:
         'max_job_for_tensor',
         'tensor_number',
         'timestamp',
+        '_root.logs',
         )
     _method_needs_update = (  # Only those without args
-        '_collect_files_to_archive',
+        '_archive_to_history_and_add_info_entry',
         '_copy_input_files_from_original_inputs_or_cwd',
         '_copy_log_files',
         '_copy_out_and_supp',
-        '_deal_with_workhistory_and_history_info',
-        '_discard_workhistory_previous',
         '_find_base_name_for_history_subfolder',
         '_find_new_history_directory_name',
         '_get_conflicting_history_subfolders',
-        '_infer_run_info_from_log',
         '_make_and_copy_to_history',
-        '_move_workhistory_folders',
-        '_remove_log_files',
         '_remove_tensors_and_deltas',
+        '_root.logs.discard',
+        '_root.revert_to_previous_calc_run',
         '_run_archive_mode',
         '_run_clear_mode',
-        '_run_discard_common',
         '_run_discard_full_mode',
         '_run_discard_mode',
         )
 
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, attr):
-        """check that accessing attributes before update_from_cwd fails."""
+        """Check that accessing attributes before update_from_cwd fails."""
         bookkeeper = Bookkeeper()
         with pytest.raises(AttributeError) as exc:
-            getattr(bookkeeper, attr)
-        assert _UPDATE_METHOD in str(exc)
+            attrgetter(attr)(bookkeeper)
+        assert any(update in str(exc) for update in _UPDATE_METHODS)
 
-    @parametrize(method_name=_attr_needs_update)
+    @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, method_name):
-        """check that accessing attributes before update_from_cwd fails."""
+        """Check that accessing attributes before update_from_cwd fails."""
         bookkeeper = Bookkeeper()
         with pytest.raises(AttributeError) as exc:
             # Some methods raise already at getattr, some at call
-            method = getattr(bookkeeper, method_name)
+            method = attrgetter(method_name)(bookkeeper)
             method()
-        assert _UPDATE_METHOD in str(exc)
+        assert any(update in str(exc) for update in _UPDATE_METHODS)
 
 
 class TestBookkeeperComplaints:

@@ -12,6 +12,17 @@ __license__ = 'GPLv3+'
 
 import re
 
+from viperleed.calc import LOG_PREFIX
+
+CALC_LOG_PREFIXES = (
+    LOG_PREFIX,
+    # The next ones are for backwards compatibility. Must
+    # be in historical order of use: Most recent first!
+    'tleedm',
+    )
 HISTORY_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3})\.r(?P<job_num>[0-9]{3})(?P<rest>.*)'
     )
+
+# Input/output files that may have _ori or _OUT suffix
+STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')

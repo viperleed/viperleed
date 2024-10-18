@@ -13,12 +13,9 @@ from collections import defaultdict
 from contextlib import nullcontext
 from enum import IntEnum
 from pathlib import Path
-import re
 import shutil
 
 from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
@@ -29,6 +26,7 @@ from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 
 from . import log
 from .constants import HISTORY_FOLDER_RE
+from .constants import STATE_FILES
 from .history.entry.entry import HistoryInfoEntry
 from .history.errors import CantDiscardEntryError
 from .history.errors import CantRemoveEntryError
@@ -36,21 +34,13 @@ from .history.errors import NoHistoryEntryError
 from .history.constants import HISTORY_INFO_NAME
 from .history.info import HistoryInfoFile
 from .history.meta import BookkeeperMetaFile
-from .history.workhistory import WorkhistoryHandler
 from .log import LOGGER
 from .mode import BookkeeperMode
+from .root_explorer import RootExplorer
 from .utils import discard_files
 from .utils import make_property
 from .utils import needs_update_for_attr
 
-
-CALC_LOG_PREFIXES = (
-    LOG_PREFIX,
-    # The next ones are for backwards compatibility. Must
-    # be in historical order of use: Most recent first!
-    'tleedm',
-    )
-STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
 # Input files that may be generated at runtime - don't warn if missing
 RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
@@ -58,19 +48,6 @@ RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 # Suffix for files moved from root rather than original_inputs
 _FROM_ROOT = '_from_root'
-
-# Regular expressions for parsing the log file
-_RFAC_RE = r'[\d.( )/]+'
-_LOG_FILE_RE = {
-    'run_info': re.compile(r'Executed segments:\s*(?P<run_info>[\d ]+)\s*'),
-    'r_ref': re.compile(
-        rf'Final R \(refcalc\)\s*:\s*(?P<r_ref>{_RFAC_RE})\s*'
-        ),
-    'r_super': re.compile(
-        rf'Final R \(superpos\)\s*:\s*(?P<r_super>{_RFAC_RE})\s*'
-        ),
-    }
-
 
 
 class _FileNotOlderError(Exception):
@@ -95,29 +72,19 @@ class Bookkeeper:
             }
         self._history_info = None   # Set in update_from_cwd
         self._mode = None           # Set in run
-        self._paths = {
-            'cwd': Path(cwd),
-            # The next ones are set in update_from_cwd
-            'calc_logs': None,       # tuple
-            'other_logs': None,      # tuple
-            'to_be_archived': None,  # tuple
-            }
+        self._root = RootExplorer(path=cwd, bookkeeper=self)
         self._state_info = {
             'logger_prepared': False,
             # The next ones are set in update_from_cwd
-            'last_log_lines': None,       # tuple
             'max_job_for_tensor': None,   # defaultdict[int]
             'tensor_number': None,        # int
             'timestamp': None,            # str
             'history_with_same_base_name_exists': None,  # bool
             }
-        self._workhistory = WorkhistoryHandler(
-            work_history_path=self.cwd / DEFAULT_WORK_HISTORY,
-            bookkeeper=self,
-            )
 
     # Simple dynamic @properties
     cwd = make_property('_root.path')
+    files_need_archiving = make_property('_root.needs_archiving')
     history_dir_base_name = make_property(
         # Notice that this is not necessarily the name of the
         # history subfolder that is created. Use .history_dir
@@ -125,40 +92,23 @@ class Bookkeeper:
         '_folder_names[history_dir_base_name]',
         needs_update=True,
         )
+    history_info = make_property('_history_info', needs_update=True)
     history_with_same_base_name_exists = make_property(
         '_state_info[history_with_same_base_name_exists]',
         needs_update=True,
         )
-
-    @property
-    def all_cwd_logs(self):
-        """Return paths to all the log files in the root directory."""
-        # tuple() is the start value. It would be nicer to specify
-        # it as a keyword, but this was only introduced in py38.
-        return sum(self.cwd_logs, tuple())
     max_job_for_tensor = make_property('_state_info[max_job_for_tensor]',
                                        needs_update=True)
     tensor_number = make_property('_state_info[tensor_number]',
                                   needs_update=True)
     timestamp = make_property('_state_info[timestamp]', needs_update=True)
+    _workhistory = make_property('_root.workhistory')
 
     @property
     def archiving_required(self):
         """Check if archiving is required."""
         return (self.files_need_archiving
                 and not self.history_with_same_base_name_exists)
-
-    @property
-    @needs_update_for_attr('_paths[calc_logs]')
-    def cwd_logs(self):
-        """Return log files, split into those of calc and all the others."""
-        return self._paths['calc_logs'], self._paths['other_logs']
-
-    @property
-    @needs_update_for_attr('_paths[to_be_archived]')
-    def files_need_archiving(self):
-        """Check if there are any files that need archiving."""
-        return bool(self._paths['to_be_archived'])
 
     @property
     @needs_update_for_attr('_folder_names[history_dir]')
@@ -172,12 +122,6 @@ class Bookkeeper:
         Path
         """
         return self.top_level_history_path / self._folder_names['history_dir']
-
-    @property
-    @needs_update_for_attr('_history_info')
-    def history_info(self):
-        """Return the HistoryInfoFile handling history.info."""
-        return self._history_info
 
     @property
     def orig_inputs_dir(self):
@@ -259,11 +203,13 @@ class Bookkeeper:
             self._state_info['tensor_number'] = tensor_number
             self._collect_max_run_per_tensor()
 
-            # Infer timestamp from log file, if possible
-            self._collect_log_files()
-            timestamp, log_lines = self._read_most_recent_log()
-            self._state_info['timestamp'] = timestamp
-            self._state_info['last_log_lines'] = log_lines
+            # Collect information from the root directory:
+            # log files, SUPP, OUT, and workhistory.
+            self._root.collect_info()
+            self._state_info['timestamp'] = (
+                self._root.calc_timestamp  # If a log file was found
+                or f'moved-{DateTimeFormat.FILE_SUFFIX.now()}'
+                )
 
             # Infer which history subfolder we should be handling
             self._find_base_name_for_history_subfolder()
@@ -273,9 +219,6 @@ class Bookkeeper:
             self._history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
                                                  create_new=True)
             self.history_info.read()
-
-            # Collect all the necessary files
-            self._collect_files_to_archive()
 
     def _add_history_info_entry(self, tensor_nums):
         """Add a new entry to the history.info file.
@@ -304,11 +247,11 @@ class Bookkeeper:
                 job_nums=[self.max_job_for_tensor[tensor] + 1
                           for tensor in sorted_tensors],
                 timestamp=self.timestamp,
-                discarded_=self._mode is BookkeeperMode.DISCARD,
                 folder_name=self.history_dir.name,
-                notes=self._read_and_clear_notes_file(),
+                notes=self._root.read_and_clear_notes_file(),
+                discarded_=self._mode is BookkeeperMode.DISCARD,
                 # Optional ones
-                **self._infer_run_info_from_log()
+                **self._root.infer_run_info()
                 )
         self.history_info.append_entry(new_info_entry, fix_time_format=True)
 
@@ -359,33 +302,6 @@ class Bookkeeper:
         # pylint: disable-next=unnecessary-dunder-call
         self.__init__(cwd=self.cwd)
         self._state_info['logger_prepared'] = logger_prepared
-
-    @needs_update_for_attr('_paths[calc_logs]')
-    def _collect_files_to_archive(self):
-        """Scan the root directory for files to be stored to history."""
-        files_to_archive = (
-            # OUT and SUPP, if present
-            self.cwd / DEFAULT_OUT,
-            self.cwd / DEFAULT_SUPP,
-            # Any calc logs
-            *self._paths['calc_logs'],
-            # And workhistory folders
-            *self._workhistory.find_current_directories(contains='r'),
-            )
-        self._paths['to_be_archived'] = tuple(p for p in files_to_archive
-                                              if p.is_file() or p.is_dir())
-
-    def _collect_log_files(self):
-        """Find the path to log files in root, store them internally."""
-        calc_logs, other_logs = [], []
-        for file in self.cwd.glob('*.log'):
-            if not file.is_file():
-                continue
-            container = (calc_logs if file.name.startswith(CALC_LOG_PREFIXES)
-                         else other_logs)
-            container.append(file)
-        self._paths['calc_logs'] = tuple(calc_logs)
-        self._paths['other_logs'] = tuple(other_logs)
 
     def _collect_max_run_per_tensor(self):
         """Find the maximum run numbers for all directories in history."""
@@ -453,7 +369,7 @@ class Bookkeeper:
 
     def _copy_log_files(self):
         """Copy all the log files in root to history."""
-        for file in self.all_cwd_logs:
+        for file in self._root.logs.files:
             self._copy_one_file_to_history(file)
 
     @needs_update_for_attr('_folder_names[history_dir]')
@@ -571,20 +487,6 @@ class Bookkeeper:
             )
         return (f for f in folders if f.is_dir())
 
-    @needs_update_for_attr('_state_info[last_log_lines]')
-    def _infer_run_info_from_log(self):
-        """Return a dictionary of information read from the calc log."""
-        matched = {k: False for k in _LOG_FILE_RE}
-        log_lines = self._state_info['last_log_lines'] or tuple()
-        for line in reversed(log_lines):  # Info is at the end
-            for info, already_matched in matched.items():
-                if already_matched:
-                    continue
-                matched[info] = _LOG_FILE_RE[info].match(line)
-            if all(matched.values()):
-                break
-        return {k: match[k] for k, match in matched.items() if match}
-
     def _make_and_copy_to_history(self):
         """Create new history subfolder and copy all files there.
 
@@ -637,89 +539,11 @@ class Bookkeeper:
             )
         self._state_info['logger_prepared'] = True
 
-    def _read_and_clear_notes_file(self):
-        """Return notes read from file. Clear the file contents."""
-        notes_path = next(self.cwd.glob('notes*'), None)
-        if notes_path is None:
-            return ''
-        try:
-            notes = notes_path.read_text(encoding='utf-8')
-        except OSError:
-            LOGGER.error(f'Error: Failed to read {notes_path.name} file.',
-                         exc_info=True)
-            return ''
-        try:
-            notes_path.write_text('', encoding='utf-8')
-        except OSError:
-            LOGGER.error(f'Failed to clear the {notes_path.name} '
-                         'file after reading.', exc_info=True)
-        return notes
-
-    @needs_update_for_attr('_paths[calc_logs]')
-    def _read_most_recent_log(self):
-        """Read timestamp and lines from the most-recent calc log file."""
-        last_log_lines = []
-        split_logs = {}  # Path to most recent log for each prefix
-        for prefix in CALC_LOG_PREFIXES:  # newest to oldest
-            # Note on the disable: pylint does not recognize that we
-            # dynamically set the _paths['calc_logs'] to be a tuple.
-            # pylint: disable-next=not-an-iterable
-            calc_logs = (f for f in self._paths['calc_logs']
-                         if f.name.startswith(prefix))
-            try:
-                split_logs[prefix] = max(calc_logs, key=attrgetter('name'))
-            except ValueError:
-                pass
-        try:
-            most_recent_log = next(iter(split_logs.values()))
-        except StopIteration:  # No log files
-            old_timestamp = f'moved-{DateTimeFormat.FILE_SUFFIX.now()}'
-            return old_timestamp, last_log_lines
-
-        old_timestamp = most_recent_log.name[-17:-4]
-        try:  # pylint: disable=too-many-try-statements
-            with most_recent_log.open('r', encoding='utf-8') as log_file:
-                last_log_lines = log_file.readlines()
-        except OSError:
-            pass
-        return old_timestamp, last_log_lines
-
-    def _remove_log_files(self):
-        """Delete all log files in root."""
-        discard_files(*self._root.logs.files)
-
     def _remove_tensors_and_deltas(self):
         """Delete the most recent tensor and delta files."""
         tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
         delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
         discard_files(self.cwd / tensor_file, self.cwd / delta_file)
-
-    def _remove_ori_files(self):
-        """Delete '_ori'-suffixed files from root."""
-        ori_files = (self.cwd / f'{file}_ori' for file in STATE_FILES)
-        discard_files(*ori_files)
-
-    def _remove_out_and_supp(self):
-        """Delete the SUPP and OUT directories from root."""
-        discard_files(self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP)
-
-    def _replace_state_files_from_ori(self):
-        """Replace input files with their '_ori'-suffixed version."""
-        for file in STATE_FILES:
-            ori_file = self.cwd / f'{file}_ori'
-            try:
-                ori_file.replace(self.cwd / file)
-            except FileNotFoundError:
-                pass
-            except OSError:
-                LOGGER.error(f'Failed to move {ori_file} to {file}.')
-                raise
-
-    def _revert_root_to_previous(self):
-        """Remove files generated by the previous calc run in self.cwd."""
-        self._replace_state_files_from_ori()
-        self._remove_log_files()
-        self._remove_out_and_supp()
 
     def _run_archive_mode(self):
         """Execute bookkeeper in ARCHIVE mode."""
@@ -737,15 +561,13 @@ class Bookkeeper:
         # Copy all relevant files to history, add an entry...
         self._archive_to_history_and_add_info_entry()
         # ...and move old inputs to _ori, replacing them from OUT
-        self._update_state_files_from_out()
+        self._root.update_state_files_from_out()
         return BookkeeperExitCode.SUCCESS
 
     def _run_clear_mode(self):
         """Execute bookkeeper in CLEAR mode."""
         self._do_prerun_archiving()
-        self._remove_log_files()
-        self._remove_out_and_supp()
-        self._remove_ori_files()
+        self._root.clear_for_next_calc_run()
         return BookkeeperExitCode.SUCCESS
 
     def _run_discard_full_mode(self):
@@ -778,7 +600,7 @@ class Bookkeeper:
         except OSError:
             LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
             return BookkeeperExitCode.FAIL
-        self._revert_root_to_previous()
+        self._root.revert_to_previous_calc_run()
 
         # Tensors and Deltas
         if self.tensor_number not in self.max_job_for_tensor:
@@ -792,7 +614,7 @@ class Bookkeeper:
     def _run_discard_mode(self):
         """Execute bookkeeper in DISCARD mode."""
         did_archive = self._do_prerun_archiving()
-        self._revert_root_to_previous()
+        self._root.revert_to_previous_calc_run()
         if did_archive:
             # We had to archive the contents of the root directory.
             # This means that we have already marked the entry as
@@ -807,24 +629,6 @@ class Bookkeeper:
                      f'in {HISTORY_INFO_NAME}: {exc}')
             return BookkeeperExitCode.FAIL
         return BookkeeperExitCode.SUCCESS
-
-    def _update_state_files_from_out(self):
-        """Move state files from OUT to root. Rename old to '_ori'."""
-        out_path = self.cwd / 'OUT'
-        if not out_path.is_dir():
-            return
-        for file in STATE_FILES:
-            out_file = out_path / f'{file}_OUT'
-            cwd_file = self.cwd / file
-            if not out_file.is_file():
-                continue
-            # NB: all the moving around is local to the same folder
-            # tree, so we don't really need shutil. Path.replace always
-            # works for the same file system. Notice also the use of
-            # replace rather than rename, as the behavior of rename
-            # is not identical for all platforms.
-            cwd_file.replace(self.cwd / f'{file}_ori')
-            out_file.replace(cwd_file)
 
 
 def _check_newer(older, newer):
