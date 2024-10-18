@@ -163,6 +163,38 @@ class DisplacementsFile:
                 # we set the flag to False after the first block
                 self.offsets_block_allowed = False
 
-    def parse(self):
-        # After reading, process the blocks, e.g., validate the structure or check symmetry.
-        pass
+    def parse(self, tl_backend):
+        if self.has_been_parsed:
+            raise ValueError("parse() has already been called.")
+        # After reading, process the blocks
+        # There are two steps to this:
+        # 1. Check that the general structure is valid, ie. line order, etc.
+        # 2. check the requested displacements vs. the backend capabilities
+        # Checks about matching the search blocks to the structure are performed
+        # when the parameter space is generated.
+
+        # check that the file is valid
+        self.check_valid()
+
+        # check against the backend capabilities
+        for block in self.blocks:
+            new_blocks = []
+            if not isinstance(block, SearchBlock):
+                new_blocks.append(block)
+                continue
+            can_handle, replacement = tl_backend.can_handle_search_block(
+                self.offsets_block, block)
+            if can_handle:
+                new_blocks.append(block)
+                continue
+            if replacement is None:
+                raise ValueError(
+                    f"Tensor LEED backend {tl_backend.name }cannot handle "
+                    f"search block  {block.label}.")
+            # replace the block with the replacement blocks
+            new_blocks.extend(replacement)
+
+        # finally, replace the blocks with the new ones
+        self.blocks = new_blocks
+        self.has_been_parsed = True
+
