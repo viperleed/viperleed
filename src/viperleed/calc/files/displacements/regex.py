@@ -7,9 +7,9 @@ SECTION_HEADER_PATTERN = re.compile(
 
 OFFSETS_LINE_PATTERN = re.compile(
     r"^(?P<type>geo|vib|occ)\s+"
-    r"(?P<parameters>[^\s=,]+(?:\s*[^\s=,]+)*(?:,\s*[^\s=,]+)*)"
+    r"(?P<targets>[^\s=,]+(?:\s+\d+)*(?:\s*,\s*[^\s=,]+(?:\s+\d+)*)*)"
     r"(?:\s+(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?))?\s*=\s*"
-    r"(?P<value>linked|-?\d+(\.\d+)?)$"
+    r"(?P<value>-?\d+(\.\d+)?)$"
 )
 
 GEO_LINE_PATTERN = re.compile(
