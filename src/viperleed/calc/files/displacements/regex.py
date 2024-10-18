@@ -34,7 +34,9 @@ OCC_LINE_PATTERN = re.compile(
     r"(?:\s*,\s*(?P<additional_blocks>.+))?)$"
 )
 CONSTRAIN_LINE_PATTERN = re.compile(
-    r"^(?P<type>geo|vib|occ)\s+(?P<parameters>.+?)"
+    r"^(?P<type>geo|vib|occ)\s+(?P<targets>[^\s=,]+"
+    r"(?:\s*[^\s=,]+)*(?:,\s*[^\s=,]+)*)"
+    r"(?:\s+(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?))?"
     r"\s*=\s*(?P<value>linked|-?\d+(\.\d+)?)$"
 )
 
@@ -124,27 +126,23 @@ def match_occ_line(line):
 
 
 def match_constrain_line(line):
-    """Match and parse a CONSTRAIN line, returning the type, parameters, and value."""
-    if "ind(" in line:
-        raise NotImplementedError(
-            "Index based constrains are not yet supported in the new parser."
-        )
-
+    """Match and parse an OFFSETS line, returning the type, parameters, direction, and value."""
     match = CONSTRAIN_LINE_PATTERN.match(line)
     if match is None:
         return None
 
-    constraint_type = match.group("type")
-    parameters = match.group("parameters").split(",")
-    parameters = [
-        param.strip() for param in parameters
-    ]  # Clean up whitespace around parameters
+    offset_type = match.group("type")  # Type can be 'geo', 'vib', or 'occ'     # TODO: make into Enum
+    parameters = match.group("targets")  # Multiple comma-separated targets
+    direction = match.group("direction")  # Optional complex direction for geo
     value = match.group("value")
 
-    # Convert `value` to a float if it's a number, otherwise keep it as `linked`
-    value = float(value) if value != "linked" else value
+    # Convert `value` to float if it's a number; otherwise, keep it as a string
+    try:
+        value = float(value)
+    except ValueError:
+        pass  # Keep value as a string if it is not a float
 
-    return constraint_type, parameters, value
+    return offset_type, parameters, direction, value
 
 
 def match_offsets_line(line):
