@@ -126,13 +126,13 @@ def match_occ_line(line):
 
 
 def match_constrain_line(line):
-    """Match and parse an OFFSETS line, returning the type, parameters, direction, and value."""
+    """Match and parse an OFFSETS line, returning the type, targets, direction, and value."""
     match = CONSTRAIN_LINE_PATTERN.match(line)
     if match is None:
         return None
 
     offset_type = match.group("type")  # Type can be 'geo', 'vib', or 'occ'     # TODO: make into Enum
-    parameters = match.group("targets")  # Multiple comma-separated targets
+    targets = match.group("targets")  # Multiple comma-separated targets
     direction = match.group("direction")  # Optional complex direction for geo
     value = match.group("value")
 
@@ -142,17 +142,17 @@ def match_constrain_line(line):
     except ValueError:
         pass  # Keep value as a string if it is not a float
 
-    return offset_type, parameters, direction, value
+    return offset_type, targets, direction, value
 
 
 def match_offsets_line(line):
-    """Match and parse an OFFSETS line, returning the type, parameters, direction, and value."""
+    """Match and parse an OFFSETS line, returning the type, targets, direction, and value."""
     match = OFFSETS_LINE_PATTERN.match(line)
     if match is None:
         return None
 
     offset_type = match.group("type")  # Type can be 'geo', 'vib', or 'occ'
-    parameters = match.group("parameters").strip()  # Multiple comma-separated targets
+    targets = match.group("targets").strip()  # Multiple comma-separated targets
     direction = match.group("direction")  # Optional complex direction for geo
     value = match.group("value")
 
@@ -162,4 +162,4 @@ def match_offsets_line(line):
     except ValueError:
         pass  # Keep value as a string if it is not a float
 
-    return offset_type, parameters, direction, value
+    return offset_type, targets, direction, value
