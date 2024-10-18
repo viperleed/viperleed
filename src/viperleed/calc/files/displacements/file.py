@@ -90,8 +90,17 @@ class DisplacementsFile:
         # Syntax and logic checks
         # check for unclosed loops
         if self.unclosed_loop():
-            raise False
+            raise InvalidSearchLoopError
+        if not self.blocks:
+            raise InvalidSearchBlocksError
+        if any(isinstance(block, OffsetsBlock) for block in self.blocks[1:]):
+            raise OffsetsNotAtBeginningError
+        return True
 
+    def offsets_block(self):
+        if isinstance(self.blocks[0], OffsetsBlock):
+            return self.blocks[0]
+        return None
 
     def read(self, filename):
         """Read the file using the DisplacementsReader."""
