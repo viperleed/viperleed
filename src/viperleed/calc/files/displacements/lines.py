@@ -95,11 +95,21 @@ class ConstraintLine:
 
 
 class OffsetsLine:
-    def __init__(self, line, offset_type, parameters, value):
+    def __init__(self, line, offset_type, parameters, direction, value):
         self.line = line
         self.offset_type = offset_type
         self.parameters = parameters
         self.value = value
+        if self.offset_type == "geo":
+            if direction is not None:
+                self.direction = Direction(direction)
+            else:
+                self.direction = None
+        elif self.offset_type != "geo" and direction is not None:
+            raise ValueError(
+                f"A direction is not allowed for {self.offset_type} "
+                f"offsets."
+            )
 
     def __eq__(self, other):
         if isinstance(other, ConstraintLine):

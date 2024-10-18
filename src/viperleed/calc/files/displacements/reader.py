@@ -107,8 +107,8 @@ class DisplacementsReader(SettingsFileReader):
             raise InvalidDisplacementsSyntaxError(
                 f"Cannot parse line '{line}' in OFFSETS section."
             )
-        offset_type, parameters, value = match
-        return OffsetsLine(line, offset_type, parameters, value)
+        offset_type, parameters, direction, value = match
+        return OffsetsLine(line, offset_type, parameters, direction, value)
 
     def _read_geo_delta_line(self, line):
         """Parse a line in the GEO_DELTA section."""

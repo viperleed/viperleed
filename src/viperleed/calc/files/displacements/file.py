@@ -1,8 +1,9 @@
-from .errors import InvalidSearchLoopError
+from .errors import InvalidSearchLoopError, OffsetsNotAtBeginningError
+from .errors import InvalidSearchBlocksError
 from .reader import LoopMarker
 from .reader import DisplacementsReader
 from .reader import DisplacementFileSections
-from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine
+from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine, OffsetsLine
 from .lines import LoopMarkerLine, SearchHeaderLine, SectionHeaderLine
 
 class SearchBlock:
@@ -120,6 +121,13 @@ class DisplacementsFile:
                     self.current_search_block = SearchBlock(read.label)
 
                 elif isinstance(read, SectionHeaderLine):
+                    if read.section == "OFFSETS":
+                        if not self.offsets_block_allowed:
+                            raise OffsetsNotAtBeginningError(
+                                "The OFFSETS block is only allowed at the beginning of the file."
+                            )
+                        self.finish_block()
+                        self.current_search_block = OffsetsBlock()
                     # Update the current section in the active search block
                     self.current_section = DisplacementFileSections[read.section]
 
@@ -128,6 +136,11 @@ class DisplacementsFile:
                     if not self.current_search_block:
                         raise ValueError("No active search block for section line.")
                     self.current_search_block.add_line(self.current_section, read)
+
+                elif isinstance(read, OffsetsLine):
+                    if not self.current_section is DisplacementFileSections.OFFSETS:
+                        raise ValueError("Offsets line found outside of an OFFSETS block.")
+                    self.current_search_block.add_line(read)
 
                 else:
                     raise ValueError("Unexpected line type")

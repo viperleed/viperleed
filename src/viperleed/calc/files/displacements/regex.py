@@ -6,7 +6,10 @@ SECTION_HEADER_PATTERN = re.compile(
 )
 
 OFFSETS_LINE_PATTERN = re.compile(
-    r"^(?P<type>geo|vib|occ)\s+(?P<parameters>.+?)" r"\s*=\s*(?P<value>.+)$"
+    r"^(?P<type>geo|vib|occ)\s+"
+    r"(?P<parameters>[^\s=,]+(?:\s*[^\s=,]+)*(?:,\s*[^\s=,]+)*)"
+    r"(?:\s+(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?))?\s*=\s*"
+    r"(?P<value>linked|-?\d+(\.\d+)?)$"
 )
 
 GEO_LINE_PATTERN = re.compile(
@@ -145,15 +148,14 @@ def match_constrain_line(line):
 
 
 def match_offsets_line(line):
-    """Match and parse an OFFSETS line, returning the type, parameters, and value."""
+    """Match and parse an OFFSETS line, returning the type, parameters, direction, and value."""
     match = OFFSETS_LINE_PATTERN.match(line)
     if match is None:
         return None
 
     offset_type = match.group("type")  # Type can be 'geo', 'vib', or 'occ'
-    parameters = match.group(
-        "parameters"
-    ).strip()  # Single targeting instruction
+    parameters = match.group("parameters").strip()  # Multiple comma-separated targets
+    direction = match.group("direction")  # Optional complex direction for geo
     value = match.group("value")
 
     # Convert `value` to float if it's a number; otherwise, keep it as a string
@@ -162,4 +164,4 @@ def match_offsets_line(line):
     except ValueError:
         pass  # Keep value as a string if it is not a float
 
-    return offset_type, parameters, value
+    return offset_type, parameters, direction, value
