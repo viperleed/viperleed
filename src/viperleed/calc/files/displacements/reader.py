@@ -76,10 +76,10 @@ class DisplacementsReader(SettingsFileReader):
         # parse section lines
         try:
             return self._parse_line(line)
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as err:
             raise InvalidDisplacementsSyntaxError(
                 f"Cannot parse line '{line}' in section '{self.current_section}'."
-            )
+            ) from err
 
     def _parse_line(self, line):
         """Get content from line."""
