@@ -6,6 +6,9 @@ from .reader import DisplacementFileSections
 from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine, OffsetsLine
 from .lines import LoopMarkerLine, SearchHeaderLine, SectionHeaderLine
 
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__created__ = "2024-10-04"
+
 class SearchBlock:
     """Class to hold all information for a single search block."""
 
@@ -62,6 +65,7 @@ class DisplacementsFile:
         self.current_search_block = None
         self.current_section_lines = []
         self.has_been_read = False
+        self.has_been_parsed = False
         # an OFFSETS block is only allowed at the very beginning of the file
         # we check this by setting this flag to False after the first block
         self.offsets_block_allowed = True
@@ -102,6 +106,7 @@ class DisplacementsFile:
                 except StopIteration:
                     self.finish_block()
                     break
+                # TODO: low level logging: print(f"Read: {read}")
 
                 if isinstance(read, LoopMarkerLine):
                     if read.type == LoopMarker.LOOP_START and self.unclosed_loop():
@@ -143,11 +148,10 @@ class DisplacementsFile:
                     self.current_search_block.add_line(read)
 
                 else:
-                    raise ValueError("Unexpected line type")
-                
+                    raise ValueError(f"Unexpected line type: {read}")
+
                 # OFFSETS block is only allowed in the first search block, thus
-                # 
-                # 
+                # we set the flag to False after the first block
                 self.offsets_block_allowed = False
 
     def parse(self):
