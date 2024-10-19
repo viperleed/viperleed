@@ -102,7 +102,7 @@ class BookkeeperMetaFile:
         """Compute and store a hash from all the files in path."""
         if not any(self._hashable_contents(self.path)):
             return
-        self._hash = hashlib.md5()
+        self._hash = hashlib.md5(self.path.name.encode())
         self._update_hash_from_folder(self.path)
         self._parser['archived']['hash'] = self.hash_
 

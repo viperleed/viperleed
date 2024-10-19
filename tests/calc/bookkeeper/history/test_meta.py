@@ -78,7 +78,7 @@ class CasesHistoryTree:
                 },
             }
         self._tree_from_dict(tree, tmp_path)
-        return tmp_path, 'bb3aefe4f70f5a50789ab36a1ff63c74'
+        return tmp_path, '9d46c0aae42777a813780a6ba49befec'
 
 
 @fixture(name='meta')
