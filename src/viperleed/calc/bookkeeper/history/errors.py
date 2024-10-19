@@ -74,3 +74,11 @@ class FixFailedError(HistoryInfoError):
 
 class NoHistoryEntryError(HistoryInfoError):
     """There is no entry to process according to the criteria."""
+
+
+class MetadataError(Exception):
+    """Base exception for metadata-related errors."""
+
+
+class MetadataMismatchError(MetadataError):
+    """Something is not consistent between the metadata-file and its folder."""
