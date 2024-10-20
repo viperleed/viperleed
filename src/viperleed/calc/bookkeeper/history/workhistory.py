@@ -53,7 +53,7 @@ class WorkhistoryHandler:
     @property
     def history(self):
         """Return the path to the 'history' directory."""
-        return self.bookkeeper.top_level_history_path
+        return self.bookkeeper.history.path
 
     @property
     def timestamp(self):
@@ -196,7 +196,11 @@ class WorkhistoryHandler:
             match = HISTORY_FOLDER_RE.match(directory.name)
             tensor_num = int(match['tensor_num'])
             search_num = int(match['job_num'])  # Misuse the job_num
-            job_num = max_job_for_tensor[tensor_num] + 1
+            # Workhistory is always processed after the primary
+            # history folder, so it should have the same job number.
+            # The only exception is when there is no "main" folder,
+            # e.g., for RUN = 1-3 1.
+            job_num = max(max_job_for_tensor[tensor_num], 1)
             newname = (
                 f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
                 + match['rest']
@@ -219,4 +223,9 @@ class WorkhistoryHandler:
             meta.compute_hash()
             meta.collect_from(main_metadata)
             meta.write()
+
+            # And register the folder in history. Notice that we need
+            # the metadata file to already be written to successfully
+            # register a folder.
+            self.bookkeeper.history.register_folder(target)
         return tensor_nums

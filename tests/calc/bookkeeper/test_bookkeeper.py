@@ -50,7 +50,14 @@ from .conftest import MOCK_WORKHISTORY
 from .conftest import NOTES_TEST_CONTENT
 
 
-_UPDATE_METHODS = 'update_from_cwd', 'run', 'collect', 'collect_info'
+_UPDATE_METHODS = (
+    'update_from_cwd',     # Bookkeeper
+    'run',                 # Bookkeeper
+    'collect',             # LogFiles
+    'collect_info',        # RootExplorer
+    'collect_subfolders',  # HistoryExplorer
+    'prepare_info_file',   # HistoryExplorer
+    )
 raises_oserror = functools.partial(raises_exception, exc=OSError)
 make_raise_oserror = functools.partial(make_obj_raise, exc=OSError)
 not_raises_oserror = functools.partial(not_raises, exc=OSError)
@@ -109,6 +116,12 @@ def fixture_history_run_path(history_path):
     return history_path / f't000.r001_{MOCK_TIMESTAMP}'
 
 
+def check_too_early():
+    """Ensure an AttributeError is raised for a too-early getattr."""
+    match_re = '|'.join(_UPDATE_METHODS)
+    return pytest.raises(AttributeError, match=match_re)
+
+
 class _TestBookkeeperRunBase:
     """Base class for checking correct execution of bookkeeper."""
 
@@ -141,11 +154,13 @@ class _TestBookkeeperRunBase:
             def _record_faulty(record):
                 return (record.levelno >= logging.WARNING
                         and contain in str(record))
-        assert not any(
-            _record_faulty(rec)
+        faulty = [
+            rec
             for rec in caplog.records
             if not any(exclude in str(rec) for exclude in exclude_msgs)
-            )
+            and _record_faulty(rec)
+            ]
+        assert not any(faulty), f'Found: {faulty[0].getMessage()!r}'
 
     def check_out_files_in_history(self, *run):
         """Check that the expected state files are stored in 'OUT'."""
@@ -220,8 +235,9 @@ class _TestBookkeeperRunBase:
             self.check_root_is_clean(*after_archive)
         # Check that the workhistory directories are
         # also where they should be
-        history = bookkeeper.top_level_history_path
-        workhistory = bookkeeper.cwd / DEFAULT_WORK_HISTORY
+        history = bookkeeper.history.path
+        # pylint: disable-next=protected-access           # OK in tests
+        workhistory = bookkeeper._workhistory.path
         assert not workhistory.is_dir()
         for ori_name, hist_name in MOCK_WORKHISTORY.items():
             if hist_name is None:  # File should be deleted
@@ -262,7 +278,7 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         """Check correct storage of history files in ARCHIVE mode."""
         self.run_after_calc_exec_and_check(after_calc_execution)
         self.check_root_after_archive(*after_calc_execution)
-        self.check_no_warnings(caplog)
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
     def test_archive_again(self, after_archive, caplog):
         """Bookkeeper ARCHIVE after ARCHIVE should not do anything."""
@@ -276,12 +292,12 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
                                          check_input_contents=False)
         for file in MOCK_STATE_FILES:
             assert (cwd / file).read_text() == sentinel_text
-        self.check_no_warnings(caplog)
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check no archiving happens before calc runs."""
         self.run_before_calc_exec_and_check(before_calc_execution)
-        self.check_no_warnings(caplog)
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
 
 class TestBookkeeperClear(_TestBookkeeperRunBase):
@@ -298,7 +314,7 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         """Check behavior of CLEAR after ARCHIVE (e.g., manual call)."""
         self.run_after_archive_and_check(after_archive)
         self.check_root_inputs_replaced_by_out(*after_archive)
-        self.check_no_warnings(caplog)
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
     def test_clear_after_calc_exec(self, after_calc_execution, caplog):
         """Check behavior of CLEAR after a non-ARCHIVEd calc run.
@@ -316,7 +332,7 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         None.
         """
         self.run_after_calc_exec_and_check(after_calc_execution)
-        self.check_no_warnings(caplog)
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
         self.check_root_is_clean(*after_calc_execution)
 
         # Original SHOULD NOT be replaced by output:
@@ -349,13 +365,14 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
             out_content = (cwd / file).read_text()
             assert MOCK_INPUT_CONTENT in out_content
         # A 'DISCARDED' note should be in history.info
-        assert _DISCARDED in bookkeeper.history_info.path.read_text()
+        assert _DISCARDED in bookkeeper.history.info.path.read_text()
         # Some fields are knowingly faulty,
         # but we can still DISCARD them.
         faulty_entry_logs = (
             'Found entry with',
             'Could not understand',
             'Faulty entry is',
+            'metadata',
             )
         self.check_no_warnings(caplog, exclude_msgs=faulty_entry_logs)
 
@@ -375,7 +392,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         None.
         """
         self.run_after_calc_exec_and_check(after_calc_execution)
-        self.check_no_warnings(caplog, exclude_msgs=('discarded',))
+        self.check_no_warnings(caplog, exclude_msgs=('discarded', 'metadata'))
         self.check_root_is_clean(*after_calc_execution)
 
         # Original SHOULD NOT be replaced by output:
@@ -385,8 +402,8 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 
         # A 'DISCARDED' note should be in history.info
         bookkeeper, *_ = after_calc_execution
-        assert bookkeeper.history_info.last_entry_was_discarded
-        assert _DISCARDED in bookkeeper.history_info.path.read_text()
+        assert bookkeeper.history.info.last_entry_was_discarded
+        assert _DISCARDED in bookkeeper.history.info.path.read_text()
 
 
 class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
@@ -429,7 +446,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         None.
         """
         bookkeeper, *_, history_run_path = after_archive
-        last_entry = bookkeeper.history_info.last_entry
+        last_entry = bookkeeper.history.info.last_entry
         bookkeeper.run(mode=self.mode)
         if not last_entry.can_be_removed:
             # Should prevent the removal of the history
@@ -447,7 +464,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         notes_in_history_info = (
             NOTES_TEST_CONTENT in (cwd / HISTORY_INFO_NAME).read_text()
             )
-        last_entry = bookkeeper.history_info.last_entry
+        last_entry = bookkeeper.history.info.last_entry
         bookkeeper.run(mode=self.mode)
         # Since the run was not archived, the history should be empty
         assert not history_run_path.is_dir()
@@ -465,6 +482,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
             expected_logs = (
                 'could not identify directory to remove',
                 'No entries to remove',
+                'inconsistent',
                 )
             assert any(msg in caplog.text for msg in expected_logs)
 
@@ -574,18 +592,14 @@ class TestBookkeeperOthers:
          invalid_history_stuff) = funky_files
 
         bookkeeper.update_from_cwd(silent=True)
-        history_dir = bookkeeper.history_dir
-        history_info = bookkeeper.history_info
+        history_dir = bookkeeper.history.new_folder.path
+        history_info = bookkeeper.history.info
         # pylint: disable-next=protected-access   # OK in tests
         logs = bookkeeper._root.logs.files
         assert tensor_num_unused not in bookkeeper.max_job_for_tensor
         assert not_collected_log not in logs
 
-        # About the disables: W0212 (protected-access) is OK in a test;
-        # E1135 (unsupported-membership-test) is a pylint problem, as
-        # it cannot infer that by the time we reach this one we have
-        # a tuple in _paths['to_be_archived'].
-        # pylint: disable-next=E1135,W0212
+        # pylint: disable-next=protected-access           # OK in tests
         assert not any(f in bookkeeper._root._files_to_archive
                        for f in not_collected_dirs)
 
@@ -610,6 +624,17 @@ class TestBookkeeperOthers:
 class TestBookkeeperRaises:
     """"Collection of tests for various bookkeeper complaints."""
 
+    @staticmethod
+    def _to_method_and_args(method_and_args):
+        """Return a method name and arguments from a string."""
+        # pylint: disable-next=magic-value-comparison
+        if '(' not in method_and_args:
+            return method_and_args, tuple()
+
+        method_name, args = method_and_args.split('(')
+        args = args.replace(')', '') + ','
+        return method_name, ast.literal_eval(args)
+
     def test_cant_make_history(self):
         """Check complaints when we fail to make the history directory."""
         bookkeeper = Bookkeeper()
@@ -625,12 +650,12 @@ class TestBookkeeperRaises:
         """Check complaints when it's not possible to remove folders."""
         bookkeeper, *_ = after_archive
         # Purge notes otherwise we can't remove anything.
-        info = bookkeeper.history_info.raw_contents
+        info = bookkeeper.history.info.raw_contents
         info, _ = info.rsplit('Notes:', maxsplit=1)
         if info:
             info += 'Notes:\n'
-        info = bookkeeper.history_info.path.write_text(info)
-        bookkeeper.history_info.read()
+        info = bookkeeper.history.info.path.write_text(info)
+        bookkeeper.history.info.read()
 
         with raises_test_exception('shutil.rmtree'):
             # pylint: disable-next=protected-access    # OK in tests
@@ -677,7 +702,7 @@ class TestBookkeeperRaises:
         '_root._replace_state_files_from_ori': ('pathlib.Path.replace',
                                                 raises),
         '_workhistory._discard_previous': ('shutil.rmtree', logs),
-        '_workhistory.move_and_cleanup(None)': ('shutil.rmtree', logs),
+        '_workhistory.move_current_and_cleanup(None)': ('shutil.rmtree', logs),
         }
 
     @parametrize(method_name=_os_error)
@@ -696,12 +721,7 @@ class TestBookkeeperRaises:
 
         to_patch, action = self._os_error[method_name]
         method_name, *_ = method_name.split('-')
-        if '(' in method_name:  # pylint: disable=magic-value-comparison
-            method_name, args = method_name.split('(')
-            args = args.replace(')', '') + ','
-            args = ast.literal_eval(args)
-        else:
-            args = tuple()
+        method_name, args = self._to_method_and_args(method_name)
 
         # Notice the use of operator.attrgetter instead of getattr,
         # as the latter does not handle dotted attributes
@@ -723,25 +743,24 @@ class TestBookkeeperRaises:
     _attr_needs_update = (
         'archiving_required',
         'files_need_archiving',
-        'history_dir',
-        'history_dir_base_name',
-        'history_info',
-        'history_with_same_base_name_exists',
+        'history.info',
+        'history.new_folder',
+        'history.new_folder.name',
+        'history.new_folder.exists',
         'max_job_for_tensor',
         'tensor_number',
         'timestamp',
         '_root.logs',
         )
-    _method_needs_update = (  # Only those without args
+    _method_needs_update = (
         '_archive_to_history_and_add_info_entry',
         '_copy_input_files_from_original_inputs_or_cwd',
         '_copy_log_files',
         '_copy_out_and_supp',
-        '_find_base_name_for_history_subfolder',
-        '_find_new_history_directory_name',
-        '_get_conflicting_history_subfolders',
         '_make_and_copy_to_history',
         '_remove_tensors_and_deltas',
+        'history._find_name_for_new_history_subfolder(None, None)',
+        'history.find_new_history_directory(None, None)',
         '_root.logs.discard',
         '_root.revert_to_previous_calc_run',
         '_run_archive_mode',
@@ -754,19 +773,18 @@ class TestBookkeeperRaises:
     def test_too_early_attribute_access(self, attr):
         """Check that accessing attributes before update_from_cwd fails."""
         bookkeeper = Bookkeeper()
-        with pytest.raises(AttributeError) as exc:
+        with check_too_early():
             attrgetter(attr)(bookkeeper)
-        assert any(update in str(exc) for update in _UPDATE_METHODS)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, method_name):
         """Check that accessing attributes before update_from_cwd fails."""
         bookkeeper = Bookkeeper()
-        with pytest.raises(AttributeError) as exc:
+        method_name, args = self._to_method_and_args(method_name)
+        with check_too_early():
             # Some methods raise already at getattr, some at call
             method = attrgetter(method_name)(bookkeeper)
-            method()
-        assert any(update in str(exc) for update in _UPDATE_METHODS)
+            method(*args)
 
 
 class TestBookkeeperComplaints:
@@ -795,7 +813,7 @@ class TestBookkeeperComplaints:
         (tmp_path/'POSCAR').touch()
         (tmp_path/DEFAULT_OUT).mkdir()  # Otherwise 'nothing to do'
         bookkeeper.update_from_cwd()
-        target = bookkeeper.history_dir
+        target = bookkeeper.history.new_folder.path
         bookkeeper.run('archive')
         assert _FROM_ROOT in caplog.text
         assert (tmp_path/'POSCAR').is_file()

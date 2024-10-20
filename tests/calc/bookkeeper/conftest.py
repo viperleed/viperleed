@@ -43,12 +43,13 @@ MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_ORIG_CONTENT = 'This is a test original input file.'
 MOCK_OUT_CONTENT = 'This is a test output file.'
 MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
-MOCK_TIMESTAMP = '010203-040506'
+MOCK_TIMESTAMP = '210203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
 MOCK_WORKHISTORY = {  # name in workhistory: name in history
-    f't003.r001_RDS_{MOCK_TIMESTAMP}': f't003.r001.001_RDS_{MOCK_TIMESTAMP}',
-    f't004.r005_DS_{MOCK_TIMESTAMP}': f't004.r001.005_DS_{MOCK_TIMESTAMP}',
+    f't003.r005_DS_{MOCK_TIMESTAMP}': f't003.r001.005_DS_{MOCK_TIMESTAMP}',
     f't003.r000_{PREVIOUS_LABEL}_xxx': None,  # deleted
+    f't004.r001_RDS_{MOCK_TIMESTAMP}': f't004.r001.001_RDS_{MOCK_TIMESTAMP}',
+    f't004.r002_RDS_{MOCK_TIMESTAMP}': f't004.r001.002_RDS_{MOCK_TIMESTAMP}',
     }
 
 
@@ -67,6 +68,7 @@ def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
     tensors_path = tmp_path / 'Tensors'
     out_path = tmp_path / DEFAULT_OUT
     supp_path = tmp_path / DEFAULT_SUPP
+    history_path = tmp_path / DEFAULT_HISTORY
     original_inputs_path = supp_path / ORIGINAL_INPUTS_DIR_NAME
     directories = [
         deltas_path,
@@ -74,8 +76,8 @@ def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
         out_path,
         supp_path,
         original_inputs_path,
-        tmp_path / DEFAULT_HISTORY / 't001.r001_20xxxx-xxxxxx',
-        tmp_path / DEFAULT_HISTORY / 't002.r002_20xxxx-xxxxxx',
+        history_path / 't001.r001_20xxxx-xxxxxx/some_directory',
+        history_path / 't002.r002_20xxxx-xxxxxx/some_directory',
         ]
     directories.extend(tmp_path/DEFAULT_WORK_HISTORY/f
                        for f in MOCK_WORKHISTORY)
@@ -86,8 +88,8 @@ def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
     files = {  # path: contents
         tmp_path / log_file_name: None,
         tmp_path / 'notes.txt': NOTES_TEST_CONTENT,
-        deltas_path / 'Deltas_003.zip': None,
-        tensors_path / 'Tensors_003.zip': None,
+        deltas_path / 'Deltas_004.zip': None,
+        tensors_path / 'Tensors_004.zip': None,
         }
     # Inputs in root
     files.update((tmp_path / f, MOCK_INPUT_CONTENT)
@@ -126,5 +128,5 @@ def after_calc_execution(mock_tree_after_calc_execution):
     bookkeeper = Bookkeeper(cwd=mock_tree_after_calc_execution)
     bookkeeper.update_from_cwd(silent=True)
     history_path = bookkeeper.cwd / DEFAULT_HISTORY
-    history_run_path = history_path / f't003.r001_{MOCK_TIMESTAMP}'
+    history_run_path = history_path / f't004.r001_{MOCK_TIMESTAMP}'
     return bookkeeper, history_run_path

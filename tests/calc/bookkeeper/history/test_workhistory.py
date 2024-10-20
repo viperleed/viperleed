@@ -30,8 +30,8 @@ patch_rmtree = patch('shutil.rmtree')
 @fixture(name='mock_bookkeeper')
 def fixture_mock_bookkeeper():
     """Fixture to mock the bookkeeper."""
-    bookkeeper = MagicMock()
-    bookkeeper.top_level_history_path = Path('/mock/history')
+    bookkeeper = MagicMock(history=MagicMock())
+    bookkeeper.history.path = Path('/mock/history')
     bookkeeper.timestamp = '20231008'
     jobs = defaultdict(int)
     jobs[1] = 5
@@ -67,7 +67,7 @@ class TestWorkhistoryHandler:
 
     def test_history_property(self, workhistory, mock_bookkeeper):
         """Test history property."""
-        assert workhistory.history is mock_bookkeeper.top_level_history_path
+        assert workhistory.history is mock_bookkeeper.history.path
 
     def test_timestamp_property(self, workhistory, mock_bookkeeper):
         """Test timestamp property."""

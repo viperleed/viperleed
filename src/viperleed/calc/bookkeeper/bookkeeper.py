@@ -9,13 +9,11 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
-from collections import defaultdict
 from contextlib import nullcontext
 from enum import IntEnum
 from pathlib import Path
 import shutil
 
-from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
@@ -25,14 +23,13 @@ from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 
 from . import log
-from .constants import HISTORY_FOLDER_RE
 from .constants import STATE_FILES
 from .history.constants import HISTORY_INFO_NAME
 from .history.entry.entry import HistoryInfoEntry
 from .history.errors import CantDiscardEntryError
 from .history.errors import CantRemoveEntryError
 from .history.errors import NoHistoryEntryError
-from .history.info import HistoryInfoFile
+from .history.explorer import HistoryExplorer
 from .history.meta import BookkeeperMetaFile
 from .log import LOGGER
 from .mode import BookkeeperMode
@@ -66,39 +63,21 @@ class Bookkeeper:
 
     def __init__(self, cwd=Path.cwd()):
         """Initialize the bookkeeper using `cwd` as the root folder."""
-        self._folder_names = {
-            'history_dir_base_name': None,   # Set in update_from_cwd
-            'history_dir': None,             # Set in update_from_cwd
-            }
-        self._history_info = None   # Set in update_from_cwd
-        self._mode = None           # Set in run
         self._root = RootExplorer(path=cwd, bookkeeper=self)
+        self._history = HistoryExplorer(self.cwd)
+        self._mode = None           # Set in run
         self._state_info = {
             'logger_prepared': False,
             # The next ones are set in update_from_cwd
-            'max_job_for_tensor': None,   # defaultdict[int]
             'tensor_number': None,        # int
             'timestamp': None,            # str
-            'history_with_same_base_name_exists': None,  # bool
             }
 
     # Simple dynamic @properties
     cwd = make_property('_root.path')
     files_need_archiving = make_property('_root.needs_archiving')
-    history_dir_base_name = make_property(
-        # Notice that this is not necessarily the name of the
-        # history subfolder that is created. Use .history_dir
-        # for that.
-        '_folder_names[history_dir_base_name]',
-        needs_update=True,
-        )
-    history_info = make_property('_history_info', needs_update=True)
-    history_with_same_base_name_exists = make_property(
-        '_state_info[history_with_same_base_name_exists]',
-        needs_update=True,
-        )
-    max_job_for_tensor = make_property('_state_info[max_job_for_tensor]',
-                                       needs_update=True)
+    history = make_property('_history')
+    max_job_for_tensor = make_property('history.max_run_per_tensor')
     tensor_number = make_property('_state_info[tensor_number]',
                                   needs_update=True)
     timestamp = make_property('_state_info[timestamp]', needs_update=True)
@@ -107,31 +86,12 @@ class Bookkeeper:
     @property
     def archiving_required(self):
         """Check if archiving is required."""
-        return (self.files_need_archiving
-                and not self.history_with_same_base_name_exists)
-
-    @property
-    @needs_update_for_attr('_folder_names[history_dir]')
-    def history_dir(self):
-        """Return the path to the history subfolder that we deal with.
-
-        This is the directory to which files will be moved upon run().
-
-        Returns
-        -------
-        Path
-        """
-        return self.top_level_history_path / self._folder_names['history_dir']
+        return self.files_need_archiving and not self.history.new_folder.exists
 
     @property
     def orig_inputs_dir(self):
         """Return the path to the folder containing untouched input files."""
         return self.cwd / DEFAULT_SUPP / ORIGINAL_INPUTS_DIR_NAME
-
-    @property
-    def top_level_history_path(self):
-        """Return the path to the 'history' folder."""
-        return self.cwd / DEFAULT_HISTORY
 
     def run(self, mode):
         """Run the bookkeeper in the given mode.
@@ -201,7 +161,7 @@ class Bookkeeper:
             # tensor in history.
             tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
             self._state_info['tensor_number'] = tensor_number
-            self._collect_max_run_per_tensor()
+            self.history.collect_subfolders()
 
             # Collect information from the root directory:
             # log files, SUPP, OUT, and workhistory.
@@ -212,12 +172,12 @@ class Bookkeeper:
                 )
 
             # Infer which history subfolder we should be handling
-            self._find_base_name_for_history_subfolder()
-            self._find_new_history_directory_name()
+            self.history.find_new_history_directory(self.tensor_number,
+                                                    suffix=self.timestamp)
 
             # history.info handler (may create history.info file)
-            self._history_info = HistoryInfoFile(self.cwd, create_new=True)
-            self.history_info.read()
+            self.history.prepare_info_file()
+            self.history.info.read()
 
     def _add_history_info_entry(self, tensor_nums):
         """Add a new entry to the history.info file.
@@ -234,6 +194,7 @@ class Bookkeeper:
         None.
         """
         sorted_tensors = sorted(tensor_nums)
+        job_per_tensor = self.max_job_for_tensor
         with logging_silent():
             # It's OK to silence the logger here, as we will surely
             # replace the timestamp format in append_entry. In fact,
@@ -243,16 +204,15 @@ class Bookkeeper:
             # stuff will pop up.
             new_info_entry = HistoryInfoEntry(
                 tensor_nums=sorted_tensors,
-                job_nums=[self.max_job_for_tensor[tensor] + 1
-                          for tensor in sorted_tensors],
+                job_nums=[job_per_tensor[t] for t in sorted_tensors],
                 timestamp=self.timestamp,
-                folder_name=self.history_dir.name,
+                folder_name=self.history.new_folder.name,
                 notes=self._root.read_and_clear_notes_file(),
                 discarded_=self._mode is BookkeeperMode.DISCARD,
                 # Optional ones
                 **self._root.infer_run_info()
                 )
-        self.history_info.append_entry(new_info_entry, fix_time_format=True)
+        self.history.info.append_entry(new_info_entry, fix_time_format=True)
 
     def _archive_to_history_and_add_info_entry(self):
         """Store all relevant files in root to history, add a new entry.
@@ -302,19 +262,6 @@ class Bookkeeper:
         self.__init__(cwd=self.cwd)
         self._state_info['logger_prepared'] = logger_prepared
 
-    def _collect_max_run_per_tensor(self):
-        """Find the maximum run numbers for all directories in history."""
-        history_path = self.top_level_history_path
-        max_jobs = defaultdict(int)  # Max. job nr. per tensor number
-        for directory in history_path.iterdir():
-            match = HISTORY_FOLDER_RE.match(directory.name)
-            if not directory.is_dir() or not match:
-                continue
-            tensor_num = int(match['tensor_num'])
-            job_num = int(match['job_num'])
-            max_jobs[tensor_num] = max(max_jobs[tensor_num], job_num)
-        self._state_info['max_job_for_tensor'] = max_jobs
-
     @needs_update_for_attr('_mode', updater='run')
     def _copy_input_files_from_original_inputs_or_cwd(self):
         """Copy input files to the history subfolder.
@@ -331,6 +278,7 @@ class Bookkeeper:
         None.
         """
         use_ori = self._mode.uses_ori_files_as_fallback
+        history_folder = self.history.new_folder
         for file in ALL_INPUT_FILES:
             original_file = self.orig_inputs_dir / file
             cwd_file = self.cwd / file
@@ -364,25 +312,17 @@ class Bookkeeper:
                     f'{with_name}.'
                     )
             if copy_file:
-                self._copy_one_file_to_history(copy_file, with_name=with_name)
+                history_folder.copy_file_or_directory(copy_file,
+                                                      with_name=with_name)
 
     def _copy_log_files(self):
         """Copy all the log files in root to history."""
         for file in self._root.logs.files:
-            self._copy_one_file_to_history(file)
+            self.history.new_folder.copy_file_or_directory(file)
 
-    @needs_update_for_attr('_folder_names[history_dir]')
-    def _copy_one_file_to_history(self, file_path, with_name=None):
-        """Copy `file_path` to history, optionally renaming."""
-        dest_name = with_name or file_path.name
-        try:
-            shutil.copy2(file_path, self.history_dir / dest_name)
-        except OSError:
-            LOGGER.error(f'Failed to copy {file_path} to history.')
-
-    @needs_update_for_attr('_folder_names[history_dir]')
     def _copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
+        history_folder = self.history.new_folder
         for name in (DEFAULT_SUPP, DEFAULT_OUT):
             directory = self.cwd / name
             if not directory.is_dir():
@@ -390,10 +330,7 @@ class Bookkeeper:
                                f'{self.cwd}. It will not be copied '
                                'to history.')
                 continue
-            try:
-                shutil.copytree(directory, self.history_dir / name)
-            except OSError:
-                LOGGER.error(f'Failed to copy {name} directory to history.')
+            history_folder.copy_file_or_directory(directory)
 
     def _do_prerun_archiving(self):
         """If needed, archive files from root to history.
@@ -410,81 +347,10 @@ class Bookkeeper:
         """
         if not self.archiving_required:
             return False
-        LOGGER.info(f'History folder {self.history_dir} does not '
-                    'exist yet. Running archive mode first.')
+        LOGGER.info(f'History folder {self.history.new_folder.name} '
+                    'does not exist yet. Running archive mode first.')
         self._archive_to_history_and_add_info_entry()
         return True
-
-    def _find_base_name_for_history_subfolder(self):
-        """Store internally the potential name of the history subfolder.
-
-        This is the base name for the folder that will contain the
-        final output and SUPP files. Folders coming from the work-
-        history folder have their own naming. Notice also that this
-        is not necessarily the name of the history directory that is
-        actually created. Use self.history_dir.name instead. See also
-        help(self._find_new_history_directory_name).
-
-        Returns
-        -------
-        None.
-        """
-        suffix = self.timestamp
-        job_number = self.max_job_for_tensor[self.tensor_number]
-        dir_name_fmt = f't{self.tensor_number:03d}.r{{job:03d}}_{suffix}'
-        # If there is already a folder with the same name and correct
-        # timestamp/suffix, we take that, otherwise, we increase the
-        # job number: it's a new run.
-        base_name = dir_name_fmt.format(job=job_number)
-        if not (self.top_level_history_path / base_name).is_dir():
-            base_name = dir_name_fmt.format(job=job_number + 1)
-        self._folder_names['history_dir_base_name'] = base_name
-
-        # Now that we have a base name, we can also check if there
-        # are already history folders with the same base name.
-        self._state_info['history_with_same_base_name_exists'] = any(
-            self._get_conflicting_history_subfolders()
-            )
-
-    def _find_new_history_directory_name(self):
-        """Store internally the name of the history directory to be used.
-
-        The path to the directory is then available via self.history_dir.
-
-        Folder name has form 'tXXX.rYYY_<suffix>'. <suffix> can vary.
-        It may be:
-        - if there was a log file, and the folder is not
-          present in history:
-              <log_timestamp>
-        - if there was a log file, but there is already a folder
-          in history with the same timestamp (typically that means
-          that bookkeeper was called multiple times on the same run):
-              <log_timestamp>_moved-<bookie_timestamp>
-        - if there was no log file:
-              moved-<bookie_timestamp>
-        - in the unlikely event that the folder in the previous point
-          already exists (this would mean that the bookkeeper is called
-          twice within one second):
-              moved-<bookie_timestamp>_moved-<bookie_timestamp2>
-          where <bookie_timestamp2> may be slightly later than
-          <bookie_timestamp>, but is most likely the same.
-
-        Returns
-        -------
-        None.
-        """
-        dir_name = self.history_dir_base_name
-        if (self.top_level_history_path / dir_name).is_dir():
-            bookkeeper_timestamp = DateTimeFormat.FILE_SUFFIX.now()
-            dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
-        self._folder_names['history_dir'] = dir_name
-
-    def _get_conflicting_history_subfolders(self):
-        """Return an iterator of history subfolders with the same base name."""
-        folders = self.top_level_history_path.glob(
-            f'{self.history_dir_base_name}*'
-            )
-        return (f for f in folders if f.is_dir())
 
     def _make_and_copy_to_history(self):
         """Create new history subfolder and copy all files there.
@@ -501,19 +367,22 @@ class Bookkeeper:
             If creating the new history subfolder fails.
         """
         try:
-            self.history_dir.mkdir()
+            self.history.new_folder.path.mkdir()
         except OSError:
             LOGGER.error('Error: Could not create target directory '
-                         f'{self.history_dir}\n Stopping...')
+                         f'{self.history.new_folder.name}\n Stopping...')
             raise
         self._copy_out_and_supp()
         self._copy_input_files_from_original_inputs_or_cwd()
         self._copy_log_files()
 
         # Now that all files are in place, add the metadata file
-        meta = BookkeeperMetaFile(self.history_dir)
+        meta = BookkeeperMetaFile(self.history.new_folder.path)
         meta.compute_hash()
         meta.write()
+
+        # Finally, register the new folder in history
+        self.history.register_folder(self.history.new_folder.path)
         return meta
 
     def _make_history_and_prepare_logger(self):
@@ -525,13 +394,13 @@ class Bookkeeper:
         log.ensure_has_stream_handler()
 
         try:  # Make top level history folder if not there yet
-            self.top_level_history_path.mkdir(exist_ok=True)
+            self.history.path.mkdir(exist_ok=True)
         except OSError:
             LOGGER.error('Error creating history folder.')
             raise
 
         # Attach file handler for history/bookkeeper.log
-        log.add_bookkeeper_logfile(self.top_level_history_path)
+        log.add_bookkeeper_logfile(self.history.path)
         LOGGER.info(  # Log only once per instance
             '\n### Bookeeper running at '
             f'{DateTimeFormat.LOG_CONTENTS.now()} ###'
@@ -546,9 +415,9 @@ class Bookkeeper:
 
     def _run_archive_mode(self):
         """Execute bookkeeper in ARCHIVE mode."""
-        if self.history_with_same_base_name_exists:
+        if self.history.new_folder.exists:
             LOGGER.info(
-                f'History directory for run {self.history_dir_base_name} '
+                f'History directory for run {self.history.new_folder.name} '
                 'exists. Exiting without doing anything.'
                 )
             return BookkeeperExitCode.NOTHING_TO_DO
@@ -572,7 +441,7 @@ class Bookkeeper:
     def _run_discard_full_mode(self):
         """Execute bookkeeper in DISCARD_FULL mode."""
         try:
-            self.history_info.may_remove_last_entry()
+            self.history.info.may_remove_last_entry()
         except NoHistoryEntryError as exc:
             LOGGER.warning('Error: Failed to remove last entry '
                            f'from {HISTORY_INFO_NAME}: {exc}')
@@ -581,13 +450,20 @@ class Bookkeeper:
             LOGGER.error(str(exc))
             return BookkeeperExitCode.FAIL
 
-        # The directory we want to remove is not self.history_dir (since that   # TODO: don't we also want to purge all the intermediate ones from workhistory?
-        # would be _moved-<timestamp>), but the one with the same base name!
-        dir_to_remove = (self.top_level_history_path
-                         / self.history_dir_base_name)
-        if not dir_to_remove.is_dir():
-            LOGGER.error('FULL_DISCARD mode failed: could not identify '
+        dir_to_remove = self.history.last_folder
+        if not dir_to_remove.exists:
+            LOGGER.error(f'{self._mode.name} mode failed: could not identify '
                          'directory to remove. Please proceed manually.')
+            return BookkeeperExitCode.FAIL
+
+        # Make sure that we're going to remove consistent
+        # stuff from history and history.info
+        entry_folder = self.history.info.last_entry.folder_name.value.strip()
+        if dir_to_remove.name != entry_folder:
+            LOGGER.error('Error: the most recent history folder '
+                         f'({dir_to_remove.name}) is inconsistent with '
+                         f'the last entry in history.info ({entry_folder}). '
+                         'Please proceed manually.')
             return BookkeeperExitCode.FAIL
 
         # Clean up workhistory in root
@@ -595,9 +471,9 @@ class Bookkeeper:
 
         # Remove history folder
         try:
-            shutil.rmtree(dir_to_remove)
+            shutil.rmtree(dir_to_remove.path)
         except OSError:
-            LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
+            LOGGER.error(f'Error: Failed to delete {dir_to_remove.path}.')
             return BookkeeperExitCode.FAIL
         self._root.revert_to_previous_calc_run()
 
@@ -607,7 +483,7 @@ class Bookkeeper:
             self._remove_tensors_and_deltas()
 
         # And the history entry from history.info
-        self.history_info.remove_last_entry()
+        self.history.info.remove_last_entry()
         return BookkeeperExitCode.SUCCESS
 
     def _run_discard_mode(self):
@@ -620,7 +496,7 @@ class Bookkeeper:
             # discarded and we don't have to bother.
             return BookkeeperExitCode.SUCCESS
         try:
-            self.history_info.discard_last_entry()
+            self.history.info.discard_last_entry()
         except (NoHistoryEntryError, CantDiscardEntryError) as exc:
             emit_log = (LOGGER.error if isinstance(exc, NoHistoryEntryError)
                         else LOGGER.warning)
