@@ -27,11 +27,11 @@ from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 from . import log
 from .constants import HISTORY_FOLDER_RE
 from .constants import STATE_FILES
+from .history.constants import HISTORY_INFO_NAME
 from .history.entry.entry import HistoryInfoEntry
 from .history.errors import CantDiscardEntryError
 from .history.errors import CantRemoveEntryError
 from .history.errors import NoHistoryEntryError
-from .history.constants import HISTORY_INFO_NAME
 from .history.info import HistoryInfoFile
 from .history.meta import BookkeeperMetaFile
 from .log import LOGGER
@@ -216,8 +216,7 @@ class Bookkeeper:
             self._find_new_history_directory_name()
 
             # history.info handler (may create history.info file)
-            self._history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
-                                                 create_new=True)
+            self._history_info = HistoryInfoFile(self.cwd, create_new=True)
             self.history_info.read()
 
     def _add_history_info_entry(self, tensor_nums):

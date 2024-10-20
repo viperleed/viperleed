@@ -12,6 +12,7 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from enum import Enum
+from functools import wraps
 from pathlib import Path
 import re
 
@@ -60,16 +61,30 @@ class CantRemoveReason(Enum):
         return cls.FIXABLE
 
 
+def _create_or_raise(func):
+    """Create a history.info file if asked or raise FileNotFoundError."""
+    @wraps(func)
+    def _wrapper(self, *args, **kwargs):
+        # pylint: disable-next=protected-access
+        if not self.path.is_file() and not self._create_new:
+            raise FileNotFoundError(f'{self.path.name} file not '
+                                    f'found at {self.path.parent}.')
+        if not self.path.is_file():  # create new file
+            self.path.touch()
+        return func(self, *args, **kwargs)
+    return _wrapper
+
+
 class HistoryInfoFile:
     """Deals with the history.info file in a history directory."""
 
-    def __init__(self, file_path, create_new=False):
+    def __init__(self, root_path, create_new=False):
         """Initialize instance.
 
         Parameters
         ----------
-        file_path : str or Path
-            The path to the history.info file.
+        root_path : str or Path
+            The path to the folder containing the history.info file.
         create_new : bool, optional
             Whether a empty file should be created
             in case `file_path` does not exist.
@@ -79,12 +94,8 @@ class HistoryInfoFile:
         FileNotFoundError
             If `file_path` does not exist and `create_new` is False.
         """
-        self.path = Path(file_path)
-        if not self.path.is_file() and not create_new:
-            raise FileNotFoundError(f'{HISTORY_INFO_NAME} file not '
-                                    f'found at {self.path}.')
-        if not self.path.is_file():  # create new file
-            self.path.touch()
+        self.path = Path(root_path).resolve() / HISTORY_INFO_NAME
+        self._create_new = create_new
 
         self.raw_contents = ''
         self._entries = []  # The HistoryInfoEntry(s) from raw_contents
@@ -103,6 +114,7 @@ class HistoryInfoFile:
         """Return whether the last entry is labeled as DISCARDED."""
         return getattr(self.last_entry, 'is_discarded', False)
 
+    @_create_or_raise
     def append_entry(self, entry, fix_time_format=True):
         """Write `entry` to the history.info file."""
         if fix_time_format:
@@ -129,6 +141,7 @@ class HistoryInfoFile:
         self._do_remove_last_entry()
         self.append_entry(discarded_entry, fix_time_format=False)
 
+    @_create_or_raise
     def fix(self):
         """Save to file fixed versions of all the fixable entries."""
         fixed_entries = []
@@ -199,6 +212,7 @@ class HistoryInfoFile:
                                    f'{self.path.name}: {err_} '
                                    'Please proceed manually.')
 
+    @_create_or_raise
     def read(self):
         """Read the current contents of the history.info file."""
         self.raw_contents = self.path.read_text(encoding='utf-8')
@@ -225,6 +239,7 @@ class HistoryInfoFile:
             return re.sub(rf'^{missing.rstrip()}', '', missing, count=1)
         return missing
 
+    @_create_or_raise
     def _do_remove_last_entry(self):
         """Actually remove the last entry assuming its possible."""
         self._entries.pop()

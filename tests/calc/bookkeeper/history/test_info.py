@@ -51,7 +51,7 @@ def factory_history_file(tmp_path_factory):
     def _make(contents):
         base_path = tmp_path_factory.mktemp(basename='history_info',
                                             numbered=True)
-        info = HistoryInfoFile(base_path/HISTORY_INFO_NAME, create_new=True)
+        info = HistoryInfoFile(base_path, create_new=True)
         info.path.write_text(contents, encoding='utf-8')
         return info, contents
     return _make
@@ -84,7 +84,7 @@ class TestHistoryInfoFile:
     def test_read_contents(self, after_calc_execution):
         """Check that the history.info file is read correctly."""
         bookkeeper, *_ = after_calc_execution
-        history_info = bookkeeper.history_info
+        history_info = bookkeeper.history.info
         actual_file = bookkeeper.cwd / HISTORY_INFO_NAME
         assert actual_file.exists()
         assert history_info.path == actual_file
@@ -339,11 +339,21 @@ class TestHistoryInfoFileFix:
 class TestHistoryInfoRaises:
     """Tests for HistoryInfoFile conditions that raise exceptions."""
 
-    def test_filenotfound_at_init(self):
+    _raise_filenotfound = (
+        # 'append_entry(None)',
+        'fix',
+        'read',
+        '_do_remove_last_entry',
+        )
+
+    @parametrize(method_name=_raise_filenotfound, ids=_raise_filenotfound)
+    def test_filenotfound(self, method_name):
         """Check complaints when initialized with a non-existing file."""
+        info = HistoryInfoFile('a_file_that_does_not_exist.zz_yy',
+                               create_new=False)
+        method = getattr(info, method_name)
         with pytest.raises(FileNotFoundError):
-            HistoryInfoFile('a_file_that_does_not_exist.zz_yy',
-                            create_new=False)
+            method()
 
     @parametrize_with_cases('contents,exc',
                             cases=all_history_cases,
