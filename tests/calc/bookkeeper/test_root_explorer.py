@@ -113,6 +113,7 @@ class TestRootExplorer:
     def test_calc_timestamp(self, explorer, expect):
         """Test calc_timestamp property."""
         most_recent = expect if expect is None else MagicMock(timestamp=expect)
+        # pylint: disable-next=protected-access           # OK in tests
         explorer._logs = MagicMock(most_recent=most_recent)
         assert explorer.calc_timestamp == expect
 
@@ -159,6 +160,7 @@ class TestRootExplorer:
 
     def test_collect_files_to_archive(self, explorer, monkeypatch):
         """Test the _collect_files_to_archive method."""
+        # pylint: disable-next=protected-access           # OK in tests
         explorer._logs = MagicMock(calc=(explorer.path / 'calc.log',))
         explorer.workhistory = MagicMock()
         explorer.workhistory.find_current_directories.return_value = (
@@ -173,6 +175,7 @@ class TestRootExplorer:
         with monkeypatch.context() as patch_:
             patch_.setattr('pathlib.Path.is_file',
                            MagicMock(return_value=True))
+            # pylint: disable-next=protected-access       # OK in tests
             explorer._collect_files_to_archive()
         to_archive = explorer._files_to_archive
         assert to_archive == tuple(explorer.path / f for f in expected_files)
@@ -196,6 +199,7 @@ class TestRootExplorer:
 
     def test_infer_run_info(self, explorer):
         """Check correct result of inferring info from log files."""
+        # pylint: disable-next=protected-access           # OK in tests
         explorer._logs = MagicMock()
         explorer.logs.infer_run_info = MagicMock(return_value=_TEST_STRING)
         assert explorer.infer_run_info() is _TEST_STRING
@@ -208,6 +212,7 @@ class TestRootExplorer:
     @parametrize('expect,files', _archive_files.items(), ids=_archive_files)
     def test_needs_archiving(self, explorer, files, expect):
         """Check the needs_archiving property."""
+        # pylint: disable-next=protected-access           # OK in tests
         explorer._files_to_archive = files
         assert explorer.needs_archiving == expect
 
@@ -230,6 +235,7 @@ class TestRootExplorer:
         """Check there are no complaints if an _ori file is not there."""
         with make_obj_raise('pathlib.Path.replace', FileNotFoundError):
             with not_raises(FileNotFoundError):
+                # pylint: disable-next=protected-access   # OK in tests
                 explorer._replace_state_files_from_ori()
 
     @parametrize(out_exists=(True, False))
@@ -259,6 +265,7 @@ class TestRootExplorerRaises:
     def test_cannot_replace_state_files_from_ori(self, mock_error, explorer):
         """Check complaints when a root file cannot be replaced with _ori."""
         with raises_exception('pathlib.Path.replace', OSError):
+            # pylint: disable-next=protected-access       # OK in tests
             explorer._replace_state_files_from_ori()
             mock_error.assert_called_once()
 
@@ -270,17 +277,15 @@ class TestRootExplorerRaises:
     @parametrize('method,expect',
                  _read_notes_raises.items(),
                  ids=_read_notes_raises)
-    @patch(f'{_MODULE}.LOGGER.error')
-    def test_read_and_clear_notes_file(self, mock_error,
-                                       method, expect,
-                                       explorer,
-                                       patched_path):
+    def test_read_and_clear_notes_file(self, method, expect,
+                                       explorer, patched_path):
         """Test that complaints by read/write_text emit errors."""
         complaining = getattr(patched_path, method)
         complaining.side_effect = OSError
-        notes = explorer.read_and_clear_notes_file()
-        assert notes == expect
-        mock_error.assert_called_once()
+        with patch(f'{_MODULE}.LOGGER.error') as mock_error:
+            notes = explorer.read_and_clear_notes_file()
+            assert notes == expect
+            mock_error.assert_called_once()
 
     _attr_needs_update = (
         'calc_timestamp',
@@ -293,14 +298,14 @@ class TestRootExplorerRaises:
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, explorer, attr):
         """Check that accessing attributes before update_from_cwd fails."""
-        with pytest.raises(AttributeError, match=rf'.*collect_info.*'):
+        with pytest.raises(AttributeError, match=r'.*collect_info.*'):
             attrgetter(attr)(explorer)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, explorer, method_name):
         """Check that accessing attributes before update_from_cwd fails."""
         method = attrgetter(method_name)(explorer)
-        with pytest.raises(AttributeError, match=rf'.*collect_info.*'):
+        with pytest.raises(AttributeError, match=r'.*collect_info.*'):
             method()
 
 
@@ -334,10 +339,12 @@ class TestLogFiles:
             '_others': ('other_stuff.log',)
             }
         for attr, file_list in files.items():
+            # pylint: disable-next=protected-access       # OK in tests
             files[attr] = tuple(logs._path / f for f in file_list)
         all_files = sum(files.values(), tuple())
         with patch('pathlib.Path.glob', return_value=all_files):
             with patch('pathlib.Path.is_file', return_value=True):
+                # pylint: disable-next=protected-access   # OK in tests
                 logs._collect_logs()
         for attr, expect in files.items():
             assert getattr(logs, attr) == expect
@@ -349,19 +356,22 @@ class TestLogFiles:
             '_others': ('other_stuff.log',)
             }
         for attr, file_list in files.items():
+            # pylint: disable-next=protected-access       # OK in tests
             files[attr] = tuple(logs._path / f for f in file_list)
         all_files = sum(files.values(), tuple())
         with patch('pathlib.Path.glob', return_value=all_files):
-            # None of the files above are actual files.
+            # pylint: disable-next=protected-access       # OK in tests
             logs._collect_logs()
-        for attr, expect in files.items():
+        for attr in files:
             collected = getattr(logs, attr)
             assert collected is not None
+            # None of the files above are actual files.
             assert not collected
 
     @patch_discard
     def test_discard(self, discard_files, logs):
         """Check deletion of all log files in root."""
+        # pylint: disable-next=protected-access           # OK in tests
         files = [logs._path / f'file{i}.log' for i in range(5)]
         logs._calc, logs._others = files[:2], files[2:]
 
@@ -370,6 +380,7 @@ class TestLogFiles:
 
     def test_files_property(self, logs):
         """Test the files property of LogFiles."""
+        # pylint: disable-next=protected-access           # OK in tests
         files = tuple(logs._path / f
                       for f in ('calc1.log', 'calc2.log', 'other.log'))
         logs._calc, logs._others = files[:2], files[2:]
@@ -384,6 +395,7 @@ class TestLogFiles:
     @parametrize('lines,expect', _log_info.values(), ids=_log_info)
     def test_infer_run_info(self, logs, lines, expect):
         """Check correct inference of information from log files."""
+        # pylint: disable-next=protected-access           # OK in tests
         logs._calc = MagicMock()
         logs.most_recent = MagicMock()
         logs.most_recent.lines = lines
@@ -391,6 +403,7 @@ class TestLogFiles:
 
     def test_infer_run_info_no_log(self, logs):
         """Check correct result when no log is found in root."""
+        # pylint: disable-next=protected-access           # OK in tests
         logs._calc = MagicMock()
         assert not logs.infer_run_info()
 
@@ -419,8 +432,10 @@ class TestLogFiles:
     @parametrize('collected,expect', _calc_logs.values(), ids=_calc_logs)
     def test_most_recent(self, logs, collected, expect, mock_path_readlines):
         """Test the _read_most_recent method of LogFiles."""
+        # pylint: disable-next=protected-access           # OK in tests
         logs._calc = tuple(logs._path/f for f in collected)
         with mock_path_readlines():
+            # pylint: disable-next=protected-access       # OK in tests
             logs._read_most_recent()
         assert logs.most_recent == expect
 
@@ -429,9 +444,11 @@ class TestLogFiles:
         collected, (expect_time, _) = next(
             log for log in self._calc_logs.values() if log[1]
             )
+        # pylint: disable-next=protected-access           # OK in tests
         logs._calc = tuple(logs._path/f for f in collected)
         with mock_path_readlines() as mock_open:
             with make_obj_raise(mock_open, OSError, 'readlines'):
+                # pylint: disable-next=protected-access   # OK in tests
                 logs._read_most_recent()
             assert logs.most_recent == (expect_time, ())
 
@@ -446,12 +463,12 @@ class TestLogFiles:
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, logs, attr):
         """Check that accessing attributes before update_from_cwd fails."""
-        with pytest.raises(AttributeError, match=rf'.*collect.*'):
+        with pytest.raises(AttributeError, match=r'.*collect.*'):
             attrgetter(attr)(logs)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, logs, method_name):
         """Check that accessing attributes before update_from_cwd fails."""
         method = attrgetter(method_name)(logs)
-        with pytest.raises(AttributeError, match=rf'.*collect.*'):
+        with pytest.raises(AttributeError, match=r'.*collect.*'):
             method()
