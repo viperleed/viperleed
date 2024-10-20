@@ -93,7 +93,7 @@ class WorkhistoryHandler:
         directories = self._find_directories(contains=contains)
         return (d for d in directories if PREVIOUS_LABEL not in d.name)
 
-    def move_and_cleanup(self, main_metadata):
+    def move_current_and_cleanup(self, main_metadata):
         """Move files from the current work-history folder, then clean up.
 
         Any subfolder of workhistory that is labeled as "previous"

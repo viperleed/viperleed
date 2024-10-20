@@ -274,7 +274,7 @@ class Bookkeeper:
         # Create the new 'primary' history directory...
         metadata = self._make_and_copy_to_history()
         # ...move workhistory folders...
-        tensor_nums = self._workhistory.move_and_cleanup(metadata)
+        tensor_nums = self._workhistory.move_current_and_cleanup(metadata)
         tensor_nums.add(self.tensor_number)
         # ...and add a history.info entry
         self._add_history_info_entry(tensor_nums)

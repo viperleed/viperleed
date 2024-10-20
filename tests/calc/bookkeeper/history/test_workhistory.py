@@ -108,23 +108,23 @@ class TestWorkhistoryHandler:
     @patch_rmtree
     def test_move_and_cleanup_nonexistent_folder(self, mock_rmtree,
                                                  workhistory, patched_path):
-        """Test move_and_cleanup when the folder doesn't exist."""
+        """Test move_current_and_cleanup when the folder doesn't exist."""
         patched_path(is_dir=False)
-        tensor_nums = workhistory.move_and_cleanup(None)
+        tensor_nums = workhistory.move_current_and_cleanup(None)
         assert not tensor_nums
         mock_rmtree.assert_not_called()
 
     @patch_rmtree
     def test_move_and_cleanup_with_folders(self, mock_rmtree,
                                            workhistory, patched_path):
-        """Test move_and_cleanup where folders are moved."""
+        """Test move_current_and_cleanup where folders are moved."""
         tensors_expect = {1, 2}
         patched_path(is_dir=True, iterdir=iter([1]))
         mock_move = patch.object(workhistory,
                                  '_move_folders_to_history',
                                  return_value=tensors_expect)
         with mock_move:
-            tensor_nums = workhistory.move_and_cleanup(None)
+            tensor_nums = workhistory.move_current_and_cleanup(None)
             assert tensor_nums == tensors_expect
             mock_rmtree.assert_not_called()
 
@@ -202,12 +202,12 @@ class TestWorkhistoryHandlerRaises:
         assert any(r for r in logger.records if r.levelno == logging.ERROR)
 
     def test_move_and_cleanup(self, workhistory, patched_path, caplog):
-        """Check that failed removal of the workhistory logs errors."""
+        """Check that failed removal of the workhistory emits log errors."""
         patched_path(iterdir=tuple())
         # Make sure we don't raise OSError at _discard_previous
         mock_previous = patch.object(workhistory, '_discard_previous')
         with mock_previous, make_obj_raise('shutil.rmtree', OSError):
-            workhistory.move_and_cleanup(None)
+            workhistory.move_current_and_cleanup(None)
         self.check_has_error(caplog)
 
     def test_discard_previous(self, workhistory, caplog):
