@@ -29,7 +29,8 @@ from viperleed.calc.files.iorfactor import largest_nr_grid_points
 from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
 from viperleed.calc.files.vibrocc import writeVIBROCC
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import BackwardsReader, readIntLine
+from viperleed.calc.lib.base import BackwardsReader
+from viperleed.calc.lib.string_utils import read_int_line
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -143,7 +144,7 @@ def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
                 try:
                     percent = int(line.split("|")[-2].strip()[:-1])
                     valstring = line.split("|")[-1].rstrip()
-                    pars = readIntLine(valstring, width=4)
+                    pars = read_int_line(valstring, width=4)
                     dpars.append((percent, pars))
                 except ValueError:
                     if print_info:
@@ -313,7 +314,7 @@ def readDataChem(rp, source, cutoff=0, max_configs=0):
             if cutoff != 0 and rfac > cutoff:
                 continue
             valstring = line.split("|")[1].rstrip()
-            pars = readIntLine(valstring, width=4)
+            pars = read_int_line(valstring, width=4)
         except (ValueError, IndexError):
             logger.debug("Could not read values in data.chem line:\n"+line)
             continue
@@ -872,7 +873,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 if rp.SEARCH_CULL.type_.is_genetic or getPredicted:
                     # prepare readable clines
                     try:
-                        csurvive = [readIntLine(s, width=ctrl_width)
+                        csurvive = [read_int_line(s, width=ctrl_width)
                                     for s in clines[:nsurvive]]
                     except ValueError:
                         if rp.SEARCH_CULL.type_.is_genetic:
@@ -1196,27 +1197,27 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                     at.offset_occ[el] -= offset_occ
                 if el in at.offset_vib:
                     at.offset_vib[el] -= offset_vib
-    fn = "POSCAR_OUT" + suffix + "_" + rp.timestamp
+    poscar_fn = "POSCAR_OUT" + suffix
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
-        poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
+        poscar.write(tmpslab, filename=poscar_fn, comments="all", silent=silent)
     except OSError:
         logger.error("Exception occurred while writing POSCAR_OUT" + suffix,
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.make_subcell(rp, rp.SYMMETRY_CELL_TRANSFORM)
-        fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
+        poscar_mincell_fn = "POSCAR_OUT_mincell" + suffix
         try:
-            poscar.write(tmpslab, filename=fn, silent=silent)
+            poscar.write(tmpslab, filename=poscar_mincell_fn, silent=silent)
         except OSError:
             logger.warning(
                 "Exception occurred while writing POSCAR_OUT_mincell" + suffix,
                 exc_info=rp.is_debug_mode)
-    fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
+    vibrocc_fn = "VIBROCC_OUT" + suffix
     try:
-        writeVIBROCC(sl, rp, filename=fn, silent=silent)
+        writeVIBROCC(sl, rp, filename=vibrocc_fn, silent=silent)
     except Exception:
         logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
                      exc_info=rp.is_debug_mode)

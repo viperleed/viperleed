@@ -14,8 +14,8 @@ __license__ = 'GPLv3+'
 from enum import Enum
 from itertools import chain
 
-from viperleed.calc.lib.base import readIntRange
-from viperleed.calc.lib.base import split_string_range
+from viperleed.calc.lib.string_utils import read_int_range
+from viperleed.calc.lib.string_utils import split_string_range
 
 
 _ALIASES = {  # Exact match first, then check .startswith
@@ -62,6 +62,12 @@ class CalcSection(Enum):
             except ValueError:
                 pass
 
+        # Try with the capitalized version of the string
+        try:
+            return cls[value.upper()]
+        except KeyError:
+            pass
+
         # Try with the aliases instead. First look for an exact match
         for name, aliases in _ALIASES.items():
             if any(alias == value for alias in aliases):
@@ -96,7 +102,7 @@ class CalcSection(Enum):
                 f'{cls.__name__}: Could not interpret one of '
                 f'{start!r} and/or {stop!r} as a valid section'
                 ) from None
-        return tuple(cls(v) for v in readIntRange(_as_int_range))
+        return tuple(cls(v) for v in read_int_range(_as_int_range))
 
     @property
     def history_tag(self):

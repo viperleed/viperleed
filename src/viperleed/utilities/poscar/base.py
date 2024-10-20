@@ -21,6 +21,7 @@ import sys
 from viperleed.calc.classes.rparams import Rparams, SymmetryEps
 from viperleed.calc.classes.rparams.defaults import DEFAULTS as PARAM_DEFAULTS
 from viperleed.calc.files import poscar
+from viperleed.calc.lib.log_utils import debug_or_lower
 from viperleed.cli_base import ViPErLEEDCLI, positive_float
 
 
@@ -234,11 +235,10 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'also overriding write_output, make sure to '
                                  'call add_outfile_argument in your overridden'
                                  ' add_parser_arguments') from None
-        log_level = self.get_logger().getEffectiveLevel()
         poscar.write(processed_slab,
                      filename=args.outfile,
                      comments='none',
-                     silent=log_level<=logging.DEBUG)
+                     silent=debug_or_lower(self.get_logger()))
 
 
 EPS_DEFAULT = PARAM_DEFAULTS['SYMMETRY_EPS']

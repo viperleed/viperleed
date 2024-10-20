@@ -23,14 +23,6 @@ import os
 from pathlib import Path
 import random
 import shutil
-from timeit import default_timer as timer
-
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
 
 import numpy as np
 
@@ -39,12 +31,19 @@ from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
-from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
-from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import close_figures
+from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
+from viperleed.calc.lib.matplotlib_utils import use_calc_style
+from viperleed.calc.lib.string_utils import parent_name
+from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
+from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
+from viperleed.calc.sections.cleanup import DEFAULT_OUT
+from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 
 from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
 from .limits import PARAM_LIMITS
@@ -53,8 +52,9 @@ from .special.base import SpecialParameter
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
-if _CAN_PLOT:
-    plt.style.use('viperleed.calc')
+if CAN_PLOT:
+    import matplotlib.pyplot as plt
+    use_calc_style()
 
 
 class Rparams:
@@ -149,7 +149,7 @@ class Rparams:
         self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
 
         # RUN VARIABLES
-        self.starttime = timer()
+        self.timer = ExecutionTimer()
         self.source_dir = None  # where to find 'tensorleed'
         # .workdir is the MAIN WORK DIRECTORY; where to find input
         self.workdir = Path.cwd().resolve()
@@ -165,7 +165,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = ['SUPP', 'OUT']
+        self.manifest = [DEFAULT_SUPP, DEFAULT_OUT]
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
             'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,
@@ -378,7 +378,7 @@ class Rparams:
                 'source_dir is not set'
                 )
         source_tree = self.source_dir.resolve()
-        wanted_version = (Version(wanted_version) if wanted_version else 
+        wanted_version = (Version(wanted_version) if wanted_version else
                           self.TL_VERSION)
         sources = get_tenserleed_sources(source_tree)
         # sort sources by .version attribute
@@ -846,6 +846,7 @@ class Rparams:
             return []
         return self.renormalizeDomainParams(out)
 
+    @skip_without_matplotlib
     def closePdfReportFigs(self):
         """
         Closes the pdf figures from the Search-progress pdf files, which are
@@ -855,15 +856,11 @@ class Rparams:
         -------
         None.
         """
-        if not _CAN_PLOT:
-            return
-
         for figures in self.lastParScatterFigs.values():
-            for figure in figures:
-                try:
-                    plt.close(figure)
-                except Exception:
-                    pass
+            # Pylint can't tell that we will not execute this,
+            # as per decorator, if we fail to import matplotlib
+            # pylint: disable-next=possibly-used-before-assignment
+            close_figures(plt, *figures)
 
     def generateSearchPars(self, sl, subdomain=False):
         """

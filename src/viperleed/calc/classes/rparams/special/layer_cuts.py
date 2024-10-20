@@ -15,25 +15,18 @@ __created__ = '2023-10-21'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from enum import IntEnum, auto
 import itertools
 from numbers import Real
 import re
 from typing import Any
 
-from viperleed.calc.lib.base import pairwise
+from viperleed.calc.lib.dataclass_utils import frozen
+from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+from viperleed.calc.lib.itertools_utils import pairwise
+from viperleed.calc.lib.itertools_utils import threewise
 
 from .base import SpecialParameter
-
-
-def threewise(iterable):
-    """Yield triplets of items from iterable."""
-    orig, shift_one, shift_two = itertools.tee(iterable, 3)
-    next(shift_one, None)
-    next(shift_two, None)
-    next(shift_two, None)
-    yield from zip(orig, shift_one, shift_two)
 
 
 class LayerCutTokenType(IntEnum):
@@ -49,7 +42,7 @@ class LayerCutTokenType(IntEnum):
 _AUTO_CUT_RE = re.compile(r'(?P<type>dz|dc)\((?P<cutoff>[\d.]+)\)')
 
 
-@dataclass(frozen=True)
+@frozen
 class LayerCutToken:
     """A single token of a LayerCuts object."""
 
@@ -116,9 +109,9 @@ class LayerCutToken:
         if not self.is_auto_cut and (self.lower, self.upper) != (None, None):
             raise ValueError('Only dc/dz can have bounds')
         if isinstance(self.lower, Real):
-            object.__setattr__(self, 'lower', self.make_numeric(self.lower))
+            set_frozen_attr(self, 'lower', self.make_numeric(self.lower))
         if isinstance(self.upper, Real):
-            object.__setattr__(self, 'upper', self.make_numeric(self.upper))
+            set_frozen_attr(self, 'upper', self.make_numeric(self.upper))
         if self.is_auto_cut:
             self._check_valid_bound_type(self.lower, self.upper)
 

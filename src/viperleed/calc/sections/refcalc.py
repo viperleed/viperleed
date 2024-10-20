@@ -24,7 +24,6 @@ from viperleed.calc.files import parameters
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
-from viperleed.calc.lib.base import splitMaxRight
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.version import Version
 
@@ -287,7 +286,7 @@ def edit_fin_energy_lmax(runtask):
     # this works because even if the directory were to be named LMAX, there is
     #   a timestap after it rather than a \n
     before_LMAX, after_LMAX = rest.split("   LMAX", maxsplit=1)
-    before_LMAX = splitMaxRight(before_LMAX, "\n")[0]
+    before_LMAX, *_ = before_LMAX.rsplit('\n', maxsplit=1)
     after_LMAX = (str(runtask.comptask.lmax).rjust(3).ljust(45)
                   + "LMAX" + after_LMAX)
     # fin = finparts[0] + "\n" + nl + finparts[1]
@@ -648,17 +647,17 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     try:
         for tf in [f for f in os.listdir('.') if f.startswith("T_")]:
             shutil.move(tf, os.path.join(".", "Tensors", dn, tf))
-    except Exception:
+    except OSError:
         logger.error("Error moving Tensor files: ")
         raise
-    tInputFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS",
+    tensor_input_files = ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS",
                    "PHASESHIFTS"]
-    for f in [f for f in tInputFiles if f in os.listdir('.')]:
+    for f in [f for f in tensor_input_files if f in os.listdir('.')]:
         of = f
-        for fn in ["POSCAR", "VIBROCC"]:
+        for fn in ["POSCAR", "VIBROCC", "PARAMETERS"]:
             if (f == fn and 3 in rp.runHistory
-                    and os.path.isfile(fn + "_OUT_" + rp.timestamp)):
-                of = fn + "_OUT_" + rp.timestamp
+                    and os.path.isfile(fn + "_OUT")):
+                of = fn + "_OUT"
         try:
             shutil.copy2(of, os.path.join("Tensors", dn, f))
         except Exception:
@@ -669,12 +668,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                      os.path.join("Tensors", dn, "refcalc-fd.out"))
     except Exception:
         logger.warning("Failed to copy refcalc-fd.out to Tensors folder.")
-    # modify PARAMETERS to contain the energies and LMAX that were really used
-    if os.path.isfile(os.path.join("Tensors", dn, "PARAMETERS")):
-        parameters.modify(rp, "THEO_ENERGIES",
-                          path=os.path.join("Tensors", dn), suppress_ori=True)
-        parameters.modify(rp, "LMAX",
-                          path=os.path.join("Tensors", dn), suppress_ori=True)
 
     # remove references to Deltas from old tensors
     _reinitialize_deltas(rp, sl)

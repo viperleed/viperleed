@@ -10,13 +10,14 @@ __license__ = 'GPLv3+'
 
 import pytest
 
-
 class TestSearchAg100:
     """Check the successful outcome of a structure optimization for Ag(100)."""
 
     def test_successful_run(self, search_files_ag100):
         """Check that structure search exits without errors."""
         assert not search_files_ag100.failed
+        assert search_files_ag100.records is not None
+        assert search_files_ag100.records.get_last_section_state('search')
 
     @pytest.mark.parametrize('expected_file', ('search.steu',))
     def test_search_input_exist(self, search_files_ag100, expected_file):

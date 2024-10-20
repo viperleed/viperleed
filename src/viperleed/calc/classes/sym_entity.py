@@ -15,7 +15,8 @@ __license__ = 'GPLv3+'
 
 import numpy as np
 
-from viperleed.calc.lib.base import add_edges_and_corners, dist_from_line
+from viperleed.calc.lib.base import dist_from_line
+from viperleed.calc.lib.coordinates import add_edges_and_corners
 
 
 class SymPlane:

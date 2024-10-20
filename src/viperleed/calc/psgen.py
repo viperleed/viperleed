@@ -333,7 +333,7 @@ def runPhaseshiftGen_old(sl, rp,
     phaseshifts_log_path = (rp.workdir / phaseshifts_log_name).with_suffix(".log")
 
     # RUNS phaseshift program
-    ps_output = subprocess.run(psgensource,
+    ps_output = subprocess.run(str(psgensource),
                                cwd=rp.workdir,
                                input=output,
                                encoding='ascii',

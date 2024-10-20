@@ -32,7 +32,8 @@ from viperleed.calc.files import iorfactor as rf_io
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.ivplot import plot_iv
-from viperleed.calc.lib.base import rotation_matrix
+from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.run import run_calc
 from viperleed.extensions.error_codes import check_ierr
 
@@ -120,9 +121,9 @@ class _ImmutableSlabTransform(SlabTransform):
 
     def __init__(self):
         """Initialize instance attributes."""
-        object.__setattr__(self, 'orthogonal_matrix', None)
-        object.__setattr__(self, 'uc_scaling', None)
-        object.__setattr__(self, 'cut_cell_c_fraction', 0.)
+        set_frozen_attr(self, 'orthogonal_matrix', None)
+        set_frozen_attr(self, 'uc_scaling', None)
+        set_frozen_attr(self, 'cut_cell_c_fraction', 0.)
 
     def __setattr__(self, name, value):
         """Raise FrozenInstanceError."""
@@ -292,8 +293,10 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
 
     # We are ready to run ViPErLEED! Have fun!
     try:
-        exit_code = run_calc(slab=slab,
-                             preset_params=_make_preset_params(rparams, slab))
+        exit_code, _ = run_calc(
+            slab=slab,
+            preset_params=_make_preset_params(rparams, slab)
+            )
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
         os.chdir(home)

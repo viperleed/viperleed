@@ -18,6 +18,7 @@ from typing import Dict, List, Mapping, Set, Tuple
 import numpy as np
 
 from viperleed.calc.classes.rparams import LayerCuts
+from viperleed.calc.lib.dataclass_utils import non_init_field
 
 from ..helpers import InfoBase
 
@@ -85,7 +86,7 @@ class POSCARInfo(InfoBase):
     """Container for information about POSCAR files."""
     name: str = ''
     n_atoms: int = None
-    n_atoms_by_elem: dict = field(init=False, default_factory=dict)
+    n_atoms_by_elem: dict = non_init_field(default_factory=dict, repr=True)
     n_cells: int = 1  # How many 2D cells are in the POSCAR?
 
     def __post_init__(self):

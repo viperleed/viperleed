@@ -22,7 +22,7 @@ from pytest_cases import fixture, parametrize, parametrize_with_cases
 from pytest_cases.filters import id_has_suffix
 
 from viperleed.calc import symmetry
-from viperleed.calc.lib.base import angle as angle_radians
+from viperleed.calc.lib.math_utils import angle as angle_radians
 
 from ...helpers import duplicate_all
 from ..poscar_slabs import make_poscar_ids

@@ -138,7 +138,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     err_log = ""
     try:
         with open(outname, "w") as out:
-            complete = subprocess.run(sposname.resolve(),                       # TODO: Perhaps nicer to have log be a TextIO stream?
+            complete = subprocess.run(str(sposname.resolve()),                  # TODO: Perhaps nicer to have log be a TextIO stream?
                                       input=contrin, encoding="ascii",
                                       capture_output=True)
             out.write(complete.stdout)

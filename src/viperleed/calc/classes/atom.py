@@ -17,7 +17,7 @@ import logging
 
 import numpy as np
 
-from viperleed.calc.lib.base import add_edges_and_corners
+from viperleed.calc.lib.coordinates import add_edges_and_corners
 
 _LOGGER = logging.getLogger(__name__)
 

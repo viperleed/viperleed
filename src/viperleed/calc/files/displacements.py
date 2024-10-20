@@ -13,8 +13,8 @@ import re
 
 import numpy as np
 
-from viperleed.calc.lib.base import readIntRange
 from viperleed.calc.lib.base import splitSublists
+from viperleed.calc.lib.string_utils import read_int_range
 from viperleed.calc.symmetry import enforceSymmetry
 from viperleed.calc.symmetry import setSymmetry
 
@@ -22,7 +22,7 @@ from viperleed.calc.symmetry import setSymmetry
 logger = logging.getLogger(__name__)
 
 
-def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
+def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            # TODO: This should probably set rp.fileLoaded['DISPLACEMENTS'] = True
     """
     Reads the DISPLACEMENTS file to rp.disp_blocks without interpreting it.
 
@@ -475,13 +475,13 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 numlist = []
                 for s in nl:
                     if "l(" not in s:
-                        il = readIntRange(s)
-                        if len(il) > 0:
-                            numlist.extend(il)
-                        else:
+                        try:
+                            numlist.extend(read_int_range(s))
+                        except ValueError:
                             logger.warning(
-                                'DISPLACEMENTS file: could not '
-                                'parse integer range, skipping line: '+pside)
+                                'DISPLACEMENTS file: could not parse '
+                                f'integer range, skipping line: {pside}'
+                                )
                             rp.setHaltingLevel(2)
                             break
                     else:
@@ -489,14 +489,17 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                         if not m:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse layer '
-                                'expression, skipping line: '+pside)
+                                f'expression, skipping line: {pside}'
+                                )
                             rp.setHaltingLevel(2)
                             break
-                        il = readIntRange(m.group("laynum"))
-                        if len(il) == 0:
+                        try:
+                            il = read_int_range(m['laynum'])
+                        except ValueError:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse layer '
-                                'expression, skipping line: '+pside)
+                                f'expression, skipping line: {pside}'
+                                )
                             rp.setHaltingLevel(2)
                             break
                         for ln in il:
@@ -870,7 +873,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             'wrong element. Atom will be skipped.'.format(at))
                         rp.setHaltingLevel(1)
                 # else:
-                #     # !!! currently unused, not in wiki - delete?
+                #     # !!! currently unused, not in wiki - delete?             # TODO: Not true! It is in the Syntax example in the documentation of OCC_DELTA, and described in detail there!
                 #     elparts = "".join(subl[:-3]).split("+")
                 #     elweights = []
                 #     elsum = 0.0
