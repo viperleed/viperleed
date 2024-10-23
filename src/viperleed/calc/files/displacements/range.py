@@ -1,6 +1,6 @@
+"""Module range."""
 __authors__ = ("Alexander M. Imre (@amimre)",)
 __created__ = "2024-10-15"
-
 
 class DisplacementsRange:
     _EPS = 1e-6

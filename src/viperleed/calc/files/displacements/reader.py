@@ -1,3 +1,7 @@
+"""Module file."""
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__created__ = "2024-10-04"
+
 from enum import Enum
 from collections import namedtuple
 import re

@@ -1,3 +1,7 @@
+"""Module file."""
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__created__ = "2024-10-04"
+
 from .errors import InvalidSearchLoopError, OffsetsNotAtBeginningError
 from .errors import InvalidSearchBlocksError
 from .reader import LoopMarker
@@ -5,9 +9,6 @@ from .reader import DisplacementsReader
 from .reader import DisplacementFileSections
 from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine, OffsetsLine
 from .lines import LoopMarkerLine, SearchHeaderLine, SectionHeaderLine
-
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__created__ = "2024-10-04"
 
 class SearchBlock:
     """Class to hold all information for a single search block."""
