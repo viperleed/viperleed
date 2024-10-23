@@ -90,35 +90,6 @@ class BackwardsReader:                                                          
 
 
 ###############################################
-#              CONTEXT MANAGERS               #
-###############################################
-
-@contextmanager
-def logging_silent(level=logging.CRITICAL):
-    """Mute all logging messages with at least `level`.
-
-    Parameters
-    ----------
-    level : int, optional
-        The maximum logging level in use. Default is
-        logging.CRITICAL, which silences all logging
-        messages.
-
-    Returns
-    -------
-    None.
-    """
-    # Adapted from https://gist.github.com/simon-weber/7853144
-    # Uses an undocumented, but public API: logging.Manager.disable
-    previous_level = logging.root.manager.disable
-    logging.disable(level)
-    try:
-        yield
-    finally:
-        logging.disable(previous_level)
-
-
-###############################################
 #                FUNCTIONS                    #
 ###############################################
 
