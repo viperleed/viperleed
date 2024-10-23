@@ -142,33 +142,50 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def getMaxTensorIndex(home=".", zip_only=False):
+def getMaxTensorIndex(home='', zip_only=False):
+    """Return the highest index of tensor files/folders in home/Tensors.
+
+    Parameters
+    ----------
+    home : str or Path
+        The base directory, in which a Tensors folder should
+        be present. Only files/folders in <home/Tensors> will
+        be looked up.
+    zip_only : bool, optional
+        Search only for (.zip) archives, skipping directories.
+        Default is False.
+
+    Returns
+    -------
+    max_index : int
+        The largest among the indices found. Zero if no tensor
+        file/directories are present.
     """
-    Checks the Tensors folder for the highest Tensor index there,
-    returns that value, or zero if there is no Tensors folder or no valid
-    Tensors zip file. zip_only looks only for zip files, ignoring directories.
-    """
-    tensor_dir = (Path(home) / "Tensors").resolve()
-    if not tensor_dir.is_dir():
+    def get_index(fpath):
+        """Return the tensor index from a file path."""
+        if not fpath.is_file():
+            return -1
+        _, ind = fpath.stem.split('_')
+        try:
+            return int(ind)
+        except ValueError:
+            return -1
+
+    tensors = Path(home, 'Tensors').resolve()
+    if not tensors.is_dir():
         return 0
-    indlist = []
-    rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-    for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-              if (os.path.isfile(os.path.join(home, "Tensors", f))
-                  and rgx.match(f))]:
-        m = rgx.match(f)
-        if m.span()[1] == 15:  # exact match
-            indlist.append(int(m.group(0)[-7:-4]))
+
+    _base_pattern = 'Tensors_[0-9][0-9][0-9]'
+    patterns = (f'{_base_pattern}.zip',)
     if not zip_only:
-        rgx = re.compile(r'Tensors_[0-9]{3}')
-        for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-                  if ((tensor_dir / f).is_dir() and rgx.match(f))]:
-            m = rgx.match(f)
-            if m.span()[1] == 11:  # exact match
-                indlist.append(int(m.group(0)[-3:]))
-    if indlist:
-        return max(indlist)
-    return 0
+        patterns += (_base_pattern,)
+
+    likely_files = (f for p in patterns for f in tensors.glob(p))
+    try:
+        maxind = max(get_index(f) for f in likely_files)
+    except ValueError:  # No files
+        return 0
+    return max(0, maxind)
 
 
 def getDeltas(index, basedir=".", targetdir=".", required=True):
