@@ -198,4 +198,3 @@ class DisplacementsFile:
         # finally, replace the blocks with the new ones
         self.blocks = new_blocks
         self.has_been_parsed = True
-
