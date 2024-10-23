@@ -2,6 +2,9 @@
 
 This module is a reworking of scipy's and my Bspline interpolation methods.
 It can interpolate functions efficiently and in a JAX-compatible way."""
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__created__ = "2024-02-19"
+
 from abc import ABC, abstractmethod
 
 from functools import partial
