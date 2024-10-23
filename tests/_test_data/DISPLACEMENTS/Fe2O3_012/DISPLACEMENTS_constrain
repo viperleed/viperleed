@@ -1,0 +1,10 @@
+
+== SEARCH offsets
+    = GEO_DELTA
+    Fe_surf z= -0.1 0.1
+
+    = VIB_DELTA
+    O_def = -0.1 0.1
+
+    =CONSTRAIN
+    vib Fe_def, O_def = linked

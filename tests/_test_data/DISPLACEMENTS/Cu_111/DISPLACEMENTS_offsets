@@ -11,3 +11,6 @@
 
     = VIB_DELTA
     Cu_surf = -0.1 0.1 0.05
+
+    = CONSTRAIN
+    geo Cu_def = linked
