@@ -5,6 +5,7 @@
 
     = VIB_DELTA
     O_def = -0.1 0.1
+    Fe_def = -0.1 0.1
 
     =CONSTRAIN
     vib Fe_def, O_def = linked
