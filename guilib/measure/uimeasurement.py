@@ -882,6 +882,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         dialog = MeasurementSettingsDialog(self.measurement, parent=self)
         dialog.rejected.connect(self._measurement_cancelled)
         dialog.accepted.connect(self._on_settings_accepted)
+        dialog.error_occurred.connect(self._on_error_occurred)
         dialog.setModal(True)
         self._dialogs['measurement_settings'] = dialog
         dialog.open()

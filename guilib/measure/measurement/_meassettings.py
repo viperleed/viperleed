@@ -32,6 +32,8 @@ from viperleed.guilib.widgets.basewidgets import ButtonWithLabel
 class DeviceEditor(SettingsDialogSectionBase):
     """Class for selecting devices and editing their settings."""
 
+    error_occurred = qtc.pyqtSignal(tuple)
+
     def __init__(self, settings, **kwargs):
         """Initialize instance."""
         self._settings = settings
@@ -72,6 +74,8 @@ class DeviceEditor(SettingsDialogSectionBase):
         self.central_widget.setLayout(central_layout)
         self._controllers.settings_changed.connect(self.settings_changed)
         self._cameras.settings_changed.connect(self.settings_changed)
+        self._controllers.error_occurred.connect(self.error_occurred)
+        self._cameras.error_occurred.connect(self.error_occurred)
 
     @qtc.pyqtSlot()
     def _store_device_settings(self):

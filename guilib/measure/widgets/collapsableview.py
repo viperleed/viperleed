@@ -19,6 +19,8 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.classes.abc import SettingsInfo
+from viperleed.guilib.measure.classes.decorators import emit_default_faulty
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import NO_HARDWARE_INTERFACE
 from viperleed.guilib.measure.dialogs.settingsdialog import (
@@ -540,6 +542,8 @@ class CollapsableDeviceList(qtw.QScrollArea):
     # This is signal is emitted when the device/quantity selection changes.
     settings_changed = qtc.pyqtSignal()
 
+    error_occurred = qtc.pyqtSignal(tuple)
+
     def __init__(self, parent=None):
         """Initialise widget."""
         super().__init__(parent=parent)
@@ -582,16 +586,24 @@ class CollapsableDeviceList(qtw.QScrollArea):
             self.views[view].append(widget)
 
     @qtc.pyqtSlot()
-    def _detect_devices(self):
+    def _detect_and_add_devices(self):
         """Detect devices and add them as views."""
         self._views = {}
         self._layout = qtw.QVBoxLayout()
         self._layout.setSpacing(0)
         self._make_scroll_area()
         self._make_top_items()
-        detected_devices = get_devices(self._device_type)
+        try:
+            detected_devices = self._detect_devices()
+        except DefaultSettingsError:
+            detected_devices = {}
         for name, cls_and_info in detected_devices.items():
             self.add_new_view(name, cls_and_info)
+
+    @emit_default_faulty
+    def _detect_devices(self):
+        """Detect and return devices."""
+        return get_devices(self._device_type)
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
@@ -622,7 +634,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
         """Make top labels and add them to the QScrollArea."""
         button = QNoDefaultPushButton()
         button.setText('Refresh ' + self._device_type + 's')
-        button.clicked.connect(self._detect_devices)
+        button.clicked.connect(self._detect_and_add_devices)
         self._layout.insertWidget(0, button)
 
         top_labels = qtw.QHBoxLayout()
@@ -700,7 +712,7 @@ class CollapsableCameraList(CollapsableDeviceList):
 
     def set_cameras_from_settings(self, camera_settings):
         """Attempt to select the cameras from settings."""
-        self._detect_devices()
+        self._detect_and_add_devices()
         # TODO
 
 
@@ -739,9 +751,9 @@ class CollapsableControllerList(CollapsableDeviceList):
         self._views[view][1].toggled.connect(self._emit_settings_changed)
 
     @qtc.pyqtSlot()
-    def _detect_devices(self):
+    def _detect_and_add_devices(self):
         """Detect controllers, add them as views and preselect them."""
-        super()._detect_devices()
+        super()._detect_and_add_devices()
         self.set_primary_from_settings()
         self.set_secondary_from_settings()
 
@@ -791,7 +803,7 @@ class CollapsableControllerList(CollapsableDeviceList):
 
     def set_controllers_from_settings(self, meas_settings):
         """Attempt to select controllers from settings."""
-        self._detect_devices()
+        self._detect_and_add_devices()
         self._primary_settings = meas_settings.getsequence(
             'devices', 'primary_controller', fallback=()
             )

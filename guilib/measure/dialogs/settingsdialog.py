@@ -188,6 +188,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
 
     settings_changed = qtc.pyqtSignal()
     redraw_needed = qtc.pyqtSignal()  # Should trigger redraw of dialog
+    error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, config, parent=None, show_path_to_config=False):
         """Initialize instance.
@@ -364,6 +365,10 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         section.settings_changed.connect(self.settings_changed)
         self.__widgets.append(section)
         self.__complex_sections.append(section)
+        try:
+            section.error_occurred.connect(self.error_occurred)                 # TODO: should regular options and sections also have an error_occurred signal?
+        except AttributeError:
+            pass
         section.updated.connect(self.__updated_timer.start)
 
     def add_static_option(self, section_name, option_name, handler_widget,
@@ -916,6 +921,8 @@ class SettingsDialog(qtw.QDialog):
     # False.
     settings_saved = qtc.pyqtSignal(bool)
 
+    error_occurred = qtc.pyqtSignal(tuple)
+
     def __init__(self, handled_obj=None, settings=None, title=None, **kwargs):
         """Initialize dialog instance.
 
@@ -1074,6 +1081,7 @@ class SettingsDialog(qtw.QDialog):
 
     def __compose_and_connect(self):
         """Place and update children widgets."""
+        self.handler.error_occurred.connect(self.error_occurred)
         self.handler.update_widgets()  # Fill widgets from settings
 
         # Dialog buttons
