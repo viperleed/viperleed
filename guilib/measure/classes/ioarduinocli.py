@@ -224,7 +224,13 @@ class ArduinoCLI(qtc.QObject):
             self.on_arduino_cli_failed(err)
             raise
 
-        return json.loads(cores_json.stdout)
+        cores = json.loads(cores_json.stdout)
+        # Check if the version is at least 1.0.0, as older
+        # versions do not contain the cores in another dict.
+        version = self.get_installed_cli_version()
+        if version >= '1.0.0':
+            cores = cores['platforms']
+        return cores
 
     @qtc.pyqtSlot()
     def is_cli_installed(self):
@@ -658,6 +664,11 @@ class FirmwareUploader(ArduinoCLI):
             self.cli_failed.emit()
             return []
         boards = json.loads(boards_json.stdout)
+        # Check if the version is at least 1.0.0, as older
+        # versions do not contain the boards in another dict.
+        version = self.get_installed_cli_version()
+        if version >= '1.0.0':
+            boards = boards['detected_ports']
         return [b for b in boards if 'matching_boards' in b]
 
     @qtc.pyqtSlot(dict, FirmwareVersionInfo)
