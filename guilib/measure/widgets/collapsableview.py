@@ -838,7 +838,7 @@ class CollapsableControllerList(CollapsableDeviceList):
 
         safe_disconnect(self._views[correct_view][0].stateChanged,
                         self._emit_settings_changed)
-        safe_disconnect(self._views[view][1].toggled,
+        safe_disconnect(self._views[correct_view][1].toggled,
                         self._emit_settings_changed)
         correct_view.original_settings = settings.last_file
         self._views[correct_view][0].setChecked(True)
@@ -846,6 +846,6 @@ class CollapsableControllerList(CollapsableDeviceList):
         safe_connect(self._views[correct_view][0].stateChanged,
                      self._emit_settings_changed,
                      type=qtc.Qt.UniqueConnection)
-        safe_connect(self._views[view][1].toggled,
+        safe_connect(self._views[correct_view][1].toggled,
                      self._emit_settings_changed,
                      type=qtc.Qt.UniqueConnection)
