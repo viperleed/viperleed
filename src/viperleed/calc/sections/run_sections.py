@@ -345,7 +345,7 @@ def section_loop(rp, sl):
 
     logger.debug("End of section loop.")
     disp_ranges = [at.range_repr() for at in sl.atlist]
-    disp_ranges_str = "\n".join(disp_ranges)
+    disp_ranges_str = "\n\t".join(disp_ranges)
     logger.log(level=logging.DEBUG, msg=
                f"Total ranges of all displacements:\n{disp_ranges_str}")
 
