@@ -350,5 +350,10 @@ def section_loop(rp, sl):
         if rp.RUN and rp.STOP and not rp.RUN[0] in [11, 12, 31]:
             logger.info("# Stopped by user STOP command.")
             break
+    logger.debug("End of section loop.")
+    if searchLoopR is not None:  # search was performed
+        disp_ranges = [at.range_repr() for at in sl.atlist]
+        disp_ranges_str = "\n".join(disp_ranges)
+        logger.debug(f"Total ranges of all displacements:\n{disp_ranges_str}")
     cleanup(rp.manifest, rp)
     return 0, state_recorder
