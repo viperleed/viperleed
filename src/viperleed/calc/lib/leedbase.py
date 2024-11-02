@@ -142,8 +142,52 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
+def get_tensor_indices(home='', zip_only=False):
+    """Yield the indices of all the Tensor files/folders in `home`/Tensors.
+
+    Parameters
+    ----------
+    home : str or Path
+        The base directory, in which a Tensors folder should
+        be present. Only files/folders in <home/Tensors> will
+        be looked up.
+    zip_only : bool, optional
+        Search only for (.zip) archives, skipping directories.
+        Default is False.
+
+    Yields
+    ------
+    indices : int
+        The unique indices of Tensor files found. Notice that
+        sorting of the indices is not guaranteed.
+    """
+    def get_index(fpath):
+        """Return the tensor index from a file path."""
+        exists = fpath.is_file() or (None if zip_only else fpath.is_dir())
+        if not exists:
+            return -1
+        *_, ind = fpath.stem.split('_', maxsplit=1)
+        try:
+            return int(ind)
+        except ValueError:
+            return -1
+
+    tensors = Path(home, 'Tensors').resolve()
+    if not tensors.is_dir():
+        return
+
+    _base_pattern = 'Tensors_[0-9][0-9][0-9]*'
+    patterns = (f'{_base_pattern}.zip',)
+    if not zip_only:
+        patterns += (_base_pattern,)
+
+    likely_files = {f for p in patterns for f in tensors.glob(p)}
+    indices = (get_index(f) for f in likely_files)
+    yield from (ind for ind in indices if ind > 0)
+
+
 def getMaxTensorIndex(home='', zip_only=False):
-    """Return the highest index of tensor files/folders in home/Tensors.
+    """Return the highest index of tensor files/folders in `home`/Tensors.
 
     Parameters
     ----------
@@ -161,32 +205,10 @@ def getMaxTensorIndex(home='', zip_only=False):
         The largest among the indices found. Zero if no tensor
         file/directories are present.
     """
-    def get_index(fpath):
-        """Return the tensor index from a file path."""
-        exists = fpath.is_file() or (None if zip_only else fpath.is_dir())
-        if not exists:
-            return -1
-        _, ind = fpath.stem.split('_')
-        try:
-            return int(ind)
-        except ValueError:
-            return -1
-
-    tensors = Path(home, 'Tensors').resolve()
-    if not tensors.is_dir():
-        return 0
-
-    _base_pattern = 'Tensors_[0-9][0-9][0-9]'
-    patterns = (f'{_base_pattern}.zip',)
-    if not zip_only:
-        patterns += (_base_pattern,)
-
-    likely_files = (f for p in patterns for f in tensors.glob(p))
     try:
-        maxind = max(get_index(f) for f in likely_files)
+        return max(get_tensor_indices(home, zip_only))
     except ValueError:  # No files
         return 0
-    return max(0, maxind)
 
 
 def getDeltas(index, basedir=".", targetdir=".", required=True):
