@@ -21,6 +21,7 @@ from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from ..constants import HISTORY_FOLDER_RE
 from ..log import LOGGER
 from ..utils import make_property
+from .errors import CantRemoveEntryError
 from .errors import MetadataMismatchError
 from .meta import BookkeeperMetaFile
 
@@ -90,6 +91,30 @@ class HistoryFolder(IncompleteHistoryFolder):
         """Return whether this folder contains a metadata file."""
         # pylint: disable-next=no-member    # It's a BookkeeperMetaFile
         return self.metadata.path.is_file()
+
+    def check_consistent_with_entry(self, entry):
+        """Raise unless this folder is consistent with a history.info entry."""
+        # Folder names should match
+        entry_folder_name = entry.folder_name.value.strip()
+        if self.name != entry_folder_name:
+            raise CantRemoveEntryError(
+                f'Folder names differ: directory name is {self.name!r}, '
+                f'history.info entry has {entry_folder_name!r} instead.'
+                )
+        # Tensor numbers too
+        entry_tensors = ((0,) if entry.tensor_nums.no_tensors
+                         else entry.tensor_nums.value)
+        if self.tensor_num not in entry_tensors:
+            raise CantRemoveEntryError(
+                f'Tensor number from folder name ({self.tensor_num}) is not '
+                f'among the ones in the history.info entry {entry_tensors}'
+                )
+        # And the same for the job ids
+        if self.job_num not in entry.job_nums.value:
+            raise CantRemoveEntryError(
+                f'Job number from folder name ({self.job_num}) is not among '
+                f'the ones in the history.info entry {entry.job_nums.value}'
+                )
 
     def check_metadata(self):
         """Raise a MetadataMismatchError if the metadata file is outdated."""

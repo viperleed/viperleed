@@ -8,16 +8,21 @@ __created__ = '2024-10-19'
 __license__ = 'GPLv3+'
 
 from contextlib import contextmanager
+from operator import attrgetter
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.folder import HistoryFolder
 from viperleed.calc.bookkeeper.history.folder import IncompleteHistoryFolder
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+
+from ....helpers import not_raises
 
 
 _MODULE = 'viperleed.calc.bookkeeper.history.folder'
@@ -44,6 +49,17 @@ class MockMetaFile:
 
     def compute_hash(self):
         """Don't compute anything."""
+
+
+@fixture(name='mock_entry')
+def mock_history_info_entry():
+    """Return a fake HistoryInfoEntry."""
+    entry = MagicMock()
+    entry.folder_name.value = _VALID_FOLDER_NAME
+    entry.tensor_nums.no_tensors = False
+    entry.tensor_nums.value = (1, 2, 5)
+    entry.job_nums.value = (2, 3, 10)
+    return entry
 
 
 @fixture(name='incomplete_folder')
@@ -139,22 +155,6 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
         with patch.object(mock_path, 'is_file', return_value=is_file):
             assert history_folder.has_metadata == is_file
 
-    def test_check_metadata_ok(self, history_folder, metafile):
-        """Test check_metadata method without mismatch."""
-        with metafile():
-            history_folder.check_metadata()
-
-    def test_check_metadata_raises(self, history_folder, metafile):
-        """Test check_metadata raises MetadataMismatchError on mismatch."""
-        class _OtherHashMeta(MockMetaFile):
-            def __init__(self, *args):
-                super().__init__(*args)
-                self.hash_ = 'another different hash'
-
-        with metafile(fake_meta=_OtherHashMeta):
-            with pytest.raises(MetadataMismatchError):
-                history_folder.check_metadata()
-
     def test_analyze_path_not_directory(self, mock_path):
         """Test _analyze_path raises ValueError if path is not a directory."""
         mock_path.is_dir.return_value = False
@@ -171,3 +171,48 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
             mock_path.name = _VALID_FOLDER_NAME
             HistoryFolder(mock_path)
             mock_warning.assert_called_once()
+
+
+class TestHistoryFolderConsistency:
+    """Collection of tests for consistency checks of a HistoryFolder."""
+
+    def test_check_metadata_ok(self, history_folder, metafile):
+        """Test check_metadata method without mismatch."""
+        with metafile():
+            history_folder.check_metadata()
+
+    def test_check_metadata_raises(self, history_folder, metafile):
+        """Test check_metadata raises MetadataMismatchError on mismatch."""
+        class _OtherHashMeta(MockMetaFile):
+            def __init__(self, *args):
+                super().__init__(*args)
+                self.hash_ = 'another different hash'
+
+        with metafile(fake_meta=_OtherHashMeta):
+            with pytest.raises(MetadataMismatchError):
+                history_folder.check_metadata()
+
+    def test_check_entry_valid(self, history_folder, mock_entry):
+        """Test that no error is raised when folder matches entry."""
+        with not_raises(CantRemoveEntryError):
+            history_folder.check_consistent_with_entry(mock_entry)
+
+    _mismatched = {
+        'folder name': {'folder_name.value': 'another name'},
+        'tensor nums': {'tensor_nums.value': (3,)},
+        'tensor nums, init': {'tensor_nums.no_tensors': True},
+        'job nums': {'job_nums.value': (1,)},
+        }
+
+    @parametrize('attrs', _mismatched.values(), ids=_mismatched)
+    def test_check_entry_mismatch(self, attrs, history_folder, mock_entry):
+        """Test error raised when folder name does not match entry name."""
+        for attr_name, attr_value in attrs.items():
+            if '.' in attr_name:
+                nested_attr_name, attr_name = attr_name.rsplit('.', 1)
+                to_patch = attrgetter(nested_attr_name)(mock_entry)
+            else:
+                to_patch = mock_entry
+            setattr(to_patch, attr_name, attr_value)
+        with pytest.raises(CantRemoveEntryError):
+            history_folder.check_consistent_with_entry(mock_entry)
