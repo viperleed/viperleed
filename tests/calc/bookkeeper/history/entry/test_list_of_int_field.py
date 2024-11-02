@@ -26,6 +26,7 @@ from viperleed.calc.bookkeeper.history.entry.list_of_int_field import (
 from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.field import FieldBase
+from viperleed.calc.bookkeeper.history.entry.field import DefaultMessage
 from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.sections.calc_section import CalcSection
 
@@ -295,7 +296,8 @@ class TestTensorNumsField(TestCommaSeparatedIntsField):
 
     test_cls = TensorNumsField
     _none_attrs = {'value': 'None', '_value_str': 'None',
-                   'was_understood': True, 'needs_fixing': False}
+                   'was_understood': True, 'needs_fixing': False,
+                   'no_tensors': True}
     init = {
         **TestPositiveIntsField.init,
         'init list': ([CalcSection.INITIALIZATION.value], _none_attrs),
@@ -316,25 +318,8 @@ class TestTensorNumsField(TestCommaSeparatedIntsField):
         """Check attributes after initialization."""
         self.check_attrs(list_of_int, attrs, value)
 
-    # def test_check_str_value_with_none_string(self):
-        # field = TensorNumsField(value='None')
-        # field._check_str_value()
-        # assert field.value == 'None'
-        # assert field._value_str == 'None'
-
-    # def test_check_not_empty_with_none(self):
-        # field = TensorNumsField(value=None)
-        # field._check_not_empty()
-        # assert field.value == 'None'
-        # assert field._value_str == 'None'
-
-    # def test_check_not_empty_with_initialization(self):
-        # field = TensorNumsField(value=[CalcSection.INITIALIZATION.value])
-        # field._check_not_empty()
-        # assert field.value == 'None'
-        # assert field._value_str == 'None'
-
-    # def test_check_not_empty_with_empty_value(self):
-        # field = TensorNumsField(value=[])
-        # with pytest.raises(EntrySyntaxError, match=DefaultMessage.EMPTY):
-            # field._check_not_empty()
+    def test_check_not_empty_with_empty_value(self):
+        """Check complaints when an empty value is given."""
+        field = self.test_cls(value=[])
+        with pytest.raises(EntrySyntaxError, match=DefaultMessage.EMPTY.value):
+            field._check_not_empty()

@@ -246,13 +246,18 @@ class TensorNumsField(PositiveIntsField, CommaSeparatedIntsField,
 
     value: Union[int, Tuple[int], List[int], str, None] = MissingField
 
-    def _check_str_value(self):
-        """Accept 'None' as a valid string value."""
+    @property
+    def no_tensors(self):
+        """Return whether no tensors were used/generated."""
         # About the disable: this seems to be a pylint inference bug.
         # It looks like it cannot realize that value.strip() is behind
         # a type check for string.
         # pylint: disable-next=no-member
-        if isinstance(self.value, str) and self.value.strip() == str(None):
+        return isinstance(self.value, str) and self.value.strip() == str(None)
+
+    def _check_str_value(self):
+        """Accept 'None' as a valid string value."""
+        if self.no_tensors:
             self._store_none()
             return
         super()._check_str_value()
@@ -272,7 +277,7 @@ class TensorNumsField(PositiveIntsField, CommaSeparatedIntsField,
             self._store_none()
             return
         # Notice that it is important to use super at the end, as
-        # it checks for emptiness too by using the logic value of
+        # it checks for emptiness by using the logical value of
         # self.value, which would be False if the value is None
         # (that is instead acceptable).
         super()._check_not_empty()
