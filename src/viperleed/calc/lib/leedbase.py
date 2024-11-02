@@ -163,7 +163,8 @@ def getMaxTensorIndex(home='', zip_only=False):
     """
     def get_index(fpath):
         """Return the tensor index from a file path."""
-        if not fpath.is_file():
+        exists = fpath.is_file() or (None if zip_only else fpath.is_dir())
+        if not exists:
             return -1
         _, ind = fpath.stem.split('_')
         try:
