@@ -28,6 +28,7 @@ from .history.constants import HISTORY_INFO_NAME
 from .history.entry.entry import HistoryInfoEntry
 from .history.errors import CantDiscardEntryError
 from .history.errors import CantRemoveEntryError
+from .history.errors import MetadataMismatchError
 from .history.errors import NoHistoryEntryError
 from .history.explorer import HistoryExplorer
 from .history.meta import BookkeeperMetaFile
@@ -239,6 +240,35 @@ class Bookkeeper:
         # ...and add a history.info entry
         self._add_history_info_entry(tensor_nums)
 
+    def _check_may_discard_full(self):
+        """Log and raise if it is not possible to DISCARD_FULL."""
+        try:
+            self.history.info.may_remove_last_entry()
+        except NoHistoryEntryError as exc:
+            LOGGER.warning('Error: Failed to remove last entry '
+                           f'from {HISTORY_INFO_NAME}: {exc}')
+            raise
+        except CantRemoveEntryError as exc:
+            LOGGER.error(str(exc))
+            raise
+
+        # Make sure that we're going to remove consistent
+        # stuff from history and history.info
+        try:
+            self.history.check_last_folder_consistent()
+        except FileNotFoundError:
+            LOGGER.error(f'{self._mode.name} mode failed: could not identify '
+                         'directory to remove. Please proceed manually.')
+            raise
+        except MetadataMismatchError as exc:
+            LOGGER.error(f'Error: {exc} Please proceed manually.')
+            raise
+        except CantRemoveEntryError as exc:
+            LOGGER.error('Error: the most recent history folder is '
+                         'inconsistent with the last entry in history.info. '
+                         f'{exc} Please proceed manually.')
+            raise
+
     def _clean_state(self):
         """Rebuild (almost) the same state as after __init__.
 
@@ -441,35 +471,19 @@ class Bookkeeper:
     def _run_discard_full_mode(self):
         """Execute bookkeeper in DISCARD_FULL mode."""
         try:
-            self.history.info.may_remove_last_entry()
-        except NoHistoryEntryError as exc:
-            LOGGER.warning('Error: Failed to remove last entry '
-                           f'from {HISTORY_INFO_NAME}: {exc}')
+            self._check_may_discard_full()
+        except NoHistoryEntryError:
             return BookkeeperExitCode.NOTHING_TO_DO
-        except CantRemoveEntryError as exc:
-            LOGGER.error(str(exc))
-            return BookkeeperExitCode.FAIL
-
-        dir_to_remove = self.history.last_folder
-        if not dir_to_remove.exists:
-            LOGGER.error(f'{self._mode.name} mode failed: could not identify '
-                         'directory to remove. Please proceed manually.')
-            return BookkeeperExitCode.FAIL
-
-        # Make sure that we're going to remove consistent
-        # stuff from history and history.info
-        entry_folder = self.history.info.last_entry.folder_name.value.strip()
-        if dir_to_remove.name != entry_folder:
-            LOGGER.error('Error: the most recent history folder '
-                         f'({dir_to_remove.name}) is inconsistent with '
-                         f'the last entry in history.info ({entry_folder}). '
-                         'Please proceed manually.')
+        except (CantRemoveEntryError,
+                FileNotFoundError,
+                MetadataMismatchError):
             return BookkeeperExitCode.FAIL
 
         # Clean up workhistory in root
         self._workhistory.discard_workhistory_root()
 
         # Remove history folder
+        dir_to_remove = self.history.last_folder
         try:
             shutil.rmtree(dir_to_remove.path)
         except OSError:
