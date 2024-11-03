@@ -208,6 +208,7 @@ class TestHistoryFolderConsistency:
     def test_check_entry_mismatch(self, attrs, history_folder, mock_entry):
         """Test error raised when folder name does not match entry name."""
         for attr_name, attr_value in attrs.items():
+            # pylint: disable-next=magic-value-comparison
             if '.' in attr_name:
                 nested_attr_name, attr_name = attr_name.rsplit('.', 1)
                 to_patch = attrgetter(nested_attr_name)(mock_entry)

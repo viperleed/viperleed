@@ -322,4 +322,5 @@ class TestTensorNumsField(TestCommaSeparatedIntsField):
         """Check complaints when an empty value is given."""
         field = self.test_cls(value=[])
         with pytest.raises(EntrySyntaxError, match=DefaultMessage.EMPTY.value):
+            # pylint: disable-next=protected-access       # OK in tests
             field._check_not_empty()

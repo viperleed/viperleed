@@ -218,6 +218,7 @@ class TestHistoryExplorer:
     @parametrize(method_name=_too_early_call)
     def test_too_early_method_call(self, method_name, history):
         """Check that accessing attributes before update_from_cwd fails."""
+        # pylint: disable-next=magic-value-comparison
         if '(' not in method_name:
             args = tuple()
         else:
@@ -225,7 +226,7 @@ class TestHistoryExplorer:
             args_str = args_str.replace(')', '') + ','
             args = ast.literal_eval(args_str)
         method = attrgetter(method_name)(history)
-        with pytest.raises(AttributeError, match=rf'.*collect_subfolders.*'):
+        with pytest.raises(AttributeError, match=r'.*collect_subfolders.*'):
             method(*args)
 
 
@@ -269,6 +270,7 @@ class TestHistoryExplorerConsistencyCheck:
 
     def test_inconsistent_entry(self, history, add_subfolder):
         """Check complaints if the last folder and entry are inconsistent."""
+        # pylint: disable-next=protected-access           # OK in tests
         history._info = MagicMock()
         last_folder = add_subfolder(history)
         last_folder.exists = True
@@ -280,6 +282,7 @@ class TestHistoryExplorerConsistencyCheck:
 
     def test_consistent(self, history, add_subfolder):
         """Test successful call to check_last_folder_consistent."""
+        # pylint: disable-next=protected-access           # OK in tests
         history._info = MagicMock()
         last_folder = add_subfolder(history)
         last_folder.exists = True

@@ -513,6 +513,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         check.assert_called_once()
         assert exit_code is not BookkeeperExitCode.SUCCESS
 
+
 class TestBookkeeperOthers:
     """Collections of various tests for bits not covered by other tests."""
 

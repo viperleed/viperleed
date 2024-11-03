@@ -177,6 +177,7 @@ class TestRootExplorer:
                            MagicMock(return_value=True))
             # pylint: disable-next=protected-access       # OK in tests
             explorer._collect_files_to_archive()
+        # pylint: disable-next=protected-access           # OK in tests
         to_archive = explorer._files_to_archive
         assert to_archive == tuple(explorer.path / f for f in expected_files)
 
