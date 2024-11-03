@@ -73,6 +73,26 @@ class HistoryExplorer:
                     if job_nums}
         return defaultdict(int, max_jobs)
 
+    def check_last_folder_consistent(self):
+        """Raise if the last folder in history has some inconsistency.
+        
+        Raises
+        ------
+        FileNotFoundError
+            If there is no last folder.
+        MetadataMismatchError
+            If the hash computed from the contents of the last folder
+            and the one stored as metadata do not match.
+        CantRemoveEntryError
+            If some inconsistency is found between the last folder and
+            the last entry in the history.info file.
+        """
+        last_folder = self.last_folder
+        if not last_folder or not last_folder.exists:
+            raise FileNotFoundError
+        last_folder.check_metadata()
+        last_folder.check_consistent_with_entry(self.info.last_entry)
+
     def collect_subfolders(self):
         """Navigate the main history folder and pull subfolder information."""
         self._subfolders.clear()

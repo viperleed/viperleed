@@ -18,8 +18,12 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
+from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
+from viperleed.calc.bookkeeper.history.folder import HistoryFolder
 from viperleed.calc import DEFAULT_HISTORY
 
+from ....helpers import not_raises
 
 _MODULE = 'viperleed.calc.bookkeeper.history.explorer'
 patch_folder = patch(f'{_MODULE}.HistoryFolder')
@@ -166,9 +170,8 @@ class TestHistoryExplorer:
             assert folder in history._subfolders
 
     @parametrize(job_exists=(True, False))
-    def test_find_name_for_new_history_subfolder_new(self, job_exists,
-                                                     history):
-        """Test _find_name_for_new_history_subfolder when no job exists."""
+    def test_find_name_for_new_history_subfolder(self, job_exists, history):
+        """Test _find_name_for_new_history_subfolder."""
         # pylint: disable-next=protected-access           # OK in tests
         history._maps['jobs_for_tensor'] = {1: {1} if job_exists else {}}
         mock_concat = MagicMock(return_value=MagicMock(spec=Path))
@@ -224,3 +227,65 @@ class TestHistoryExplorer:
         method = attrgetter(method_name)(history)
         with pytest.raises(AttributeError, match=rf'.*collect_subfolders.*'):
             method(*args)
+
+
+class TestHistoryExplorerConsistencyCheck:
+    """Tests for consistency checks between history folder and info entry."""
+
+    @fixture(name='add_subfolder')
+    def fixture_add_fake_subfolder(self):
+        """Add a fake subfolder to a HistoryExplorer."""
+        def _add(explorer):
+            last_folder = MagicMock(spec=HistoryFolder)
+            # pylint: disable-next=protected-access       # OK in tests
+            explorer._subfolders = [last_folder]
+            # pylint: disable-next=protected-access       # OK in tests
+            explorer._maps = {
+                'hash_to_parent': {last_folder.hash_: last_folder}
+                }
+            return last_folder
+        return _add
+
+    def test_missing_last_folder(self, history, add_subfolder):
+        """Check complaints when last_folder does not exist."""
+        last_folder = add_subfolder(history)
+        last_folder.exists = False
+        with pytest.raises(FileNotFoundError):
+            history.check_last_folder_consistent()
+
+    def test_no_last_folder(self, history):
+        """Check complaints when no last_folder is found."""
+        history.collect_subfolders()
+        with pytest.raises(FileNotFoundError):
+            history.check_last_folder_consistent()
+
+    def test_metadata_mismatch(self, history, add_subfolder):
+        """Check complaints when metadata are outdated."""
+        last_folder = add_subfolder(history)
+        last_folder.exists = True
+        last_folder.check_metadata.side_effect = MetadataMismatchError
+        with pytest.raises(MetadataMismatchError):
+            history.check_last_folder_consistent()
+
+    def test_inconsistent_entry(self, history, add_subfolder):
+        """Check complaints if the last folder and entry are inconsistent."""
+        history._info = MagicMock()
+        last_folder = add_subfolder(history)
+        last_folder.exists = True
+        last_folder.check_consistent_with_entry.side_effect = (
+            CantRemoveEntryError
+            )
+        with pytest.raises(CantRemoveEntryError):
+            history.check_last_folder_consistent()
+
+    def test_consistent(self, history, add_subfolder):
+        """Test successful call to check_last_folder_consistent."""
+        history._info = MagicMock()
+        last_folder = add_subfolder(history)
+        last_folder.exists = True
+        with not_raises(Exception):
+            history.check_last_folder_consistent()
+        last_folder.check_metadata.assert_called_once()
+        last_folder.check_consistent_with_entry.assert_called_once_with(
+            history.info.last_entry
+            )
