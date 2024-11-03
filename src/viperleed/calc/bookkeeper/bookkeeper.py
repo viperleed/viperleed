@@ -512,11 +512,12 @@ class Bookkeeper:
         try:
             self.history.info.discard_last_entry()
         except (NoHistoryEntryError, CantDiscardEntryError) as exc:
-            emit_log = (LOGGER.error if isinstance(exc, NoHistoryEntryError)
-                        else LOGGER.warning)
+            no_entry = isinstance(exc, NoHistoryEntryError)
+            emit_log = LOGGER.error if no_entry else LOGGER.warning
             emit_log('Failed to mark last entry as discarded '
                      f'in {HISTORY_INFO_NAME}: {exc}')
-            return BookkeeperExitCode.FAIL
+            return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
+                    else BookkeeperExitCode.FAIL)
         return BookkeeperExitCode.SUCCESS
 
 

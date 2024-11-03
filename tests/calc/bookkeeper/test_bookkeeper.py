@@ -266,10 +266,11 @@ class _TestBookkeeperRunBase:
         bookkeeper = before_calc_execution
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
-        bookkeeper.run(mode=self.mode)
+        exit_code = bookkeeper.run(mode=self.mode)
         # Bookkeeper should not do anything (except for logging)
         self.check_history_folder_empty(before_calc_execution)
         self.check_root_inputs_untouched(before_calc_execution)
+        assert exit_code is not BookkeeperExitCode.FAIL
 
 
 class TestBookkeeperArchive(_TestBookkeeperRunBase):
