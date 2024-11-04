@@ -20,6 +20,7 @@ import shutil
 import fortranformat as ff
 import numpy as np
 
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.lib.version import Version
 
@@ -206,12 +207,14 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     if auxbeams == "":
         # if AUXBEAMS is not in work folder, check SUPP folder
         if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
-            if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
+            if os.path.isfile(os.path.join(".", DEFAULT_SUPP, "AUXBEAMS")):
                 try:
-                    shutil.copy2(os.path.join(".", "SUPP", "AUXBEAMS"),
+                    shutil.copy2(os.path.join(".", DEFAULT_SUPP, "AUXBEAMS"),
                                  "AUXBEAMS")
                 except Exception:
-                    logger.warning("Failed to copy AUXBEAMS from SUPP folder")
+                    logger.warning(
+                        f"Failed to copy AUXBEAMS from {DEFAULT_SUPP} folder"
+                        )
             else:
                 logger.warning("generateDeltaInput: AUXBEAMS not found")
         try:

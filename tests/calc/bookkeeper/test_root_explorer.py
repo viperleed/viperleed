@@ -21,8 +21,8 @@ from pytest_cases import parametrize
 from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.root_explorer import LogFiles
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
-from viperleed.calc.sections.cleanup import DEFAULT_OUT
-from viperleed.calc.sections.cleanup import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
 
 from ...helpers import make_obj_raise
 from ...helpers import not_raises
@@ -167,8 +167,8 @@ class TestRootExplorer:
             explorer.path / 'workhist_folder',
             )
         expected_files = (
-            'OUT',
-            'SUPP',
+            DEFAULT_OUT,
+            DEFAULT_SUPP,
             'calc.log',
             'workhist_folder',
             )

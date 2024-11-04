@@ -21,7 +21,6 @@ from zipfile import ZipFile
 
 import numpy as np
 
-from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
@@ -31,6 +30,9 @@ from viperleed.calc.classes.slab import NoVacuumError
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import iotensors
 from viperleed.calc.files import parameters
@@ -40,9 +42,9 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import rotation_matrix
-from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
@@ -423,24 +425,27 @@ def init_domains(rp):
                                          target_dir=target)
                 except Exception as exc:
                     tensorIndex = 0
-                    logger.warning(f"Error fetching Tensors: {exc}")
+                    logger.warning(f"Error fetching {DEFAULT_TENSORS}: {exc}")
             if tensorIndex != 0:
-                tensorDir = target / "Tensors" / f"Tensors_{tensorIndex:03d}"
+                tensorDir = (
+                    target
+                    / f"{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensorIndex:03d}"
+                    )
                 for file in (checkFiles + ["IVBEAMS"]):
                     if os.path.isfile(tensorDir / file):
                         shutil.copy2(tensorDir / file, target / file)
                     else:
                         logger.warning(f"Input file {file} is missing in "
-                                       "Tensors directory. A new reference "
-                                       "calculation is required.")
+                                       f"{DEFAULT_TENSORS} directory. A new "
+                                       "reference calculation is required.")
                         tensorIndex = 0
                         break
             if tensorIndex != 0:
                 dp.tensorDir = tensorDir
             else:       # no usable tensors in that dir; get input
                 dp.refcalcRequired = True
-                logger.info("No previous Tensors found, reference calculation "
-                            "is required.")
+                logger.info(f"No previous {DEFAULT_TENSORS} found, "
+                            "reference calculation is required.")
                 for file in checkFiles:
                     if os.path.isfile(os.path.join(path, file)):
                         try:
@@ -463,7 +468,10 @@ def init_domains(rp):
                 tensorIndex = leedbase.getMaxTensorIndex(target)
             except Exception:
                 tensorIndex = 0
-            tensorDir = target / "Tensors" / f"Tensors_{tensorIndex + 1:03d}"
+            tensorDir = (
+                target
+                / f"{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensorIndex + 1:03d}"
+                )
             try:
                 tensorDir.mkdir(parents=True, exist_ok=True)
             except Exception:
@@ -472,15 +480,17 @@ def init_domains(rp):
                 with ZipFile(path, 'r') as archive:
                     archive.extractall(tensorDir)                               # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
-                logger.error("Failed to unpack Tensors for domain "
-                             f"{name} from file {path}")
+                logger.error(f"Failed to unpack {DEFAULT_TENSORS} for "
+                             f"domain {name} from file {path}")
                 raise RuntimeError("Error getting domain input files")
             for file in (checkFiles + ["IVBEAMS"]):
                 if (tensorDir / file).is_file():
                     shutil.copy2(tensorDir / file, target / file)
                 else:
-                    logger.error(f"Required file {file} for domain {name} not "
-                                 f"found in Tensor directory {tensorDir}")
+                    logger.error(
+                        f"Required file {file} for domain {name} not "
+                        f"found in {DEFAULT_TENSORS} directory {tensorDir}"
+                        )
                     raise RuntimeError("Error getting domain input files")
             dp.tensorDir = tensorDir
         try:
@@ -848,8 +858,10 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
         poscar.write(exc.fixed_slab, 'POSCAR_vacuum_corrected')
         exc_type = type(exc)
         _msg = exc.message
-        _msg += '. This may cause problems with layer assignment! '
-        _msg += 'You can find a POSCAR_vacuum_corrected file in SUPP with '
+        _msg += (
+            '. This may cause problems with layer assignment! You can '
+            f'find a POSCAR_vacuum_corrected file in {DEFAULT_SUPP} with '
+            )
         _msg += ('the correct position of vacuum. '
                  if exc_type is WrongVacuumPositionError
                  else 'a large enough vacuum gap. ')

@@ -31,7 +31,7 @@ from zipfile import ZipFile
 import pytest
 import pytest_cases
 
-from viperleed.calc import DEFAULT_WORK
+from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import tenserleed
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.version import Version

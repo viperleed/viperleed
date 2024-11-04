@@ -22,10 +22,6 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc import LOG_PREFIX
-from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import _FROM_ROOT
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
@@ -36,8 +32,14 @@ from viperleed.calc.bookkeeper.history.entry.notes_field import _DISCARDED
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
-from viperleed.calc.sections.cleanup import DEFAULT_OUT
-from viperleed.calc.sections.cleanup import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_HISTORY
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import DEFAULT_WORK_HISTORY
+from viperleed.calc.constants import LOG_PREFIX
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
@@ -556,16 +558,16 @@ class TestBookkeeperOthers:
         """Check removal of tensor and delta files."""
         bookkeeper = Bookkeeper(cwd=tmp_path)
         removed_files = (
-            tmp_path/'Tensors/Tensors_003.zip',
-            tmp_path/'Deltas/Deltas_003.zip',
+            tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_003.zip',
+            tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_003.zip',
             )
         surviving_files= (
-            tmp_path/'Tensors/Tensors_002.zip',
-            tmp_path/'Tensors/Tensors_001.zip',
-            tmp_path/'Deltas/Deltas_001.zip',
+            tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_002.zip',
+            tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_001.zip',
+            tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_001.zip',
             )
-        folders = (tmp_path/'Tensors',
-                   tmp_path/'Deltas')
+        folders = (tmp_path/DEFAULT_TENSORS,
+                   tmp_path/DEFAULT_DELTAS)
         for folder in folders:
             folder.mkdir(parents=True)
         for file in (*removed_files, *surviving_files):

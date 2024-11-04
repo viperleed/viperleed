@@ -13,7 +13,7 @@ __license__ = 'GPLv3+'
 from collections import defaultdict
 from operator import attrgetter
 
-from viperleed.calc import DEFAULT_HISTORY
+from viperleed.calc.constants import DEFAULT_HISTORY
 
 from ..utils import make_property
 from ..utils import needs_update_for_attr
@@ -75,7 +75,7 @@ class HistoryExplorer:
 
     def check_last_folder_consistent(self):
         """Raise if the last folder in history has some inconsistency.
-        
+
         Raises
         ------
         FileNotFoundError

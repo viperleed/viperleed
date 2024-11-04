@@ -15,15 +15,17 @@ import re
 import shutil
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc import LOG_PREFIX
-from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import DEFAULT_WORK_HISTORY
+from viperleed.calc.constants import LOG_PREFIX
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
-DEFAULT_SUPP = "SUPP"
-DEFAULT_OUT = "OUT"
 
 # files to go in SUPP
 _SUPP_FILES = (
@@ -276,8 +278,8 @@ def _copy_files_and_directories(filelist, directory_list, origin, target):
 def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
                             compression_level):
     # If there are unzipped Tensors or Deltas directories, zip them:
-    for folder in ["Tensors", "Deltas"]:
-        todo = tensors if folder == "Tensors" else deltas
+    for folder in (DEFAULT_TENSORS, DEFAULT_DELTAS):
+        todo = tensors if folder is DEFAULT_TENSORS else deltas
         origin_base = path / folder
         if not origin_base.is_dir():
             continue
@@ -318,24 +320,25 @@ def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
 def _collect_deltas(tensor_index, path):
     # Clean up deltas
     deltalist = list(path.glob("DEL_*"))
-    if len(deltalist) > 0:
-        destination = path / "Deltas" / f"Deltas_{tensor_index:03d}"
-        try:
-            destination.mkdir(parents=True)
-        except FileExistsError:
-            pass
-        except OSError:
-            logger.error(f"Failed to create {destination} folder: ",
-                         exc_info=True)
-        if destination.exists():
-            errors = []
-            for delta_file in deltalist:
-                try:
-                    shutil.move(delta_file, destination / delta_file.name)
-                except OSError as err:
-                    errors.append(err)
-            if errors:
-                logger.error(f"Error moving Delta files: {errors}")
+    if not deltalist:
+        return
+    destination = path/f"{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{tensor_index:03d}"
+    try:
+        destination.mkdir(parents=True)
+    except FileExistsError:
+        pass
+    except OSError:
+        logger.error(f"Failed to create {destination} folder: ",
+                     exc_info=True)
+    if destination.exists():
+        errors = []
+        for delta_file in deltalist:
+            try:
+                shutil.move(delta_file, destination / delta_file.name)
+            except OSError as err:
+                errors.append(err)
+        if errors:
+            logger.error(f"Error moving Delta files: {errors}")
 
 
 def move_oldruns(rp, prerun=False):
@@ -425,12 +428,14 @@ def move_oldruns(rp, prerun=False):
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in _OUT_FILES or f in _SUPP_FILES)
                     and f not in rp.manifest and f not in iofiles]
-        dirlist = ["SUPP", "OUT"]
+        dirlist = [DEFAULT_SUPP, DEFAULT_OUT]
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
                     (f.startswith(LOG_PREFIX) and f.endswith(".log"))]
-        dirlist = [d for d in rp.manifest if os.path.isdir(d) and
-                   d not in ["Tensors", "Deltas", DEFAULT_WORK_HISTORY]]
+        dirlist = [
+            d for d in rp.manifest if os.path.isdir(d) and
+            d not in {DEFAULT_TENSORS, DEFAULT_DELTAS, DEFAULT_WORK_HISTORY}
+            ]
     for f in filelist:
         try:
             if not prerun or f in iofiles:
@@ -483,17 +488,19 @@ def cleanup(manifest, rp=None):
         rp.closePdfReportFigs()
         compress_level = rp.ZIP_COMPRESSION_LEVEL
         if not rp.domainParams:
-            to_sort = [{"newTensors": ("Tensors" in rp.manifest),
-                        "newDeltas": ("Deltas" in rp.manifest),
+            to_sort = [{"newTensors": (DEFAULT_TENSORS in rp.manifest),
+                        "newDeltas": (DEFAULT_DELTAS in rp.manifest),
                         "tind": rp.TENSOR_INDEX, "path": ""}]
         else:
             to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
                         "path": ""}]
             for dp in rp.domainParams:
-                to_sort.append({"newTensors": ("Tensors" in dp.rp.manifest),
-                                "newDeltas": ("Deltas" in dp.rp.manifest),
-                                "tind": dp.rp.TENSOR_INDEX,
-                                "path": dp.workdir})
+                to_sort.append(
+                    {"newTensors": (DEFAULT_TENSORS in dp.rp.manifest),
+                    "newDeltas": (DEFAULT_DELTAS in dp.rp.manifest),
+                    "tind": dp.rp.TENSOR_INDEX,
+                    "path": dp.workdir}
+                    )
     for d in to_sort:
         try:
             organize_workdir(d["tind"], delete_unzipped=True,

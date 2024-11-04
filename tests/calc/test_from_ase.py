@@ -18,9 +18,9 @@ import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import from_ase as vpr_ase
 from viperleed.calc.classes.slab import Slab
+from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.lib.math_utils import angle

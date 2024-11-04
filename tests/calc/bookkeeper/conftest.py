@@ -22,14 +22,16 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
-from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.constants import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
-from viperleed.calc.sections.cleanup import DEFAULT_OUT
-from viperleed.calc.sections.cleanup import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_HISTORY
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import DEFAULT_WORK_HISTORY
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
@@ -64,8 +66,8 @@ with_logs = parametrize(log_file_name=MOCK_LOG_FILES)
 def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
                                            history_info_contents):
     """Yield a temporary directory for testing the bookkeeper."""
-    deltas_path = tmp_path / 'Deltas'
-    tensors_path = tmp_path / 'Tensors'
+    deltas_path = tmp_path / DEFAULT_DELTAS
+    tensors_path = tmp_path / DEFAULT_TENSORS
     out_path = tmp_path / DEFAULT_OUT
     supp_path = tmp_path / DEFAULT_SUPP
     history_path = tmp_path / DEFAULT_HISTORY
@@ -88,8 +90,8 @@ def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
     files = {  # path: contents
         tmp_path / log_file_name: None,
         tmp_path / 'notes.txt': NOTES_TEST_CONTENT,
-        deltas_path / 'Deltas_004.zip': None,
-        tensors_path / 'Tensors_004.zip': None,
+        deltas_path / f'{DEFAULT_DELTAS}_004.zip': None,
+        tensors_path / f'{DEFAULT_TENSORS}_004.zip': None,
         }
     # Inputs in root
     files.update((tmp_path / f, MOCK_INPUT_CONTENT)

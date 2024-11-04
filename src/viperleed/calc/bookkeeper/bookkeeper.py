@@ -14,13 +14,15 @@ from enum import IntEnum
 from pathlib import Path
 import shutil
 
-from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
-from viperleed.calc.sections.cleanup import DEFAULT_OUT
-from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 
 from . import log
 from .constants import STATE_FILES
@@ -439,8 +441,12 @@ class Bookkeeper:
 
     def _remove_tensors_and_deltas(self):
         """Delete the most recent tensor and delta files."""
-        tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
-        delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
+        tensor_file = (
+            f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_number:03d}.zip'
+            )
+        delta_file = (
+            f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_number:03d}.zip'
+            )
         discard_files(self.cwd / tensor_file, self.cwd / delta_file)
 
     def _run_archive_mode(self):

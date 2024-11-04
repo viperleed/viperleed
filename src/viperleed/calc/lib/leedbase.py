@@ -20,6 +20,8 @@ from zipfile import ZipFile
 import numpy as np
 from quicktions import Fraction
 
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.math_utils import cosvec
 from viperleed.calc.lib.math_utils import lcm
 from viperleed.calc.lib.matrix import SingularMatrixError
@@ -172,11 +174,11 @@ def get_tensor_indices(home='', zip_only=False):
         except ValueError:
             return -1
 
-    tensors = Path(home, 'Tensors').resolve()
+    tensors = Path(home, DEFAULT_TENSORS).resolve()
     if not tensors.is_dir():
         return
 
-    _base_pattern = 'Tensors_[0-9][0-9][0-9]*'
+    _base_pattern = f'{DEFAULT_TENSORS}_[0-9][0-9][0-9]*'
     patterns = (f'{_base_pattern}.zip',)
     if not zip_only:
         patterns += (_base_pattern,)
@@ -211,37 +213,55 @@ def getMaxTensorIndex(home='', zip_only=False):
         return 0
 
 
-def getDeltas(index, basedir=".", targetdir=".", required=True):
-    """Fetches Delta files from Deltas or archive with specified tensor index.
-    If required is set True, an error will be printed if no Delta files are
-    found.
-    basedir is the directory in which the Delta directory is based.
-    targetdir is the directory to which the Tensor files should be moved."""
-    dn = "Deltas_"+str(index).zfill(3)
-    _basedir, _targetdir = Path(basedir).resolve(), Path(targetdir).resolve()
-    zip_path=(_basedir / "Deltas" / dn).with_suffix(".zip")
-    if os.path.isdir(_basedir / "Deltas" / dn):
-        for f in [f for f in os.listdir(_basedir / "Deltas" / dn)
-                  if (os.path.isfile(_basedir / "Deltas" / dn / f)
-                      and f.startswith("DEL_"))]:
+def getDeltas(index, basedir='', targetdir='', required=True):
+    """Fetch delta files with a given `index` from a folder or an archive.
+
+    Parameters
+    ----------
+    index : int
+        The progressive index of the delta-amplitudes file to be
+        retrieved. This is identical to the index of the Tensors
+        with which the delta-amplitude calculation was performed.
+    basedir : str or Path, optional
+        The folder from which Deltas should be retrieved. It should
+        be the path containing the 'Deltas' folder. Default is the
+        current directory.
+    targetdir : str or Path, optional
+        The path to the directory in which the delta files
+        should be placed. Default is the current directory.
+
+    Raises
+    ------
+    RuntimeError
+        When no delta file is found for `index`.
+    OSError
+        If any copying/extraction fails.
+    """
+    basedir, targetdir = Path(basedir).resolve(), Path(targetdir).resolve()
+    delta_folder = basedir / DEFAULT_DELTAS / f'{DEFAULT_DELTAS}_{index:03d}'
+    delta_zip = delta_folder.with_suffix('.zip')
+    if delta_folder.is_dir():
+        for delta_file in delta_folder.glob('DEL_*'):
+            if not delta_file.is_file():
+                continue
             try:
-                shutil.copy2(_basedir / "Deltas" / dn / f, targetdir)
-            except Exception:
-                logger.error("Could not copy existing delta files to "
-                             "work directory")
+                shutil.copy2(delta_file, targetdir)
+            except OSError:
+                logger.error('Could not copy existing delta files to '
+                             f'{targetdir.name} directory')
                 raise
-    elif os.path.isfile(zip_path):
-        logger.info(f"Unpacking {dn}.zip...")
+    elif delta_zip.is_file():
+        logger.info(f'Unpacking {delta_zip.name}...')
         try:
-            with ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(_targetdir)                                  # TODO: maybe it would be nicer to read directly from the zip file
-        except Exception:
-            logger.error(f"Failed to unpack {dn}.zip")
+            with ZipFile(delta_zip, 'r') as archive:
+                archive.extractall(targetdir)                                   # TODO: maybe it would be nicer to read directly from the zip file
+        except OSError:
+            logger.error(f'Failed to unpack {delta_zip.name}')
             raise
     elif required:
-        logger.error("Deltas not found")
-        raise RuntimeError("Deltas not found")
-    return None
+        logger.error(f'{DEFAULT_DELTAS} not found')
+        raise RuntimeError(f'No {DEFAULT_DELTAS} folder/zip file '              # TODO: FileNotFoundError
+                           f'for index {index} in {basedir}')
 
 
 def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):

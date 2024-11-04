@@ -17,6 +17,9 @@ import subprocess
 
 import numpy as np
 
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iorfactor
 from viperleed.calc.files import iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
@@ -78,15 +81,15 @@ def _fetch_and_check_spectra(rp, index, name):
     if fn.is_file():
         directory = rp.workdir.name
         path = fn
-    elif ("OUT" / fn).is_file():
-        directory = "OUT"
-        path = "OUT" / fn
+    elif (DEFAULT_OUT / fn).is_file():
+        directory = DEFAULT_OUT
+        path = DEFAULT_OUT / fn
     elif index == 11:
         # try getting from Tensors
-        iotensors.getTensors(rp.TENSOR_INDEX, required=False)
-        directory = Path(f"Tensors_{rp.TENSOR_INDEX:03d}")
-        if ("Tensors" / directory / fn).is_file():
-            path = "Tensors" / directory / fn
+        iotensors.getTensors(rp.TENSOR_INDEX)                                   # TODO: this had required=False, but the argument never did anything.
+        directory = Path(f"{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}")
+        if (DEFAULT_TENSORS / directory / fn).is_file():
+            path = DEFAULT_TENSORS / directory / fn
 
     if path:
         logger.warning("R-factor calculation was called without stored "
@@ -490,7 +493,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     try:
         shutil.move(compile_log, "compile_logs" / compile_log)
     except OSError:
-        logger.warning(f"Could not move {compile_log} to SUPP")
+        logger.warning(f"Could not move {compile_log} to {DEFAULT_SUPP}")
     # run
     rfaclogname = Path(rfacname).with_suffix(".log")
     logger.info(
@@ -547,7 +550,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     logger.info("With inner potential shift of {:.2f} eV: "
                 "R = {:.4f}\n".format(v0rshift, rfac))
     rp.best_v0r = v0rshift
-    dir_list = [Path(), Path("OUT")]
+    dir_list = [Path(), Path(DEFAULT_OUT)]
     for dir_name in dir_list:
         for f_name in dir_name.glob(f"R_OUT*"):
             if not f_name.is_file():

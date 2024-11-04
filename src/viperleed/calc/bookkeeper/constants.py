@@ -12,7 +12,7 @@ __license__ = 'GPLv3+'
 
 import re
 
-from viperleed.calc import LOG_PREFIX
+from viperleed.calc.constants import LOG_PREFIX
 
 CALC_LOG_PREFIXES = (
     LOG_PREFIX,

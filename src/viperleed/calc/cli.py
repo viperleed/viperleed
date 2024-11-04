@@ -18,11 +18,13 @@ import os
 from pathlib import Path
 import shutil
 
-from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK
-from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_HISTORY
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
@@ -122,8 +124,10 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         # CREATING/DELETING DIRECTORIES
         parser.add_argument(
             '--all-tensors',
-            help=('copy all Tensors to the work directory. Required if using '
-                  'the TENSORS parameter to calculate from old tensors'),
+            help=(
+                f'copy all {DEFAULT_TENSORS} to the work directory. Required '
+                'if using the TENSORS parameter to calculate from old tensors'
+                ),
             action='store_true'
             )
         parser.add_argument(
@@ -164,7 +168,7 @@ def _copy_files_from_manifest(to_path):
 def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
     """Move appropriate files from 'Tensors' and 'Deltas' to work_path."""
     if all_tensors:  # Copy all of them
-        for directory in ('Tensors', 'Deltas'):
+        for directory in (DEFAULT_TENSORS, DEFAULT_DELTAS):
             try:
                 copytree_exists_ok(directory, work_path / directory)
             except FileNotFoundError:
@@ -176,7 +180,7 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
     if not tensor_num:
         return
 
-    for local_dir in ('Tensors', 'Deltas'):
+    for local_dir in (DEFAULT_TENSORS, DEFAULT_DELTAS):
         local_file = Path(f'{local_dir}/{local_dir}_{tensor_num:03d}.zip')
         if not local_file.is_file():
             continue

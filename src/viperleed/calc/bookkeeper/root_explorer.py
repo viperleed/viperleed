@@ -18,9 +18,9 @@ from pathlib import Path
 import shutil
 import re
 
-from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc.sections.cleanup import DEFAULT_OUT
-from viperleed.calc.sections.cleanup import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 
 from .constants import CALC_LOG_PREFIXES
 from .constants import STATE_FILES

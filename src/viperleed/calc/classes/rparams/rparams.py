@@ -27,6 +27,8 @@ import shutil
 import numpy as np
 
 from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.lib import leedbase
@@ -42,8 +44,6 @@ from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
-from viperleed.calc.sections.cleanup import DEFAULT_OUT
-from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 
 from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
 from .limits import PARAM_LIMITS

@@ -21,7 +21,7 @@ from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.folder import HistoryFolder
-from viperleed.calc import DEFAULT_HISTORY
+from viperleed.calc.constants import DEFAULT_HISTORY
 
 from ....helpers import not_raises
 

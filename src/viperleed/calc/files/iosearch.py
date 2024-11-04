@@ -23,6 +23,7 @@ import time
 import fortranformat as ff
 import numpy as np
 
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.iorfactor import largest_nr_grid_points
@@ -805,10 +806,10 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         controlpath = ""
         if os.path.isfile("control.chem"):
             controlpath = "control.chem"
-        elif os.path.isfile(os.path.join("SUPP", "control.chem")):
-            controlpath = os.path.join("SUPP", "control.chem")
+        elif os.path.isfile(os.path.join(DEFAULT_SUPP, "control.chem")):
+            controlpath = os.path.join(DEFAULT_SUPP, "control.chem")
             logger.warning("No control.chem file found in working folder, "
-                           "using SUPP/control.chem")
+                           f"using {DEFAULT_SUPP}/control.chem")
             rp.setHaltingLevel(1)
         else:
             logger.warning("No control.chem file found. Defaulting to random "

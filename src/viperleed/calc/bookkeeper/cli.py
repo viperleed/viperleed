@@ -16,6 +16,7 @@ __license__ = 'GPLv3+'
 from argparse import Action
 from pathlib import Path
 
+from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.cli_base import ViPErLEEDCLI
 
 from .bookkeeper import Bookkeeper
@@ -73,7 +74,8 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
         what_next.add_argument(
             '-a', '--archive',
             help=('Store last run in history. Overwrite PARAMETERS, POSCAR &'
-                  'VIBROCC from OUT. Runs after viperleed.calc by default.'),
+                  f'VIBROCC from {DEFAULT_OUT}. Runs after viperleed.calc by '
+                  'default.'),
             action=StoreBookkeeperMode,
             )
         what_next.add_argument(
