@@ -32,9 +32,6 @@ from .utils import Assignment
 class ParametersReader(InputFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
 
-    def __init__(self, filename, noisy=True):
-        super().__init__(filename, noisy)
-
     def __next__(self):
         """Return the next understandable information in the file."""
         for line in self._file_obj:
