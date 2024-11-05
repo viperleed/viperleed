@@ -131,7 +131,6 @@ class Atom:                                                                     
                                   'geo': {'all': 0},
                                   'occ': {el: 0}}
         self.disp_ranges = DisplacementRanges(_atom=self)
-        self.range_geo, self.range_vib, self.range_occ = {}, {}, {}
         self.dispInitialized = False
         self.offset_geo = {}
         self.offset_vib = {}
@@ -159,31 +158,6 @@ class Atom:                                                                     
             return self.layer.is_bulk
         except AttributeError:
             return False
-
-    def update_range(self):
-        """Update the maximum range of this Atom's displacements."""
-        for disp, _range in zip([self.disp_geo, self.disp_vib, self.disp_occ],
-                        [self.range_geo, self.range_vib, self.range_occ]):
-            for el in disp.keys():
-                new_min = np.array(disp[el]).min(axis=0)
-                new_max = np.array(disp[el]).max(axis=0)
-                if el not in _range:
-                    _range[el] = (new_min, new_max)
-                    continue
-                old_min, old_max = _range[el]
-                new_min = np.minimum(new_min, old_min)
-                new_max = np.maximum(new_max, old_max)
-                _range[el] = (new_min, new_max)
-
-    def range_repr(self):
-        range_str = f'Ranges for atom {self.num} {self.el}'
-        for el in self.range_geo.keys():
-            range_str += f"\ngeo {el}: {self.range_geo[el]}"
-        for el in self.range_vib.keys():
-            range_str += f"\nvib {el}: {self.range_vib[el]}"
-        for el in self.range_occ.keys():
-            range_str += f"\nocc {el}: {self.range_occ[el]}"
-        return range_str
 
     def assignConstraint(self, mode, targetel='', value=None, linkAtEl=None,
                          index=None):
@@ -727,7 +701,8 @@ class Atom:                                                                     
         self.cartpos[:2] += cart_shift
         self.pos[:2] += frac_shift
 
-@frozen(unsafe_hash=False)
+
+@frozen
 class DisplacementRanges:
     """The minimum and maximum displacements for all elements of an atom."""
 
@@ -735,6 +710,7 @@ class DisplacementRanges:
     geo: Dict[str, tuple] = field(default_factory=dict)
     vib: Dict[str, tuple] = field(default_factory=dict)
     occ: Dict[str, tuple] = field(default_factory=dict)
+    __hash__ = None  # Not hashable, as it has mutable attributes
 
     def __iter__(self):
         """Yield displacement-range dictionaries."""
