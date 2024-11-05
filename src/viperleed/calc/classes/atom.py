@@ -12,10 +12,11 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
-from dataclasses import field
-from typing import Dict
 import copy
+from dataclasses import field
 import logging
+from typing import Dict
+
 
 import numpy as np
 
