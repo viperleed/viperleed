@@ -24,12 +24,12 @@ from viperleed.calc.lib.string_utils import strip_comments
 from .errors import MissingEqualsError
 from .errors import ParameterHasNoValueError
 from .errors import ParameterNotRecognizedError
-from .file_reader import SettingsFileReader
+from ..file_reader import InputFileReader
 from .known_parameters import did_you_mean
 from .known_parameters import from_alias
 from .utils import Assignment
 
-class ParametersReader(SettingsFileReader):
+class ParametersReader(InputFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
 
     def __init__(self, filename, noisy=True):

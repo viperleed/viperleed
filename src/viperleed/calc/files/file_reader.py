@@ -1,4 +1,4 @@
-"""Module file_reader of viperleed.calc.classes.
+"""Module file_reader of viperleed.calc.files.
 
 This module is a more abstract version of a settings file reader. It is based on
 @michele-riva's work on the PARAMETERS file reader, which in turn is based on
@@ -21,7 +21,7 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 
 
-class SettingsFileReader(AbstractContextManager, Iterator):
+class InputFileReader(AbstractContextManager, Iterator):
     """A context manager that iterates the contents of an input file."""
 
     def __init__(self, filename, noisy=True):                                   # TODO: it would be nice to support passing file contents via a StringIO or similar
@@ -57,4 +57,4 @@ class SettingsFileReader(AbstractContextManager, Iterator):
     @abstractmethod
     def __next__(self):
         """Return the next understandable information in the file."""
-        raise NotImplementedError
+        pass
