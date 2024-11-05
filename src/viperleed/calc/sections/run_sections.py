@@ -352,10 +352,7 @@ def section_loop(rp, sl):
             break
 
     logger.debug("End of section loop.")
-    disp_ranges = [at.range_repr() for at in sl.atlist]
-    disp_ranges_str = "\n\t".join(disp_ranges)
-    logger.log(level=logging.DEBUG, msg=
-               f"Total ranges of all displacements:\n{disp_ranges_str}")
-
+    disp_ranges_str = '\n\t'.join(str(at.disp_ranges) for at in sl)
+    logger.debug(f'Total ranges of all displacements:\n{disp_ranges_str}')
     cleanup(rp.manifest, rp)
     return 0, state_recorder

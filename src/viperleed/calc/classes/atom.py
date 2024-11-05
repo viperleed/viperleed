@@ -12,12 +12,15 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
+from dataclasses import field
+from typing import Dict
 import copy
 import logging
 
 import numpy as np
 
 from viperleed.calc.lib.coordinates import add_edges_and_corners
+from viperleed.calc.lib.dataclass_utils import frozen
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -126,13 +129,14 @@ class Atom:                                                                     
         self.disp_center_index = {'vib': {'all': 0},
                                   'geo': {'all': 0},
                                   'occ': {el: 0}}
+        self.displacement_ranges = DisplacementRanges(_atom=self)
         self.range_geo, self.range_vib, self.range_occ = {}, {}, {}
         self.dispInitialized = False
         self.offset_geo = {}
         self.offset_vib = {}
         self.offset_occ = {}
         self.constraints = {1: {}, 2: {}, 3: {}}
-        self.update_range()
+        self.displacement_ranges.update()
 
     def __repr__(self):
         """Return a representation string of this Atom."""
@@ -710,7 +714,7 @@ class Atom:                                                                     
             else:
                 self.disp_occ[el] = final_occ_steps
             del self.offset_occ[el]
-        self.update_range()
+        self.displacement_ranges.update()
 
     def storeOriState(self):
         """Stores the initial values from the input files for this atom."""
@@ -721,3 +725,44 @@ class Atom:                                                                     
         """Apply a 2D translation to this Atom."""
         self.cartpos[:2] += cart_shift
         self.pos[:2] += frac_shift
+
+@frozen(unsafe_hash=False)
+class DisplacementRanges:
+    """The minimum and maximum displacements for all elements of an atom."""
+
+    _atom: Atom
+    geo: Dict[str, tuple] = field(default_factory=dict)
+    vib: Dict[str, tuple] = field(default_factory=dict)
+    occ: Dict[str, tuple] = field(default_factory=dict)
+
+    def __iter__(self):
+        """Yield displacement-range dictionaries."""
+        yield self.geo
+        yield self.vib
+        yield self.occ
+
+    def __str__(self):
+        """Return a string version of these displacement ranges."""
+        lines = [f'Ranges for {self._atom}']
+        names = 'geo', 'vib', 'occ'
+        for _range, name in zip(self, names):
+            lines.extend(f'{name} {el}: {minmax}'
+                         for el, minmax in _range.items())
+        return '\n'.join(lines)
+
+    def update(self):
+        """Update the minimum and maximum displacements."""
+        displacements = (self._atom.disp_geo,
+                         self._atom.disp_vib,
+                         self._atom.disp_occ)
+        for disp_type, _range in zip(displacements, self):
+            for element, disp in disp_type.items():
+                disp = np.asarray(disp)
+                new_range = disp.min(axis=0), disp.max(axis=0)
+                try:
+                    old_range = _range[element]
+                except KeyError:
+                   _range[element] = new_range
+                   continue
+                _range[element] = (np.minimum(old_range[0], new_range[0]),
+                                   np.maximum(old_range[1], new_range[1]))
