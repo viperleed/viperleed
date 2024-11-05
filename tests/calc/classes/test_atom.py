@@ -72,30 +72,34 @@ class TestAtomMergeDisplacementOffset:
             assert atom.disp_occ[element] == approx([0.7, 0.8, 0.9, 1.0])
 
 
-def test_displacement_ranges(manually_displaced_atom):
-    atom = manually_displaced_atom
-    disp_ranges = atom.disp_ranges
+class TestDisplacementRanges:
+    """Tests for the DisplacementRanges class."""
 
-    # without any displacement, the range should be zero
-    assert (disp_ranges.geo['all'][0] - disp_ranges.geo['all'][1]).sum() == approx(0)
-    assert disp_ranges.vib['all'][0] - disp_ranges.vib['all'][1] == approx(0)
-    assert disp_ranges.occ['Ag'][0] - disp_ranges.occ['Ag'][1] == approx(0)
+    @staticmethod
+    def diff(range_):
+        """Return max - min from `range_`."""
+        return range_[1] - range_[0]
 
-    # set some displacements
-    atom.disp_geo['Ag'] = np.array([0.1, 0, 0])
-    atom.offset_vib['Ag'] = -0.2
-    atom.offset_occ['Ag'] = +0.3
-    atom.dispInitialized = True
-    # merge the displacements which should update the ranges
-    atom.mergeDisp('all')
+    def test_no_displacements(self, manually_displaced_atom):
+        """Check that ranges are zero without any displacement."""
+        atom = manually_displaced_atom
+        ranges = atom.disp_ranges
+        assert self.diff(ranges.geo['all']).sum() == approx(0)
+        assert self.diff(ranges.vib['all']) == approx(0)
+        assert self.diff(ranges.occ['Ag']) == approx(0)
 
-    # check the new ranges
-    assert (
-        disp_ranges.geo['Ag'][1] - disp_ranges.geo['Ag'][0]
-    ).sum() == approx(0.1)
-    assert disp_ranges.vib['Ag'][1] - disp_ranges.vib['Ag'][0] == approx(
-        0.2
-    )
-    assert disp_ranges.occ['Ag'][1] - disp_ranges.occ['Ag'][0] == approx(
-        0.3
-    )
+    def test_with_displacements(self, manually_displaced_atom):
+        """Check expected ranges with displacements set."""
+        atom = manually_displaced_atom
+        atom.disp_geo['Ag'] = np.array([0.1, 0, 0])
+        atom.offset_vib['Ag'] = -0.2
+        atom.offset_occ['Ag'] = +0.3
+        atom.dispInitialized = True
+
+        # Merge the displacements which should update the ranges
+        atom.mergeDisp('all')
+
+        ranges = atom.disp_ranges
+        assert self.diff(ranges.geo['Ag']).sum() == approx(0.1)
+        assert self.diff(ranges.vib['Ag']) == approx(0.2)
+        assert self.diff(ranges.occ['Ag']) == approx(0.3)
