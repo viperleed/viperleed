@@ -45,19 +45,6 @@ class ParametersReader(InputFileReader):
             return (param, *rest)
         raise StopIteration
 
-    def _read_one_line(self, line):
-        """Return a parameter and other custom information from one line."""
-        pass
-
-    def _parse_line(self, line):
-        """Return a parameter string and an Assignment from line."""
-        pass
-
-    @staticmethod
-    def _tokenize_line(line):
-        """Split up line into tokens."""
-        pass
-
     def _complain_about_line_parse_errors(self, line, exc):
         """Re-raise an exception occurred while line was being parsed."""
         if not isinstance(exc, ParameterNotRecognizedError):
