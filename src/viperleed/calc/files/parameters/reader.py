@@ -17,9 +17,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
-from collections.abc import Iterator
-from contextlib import AbstractContextManager
-from pathlib import Path
 import re
 
 from viperleed.calc.lib.string_utils import strip_comments
