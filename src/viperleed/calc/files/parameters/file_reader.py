@@ -22,8 +22,7 @@ from pathlib import Path
 
 
 class SettingsFileReader(AbstractContextManager, Iterator):
-    """A context manager that iterates the contents of a settings file
-    (e.g PARAMETERS)."""
+    """A context manager that iterates the contents of an input file."""
 
     def __init__(self, filename, noisy=True):                                   # TODO: it would be nice to support passing file contents via a StringIO or similar
         """Initialize instance.
