@@ -129,14 +129,14 @@ class Atom:                                                                     
         self.disp_center_index = {'vib': {'all': 0},
                                   'geo': {'all': 0},
                                   'occ': {el: 0}}
-        self.displacement_ranges = DisplacementRanges(_atom=self)
+        self.disp_ranges = DisplacementRanges(_atom=self)
         self.range_geo, self.range_vib, self.range_occ = {}, {}, {}
         self.dispInitialized = False
         self.offset_geo = {}
         self.offset_vib = {}
         self.offset_occ = {}
         self.constraints = {1: {}, 2: {}, 3: {}}
-        self.displacement_ranges.update()
+        self.disp_ranges.update()
 
     def __repr__(self):
         """Return a representation string of this Atom."""
@@ -714,7 +714,7 @@ class Atom:                                                                     
             else:
                 self.disp_occ[el] = final_occ_steps
             del self.offset_occ[el]
-        self.displacement_ranges.update()
+        self.disp_ranges.update()
 
     def storeOriState(self):
         """Stores the initial values from the input files for this atom."""
