@@ -93,3 +93,16 @@ class TestInputFileReader:
         reader = MockInputFileReader(file)
         with not_raises(AttributeError):
             reader.__exit__(None, None, None)
+
+    def test_current_line_updated(self, tmp_path):
+        """Check that the line numbers a tracked."""
+        file = tmp_path / 'test.txt'
+        file.write_text('line1\nline2\nline3\n')
+        with MockInputFileReader(file) as reader:
+            # pylint: disable=protected-access            # OK in tests
+            assert not reader._current_line
+            next(reader)
+            assert reader._current_line
+        with MockInputFileReader(file) as reader:
+            # pylint: disable-next=protected-access       # OK in tests
+            assert not reader._current_line  # Reset after __enter__
