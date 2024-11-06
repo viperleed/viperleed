@@ -34,8 +34,7 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
-from viperleed.calc.lib.fortran_utils import CouldNotDeterminMpifortVersionError
-from viperleed.calc.lib.fortran_utils import get_mpifort_version
+from viperleed.calc.lib import fortran_utils
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
@@ -694,10 +693,24 @@ class Rparams:
             self.FORTRAN_COMP_MPI = ['mpiifort -Ofast', '']
             _LOGGER.debug('Using fortran compiler: mpiifort')
         elif found == 'mpifort':
-            self.FORTRAN_COMP_MPI = [
-                'mpifort -Ofast -no-pie -fallow-argument-mismatch',
-                ''
-                ]
+            # check for the mpifort version
+            mpifort_version = None
+            try:
+                mpifort_version = fortran_utils.get_mpifort_version()
+            except fortran_utils.CouldNotDeterminMpifortVersionError:
+                _LOGGER.warning(
+                    'mpifort version could not be determined automatically. '
+                    'mpifort versions <= 10.0 may need the '
+                    '"-fallow-argument-mismatch flag" or "-std=legacy" flag to '
+                    'compile the TenseErLEED structure search code. '
+                    'If an error occurs, please check the mpifort version and '
+                    'adapt the FORTRAN_COMP parameter as required.'
+                )
+            mpifort_call = 'mpifort -Ofast'
+            if mpifort_version is not None and mpifort_version > Version('9.0'):
+                mpifort_call += ' -fallow-argument-mismatch'
+
+            self.FORTRAN_COMP_MPI = [mpifort_call, '']
             _LOGGER.debug('Using fortran compiler: mpifort')
 
     def renormalizeDomainParams(self, config):
