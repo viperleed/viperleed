@@ -52,14 +52,14 @@ def get_mpifort_version():
     try:
         subprocess.run(check_for_mpifort_call, shell=True, check=True)
     except subprocess.CalledProcessError:
-        raise GFortranNotFoundError
+        raise MpifortNotFoundError
 
     # get version number
     try:
         version_nr_str = subprocess.run(version_nr_call, shell=True, check=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError:
-        raise CouldNotDeterminGFortranVersionError
+        raise CouldNotDeterminMpifortVersionError
     mpifort_version = Version(version_nr_str.stdout.decode().strip())
 
     return mpifort_version
