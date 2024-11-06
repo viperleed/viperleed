@@ -29,6 +29,7 @@ import numpy as np
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
+from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
@@ -40,7 +41,6 @@ from viperleed.calc.lib.matplotlib_utils import use_calc_style
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
-from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
