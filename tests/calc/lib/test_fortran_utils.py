@@ -6,10 +6,15 @@ __authors__ = (
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
+import subprocess
 
+import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.lib.fortran_utils import wrap_fortran_line
+from viperleed.calc.lib.fortran_utils import get_mpifort_version
+from viperleed.calc.lib.fortran_utils import MpifortNotFoundError
+from viperleed.calc.lib.fortran_utils import CouldNotDeterminMpifortVersionError
 
 
 class TestWrapFortranLine:  # pylint: disable=too-few-public-methods
@@ -53,3 +58,53 @@ class TestWrapFortranLine:  # pylint: disable=too-few-public-methods
     def test_valid(self, string, expect):
         """Check expected outcome with valid arguments."""
         assert wrap_fortran_line(string) == expect
+
+class TestGetMpifortVersion:
+    def test_get_mpifort_version_success(self, monkeypatch):
+        """Test successful retrieval of mpifort version."""
+
+        # Mock function to simulate subprocess.run behavior
+        def mock_run_success(cmd, shell, check, stdout=None, stderr=None):
+            if "mpifort --version | sed" in " ".join(cmd):
+                # Simulate the expected output for version extraction
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout=b"13.2.0\n"
+                )
+            elif "mpifort --version" in " ".join(cmd):
+                # Simulate the initial check call
+                return subprocess.CompletedProcess(args=cmd, returncode=0)
+            raise ValueError("Unexpected command")  # Catch unexpected calls
+
+        monkeypatch.setattr(subprocess, "run", mock_run_success)
+
+        # Run the function and check the version output
+        version = get_mpifort_version()
+        assert str(version) == "13.2.0"
+
+
+    def test_get_mpifort_version_not_installed(self, monkeypatch):
+        """Test behavior when mpifort is not installed."""
+
+        def mock_run_not_installed(cmd, shell, check, stdout=None, stderr=None):
+            raise subprocess.CalledProcessError(1, cmd)
+
+        monkeypatch.setattr(subprocess, "run", mock_run_not_installed)
+        with pytest.raises(MpifortNotFoundError):
+            get_mpifort_version()
+
+
+    def test_get_mpifort_version_could_not_determine(self, monkeypatch):
+        """Test behavior when mpifort version cannot be determined."""
+
+        def mock_run_could_not_determine(
+            cmd, shell, check, stdout=None, stderr=None
+        ):
+            if "mpifort --version" in cmd:
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0
+                )  # Simulate successful initial check
+            raise subprocess.CalledProcessError(1, cmd)
+
+        monkeypatch.setattr(subprocess, "run", mock_run_could_not_determine)
+        with pytest.raises(CouldNotDeterminMpifortVersionError):
+            get_mpifort_version()
