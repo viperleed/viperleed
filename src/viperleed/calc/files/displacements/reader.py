@@ -26,12 +26,12 @@ DisplacementFileSections = Enum(
 
 LoopMarker = Enum("LoopMarker", ["LOOP_START", "LOOP_END"])
 
-from viperleed.calc.files.parameters.file_reader import SettingsFileReader
+from viperleed.calc.files.input_reader import InputFileReader
 from viperleed.calc.lib.string_utils import strip_comments
 
 
-class DisplacementsReader(SettingsFileReader):
-    """Reader for the DISPLACEMENTS file based on SettingsFileReader."""
+class DisplacementsReader(InputFileReader):
+    """Reader for the DISPLACEMENTS file based on InputFileReader."""
 
     def __init__(self, filename, noisy=True):
         """Initialize instance."""
