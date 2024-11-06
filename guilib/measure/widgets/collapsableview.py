@@ -371,10 +371,7 @@ class CollapsableDeviceView(CollapsableView):
 
     def _is_dummy_device(self):
         """Returns whether the view is a dummy object or not."""
-        try:
-            return self._device_info.more['address'] is NO_HARDWARE_INTERFACE
-        except KeyError:
-            return False
+        return not self._device_info.hardware_interface
 
     def _make_handler_for_device(self, device):
         """Make a SettingsHandler for the device."""
@@ -845,7 +842,8 @@ class CollapsableControllerList(CollapsableDeviceList):
             info = {}
             info['address'] = NO_HARDWARE_INTERFACE
             info['name'] = device_name
-            settings_info = SettingsInfo(name, info)
+            present = False # Because there is no hardware interface.
+            settings_info = SettingsInfo(name, present, info)
             correct_view = self.add_new_view(name, (cls, settings_info))
 
         safe_disconnect(self._views[correct_view][0].stateChanged,

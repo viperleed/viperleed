@@ -920,13 +920,15 @@ class CameraABC(DeviceABC):
         This method must return a list of SettingsInfo instances. The
         SettingsInfo class is located in the classes.abc module. Each
         camera is represented by a single SettingsInfo instance. The
-        SettingsInfo object contains the uninque device name and a dict
-        holding additional information about the device. If there is
-        no additional information about the camera, then this dict can
-        be empty. The information contained within a SettingsInfo must
-        be enough to determine a suitable settings file for the device
-        from it. Subclasses should raise a DefaultSettingsError if they
-        fail to create instances from the settings in the DEFAULTS_PATH.
+        SettingsInfo object must contain a .unique_name, a boolean
+        which is true if the device has a hardware interface present,
+        and a dict holding .more information about the device. If
+        there is no additional information about the camera, then this
+        dict can be empty. The information contained within a
+        SettingsInfo must be enough to determine a suitable settings
+        file for the device from it. Subclasses should raise a
+        DefaultSettingsError if they fail to create instances from the
+        settings in the DEFAULTS_PATH.
 
         Returns
         -------

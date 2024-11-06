@@ -786,14 +786,16 @@ class ControllerABC(DeviceABC):
 
         This method must return a list of SettingsInfo instances. The
         SettingsInfo class is located in the classes.abc module. Each
-        controller is represented by a single SettingsInfo instance. The
-        SettingsInfo object must contain a .unique_name, and a dict
-        holding .more information about the device. .unique_name may
-        contain the controller name and it's address to make it unique.
-        The information contained within a SettingsInfo must be enough
-        to determine a suitable settings file for the device from it.
-        Subclasses should raise a DefaultSettingsError if they fail
-        to create instances from the settings in the DEFAULTS_PATH.
+        controller is represented by a single SettingsInfo instance.
+        The SettingsInfo object must contain a .unique_name, a boolean
+        which is true if the device has a hardware interface present,
+        and a dict holding .more information about the device.
+        .unique_name may contain the controller name and it's address to
+        make it unique. The information contained within a SettingsInfo
+        must be enough to determine a suitable settings file for the
+        device from it. Subclasses should raise a DefaultSettingsError
+        if they fail to create instances from the settings in the
+        DEFAULTS_PATH.
 
         Returns
         -------

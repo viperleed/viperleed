@@ -653,8 +653,9 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         device_list : list
-            Each element is a SettingsInfo instance containing the unique
-            name of a controller and .more information as a dict.
+            Each element is a SettingsInfo instance containing the
+            .unique_name of a controller, a .hardware_interface bool,
+            and .more information as a dict.
             The .more dict contains the following keys:
                 'name' : str
                     The controller name. This name may not be unique!
@@ -678,6 +679,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
 
+        # Since we detect controllers on the ports, we can assume the
+        # hardware interface is going to be present when we attempt to
+        # connect to the device.
+        present = True
         device_list = []
         threads = []
         controllers = []
@@ -710,7 +715,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 more_info = {k: hardware[k] for k in ('firmware', )}
                 more_info['address'] = ctrl.address
                 more_info['name'] = ctrl.name
-                device_list.append(SettingsInfo(txt, more_info))
+                device_list.append(SettingsInfo(txt, present, more_info))
             else:
                 print("Not a ViPErLEED controller at", ctrl.address,
                       hardware, flush=True)

@@ -681,12 +681,16 @@ class ImagingSourceCamera(abc.CameraABC):
         -------
         devices : list of SettingsInfo
             Information for each of the detected Imaging Source cameras.
-            For each item, only .unique_name is set, i.e., there is no
-            .more information.
+            For each item, only .unique_name and .hardware_interface are
+            set, i.e., there is no .more information.
         """
         # Use empty dictionaries as there is no
         # additional information to pass along.
-        return [SettingsInfo(name) for name in self.driver.devices]
+        # Since we detect camera presence throgh the driver, we can
+        # assume the hardware interface is going to be present when
+        # we attempt to connect to the device.
+        present = True
+        return [SettingsInfo(name, present) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.

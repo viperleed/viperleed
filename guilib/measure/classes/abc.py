@@ -592,12 +592,13 @@ class DeviceABC(HardwareABC):
 
         This method must return a list of SettingsInfo instances. Each
         device is represented by a single SettingsInfo instance. The
-        SettingsInfo object must contain a .unique_name and can contain
-        .more information as a dict. The information contained within
-        a SettingsInfo must be enough to determine settings files that
-        contain the correct settings for this device. Subclasses should
-        raise a DefaultSettingsError if they fail to create instances
-        from the settings in the DEFAULTS_PATH.
+        SettingsInfo object must contain a .unique_name, a
+        .hardware_interface boolean, and can contain .more information
+        as a dict. The information contained within a SettingsInfo must
+        be enough to determine settings files that contain the correct
+        settings for this device. Subclasses should raise a
+        DefaultSettingsError if they fail to create instances from the
+        settings in the DEFAULTS_PATH.
 
         Returns
         -------
@@ -618,14 +619,20 @@ class SettingsInfo:
     ----------
     unique_name : str
         Unique name identifying the device.
+    hardware_interface : bool
+        Whether the device has a hardware interface or not.
     more : dict
         Extra, optional, information about the device.
     """
     unique_name: str
+    hardware_interface: bool
     more: dict = field(default_factory=dict)
 
     def __post_init__(self):
-        """Check that we have a string unique_name."""
+        """Check that we have the correct attribute types."""
         if not isinstance(self.unique_name, str):
             raise TypeError(f'{type(self).__name__}: '
                             'unique_name must be a string')
+        if not isinstance(self.hardware_interface, bool):
+            raise TypeError(f'{type(self).__name__}: '
+                            'hardware_interface must be a bool')
