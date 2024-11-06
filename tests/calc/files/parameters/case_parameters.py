@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-09-07'
 __license__ = 'GPLv3+'
 
+from copy import deepcopy
 import numpy as np
 from pytest_cases import case, parametrize
 
@@ -68,13 +69,16 @@ for key in ('stop', 'no_stop', 'left empty'):
 _READ['missing_equals'].update(**_READ['Ag'])
 del _READ['missing_equals']['SUPERLATTICE']
 
-# FORTRAN_COMP added only for the 'Ag'
-_READ['Ag']['FORTRAN_COMP'] = ['gfortran', '-llapack -lpthread -lblas']
+# FORTRAN_COMP added on a copy of the Ag(100) file
+_READ['fortran comp'] = deepcopy(_READ['Ag'])
+_READ['fortran comp']['FORTRAN_COMP'] = ['gfortran',
+                                         '-llapack -lpthread -lblas']
 
 _PATHS = {
     'Ag': 'Ag(100)/initialization/PARAMETERS',
     'Ir': 'parameters/PARAMETERS_Ir(100)-(2x1)-O',
     'empty': 'parameters/PARAMETERS_empty',
+    'fortran comp': 'parameters/PARAMETERS_fortran_comp',
     'stop': 'parameters/PARAMETERS_stop',
     'no_stop': 'parameters/PARAMETERS_stop_false',
     'missing_equals': 'parameters/PARAMETERS_missing_equals',
