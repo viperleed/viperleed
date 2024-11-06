@@ -11,10 +11,18 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
+import subprocess
+
+from .version import Version
 
 _FORTRAN_LINE_LENGTH = 72  # FORTRAN line-length limit
 _F77_CONTINUATION_POS = 6  # Column of the continuation character
 
+class GFortranNotFoundError(Exception):
+    """Raised when the gfortran compiler is not found."""
+
+class CouldNotDeterminGFortranVersionError(Exception):
+    """Raised when the gfortran version could not be determined."""
 
 def wrap_fortran_line(string):
     """Wrap a FORTRAN string into continuation lines with ampersands."""
@@ -31,3 +39,26 @@ def wrap_fortran_line(string):
                           for i in range(0, len(rest), chunk_size))
     sep = f'&\n{"&":>{_F77_CONTINUATION_POS}}'
     return head + sep.join(continuation_lines)
+
+
+def get_gfortran_version():
+    """Check the version of the gfortran compiler."""
+    check_for_gfortran_call = ['gfortran --version']
+    version_nr_call = [
+        r'gfortran --version | sed -n "s/^GNU Fortran.*) \([0-9.]*\).*/\1/p"']
+
+    # check if gfortran is installed
+    try:
+        subprocess.run(check_for_gfortran_call, shell=True, check=True)
+    except subprocess.CalledProcessError:
+        raise GFortranNotFoundError
+
+    # get version number
+    try:
+        version_nr_str = subprocess.run(version_nr_call, shell=True, check=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError:
+        raise CouldNotDeterminGFortranVersionError
+    gfortran_version = Version(version_nr_str.stdout.decode().strip())
+
+    return gfortran_version
