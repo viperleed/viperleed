@@ -1,6 +1,6 @@
 # simple DISPLACEMENTS file for Cu(111)
 
-== SEARCH test
+== SEARCH label
 
     = GEO_DELTA
     Cu_surf z = -0.1 0.1 0.05
