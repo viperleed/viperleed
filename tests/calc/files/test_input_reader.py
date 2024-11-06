@@ -85,3 +85,11 @@ class TestInputFileReader:
         with MockInputFileReader(test_file) as reader:
             lines = tuple(reader)
         assert lines == expect
+
+    def test_exit_before_enter(self, tmp_path):
+        """Check that exiting before entering a context does not complain."""
+        file = tmp_path / 'test.txt'
+        file.touch()
+        reader = MockInputFileReader(file)
+        with not_raises(AttributeError):
+            reader.__exit__(None, None, None)
