@@ -7,6 +7,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-25'
 __license__ = 'GPLv3+'
 
+from unittest.mock import MagicMock
+
 import pytest
 from pytest_cases import fixture, parametrize
 
@@ -63,3 +65,44 @@ class TestElementConflicts:
         rpars = rpars_with_attrs(**rpars_kwargs)
         with not_raises(Exception):
             checker.check_parameter_conflicts(rpars)
+
+
+class TestFortraCompUpdated:
+    """Check that FORTRAN_COMP is updated by the checker."""
+
+    _unchanged = {
+        'ifort post': {'FORTRAN_COMP': ('ifort', 'cli flags')},
+        'gfortran post': {'FORTRAN_COMP': ('gfortran', 'cli flags')},
+        'mpiifort post': {'FORTRAN_COMP_MPI': ('mpiifort', 'cli flags')},
+        'mpifort post': {'FORTRAN_COMP_MPI': ('mpifort', 'cli flags')},
+        'user': {'FORTRAN_COMP': ('user compiler', '')},
+        'user mpi': {'FORTRAN_COMP_MPI': ('user compiler', '')},
+        }
+
+    @parametrize(fortran_comp=_unchanged.values())
+    def test_not_called(self, fortran_comp, checker, rpars_with_attrs):
+        """Check that fortran_comp is not messed with."""
+        rpars = rpars_with_attrs(**fortran_comp)
+        before = tuple(getattr(rpars, attr) for attr in fortran_comp)
+        checker.check_parameter_conflicts(rpars)
+        after = tuple(getattr(rpars, attr) for attr in fortran_comp)
+        assert after == before
+
+    _verify = {
+        'intel': {'FORTRAN_COMP': ('ifort', ''),
+                  'FORTRAN_COMP_MPI': ('mpiifort', '')},
+        'gnu': {'FORTRAN_COMP': ('gfortran', ''),
+                'FORTRAN_COMP_MPI': ('mpifort', '')},
+        }
+
+    @parametrize(comp=_verify.values(), ids=_verify)
+    def test_verified(self, comp, checker, rpars_with_attrs, monkeypatch):
+        """Check that an automatic comp is verified."""
+        rpars = rpars_with_attrs(**comp)
+        mock_mpi = MagicMock()
+        mock_non_mpi = MagicMock()
+        monkeypatch.setattr(rpars, 'getFortranComp', mock_non_mpi)
+        monkeypatch.setattr(rpars, 'getFortranMpiComp', mock_mpi)
+        checker.check_parameter_conflicts(rpars)
+        mock_mpi.assert_called_once()
+        mock_non_mpi.assert_called_once()
