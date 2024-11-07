@@ -341,7 +341,7 @@ def _check_search_log(search_log_path):
           in log_content):
         raise SearchInconsistentV0ImagError from None
     # (4) MPI process killed, most likely because of insufficient memory
-    # Note the two different error messages for Intel and GNU MPI 
+    # Note the two different error messages for Intel and GNU MPI
     elif ("YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)"
           in log_content or
           "=   KILLED BY SIGNAL: 9 (Killed)" in log_content):
@@ -728,32 +728,28 @@ def search(sl, rp):
         return None
 
     # check for mpirun, decide whether to use parallelization
-    usempi = True
-    if rp.N_CORES == 1:
-        logger.warning(
-            "The N_CORES parameter is set to 1. The search will be run "
-            "without multiprocessing. This will be much slower!")
-        usempi = False
-
-    if usempi and shutil.which("mpirun", os.X_OK) is None:
-        usempi = False
-        logger.warning(
-            "mpirun is not present. Search will be compiled and executed "
-            "without parallelization. This will be much slower!")
+    usempi = rp.N_CORES > 1 and shutil.which('mpirun')
+    if not usempi:
+        reason = (
+            f'The N_CORES parameter is set to {rp.N_CORES}' if rp.N_CORES <= 1
+            else 'mpirun is not present'
+            )
+        logger.warning(f'{reason}. The search will be run without '
+                       'parallelization. This will be much slower!')
 
     _find_compiler = None
     if usempi and not rp.FORTRAN_COMP_MPI[0]:
         _find_compiler = rp.getFortranMpiComp
     elif not rp.FORTRAN_COMP[0]:
         _find_compiler = rp.getFortranComp
-
     if _find_compiler:
         try:
             _find_compiler()
         except Exception as exc:
             _mpi = 'mpi ' if usempi else ''
-            logger.error(f"No fortran {_mpi}compiler found, cancelling...")
-            raise FileNotFoundError("Fortran compile error") from exc
+            logger.error(f'No fortran {_mpi}compiler found, cancelling...')
+            raise FileNotFoundError('Fortran compile error') from exc
+
     # get fortran files
     try:
         tl_source = rp.get_tenserleed_directory()
@@ -766,15 +762,16 @@ def search(sl, rp):
                          if 'mpi' not in f.name)
             src_file = next(src_files, None)
         if src_file is None:
-            raise FileNotFoundError(f"No Fortran source for search in {tl_path}")
+            raise FileNotFoundError('No Fortran source for '
+                                    f'search in {tl_path}')
         shutil.copy2(src_file, src_file.name)
         libpath = tl_path / 'lib'
-        libpattern = "lib.search"
+        libpattern = 'lib.search'
         if usempi and rp.TL_VERSION <= Version('1.7.3'):
-            libpattern += ".mpi"
-        lib_file = next(libpath.glob(libpattern + "*"), None)
+            libpattern += '.mpi'
+        lib_file = next(libpath.glob(libpattern + '*'), None)
         if lib_file is None:
-            raise FileNotFoundError(f"File {libpattern}.f not found.")
+            raise FileNotFoundError(f'File {libpattern}.f not found.')
 
         # copy to work dir
         shutil.copy2(lib_file, lib_file.name)
@@ -785,7 +782,7 @@ def search(sl, rp):
         else:
             hashname = ""
 
-        randname = "MPIrandom_.o" if usempi else "random_.o"
+        randname = 'MPIrandom_.o' if usempi else 'random_.o'
         if rp.TL_VERSION <= Version('1.7.3'):
             # these are short C scripts - use pre-compiled versions
 
@@ -793,8 +790,8 @@ def search(sl, rp):
             try:
                 shutil.copy2(libpath / randname, randname)
             except FileNotFoundError:
-                logger.error("Could not find required random_.o object file. "
-                             "You may have forgotten to compile random_.c.")
+                logger.error('Could not find required random_.o object file. '
+                             'You may have forgotten to compile random_.c.')
                 raise
 
         globalname = "GLOBAL"
@@ -812,27 +809,24 @@ def search(sl, rp):
         validate_multiple_files(files_to_check, logger,
                                 "search", rp.TL_VERSION)
 
-    # compile fortran files
-    searchname = f"search-{rp.timestamp}"
-    if usempi:
-        fcomp = rp.FORTRAN_COMP_MPI
-    else:
-        fcomp = rp.FORTRAN_COMP
-    logger.info("Compiling fortran input files...")
-    # compile
+    # Prepare to compile fortran files
+    searchname = f'search-{rp.timestamp}'
+    fcomp = rp.FORTRAN_COMP_MPI if usempi else rp.FORTRAN_COMP
+    logger.info('Compiling fortran input files...')
+
     # compile task could be inherited from general CompileTask (issue #43)
     ctasks = [(f"{fcomp[0]} -o lib.search.o -c", lib_file.name, fcomp[1])]
     if hashname:
         ctasks.append((f"{fcomp[0]} -c", hashname, fcomp[1]))
     ctasks.append((f"{fcomp[0]} -o restrict.o -c", "restrict.f", fcomp[1]))
-    format_tag = ""
+    format_tag = ''
     _fixed_format = any(f.endswith('.f90')
                         for f in (lib_file.name, src_file.name, hashname))
     if _fixed_format:
-        format_tag = "-fixed"
-        if any(s in fcomp[0] for s in ("gfortran", "mpifort")):
-            # assume that mpifort also uses gfortran
-            format_tag = "--fixed-form"  # different formatting string
+        is_gfortran = any(s in fcomp[0]
+                          # Assume that mpifort uses gfortran
+                          for s in ('gfortran', 'mpifort'))
+        format_tag =  '--fixed-form' if is_gfortran else '-fixed'
     ctasks.append(
         (f"{fcomp[0]} -o search.o -c {format_tag}", src_file.name, fcomp[1])
         )
