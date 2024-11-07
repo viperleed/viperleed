@@ -4,10 +4,10 @@ Collects functionality useful for handling FORTRAN code.
 """
 
 __authors__ = (
-    "Florian Kraushofer (@fkraushofer)",
-    "Alexander M. Imre (@amimre)",
-    "Michele Riva (@michele-riva)",
-)
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
@@ -27,41 +27,40 @@ class FortranCompilerError(Exception):
 
 
 class CompilerNotFoundError(FortranCompilerError):
-    """Raised when the Fortran compiler is not found."""
+    """Raised when a Fortran compiler is not found."""
 
 
 class NoCompilerVersionFoundError(FortranCompilerError):
-    """Raised when the Fortran version could not be determined."""
+    """The version of a Fortran compiler could not be determined."""
 
 
 def get_mpifort_version():
-    """Check the version of the mpifort compiler."""
-    version_nr_call = ["mpifort", "--version"]
-    # check if mpifort is installed
-    if not shutil.which("mpifort"):
+    """Return the version of the mpifort compiler."""
+    # Check if mpifort is installed
+    if not shutil.which('mpifort'):
         raise CompilerNotFoundError
 
-    # get version number
+    # Get version number
+    version_nr_call = 'mpifort', '--version'
     try:
-        result = subprocess.run(
-            version_nr_call, shell=False, check=True, capture_output=True
-        )
-    except subprocess.CalledProcessError as err:
-        msg = str(err)
-        if err.stdout:
-            msg += f"\noutput:{err.stdout.decode()}"
-        if err.stderr:
-            msg += f"\nerrors:\n{err.stderr.decode()}"
+        result = subprocess.run(version_nr_call,
+                                capture_output=True,
+                                check=True)
+    except subprocess.CalledProcessError as exc:
+        msg = str(exc)
+        if exc.stdout:
+            msg += f'\noutput:{exc.stdout.decode()}'
+        if exc.stderr:
+            msg += f'\nerrors:\n{exc.stderr.decode()}'
         raise NoCompilerVersionFoundError(msg) from None
-    output = result.stdout.decode().strip()
-    version_nr_ = re.search(r"GNU Fortran.*\) (\d+\.\d+\.\d+)", output)
-    if version_nr_ is None:
-        raise NoCompilerVersionFoundError(
-            f"Could not determine version from {output}")
-    version_nr_str = version_nr_.group(1)
-    mpifort_version = Version(version_nr_str.strip())
 
-    return mpifort_version
+    output = result.stdout.decode().strip()
+    match_ = re.match(r'GNU Fortran.*\) (?P<version>\d+\.\d+\.\d+)',
+                      output)
+    if not match_:
+        raise NoCompilerVersionFoundError('Could not determine version '
+                                          f'from\n{output}')
+    return Version(match_['version'])
 
 
 def wrap_fortran_line(string):
