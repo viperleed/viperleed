@@ -34,6 +34,21 @@ class TestGetMpifortVersion:
     mock_version = '13.2.0'
     check_version_cmd = 'mpifort', '--version'
 
+    @staticmethod
+    def mock_run_fails(cmd, **_):
+        """Simulate a failed subprocess.run call."""
+        raise CalledProcessError(1,
+                                 cmd,
+                                 'fake stdout'.encode(),
+                                 'fake stderr'.encode())
+
+    @staticmethod
+    def mock_run_no_version(cmd, **_):
+        """Fail only on version check."""
+        return CompletedProcess(args=cmd,
+                                returncode=0,
+                                stdout=b'Unknown output\n')
+
     def mock_run_success(self, cmd, **_):
         """Simulate a successful subprocess.run."""
         if cmd == self.check_version_cmd:
@@ -44,14 +59,6 @@ class TestGetMpifortVersion:
                                     returncode=0,
                                     stdout=result.encode())
         raise ValueError(f'Unexpected command {cmd}')
-
-    def mock_run_no_version(self, cmd, **_):
-        """Fail only on version check."""
-        if cmd == self.check_version_cmd:
-            return CompletedProcess(args=cmd,
-                                    returncode=0,
-                                    stdout=b'Unknown output\n')
-        raise CalledProcessError(1, cmd)
 
     def test_success(self, monkeypatch):
         """Test successful retrieval of mpifort version."""
@@ -73,10 +80,11 @@ class TestGetMpifortVersion:
         with pytest.raises(CompilerNotFoundError):
             get_mpifort_version()
 
-    def test_could_not_determine(self, monkeypatch):
+    @parametrize(fake_run=('mock_run_no_version', 'mock_run_fails'))
+    def test_could_not_determine(self, fake_run, monkeypatch):
         """Test behavior when mpifort version cannot be determined."""
         monkeypatch.setattr('shutil.which', MagicMock(return_value=True))
-        monkeypatch.setattr('subprocess.run', self.mock_run_no_version)
+        monkeypatch.setattr('subprocess.run', getattr(self, fake_run))
         with pytest.raises(NoCompilerVersionFoundError):
             get_mpifort_version()
 
