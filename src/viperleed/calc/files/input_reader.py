@@ -16,6 +16,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-10-03'
 __license__ = 'GPLv3+'
 
+from abc import ABC
 from abc import abstractmethod
 from io import TextIOBase
 from collections.abc import Iterator
@@ -82,18 +83,24 @@ class InputReader(Iterator):
         pass
 
 
-class InputStreamReader(InputReader):
+class InputStreamReader(ABC, InputReader):
     """Class for reading an input file from a stream."""
+
     def __init__(self, source, noisy=True):
         """Initialize instance.
 
         Parameters
         ----------
-        source : Stream
+        source : TextIOBase
             Input stream to be read.
         noisy : bool, optional
             Whether the reader will emit logging messages and raise
-            errors if unknown or malformed parameters are encountered.
+            errors if unknown or malformed lines are encountered.
+
+        Raises
+        ------
+        TypeError
+            If `source` is not a TextIOBase instance.
         """
         if not isinstance(source, TextIOBase):
             raise TypeError('Input source must be a stream-like object.')
@@ -120,7 +127,11 @@ class InputFileReader(AbstractContextManager, InputReader):
             Path to the file to be read.
         noisy : bool, optional
             Whether the reader will emit logging messages and raise
-            errors if unknown or malformed parameters are encountered.
+            errors if unknown or malformed lines are encountered.
+
+        Returns
+        -------
+        None.
         """
         self._filename = Path(filename)
         if not self._filename.is_file():
