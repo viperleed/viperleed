@@ -95,7 +95,6 @@ class InputReader(Iterator):
             If `line` does not contain any valuable information that is
             worth returning while iterating over `self.stream`.
         """
-        pass
 
 
 # pylint: disable-next=too-few-public-methods   # Inherited from parent
