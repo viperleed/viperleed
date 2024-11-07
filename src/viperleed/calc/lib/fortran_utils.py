@@ -34,6 +34,27 @@ class NoCompilerVersionFoundError(FortranCompilerError):
     """Raised when the Fortran version could not be determined."""
 
 
+def get_mpifort_version():
+    """Check the version of the mpifort compiler."""
+    version_nr_call = ["mpifort", "--version"]
+    # check if mpifort is installed
+    if not shutil.which("mpifort"):
+        raise CompilerNotFoundError
+
+    # get version number
+    try:
+        result = subprocess.run(
+            version_nr_call, shell=False, check=True, capture_output=True
+        )
+    except subprocess.CalledProcessError:
+        raise NoCompilerVersionFoundError
+    output = result.stdout.decode().strip()
+    version_nr_str = re.search(r"GNU Fortran.*\) (\d+\.\d+\.\d+)", output)
+    mpifort_version = Version(version_nr_str.strip())
+
+    return mpifort_version
+
+
 def wrap_fortran_line(string):
     """Wrap a FORTRAN string into continuation lines with ampersands."""
     if len(string) <= _FORTRAN_LINE_LENGTH:
@@ -49,25 +70,3 @@ def wrap_fortran_line(string):
                           for i in range(0, len(rest), chunk_size))
     sep = f'&\n{"&":>{_F77_CONTINUATION_POS}}'
     return head + sep.join(continuation_lines)
-
-
-def get_mpifort_version():
-    """Check the version of the mpifort compiler."""
-    # use sed to extract the version number; standard GNU util
-    version_nr_call = ['mpifort', '--version']
-    # check if mpifort is installed
-    if not shutil.which('mpifort'):
-        raise CompilerNotFoundError
-
-    # get version number
-    try:
-        result = subprocess.run(
-            version_nr_call, shell=False, check=True, capture_output=True
-        )
-    except subprocess.CalledProcessError:
-        raise NoCompilerVersionFoundError
-    output = result.stdout.decode().strip()
-    version_nr_str = re.search(r"GNU Fortran.*\) (\d+\.\d+\.\d+)", output)
-    mpifort_version = Version(version_nr_str.strip())
-
-    return mpifort_version
