@@ -13,6 +13,7 @@ __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
 import subprocess
+import shutil
 
 from .version import Version
 
@@ -51,15 +52,12 @@ def wrap_fortran_line(string):
 
 def get_mpifort_version():
     """Check the version of the mpifort compiler."""
-    check_for_mpifort_call = ['mpifort --version']
     # use sed to extract the version number; standard GNU util
     version_nr_call = [
         r'mpifort --version | sed -n "s/^GNU Fortran.*) \([0-9.]*\).*/\1/p"']
 
     # check if mpifort is installed
-    try:
-        subprocess.run(check_for_mpifort_call, shell=True, check=True)
-    except subprocess.CalledProcessError:
+    if not shutil.which('mpifort'):
         raise CompilerNotFoundError
 
     # get version number
