@@ -80,7 +80,7 @@ class TensErLEEDSearchError(SearchError):
 
 
 class InconsistentV0ImagError(SearchParameterError, TensErLEEDSearchError):
-    """The VOi value in PARAMETERS does not match the one in the Deltas."""
+    """The V0i value in PARAMETERS does not match the one in the Deltas."""
 
     detailed_message = (
         'TensErLEED search stopped because stored Delta files were calculated '
