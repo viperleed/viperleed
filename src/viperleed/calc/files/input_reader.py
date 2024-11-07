@@ -37,7 +37,18 @@ class InputReader(Iterator):
     """Common base class for all input readers."""
 
     def __init__(self, noisy=True):
-        """Initialize base class instance."""
+        """Initialize base-class instance.
+
+        Parameters
+        ----------
+        noisy : bool, optional
+            Whether the reader will emit logging messages and raise
+            errors if unknown or malformed lines are encountered.
+
+        Returns
+        -------
+        None.
+        """
         self.noisy = noisy
         self._current_line = 0
         super().__init__()
