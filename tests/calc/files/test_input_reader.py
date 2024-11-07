@@ -68,8 +68,9 @@ class TestInputFileReader:
     def test_file_not_found(self):
         """Check complaints when accessing a non-existing file."""
         non_existent_file = '_this_file__DOES_non_exist.funny_ext'
-        with pytest.raises(FileNotFoundError):
-            MockInputFileReader(non_existent_file)
+        reader = MockInputFileReader(non_existent_file)
+        with pytest.raises(FileNotFoundError), reader:
+            pass
 
     _files = {
         'no skip': ('line1\nline2\nline3\n', ('line1', 'line2', 'line3')),

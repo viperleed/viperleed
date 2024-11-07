@@ -135,8 +135,6 @@ class InputFileReader(AbstractContextManager, InputReader):
         None.
         """
         self._filename = Path(filename)
-        if not self._filename.is_file():
-            raise FileNotFoundError(f'File {self._filename} does not exist.')
         self._file_obj = None
         super().__init__(noisy=noisy)
 
