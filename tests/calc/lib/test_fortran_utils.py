@@ -14,12 +14,10 @@ import subprocess
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.lib.fortran_utils import wrap_fortran_line
+from viperleed.calc.lib.fortran_utils import CompilerNotFoundError
 from viperleed.calc.lib.fortran_utils import get_mpifort_version
-from viperleed.calc.lib.fortran_utils import MpifortNotFoundError
-from viperleed.calc.lib.fortran_utils import (
-    CouldNotDetermineMpifortVersionError
-    )
+from viperleed.calc.lib.fortran_utils import NoCompilerVersionFoundError
+from viperleed.calc.lib.fortran_utils import wrap_fortran_line
 
 from ...helpers import not_raises
 
@@ -109,14 +107,14 @@ class TestGetMpifortVersion:
     @with_mpifort
     def test_success_dont_mock(self):
         """Run a realistic version check when mpifort exists."""
-        with not_raises(CouldNotDetermineMpifortVersionError):
+        with not_raises(NoCompilerVersionFoundError):
             version = get_mpifort_version()
         assert any(part > 0 for part in version)
 
     def test_not_installed(self, monkeypatch):
         """Test behavior when mpifort is not installed."""
         monkeypatch.setattr(subprocess, 'run', self.mock_run_fails)
-        with pytest.raises(MpifortNotFoundError):
+        with pytest.raises(CompilerNotFoundError):
             get_mpifort_version()
 
     def test_could_not_determine(self, monkeypatch):
@@ -130,5 +128,5 @@ class TestGetMpifortVersion:
             return self.mock_run_fails(cmd)
 
         monkeypatch.setattr(subprocess, 'run', mock_run_could_not_determine)
-        with pytest.raises(CouldNotDetermineMpifortVersionError):
+        with pytest.raises(NoCompilerVersionFoundError):
             get_mpifort_version()
