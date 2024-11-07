@@ -107,6 +107,16 @@ class MaxIntensitiesError(SearchParameterError, TensErLEEDSearchError):
                    '****** STOP PROGRAM ******')
 
 
+class NotEnoughSlotsError(SearchParameterError):
+    """Could not spawn the requested N_CORES Open MPI processes."""
+
+    detailed_message = (
+        'GNU mpirun failed to allocate the number of processes '
+        'requested via N_CORES. Try reducing the N_CORES parameter.'
+        )
+    log_records = ('There are not enough slots available in the system',)
+
+
 class ProcessKilledError(SearchError):
     """The mpirun process died. Typically, it required too much memory."""
 
@@ -371,6 +381,7 @@ def _check_search_log(search_log_path):
         SigbusError,
         InconsistentV0ImagError,
         ProcessKilledError,
+        NotEnoughSlotsError,
         )
     try:
         raise next(e for e in _known_errors if e.matches(log_contents))
