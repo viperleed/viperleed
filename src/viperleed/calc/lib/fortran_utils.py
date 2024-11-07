@@ -46,8 +46,13 @@ def get_mpifort_version():
         result = subprocess.run(
             version_nr_call, shell=False, check=True, capture_output=True
         )
-    except subprocess.CalledProcessError:
-        raise NoCompilerVersionFoundError
+    except subprocess.CalledProcessError as err:
+        msg = str(err)
+        if err.stdout:
+            msg += f"\noutput:{err.stdout.decode()}"
+        if err.stderr:
+            msg += f"\nerrors:\n{err.stderr.decode()}"
+        raise NoCompilerVersionFoundError(msg) from None
     output = result.stdout.decode().strip()
     version_nr_str = re.search(r"GNU Fortran.*\) (\d+\.\d+\.\d+)", output)
     mpifort_version = Version(version_nr_str.strip())
