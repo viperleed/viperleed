@@ -86,6 +86,7 @@ class InputReader(Iterator):
         pass
 
 
+# pylint: disable-next=too-few-public-methods   # Inherited from parent
 class InputStreamReader(ABC, InputReader):
     """Class for reading an input file from a stream."""
 
