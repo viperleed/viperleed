@@ -692,7 +692,6 @@ class Rparams:
             _LOGGER.debug('Using fortran compiler: mpiifort')
         elif found == 'mpifort':
             # check for the mpifort version
-            mpifort_version = None
             mpifort_call = "mpifort -Ofast"
             try:  # Add version-dependent CLI args
                 mpifort_version = fortran_utils.get_mpifort_version()
