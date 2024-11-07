@@ -706,8 +706,7 @@ class Rparams:
                     )
             else:
                 mpifort_call += ('' if mpifort_version < '10.0'
-                                 else ' -fallow-argument-mismatch'
-                                )
+                                 else ' -fallow-argument-mismatch')
             self.FORTRAN_COMP_MPI = [mpifort_call, '']
             _LOGGER.debug('Using fortran compiler: mpifort')
 
