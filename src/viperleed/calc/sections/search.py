@@ -48,51 +48,94 @@ logger = logging.getLogger(__name__)
 class SearchError(Exception):
     """Base class for exceptions in this module."""
 
-
-class SearchMaxIntensitiesError(SearchError):
-    message = ("TensErLEED stopped due to unreasonably high beam amplitudes.\n"
-               "This may be causes by convergence problems due to a too small "
-               "value of LMAX. "
-               "Alternatively, this error may be caused either by scatterers "
-               "with very small distances as a result of a very large "
-               "range used in DISPLACEMENTS."
-               "Check your input files and consider increasing LMAX or "
-               "decreasing the DISPLACEMENTS ranges.")
+    base_message = ''
+    detailed_message = ''
+    log_records = ()   # Strings in the log that signal this exception
+    _matcher = all     # Should all or any of the log records match?
 
     def __init__(self, *args, **kwargs):
-        super().__init__(self.message, *args, **kwargs)
+        """Initialize exception instance."""
+        message = (self.base_message
+                   + (' ' if self.base_message else '')
+                   + self.detailed_message)
+        if message:
+            args = message, *args
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def matches(cls, log_contents):
+        """Return whether this exception matches `log_contents`."""
+        return cls._matcher(rec in log_contents for rec in cls.log_records)
 
 
-class SearchSigbusError(SearchError):
-    message = ("TensErLEED stopped due to a SIGBUS signal.\n"
-               "This may be caused by a compiler error. "
-               "If you are using gfortran, consider lowering the optimization "
-               "level to '-O1' or '-O0' using the FORTRAN_COMP parameter.")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(self.message, *args, **kwargs)
+class SearchParameterError(SearchError):
+    """A value in PARAMETERS is inappropriate for the search."""
 
 
-class SearchInconsistentV0ImagError(SearchError):
-    message = ("TensErLEED search stopped because stored Delta files were "
-               "calculated with a different imaginary inner potential "
-               "(optical potential) than requested in PARAMETERS. "
-               "Make sure to use the same value for V0_IMAG for "
-               "Delta-Amplitudes and structure search.")
+class TensErLEEDSearchError(SearchError):
+    """A known, fatal TensErLEED error occurred during the search."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(self.message, *args, **kwargs)
+    base_message = ('TensErLEED error encountered in '
+                    'search. Execution cannot proceed.')
 
 
-class SearchProcessKilledError(SearchError):
-    message = ("The search was stopped because the MPI process was killed by "
-               "system. This is most likely because the process ran out of "
-               "available memory. Consider reducing the number of MPI "
-               "processes by setting a lower value for NCORES or limiting the "
-               "parameter space in the DISPLACEMENTS file.")
+class InconsistentV0ImagError(SearchParameterError, TensErLEEDSearchError):
+    """The VOi value in PARAMETERS does not match the one in the Deltas."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(self.message, *args, **kwargs)
+    detailed_message = (
+        'TensErLEED search stopped because stored Delta files were calculated '
+        'with a different imaginary inner potential (optical potential) than '
+        'requested in PARAMETERS. Make sure to use the same value of V0_IMAG '
+        'for delta amplitudes and structure search.'
+        )
+    log_records = ('Average optical potential value in rf.info is incorrect:',)
+
+
+class MaxIntensitiesError(SearchParameterError, TensErLEEDSearchError):
+    """Search failed with "too high intensity" error."""
+
+    detailed_message = (
+        'TensErLEED stopped due to unreasonably high beam amplitudes.\n'
+        'This may be causes by convergence problems due to a too small '
+        'value of LMAX. Alternatively, this error may be caused either '
+        'by scatterers with very small distances as a result of a very '
+        'large range used in DISPLACEMENTS. Check your input files and '
+        'consider increasing LMAX or decreasing the DISPLACEMENTS ranges.'
+       )
+    log_records = ('MAX. INTENS. IN THEOR. BEAM',
+                   'IS SUSPECT',
+                   '****** STOP PROGRAM ******')
+
+
+class ProcessKilledError(SearchError):
+    """The mpirun process died. Typically, it required too much memory."""
+
+    detailed_message = (
+        'The search was stopped because the MPI process was killed by system. '
+        'This is most likely because the process ran out of available memory. '
+        'Consider reducing the number of MPI processes by setting a lower '
+        'value for N_CORES or limiting the parameter space in the '
+        'DISPLACEMENTS file.'
+        )
+    _matcher = any  # Two different error messages for Intel and GNU
+    log_records = (
+        'YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)',
+        '=   KILLED BY SIGNAL: 9 (Killed)',
+        )
+
+
+class SigbusError(TensErLEEDSearchError):
+    """Tried to write to a non-existing memory address."""
+
+    detailed_message = (
+        'TensErLEED stopped due to a SIGBUS signal.\nThis may be caused by a '
+        'compiler error. If you are using gfortran, consider lowering the '
+        'optimization level to \'-O1\' or \'-O0\' using the FORTRAN_COMP '
+        'parameter.'
+        )
+    log_records = ('received signal SIGBUS',
+                   'undefined portion of a memory object')
+
 
 def processSearchResults(sl, rp, search_log_path, final=True):
     """Read the best structure from the last block of 'SD.TL' into a slab.
@@ -298,7 +341,7 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
 
 
 def _check_search_log(search_log_path):
-    """Check the file at `search_log_path` for fatal TensErLEED errors.
+    """Check the file at `search_log_path` for known fatal errors.
 
     Parameters
     ----------
@@ -307,45 +350,33 @@ def _check_search_log(search_log_path):
 
     Raises
     ------
-    OSError
-        When failing to open or read a non-None `search_log_path`.
-    RuntimeError                                                                # TODO: would be nice to raise a nicer error. Some TensErLEEDExecutionError perhaps?
+    SearchError
         If an error message is found in the search log file that
-        corresponds to a fatal TensErLEED error.
+        corresponds to a fatal error (from TensErLEED or other
+        source).
     """
-    if search_log_path is None:
+    if not search_log_path:
         return
 
+    search_log_path = Path(search_log_path)
     try:
-        with open(search_log_path, "r", encoding="utf-8") as search_log:
-            log_content = search_log.read()
+        log_contents = search_log_path.read_text(encoding='utf-8')
     except OSError:
-        logger.error(f"Could not read search logfile {search_log_path}. "
-                     "Execution will continue, but TensErLEED errors related "
-                     "to the search may not be detected properly.")
+        logger.error(f'Could not read search log file {search_log_path}. '
+                     'Execution will continue, but errors related '
+                     'to the search may not be reported properly.')
         return
+    _known_errors = (
+        MaxIntensitiesError,
+        SigbusError,
+        InconsistentV0ImagError,
+        ProcessKilledError,
+        )
+    try:
+        raise next(e for e in _known_errors if e.matches(log_contents))
+    except StopIteration:  # No error
+        pass
 
-    gen_err_msg = ("TensErLEED Error encountered in search. "
-                   "Execution cannot proceed.")
-    # (1) unreasonably high amplitude values:
-    if ("MAX. INTENS. IN THEOR. BEAM" in log_content
-            and "IS SUSPECT" in log_content
-            and "****** STOP PROGRAM ******" in log_content):
-        raise SearchMaxIntensitiesError from None
-    # (2) SIGBUS signal
-    elif ("received signal SIGBUS" in log_content
-          and "undefined portion of a memory object" in log_content):
-        raise SearchSigbusError from None
-    # (3) different V0_IMAG between Deltas and Search
-    elif ("Average optical potential value in rf.info is incorrect:"
-          in log_content):
-        raise SearchInconsistentV0ImagError from None
-    # (4) MPI process killed, most likely because of insufficient memory
-    # Note the two different error messages for Intel and GNU MPI
-    elif ("YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)"
-          in log_content or
-          "=   KILLED BY SIGNAL: 9 (Killed)" in log_content):
-        raise SearchProcessKilledError from None
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     """
