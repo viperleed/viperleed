@@ -36,8 +36,10 @@ class ShouldSkipLineError(Exception):
 class InputReader(Iterator):
     """Common base class for all input readers."""
 
-    def __init__(self, noisy=True) -> None:
+    def __init__(self, noisy=True):
+        """Initialize base class instance."""
         self.noisy = noisy
+        self._current_line = 0
         super().__init__()
 
     def __next__(self):
@@ -105,8 +107,6 @@ class InputStreamReader(ABC, InputReader):
         if not isinstance(source, TextIOBase):
             raise TypeError('Input source must be a stream-like object.')
         self._source = source
-        self.noisy = noisy
-        self._current_line = 0
         super().__init__(noisy=noisy)
 
     @property
