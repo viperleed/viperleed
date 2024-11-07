@@ -93,7 +93,7 @@ class InputReader(Iterator):
         -------
         ShouldSkipLineError
             If `line` does not contain any valuable information that is
-            worth returning while iterating over the self.stream.
+            worth returning while iterating over `self.stream`.
         """
         pass
 
