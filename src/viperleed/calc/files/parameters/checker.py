@@ -11,9 +11,16 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-25'
 __license__ = 'GPLv3+'
 
+import logging
 import operator
 
+from viperleed.calc.lib.base import available_cpu_count   # For N_CORES
+from viperleed.calc.lib.string_utils import parent_name
+
 from .errors import ParameterConflictError
+
+
+_LOGGER = logging.getLogger(parent_name(__name__))
 
 
 # About the disable: ParametersChecker has only one single job:
@@ -66,3 +73,18 @@ class ParametersChecker:
         pre, post = self._rpars.FORTRAN_COMP_MPI
         if not post and pre in {'mpifort', 'mpiifort'}:
             self._rpars.getFortranMpiComp(comp=pre)
+
+    def _check_n_cores(self):
+        """Warn if N_CORES is larger than the number of available CPUs."""
+        n_cores = self._rpars.N_CORES
+        available = available_cpu_count()
+        if not n_cores or available <= 0:
+            # Will auto-detect, or detection failed
+            return
+        if n_cores > available:
+            _LOGGER.warning(
+                f'The N_CORES parameter is set to {n_cores}, which is larger '
+                f'than the number of available processors ({available}). This '
+                'may not be ideal for performance, or may render execution '
+                'impossible. Consider reducing N_CORES.'
+                )
