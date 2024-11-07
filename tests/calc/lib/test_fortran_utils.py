@@ -110,7 +110,8 @@ class TestGetMpifortVersion:
     def test_success_dont_mock(self):
         """Run a realistic version check when mpifort exists."""
         with not_raises(CouldNotDeterminMpifortVersionError):
-            get_mpifort_version()
+            version = get_mpifort_version()
+        assert any(part > 0 for part in version)
 
     def test_not_installed(self, monkeypatch):
         """Test behavior when mpifort is not installed."""
