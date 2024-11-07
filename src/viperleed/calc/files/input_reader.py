@@ -4,7 +4,8 @@ This module is a more abstract version of an input-file reader. It is based on
 @michele-riva's work on the PARAMETERS file reader, which in turn is based on
 the old readPARAMETERS from @fkraushofer.
 
-Defines context-manager, iterator classes for reading parameters from a file.
+Defines context-manager, iterator classes for reading parameters from a file
+as well as from TextIOBase streams.
 """
 
 __authors__ = (
