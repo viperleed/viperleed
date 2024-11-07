@@ -106,7 +106,7 @@ class InputStreamReader(ABC, InputReader):
             If `source` is not a TextIOBase instance.
         """
         if not isinstance(source, TextIOBase):
-            raise TypeError('Input source must be a stream-like object.')
+            raise TypeError('Input source must be a TextIOBase type object.')
         self._source = source
         super().__init__(noisy=noisy)
 
