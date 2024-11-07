@@ -152,8 +152,6 @@ class InputFileReader(AbstractContextManager, InputReader):
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Close file, then return control to caller to handle exceptions."""
-        if self._file_obj is None:
-            return super().__exit__(exc_type, exc_value, traceback)
         try:
             self._file_obj.close()
         except AttributeError:
