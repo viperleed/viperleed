@@ -45,6 +45,7 @@ class InputReader(Iterator):
     def __next__(self):
         """Return the next understandable information in the file."""
         for line in self.stream:
+            self._current_line += 1
             try:
                 return self._read_one_line(line)
             except ShouldSkipLineError:
@@ -137,7 +138,6 @@ class InputFileReader(AbstractContextManager, InputReader):
         if not self._filename.is_file():
             raise FileNotFoundError(f'File {self._filename} does not exist.')
         self._file_obj = None
-        self._current_line = 0
         super().__init__(noisy=noisy)
 
     @property
@@ -148,7 +148,6 @@ class InputFileReader(AbstractContextManager, InputReader):
     def __enter__(self):
         """Enter context."""
         self._file_obj = self._filename.open('r', encoding='utf-8')
-        self._current_line = 0
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
