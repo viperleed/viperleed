@@ -54,7 +54,11 @@ def get_mpifort_version():
             msg += f"\nerrors:\n{err.stderr.decode()}"
         raise NoCompilerVersionFoundError(msg) from None
     output = result.stdout.decode().strip()
-    version_nr_str = re.search(r"GNU Fortran.*\) (\d+\.\d+\.\d+)", output)
+    version_nr_ = re.search(r"GNU Fortran.*\) (\d+\.\d+\.\d+)", output)
+    if version_nr_ is None:
+        raise NoCompilerVersionFoundError(
+            f"Could not determine version from {output}")
+    version_nr_str = version_nr_.group(1)
     mpifort_version = Version(version_nr_str.strip())
 
     return mpifort_version
