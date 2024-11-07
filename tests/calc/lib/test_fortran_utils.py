@@ -17,8 +17,8 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.lib.fortran_utils import CompilerNotFoundError
-from viperleed.calc.lib.fortran_utils import get_mpifort_version
 from viperleed.calc.lib.fortran_utils import NoCompilerVersionFoundError
+from viperleed.calc.lib.fortran_utils import get_mpifort_version
 from viperleed.calc.lib.fortran_utils import wrap_fortran_line
 
 from ...helpers import not_raises
