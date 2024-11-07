@@ -7,6 +7,8 @@ __authors__ = (
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
+
+import shutil
 import subprocess
 
 import pytest
@@ -15,7 +17,15 @@ from pytest_cases import parametrize
 from viperleed.calc.lib.fortran_utils import wrap_fortran_line
 from viperleed.calc.lib.fortran_utils import get_mpifort_version
 from viperleed.calc.lib.fortran_utils import MpifortNotFoundError
-from viperleed.calc.lib.fortran_utils import CouldNotDeterminMpifortVersionError
+from viperleed.calc.lib.fortran_utils import (
+    CouldNotDeterminMpifortVersionError
+    )
+
+from ...helpers import not_raises
+
+
+with_mpifort = pytest.mark.skipif(not shutil.which('mpifort'),
+                                  reason='no mpifort installed')
 
 
 class TestWrapFortranLine:  # pylint: disable=too-few-public-methods
@@ -95,6 +105,12 @@ class TestGetMpifortVersion:
         """Test successful retrieval of mpifort version."""
         monkeypatch.setattr(subprocess, 'run', self.mock_run_success)
         assert get_mpifort_version() == self.mock_version
+
+    @with_mpifort
+    def test_success_dont_mock(self):
+        """Run a realistic version check when mpifort exists."""
+        with not_raises(CouldNotDeterminMpifortVersionError):
+            get_mpifort_version()
 
     def test_not_installed(self, monkeypatch):
         """Test behavior when mpifort is not installed."""
