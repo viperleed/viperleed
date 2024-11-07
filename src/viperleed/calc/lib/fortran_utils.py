@@ -12,6 +12,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
+import re
 import subprocess
 import shutil
 
@@ -53,19 +54,20 @@ def wrap_fortran_line(string):
 def get_mpifort_version():
     """Check the version of the mpifort compiler."""
     # use sed to extract the version number; standard GNU util
-    version_nr_call = [
-        r'mpifort --version | sed -n "s/^GNU Fortran.*) \([0-9.]*\).*/\1/p"']
-
+    version_nr_call = ['mpifort', '--version']
     # check if mpifort is installed
     if not shutil.which('mpifort'):
         raise CompilerNotFoundError
 
     # get version number
     try:
-        version_nr_str = subprocess.run(version_nr_call, shell=True, check=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(
+            version_nr_call, shell=False, check=True, capture_output=True
+        )
     except subprocess.CalledProcessError:
         raise NoCompilerVersionFoundError
-    mpifort_version = Version(version_nr_str.stdout.decode().strip())
+    output = result.stdout.decode().strip()
+    version_nr_str = re.search(r"GNU Fortran.*\) (\d+\.\d+\.\d+)", output)
+    mpifort_version = Version(version_nr_str.strip())
 
     return mpifort_version
