@@ -29,10 +29,12 @@ import numpy as np
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
+from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
+from viperleed.calc.lib import fortran_utils
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
@@ -40,7 +42,6 @@ from viperleed.calc.lib.matplotlib_utils import use_calc_style
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
-from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
@@ -395,7 +396,6 @@ class Rparams:
             f'{source_tree}.'
             )
 
-
     def updateDerivedParams(self):
         """
         Checks which derivative parameters (which cannot be calculated at
@@ -418,7 +418,6 @@ class Rparams:
             tl_source = self.get_tenserleed_directory()
             self.TL_VERSION = tl_source.version
             _LOGGER.debug(f'Detected TensErLEED version {str(self.TL_VERSION)}')
-
 
         # SEARCH_CONVERGENCE:
         if self.searchConvInit['gaussian'] is None:
@@ -692,10 +691,23 @@ class Rparams:
             self.FORTRAN_COMP_MPI = ['mpiifort -Ofast', '']
             _LOGGER.debug('Using fortran compiler: mpiifort')
         elif found == 'mpifort':
-            self.FORTRAN_COMP_MPI = [
-                'mpifort -Ofast -no-pie -fallow-argument-mismatch',
-                ''
-                ]
+            # check for the mpifort version
+            mpifort_call = 'mpifort -Ofast'
+            try:  # Add version-dependent CLI args
+                mpifort_version = fortran_utils.get_mpifort_version()
+            except fortran_utils.FortranCompilerError:
+                _LOGGER.warning(
+                    'mpifort version could not be determined automatically. '
+                    'mpifort versions >= 10.0 may need the '
+                    '"-fallow-argument-mismatch" or "-std=legacy" flags to '
+                    'compile the TenseErLEED structure-search code. '
+                    'If an error occurs, please check the mpifort version and '
+                    'adapt the FORTRAN_COMP parameter as required.'
+                    )
+            else:
+                mpifort_call += ('' if mpifort_version < '10.0'
+                                 else ' -fallow-argument-mismatch')
+            self.FORTRAN_COMP_MPI = [mpifort_call, '']
             _LOGGER.debug('Using fortran compiler: mpifort')
 
     def renormalizeDomainParams(self, config):

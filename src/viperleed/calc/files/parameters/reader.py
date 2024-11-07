@@ -17,11 +17,9 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
-from collections.abc import Iterator
-from contextlib import AbstractContextManager
-from pathlib import Path
 import re
 
+from viperleed.calc.files.input_reader import InputFileReader
 from viperleed.calc.lib.string_utils import strip_comments
 
 from .errors import MissingEqualsError
@@ -31,39 +29,8 @@ from .known_parameters import did_you_mean
 from .known_parameters import from_alias
 from .utils import Assignment
 
-
-class ParametersReader(AbstractContextManager, Iterator):
+class ParametersReader(InputFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
-
-    def __init__(self, filename, noisy=True):
-        """Initialize instance.
-
-        Parameters
-        ----------
-        filename : str or Path
-            Path to the file to be read.
-        noisy : bool, optional
-            Whether the reader will emit logging messages and raise
-            errors if unknown or malformed parameters are encountered.
-        """
-        self.filename = Path(filename)
-        self.noisy = noisy
-        self._file_obj = None
-        self._current_line = 0
-
-    def __enter__(self):
-        """Enter context."""
-        self._file_obj = self.filename.open('r', encoding='utf-8')
-        self._current_line = 0
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Close file, then return control to caller to handle exceptions."""
-        try:
-            self._file_obj.close()
-        except AttributeError:
-            pass
-        return super().__exit__(exc_type, exc_value, traceback)
 
     def __next__(self):
         """Return the next understandable information in the file."""
