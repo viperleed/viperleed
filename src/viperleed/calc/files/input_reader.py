@@ -54,19 +54,18 @@ class InputReader(Iterator):
     @abstractmethod
     def stream(self):
         """Return the input stream."""
-        pass
 
     @abstractmethod
     def _read_one_line(self, line):
         """Return understandable information from `line`.
 
         This method is guaranteed to be called once on each
-        line read from the file.
+        line read from self.stream.
 
         Parameters
         -------------
         line : str
-            A single line read from `self._file_obj.`
+            A single line read from `self.stream.`
 
         Returns
         --------
@@ -78,7 +77,7 @@ class InputReader(Iterator):
         -------
         ShouldSkipLineError
             If `line` does not contain any valuable information that is
-            worth returning while iterating over the file.
+            worth returning while iterating over the self.stream.
         """
         pass
 
