@@ -8,7 +8,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
-from functools import partial
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -68,10 +67,11 @@ class TestCheckSearchLog:
 
     def test_cannot_open_file(self, caplog):
         """Check logging when failing to open a log file."""
+        msg = 'Could not read search log'
         with patch_read('Some log data') as mock_read:
             mock_read.side_effect = OSError
             _check_search_log('does_not_exist')
-            assert 'Could not read search log' in caplog.text
+            assert msg in caplog.text
 
     _log_faulty = {
         'max intensity': (
