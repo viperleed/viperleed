@@ -19,12 +19,12 @@ __license__ = 'GPLv3+'
 
 import re
 
+from viperleed.calc.files.input_reader import InputFileReader
 from viperleed.calc.lib.string_utils import strip_comments
 
 from .errors import MissingEqualsError
 from .errors import ParameterHasNoValueError
 from .errors import ParameterNotRecognizedError
-from ..input_reader import InputFileReader
 from .known_parameters import did_you_mean
 from .known_parameters import from_alias
 from .utils import Assignment
