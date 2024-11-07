@@ -19,10 +19,13 @@ _FORTRAN_LINE_LENGTH = 72  # FORTRAN line-length limit
 _F77_CONTINUATION_POS = 6  # Column of the continuation character
 
 class MpifortNotFoundError(Exception):
+
     """Raised when the mpifort compiler is not found."""
+
 
 class CouldNotDeterminMpifortVersionError(Exception):
     """Raised when the mpifort version could not be determined."""
+
 
 def wrap_fortran_line(string):
     """Wrap a FORTRAN string into continuation lines with ampersands."""
