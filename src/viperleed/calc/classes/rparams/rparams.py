@@ -692,24 +692,24 @@ class Rparams:
             _LOGGER.debug('Using fortran compiler: mpiifort')
         elif found == 'mpifort':
             # check for the mpifort version
-            mpifort_call = "mpifort -Ofast"
+            mpifort_call = 'mpifort -Ofast'
             try:  # Add version-dependent CLI args
                 mpifort_version = fortran_utils.get_mpifort_version()
             except fortran_utils.FortranCompilerError:
                 _LOGGER.warning(
-                    "mpifort version could not be determined automatically. "
-                    "mpifort versions >= 10.0 may need the "
+                    'mpifort version could not be determined automatically. '
+                    'mpifort versions >= 10.0 may need the '
                     '"-fallow-argument-mismatch" or "-std=legacy" flags to '
-                    "compile the TenseErLEED structure-search code. "
-                    "If an error occurs, please check the mpifort version and "
-                    "adapt the FORTRAN_COMP parameter as required."
+                    'compile the TenseErLEED structure-search code. '
+                    'If an error occurs, please check the mpifort version and '
+                    'adapt the FORTRAN_COMP parameter as required.'
                 )
             else:
                 mpifort_call += (
-                    "" if mpifort_version < "10.0"
+                    "" if mpifort_version < '10.0'
                     else " -fallow-argument-mismatch"
                 )
-            self.FORTRAN_COMP_MPI = [mpifort_call, ""]
+            self.FORTRAN_COMP_MPI = [mpifort_call, '']
             _LOGGER.debug('Using fortran compiler: mpifort')
 
     def renormalizeDomainParams(self, config):
