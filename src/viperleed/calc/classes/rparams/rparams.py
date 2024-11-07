@@ -703,12 +703,11 @@ class Rparams:
                     'compile the TenseErLEED structure-search code. '
                     'If an error occurs, please check the mpifort version and '
                     'adapt the FORTRAN_COMP parameter as required.'
-                )
+                    )
             else:
-                mpifort_call += (
-                    "" if mpifort_version < '10.0'
-                    else " -fallow-argument-mismatch"
-                )
+                mpifort_call += ('' if mpifort_version < '10.0'
+                                 else ' -fallow-argument-mismatch'
+                                )
             self.FORTRAN_COMP_MPI = [mpifort_call, '']
             _LOGGER.debug('Using fortran compiler: mpifort')
 
