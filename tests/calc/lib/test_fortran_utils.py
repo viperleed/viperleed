@@ -91,18 +91,18 @@ class TestGetMpifortVersion:
             return subprocess.CompletedProcess(args=cmd, returncode=0)
         raise ValueError(f'Unexpected command {cmd}')
 
-    def test_get_mpifort_version_success(self, monkeypatch):
+    def test_success(self, monkeypatch):
         """Test successful retrieval of mpifort version."""
         monkeypatch.setattr(subprocess, 'run', self.mock_run_success)
         assert get_mpifort_version() == self.mock_version
 
-    def test_get_mpifort_version_not_installed(self, monkeypatch):
+    def test_not_installed(self, monkeypatch):
         """Test behavior when mpifort is not installed."""
         monkeypatch.setattr(subprocess, 'run', self.mock_run_fails)
         with pytest.raises(MpifortNotFoundError):
             get_mpifort_version()
 
-    def test_get_mpifort_version_could_not_determine(self, monkeypatch):
+    def test_could_not_determine(self, monkeypatch):
         """Test behavior when mpifort version cannot be determined."""
         def mock_run_could_not_determine(cmd, **_):
             """Fail only on version check."""
