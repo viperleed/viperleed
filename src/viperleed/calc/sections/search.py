@@ -819,13 +819,13 @@ def search(sl, rp):
     if hashname:
         ctasks.append((f"{fcomp[0]} -c", hashname, fcomp[1]))
     ctasks.append((f"{fcomp[0]} -o restrict.o -c", "restrict.f", fcomp[1]))
-    format_tag = ''
     _fixed_format = any(f.endswith('.f90')
                         for f in (lib_file.name, src_file.name, hashname))
+    is_gfortran = any(s in fcomp[0]
+                      # Assume that mpifort uses gfortran
+                      for s in ('gfortran', 'mpifort'))
+    format_tag = ''
     if _fixed_format:
-        is_gfortran = any(s in fcomp[0]
-                          # Assume that mpifort uses gfortran
-                          for s in ('gfortran', 'mpifort'))
         format_tag =  '--fixed-form' if is_gfortran else '-fixed'
     ctasks.append(
         (f"{fcomp[0]} -o search.o -c {format_tag}", src_file.name, fcomp[1])
@@ -908,15 +908,23 @@ def search(sl, rp):
     pgid = None
     logger.info("Starting search. See files Search-progress.pdf "
                 "and SD.TL for progress information.")
+
+    # Prepare the command to be run via subprocess
+    executable = os.path.join('.', searchname)
+    if usempi:
+        command = ['mpirun', '-n', str(rp.N_CORES)]
+    if usempi and is_gfortran:
+        # Assume we're using OpenMPI: we need to specify the use of all
+        # CPU threads explicitly, otherwise OpenMPI will use only the
+        # physical cores. However, our auto-detected N_CORES counts all
+        # the logical cores, not only the physical ones.
+        command.append('--use-hwthread-cpus')
+    command.append(executable)
+
     while repeat:                                                               # TODO: all this mess would be nicer to handle with a state machine approach. This would at least help readability on the various ways things are handled
         repeat = False
         interrupted = False
         proc = None
-        if usempi:
-            command = ["mpirun", "-n", str(rp.N_CORES),
-                       os.path.join(".", searchname)]
-        else:
-            command = [os.path.join('.', searchname),]
         # if LOG_SEARCH -> log search
         if search_log_path:
             log_exists = search_log_path.is_file()
