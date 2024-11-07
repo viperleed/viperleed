@@ -129,7 +129,7 @@ class ProcessKilledError(SearchError):
         )
     _matcher = any  # Two different error messages for Intel and GNU
     log_records = (
-        'YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)',
+        'APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)',
         '=   KILLED BY SIGNAL: 9 (Killed)',
         )
 
