@@ -16,7 +16,7 @@ import re
 import subprocess
 import shutil
 
-from .version import Version
+from viperleed.calc.lib.version import Version
 
 _FORTRAN_LINE_LENGTH = 72  # FORTRAN line-length limit
 _F77_CONTINUATION_POS = 6  # Column of the continuation character
