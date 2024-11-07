@@ -45,10 +45,8 @@ class InputReader(Iterator):
             try:
                 return self._read_one_line(line)
             except ShouldSkipLineError:
-                # Intentional sub-debug logging level as this is expected
-                # behavior and may spam the logs.
-                _LOGGER.log(level=5,
-                            msg=f'Skipping line in input file: "{line}".')
+                if self.noisy:
+                    _LOGGER.debug(msg=f'Skipping line in input file: "{line}".')
                 continue
         raise StopIteration
 
