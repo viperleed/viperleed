@@ -697,7 +697,7 @@ class Rparams:
             mpifort_version = None
             try:
                 mpifort_version = fortran_utils.get_mpifort_version()
-            except fortran_utils.CouldNotDeterminMpifortVersionError:
+            except fortran_utils.CouldNotDetermineMpifortVersionError:
                 _LOGGER.warning(
                     'mpifort version could not be determined automatically. '
                     'mpifort versions <= 10.0 may need the '

@@ -19,13 +19,17 @@ from .version import Version
 _FORTRAN_LINE_LENGTH = 72  # FORTRAN line-length limit
 _F77_CONTINUATION_POS = 6  # Column of the continuation character
 
-class MpifortNotFoundError(Exception):
 
-    """Raised when the mpifort compiler is not found."""
+class FortranCompilerError(Exception):
+    """Base class for exceptions related to the Fortran compiler(s)."""
 
 
-class CouldNotDeterminMpifortVersionError(Exception):
-    """Raised when the mpifort version could not be determined."""
+class CompilerNotFoundError(FortranCompilerError):
+    """Raised when the Fortran compiler is not found."""
+
+
+class NoCompilerVersionFoundError(FortranCompilerError):
+    """Raised when the Fortran version could not be determined."""
 
 
 def wrap_fortran_line(string):
@@ -56,14 +60,14 @@ def get_mpifort_version():
     try:
         subprocess.run(check_for_mpifort_call, shell=True, check=True)
     except subprocess.CalledProcessError:
-        raise MpifortNotFoundError
+        raise CompilerNotFoundError
 
     # get version number
     try:
         version_nr_str = subprocess.run(version_nr_call, shell=True, check=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError:
-        raise CouldNotDeterminMpifortVersionError
+        raise NoCompilerVersionFoundError
     mpifort_version = Version(version_nr_str.stdout.decode().strip())
 
     return mpifort_version

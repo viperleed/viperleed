@@ -18,7 +18,7 @@ from viperleed.calc.lib.fortran_utils import wrap_fortran_line
 from viperleed.calc.lib.fortran_utils import get_mpifort_version
 from viperleed.calc.lib.fortran_utils import MpifortNotFoundError
 from viperleed.calc.lib.fortran_utils import (
-    CouldNotDeterminMpifortVersionError
+    CouldNotDetermineMpifortVersionError
     )
 
 from ...helpers import not_raises
@@ -109,7 +109,7 @@ class TestGetMpifortVersion:
     @with_mpifort
     def test_success_dont_mock(self):
         """Run a realistic version check when mpifort exists."""
-        with not_raises(CouldNotDeterminMpifortVersionError):
+        with not_raises(CouldNotDetermineMpifortVersionError):
             version = get_mpifort_version()
         assert any(part > 0 for part in version)
 
@@ -130,5 +130,5 @@ class TestGetMpifortVersion:
             return self.mock_run_fails(cmd)
 
         monkeypatch.setattr(subprocess, 'run', mock_run_could_not_determine)
-        with pytest.raises(CouldNotDeterminMpifortVersionError):
+        with pytest.raises(CouldNotDetermineMpifortVersionError):
             get_mpifort_version()
