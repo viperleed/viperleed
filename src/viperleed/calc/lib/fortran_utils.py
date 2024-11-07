@@ -13,8 +13,8 @@ __created__ = '2024-08-26'
 __license__ = 'GPLv3+'
 
 import re
-import subprocess
 import shutil
+import subprocess
 
 from viperleed.calc.lib.version import Version
 
