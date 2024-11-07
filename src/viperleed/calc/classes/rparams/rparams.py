@@ -396,7 +396,6 @@ class Rparams:
             f'{source_tree}.'
             )
 
-
     def updateDerivedParams(self):
         """
         Checks which derivative parameters (which cannot be calculated at
@@ -419,7 +418,6 @@ class Rparams:
             tl_source = self.get_tenserleed_directory()
             self.TL_VERSION = tl_source.version
             _LOGGER.debug(f'Detected TensErLEED version {str(self.TL_VERSION)}')
-
 
         # SEARCH_CONVERGENCE:
         if self.searchConvInit['gaussian'] is None:
@@ -695,22 +693,24 @@ class Rparams:
         elif found == 'mpifort':
             # check for the mpifort version
             mpifort_version = None
-            try:
+            mpifort_call = "mpifort -Ofast"
+            try:  # Add version-dependent CLI args
                 mpifort_version = fortran_utils.get_mpifort_version()
-            except fortran_utils.CouldNotDetermineMpifortVersionError:
+            except fortran_utils.FortranCompilerError:
                 _LOGGER.warning(
-                    'mpifort version could not be determined automatically. '
-                    'mpifort versions <= 10.0 may need the '
-                    '"-fallow-argument-mismatch flag" or "-std=legacy" flag to '
-                    'compile the TenseErLEED structure search code. '
-                    'If an error occurs, please check the mpifort version and '
-                    'adapt the FORTRAN_COMP parameter as required.'
+                    "mpifort version could not be determined automatically. "
+                    "mpifort versions >= 10.0 may need the "
+                    '"-fallow-argument-mismatch" or "-std=legacy" flags to '
+                    "compile the TenseErLEED structure-search code. "
+                    "If an error occurs, please check the mpifort version and "
+                    "adapt the FORTRAN_COMP parameter as required."
                 )
-            mpifort_call = 'mpifort -Ofast'
-            if mpifort_version is not None and mpifort_version > Version('9.0'):
-                mpifort_call += ' -fallow-argument-mismatch'
-
-            self.FORTRAN_COMP_MPI = [mpifort_call, '']
+            else:
+                mpifort_call += (
+                    "" if mpifort_version < "10.0"
+                    else " -fallow-argument-mismatch"
+                )
+            self.FORTRAN_COMP_MPI = [mpifort_call, ""]
             _LOGGER.debug('Using fortran compiler: mpifort')
 
     def renormalizeDomainParams(self, config):
