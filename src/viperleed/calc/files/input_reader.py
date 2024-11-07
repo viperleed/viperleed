@@ -1,6 +1,6 @@
 """Module input_reader of viperleed.calc.files.
 
-This module is a more abstract version of a settings file reader. It is based on
+This module is a more abstract version of an input-file reader. It is based on
 @michele-riva's work on the PARAMETERS file reader, which in turn is based on
 the old readPARAMETERS from @fkraushofer.
 
