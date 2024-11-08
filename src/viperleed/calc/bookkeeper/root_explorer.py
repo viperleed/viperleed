@@ -56,7 +56,6 @@ class RootExplorer:
     def __init__(self, path, bookkeeper):
         """Initialize this explorer at `path` for a `bookkeeper`."""
         self._path = Path(path).resolve()
-        # Tuples of paths to log files found in self.path
         self._logs = None              # LogFiles, set in collect
         self._files_to_archive = None  # See _collect_files_to_archive
         self.workhistory = WorkhistoryHandler(
@@ -65,8 +64,8 @@ class RootExplorer:
             )
 
     # Simple read-only properties
-    path = make_property('_path')
     logs = make_property('_logs', needs_update=True, updater='collect_info')
+    path = make_property('_path')
 
     @property
     @_needs_collect('_logs')
