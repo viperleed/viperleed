@@ -3,4 +3,5 @@
 ase            # Used for testing the ASE interface
 pytest<8       # Till Issue #337 of pytest-cases is fixed
 pytest-cases
+pytest-mock>=3
 pytest-subtests

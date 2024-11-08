@@ -8,10 +8,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
-from unittest.mock import MagicMock
-from unittest.mock import patch
-
 import pytest
+from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.sections.search import InconsistentV0ImagError
@@ -25,10 +23,13 @@ from viperleed.calc.sections.search import _check_search_log
 from ...helpers import not_raises
 
 
-def patch_read(log_contents):
+@fixture(name='patch_read')
+def fixture_patch_read(mocker):
     """Make Path.read_text return `log_contents`."""
-    return patch('pathlib.Path.read_text',
-                 MagicMock(return_value=log_contents))
+    def _patch(log_contents):
+        return mocker.patch('pathlib.Path.read_text',
+                            return_value=log_contents)
+    return _patch
 
 
 class TestSearchAg100:
@@ -65,13 +66,13 @@ class TestCheckSearchLog:
         with not_raises(SearchError):
             _check_search_log(path)
 
-    def test_cannot_open_file(self, caplog):
+    def test_cannot_open_file(self, patch_read, caplog):
         """Check logging when failing to open a log file."""
-        msg = 'Could not read search log'
-        with patch_read('Some log data') as mock_read:
-            mock_read.side_effect = OSError
-            _check_search_log('does_not_exist')
-            assert msg in caplog.text
+        mock_read = patch_read('Some log data')
+        mock_read.side_effect = OSError
+        _check_search_log('does_not_exist')
+        expect = 'Could not read search log'
+        assert expect in caplog.text
 
     _log_faulty = {
         'max intensity': (
@@ -98,9 +99,10 @@ class TestCheckSearchLog:
         }
 
     @parametrize('exc,log_contents', _log_faulty.values(), ids=_log_faulty)
-    def test_raises(self, exc, log_contents):
+    def test_raises(self, exc, log_contents, patch_read):
         """Check that `exc` is raised for given log-file contents."""
-        with pytest.raises(exc), patch_read(log_contents):
+        with pytest.raises(exc):
+            patch_read(log_contents)
             _check_search_log('some_log_file')
 
     _no_errors = {
@@ -117,7 +119,8 @@ class TestCheckSearchLog:
         }
 
     @parametrize(log_contents=_no_errors.values(), ids=_no_errors)
-    def test_no_errors(self, log_contents):
+    def test_no_errors(self, log_contents, patch_read):
         """Check successful processing of an error-free log."""
-        with not_raises(SearchError), patch_read(log_contents):
+        with not_raises(SearchError):
+            patch_read(log_contents)
             _check_search_log('some_log_file')

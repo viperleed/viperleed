@@ -7,8 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-25'
 __license__ = 'GPLv3+'
 
-from unittest.mock import MagicMock
-
 import pytest
 from pytest_cases import fixture, parametrize
 
@@ -98,13 +96,11 @@ class TestFortranCompUpdated:
         }
 
     @parametrize(comp=_verify.values(), ids=_verify)
-    def test_verified(self, comp, checker, rpars_with_attrs, monkeypatch):
+    def test_verified(self, comp, checker, rpars_with_attrs, mocker):
         """Check that an automatic comp is verified."""
         rpars = rpars_with_attrs(**comp)
-        mock_mpi = MagicMock()
-        mock_non_mpi = MagicMock()
-        monkeypatch.setattr(rpars, 'getFortranComp', mock_non_mpi)
-        monkeypatch.setattr(rpars, 'getFortranMpiComp', mock_mpi)
+        mock_mpi = mocker.patch.object(rpars, 'getFortranComp')
+        mock_non_mpi = mocker.patch.object(rpars, 'getFortranMpiComp')
         checker.check_parameter_conflicts(rpars)
         mock_mpi.assert_called_once()
         mock_non_mpi.assert_called_once()
@@ -122,28 +118,24 @@ class TestNCoresChecked:
     @parametrize(cpus=(0, -1))
     # pylint: disable-next=too-many-arguments  # 4/6 are fixtures
     def test_fail_to_detect(self, cpus, checker, rpars_with_attrs,
-                            caplog, monkeypatch):
+                            caplog, mocker):
         """Test that no check is performed when failing to detect CPUs."""
         rpars = rpars_with_attrs(N_CORES=5)
-        monkeypatch.setattr(f'{_MODULE}.available_cpu_count',
-                            MagicMock(return_value=cpus))
+        mocker.patch(f'{_MODULE}.available_cpu_count', return_value=cpus)
         checker.check_parameter_conflicts(rpars)
         assert not caplog.text
 
-    def test_enough_cpus(self, checker, rpars_with_attrs, caplog, monkeypatch):
+    def test_enough_cpus(self, checker, rpars_with_attrs, caplog, mocker):
         """Check no warnings with N_CORES < nr. CPUs."""
         rpars = rpars_with_attrs(N_CORES=5)
-        monkeypatch.setattr(f'{_MODULE}.available_cpu_count',
-                            MagicMock(return_value=10))
+        mocker.patch(f'{_MODULE}.available_cpu_count', return_value=10)
         checker.check_parameter_conflicts(rpars)
         assert not caplog.text
 
-    def test_too_few_cpus(self, checker, rpars_with_attrs,
-                          caplog, monkeypatch):
+    def test_too_few_cpus(self, checker, rpars_with_attrs, caplog, mocker):
         """Check no warnings with N_CORES < nr. CPUs."""
         rpars = rpars_with_attrs(N_CORES=5)
-        monkeypatch.setattr(f'{_MODULE}.available_cpu_count',
-                            MagicMock(return_value=1))
+        mocker.patch(f'{_MODULE}.available_cpu_count', return_value=1)
         checker.check_parameter_conflicts(rpars)
         msg = 'Consider reducing N_CORES'
         assert msg in caplog.text

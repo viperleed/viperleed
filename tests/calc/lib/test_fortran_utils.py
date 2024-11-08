@@ -11,7 +11,6 @@ __license__ = 'GPLv3+'
 import shutil
 from subprocess import CalledProcessError
 from subprocess import CompletedProcess
-from unittest.mock import MagicMock
 
 import pytest
 from pytest_cases import parametrize
@@ -60,10 +59,10 @@ class TestGetMpifortVersion:
                                     stdout=result.encode())
         raise ValueError(f'Unexpected command {cmd}')
 
-    def test_success(self, monkeypatch):
+    def test_success(self, mocker):
         """Test successful retrieval of mpifort version."""
-        monkeypatch.setattr('shutil.which', MagicMock(return_value=True))
-        monkeypatch.setattr('subprocess.run', self.mock_run_success)
+        mocker.patch('shutil.which', return_value=True)
+        mocker.patch('subprocess.run', new=self.mock_run_success)
         version = get_mpifort_version()
         assert version == self.mock_version
 
@@ -74,17 +73,17 @@ class TestGetMpifortVersion:
             version = get_mpifort_version()
         assert any(part > 0 for part in version)
 
-    def test_not_installed(self, monkeypatch):
+    def test_not_installed(self, mocker):
         """Test behavior when mpifort is not installed."""
-        monkeypatch.setattr('shutil.which', MagicMock(return_value=None))
+        mocker.patch('shutil.which', return_value=None)
         with pytest.raises(CompilerNotFoundError):
             get_mpifort_version()
 
     @parametrize(fake_run=('mock_run_no_version', 'mock_run_fails'))
-    def test_could_not_determine(self, fake_run, monkeypatch):
+    def test_could_not_determine(self, fake_run, mocker):
         """Test behavior when mpifort version cannot be determined."""
-        monkeypatch.setattr('shutil.which', MagicMock(return_value=True))
-        monkeypatch.setattr('subprocess.run', getattr(self, fake_run))
+        mocker.patch('shutil.which', return_value=True)
+        mocker.patch('subprocess.run', new=getattr(self, fake_run))
         with pytest.raises(NoCompilerVersionFoundError):
             get_mpifort_version()
 
