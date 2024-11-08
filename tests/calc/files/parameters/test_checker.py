@@ -69,7 +69,7 @@ class TestElementConflicts:
             checker.check_parameter_conflicts(rpars)
 
 
-class TestFortraCompUpdated:
+class TestFortranCompUpdated:
     """Check that FORTRAN_COMP is updated by the checker."""
 
     _unchanged = {
