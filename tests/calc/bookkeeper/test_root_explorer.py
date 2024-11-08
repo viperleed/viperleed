@@ -21,8 +21,11 @@ from pytest_cases import parametrize
 from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.root_explorer import LogFiles
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
+from viperleed.calc.bookkeeper.root_explorer import TensorAndDeltaInfo
+from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
 
 from ...helpers import make_obj_raise
 from ...helpers import not_raises
@@ -47,6 +50,12 @@ def fixture_explorer():
 def fixture_logfiles():
     """Return a LogFiles instance."""
     return LogFiles(Path(_MOCK_ROOT))
+
+
+@fixture(name='tensors')
+def fixture_tensor_and_delta_info():
+    """Fixture to initialize TensorAndDeltaInfo with a mock root path."""
+    return TensorAndDeltaInfo(Path('/fake/root'))
 
 
 @fixture(name='mock_path_readlines')
@@ -99,6 +108,13 @@ def check_methods_called(obj, method_name, **called):
     for mocked_attr, called_attr in called.items():
         method = attrgetter(called_attr or mocked_attr)(obj)
         method.assert_called_once()
+
+
+def mock_exists(collection):
+    """Return a callable that can replace pathlib.Path.exists."""
+    def _exists(path):
+        return path in collection
+    return _exists
 
 
 class TestRootExplorer:
@@ -471,5 +487,79 @@ class TestLogFiles:
     def test_too_early_method_call(self, logs, method_name):
         """Check that accessing attributes before update_from_cwd fails."""
         method = attrgetter(method_name)(logs)
+        with pytest.raises(AttributeError, match=r'.*collect.*'):
+            method()
+
+
+class TestTensorsAndDeltasInfo:
+    """Tests for the TensorsAndDeltasInfo class."""
+
+    tensor_index = 5  # Example index to use for Tensor/Delta files
+
+    @fixture(name='patch_get_tensors')
+    def fixture_patch_get_tensors(self):
+        """Replace getMaxTensorIndex with a fake one."""
+        return patch(f'{_MODULE}.getMaxTensorIndex',
+                     return_value=self.tensor_index)
+
+    def test_collect(self, tensors, patch_get_tensors):
+        """Test that collect sets the correct Tensor index."""
+        with patch_get_tensors as mock_get:
+            tensors.collect()
+            mock_get.assert_called_once_with(home=tensors._root, zip_only=True)
+        assert tensors.most_recent == self.tensor_index
+
+    def test_to_discard(self, tensors, patch_get_tensors):
+        """Test list_paths_to_discard when Tensor and Delta files exist."""
+        expected = (
+            f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_index:03d}.zip',
+            f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
+            )
+        expected = tuple(tensors._root / f for f in expected)
+        with patch_get_tensors:
+            tensors.collect()
+        with patch.object(Path, 'is_file', new=mock_exists(expected)):
+            discard_paths = tensors.list_paths_to_discard()
+        assert discard_paths == expected
+
+    def test_to_discard_none(self, tensors, patch_get_tensors):
+        """Test list_paths_to_discard when no Tensor/Delta files exist."""
+        with patch_get_tensors:
+            tensors.collect()
+        with patch.object(Path, 'is_file', return_value=False):
+            assert not tensors.list_paths_to_discard()
+
+    @patch_discard
+    def test_remove(self, mock_discard_files, tensors, patch_get_tensors):
+        """Test removal of Tensors and Deltas."""
+        removed = (
+            f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_index:03d}.zip',
+            f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip'
+            )
+        removed = tuple(tensors._root/f for f in removed)
+        with patch_get_tensors:
+            tensors.collect()
+        with patch.object(Path, 'is_file', return_value=True):
+            tensors.remove_tensors_and_deltas()
+        mock_discard_files.assert_called_once_with(*removed)
+
+    _attr_needs_update = (
+        'most_recent',
+        )
+    _method_needs_update = (
+        'list_paths_to_discard',
+        'remove_tensors_and_deltas',
+        )
+
+    @parametrize(attr=_attr_needs_update)
+    def test_too_early_attribute_access(self, tensors, attr):
+        """Check that accessing attributes before update_from_cwd fails."""
+        with pytest.raises(AttributeError, match=r'.*collect.*'):
+            attrgetter(attr)(tensors)
+
+    @parametrize(method_name=_method_needs_update)
+    def test_too_early_method_call(self, tensors, method_name):
+        """Check that accessing attributes before update_from_cwd fails."""
+        method = attrgetter(method_name)(tensors)
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             method()

@@ -18,9 +18,12 @@ from pathlib import Path
 import shutil
 import re
 
+from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
+from viperleed.calc.lib.leedbase import getMaxTensorIndex
 
 from .constants import CALC_LOG_PREFIXES
 from .constants import STATE_FILES
@@ -286,3 +289,35 @@ class LogFiles:
         except OSError:
             pass
         self.most_recent = LogInfo(timestamp, last_log_lines)
+
+
+class TensorAndDeltaInfo:
+    """A container of information about zip Tensor (and Delta) files."""
+
+    def __init__(self, root):
+        """Initialize an instance that handles a `root` path."""
+        self._root = root
+        self._most_recent = None  # Index of most recent Tensor file
+
+    most_recent = make_property('_most_recent',
+                                needs_update=True,
+                                updater='collect')
+
+    def collect(self):
+        """Collect Tensor/Deltas information from self.path."""
+        self._most_recent = getMaxTensorIndex(home=self._root, zip_only=True)
+
+    def list_paths_to_discard(self):
+        """Return a tuple of paths to Tensor/Delta files to be discarded."""
+        tensor_file = (
+            f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.most_recent:03d}.zip'
+            )
+        delta_file = (
+            f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.most_recent:03d}.zip'
+            )
+        to_discard = (self._root / f for f in (tensor_file, delta_file))
+        return tuple(f for f in to_discard if f.is_file())
+
+    def remove_tensors_and_deltas(self):
+        """Delete the most recent Tensor and Delta zip files."""
+        discard_files(*self.list_paths_to_discard())
