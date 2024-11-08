@@ -13,6 +13,8 @@ bookkeeper
 cli
     Defines the command-line interface for invoking the bookkeeper
     as a standalone utility.
+constants
+    Constants used in multiple places in the bookkeeper package.
 log
     Defines the bookkeeper logger instance and its related
     functionality.
@@ -20,6 +22,12 @@ mode
     Defines the BookkeeperMode enumeration of the possible modes
     of execution of the bookkeeper. See help(BookkeeperMode) for
     information on what each mode entails.
+root_explorer
+    Defines functionality for collecting information from the top-level
+    folder in which Bookkeeper runs, and for archiving/discarding its
+    contents.
+utils
+    Functions used in multiple places in the bookkeeper package.
 
 Packages
 --------
