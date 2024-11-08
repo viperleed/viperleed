@@ -309,6 +309,9 @@ class TestRootExplorerRaises:
         'needs_archiving',
         )
     _method_needs_update = (  # Only those without args
+        'clear_for_next_calc_run',
+        'infer_run_info',
+        'revert_to_previous_calc_run',
         '_collect_files_to_archive',
         )
 
