@@ -96,12 +96,12 @@ class MaxIntensitiesError(SearchParameterError, TensErLEEDSearchError):
 
     detailed_message = (
         'TensErLEED stopped due to unreasonably high beam amplitudes.\n'
-        'This may be causes by convergence problems due to a too small '
+        'This may be caused by convergence problems due to a too small '
         'value of LMAX. Alternatively, this error may be caused either '
         'by scatterers with very small distances as a result of a very '
         'large range used in DISPLACEMENTS. Check your input files and '
         'consider increasing LMAX or decreasing the DISPLACEMENTS ranges.'
-       )
+        )
     log_records = ('MAX. INTENS. IN THEOR. BEAM',
                    'IS SUSPECT',
                    '****** STOP PROGRAM ******')
@@ -121,10 +121,10 @@ class ProcessKilledError(SearchError):
     """The mpirun process died. Typically, it required too much memory."""
 
     detailed_message = (
-        'The search was stopped because the MPI process was killed by system. '
-        'This is most likely because the process ran out of available memory. '
-        'Consider reducing the number of MPI processes by setting a lower '
-        'value for N_CORES or limiting the parameter space in the '
+        'The search was stopped because the MPI process was killed by the '
+        'system. This is most likely because the process ran out of available '
+        'memory. Consider reducing the number of MPI processes by setting a '
+        'smaller value for N_CORES or limiting the parameter space in the '
         'DISPLACEMENTS file.'
         )
     _matcher = any  # Two different error messages for Intel and GNU
@@ -361,8 +361,8 @@ def _check_search_log(search_log_path):
     Raises
     ------
     SearchError
-        If an error message is found in the search log file that
-        corresponds to a fatal error (from TensErLEED or other
+        If error messages are found in the log file at `search_log_path`
+        that correspond to a fatal error (from TensErLEED or other
         source).
     """
     if not search_log_path:
@@ -769,7 +769,7 @@ def search(sl, rp):
         rp.setHaltingLevel(3)
         return None
 
-    # check for mpirun, decide whether to use parallelization
+    # Decide whether to use parallelization
     usempi = rp.N_CORES > 1 and shutil.which('mpirun')
     if not usempi:
         reason = (
@@ -826,13 +826,12 @@ def search(sl, rp):
 
         randname = 'MPIrandom_.o' if usempi else 'random_.o'
         if rp.TL_VERSION <= Version('1.7.3'):
-            # these are short C scripts - use pre-compiled versions
-
-            # try to copy randomizer lib object file
+            # Try to copy randomizer lib object file
+            # These are short C scripts - use pre-compiled versions
             try:
                 shutil.copy2(libpath / randname, randname)
             except FileNotFoundError:
-                logger.error('Could not find required random_.o object file. '
+                logger.error(f'Could not find required {randname} file. '
                              'You may have forgotten to compile random_.c.')
                 raise
 
