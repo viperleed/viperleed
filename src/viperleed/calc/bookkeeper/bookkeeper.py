@@ -72,8 +72,8 @@ class Bookkeeper:
         self._state_info = {
             'logger_prepared': False,
             # The next ones are set in update_from_cwd
-            'tensor_number': None,        # int
-            'timestamp': None,            # str
+            'tensor_number': None,  # int
+            'timestamp': None,      # str
             }
 
     # Simple dynamic @properties
@@ -81,8 +81,6 @@ class Bookkeeper:
     files_need_archiving = make_property('_root.needs_archiving')
     history = make_property('_history')
     max_job_for_tensor = make_property('history.max_run_per_tensor')
-    tensor_number = make_property('_state_info[tensor_number]',
-                                  needs_update=True)
     timestamp = make_property('_state_info[timestamp]', needs_update=True)
     _workhistory = make_property('_root.workhistory')
 
@@ -95,6 +93,13 @@ class Bookkeeper:
     def orig_inputs_dir(self):
         """Return the path to the folder containing untouched input files."""
         return self.cwd / DEFAULT_SUPP / ORIGINAL_INPUTS_DIR_NAME
+
+    @property
+    def tensor_number(self):
+        """Return the index of the tensor currently handled."""
+        tensor_number = self._state_info['tensor_number']
+        return (tensor_number if tensor_number is not None
+                else self._root.tensors.most_recent)
 
     def run(self, mode):
         """Run the bookkeeper in the given mode.
