@@ -204,7 +204,6 @@ class RootExplorer:
                 raise
 
 
-
 LogInfo = namedtuple('LogInfo', ('timestamp', 'lines'))
 
 

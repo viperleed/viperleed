@@ -561,7 +561,7 @@ class TestBookkeeperOthers:
             tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_003.zip',
             tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_003.zip',
             )
-        surviving_files= (
+        surviving_files = (
             tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_002.zip',
             tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_001.zip',
             tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_001.zip',
