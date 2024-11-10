@@ -574,7 +574,7 @@ class TestBookkeeperOthers:
             file.touch()
         bookkeeper.update_from_cwd()
         # pylint: disable-next=protected-access   # OK in tests
-        bookkeeper._remove_tensors_and_deltas()
+        bookkeeper._root.remove_tensors_and_deltas()
         assert not any(f.exists() for f in removed_files)
         assert all(f.exists() for f in surviving_files)
         assert all(f.exists() for f in folders)
@@ -787,11 +787,11 @@ class TestBookkeeperRaises:
         '_copy_log_files',
         '_copy_out_and_supp',
         '_make_and_copy_to_history',
-        '_remove_tensors_and_deltas',
         'history._find_name_for_new_history_subfolder(None, None)',
         'history.find_new_history_directory(None, None)',
         '_root.logs.discard',
         '_root.revert_to_previous_calc_run',
+        '_root.remove_tensors_and_deltas',
         '_run_archive_mode',
         '_run_clear_mode',
         '_run_discard_full_mode',

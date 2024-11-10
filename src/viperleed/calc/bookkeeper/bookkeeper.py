@@ -164,15 +164,10 @@ class Bookkeeper:
         with context():
             self._make_history_and_prepare_logger()
 
-            # Figure out the number of the tensor (it's the most recent
-            # one) and the highest run number currently stored for each
-            # tensor in history.
-            tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
-            self._state_info['tensor_number'] = tensor_number
-            self.history.collect_subfolders()
-
             # Collect information from the root directory:
-            # log files, SUPP, OUT, and workhistory.
+            # log files, SUPP, OUT, workhistory, and Tensors, as well
+            # as information from the history folder (especially the
+            # highest run number currently stored for each tensor).
             self._root.collect_info()
             self._state_info['timestamp'] = (
                 self._root.calc_timestamp  # If a log file was found
@@ -502,10 +497,8 @@ class Bookkeeper:
             return BookkeeperExitCode.FAIL
         self._root.revert_to_previous_calc_run()
 
-        # Tensors and Deltas
-        if self.tensor_number not in self.max_job_for_tensor:
-            # Tensor is new.
-            self._remove_tensors_and_deltas()
+        # Tensors and Deltas, if created during the last run
+        self._root.remove_tensors_and_deltas()
 
         # And the history entry from history.info
         self.history.info.remove_last_entry()
