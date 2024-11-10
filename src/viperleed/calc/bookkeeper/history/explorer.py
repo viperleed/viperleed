@@ -99,6 +99,9 @@ class HistoryExplorer:
         self._maps['jobs_for_tensor'] = defaultdict(set)
         self._maps['main_hash_to_folders'] = defaultdict(list)
         self._maps['hash_to_parent'] = {}
+        if not self.path.is_dir():
+            LOGGER.warning(f'No {DEFAULT_HISTORY!r} folder in {self.root}')
+            return
         # pathlib.Path.iterdir has no guarantees on the sorting order
         # with which the directories are returned. We use alphabetical
         # sorting by name. This way, the most recent folders are read
