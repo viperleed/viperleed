@@ -12,9 +12,11 @@ __license__ = 'GPLv3+'
 
 from collections import defaultdict
 from operator import attrgetter
+import shutil
 
 from viperleed.calc.constants import DEFAULT_HISTORY
 
+from ..log import LOGGER
 from ..utils import make_property
 from ..utils import needs_update_for_attr
 from .folder import HistoryFolder
@@ -62,6 +64,15 @@ class HistoryExplorer:
             return None
         # pylint: disable-next=unsubscriptable-object  # Decorated
         return self._maps['hash_to_parent'][last_appended.hash_]
+
+    @property
+    def last_folder_and_siblings(self):
+        """Return all the HistoryFolder(s) created during the last run."""
+        last_folder = self.last_folder
+        if not last_folder or not last_folder.exists:
+            return tuple()
+        # pylint: disable-next=unsubscriptable-object     # It's a dict
+        return tuple(self._maps['main_hash_to_folders'][last_folder.hash_])
 
     @property
     @needs_update_for_attr('_maps[jobs_for_tensor]', updater=_updater)
@@ -114,12 +125,27 @@ class HistoryExplorer:
                 pass
         self._update_maps()
 
+    def discard_most_recent_run(self):
+        """Delete all subfolders created during the last calc run."""
+        subfolders = self.list_paths_to_discard()
+        for folder_path in subfolders:
+            try:
+                shutil.rmtree(folder_path)
+            except OSError:
+                LOGGER.error(f'Error: Failed to delete {folder_path}.')
+                raise
+
     def find_new_history_directory(self, tensor_number, suffix):
         """Store information to create a history folder for a new calc run."""
         dir_name = self._find_name_for_new_history_subfolder(tensor_number,
                                                              suffix)
         new_folder_path = self.path / dir_name
         self._new_calc_run_folder = IncompleteHistoryFolder(new_folder_path)
+
+    def list_paths_to_discard(self):
+        """Return a tuple of paths to folders that will be discarded."""
+        paths = (f.path for f in self.last_folder_and_siblings)
+        return tuple(sorted(paths, key=attrgetter('name')))
 
     def prepare_info_file(self):
         """Prepare a history.info file in the root directory."""

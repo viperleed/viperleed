@@ -9,6 +9,7 @@ __license__ = 'GPLv3+'
 
 from collections import namedtuple
 from contextlib import contextmanager
+from itertools import combinations
 from itertools import permutations
 from operator import attrgetter
 from pathlib import Path
@@ -275,6 +276,54 @@ class TestRootExplorer:
             assert_ok()
 
 
+class TestRootExplorerListFiles:
+    """Tests for listing files/directories to be removed."""
+
+    def test_to_discard_no_files(self, explorer):
+        """Test list_paths_to_discard when no discardable files exist."""
+        explorer.collect_info()
+        with patch.object(Path, 'exists', return_value=False):
+            paths_to_discard = explorer.list_paths_to_discard()
+        assert not paths_to_discard
+
+    def test_to_discard_files_exist(self, explorer, monkeypatch):
+        """Test list_paths_to_discard when some discardable files exist."""
+        mock_log_path = explorer.path / 'log_file.log'
+        mock_paths = (
+            explorer.path / DEFAULT_OUT,
+            # explorer.path / DEFAULT_SUPP,  # No SUPP
+            mock_log_path,
+            )
+        explorer.collect_info()
+        with patch.object(Path, 'exists', new=mock_exists(mock_paths)):
+            monkeypatch.setattr(type(explorer.logs), 'files', [mock_log_path])
+            paths_to_discard = explorer.list_paths_to_discard()
+        assert paths_to_discard == mock_paths
+
+    def test_to_replace_no_ori(self, explorer):
+        """Test list_files_to_replace when no '_ori' files are present."""
+        with patch.object(Path, 'exists', return_value=False):
+            files_to_replace = explorer.list_files_to_replace()
+        assert not files_to_replace
+
+    _ori_files = {}
+    for repeats in range(len(STATE_FILES)):
+        _ori_files.update({'+'.join(files): files
+                           for files in combinations(STATE_FILES, repeats+1)})
+
+    @parametrize(state_files=_ori_files.values(), ids=_ori_files)
+    def test_to_replace_ori_files_exist(self, state_files, explorer):
+        """Test list_files_to_replace when '_ori' files are present."""
+        mock_ori = [explorer.path / f'{f}_ori' for f in state_files]
+        with patch.object(Path, 'exists', new=mock_exists(mock_ori)):
+            files_to_replace = explorer.list_files_to_replace()
+        expected_files_to_replace = {
+            explorer.path / f: ori_f
+            for f, ori_f in zip(state_files, mock_ori)
+            }
+        assert dict(files_to_replace) == expected_files_to_replace
+
+
 class TestRootExplorerRaises:
     """Tests for conditions that causes exceptions or complaints."""
 
@@ -311,6 +360,7 @@ class TestRootExplorerRaises:
     _method_needs_update = (  # Only those without args
         'clear_for_next_calc_run',
         'infer_run_info',
+        'list_paths_to_discard',
         'revert_to_previous_calc_run',
         '_collect_files_to_archive',
         )
@@ -505,53 +555,66 @@ class TestTensorsAndDeltasInfo:
         return patch(f'{_MODULE}.getMaxTensorIndex',
                      return_value=self.tensor_index)
 
+    @fixture(name='mock_history')
+    def fixture_mock_history(self):
+        """Return a fake HistoryExplorer."""
+        return MagicMock(
+            max_run_per_tensor={self.tensor_index: 1},
+            last_folder_and_siblings = [
+                MagicMock(tensor_num=self.tensor_index),
+                ]
+            )
+
     def test_collect(self, tensors, patch_get_tensors):
         """Test that collect sets the correct Tensor index."""
         with patch_get_tensors as mock_get:
             tensors.collect()
+            # pylint: disable-next=protected-access       # OK in tests
             mock_get.assert_called_once_with(home=tensors._root, zip_only=True)
         assert tensors.most_recent == self.tensor_index
 
-    def test_to_discard(self, tensors, patch_get_tensors):
+    def test_to_discard(self, tensors, patch_get_tensors, mock_history):
         """Test list_paths_to_discard when Tensor and Delta files exist."""
         expected = (
-            f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_index:03d}.zip',
             f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
+            f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_index:03d}.zip',
             )
+        # pylint: disable-next=protected-access           # OK in tests
         expected = tuple(tensors._root / f for f in expected)
         with patch_get_tensors:
             tensors.collect()
         with patch.object(Path, 'is_file', new=mock_exists(expected)):
-            discard_paths = tensors.list_paths_to_discard()
+            discard_paths = tensors.list_paths_to_discard(mock_history)
         assert discard_paths == expected
 
-    def test_to_discard_none(self, tensors, patch_get_tensors):
+    def test_to_discard_none(self, tensors, patch_get_tensors, mock_history):
         """Test list_paths_to_discard when no Tensor/Delta files exist."""
         with patch_get_tensors:
             tensors.collect()
         with patch.object(Path, 'is_file', return_value=False):
-            assert not tensors.list_paths_to_discard()
+            assert not tensors.list_paths_to_discard(mock_history)
 
     @patch_discard
-    def test_remove(self, mock_discard_files, tensors, patch_get_tensors):
+    def test_discard(self, mock_discard_files, tensors,
+                     patch_get_tensors, mock_history):
         """Test removal of Tensors and Deltas."""
         removed = (
+            f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
             f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_index:03d}.zip',
-            f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip'
             )
+        # pylint: disable-next=protected-access           # OK in tests
         removed = tuple(tensors._root/f for f in removed)
         with patch_get_tensors:
             tensors.collect()
         with patch.object(Path, 'is_file', return_value=True):
-            tensors.remove_tensors_and_deltas()
+            tensors.discard(mock_history)
         mock_discard_files.assert_called_once_with(*removed)
 
     _attr_needs_update = (
         'most_recent',
         )
     _method_needs_update = (
-        'list_paths_to_discard',
-        'remove_tensors_and_deltas',
+        # None for now
         )
 
     @parametrize(attr=_attr_needs_update)

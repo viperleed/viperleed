@@ -12,14 +12,10 @@ __license__ = 'GPLv3+'
 from contextlib import nullcontext
 from enum import IntEnum
 from pathlib import Path
-import shutil
 
-from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
-from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
@@ -32,12 +28,10 @@ from .history.errors import CantDiscardEntryError
 from .history.errors import CantRemoveEntryError
 from .history.errors import MetadataMismatchError
 from .history.errors import NoHistoryEntryError
-from .history.explorer import HistoryExplorer
 from .history.meta import BookkeeperMetaFile
 from .log import LOGGER
 from .mode import BookkeeperMode
 from .root_explorer import RootExplorer
-from .utils import discard_files
 from .utils import make_property
 from .utils import needs_update_for_attr
 
@@ -67,7 +61,6 @@ class Bookkeeper:
     def __init__(self, cwd=Path.cwd()):
         """Initialize the bookkeeper using `cwd` as the root folder."""
         self._root = RootExplorer(path=cwd, bookkeeper=self)
-        self._history = HistoryExplorer(self.cwd)
         self._mode = None           # Set in run
         self._state_info = {
             'logger_prepared': False,
@@ -79,7 +72,6 @@ class Bookkeeper:
     # Simple dynamic @properties
     cwd = make_property('_root.path')
     files_need_archiving = make_property('_root.needs_archiving')
-    history = make_property('_history')
     max_job_for_tensor = make_property('history.max_run_per_tensor')
     timestamp = make_property('_state_info[timestamp]', needs_update=True)
     _workhistory = make_property('_root.workhistory')
@@ -439,16 +431,6 @@ class Bookkeeper:
             )
         self._state_info['logger_prepared'] = True
 
-    def _remove_tensors_and_deltas(self):
-        """Delete the most recent tensor and delta files."""
-        tensor_file = (
-            f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_number:03d}.zip'
-            )
-        delta_file = (
-            f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_number:03d}.zip'
-            )
-        discard_files(self.cwd / tensor_file, self.cwd / delta_file)
-
     def _run_archive_mode(self):
         """Execute bookkeeper in ARCHIVE mode."""
         if self.history.new_folder.exists:
@@ -485,16 +467,14 @@ class Bookkeeper:
                 MetadataMismatchError):
             return BookkeeperExitCode.FAIL
 
-        # Clean up workhistory in root
-        self._workhistory.discard_workhistory_root()
 
-        # Remove history folder
-        dir_to_remove = self.history.last_folder
+        # Delete the history folders, stuff in workhistory,
+        # and output files/folders in the root directory
         try:
-            shutil.rmtree(dir_to_remove.path)
+            self.history.discard_most_recent_run()
         except OSError:
-            LOGGER.error(f'Error: Failed to delete {dir_to_remove.path}.')
             return BookkeeperExitCode.FAIL
+        self._workhistory.discard_workhistory_root()
         self._root.revert_to_previous_calc_run()
 
         # Tensors and Deltas, if created during the last run

@@ -19,6 +19,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
+from operator import attrgetter
 import shutil
 
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
@@ -92,6 +93,13 @@ class WorkhistoryHandler:
         """
         directories = self._find_directories(contains=contains)
         return (d for d in directories if PREVIOUS_LABEL not in d.name)
+
+    def list_paths_to_discard(self):
+        """Return a tuple of paths to folders that will be discarded."""
+        if not self.path.is_dir():
+            return tuple()
+        subfolders = sorted(self.path.iterdir(), key=attrgetter('name'))
+        return (self.path, *subfolders)
 
     def move_current_and_cleanup(self, main_metadata):
         """Move files from the current work-history folder, then clean up.

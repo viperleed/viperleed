@@ -566,11 +566,26 @@ class TestBookkeeperOthers:
             tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_001.zip',
             tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_001.zip',
             )
-        folders = (tmp_path/DEFAULT_TENSORS,
-                   tmp_path/DEFAULT_DELTAS)
+        folders = (
+            tmp_path/DEFAULT_TENSORS,
+            tmp_path/DEFAULT_DELTAS,
+            # Unzipped tensors/deltas should be left untouched
+            tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_003',
+            tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_003',
+            )
+        # We need information in history to actually remove tensors
+        history_stuff = (
+            tmp_path/DEFAULT_HISTORY/'t003.r001_other_stuff/file',
+            tmp_path/DEFAULT_HISTORY/'t002.r001_first_run/file',
+            tmp_path/DEFAULT_HISTORY/'t002.r005_other_run/file',
+            tmp_path/DEFAULT_HISTORY/'t001.r001_first_tensor/file',
+            )
         for folder in folders:
             folder.mkdir(parents=True)
         for file in (*removed_files, *surviving_files):
+            file.touch()
+        for file in history_stuff:
+            file.parent.mkdir(parents=True)
             file.touch()
         bookkeeper.update_from_cwd()
         # pylint: disable-next=protected-access   # OK in tests
