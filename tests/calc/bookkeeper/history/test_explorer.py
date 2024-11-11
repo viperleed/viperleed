@@ -46,7 +46,7 @@ class TestHistoryExplorer:
         """Test initialization of HistoryExplorer."""
         # pylint: disable=protected-access                # OK in tests
         assert history.path == (mock_path / DEFAULT_HISTORY)
-        assert not history._subfolders
+        assert not any(history._subfolders)
         assert all(m is None for m in history._maps.values())
         assert history._new_calc_run_folder is None
         assert history._info is None
@@ -55,7 +55,7 @@ class TestHistoryExplorer:
     def _check_collected_nothing(history):
         """Check that no folders were collected."""
         # pylint: disable-next=protected-access           # OK in tests
-        assert not history._subfolders
+        assert not any(history._subfolders)
         # pylint: disable-next=protected-access           # OK in tests
         maps = history._maps.values()
         assert all(not m for m in maps)
@@ -161,7 +161,7 @@ class TestHistoryExplorer:
         """Test last_folder when there are no subfolders."""
         history.collect_subfolders()
         assert history.last_folder is None
-        assert not history.last_folder_and_siblings
+        assert not any(history.last_folder_and_siblings)
 
     def test_last_folder_with_subfolders(self, history, mocker):
         """Test last_folder returns the most recent folder."""

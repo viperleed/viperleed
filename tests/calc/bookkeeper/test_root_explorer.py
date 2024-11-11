@@ -297,7 +297,7 @@ class TestRootExplorerListFiles:
         explorer.collect_info()
         mocker.patch.object(Path, 'exists', return_value=False)
         paths_to_discard = explorer.list_paths_to_discard()
-        assert not paths_to_discard
+        assert not any(paths_to_discard)
 
     def test_to_discard_files_exist(self, explorer, mocker, mock_history):
         """Test list_paths_to_discard when some discardable files exist."""
@@ -323,7 +323,7 @@ class TestRootExplorerListFiles:
         """Test list_files_to_replace when no '_ori' files are present."""
         mocker.patch.object(Path, 'exists', return_value=False)
         files_to_replace = explorer.list_files_to_replace()
-        assert not files_to_replace
+        assert not any(files_to_replace)
 
     _ori_files = {}
     for repeats in range(len(STATE_FILES)):
@@ -459,7 +459,7 @@ class TestLogFiles:
             collected = getattr(logs, attr)
             assert collected is not None
             # None of the files above are actual files.
-            assert not collected
+            assert not any(collected)
 
     @patch_discard
     def test_discard(self, discard_files, logs, check_methods_called):
@@ -605,21 +605,21 @@ class TestTensorsAndDeltasInfo:
         """Test list_paths_to_discard when no Tensor/Delta files exist."""
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=False)
-        assert not tensors.list_paths_to_discard(simple_history)
+        assert not any(tensors.list_paths_to_discard(simple_history))
 
     def test_to_discard_history_empty(self, tensors, mock_history, mocker):
         """Check that no Tensors/Deltas are discarded with empty history."""
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=True)
         history = mock_history({})
-        assert not tensors.list_paths_to_discard(history)
+        assert not any(tensors.list_paths_to_discard(history))
 
     def test_to_discard_older_runs(self, tensors, mock_history, mocker):
         """Check that no Tensors/Deltas are discarded when more runs exist."""
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=True)
         history = mock_history({self.tensor_index: 3})
-        assert not tensors.list_paths_to_discard(history)
+        assert not any(tensors.list_paths_to_discard(history))
 
     @patch_discard
     def test_discard(self, mock_discard_files,

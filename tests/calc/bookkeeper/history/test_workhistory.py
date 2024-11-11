@@ -110,7 +110,7 @@ class TestWorkhistoryHandler:
         """Test move_current_and_cleanup when the folder doesn't exist."""
         patched_path(is_dir=False)
         tensor_nums = workhistory.move_current_and_cleanup(None)
-        assert not tensor_nums
+        assert not any(tensor_nums)
         mock_rmtree.assert_not_called()
 
     @patch_rmtree
@@ -251,5 +251,5 @@ class TestWorkhistoryHandlerRaises:
         with make_obj_raise(directory, OSError, 'replace'):
             # pylint: disable-next=protected-access       # OK in tests
             tensor_nums = workhistory._move_folders_to_history(None)
-            assert not tensor_nums
+            assert not any(tensor_nums)
         self.check_has_error(caplog)
