@@ -6,12 +6,21 @@ import re
 import numpy as np
 
 
+def generate_label_match_regex(label):
+    """Generate a regex pattern to match variations of the given label."""
+    # Escape any special characters in the label
+    escaped_label = re.escape(label)
+
+    # Replace '*' in the label with a regex pattern that matches any characters
+    pattern = escaped_label.replace(r"\*", r"\w*")
+
+    # Compile the final regex pattern
+    return re.compile(rf"^{pattern}$")
+
+
 class BSSubtarget:
     def __init__(self, target_str):
         self.target_str = target_str
-        self.element = None
-        self.exact_label = None
-        self.partial_label = None
         self.nums = None
         self.layers = None
         self._parse_target()
@@ -22,14 +31,7 @@ class BSSubtarget:
         if not parts:
             raise ValueError("Subtarget string is empty")
         site_str = parts[0]
-
-        if site_str.endswith("*"):
-            # It's an inexact element label
-            self.partial_label = site_str[:-1]
-        elif "_" in site_str:
-            self.exact_label = site_str
-        else:
-            self.element = site_str
+        self.regex = generate_label_match_regex(site_str)
 
         if len(parts) == 1:
             # only site is specified, no nums or layers
@@ -53,24 +55,10 @@ class BSSubtarget:
         """Selects base scatterers that match the subtarget specification."""
         mask = np.full(len(base_scatterers), True)
 
-        # Match element
-        if self.element is not None:
-            mask = mask & np.array(
-                [bs.element == self.element for bs in base_scatterers]
-            )
-        # Match exact label
-        if self.exact_label is not None:
-            mask = mask & np.array(
-                [bs.site == self.exact_label for bs in base_scatterers]
-            )
-        # Match partial label
-        if self.partial_label is not None:
-            mask = mask & np.array(
-                [
-                    bs.atom.site.starts_with(self.partial_label)
-                    for bs in base_scatterers
-                ]
-            )
+        # mask based on the site
+        matches = np.array([self.regex.match(bs.site) is not None 
+                            for bs in base_scatterers])
+        mask = mask & matches
 
         # mask based on the labels
         label_mask = mask.copy()
