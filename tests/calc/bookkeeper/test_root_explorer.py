@@ -331,9 +331,10 @@ class TestRootExplorerRaises:
     def test_cannot_replace_state_files_from_ori(self, mock_error, explorer):
         """Check complaints when a root file cannot be replaced with _ori."""
         with raises_exception('pathlib.Path.replace', OSError):
-            # pylint: disable-next=protected-access       # OK in tests
-            explorer._replace_state_files_from_ori()
-            mock_error.assert_called_once()
+            with patch('pathlib.Path.exists', return_value=True):
+                # pylint: disable-next=protected-access   # OK in tests
+                explorer._replace_state_files_from_ori()
+                mock_error.assert_called_once()
 
     _read_notes_raises = {
         'read': '',

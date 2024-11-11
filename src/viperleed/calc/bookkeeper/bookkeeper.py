@@ -432,6 +432,35 @@ class Bookkeeper:
             )
         self._state_info['logger_prepared'] = True
 
+    def _print_discard_info(self):
+        """Emit logging messages with files/folders/entry to be deleted."""
+        LOGGER.info(f'About to delete files/folders from {self.cwd}')
+        # First, files and folders that are simply deleted
+        paths_to_discard = (
+            *self._workhistory.list_paths_to_discard(),
+            *self.history.list_paths_to_discard(),
+            *self._root.list_paths_to_discard(),
+            )
+        if paths_to_discard:
+            LOGGER.info('The following files/folders will '
+                        'be permanently deleted:')
+        for path in paths_to_discard:
+            LOGGER.info(f'    {path.relative_to(self.cwd)}')
+
+        # Then files that are replaced by others
+        files_to_replace = self._root.list_files_to_replace()
+        if files_to_replace:
+            LOGGER.info('The following files will be permanently replaced:')
+        for deleted, renamed in files_to_replace:
+            LOGGER.info(f'    replace {deleted.relative_to(self.cwd)} '
+                        f'with {renamed.relative_to(self.cwd)}')
+
+        # Finally, the history.info entry
+        LOGGER.info('The following entry will be deleted '
+                    f'from {self.history.info.path.name}:'
+                    f'{self.history.info.last_entry}'.rstrip())
+        LOGGER.info('Calculation data will be lost irreversibly.')
+
     def _run_archive_mode(self):
         """Execute bookkeeper in ARCHIVE mode."""
         if self.history.new_folder.exists:
@@ -468,6 +497,7 @@ class Bookkeeper:
                 MetadataMismatchError):
             return BookkeeperExitCode.FAIL
 
+        self._print_discard_info()
 
         # Delete the history folders, stuff in workhistory,
         # and output files/folders in the root directory

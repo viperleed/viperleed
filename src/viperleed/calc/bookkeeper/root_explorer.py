@@ -112,6 +112,22 @@ class RootExplorer:
         """Return a dictionary of information read from the newest calc log."""
         return self.logs.infer_run_info()
 
+    def list_files_to_replace(self):
+        """Return a tuple of pairs of files that will be replaced.
+
+        Returns
+        -------
+        to_replace : tuple of tuples
+            Pairs of files that will be replaced. Each pair has format
+            (<file_that_will_be_deleted>, <file_that will_be_renamed>).
+            All items are Paths to the files.
+        """
+        ori_files = {self.path/file: self.path/f'{file}_ori'
+                     for file in STATE_FILES}
+        ori_files = {file: ori_file for file, ori_file in ori_files.items()
+                     if ori_file.exists()}
+        return tuple(ori_files.items())
+
     def list_paths_to_discard(self):
         """Return a list of files and folders that will be discarded."""
         to_discard = (
@@ -206,14 +222,12 @@ class RootExplorer:
 
     def _replace_state_files_from_ori(self):
         """Replace input files with their '_ori'-suffixed version."""
-        for file in STATE_FILES:
-            ori_file = self.path / f'{file}_ori'
+        for state_file, ori_file in self.list_files_to_replace():
             try:
-                ori_file.replace(self.path / file)
-            except FileNotFoundError:
-                pass
+                ori_file.replace(state_file)
             except OSError:
-                LOGGER.error(f'Failed to move {ori_file} to {file}.')
+                LOGGER.error(f'Failed to move {ori_file} '
+                             f'to {state_file.name}.')
                 raise
 
 
