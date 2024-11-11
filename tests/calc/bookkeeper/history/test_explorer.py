@@ -10,8 +10,6 @@ __license__ = 'GPLv3+'
 import ast
 from operator import attrgetter
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from pytest_cases import fixture
@@ -26,13 +24,18 @@ from viperleed.calc.constants import DEFAULT_HISTORY
 from ....helpers import not_raises
 
 _MODULE = 'viperleed.calc.bookkeeper.history.explorer'
-patch_folder = patch(f'{_MODULE}.HistoryFolder')
 
 
 @fixture(name='history')
 def mock_explorer(mock_path):
     """Return a HistoryExplorer instance with a mocked root path."""
     return HistoryExplorer(mock_path)
+
+
+@fixture(name='patched_folder')
+def fixture_patched_folder(mocker):
+    """Return a fake HistoryFolder class."""
+    return mocker.patch(f'{_MODULE}.HistoryFolder')
 
 
 class TestHistoryExplorer:
@@ -57,68 +60,66 @@ class TestHistoryExplorer:
         assert all(not m for m in maps)
         assert all(m is not None for m in maps)
 
-    def test_collect_subfolders_empty(self, history):
+    def test_collect_subfolders_empty(self, history, patched_folder):
         """Test collect_subfolders when there are no subfolders."""
         history.path.iterdir.return_value = []
-        with patch_folder:
-            history.collect_subfolders()
-            self._check_collected_nothing(history)
+        history.collect_subfolders()
+        patched_folder.assert_not_called()
+        self._check_collected_nothing(history)
 
-    def test_collect_subfolders_with_folders(self, history):                    # TODO: this needs some realistic cases
+    def test_collect_subfolders_with_folders(self, history,                     # TODO: this needs some realistic cases
+                                             patched_folder,
+                                             mocker):
         """Test collect_subfolders with valid folders."""
-        directories = MagicMock(spec=Path), MagicMock(spec=Path)
+        directories = [mocker.MagicMock(spec=Path) for _ in range(2)]
         for i, directory in enumerate(directories):
             directory.name = f't00{i}.r001_rest'
             directory.parent = history.path
-        history.path.iterdir.return_value = directories
-        with patch_folder as mock_folder:
-            mock_folder.return_value.parent = None
-            history.collect_subfolders()
+        mocker.patch.object(history.path, 'iterdir', return_value=directories)
+        patched_folder.return_value.parent = None
+        history.collect_subfolders()
         # pylint: disable-next=protected-access           # OK in tests
         assert len(history._subfolders) == len(directories)
 
-    def test_collect_subfolders_funny(self, history):
+    def test_collect_subfolders_funny(self, history, mocker):
         """Test collect_subfolders with valid folders."""
-        directories = MagicMock(spec=Path), MagicMock(spec=Path)
-        history.path.iterdir.return_value = directories
+        directories = [mocker.MagicMock(spec=Path) for _ in range(2)]
         for i, directory in enumerate(directories):
             directory.name = f't00{i}.r001_rest'
-        raises_valueerror = patch.object(history,
-                                         '_append_existing_folder',
-                                         side_effect=ValueError)
-        with raises_valueerror:
-            history.collect_subfolders()
+        mocker.patch.object(history.path, 'iterdir', return_value=directories)
+        mocker.patch.object(history,
+                            '_append_existing_folder',
+                            side_effect=ValueError)
+        history.collect_subfolders()
         self._check_collected_nothing(history)
 
-    def test_find_new_history_directory(self, history):
+    def test_find_new_history_directory(self, history, mocker):
         """Test find_new_history_directory creates a new folder."""
         history.collect_subfolders()
-        fake_new_folder_name = 'new_folder'
-        patch_find_name = patch.object(history,
-                                       '_find_name_for_new_history_subfolder',
-                                       return_value=fake_new_folder_name)
-        with patch(f'{_MODULE}.IncompleteHistoryFolder') as mock_folder:
-            with patch_find_name:
-                history.find_new_history_directory(1, 'test')
-                mock_folder.assert_called_once()
-                assert history.new_folder
+        mocker.patch.object(history,
+                            '_find_name_for_new_history_subfolder',
+                            return_value='new_folder')
+        mock_folder = mocker.patch(f'{_MODULE}.IncompleteHistoryFolder')
+        history.find_new_history_directory(1, 'test')
+        mock_folder.assert_called_once()
+        assert history.new_folder
 
-    def test_prepare_info_file(self, history):
+    def test_prepare_info_file(self, history, mocker):
         """Test prepare_info_file method."""
-        with patch(f'{_MODULE}.HistoryInfoFile') as mock_info_file:
-            history.prepare_info_file()
-            mock_info_file.assert_called_once_with(history.root,
-                                                   create_new=True)
-            assert history.info == mock_info_file.return_value
+        mock_info_file = mocker.patch(f'{_MODULE}.HistoryInfoFile')
+        history.prepare_info_file()
+        mock_info_file.assert_called_once_with(history.root,
+                                               create_new=True)
+        assert history.info == mock_info_file.return_value
 
     def test_last_folder_no_subfolders(self, history):
         """Test last_folder when there are no subfolders."""
         history.collect_subfolders()
         assert history.last_folder is None
 
-    def test_last_folder_with_subfolders(self, history):
+    def test_last_folder_with_subfolders(self, history, mocker):
         """Test last_folder returns the most recent folder."""
-        mock_folders = MagicMock(), MagicMock()
+        mock_folders = mocker.MagicMock(), mocker.MagicMock()
         mock_folder_last = mock_folders[-1]
         # pylint: disable-next=protected-access           # OK in tests
         history._subfolders = mock_folders
@@ -141,40 +142,43 @@ class TestHistoryExplorer:
         expected_result = {1: 2, 2: 3}
         assert history.max_run_per_tensor == expected_result
 
-    def test_register_folder(self, history, mock_path):
+    def test_register_folder(self, history, mock_path, mocker):
         """Test register_folder method."""
         history.collect_subfolders()
-        with patch.object(history, '_append_existing_folder') as mock_append:
-            with patch.object(history, '_update_maps') as mock_update:
-                history.register_folder(mock_path)
-                mock_append.assert_called_once_with(mock_path,
-                                                    insert_sorted=True)
-                mock_update.assert_called_once()
+        mock_append = mocker.patch.object(history, '_append_existing_folder')
+        mock_update = mocker.patch.object(history, '_update_maps')
+        history.register_folder(mock_path)
+        mock_append.assert_called_once_with(mock_path, insert_sorted=True)
+        mock_update.assert_called_once()
 
-    def test_append_existing_folder_invalid_path(self, history, mock_path):
+    def test_append_existing_folder_invalid_path(self, history,
+                                                 mock_path, mocker):
         """Test _append_existing_folder with invalid path raises ValueError."""
-        mock_path.parent = MagicMock(return_value=MagicMock())
+        mocker.patch.object(mock_path, 'parent')
         with pytest.raises(ValueError, match='Not a subfolder'):
             # pylint: disable-next=protected-access       # OK in tests
             history._append_existing_folder(mock_path)
 
-    def test_append_existing_folder_valid_path(self, history, mock_path):
+    def test_append_existing_folder_valid_path(self, history, mock_path,
+                                               patched_folder, mocker):
         """Test _append_existing_folder with valid path."""
         history.collect_subfolders()
         mock_path.parent = history.path
-        with patch_folder as mock_folder:
-            mock_folder.return_value = folder = MagicMock()
-            # pylint: disable-next=protected-access       # OK in tests
-            history._append_existing_folder(mock_path)
-            # pylint: disable-next=protected-access       # OK in tests
-            assert folder in history._subfolders
+        patched_folder.return_value = folder = mocker.MagicMock()
+        # pylint: disable-next=protected-access       # OK in tests
+        history._append_existing_folder(mock_path)
+        # pylint: disable-next=protected-access       # OK in tests
+        assert folder in history._subfolders
 
     @parametrize(job_exists=(True, False))
-    def test_find_name_for_new_history_subfolder(self, job_exists, history):
+    def test_find_name_for_new_history_subfolder(self, job_exists,
+                                                 history, mocker):
         """Test _find_name_for_new_history_subfolder."""
         # pylint: disable-next=protected-access           # OK in tests
         history._maps['jobs_for_tensor'] = {1: {1} if job_exists else {}}
-        mock_concat = MagicMock(return_value=MagicMock(spec=Path))
+        mock_concat = mocker.MagicMock(
+            return_value=mocker.MagicMock(spec=Path)
+            )
         mock_concat.return_value.is_dir.return_value = job_exists
         history.path.__truediv__ = mock_concat
         args = 1, 'test'
@@ -182,9 +186,9 @@ class TestHistoryExplorer:
         result = history._find_name_for_new_history_subfolder(*args)
         assert result == f't00{args[0]}.r001_{args[1]}'
 
-    def test_update_maps(self, history):
+    def test_update_maps(self, history, mocker):
         """Test _update_maps method."""
-        folders = MagicMock(), MagicMock()
+        folders = mocker.MagicMock(), mocker.MagicMock()
         main = folders[0]
         main.parent = None
         # pylint: disable-next=protected-access           # OK in tests
@@ -234,10 +238,10 @@ class TestHistoryExplorerConsistencyCheck:
     """Tests for consistency checks between history folder and info entry."""
 
     @fixture(name='add_subfolder')
-    def fixture_add_fake_subfolder(self):
+    def fixture_add_fake_subfolder(self, mocker):
         """Add a fake subfolder to a HistoryExplorer."""
         def _add(explorer):
-            last_folder = MagicMock(spec=HistoryFolder)
+            last_folder = mocker.MagicMock(spec=HistoryFolder)
             # pylint: disable-next=protected-access       # OK in tests
             explorer._subfolders = [last_folder]
             # pylint: disable-next=protected-access       # OK in tests
@@ -268,10 +272,9 @@ class TestHistoryExplorerConsistencyCheck:
         with pytest.raises(MetadataMismatchError):
             history.check_last_folder_consistent()
 
-    def test_inconsistent_entry(self, history, add_subfolder):
+    def test_inconsistent_entry(self, history, add_subfolder, mocker):
         """Check complaints if the last folder and entry are inconsistent."""
-        # pylint: disable-next=protected-access           # OK in tests
-        history._info = MagicMock()
+        mocker.patch.object(history, '_info')
         last_folder = add_subfolder(history)
         last_folder.exists = True
         last_folder.check_consistent_with_entry.side_effect = (
@@ -280,10 +283,9 @@ class TestHistoryExplorerConsistencyCheck:
         with pytest.raises(CantRemoveEntryError):
             history.check_last_folder_consistent()
 
-    def test_consistent(self, history, add_subfolder):
+    def test_consistent(self, history, add_subfolder, mocker):
         """Test successful call to check_last_folder_consistent."""
-        # pylint: disable-next=protected-access           # OK in tests
-        history._info = MagicMock()
+        mocker.patch.object(history, '_info')
         last_folder = add_subfolder(history)
         last_folder.exists = True
         with not_raises(Exception):

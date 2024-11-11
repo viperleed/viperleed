@@ -10,7 +10,6 @@ __license__ = 'GPLv3+'
 from configparser import ConfigParser
 import hashlib
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 from pytest_cases import fixture
@@ -26,6 +25,7 @@ from viperleed.calc.bookkeeper.history.meta import _SECTIONS
 
 _MOCK_HASH = 'this is a fake hash'
 _MOCK_OTHER_HASH = 'this is another fake hash'
+_MODULE = 'viperleed.calc.bookkeeper.history.meta'
 
 
 @fixture(name='metadata_file')
@@ -120,20 +120,18 @@ class TestBookkeeperMetaFile:
         meta._hash = hash_
         assert meta.hash_ == hash_.hexdigest()
 
-    def test_collect_from(self, meta):
+    def test_collect_from(self, meta, mocker):
         """Test collect_from method."""
-        other_meta = MagicMock()
-        other_meta.hash_ = _MOCK_HASH
+        other_meta = mocker.MagicMock(hash_=_MOCK_HASH)
         meta.collect_from(other_meta)
         assert meta.parent == _MOCK_HASH
 
-    module = 'viperleed.calc.bookkeeper.history.meta'
-
-    @patch(f'{module}.hashlib.md5')
-    @patch(f'{module}.BookkeeperMetaFile._update_hash_from_folder')
-    def test_compute_hash_fake(self, mock_update_folder, mock_md5, meta):
+    def test_compute_hash_fake(self, meta, mocker):
         """Test compute_hash method by mocking methods."""
-        mock_md5.return_value = _MOCK_OTHER_HASH
+        mocker.patch(f'{_MODULE}.hashlib.md5', return_value=_MOCK_OTHER_HASH)
+        mock_update_folder = mocker.patch(
+            f'{_MODULE}.BookkeeperMetaFile._update_hash_from_folder'
+            )
         meta.compute_hash()
         mock_update_folder.assert_called_once_with(meta.path)
         assert meta.hash_ == _MOCK_OTHER_HASH
@@ -176,14 +174,12 @@ class TestBookkeeperMetaFileRaises:
         with pytest.raises(AttributeError):
             _ = meta.hash_
 
-    def test_read_file_not_found(self, meta):
+    def test_read_file_not_found(self, meta, mocker):
         """Test read method when the metadata file is missing."""
         # NB: Path instances have immutable .is_file. Setting it
         # onto the class rather than the instance circumvents this.
-        mock_is_file = patch.object(type(meta.path),
-                                    'is_file',
-                                    return_value=False)
-        with mock_is_file, pytest.raises(FileNotFoundError):
+        mocker.patch.object(type(meta.path), 'is_file', return_value=False)
+        with pytest.raises(FileNotFoundError):
             meta.read()
 
     def test_write_without_hash(self, meta):
@@ -198,9 +194,9 @@ _read_chunked_bytes = (
     )
 
 @parametrize(chunks=_read_chunked_bytes)
-def test_read_chunked(chunks):
+def test_read_chunked(chunks, mocker):
     """Test _read_chunked function."""
-    mock_file = MagicMock()
+    mock_file = mocker.MagicMock()
     mock_file.read.side_effect = (*chunks, b'')
     result = tuple(_read_chunked(mock_file, len(chunks[0])))
     assert result == chunks

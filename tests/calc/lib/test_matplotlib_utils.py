@@ -9,7 +9,6 @@ __created__ = '2024-07-10'
 __license__ = 'GPLv+3'
 
 import logging
-from unittest.mock import Mock
 
 import pytest
 from pytest_cases import fixture, parametrize
@@ -31,15 +30,15 @@ MOCK_RETURN = 'Function called'
 
 
 @fixture(name='mock_logger')
-def fixture_mock_logger():
+def fixture_mock_logger(mocker):
     """Return a fake logging.Logger."""
-    return Mock(logging.Logger)
+    return mocker.Mock(spec=logging.Logger)
 
 
 @fixture(name='mock_pyplot')
-def fixture_mock_pyplot():
+def fixture_mock_pyplot(mocker):
     """Return a fake matplotlib.pyplot."""
-    return Mock()
+    return mocker.Mock()
 
 
 @fixture(name='decorated', scope='session')
@@ -124,27 +123,26 @@ class TestCanPlot:
         func()
         mock_logger.debug.assert_not_called()
 
-    def test_close_figures(self, mock_pyplot):
+    def test_close_figures(self, mock_pyplot, mocker):
         """Check that calling close_figures calls pyplot.close."""
-        figures = Mock(), Mock()
+        figures = mocker.Mock(), mocker.Mock()
         close_figures(mock_pyplot, *figures)
         for fig in figures:
             mock_pyplot.close.assert_any_call(fig)
 
-    def test_close_figures_exception_logs(self, mock_pyplot, caplog):
+    def test_close_figures_exception_logs(self, mock_pyplot, caplog, mocker):
         """Check that exceptions during close_figures are logged."""
         _exc_text = 'Close failed'
         mock_pyplot.close.side_effect = Exception(_exc_text)
-        close_figures(mock_pyplot, Mock())
+        close_figures(mock_pyplot, mocker.Mock())
         assert _exc_text in caplog.text
 
-    def test_prepare_matplotlib_for_calc(self, monkeypatch):
+    def test_prepare_matplotlib_for_calc(self, mocker):
         """Check that all the expected functions are called."""
-        mock_matplotlib = Mock()
-        monkeypatch.setattr(matplotlib_utils, 'matplotlib', mock_matplotlib)
-        monkeypatch.setattr(matplotlib_utils,
+        mock_matplotlib = mocker.patch.object(matplotlib_utils, 'matplotlib')
+        mocker.patch.object(matplotlib_utils,
                             'mpl_style',
-                            mock_matplotlib.style)
+                            new=mock_matplotlib.style)
 
         prepare_matplotlib_for_calc()
         mock_matplotlib.rcParams.update.assert_called_once_with(
@@ -154,10 +152,9 @@ class TestCanPlot:
         mock_matplotlib.style.use.assert_called_once()
 
     @parametrize(mpl_version=('3.6', '3.7'))
-    def test_use_calc_style(self, mpl_version, monkeypatch):
+    def test_use_calc_style(self, mpl_version, mocker):
         """Check that the matplotlib style is updated via use_calc_style."""
-        mock_mpl_style = Mock()
-        monkeypatch.setattr(matplotlib_utils, 'mpl_version', mpl_version)
-        monkeypatch.setattr(matplotlib_utils, 'mpl_style', mock_mpl_style)
+        mocker.patch.object(matplotlib_utils, 'mpl_version', new=mpl_version)
+        mock_mpl_style = mocker.patch.object(matplotlib_utils, 'mpl_style')
         use_calc_style()
         mock_mpl_style.use.assert_called_once()

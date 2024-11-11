@@ -1,7 +1,5 @@
 """Tests for the viperleed bookkeeper command-line interface."""
 
-from unittest.mock import Mock
-
 import pytest
 from pytest_cases import fixture, parametrize
 
@@ -65,22 +63,20 @@ class TestBookkeeperParser:
         assert exc.value.code == _ARGPARSE_EXIT_WITH_ERROR
 
 
-def test_action_raises_unexpected_mode(bookkeeper_parser):
+def test_action_raises_unexpected_mode(bookkeeper_parser, mocker):
     """Check complaints when called with an unexpected mode."""
     action = StoreBookkeeperMode(option_strings=None, dest='unknown')
     with pytest.raises(SystemExit):
-        action(bookkeeper_parser, Mock(), None)
+        action(bookkeeper_parser, mocker.MagicMock(), None)
 
 
 class TestBookkeeperRun:
     """Tests for calling the BookkeeperCLI."""
 
     @fixture(name='mock_run')
-    def fixture_mock_run(self, monkeypatch):
+    def fixture_mock_run(self, mocker):
         """Return a BookkeeperCLI with its .run method replaced."""
-        mock_method = Mock()
-        monkeypatch.setattr(Bookkeeper, 'run', mock_method)
-        return mock_method
+        return mocker.patch.object(Bookkeeper, 'run')
 
     _mode = {
         '': BookkeeperMode.ARCHIVE,  # The default

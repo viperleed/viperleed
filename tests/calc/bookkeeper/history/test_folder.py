@@ -9,8 +9,6 @@ __license__ = 'GPLv3+'
 
 from contextlib import contextmanager
 from operator import attrgetter
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from pytest_cases import fixture
@@ -52,9 +50,9 @@ class MockMetaFile:
 
 
 @fixture(name='mock_entry')
-def mock_history_info_entry():
+def mock_history_info_entry(mocker):
     """Return a fake HistoryInfoEntry."""
-    entry = MagicMock()
+    entry = mocker.MagicMock()
     entry.folder_name.value = _VALID_FOLDER_NAME
     entry.tensor_nums.no_tensors = False
     entry.tensor_nums.value = (1, 2, 5)
@@ -118,23 +116,21 @@ class TestIncompleteHistoryFolder:
         assert incomplete_folder.exists is True
 
     @parametrize(file=(True, False))
-    def test_copy_file_or_directory(self, file, incomplete_folder, mock_path):
+    def test_copy_file_or_directory(self, file, incomplete_folder,
+                                    mock_path, mocker):
         """Test copy_file_or_directory method for a file."""
         mock_path.is_file.return_value = file
-        mock_shutil = 'shutil.copy2' if file else 'shutil.copytree'
+        mock_copy = mocker.patch('shutil.copy2' if file else 'shutil.copytree')
+        incomplete_folder.copy_file_or_directory(mock_path)
+        target = incomplete_folder.path / mock_path.name
+        mock_copy.assert_called_once_with(mock_path, target)
 
-        with patch(mock_shutil) as mock_copy:
-            incomplete_folder.copy_file_or_directory(mock_path)
-            target = incomplete_folder.path / mock_path.name
-            mock_copy.assert_called_once_with(mock_path, target)
-
-    def test_copy_file_fails(self, incomplete_folder, mock_path):
+    def test_copy_file_fails(self, incomplete_folder, mock_path, mocker):
         """Check complaints when failing to copy a file."""
-        patch_shutil = patch('shutil.copy2', side_effect=OSError)
-        patch_log = patch(f'{_MODULE}.LOGGER.error')
-        with patch_shutil, patch_log as mock_error:
-            incomplete_folder.copy_file_or_directory(mock_path, 'nowhere')
-            mock_error.assert_called_once()
+        mocker.patch('shutil.copy2', side_effect=OSError)
+        mock_error = mocker.patch(f'{_MODULE}.LOGGER.error')
+        incomplete_folder.copy_file_or_directory(mock_path, 'nowhere')
+        mock_error.assert_called_once()
 
 
 class TestHistoryFolder(TestIncompleteHistoryFolder):
@@ -150,10 +146,10 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
         super().test_init(mock_path, history_folder)
 
     @parametrize(is_file=(True, False))
-    def test_has_metadata(self, mock_path, is_file, history_folder):
+    def test_has_metadata(self, mock_path, is_file, history_folder, mocker):
         """Test has_metadata property of HistoryFolder."""
-        with patch.object(mock_path, 'is_file', return_value=is_file):
-            assert history_folder.has_metadata == is_file
+        mocker.patch.object(mock_path, 'is_file', return_value=is_file)
+        assert history_folder.has_metadata == is_file
 
     def test_analyze_path_not_directory(self, mock_path):
         """Test _analyze_path raises ValueError if path is not a directory."""
@@ -161,13 +157,14 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
         with pytest.raises(ValueError):
             HistoryFolder(mock_path)
 
-    def test_analyze_path_metadata_not_found(self, mock_path, metafile):
+    def test_analyze_path_metadata_not_found(self, mock_path,
+                                             metafile, mocker):
         """Test _analyze_path logs warning if metadata file is missing."""
         class _RaiseOnRead(MockMetaFile):
             def read(self):
                 raise FileNotFoundError
-        patch_ = patch(f'{_MODULE}.LOGGER.warning')
-        with metafile(fake_meta=_RaiseOnRead), patch_ as mock_warning:
+        mock_warning = mocker.patch(f'{_MODULE}.LOGGER.warning')
+        with metafile(fake_meta=_RaiseOnRead):
             mock_path.name = _VALID_FOLDER_NAME
             HistoryFolder(mock_path)
             mock_warning.assert_called_once()

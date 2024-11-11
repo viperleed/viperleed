@@ -8,8 +8,6 @@ __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from pytest_cases import fixture
@@ -20,6 +18,7 @@ from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.bookkeeper.utils import _get_attr_or_dict_item
 
 
+_MODULE = 'viperleed.calc.bookkeeper.utils'
 _UPDATED_VALUE = 'updated_value'
 _OTHER_UPDATED_VALUE = 'other_update_value'
 _DICT_KEY = 'key'
@@ -50,10 +49,10 @@ class TestDiscardFiles:
     """Tests for the discard_files function."""
 
     @fixture(name='make_fake_path')
-    def factory_make_fake_path(self):
+    def factory_make_fake_path(self, mocker):
         """Return a fake, existing path."""
         def _make():
-            mock_path = MagicMock(spec=Path)
+            mock_path = mocker.MagicMock(spec=Path)
             mock_path.exists.return_value = True
             return mock_path
         return _make
@@ -74,18 +73,14 @@ class TestDiscardFiles:
         return mock_file
 
     @fixture(name='mock_log_error')
-    def fixture_mock_log_error(self):
+    def fixture_mock_log_error(self, mocker):
         """Return a fake LOGGER.error."""
-        patch_ = patch('viperleed.calc.bookkeeper.utils.LOGGER.error')
-        with patch_ as mock_log_error:
-            yield mock_log_error
+        yield mocker.patch('viperleed.calc.bookkeeper.utils.LOGGER.error')
 
     @fixture(name='mock_rmtree')
-    def fixture_mock_rmtree(self):
+    def fixture_mock_rmtree(self, mocker):
         """Return a fake shutil.rmtree."""
-        patch_ = patch('viperleed.calc.bookkeeper.utils.shutil.rmtree')
-        with patch_ as mock_rmtree:
-            yield mock_rmtree
+        yield mocker.patch('viperleed.calc.bookkeeper.utils.shutil.rmtree')
 
     def test_deletion_not_exists(self, mock_file, mock_dir, mock_rmtree):
         """Test deletion of non-existing files/directories."""

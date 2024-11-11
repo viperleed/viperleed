@@ -13,7 +13,7 @@ from itertools import combinations
 from itertools import permutations
 from operator import attrgetter
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from pytest_cases import fixture
@@ -40,9 +40,9 @@ patch_discard = patch(f'{_MODULE}.discard_files')
 
 
 @fixture(name='explorer')
-def fixture_explorer():
+def fixture_explorer(mocker):
     """Return a RootExplorer with a fake bookkeeper."""
-    mock_bookkeeper = MagicMock()
+    mock_bookkeeper = mocker.MagicMock()
     root_path = Path(_MOCK_ROOT)
     return RootExplorer(root_path, mock_bookkeeper)
 
@@ -60,13 +60,13 @@ def fixture_tensor_and_delta_info():
 
 
 @fixture(name='mock_path_readlines')
-def fixture_mock_readlines(monkeypatch):
+def fixture_mock_readlines(mocker, monkeypatch):
     """Temporarily replace open and readlines for pathlib.Path."""
     @contextmanager
     def _patch():
-        mock_readlines = MagicMock(return_value=(_TEST_STRING,))
-        mock_open_file = MagicMock(readlines=mock_readlines)
-        mock_open = MagicMock()
+        mock_readlines = mocker.MagicMock(return_value=(_TEST_STRING,))
+        mock_open_file = mocker.MagicMock(readlines=mock_readlines)
+        mock_open = mocker.MagicMock()
         mock_open.return_value.__enter__.return_value = mock_open_file
         with monkeypatch.context() as patch_:
             patch_.setattr('pathlib.Path.open', mock_open)
@@ -75,24 +75,25 @@ def fixture_mock_readlines(monkeypatch):
 
 
 @fixture(name='patched_path')
-def fixture_patched_path(explorer, monkeypatch):
+def fixture_patched_path(explorer, mocker):
     """Return a version of pathlib.Path with fake read/write_text."""
     MockedPath = namedtuple('MockedPath', ('read', 'write', 'glob'))
     notes_file = explorer.path / 'notes.txt'
-    with monkeypatch.context() as patch_:
-        mock_read = MagicMock(return_value=_TEST_STRING)
-        mock_write = MagicMock()
-        mock_glob = MagicMock(return_value=iter([notes_file]))
-        patch_.setattr('pathlib.Path.glob', mock_glob)
-        patch_.setattr('pathlib.Path.read_text', mock_read)
-        patch_.setattr('pathlib.Path.write_text', mock_write)
-        yield MockedPath(mock_read, mock_write, mock_glob)
+    mock_glob = mocker.patch('pathlib.Path.glob',
+                             return_value=iter([notes_file]))
+    mock_read = mocker.patch('pathlib.Path.read_text',
+                             return_value=_TEST_STRING)
+    mock_write = mocker.patch('pathlib.Path.write_text')
+    yield MockedPath(mock_read, mock_write, mock_glob)
 
 
-def mock_attributes(obj, *attrs):
+@fixture(name='mock_attributes')
+def fixture_mock_attributes(mocker):
     """Replace attributes of obj with MagicMock(s)."""
-    for attr_name in attrs:
-        setattr(obj, attr_name, MagicMock())
+    def _patch(obj, *attrs):
+        for attr_name in attrs:
+            mocker.patch.object(obj, attr_name)
+    return _patch
 
 
 def called_or_not(condition):
@@ -100,15 +101,18 @@ def called_or_not(condition):
     return 'assert_called' if condition else 'assert_not_called'
 
 
-def check_methods_called(obj, method_name, **called):
+@fixture(name='check_methods_called')
+def fixture_check_methods_called(mock_attributes):
     """Check that calling method_name also calls other methods."""
-    mock_attributes(obj, *called)
-    method = attrgetter(method_name)(obj)
-    method()
+    def check_methods_called(obj, method_name, **called):
+        mock_attributes(obj, *called)
+        method = attrgetter(method_name)(obj)
+        method()
 
-    for mocked_attr, called_attr in called.items():
-        method = attrgetter(called_attr or mocked_attr)(obj)
-        method.assert_called_once()
+        for mocked_attr, called_attr in called.items():
+            method = attrgetter(called_attr or mocked_attr)(obj)
+            method.assert_called_once()
+    return check_methods_called
 
 
 def mock_exists(collection):
@@ -127,11 +131,12 @@ class TestRootExplorer:
         }
 
     @parametrize(expect=_recent.values(), ids=_recent)
-    def test_calc_timestamp(self, explorer, expect):
+    def test_calc_timestamp(self, explorer, expect, mocker):
         """Test calc_timestamp property."""
-        most_recent = expect if expect is None else MagicMock(timestamp=expect)
+        most_recent = (expect if expect is None
+                       else mocker.MagicMock(timestamp=expect))
         # pylint: disable-next=protected-access           # OK in tests
-        explorer._logs = MagicMock(most_recent=most_recent)
+        explorer._logs = mocker.MagicMock(most_recent=most_recent)
         assert explorer.calc_timestamp == expect
 
     _called = {
@@ -153,13 +158,14 @@ class TestRootExplorer:
 
     @parametrize('method_name,called', _called.items(), ids=_called)
     @patch_discard
-    def test_calls_methods(self, _, explorer, method_name, called):
+    def test_calls_methods(self, _, explorer, method_name, called,
+                           check_methods_called):
         """Check calling of expected methods."""
         check_methods_called(explorer, method_name, **called)
 
-    @patch(f'{_MODULE}.LogFiles')
-    def test_collect_info(self, mock_logs, explorer):
+    def test_collect_info(self, explorer, mock_attributes, mocker):
         """Check calling of expected method when collecting info."""
+        mock_logs = mocker.patch(f'{_MODULE}.LogFiles')
         mock_attributes(mock_logs, 'collect')
         mock_attributes(explorer, '_collect_files_to_archive')
 
@@ -175,11 +181,11 @@ class TestRootExplorer:
             else:
                 called_ok()
 
-    def test_collect_files_to_archive(self, explorer, monkeypatch):
+    def test_collect_files_to_archive(self, explorer, mocker):
         """Test the _collect_files_to_archive method."""
         # pylint: disable-next=protected-access           # OK in tests
-        explorer._logs = MagicMock(calc=(explorer.path / 'calc.log',))
-        explorer.workhistory = MagicMock()
+        explorer._logs = mocker.MagicMock(calc=(explorer.path / 'calc.log',))
+        mocker.patch.object(explorer, 'workhistory')
         explorer.workhistory.find_current_directories.return_value = (
             explorer.path / 'workhist_folder',
             )
@@ -189,11 +195,9 @@ class TestRootExplorer:
             'calc.log',
             'workhist_folder',
             )
-        with monkeypatch.context() as patch_:
-            patch_.setattr('pathlib.Path.is_file',
-                           MagicMock(return_value=True))
-            # pylint: disable-next=protected-access       # OK in tests
-            explorer._collect_files_to_archive()
+        mocker.patch('pathlib.Path.is_file', return_value=True)
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._collect_files_to_archive()
         # pylint: disable-next=protected-access           # OK in tests
         to_archive = explorer._files_to_archive
         assert to_archive == tuple(explorer.path / f for f in expected_files)
@@ -215,11 +219,12 @@ class TestRootExplorer:
         removed = (explorer.path / f for f in files)
         discard_files.assert_called_once_with(*removed)
 
-    def test_infer_run_info(self, explorer):
+    def test_infer_run_info(self, explorer, mocker):
         """Check correct result of inferring info from log files."""
-        # pylint: disable-next=protected-access           # OK in tests
-        explorer._logs = MagicMock()
-        explorer.logs.infer_run_info = MagicMock(return_value=_TEST_STRING)
+        mocker.patch.object(explorer, '_logs')
+        mocker.patch.object(explorer.logs,
+                            'infer_run_info',
+                            return_value=_TEST_STRING)
         assert explorer.infer_run_info() is _TEST_STRING
 
     _archive_files = {
@@ -259,17 +264,13 @@ class TestRootExplorer:
     @parametrize(out_exists=(True, False))
     @parametrize(file_exists=(True, False))
     def test_update_state_files_from_out(self, out_exists, file_exists,
-                                         explorer, monkeypatch):
+                                         explorer, mocker):
         """Test moving of files from OUT."""
-        mock_copy2 = MagicMock()
-        mock_replace = MagicMock()
-        with monkeypatch.context() as patch_:
-            set_ = patch_.setattr
-            set_('pathlib.Path.is_dir', MagicMock(return_value=out_exists))
-            set_('pathlib.Path.is_file', MagicMock(return_value=file_exists))
-            set_('shutil.copy2', mock_copy2)
-            set_('pathlib.Path.replace', mock_replace)
-            explorer.update_state_files_from_out()
+        mock_copy2 = mocker.patch('shutil.copy2')
+        mock_replace = mocker.patch('pathlib.Path.replace')
+        mocker.patch('pathlib.Path.is_dir', return_value=out_exists)
+        mocker.patch('pathlib.Path.is_file', return_value=file_exists)
+        explorer.update_state_files_from_out()
         moved = out_exists and file_exists
         for mock_ in (mock_copy2, mock_replace):
             assert_ok = getattr(mock_, called_or_not(moved))
@@ -279,14 +280,14 @@ class TestRootExplorer:
 class TestRootExplorerListFiles:
     """Tests for listing files/directories to be removed."""
 
-    def test_to_discard_no_files(self, explorer):
+    def test_to_discard_no_files(self, explorer, mocker):
         """Test list_paths_to_discard when no discardable files exist."""
         explorer.collect_info()
-        with patch.object(Path, 'exists', return_value=False):
-            paths_to_discard = explorer.list_paths_to_discard()
+        mocker.patch.object(Path, 'exists', return_value=False)
+        paths_to_discard = explorer.list_paths_to_discard()
         assert not paths_to_discard
 
-    def test_to_discard_files_exist(self, explorer, monkeypatch):
+    def test_to_discard_files_exist(self, explorer, mocker):
         """Test list_paths_to_discard when some discardable files exist."""
         mock_log_path = explorer.path / 'log_file.log'
         mock_paths = (
@@ -295,15 +296,15 @@ class TestRootExplorerListFiles:
             mock_log_path,
             )
         explorer.collect_info()
-        with patch.object(Path, 'exists', new=mock_exists(mock_paths)):
-            monkeypatch.setattr(type(explorer.logs), 'files', [mock_log_path])
-            paths_to_discard = explorer.list_paths_to_discard()
+        mocker.patch.object(Path, 'exists', new=mock_exists(mock_paths))
+        mocker.patch.object(type(explorer.logs), 'files', [mock_log_path])
+        paths_to_discard = explorer.list_paths_to_discard()
         assert paths_to_discard == mock_paths
 
-    def test_to_replace_no_ori(self, explorer):
+    def test_to_replace_no_ori(self, explorer, mocker):
         """Test list_files_to_replace when no '_ori' files are present."""
-        with patch.object(Path, 'exists', return_value=False):
-            files_to_replace = explorer.list_files_to_replace()
+        mocker.patch.object(Path, 'exists', return_value=False)
+        files_to_replace = explorer.list_files_to_replace()
         assert not files_to_replace
 
     _ori_files = {}
@@ -312,11 +313,11 @@ class TestRootExplorerListFiles:
                            for files in combinations(STATE_FILES, repeats+1)})
 
     @parametrize(state_files=_ori_files.values(), ids=_ori_files)
-    def test_to_replace_ori_files_exist(self, state_files, explorer):
+    def test_to_replace_ori_files_exist(self, state_files, explorer, mocker):
         """Test list_files_to_replace when '_ori' files are present."""
         mock_ori = [explorer.path / f'{f}_ori' for f in state_files]
-        with patch.object(Path, 'exists', new=mock_exists(mock_ori)):
-            files_to_replace = explorer.list_files_to_replace()
+        mocker.patch.object(Path, 'exists', new=mock_exists(mock_ori))
+        files_to_replace = explorer.list_files_to_replace()
         expected_files_to_replace = {
             explorer.path / f: ori_f
             for f, ori_f in zip(state_files, mock_ori)
@@ -327,14 +328,14 @@ class TestRootExplorerListFiles:
 class TestRootExplorerRaises:
     """Tests for conditions that causes exceptions or complaints."""
 
-    @patch(f'{_MODULE}.LOGGER.error')
-    def test_cannot_replace_state_files_from_ori(self, mock_error, explorer):
+    def test_cannot_replace_state_files_from_ori(self, explorer, mocker):
         """Check complaints when a root file cannot be replaced with _ori."""
+        mock_error = mocker.patch(f'{_MODULE}.LOGGER.error')
         with raises_exception('pathlib.Path.replace', OSError):
-            with patch('pathlib.Path.exists', return_value=True):
-                # pylint: disable-next=protected-access   # OK in tests
-                explorer._replace_state_files_from_ori()
-                mock_error.assert_called_once()
+            mocker.patch('pathlib.Path.exists', return_value=True)
+            # pylint: disable-next=protected-access       # OK in tests
+            explorer._replace_state_files_from_ori()
+            mock_error.assert_called_once()
 
     _read_notes_raises = {
         'read': '',
@@ -344,15 +345,15 @@ class TestRootExplorerRaises:
     @parametrize('method,expect',
                  _read_notes_raises.items(),
                  ids=_read_notes_raises)
-    def test_read_and_clear_notes_file(self, method, expect,
-                                       explorer, patched_path):
+    def test_read_and_clear_notes_file(self, method, expect, explorer,
+                                       patched_path, mocker):
         """Test that complaints by read/write_text emit errors."""
         complaining = getattr(patched_path, method)
         complaining.side_effect = OSError
-        with patch(f'{_MODULE}.LOGGER.error') as mock_error:
-            notes = explorer.read_and_clear_notes_file()
-            assert notes == expect
-            mock_error.assert_called_once()
+        mock_error = mocker.patch(f'{_MODULE}.LOGGER.error')
+        notes = explorer.read_and_clear_notes_file()
+        assert notes == expect
+        mock_error.assert_called_once()
 
     _attr_needs_update = (
         'calc_timestamp',
@@ -395,7 +396,7 @@ def _combine_log_info(**log_info):
 class TestLogFiles:
     """Tests for the LogFiles class."""
 
-    def test_collect_calls(self, logs):
+    def test_collect_calls(self, logs, check_methods_called):
         """Check that calling .collect calls other methods."""
         called = {
             '_collect_logs': None,
@@ -403,7 +404,7 @@ class TestLogFiles:
             }
         check_methods_called(logs, 'collect', **called)
 
-    def test_collect_logs(self, logs):
+    def test_collect_logs(self, logs, mocker):
         """Test that _collect_logs finds files in the root directory."""
         files = {
             '_calc': ('viperleed-calc_1.log', 'tleedm_1.log', 'tleedm_2.log'),
@@ -412,15 +413,15 @@ class TestLogFiles:
         for attr, file_list in files.items():
             # pylint: disable-next=protected-access       # OK in tests
             files[attr] = tuple(logs._path / f for f in file_list)
-        all_files = sum(files.values(), tuple())
-        with patch('pathlib.Path.glob', return_value=all_files):
-            with patch('pathlib.Path.is_file', return_value=True):
-                # pylint: disable-next=protected-access   # OK in tests
-                logs._collect_logs()
+        mocker.patch('pathlib.Path.glob',
+                     return_value=sum(files.values(), tuple()))
+        mocker.patch('pathlib.Path.is_file', return_value=True)
+        # pylint: disable-next=protected-access           # OK in tests
+        logs._collect_logs()
         for attr, expect in files.items():
             assert getattr(logs, attr) == expect
 
-    def test_collect_logs_no_logs(self, logs):
+    def test_collect_logs_no_logs(self, logs, mocker):
         """Test that _collect_logs finds files in the root directory."""
         files = {
             '_calc': ('viperleed-calc_1.log', 'tleedm_1.log', 'tleedm_2.log'),
@@ -429,10 +430,10 @@ class TestLogFiles:
         for attr, file_list in files.items():
             # pylint: disable-next=protected-access       # OK in tests
             files[attr] = tuple(logs._path / f for f in file_list)
-        all_files = sum(files.values(), tuple())
-        with patch('pathlib.Path.glob', return_value=all_files):
-            # pylint: disable-next=protected-access       # OK in tests
-            logs._collect_logs()
+        mocker.patch('pathlib.Path.glob',
+                     return_value=sum(files.values(), tuple()))
+        # pylint: disable-next=protected-access           # OK in tests
+        logs._collect_logs()
         for attr in files:
             collected = getattr(logs, attr)
             assert collected is not None
@@ -440,7 +441,7 @@ class TestLogFiles:
             assert not collected
 
     @patch_discard
-    def test_discard(self, discard_files, logs):
+    def test_discard(self, discard_files, logs, check_methods_called):
         """Check deletion of all log files in root."""
         # pylint: disable-next=protected-access           # OK in tests
         files = [logs._path / f'file{i}.log' for i in range(5)]
@@ -464,18 +465,16 @@ class TestLogFiles:
         )
 
     @parametrize('lines,expect', _log_info.values(), ids=_log_info)
-    def test_infer_run_info(self, logs, lines, expect):
+    def test_infer_run_info(self, logs, lines, expect, mocker):
         """Check correct inference of information from log files."""
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._calc = MagicMock()
-        logs.most_recent = MagicMock()
-        logs.most_recent.lines = lines
+        mocker.patch.object(logs, '_calc')
+        logs.most_recent = mocker.MagicMock(lines=lines)
         assert logs.infer_run_info() == expect
 
-    def test_infer_run_info_no_log(self, logs):
+    def test_infer_run_info_no_log(self, logs, mocker):
         """Check correct result when no log is found in root."""
         # pylint: disable-next=protected-access           # OK in tests
-        logs._calc = MagicMock()
+        logs._calc = mocker.MagicMock()
         assert not logs.infer_run_info()
 
     _calc_logs = {
@@ -550,31 +549,30 @@ class TestTensorsAndDeltasInfo:
 
     tensor_index = 5  # Example index to use for Tensor/Delta files
 
-    @fixture(name='patch_get_tensors')
-    def fixture_patch_get_tensors(self):
+    @fixture(name='mock_get_tensors', autouse=True)
+    def patch_get_tensors(self, mocker):
         """Replace getMaxTensorIndex with a fake one."""
-        return patch(f'{_MODULE}.getMaxTensorIndex',
-                     return_value=self.tensor_index)
+        return mocker.patch(f'{_MODULE}.getMaxTensorIndex',
+                            return_value=self.tensor_index)
 
     @fixture(name='mock_history')
-    def fixture_mock_history(self):
+    def fixture_mock_history(self, mocker):
         """Return a fake HistoryExplorer."""
-        return MagicMock(
+        return mocker.MagicMock(
             max_run_per_tensor={self.tensor_index: 1},
             last_folder_and_siblings = [
-                MagicMock(tensor_num=self.tensor_index),
+                mocker.MagicMock(tensor_num=self.tensor_index),
                 ]
             )
 
-    def test_collect(self, tensors, patch_get_tensors):
+    def test_collect(self, tensors, mock_get_tensors):
         """Test that collect sets the correct Tensor index."""
-        with patch_get_tensors as mock_get:
-            tensors.collect()
-            # pylint: disable-next=protected-access       # OK in tests
-            mock_get.assert_called_once_with(home=tensors._root, zip_only=True)
+        tensors.collect()
+        # pylint: disable-next=protected-access       # OK in tests
+        mock_get_tensors.assert_called_once_with(home=tensors._root, zip_only=True)
         assert tensors.most_recent == self.tensor_index
 
-    def test_to_discard(self, tensors, patch_get_tensors, mock_history):
+    def test_to_discard(self, tensors, mock_history, mocker):
         """Test list_paths_to_discard when Tensor and Delta files exist."""
         expected = (
             f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
@@ -582,22 +580,19 @@ class TestTensorsAndDeltasInfo:
             )
         # pylint: disable-next=protected-access           # OK in tests
         expected = tuple(tensors._root / f for f in expected)
-        with patch_get_tensors:
-            tensors.collect()
-        with patch.object(Path, 'is_file', new=mock_exists(expected)):
-            discard_paths = tensors.list_paths_to_discard(mock_history)
+        tensors.collect()
+        mocker.patch.object(Path, 'is_file', new=mock_exists(expected))
+        discard_paths = tensors.list_paths_to_discard(mock_history)
         assert discard_paths == expected
 
-    def test_to_discard_none(self, tensors, patch_get_tensors, mock_history):
+    def test_to_discard_none(self, tensors, mock_history, mocker):
         """Test list_paths_to_discard when no Tensor/Delta files exist."""
-        with patch_get_tensors:
-            tensors.collect()
-        with patch.object(Path, 'is_file', return_value=False):
-            assert not tensors.list_paths_to_discard(mock_history)
+        tensors.collect()
+        mocker.patch.object(Path, 'is_file', return_value=False)
+        assert not tensors.list_paths_to_discard(mock_history)
 
     @patch_discard
-    def test_discard(self, mock_discard_files, tensors,
-                     patch_get_tensors, mock_history):
+    def test_discard(self, mock_discard_files, tensors, mock_history, mocker):
         """Test removal of Tensors and Deltas."""
         removed = (
             f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
@@ -605,10 +600,9 @@ class TestTensorsAndDeltasInfo:
             )
         # pylint: disable-next=protected-access           # OK in tests
         removed = tuple(tensors._root/f for f in removed)
-        with patch_get_tensors:
-            tensors.collect()
-        with patch.object(Path, 'is_file', return_value=True):
-            tensors.discard(mock_history)
+        tensors.collect()
+        mocker.patch.object(Path, 'is_file', return_value=True)
+        tensors.discard(mock_history)
         mock_discard_files.assert_called_once_with(*removed)
 
     _attr_needs_update = (

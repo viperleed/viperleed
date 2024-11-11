@@ -16,7 +16,6 @@ from operator import attrgetter
 from pathlib import Path
 import shutil
 import time
-from unittest.mock import MagicMock
 
 import pytest
 from pytest_cases import fixture
@@ -499,7 +498,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         )
 
     @parametrize(error=_consistency_check_fails)
-    def test_consistency_check_fails(self, error, tmp_path):
+    def test_consistency_check_fails(self, error, tmp_path, mocker):
         """Check failure if last-entry consistency checks fail."""
         bookkeeper = Bookkeeper(tmp_path)
         # Patch a few methods to be able to test the relevant piece
@@ -507,10 +506,11 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         # of history.info, patch its methods, then patch away them
         # .prepare_info_file method to avoid replacing the patched one.
         bookkeeper.update_from_cwd()
-        bookkeeper.history.info.may_remove_last_entry = MagicMock()
-        bookkeeper.history.prepare_info_file = MagicMock()
-        bookkeeper.history.check_last_folder_consistent = check = MagicMock()
-        check.side_effect = error
+        mocker.patch.object(bookkeeper.history.info, 'may_remove_last_entry')
+        mocker.patch.object(bookkeeper.history, 'prepare_info_file')
+        check = mocker.patch.object(bookkeeper.history,
+                                    'check_last_folder_consistent',
+                                    side_effect=error)
         exit_code = bookkeeper.run(self.mode)
         check.assert_called_once()
         assert exit_code is not BookkeeperExitCode.SUCCESS

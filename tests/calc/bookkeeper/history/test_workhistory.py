@@ -10,9 +10,7 @@ __license__ = 'GPLv3+'
 from collections import defaultdict
 import logging
 from pathlib import Path
-from unittest.mock import MagicMock
 from unittest.mock import patch
-from unittest.mock import call
 
 from pytest_cases import fixture
 from pytest_cases import parametrize
@@ -24,19 +22,21 @@ from ....helpers import make_obj_raise
 from ....helpers import raises_exception
 
 
+_MODULE = 'viperleed.calc.bookkeeper.history.workhistory'
 patch_rmtree = patch('shutil.rmtree')
 
 
 @fixture(name='mock_bookkeeper')
-def fixture_mock_bookkeeper():
+def fixture_mock_bookkeeper(mocker):
     """Fixture to mock the bookkeeper."""
-    bookkeeper = MagicMock(history=MagicMock())
-    bookkeeper.history.path = Path('/mock/history')
-    bookkeeper.timestamp = '20231008'
-    jobs = defaultdict(int)
-    jobs[1] = 5
-    jobs[2] = 3
-    bookkeeper.max_job_for_tensor = jobs
+    max_job_for_tensor= defaultdict(int)
+    max_job_for_tensor[1] = 5
+    max_job_for_tensor[2] = 3
+    bookkeeper = mocker.MagicMock(
+        history=mocker.MagicMock(path=Path('/mock/history')),
+        max_job_for_tensor=max_job_for_tensor,
+        timestamp='20231008',
+        )
     return bookkeeper
 
 
@@ -73,15 +73,14 @@ class TestWorkhistoryHandler:
         """Test timestamp property."""
         assert workhistory.timestamp is mock_bookkeeper.timestamp
 
-    def test_find_current_directories(self, workhistory):
+    def test_find_current_directories(self, workhistory, mocker):
         """Test find_current_directories."""
-        directories = [MagicMock(), MagicMock()]
-        mock_find = patch.object(workhistory,
-                                 '_find_directories',
-                                 return_value=directories)
-        with mock_find:
-            subfolders = workhistory.find_current_directories()
-            assert all(PREVIOUS_LABEL not in d.name for d in subfolders)
+        directories = [mocker.MagicMock() for _ in range(2)]
+        mocker.patch.object(workhistory,
+                            '_find_directories',
+                            return_value=directories)
+        subfolders = workhistory.find_current_directories()
+        assert all(PREVIOUS_LABEL not in d.name for d in subfolders)
 
     _nothing_to_move = {
         'empty workhistory': tuple(),
@@ -115,62 +114,54 @@ class TestWorkhistoryHandler:
         mock_rmtree.assert_not_called()
 
     @patch_rmtree
-    def test_move_and_cleanup_with_folders(self, mock_rmtree,
-                                           workhistory, patched_path):
+    def test_move_and_cleanup_with_folders(self, mock_rmtree, workhistory,
+                                           patched_path, mocker):
         """Test move_current_and_cleanup where folders are moved."""
         tensors_expect = {1, 2}
         patched_path(is_dir=True, iterdir=iter([1]))
-        mock_move = patch.object(workhistory,
-                                 '_move_folders_to_history',
-                                 return_value=tensors_expect)
-        with mock_move:
-            tensor_nums = workhistory.move_current_and_cleanup(None)
-            assert tensor_nums == tensors_expect
-            mock_rmtree.assert_not_called()
+        mocker.patch.object(workhistory,
+                            '_move_folders_to_history',
+                            return_value=tensors_expect)
+        tensor_nums = workhistory.move_current_and_cleanup(None)
+        assert tensor_nums == tensors_expect
+        mock_rmtree.assert_not_called()
 
     @patch_rmtree
-    def test_discard_previous(self, mock_rmtree, workhistory):
+    def test_discard_previous(self, mock_rmtree, workhistory, mocker):
         """Test _discard_previous method."""
-        previous_dirs = [MagicMock(), MagicMock()]
-        mock_find = patch.object(workhistory,
-                                 '_find_directories',
-                                 return_value=previous_dirs)
-        with mock_find:
-            # pylint: disable-next=protected-access       # OK in tests
-            workhistory._discard_previous()
-            calls = [call(directory) for directory in previous_dirs]
-            mock_rmtree.assert_has_calls(calls, any_order=True)
+        previous_dirs = [mocker.MagicMock() for _ in range(2)]
+        mocker.patch.object(workhistory,
+                            '_find_directories',
+                            return_value=previous_dirs)
+        # pylint: disable-next=protected-access           # OK in tests
+        workhistory._discard_previous()
+        calls = [mocker.call(directory) for directory in previous_dirs]
+        mock_rmtree.assert_has_calls(calls, any_order=True)
 
-    def test_move_folders_to_history(self, workhistory, monkeypatch):
+    def test_move_folders_to_history(self, workhistory, mocker):
         """Test _move_folders_to_history."""
-        directory = MagicMock()
+        directory = mocker.MagicMock()
         directory.name = f't987.r001.003_{workhistory.timestamp}'
-        fake_replace = MagicMock()
-        mock_replace = patch.object(directory, 'replace', fake_replace)
-        mock_find = patch.object(workhistory,
-                                 'find_current_directories',
-                                 return_value=(directory,))
-        mock_meta_cls = MagicMock()
-        monkeypatch.setattr(
-            'viperleed.calc.bookkeeper.history.workhistory.BookkeeperMetaFile',
-            mock_meta_cls,
-            )
-        main_meta = MagicMock()
-        with mock_find, mock_replace:
-            # pylint: disable-next=protected-access       # OK in tests
-            tensor_nums = workhistory._move_folders_to_history(main_meta)
-            fake_replace.assert_called_once()
-            assert tensor_nums == {987}
-            mock_meta_cls.assert_called_once()  # Created metadata file
-            mock_meta = mock_meta_cls.return_value
-            # Metadata file processed and written
-            mock_meta.compute_hash.assert_called_once()
-            mock_meta.collect_from.assert_called_once_with(main_meta)
-            mock_meta.write.assert_called_once()
+        fake_replace = mocker.patch.object(directory, 'replace')
+        mocker.patch.object(workhistory,
+                            'find_current_directories',
+                            return_value=(directory,))
+        mock_meta_cls = mocker.patch(f'{_MODULE}.BookkeeperMetaFile')
+        main_meta = mocker.MagicMock()
+        # pylint: disable-next=protected-access           # OK in tests
+        tensor_nums = workhistory._move_folders_to_history(main_meta)
+        fake_replace.assert_called_once()
+        assert tensor_nums == {987}
+        mock_meta_cls.assert_called_once()  # Created metadata file
+        mock_meta = mock_meta_cls.return_value
+        # Metadata file processed and written
+        mock_meta.compute_hash.assert_called_once()
+        mock_meta.collect_from.assert_called_once_with(main_meta)
+        mock_meta.write.assert_called_once()
 
-    def test_find_any_directory(self, workhistory, patched_path):
+    def test_find_any_directory(self, workhistory, patched_path, mocker):
         """Test _find_directories."""
-        directories = [MagicMock(), MagicMock()]
+        directories = [mocker.MagicMock() for _ in range(2)]
         for directory in directories:
             directory.name = 'does not match'
         mock_path = patched_path(glob=directories, iterdir=directories)
@@ -180,9 +171,10 @@ class TestWorkhistoryHandler:
         mock_path.glob.assert_not_called()
         mock_path.iterdir.assert_called_once()
 
-    def test_find_directories_with_filter(self, workhistory, patched_path):
+    def test_find_directories_with_filter(self, workhistory,
+                                          patched_path, mocker):
         """Test _find_directories."""
-        directories = [MagicMock(), MagicMock()]
+        directories = [mocker.MagicMock() for _ in range(2)]
         contains = '_some_test_string_'
         for i, directory in enumerate(directories):
             directory.name = f't123.r456_{contains}_{i}'
@@ -210,38 +202,37 @@ class TestWorkhistoryHandlerRaises:
             workhistory.move_current_and_cleanup(None)
         self.check_has_error(caplog)
 
-    def test_discard_previous(self, workhistory, caplog):
+    def test_discard_previous(self, workhistory, caplog, mocker):
         """Check that failing to remove "previous" does not break."""
-        mock_find = patch.object(workhistory,
-                                 '_find_directories',
-                                 return_value=(1,))
-        with mock_find, make_obj_raise('shutil.rmtree', OSError):
+        mocker.patch.object(workhistory,
+                            '_find_directories',
+                            return_value=(1,))
+        with make_obj_raise('shutil.rmtree', OSError):
             # pylint: disable-next=protected-access       # OK in tests
             workhistory._discard_previous()
         self.check_has_error(caplog)
 
-    def test_move_folders_exists(self, workhistory, caplog):
+    def test_move_folders_exists(self, workhistory, caplog, mocker):
         """Test _move_folders_to_history handling FileExistsError."""
-        directory = MagicMock()
-        directory.name = f't001.r001.003_{workhistory.timestamp}'
-        mock_find = patch.object(workhistory,
-                                 'find_current_directories',
-                                 return_value=(directory,))
+        directory = mocker.MagicMock()
+        directory.name=f't001.r001.003_{workhistory.timestamp}'
+        mocker.patch.object(workhistory,
+                            'find_current_directories',
+                            return_value=(directory,))
         raises_ = raises_exception(directory, FileExistsError, 'replace')
-        with patch_rmtree, mock_find, raises_:
+        with patch_rmtree, raises_:
             # pylint: disable-next=protected-access       # OK in tests
             workhistory._move_folders_to_history(None)
         self.check_has_error(caplog)
 
-    def test_move_folders_os_error(self, workhistory, caplog):
+    def test_move_folders_os_error(self, workhistory, caplog, mocker):
         """Test _move_folders_to_history handling OSError."""
-        directory = MagicMock()
-        directory.name = f't001.r001.003_{workhistory.timestamp}'
-        mock_find = patch.object(workhistory,
-                                 'find_current_directories',
-                                 return_value=(directory,))
-        raises_ = make_obj_raise(directory, OSError, 'replace')
-        with mock_find, raises_:
+        directory = mocker.MagicMock()
+        directory.name=f't001.r001.003_{workhistory.timestamp}'
+        mocker.patch.object(workhistory,
+                            'find_current_directories',
+                            return_value=(directory,))
+        with make_obj_raise(directory, OSError, 'replace'):
             # pylint: disable-next=protected-access       # OK in tests
             tensor_nums = workhistory._move_folders_to_history(None)
             assert not tensor_nums

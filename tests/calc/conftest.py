@@ -31,7 +31,6 @@ __license__ = 'GPLv3+'
 
 import os
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 import pytest_cases
@@ -88,9 +87,9 @@ def ag100_with_displacements_and_offsets(ag100, data_path):
 
 
 @pytest_cases.fixture
-def mock_path():
+def mock_path(mocker):
     """Return a fake pathlib.Path."""
-    return MagicMock(spec=Path)
+    return mocker.MagicMock(spec=Path)
 
 
 # Notice that we need to exclude POSCARs without information as some

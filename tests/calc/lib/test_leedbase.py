@@ -9,8 +9,6 @@ __license__ = 'GPLv3+'
 
 from fnmatch import fnmatch  # To simulate globbing
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from pytest_cases import fixture
@@ -23,8 +21,8 @@ from viperleed.calc.lib.leedbase import getMaxTensorIndex
 _MODULE = 'viperleed.calc.lib.leedbase'
 
 
-@fixture(scope='session', name='mock_tensor')
-def factory_mock_tensor():
+@fixture(name='mock_tensor')
+def factory_mock_tensor(mocker):
     """Return a fake Tensor file with a given stem."""
     def _make(stem, **kwargs):
         suffix = kwargs.get('suffix', '')
@@ -38,18 +36,11 @@ def factory_mock_tensor():
             kwargs['is_file'] = kwargs['is_dir'] = False
         # Replace the relevant is_file/is_dir with a callable
         for key in ('is_file', 'is_dir'):
-            kwargs[key] = MagicMock(return_value=kwargs[key])
-        mocked = MagicMock(spec=Path, stem=stem, **kwargs)
+            kwargs[key] = mocker.MagicMock(return_value=kwargs[key])
+        mocked = mocker.MagicMock(spec=Path, stem=stem, **kwargs)
         mocked.name = stem+suffix
         return mocked
     return _make
-
-
-@fixture(name='patch_path')
-def fixture_patch_path(mock_path):
-    """Patch leedbase.Path to return `mock_path` instead."""
-    mock_path.resolve = MagicMock(return_value=mock_path)
-    return patch(f'{_MODULE}.Path', return_value=mock_path)
 
 
 def mock_glob(*fake_files):
@@ -59,18 +50,27 @@ def mock_glob(*fake_files):
     return _iter
 
 
-class TestGetMaxTensorIndex:
+class AutousePatchPath:
+    """A base class for tests using patch_path as a fixture for all tests."""
+
+    @fixture(name='patch_path', autouse=True)
+    def fixture_patch_path(self, mock_path, mocker):
+        """Patch leedbase.Path to return `mock_path` instead."""
+        mock_path.resolve = mocker.MagicMock(return_value=mock_path)
+        return mocker.patch(f'{_MODULE}.Path', return_value=mock_path)
+
+
+class TestGetMaxTensorIndex(AutousePatchPath):
     """Tests for the getMaxTensorIndex function."""
 
-    def test_no_files(self, mock_path, patch_path):
+    def test_no_files(self, mock_path):
         """Test getMaxTensorIndex without tensor files/directories."""
         mock_path.is_dir.return_value = True
         mock_path.glob.return_value = []
-        with patch_path:
-            index = getMaxTensorIndex()
-            assert index == 0
+        index = getMaxTensorIndex()
+        assert index == 0
 
-    def test_files_and_folders(self, mock_path, mock_tensor, patch_path):
+    def test_files_and_folders(self, mock_path, mock_tensor):
         """Test getMaxTensorIndex with files/folders with different indices."""
         mock_path.is_dir.return_value = True
         mock_path.glob.side_effect = mock_glob(
@@ -84,11 +84,9 @@ class TestGetMaxTensorIndex:
             mock_tensor(f'{DEFAULT_TENSORS}_009'),  # Not a file/folder
             mock_tensor(f'Not_a_tensor_012', is_dir=True),
             )
-        with patch_path:
-            index = getMaxTensorIndex()
-            assert index == 5
+        assert getMaxTensorIndex() == 5
 
-    def test_zip_only(self, mock_path, mock_tensor, patch_path):
+    def test_zip_only(self, mock_path, mock_tensor):
         """Test getMaxTensorIndex with zip_only=True."""
         mock_path.is_dir.return_value = True
         mock_path.glob.side_effect = mock_glob(
@@ -97,11 +95,10 @@ class TestGetMaxTensorIndex:
             mock_tensor(f'{DEFAULT_TENSORS}_008', is_dir=True),   # A folder
             mock_tensor(f'{DEFAULT_TENSORS}_009', is_file=True),  # A non-zip file
             )
-        with patch_path:
-            result = getMaxTensorIndex(zip_only=True)
-            assert result == 4
+        result = getMaxTensorIndex(zip_only=True)
+        assert result == 4
 
-    def test_mixed_files(self, mock_path, mock_tensor, patch_path):
+    def test_mixed_files(self, mock_path, mock_tensor):
         """Test getMaxTensorIndex with a mix of .zip, folders, and files."""
         mock_path.is_dir.return_value = True
         mock_path.glob.side_effect = mock_glob(
@@ -109,15 +106,14 @@ class TestGetMaxTensorIndex:
             mock_tensor(f'{DEFAULT_TENSORS}_005', is_file=True),
             mock_tensor(f'{DEFAULT_TENSORS}_010', suffix='.zip', is_file=True),
             )
-        with patch_path:
-            index = getMaxTensorIndex()
-            assert index == 10
+        index = getMaxTensorIndex()
+        assert index == 10
 
 
-class TestGetTensorIndices:
+class TestGetTensorIndices(AutousePatchPath):
     """Tests for the get_tensor_indices function."""
 
-    def test_files_and_folders(self, mock_path, mock_tensor, patch_path):
+    def test_files_and_folders(self, mock_path, mock_tensor):
         """Test get_tensor_indices with tensor files/directories present."""
         mock_path.is_dir.return_value = True
         mock_path.glob.side_effect = mock_glob(
@@ -128,7 +124,7 @@ class TestGetTensorIndices:
             mock_tensor(f'{DEFAULT_TENSORS}_005', suffix='.zip', is_file=True),
             mock_tensor(f'{DEFAULT_TENSORS}_005', is_dir=True),  # Unzipped
             mock_tensor(f'{DEFAULT_TENSORS}_123456',
-                        suffix='.zip', 
+                        suffix='.zip',
                         is_file=True),
             mock_tensor(f'{DEFAULT_TENSORS}_bad', is_file=True),
             mock_tensor(f'{DEFAULT_TENSORS}_099_not_int', is_file=True),
@@ -137,34 +133,33 @@ class TestGetTensorIndices:
             mock_tensor(f'{DEFAULT_TENSORS}_009'),  # Not a file/folder
             mock_tensor(f'Not_a_tensor_012', is_dir=True),
             )
-        with patch_path:
-            result = set(get_tensor_indices())
-            assert result == {1, 2, 3, 4, 5, 123456}
+        result = set(get_tensor_indices())
+        assert result == {1, 2, 3, 4, 5, 123456}
 
-    def test_invalid_files(self, mock_path, mock_tensor, patch_path):
+    def test_invalid_files(self, mock_path, mock_tensor):
         """Test get_tensor_indices with files that do not match the pattern."""
         mock_path.is_dir.return_value = True
         mock_path.glob.side_effect = mock_glob(
             mock_tensor(f'{DEFAULT_TENSORS}_abc', is_dir=True),
             mock_tensor('SomeOtherFile_123', is_file=True),
             )
-        with patch_path, pytest.raises(StopIteration):
+        with pytest.raises(StopIteration):
             next(get_tensor_indices())
 
-    def test_no_files(self, mock_path, patch_path):
+    def test_no_files(self, mock_path):
         """Test get_tensor_indices when Tensors folder is empty."""
         mock_path.is_dir.return_value = True
         mock_path.glob.return_value = []
-        with patch_path, pytest.raises(StopIteration):
+        with pytest.raises(StopIteration):
             next(get_tensor_indices())
 
-    def test_no_tensor_folder(self, mock_path, patch_path):
+    def test_no_tensor_folder(self, mock_path):
         """Test get_tensor_indices when the Tensors folder does not exist."""
         mock_path.is_dir.return_value = False
-        with patch_path, pytest.raises(StopIteration):
+        with pytest.raises(StopIteration):
             next(get_tensor_indices())
 
-    def test_zip_files_only(self, mock_path, mock_tensor, patch_path):
+    def test_zip_files_only(self, mock_path, mock_tensor):
         """Test get_tensor_indices with zip_only=True."""
         mock_path.is_dir.return_value = True
         mock_path.glob.side_effect = mock_glob(
@@ -172,6 +167,5 @@ class TestGetTensorIndices:
             mock_tensor(f'{DEFAULT_TENSORS}_002', suffix='.zip', is_file=True),
             mock_tensor(f'{DEFAULT_TENSORS}_003', is_dir=True),  # A folder
             )
-        with patch_path:
-            result = set(get_tensor_indices(zip_only=True))
-            assert result == {1, 2}
+        result = set(get_tensor_indices(zip_only=True))
+        assert result == {1, 2}
