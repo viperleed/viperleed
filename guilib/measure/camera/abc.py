@@ -858,6 +858,8 @@ class CameraABC(DeviceABC):
                            handler_widget=_widget, tooltip=_tip,
                            display_name="No. frames")
 
+        if not self.connected:
+            return handler
         # ROI
         _widget = ROIEditor()
         size_min, size_max, _d_size, _d_offset = self.get_roi_size_limits()
@@ -1143,7 +1145,7 @@ class CameraABC(DeviceABC):
         min_exposure, max_exposure : float
             Shortest and longest exposure times in milliseconds
         """
-        return
+        return 1, np.inf
 
     @abstractmethod
     def get_frame_rate(self):
@@ -1201,7 +1203,7 @@ class CameraABC(DeviceABC):
         min_gain, max_gain : float
             Smallest and largest gain factors in decibel
         """
-        return
+        return - np.inf, np.inf
 
     @abstractmethod
     def get_mode(self):

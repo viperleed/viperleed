@@ -432,8 +432,9 @@ class CollapsableCameraView(CollapsableDeviceView):
         # TODO: handle cameras from settings that are not connected
         if not device:
             return
-        device.connect_()
-        device.start()
+        if not self._is_dummy_device():
+            device.connect_()
+            device.start()
         self._make_handler_for_device(device)
         self._build_device_settings()
         device.disconnect_()
@@ -683,6 +684,7 @@ class CollapsableCameraList(CollapsableDeviceList):
         self._make_top_items()
         self.setMinimumWidth(self.widget().sizeHint().width() +
                              PathSelector().sizeHint().width())
+        self._camera_settings = ()
 
     def _add_top_widgets_to_view(self, view):
         """Add the top widget types to the CollapsableView."""
@@ -692,6 +694,45 @@ class CollapsableCameraList(CollapsableDeviceList):
         view.set_top_widget_geometry(
             self._views[view][0], width=self._widths[self._top_labels[1]]
             )
+
+    @qtc.pyqtSlot()
+    def _detect_and_add_devices(self):
+        """Detect controllers, add them as views and preselect them."""
+        super()._detect_and_add_devices()
+        self._set_camera_settings()
+
+    def _set_camera_settings(self):
+        """Set camera settings."""
+        for settings in self._camera_settings:
+            self._set_single_camera_settings(settings)
+
+    def _set_single_camera_settings(self, camera_settings):
+        """Set settings of camera."""
+        settings = ViPErLEEDSettings.from_settings(camera_settings)
+        device_name = settings.get('camera_settings', 'device_name')
+        correct_view = None
+        for view in self.views:
+            if device_name == view.device_info.unique_name:
+                correct_view = view
+                break
+
+        if not correct_view:
+            name = device_name + ' (not found)'
+            cls = class_from_name(
+                'camera', settings.get('camera_settings', 'class_name')
+                )
+            info = {}
+            present = False # Because there is no hardware interface.
+            settings_info = SettingsInfo(name, present, info)
+            correct_view = self.add_new_view(name, (cls, settings_info))
+
+        safe_disconnect(self._views[correct_view][0].stateChanged,
+                        self._emit_settings_changed)
+        correct_view.original_settings = settings.last_file
+        self._views[correct_view][0].setChecked(True)
+        safe_connect(self._views[correct_view][0].stateChanged,
+                     self._emit_settings_changed,
+                     type=qtc.Qt.UniqueConnection)
 
     def add_new_view(self, name, cls_and_info):
         """Add a new CollapsableCameraView."""                                  # TODO: doc
@@ -707,10 +748,13 @@ class CollapsableCameraList(CollapsableDeviceList):
             settings_files.append(self._get_relative_path(view.settings_file))
         return tuple(settings_files)
 
-    def set_cameras_from_settings(self, camera_settings):
+    def set_cameras_from_settings(self, meas_settings):
         """Attempt to select the cameras from settings."""
         self._detect_and_add_devices()
-        # TODO
+        self._camera_settings = meas_settings.getsequence(
+            'devices', 'cameras', fallback=()
+            )
+        self._set_camera_settings()
 
 
 class CollapsableControllerList(CollapsableDeviceList):
@@ -751,8 +795,8 @@ class CollapsableControllerList(CollapsableDeviceList):
     def _detect_and_add_devices(self):
         """Detect controllers, add them as views and preselect them."""
         super()._detect_and_add_devices()
-        self.set_primary_from_settings()
-        self.set_secondary_from_settings()
+        self._set_primary_from_settings()
+        self._set_secondary_from_settings()
 
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
@@ -775,55 +819,7 @@ class CollapsableControllerList(CollapsableDeviceList):
                     radio.setChecked(True)
                     break
 
-    def add_new_view(self, name, cls_and_info):
-        """Add a new CollapsableControllerView."""                              # TODO: doc
-        view = CollapsableControllerView()
-        return super().add_new_view(view, name, cls_and_info)
-
-    def get_primary_settings(self):
-        """Return a tuple of camera settings."""
-        for view, widgets in self.views.items():
-            if not widgets[0].isChecked() or not widgets[1].isChecked():
-                continue
-            rel_path = self._get_relative_path(view.settings_file)
-            return (rel_path, view.selected_quantities)
-
-    def get_secondary_settings(self):
-        """Return a tuple of camera settings."""
-        settings_files = []
-        for view, widgets in self.views.items():
-            if not widgets[0].isChecked() or widgets[1].isChecked():
-                continue
-            settings_files.append((self._get_relative_path(view.settings_file),
-                                   view.selected_quantities))
-        return tuple(settings_files)
-
-    def set_controllers_from_settings(self, meas_settings):
-        """Attempt to select controllers from settings."""
-        self._detect_and_add_devices()
-        self._primary_settings = meas_settings.getsequence(
-            'devices', 'primary_controller', fallback=()
-            )
-        self._secondary_settings = meas_settings.getsequence(
-            'devices', 'secondary_controllers', fallback=()
-            )
-        self.set_primary_from_settings()
-        self.set_secondary_from_settings()
-
-    def set_primary_from_settings(self):
-        """Attempt to select the primary controller from settings."""
-        if not self._primary_settings:
-            return
-        self.set_controller_settings(self._primary_settings)
-
-    def set_secondary_from_settings(self):
-        """Attempt to select the secondary controllers from settings."""
-        if not self._secondary_settings:
-            return
-        for controller_settings in self._secondary_settings:
-            self.set_controller_settings(controller_settings)
-
-    def set_controller_settings(self, controller_settings):
+    def _set_controller_settings(self, controller_settings):
         """Set settings of controller."""
         file, quantities = controller_settings
         settings = ViPErLEEDSettings.from_settings(file)
@@ -859,3 +855,52 @@ class CollapsableControllerList(CollapsableDeviceList):
         safe_connect(self._views[correct_view][1].toggled,
                      self._emit_settings_changed,
                      type=qtc.Qt.UniqueConnection)
+
+    def _set_primary_from_settings(self):
+        """Attempt to select the primary controller from settings."""
+        if not self._primary_settings:
+            return
+        self._set_controller_settings(self._primary_settings)
+
+    def _set_secondary_from_settings(self):
+        """Attempt to select the secondary controllers from settings."""
+        if not self._secondary_settings:
+            return
+        for controller_settings in self._secondary_settings:
+            self._set_controller_settings(controller_settings)
+
+    def add_new_view(self, name, cls_and_info):
+        """Add a new CollapsableControllerView."""                              # TODO: doc
+        view = CollapsableControllerView()
+        return super().add_new_view(view, name, cls_and_info)
+
+    def get_primary_settings(self):
+        """Return a tuple of camera settings."""
+        for view, widgets in self.views.items():
+            if not widgets[0].isChecked() or not widgets[1].isChecked():
+                continue
+            rel_path = self._get_relative_path(view.settings_file)
+            return (rel_path, view.selected_quantities)
+        return ()
+
+    def get_secondary_settings(self):
+        """Return a tuple of camera settings."""
+        settings_files = []
+        for view, widgets in self.views.items():
+            if not widgets[0].isChecked() or widgets[1].isChecked():
+                continue
+            settings_files.append((self._get_relative_path(view.settings_file),
+                                   view.selected_quantities))
+        return tuple(settings_files)
+
+    def set_controllers_from_settings(self, meas_settings):
+        """Attempt to select controllers from settings."""
+        self._detect_and_add_devices()
+        self._primary_settings = meas_settings.getsequence(
+            'devices', 'primary_controller', fallback=()
+            )
+        self._secondary_settings = meas_settings.getsequence(
+            'devices', 'secondary_controllers', fallback=()
+            )
+        self._set_primary_from_settings()
+        self._set_secondary_from_settings()

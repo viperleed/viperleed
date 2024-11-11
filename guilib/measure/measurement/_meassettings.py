@@ -106,10 +106,8 @@ class DeviceEditor(SettingsDialogSectionBase):
             # device objects that may occupy the serial as the
             # showEvent will trigger the device population anyway.
             return
-        camera_settings = self._settings.getsequence('devices', 'cameras',
-                                                     fallback=())
         self._controllers.set_controllers_from_settings(self._settings)
-        self._cameras.set_cameras_from_settings(camera_settings)
+        self._cameras.set_cameras_from_settings(self._settings)
 
 
 class StepProfileViewer(ButtonWithLabel):

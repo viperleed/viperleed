@@ -639,6 +639,9 @@ class ImagingSourceCamera(abc.CameraABC):
         # Triggered for _widget. While this is true, it is clear what
         # _widget is used for in each portion of filling the handler
 
+        if not self.connected:
+            return handler
+
         # Black level
         _widget = CoercingSpinBox(soft_range=self.get_black_level_limits())
         _widget.setMinimum(0)
@@ -773,6 +776,8 @@ class ImagingSourceCamera(abc.CameraABC):
         min_exposure, max_exposure : float
             Shortest and longest exposure times in milliseconds
         """
+        if not self.connected:
+            return super().get_exposure_limits()
         return self.driver.exposure_range
 
     def get_frame_rate(self):
@@ -781,6 +786,8 @@ class ImagingSourceCamera(abc.CameraABC):
 
     def get_gain(self):
         """Get the gain (in decibel) from the camera device."""
+        if not self.connected:
+            return self.settings.getfloat('measurement_settings', 'gain')
         return self.driver.gain
 
     def set_gain(self):
@@ -797,6 +804,8 @@ class ImagingSourceCamera(abc.CameraABC):
         min_gain, max_gain : float
             Smallest and largest gain factors in decibel
         """
+        if not self.connected:
+            return super().get_gain_limits()
         return self.driver.gain_range
 
     def get_mode(self):
