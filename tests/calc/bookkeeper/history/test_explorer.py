@@ -22,6 +22,7 @@ from viperleed.calc.bookkeeper.history.folder import HistoryFolder
 from viperleed.calc.constants import DEFAULT_HISTORY
 
 from ....helpers import not_raises
+from ....helpers import raises_exception
 
 _MODULE = 'viperleed.calc.bookkeeper.history.explorer'
 
@@ -114,6 +115,24 @@ class TestHistoryExplorer:
         history.find_new_history_directory(1, 'test')
         mock_folder.assert_called_once()
         assert history.new_folder
+
+    def test_discard_last(self, history, mocker):
+        """Test the discard_most_recent_run method."""
+        rmtree = mocker.patch('shutil.rmtree')
+        fake_paths = tuple(range(5))
+        to_discard = mocker.patch.object(history,
+                                         'list_paths_to_discard',
+                                         return_value=fake_paths)
+        history.discard_most_recent_run()
+        rmtree.assert_has_calls(mocker.call(p) for p in fake_paths)
+
+    def test_discard_last_raises(self, history, mocker):
+        """Check that exceptions while removing folders are propagated."""
+        mocker.patch.object(history,
+                            'list_paths_to_discard',
+                            return_value=('some value',))
+        with raises_exception('shutil.rmtree', OSError):
+            history.discard_most_recent_run()
 
     def test_list_to_discard(self, history, mocker):
         """Test the list_paths_to_discard method."""
