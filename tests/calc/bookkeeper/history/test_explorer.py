@@ -115,6 +115,21 @@ class TestHistoryExplorer:
         mock_folder.assert_called_once()
         assert history.new_folder
 
+    def test_list_to_discard(self, history, mocker):
+        """Test the list_paths_to_discard method."""
+        folders = *_, last = [
+            mocker.MagicMock(spec=HistoryFolder, path=mocker.MagicMock())
+            for _ in range(3)
+            ]
+        for i, folder in enumerate(folders):
+            folder.path.name = f'folder_{i}'
+        history._maps['hash_to_parent'] = {last.hash_: last}
+        history._maps['main_hash_to_folders'] = {last.hash_: set(folders)}
+        # pylint: disable-next=protected-access           # OK in tests
+        history._subfolders = folders
+        expect = tuple(f.path for f in folders)
+        assert history.list_paths_to_discard() == expect
+
     def test_prepare_info_file(self, history, mocker):
         """Test prepare_info_file method."""
         mock_info_file = mocker.patch(f'{_MODULE}.HistoryInfoFile')
