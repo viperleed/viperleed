@@ -127,17 +127,29 @@ class TestHistoryExplorer:
         """Test last_folder when there are no subfolders."""
         history.collect_subfolders()
         assert history.last_folder is None
+        assert not history.last_folder_and_siblings
 
     def test_last_folder_with_subfolders(self, history, mocker):
         """Test last_folder returns the most recent folder."""
-        mock_folders = mocker.MagicMock(), mocker.MagicMock()
-        mock_folder_last = mock_folders[-1]
+        mock_folder_last = mocker.MagicMock()
+        sibling_folders = [mocker.MagicMock() for _ in range(3)]
+        mock_folders = (
+            mocker.MagicMock(),  # Some other folder
+            *sibling_folders,
+            mock_folder_last,
+            )
         # pylint: disable-next=protected-access           # OK in tests
         history._subfolders = mock_folders
         # pylint: disable-next=protected-access           # OK in tests
         history._maps['hash_to_parent'] = {mock_folder_last.hash_:
                                            mock_folder_last}
+        history._maps['main_hash_to_folders'] = {
+            mock_folder_last.hash_: {mock_folder_last, *sibling_folders},
+            }
         assert history.last_folder is mock_folder_last
+        # last_folder_and_siblings is unsorted!
+        last_and_siblings = set(history.last_folder_and_siblings)
+        assert last_and_siblings == {mock_folder_last, *sibling_folders}
 
     def test_max_run_per_tensor_empty(self, history):
         """Test max_run_per_tensor when no jobs exist."""
