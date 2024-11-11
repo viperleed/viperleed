@@ -591,6 +591,20 @@ class TestTensorsAndDeltasInfo:
         mocker.patch.object(Path, 'is_file', return_value=False)
         assert not tensors.list_paths_to_discard(mock_history)
 
+    def test_to_discard_history_empty(self, tensors, mock_history, mocker):
+        """Check that no Tensors/Deltas are discarded with empty history."""
+        tensors.collect()
+        mocker.patch.object(Path, 'is_file', return_value=True)
+        mock_history.last_folder_and_siblings = []
+        assert not tensors.list_paths_to_discard(mock_history)
+
+    def test_to_discard_older_runs(self, tensors, mock_history, mocker):
+        """Check that no Tensors/Deltas are discarded when more runs exist."""
+        tensors.collect()
+        mocker.patch.object(Path, 'is_file', return_value=True)
+        mock_history.max_run_per_tensor[self.tensor_index] = 3
+        assert not tensors.list_paths_to_discard(mock_history)
+
     @patch_discard
     def test_discard(self, mock_discard_files, tensors, mock_history, mocker):
         """Test removal of Tensors and Deltas."""
