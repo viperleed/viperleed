@@ -310,8 +310,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
     def are_runtime_settings_ok(self):
         """Return whether runtime settings are ok.
 
-        Check if at least one camera is available before starting a
-        measurement. This method is co-opted here to not just check
+        This method is co-opted here to not just check
         runtime settings, but to actually set them.
 
         Returns
@@ -319,6 +318,11 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         settings_ok : bool
             True if the runtime settings are
             sufficient to start a measurement.
+
+        Emits
+        -----
+        error_occurred
+            If the primary controller is missing.
         """
         if not super().are_runtime_settings_ok():
             return False

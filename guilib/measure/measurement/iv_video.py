@@ -104,6 +104,11 @@ class IVVideo(MeasurementABC):
         settings_ok : bool
             True if the runtime settings are
             sufficient to start a measurement.
+
+        Emits
+        -----
+        error_occurred
+            If the primary controller or the camera is missing.
         """
         if not super().are_runtime_settings_ok():
             return False

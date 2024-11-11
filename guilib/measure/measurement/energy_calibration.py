@@ -132,6 +132,12 @@ class MeasureEnergyCalibration(MeasurementABC):
         settings_ok : bool
             True if the runtime settings are
             sufficient to start a measurement.
+
+        Emits
+        -----
+        error_occurred
+            If the primary controller is missing or if the settings
+            are insufficient to perform an energy calibration.
         """
         if not super().are_runtime_settings_ok():
             return False

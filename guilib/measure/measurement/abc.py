@@ -53,13 +53,19 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
         'of MeasureControllerABC. All secondary controllers need '
         'to be a subclass of MeasureControllerABC.'
         )
-    MISSING_CAMERA = (
+    MISSING_PRIMARY = (
         302,
+        'No primary controller available to set the beam energy. Check '
+        'both the measurement and the primary controller configuration '
+        'files.'
+        )
+    MISSING_CAMERA = (
+        303,
         'No camera available for the measurement. Check both the '
         'measurement and the camera configuration files.'
         )
     TOO_MUCH_DATA = (
-        303,
+        304,
         'The devices {} returned more data than expected.'
         )
 
@@ -630,8 +636,16 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         settings_ok : bool
             True if the runtime settings are
             sufficient to start a measurement.
+
+        Emits
+        -----
+        error_occurred
+            If the primary controller is missing.
         """
-        return bool(self.primary_controller)
+        if not self.primary_controller:
+            self.emit_error(MeasurementErrors.MISSING_PRIMARY)
+            return False
+        return True
 
     def are_settings_invalid(self, settings):
         """Check if there are any invalid settings.
@@ -965,6 +979,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     @qtc.pyqtSlot()
     def start_measurement(self):
         """Check runtime settings and start measurement."""
+        self._aborted = False
         if not self.are_runtime_settings_ok():
             return
         if self._has_been_used_before:
@@ -979,7 +994,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 )
 
         self._has_been_used_before = True
-        self._aborted = False
         self.settings.set('measurement_settings', 'was_aborted', 'False')
         self.settings.set('measurement_info', 'started',
                           time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
@@ -1139,9 +1153,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     def _connect_primary_controller(self):
         """Connect signals of the primary controller."""
-        primary = self.primary_controller
-        about_to_trigger = primary.about_to_trigger
-        self._connect_controller(primary)
+        if not self.primary_controller:
+            return
+        self._connect_controller(self.primary_controller)
 
     def _connect_secondary_controllers(self):
         """Connect necessary controller signals."""
@@ -1446,13 +1460,15 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if len(info) != 2:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/primary_controller', '')
+            self.primary_controller = None
             return False
 
         try:
             ctrl = self._make_controller(*info, is_primary=True)
         except RuntimeError:
-            # something went wrong with instantiating, and is
-            # already reported by emitting in _make_controller
+            # Something went wrong with instantiating, and is
+            # already reported by emitting in _make_controller.
+            self.primary_controller = None
             return False
 
         self.primary_controller = ctrl
