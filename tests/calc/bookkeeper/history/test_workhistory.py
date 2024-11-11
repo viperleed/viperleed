@@ -212,6 +212,22 @@ class TestWorkhistoryHandlerRaises:
             workhistory._discard_previous()
         self.check_has_error(caplog)
 
+    def test_list_to_discard(self, workhistory, mocker):
+        """Test the list_paths_to_discard method."""
+        subfolders = [mocker.MagicMock(spec=Path) for _ in range(5)]
+        for i, folder in enumerate(subfolders):
+            folder.name = f't00x.r00{i}_RDS'
+        mocker.patch.object(workhistory.path,
+                            'iterdir',
+                            return_value=iter(subfolders))
+        expect = (workhistory.path, *subfolders)
+        assert workhistory.list_paths_to_discard() == expect
+
+    def test_list_to_discard_no_workhistory(self, workhistory, mocker):
+        """Test the list_paths_to_discard method."""
+        mocker.patch.object(workhistory.path, 'is_dir', return_value=False)
+        assert not any(workhistory.list_paths_to_discard())
+
     def test_move_folders_exists(self, workhistory, caplog, mocker):
         """Test _move_folders_to_history handling FileExistsError."""
         directory = mocker.MagicMock()
