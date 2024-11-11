@@ -61,7 +61,8 @@ class Bookkeeper:
     def __init__(self, cwd=Path.cwd()):
         """Initialize the bookkeeper using `cwd` as the root folder."""
         self._root = RootExplorer(path=cwd, bookkeeper=self)
-        self._mode = None           # Set in run
+        self._mode = None                        # Set in run
+        self._requires_user_confirmation = None  # Set in run
         self._state_info = {
             'logger_prepared': False,
             # The next ones are set in update_from_cwd
@@ -94,13 +95,17 @@ class Bookkeeper:
         return (tensor_number if tensor_number is not None
                 else self._root.tensors.most_recent)
 
-    def run(self, mode):
+    def run(self, mode, requires_user_confirmation=True):
         """Run the bookkeeper in the given mode.
 
         Parameters
         ----------
         mode : str or BookkeeperMode
             Which bookkeeper mode to use. See help(BookkeeperMode).
+        requires_user_confirmation : bool, optional
+            Whether user confirmation is necessary before proceeding
+            with destructive actions. Only used in DISCARD_FULL mode.
+            Default is True.
 
         Returns
         -------
@@ -127,8 +132,9 @@ class Bookkeeper:
         except AttributeError as exc:
             raise NotImplementedError from exc
 
-        LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
+        LOGGER.info(f'\nRunning bookkeeper in {mode.name} mode.')
         self._mode = mode
+        self._requires_user_confirmation = requires_user_confirmation
         self.update_from_cwd()
         try:
             return runner()
@@ -498,6 +504,8 @@ class Bookkeeper:
             return BookkeeperExitCode.FAIL
 
         self._print_discard_info()
+        if not self._user_confirmed():
+            return BookkeeperExitCode.NOTHING_TO_DO
 
         # Delete the history folders, stuff in workhistory,
         # and output files/folders in the root directory
@@ -534,6 +542,18 @@ class Bookkeeper:
             return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
                     else BookkeeperExitCode.FAIL)
         return BookkeeperExitCode.SUCCESS
+
+    def _user_confirmed(self):
+        """Return whether the user wants to proceed with discarding."""
+        if not self._requires_user_confirmation:
+            return True
+        while True:
+            reply = input('Are you sure you want to proceed (y/N)?')
+            reply = reply.lower()
+            if not reply or reply.startswith('n'):
+                return False
+            if reply.startswith('y'):
+                return True
 
 
 def _check_newer(older, newer):

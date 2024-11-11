@@ -97,10 +97,20 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
                   'happened. The discarded run is removed from history.'),
             action=StoreBookkeeperMode,
             )
+        parser.add_argument(
+            '-y',
+            help=('Do not ask for confirmation when '
+                  'running in --discard-full mode.'),
+            action='store_true',
+            dest='skip_confirmation',
+            )
 
     def __call__(self, args=None):
         """Call the bookkeeper with command-line args."""
         parsed_args = self.parse_cli_args(args)
         bookkeeper = Bookkeeper(cwd=Path.cwd().resolve())
         mode = getattr(parsed_args, 'mode', BookkeeperMode.ARCHIVE)
-        return bookkeeper.run(mode)
+        kwargs = {
+            'requires_user_confirmation': not parsed_args.skip_confirmation,
+            }
+        return bookkeeper.run(mode, **kwargs)

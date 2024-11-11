@@ -126,6 +126,24 @@ def check_too_early():
     return pytest.raises(AttributeError, match=match_re)
 
 
+class MockInput:
+    """Fake replacement for the input built-in function."""
+
+    def __init__(self, *responses):
+        """Initialize with some expected user responses."""
+        self.responses = responses
+        self.current_response = 0
+
+    def __call__(self, *_):
+        """Return a user response."""
+        try:
+            reply = self.responses[self.current_response]
+        except IndexError:
+            return 'yes'
+        self.current_response += 1
+        return reply
+
+
 class _TestBookkeeperRunBase:
     """Base class for checking correct execution of bookkeeper."""
 
@@ -221,12 +239,13 @@ class _TestBookkeeperRunBase:
         assert not any(cwd.glob('*.log'))
 
     def run_after_archive_and_check(self, after_archive,
-                                    check_input_contents=True):
+                                    check_input_contents=True,
+                                    **kwargs):
         """Check that running bookkeeper after ARCHIVE does basic stuff."""
         bookkeeper, *_ = after_archive
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
-        bookkeeper.run(mode=self.mode)
+        bookkeeper.run(mode=self.mode, **kwargs)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
@@ -257,17 +276,17 @@ class _TestBookkeeperRunBase:
         bookkeeper, *_ = after_calc_execution
         # bookkeeper should think that it needs archiving
         assert bookkeeper.archiving_required
-        bookkeeper.run(mode=self.mode)
+        bookkeeper.run(mode=self.mode, **kwargs)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_calc_execution)
         self.check_out_files_in_history(*after_calc_execution)
 
-    def run_before_calc_exec_and_check(self, before_calc_execution):
+    def run_before_calc_exec_and_check(self, before_calc_execution, **kwargs):
         """Check that running bookkeeper before calc does almost nothing."""
         bookkeeper = before_calc_execution
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
-        exit_code = bookkeeper.run(mode=self.mode)
+        exit_code = bookkeeper.run(mode=self.mode, **kwargs)
         # Bookkeeper should not do anything (except for logging)
         self.check_history_folder_empty(before_calc_execution)
         self.check_root_inputs_untouched(before_calc_execution)
@@ -430,7 +449,8 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         -------
         None.
         """
-        self.run_before_calc_exec_and_check(before_calc_execution)
+        self.run_before_calc_exec_and_check(before_calc_execution,
+                                            requires_user_confirmation=False)
         self.check_no_warnings(
             caplog,
             exclude_msgs=('remove',)   # Catches two expected warnings
@@ -452,7 +472,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         """
         bookkeeper, *_, history_run_path = after_archive
         last_entry = bookkeeper.history.info.last_entry
-        bookkeeper.run(mode=self.mode)
+        bookkeeper.run(mode=self.mode, requires_user_confirmation=False)
         if not last_entry.can_be_removed:
             # Should prevent the removal of the history
             assert history_run_path.is_dir()
@@ -470,7 +490,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
             NOTES_TEST_CONTENT in (cwd / HISTORY_INFO_NAME).read_text()
             )
         last_entry = bookkeeper.history.info.last_entry
-        bookkeeper.run(mode=self.mode)
+        bookkeeper.run(mode=self.mode, requires_user_confirmation=False)
         # Since the run was not archived, the history should be empty
         assert not history_run_path.is_dir()
         if notes_in_history_info:
@@ -514,6 +534,25 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         exit_code = bookkeeper.run(self.mode)
         check.assert_called_once()
         assert exit_code is not BookkeeperExitCode.SUCCESS
+
+    @parametrize(confirmed=(True, False))
+    def test_user_confirmation(self, confirmed, after_archive, mocker):
+        """Check successful execution when user does/does not confirm."""
+        bookkeeper, *_ = after_archive
+        mocker.patch.object(bookkeeper,
+                            '_user_confirmed',
+                            return_value=confirmed)
+        # Patch away stuff that may prevent removal,
+        # as we only want to check the exit code
+        mocker.patch.object(bookkeeper, '_check_may_discard_full')
+        mocker.patch.object(type(bookkeeper.history.info), 'remove_last_entry')
+
+        # The default is asking for user confirmation. Do not purposely
+        # provide an explicit keyword argument to test the default.
+        code = bookkeeper.run(mode=self.mode)
+        expect = (BookkeeperExitCode.SUCCESS if confirmed
+                  else BookkeeperExitCode.NOTHING_TO_DO)
+        assert code is expect
 
 
 class TestBookkeeperOthers:
@@ -658,11 +697,36 @@ class TestBookkeeperOthers:
         assert history_info.path.read_bytes()
 
         # Now discard should remove workhistory and all the stuff
-        bookkeeper.run('discard_full')
+        bookkeeper.run('discard_full', requires_user_confirmation=False)
         assert not_collected_log.exists()
         assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()                     # TODO: this sometimes fails too???
         assert not history_dir.exists()
         assert not history_info.path.read_bytes()
+
+    _user_replies = {
+        'no reply': ('', False),  # No by default
+        'invalid reply, then no': (
+            'please do not',
+            'NoPe',  # This is the one that is used
+            False,
+            ),
+        'confirmed': ('YES please', True),
+        'invalid reply, then yes': (
+            'maybe',
+            'y',     # This is the one that is used
+            True,
+            ),
+        }
+
+    @parametrize(replies_and_expect=_user_replies.values(), ids=_user_replies)
+    def test_user_confirmed(self, replies_and_expect, mock_path, mocker):
+        """Check the result of asking user confirmation to proceed."""
+        bookkeeper = Bookkeeper(mock_path)
+        # pylint: disable-next=protected-access           # OK in tests
+        bookkeeper._requires_user_confirmation = True
+        *replies, expect = replies_and_expect
+        mocker.patch('builtins.input', new=MockInput(*replies))
+        assert bookkeeper._user_confirmed() == expect
 
 
 class TestBookkeeperRaises:

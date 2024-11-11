@@ -22,28 +22,28 @@ class TestBookkeeperParser:
     """Tests for parsing CLI arguments of viperleed.calc.bookkeeper."""
 
     @parametrize(flag=('-a', '--archive'))
-    def test_parser_archive(self, bookkeeper_parser, flag):
+    def test_archive(self, bookkeeper_parser, flag):
         """Check interpretation of --archive mode."""
         parsed = bookkeeper_parser.parse_args([flag,])
         assert parsed.archive
         assert parsed.mode is BookkeeperMode.ARCHIVE
 
     @parametrize(flag=('-c', '--clear'))
-    def test_parser_clear(self, bookkeeper_parser, flag):
+    def test_clear(self, bookkeeper_parser, flag):
         """Check interpretation of --clear mode."""
         parsed = bookkeeper_parser.parse_args([flag,])
         assert parsed.clear
         assert parsed.mode is BookkeeperMode.CLEAR
 
     @parametrize(flag=('-d', '--discard'))
-    def test_parser_discard(self, bookkeeper_parser, flag):
+    def test_discard(self, bookkeeper_parser, flag):
         """Check interpretation of --discard mode."""
         parsed = bookkeeper_parser.parse_args([flag,])
         assert parsed.discard
         assert parsed.mode is BookkeeperMode.DISCARD
 
     @parametrize(flag=('-df', '--discard-full'))
-    def test_parser_discard_full(self, bookkeeper_parser, flag):
+    def test_discard_full(self, bookkeeper_parser, flag):
         """Check interpretation of --discard-full mode."""
         parsed = bookkeeper_parser.parse_args([flag,])
         assert parsed.discard_full
@@ -56,11 +56,17 @@ class TestBookkeeperParser:
         }
 
     @parametrize(flags=_exclusive.values(), ids=_exclusive)
-    def test_parser_exclusive_options(self, bookkeeper_parser, flags):
+    def test_exclusive_options(self, bookkeeper_parser, flags):
         """Check complaints when conflicting modes are given."""
         with pytest.raises(SystemExit) as exc:
             bookkeeper_parser.parse_args(flags)
         assert exc.value.code == _ARGPARSE_EXIT_WITH_ERROR
+
+    @parametrize('flag,expect', (('-df', False), ('-y', True)))
+    def test_user_confirmation_required(self, bookkeeper_parser, flag, expect):
+        """Check correct interpretation of the '-y' CLI argument."""
+        parsed = bookkeeper_parser.parse_args([flag,])
+        assert parsed.skip_confirmation == expect
 
 
 def test_action_raises_unexpected_mode(bookkeeper_parser, mocker):
@@ -79,8 +85,14 @@ class TestBookkeeperRun:
         return mocker.patch.object(Bookkeeper, 'run')
 
     _mode = {
-        '': BookkeeperMode.ARCHIVE,  # The default
-        ('--discard',): BookkeeperMode.DISCARD,
+        '': (BookkeeperMode.ARCHIVE,  # The default
+             {'requires_user_confirmation': True}),
+        ('--discard',): (BookkeeperMode.DISCARD,
+                         {'requires_user_confirmation': True}),
+        ('-df',): (BookkeeperMode.DISCARD_FULL,
+                   {'requires_user_confirmation': True}),
+        ('-df', '-y'): (BookkeeperMode.DISCARD_FULL,
+                        {'requires_user_confirmation': False}),
         }
 
     @parametrize('args,expect', _mode.items())
@@ -88,4 +100,5 @@ class TestBookkeeperRun:
         """Check correct call to bookkeeper.run."""
         bookie = BookkeeperCLI()
         bookie(args)
-        mock_run.assert_called_with(expect)
+        mode, kwargs = expect
+        mock_run.assert_called_with(mode, **kwargs)
