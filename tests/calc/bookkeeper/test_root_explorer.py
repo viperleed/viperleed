@@ -59,6 +59,18 @@ def fixture_tensor_and_delta_info():
     return TensorAndDeltaInfo(Path('/fake/root'))
 
 
+@fixture(name='mock_history')
+def fixture_mock_history(mocker):
+    """Return a fake HistoryExplorer."""
+    def _mock(max_run_per_tensor):
+        return mocker.MagicMock(
+            max_run_per_tensor=max_run_per_tensor,
+            last_folder_and_siblings=[mocker.MagicMock(tensor_num=t)
+                                      for t in max_run_per_tensor],
+            )
+    return _mock
+
+
 @fixture(name='mock_path_readlines')
 def fixture_mock_readlines(mocker, monkeypatch):
     """Temporarily replace open and readlines for pathlib.Path."""
@@ -287,17 +299,23 @@ class TestRootExplorerListFiles:
         paths_to_discard = explorer.list_paths_to_discard()
         assert not paths_to_discard
 
-    def test_to_discard_files_exist(self, explorer, mocker):
+    def test_to_discard_files_exist(self, explorer, mocker, mock_history):
         """Test list_paths_to_discard when some discardable files exist."""
         mock_log_path = explorer.path / 'log_file.log'
+        mock_files = (
+            mock_log_path,
+            explorer.path / DEFAULT_TENSORS / f'{DEFAULT_TENSORS}_001.zip',
+            )
         mock_paths = (
             explorer.path / DEFAULT_OUT,
             # explorer.path / DEFAULT_SUPP,  # No SUPP
-            mock_log_path,
+            *mock_files
             )
         explorer.collect_info()
         mocker.patch.object(Path, 'exists', new=mock_exists(mock_paths))
+        mocker.patch.object(Path, 'is_file', new=mock_exists(mock_files))
         mocker.patch.object(type(explorer.logs), 'files', [mock_log_path])
+        mocker.patch.object(explorer, 'history', mock_history({1: 1}))
         paths_to_discard = explorer.list_paths_to_discard()
         assert paths_to_discard == mock_paths
 
@@ -363,6 +381,7 @@ class TestRootExplorerRaises:
         'clear_for_next_calc_run',
         'infer_run_info',
         'list_paths_to_discard',
+        'remove_tensors_and_deltas',
         'revert_to_previous_calc_run',
         '_collect_files_to_archive',
         )
@@ -370,14 +389,16 @@ class TestRootExplorerRaises:
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, explorer, attr):
         """Check that accessing attributes before update_from_cwd fails."""
-        with pytest.raises(AttributeError, match=r'.*collect_info.*'):
+        with pytest.raises(AttributeError,
+                           match=r'.*collect_(info|subfolders).*'):
             attrgetter(attr)(explorer)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, explorer, method_name):
         """Check that accessing attributes before update_from_cwd fails."""
         method = attrgetter(method_name)(explorer)
-        with pytest.raises(AttributeError, match=r'.*collect_info.*'):
+        with pytest.raises(AttributeError,
+                           match=r'.*collect_(info|subfolders).*'):
             method()
 
 
@@ -555,15 +576,10 @@ class TestTensorsAndDeltasInfo:
         return mocker.patch(f'{_MODULE}.getMaxTensorIndex',
                             return_value=self.tensor_index)
 
-    @fixture(name='mock_history')
-    def fixture_mock_history(self, mocker):
-        """Return a fake HistoryExplorer."""
-        return mocker.MagicMock(
-            max_run_per_tensor={self.tensor_index: 1},
-            last_folder_and_siblings = [
-                mocker.MagicMock(tensor_num=self.tensor_index),
-                ]
-            )
+    @fixture(name='simple_history')
+    def fixture_simple_history(self, mock_history):
+        """Return a fake HistoryExplorer with one tensor and one run."""
+        return mock_history({self.tensor_index: 1})
 
     def test_collect(self, tensors, mock_get_tensors):
         """Test that collect sets the correct Tensor index."""
@@ -572,7 +588,7 @@ class TestTensorsAndDeltasInfo:
         mock_get_tensors.assert_called_once_with(home=tensors._root, zip_only=True)
         assert tensors.most_recent == self.tensor_index
 
-    def test_to_discard(self, tensors, mock_history, mocker):
+    def test_to_discard(self, tensors, simple_history, mocker):
         """Test list_paths_to_discard when Tensor and Delta files exist."""
         expected = (
             f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
@@ -582,31 +598,32 @@ class TestTensorsAndDeltasInfo:
         expected = tuple(tensors._root / f for f in expected)
         tensors.collect()
         mocker.patch.object(Path, 'is_file', new=mock_exists(expected))
-        discard_paths = tensors.list_paths_to_discard(mock_history)
+        discard_paths = tensors.list_paths_to_discard(simple_history)
         assert discard_paths == expected
 
-    def test_to_discard_none(self, tensors, mock_history, mocker):
+    def test_to_discard_none(self, tensors, simple_history, mocker):
         """Test list_paths_to_discard when no Tensor/Delta files exist."""
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=False)
-        assert not tensors.list_paths_to_discard(mock_history)
+        assert not tensors.list_paths_to_discard(simple_history)
 
     def test_to_discard_history_empty(self, tensors, mock_history, mocker):
         """Check that no Tensors/Deltas are discarded with empty history."""
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=True)
-        mock_history.last_folder_and_siblings = []
-        assert not tensors.list_paths_to_discard(mock_history)
+        history = mock_history({})
+        assert not tensors.list_paths_to_discard(history)
 
     def test_to_discard_older_runs(self, tensors, mock_history, mocker):
         """Check that no Tensors/Deltas are discarded when more runs exist."""
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=True)
-        mock_history.max_run_per_tensor[self.tensor_index] = 3
-        assert not tensors.list_paths_to_discard(mock_history)
+        history = mock_history({self.tensor_index: 3})
+        assert not tensors.list_paths_to_discard(history)
 
     @patch_discard
-    def test_discard(self, mock_discard_files, tensors, mock_history, mocker):
+    def test_discard(self, mock_discard_files,
+                     tensors, simple_history, mocker):
         """Test removal of Tensors and Deltas."""
         removed = (
             f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
@@ -616,7 +633,7 @@ class TestTensorsAndDeltasInfo:
         removed = tuple(tensors._root/f for f in removed)
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=True)
-        tensors.discard(mock_history)
+        tensors.discard(simple_history)
         mock_discard_files.assert_called_once_with(*removed)
 
     _attr_needs_update = (
