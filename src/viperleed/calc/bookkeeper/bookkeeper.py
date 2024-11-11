@@ -72,6 +72,7 @@ class Bookkeeper:
     # Simple dynamic @properties
     cwd = make_property('_root.path')
     files_need_archiving = make_property('_root.needs_archiving')
+    history = make_property('_root.history')
     max_job_for_tensor = make_property('history.max_run_per_tensor')
     timestamp = make_property('_state_info[timestamp]', needs_update=True)
     _workhistory = make_property('_root.workhistory')
