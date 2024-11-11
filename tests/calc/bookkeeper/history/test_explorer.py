@@ -67,6 +67,17 @@ class TestHistoryExplorer:
         patched_folder.assert_not_called()
         self._check_collected_nothing(history)
 
+    def test_collect_subfolders_no_history(self, history,
+                                           patched_folder,
+                                           mocker):
+        """Test collect_subfolders when there are no subfolders."""
+        mocker.patch.object(history.path, 'is_dir', return_value=False)
+        mock_warn = mocker.patch(f'{_MODULE}.LOGGER.warning')
+        history.collect_subfolders()
+        patched_folder.assert_not_called()
+        self._check_collected_nothing(history)
+        mock_warn.asset_called_once()
+
     def test_collect_subfolders_with_folders(self, history,                     # TODO: this needs some realistic cases
                                              patched_folder,
                                              mocker):
