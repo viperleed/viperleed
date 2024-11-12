@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from pytest_cases import fixture
 
 from viperleed_jax.files.displacements.reader import DisplacementsReader
 from viperleed_jax.files.displacements.lines import GeoDeltaLine
@@ -11,7 +12,11 @@ from viperleed_jax.files.displacements.lines import LoopMarkerLine
 from viperleed_jax.files.displacements.lines import SearchHeaderLine
 from viperleed_jax.files.displacements.lines import SectionHeaderLine
 
+_MOCK_DISPLACEMENTS_PATH = Path("tests/test_data/displacements/")
 MOCK_DISPLACEMENTS_PATH = Path("tests/test_data/displacements/DISPLACEMENTS_mixed")
+_CU_111_DISPLACEMENTS_PATH = _MOCK_DISPLACEMENTS_PATH / "Cu_111"
+_CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / "DISPLACEMENTS_simple"
+
 
 @pytest.fixture()
 def mock_displacements():
@@ -34,7 +39,27 @@ def mock_displacements():
     ]
     return path, expected_lines
 
+@fixture
+def mock_displacements_simple():
+    path = _CU_111_SIMPLE_PATH
+    expected_lines = [
+        SearchHeaderLine("test"),
+        SectionHeaderLine("GEO_DELTA"),
+        GeoDeltaLine("Cu_surf", None, "z", -0.1, 0.1, 0.05),
+        SectionHeaderLine("VIB_DELTA"),
+        VibDeltaLine("Cu_surf", None, -0.1, 0.1, 0.05),
+    ]
+
 def test_displacements_reader(mock_displacements):
+    path, expected_lines = mock_displacements
+    with DisplacementsReader(path) as reader:
+        parsed_lines = list(reader)
+    assert len(parsed_lines) == len(expected_lines)
+    for parsed, expected in zip(parsed_lines, expected_lines):
+        assert parsed == expected
+
+
+def test_displacements_reader_simple(mock_displacements_simple):
     path, expected_lines = mock_displacements
     with DisplacementsReader(path) as reader:
         parsed_lines = list(reader)
