@@ -126,7 +126,7 @@ def check_too_early():
     return pytest.raises(AttributeError, match=match_re)
 
 
-class MockInput:
+class MockInput:  # pylint: disable=too-few-public-methods
     """Fake replacement for the input built-in function."""
 
     def __init__(self, *responses):
@@ -555,6 +555,29 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         assert code is expect
 
 
+class TestBookkeeperFix(_TestBookkeeperRunBase):
+    """Tests for correct behavior of FIX bookkeeper runs."""
+
+    mode = Mode.FIX
+
+    def test_fix_missing_metadata(self, after_archive):
+        """Check correct fixing of missing metadata files in history."""
+        bookkeeper, *_ = after_archive
+        def _metadata_everywhere():
+            # pylint: disable-next=protected-access       # OK in tests
+            return all(f.has_metadata for f in bookkeeper.history._subfolders)
+        assert not _metadata_everywhere()
+        bookkeeper.run(self.mode)
+        assert _metadata_everywhere()
+
+        # There was nothing to fix in history.info.
+        # Make sure we don't clutter with backups.
+        assert not any(bookkeeper.cwd.glob(f'{HISTORY_INFO_NAME}.bak*'))
+
+        # Make sure that nothing was touched
+        self.check_root_after_archive(*after_archive)
+
+
 class TestBookkeeperOthers:
     """Collections of various tests for bits not covered by other tests."""
 
@@ -726,6 +749,7 @@ class TestBookkeeperOthers:
         bookkeeper._requires_user_confirmation = True
         *replies, expect = replies_and_expect
         mocker.patch('builtins.input', new=MockInput(*replies))
+        # pylint: disable-next=protected-access           # OK in tests
         assert bookkeeper._user_confirmed() == expect
 
 

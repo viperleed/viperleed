@@ -363,6 +363,7 @@ class TestRootExplorerRaises:
     @parametrize('method,expect',
                  _read_notes_raises.items(),
                  ids=_read_notes_raises)
+    # pylint: disable-next=too-many-arguments  # 3/6 are fixtures
     def test_read_and_clear_notes_file(self, method, expect, explorer,
                                        patched_path, mocker):
         """Test that complaints by read/write_text emit errors."""
@@ -585,7 +586,8 @@ class TestTensorsAndDeltasInfo:
         """Test that collect sets the correct Tensor index."""
         tensors.collect()
         # pylint: disable-next=protected-access       # OK in tests
-        mock_get_tensors.assert_called_once_with(home=tensors._root, zip_only=True)
+        mock_get_tensors.assert_called_once_with(home=tensors._root,
+                                                 zip_only=True)
         assert tensors.most_recent == self.tensor_index
 
     def test_to_discard(self, tensors, simple_history, mocker):

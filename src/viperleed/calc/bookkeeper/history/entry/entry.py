@@ -28,6 +28,7 @@ from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.log_utils import logging_silent
 
 from ...log import LOGGER
+from ...mode import BookkeeperMode as Mode
 from ..constants import HISTORY_INFO_NAME
 from ..constants import HISTORY_INFO_SEPARATOR
 from ..errors import EntrySyntaxError
@@ -825,7 +826,7 @@ class SyntaxErrorLogger(AbstractContextManager):
         self._add_fixable_todo(exc.action)
         LOGGER.warning(
             f'{HISTORY_INFO_NAME}: {self._get_fixable_log_msg(exc.reason)}'
-            # 'Consider running bookkeeper in --fixup mode.'
+            f'Consider running bookkeeper {Mode.FIX.long_flag}.'
             )
 
     def _handle_unfixable(self, exc):

@@ -135,7 +135,10 @@ class Bookkeeper:
         LOGGER.info(f'\nRunning bookkeeper in {mode.name} mode.')
         self._mode = mode
         self._requires_user_confirmation = requires_user_confirmation
-        self.update_from_cwd()
+        # Do not bother logging messages when the user asked to
+        # --fix: some warnings will be fixed anyway. Others will
+        # re-appear at the next run.
+        self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
         try:
             return runner()
         finally:
@@ -541,6 +544,11 @@ class Bookkeeper:
                      f'in {HISTORY_INFO_NAME}: {exc}')
             return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
                     else BookkeeperExitCode.FAIL)
+        return BookkeeperExitCode.SUCCESS
+
+    def _run_fix_mode(self):
+        """Fix format inconsistencies found in history and history.info."""
+        self.history.fix()
         return BookkeeperExitCode.SUCCESS
 
     def _user_confirmed(self):

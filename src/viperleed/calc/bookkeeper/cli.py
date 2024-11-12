@@ -17,9 +17,11 @@ from argparse import Action
 from pathlib import Path
 
 from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.cli_base import ViPErLEEDCLI
 
 from .bookkeeper import Bookkeeper
+from .history.constants import HISTORY_INFO_NAME
 from .mode import BookkeeperMode
 
 
@@ -72,35 +74,44 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
         super().add_parser_arguments(parser)
         what_next = parser.add_mutually_exclusive_group()
         what_next.add_argument(
-            '-a', '--archive',
+            *BookkeeperMode.ARCHIVE.flags,
             help=('Store last run in history. Overwrite PARAMETERS, POSCAR &'
                   f'VIBROCC from {DEFAULT_OUT}. Runs after viperleed.calc by '
                   'default.'),
             action=StoreBookkeeperMode,
             )
         what_next.add_argument(
-            '-c', '--clear',
+            *BookkeeperMode.CLEAR.flags,
             help=('Clear the input directory and add last run '
                   'to history if not already there. Runs before '
                   'viperleed.calc by default.'),
             action=StoreBookkeeperMode,
             )
         what_next.add_argument(
-            '-d', '--discard',
+            *BookkeeperMode.DISCARD.flags,
             help=('Discard all results from the last run, and restore the '
                   'previous inputs. The discarded run is kept in history.'),
             action=StoreBookkeeperMode,
             )
         what_next.add_argument(
-            '-df', '--discard-full',
+            *BookkeeperMode.DISCARD_FULL.flags,
             help=('Discard all results from the last run as if it never '
                   'happened. The discarded run is removed from history.'),
             action=StoreBookkeeperMode,
             )
+        what_next.add_argument(
+            *BookkeeperMode.FIX.flags,
+            help=(f'Automatically fix problems found in the {DEFAULT_HISTORY} '
+                  f'directory and in the {HISTORY_INFO_NAME} file. This mode '
+                  'can be used, for example, to upgrade the state of your '
+                  f'{DEFAULT_HISTORY} to the format of the most recent '
+                  'version of the bookkeeper.'),
+            action=StoreBookkeeperMode,
+            )
         parser.add_argument(
             '-y',
-            help=('Do not ask for confirmation when '
-                  'running in --discard-full mode.'),
+            help=('Do not ask for confirmation when running in '
+                  f'{BookkeeperMode.DISCARD_FULL.long_flag} mode.'),
             action='store_true',
             dest='skip_confirmation',
             )

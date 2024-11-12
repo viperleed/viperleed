@@ -48,6 +48,9 @@ class MockMetaFile:
     def compute_hash(self):
         """Don't compute anything."""
 
+    def write(self):
+        """Don't write anything."""
+
 
 @fixture(name='mock_entry')
 def mock_history_info_entry(mocker):
@@ -168,6 +171,21 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
             mock_path.name = _VALID_FOLDER_NAME
             HistoryFolder(mock_path)
             mock_warning.assert_called_once()
+
+    @parametrize(meta_missing=(True, False))
+    def test_fix(self, meta_missing, history_folder, mocker):
+        """Check that .fix()ing a folder writes a metafile."""
+        # Fake the absence of the metadata file
+        meta = history_folder.metadata
+        mocker.patch.object(meta.path,
+                            'is_file',
+                            return_value=not meta_missing)
+        mocker.patch.object(meta, 'write')
+        history_folder.fix()
+
+        assert_called = (meta.write.assert_called_once if meta_missing
+                         else meta.write.assert_not_called)
+        assert_called()
 
 
 class TestHistoryFolderConsistency:

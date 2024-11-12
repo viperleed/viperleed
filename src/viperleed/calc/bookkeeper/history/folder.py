@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
+from enum import Enum
 from pathlib import Path
 import shutil
 
@@ -20,10 +21,22 @@ from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from ..constants import HISTORY_FOLDER_RE
 from ..log import LOGGER
+from ..mode import BookkeeperMode as Mode
 from ..utils import make_property
 from .errors import CantRemoveEntryError
 from .errors import MetadataMismatchError
 from .meta import BookkeeperMetaFile
+
+
+class FolderFixAction(Enum):
+    """Fixing action performed on a history folder in --fix mode."""
+
+    ADD_METADATA = (
+        'Note that it is not possible to determine whether folders to which '
+        'metadata files were added were created together with others during '
+        'the same viperleed.calc execution. This may have an impact on how '
+        'these folders are discarded or analyzed.'
+        )
 
 
 @frozen
@@ -130,6 +143,16 @@ class HistoryFolder(IncompleteHistoryFolder):
                 'or its contents were modified.'
                 )
 
+    def fix(self):
+        """Fix the contents of this folder. Return a set of fix actions."""
+        fix_actions = set()
+        if not self.has_metadata:
+            LOGGER.info(f'Adding metadata file in folder {self.path.name}.')
+            # pylint: disable-next=no-member  # It's BookkeeperMetaFile
+            self.metadata.write()
+            fix_actions.add(FolderFixAction.ADD_METADATA)
+        return fix_actions
+
     def _analyze_path(self):
         """Collect information from the history folder at self.path."""
         if not self.path.is_dir():
@@ -139,6 +162,7 @@ class HistoryFolder(IncompleteHistoryFolder):
         try:
             self.metadata.read()  # pylint: disable=no-member  # Inference
         except FileNotFoundError:
-            LOGGER.warning(f'No metadata file found at {self.path}.')           # TODO: fixup if not .has_metadata
+            LOGGER.warning(f'No metadata file found at {self.path}. Consider '
+                           f'running bookkeeper {Mode.FIX.long_flag}.')
             # pylint: disable-next=no-member  # It's BookkeeperMetaFile
             self.metadata.compute_hash()   # Don't write to file though

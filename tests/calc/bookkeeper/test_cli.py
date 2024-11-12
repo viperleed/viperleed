@@ -49,10 +49,17 @@ class TestBookkeeperParser:
         assert parsed.discard_full
         assert parsed.mode is BookkeeperMode.DISCARD_FULL
 
+    def test_fix(self, bookkeeper_parser):
+        """Check interpretation of --discard-full mode."""
+        parsed = bookkeeper_parser.parse_args(['--fix',])
+        assert parsed.fix
+        assert parsed.mode is BookkeeperMode.FIX
+
     _exclusive = {
         'archive & clear': ('-a', '-c'),
         'discard & clear': ('-d', '-c'),
         'discard-full & archive': ('-df', '-a'),
+        'fix & archive': ('--fix', '-a'),
         }
 
     @parametrize(flags=_exclusive.values(), ids=_exclusive)

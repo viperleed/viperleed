@@ -36,14 +36,36 @@ class BookkeeperMode(Enum):
     DISCARD_FULL
         Discard previous run as if it never happened and remove
         it from history. Has to be run manually after run_calc.
+    FIX
+        Edit information in history and history.info according
+        to the most recent format implemented in Bookkeeper.
     """
 
     ARCHIVE = 'archive'
     CLEAR = 'clear'
     DISCARD = 'discard'
     DISCARD_FULL = 'discard_full'
+    FIX = 'fix'
 
     @property
     def uses_ori_files_as_fallback(self):
         """Return whether '*_ori' files are used as fallback for archiving."""
         return self in (BookkeeperMode.CLEAR, BookkeeperMode.DISCARD)
+
+    @property
+    def flags(self):
+        """Return the CLI flags to select this mode."""
+        # First modes that only have a long version
+        if self is BookkeeperMode.FIX:
+            return (self.long_flag,)
+        short_flag = self.value[0]
+        if self is BookkeeperMode.DISCARD_FULL:
+            short_flag = 'df'
+        short_flag = f'-{short_flag}'
+        return short_flag, self.long_flag
+
+    @property
+    def long_flag(self):
+        """Return the long CLI flag for this mode."""
+        long_flag = self.value.replace('_', '-')
+        return f'--{long_flag}'

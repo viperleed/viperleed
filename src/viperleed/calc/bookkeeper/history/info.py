@@ -20,6 +20,7 @@ from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 
 from ..log import LOGGER
+from ..mode import BookkeeperMode as Mode
 from .constants import HISTORY_INFO_NAME
 from .constants import HISTORY_INFO_SEPARATOR
 from .errors import CantDiscardEntryError
@@ -31,8 +32,8 @@ from .errors import NoHistoryEntryError
 class CantRemoveReason(Enum):
     """Error messages explaining why an entry can't be removed."""
 
-    FIXABLE = ('Contains fields with non-standard format (run '
-               'bookkeeper --fixup to automatically fix this).')
+    FIXABLE = ('Contains fields with non-standard format (run bookkeeper '
+               f'{Mode.FIX.long_flag} to automatically fix this).')
     HAS_COMMENTS = 'Contains fields with user comments.'
     IS_COMMENT = 'Is a comment-only entry.'
     IS_EMPTY = 'Has no contents.'

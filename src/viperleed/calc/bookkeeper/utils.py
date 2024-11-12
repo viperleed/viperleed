@@ -27,7 +27,7 @@ def discard_files(*file_paths):
                 file.unlink()
             except OSError:
                 LOGGER.error(f'Failed to discard file {file.name}.')
-            continue
+            continue  # Marked as uncovered by pytest, but it is
         assert file.is_dir()  # Should be a directory
         try:
             shutil.rmtree(file)

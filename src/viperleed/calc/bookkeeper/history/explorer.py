@@ -12,6 +12,7 @@ __license__ = 'GPLv3+'
 
 from collections import defaultdict
 from operator import attrgetter
+from pathlib import Path
 import shutil
 
 from viperleed.calc.constants import DEFAULT_HISTORY
@@ -142,6 +143,38 @@ class HistoryExplorer:
         new_folder_path = self.path / dir_name
         self._new_calc_run_folder = IncompleteHistoryFolder(new_folder_path)
 
+    def fix(self):
+        """Fix folders in history and the history.info file."""
+        # Create some backup of history.info for now, as we don't want
+        # to risk completely messing with the user's file. This may be
+        # removed in the future once we're sure we do the right thing.
+        backup = self._backup_info_file()
+        self.info.fix()
+        if not backup:  # There was no history.info to back up
+            pass
+        elif backup.read_text(encoding='utf-8') == self.info.raw_contents:
+            # We haven't modified anything. No need to keep the backup.
+            backup.unlink()
+        else:
+            LOGGER.info(
+                f'The original {self.info.path.name} file has been renamed to '
+                f'{backup.name}. You can safely delete it if no unexpected '
+                'changes were introduced. Please open an Issue under '
+                'https://github.com/viperleed/viperleed/issues if you '
+                'experience any unexpected change.'
+                )
+
+        # Now history folders
+        folder_fix_actions = set()
+        for folder in self._subfolders:
+            folder_fix_actions.update(folder.fix())
+        for action in sorted(folder_fix_actions, key=attrgetter('name')):
+            if action.value:
+                LOGGER.info(action.value)
+
+        LOGGER.info(f'Successfully fixed {self.info.path.name} '
+                    f'file and {self.path.name} folder.')
+
     def list_paths_to_discard(self):
         """Return a tuple of paths to folders that will be discarded."""
         paths = (f.path for f in self.last_folder_and_siblings)
@@ -170,6 +203,19 @@ class HistoryExplorer:
         # pylint: disable=unsubscriptable-object  # Called in decorated
         self._maps['main_hash_to_folders'][parent_hash].append(folder)
         self._maps['jobs_for_tensor'][folder.tensor_num].add(folder.job_num)
+
+    def _backup_info_file(self):
+        """Create a numbered duplicate of history.info as a backup."""
+        info = self.info.path
+        if not info.is_file():
+            return None
+        i = 1
+        while True:
+            backup_info = Path(f'{info}.bak{i}')
+            if not backup_info.is_file():
+                info.replace(backup_info)
+                return backup_info
+            i += 1
 
     @needs_update_for_attr('_maps[jobs_for_tensor]', updater=_updater)
     def _find_name_for_new_history_subfolder(self, tensor_number, suffix):
