@@ -1,4 +1,7 @@
 """Module R-factor"""
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__created__ = "2024-02-21"
+
 from functools import partial
 
 import jax
