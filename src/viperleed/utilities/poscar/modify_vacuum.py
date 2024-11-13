@@ -123,7 +123,7 @@ class ModifyVacuumCLI(_PoscarStreamCLI, cli_name='modify_vacuum'):
             '-f', '--force',
             help=('If set, the script will not check if the resulting '
                   'vacuum gap is valid as long as it is non-negative.'),
-            action='store_true'
+            action='store_true',
             )
 
     def parse_cli_args(self, args):
