@@ -97,10 +97,10 @@ def modify_vacuum(slab, vacuum_gap_info):
     try:
         processed_slab.check_vacuum_gap()
     except NotEnoughVacuumError:
-        if not vacuum_gap_info.force:
+        if not vacuum_gap_info.accept_small_gap:
             raise RuntimeError('The resulting vacuum gap would be too small.')
     except WrongVacuumPositionError:
-        if not vacuum_gap_info.force:
+        if not vacuum_gap_info.accept_small_gap:
             raise RuntimeError('Cannot modify the vacuum gap as requested. '
                                'Check that there already is a vacuum gap in '
                                'the POSCAR.')
