@@ -194,6 +194,21 @@ This section provides a guide on how to install the Intel Fortran compiler
 :term:`mpiifort`. All the necessary components are packaged as part of the
 |oneAPI| toolkits.
 
+.. _ifort_deprecation:
+.. warning::
+    The :program:`ifort` compiler (named "Fortran Compiler Classic") was
+    `deprecated by Intel <https://community.intel.com/t5/Blogs/Tech-Innovation/Tools/Deprecation-of-The-Intel-Fortran-Compiler-Classic-ifort/post/1541699>`__
+    in 2023, and has been replaced with the new LLVM-based :program:`ifx`
+    compiler. :program:`ifort` is no longer distributed with |oneAPI|
+    starting from version 2025.0. The most recent version that ships
+    :program:`ifort` is therefore 2024.2. |calc| currently **does not**
+    **support** :program:`ifx`. Be sure to use a version
+    :math:`\leq` 2024.2 when installing |oneAPI|.
+    If you cannot obtain an old-enough version that contains :program:`ifort`,
+    you may `ask Intel <https://community.intel.com/t5/oneAPI-Registration-Download/bd-p/registration-download-licensing-instal>`__
+    to provide you with a direct-download link. You can also contact us
+    on `GitHub <https://github.com/viperleed/viperleed/issues>`__.
+
 ViPErLEED requires the |oneAPI| Base Toolkit and the |oneAPI| HPC Toolkit.
 
 .. note::
@@ -232,8 +247,13 @@ The full documentation of the |oneAPI| is available from the
 
     .. code-block:: bash
 
-        sudo apt install intel-basekit -y
-        sudo apt install intel-hpckit -y
+        sudo apt install intel-basekit-<version> -y
+        sudo apt install intel-hpckit-<version> -y
+
+    .. warning::
+        Be sure to pick a ``<version>`` of |oneAPI| (e.g., replace
+        ``<version>`` above with ``2024.2``) that includes the :program:`ifort`
+        compiler. See also the :ref:`warning <ifort_deprecation>` above.
 
     Once installation completes, we need to configure the system and add the
     compilers to our system path. First, we need to make sure the required
@@ -270,7 +290,7 @@ The full documentation of the |oneAPI| is available from the
 
   .. tab-item:: macOS
 
-    .. warning::
+    .. note::
         Newer Macs using "Apple Silicon" ARM-based chips are incompatible
         with the Intel compilers (since they don't use Intel chips).
         Use :ref:`install_gcc` instead.
@@ -280,6 +300,10 @@ The full documentation of the |oneAPI| is available from the
     to install the |oneAPI| toolkits under macOS. As for
     :ref:`Linux<ifort_linux>`, you will need to install the |oneAPI| Base
     Toolkit and the |oneAPI| HPC Toolkit.
+
+    .. warning::
+        Be sure to pick a version of |oneAPI| that includes the :program:`ifort`
+        compiler. See also the :ref:`warning <ifort_deprecation>` above.
 
   .. tab-item:: Windows Subsystem for Linux
 
@@ -310,6 +334,10 @@ The full documentation of the |oneAPI| is available from the
     `guide <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__
     to install the |oneAPI| toolkits under Windows. As for Linux, you will
     need to install the |oneAPI| Base Toolkit and the |oneAPI| HPC Toolkit.
+
+    .. warning::
+        Be sure to pick a version of |oneAPI| that includes the :program:`ifort`
+        compiler. See also the :ref:`warning <ifort_deprecation>` above.
 
     The |oneAPI| toolkits require specific environment variables to be set
     before compilers can be used. The toolkits come with dedicated ``.bat``
