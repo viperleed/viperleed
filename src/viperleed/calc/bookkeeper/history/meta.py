@@ -30,7 +30,7 @@ _HEADER = '''
 
 '''
 _METADATA_NAME = 'bookkeeper_meta'
-_EMPTY = '_not_defined_'
+_EMPTY = '_none_'
 _SECTIONS = {
     'archived' : {
         # Contains synthetic information about what was archived in a
