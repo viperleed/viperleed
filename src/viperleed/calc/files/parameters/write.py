@@ -34,16 +34,13 @@ from .reader import RawLineParametersReader
 _LOGGER = logging.getLogger(parent_name(__name__))
 
 
-def comment_out(rpars, modpar, comment=''):
+def comment_out(rpars, modpar, comment='', path=''):
     """Comment out modpar in the PARAMETERS file."""
-    editor = ParametersFileEditor(
-        rpars, path=rpars.workdir,
-        )
-    with editor:
+    with ParametersFileEditor(rpars, path=path) as editor:
         editor.comment_out_parameter(modpar, comment=comment)
 
 
-def modify(rpars, modpar, new=None, comment=''):
+def modify(rpars, modpar, new=None, comment='', path=''):
     """Change the value for `modpar` in the PARAMETERS file.
 
     The lines that contains `modpar` are commented out, and
@@ -72,12 +69,10 @@ def modify(rpars, modpar, new=None, comment=''):
         String value of the parameter as inserted in the
         PARAMETERS file.
     """
-    editor = ParametersFileEditor(
-        rpars, path=rpars.workdir,
-        )
-    with editor:
+    with ParametersFileEditor(rpars, path=path) as editor:
         new_param = editor.modify_param(modpar, new_value=new, comment=comment)
     return new_param.fmt_value
+
 
 # This is almost a dataclass (but not quite), all the
 # information is static and generated only once via
@@ -92,7 +87,7 @@ class ModifiedParameterValue:
         Whether this parameter was already written to file.
     comment : str
         An optional comment that should accompany this
-        modified parameter when it will be written to file
+        modified parameter when it will be written to file.
     fmt_value : str
         A formatted version of the new value. This normally
         includes only the part on the right side of the equals
