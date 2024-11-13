@@ -157,6 +157,7 @@ classifiers = [
     required_plugins = [
         'pytest-cases>=3.8.1',  # 3.8.1 fixes some ScopeMismatch
         'pytest-cov>=2.5',      # Added --cov-branch
+        'pytest-mock>=3',
         'pytest-subtests',
         ]
     xfail_strict = true
