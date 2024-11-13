@@ -351,7 +351,7 @@ class TensorAndDeltaInfo:
         # However, we should only discard those that have only one run,
         # otherwise we may be loosing info from previous calculations.
         max_run = history.max_run_per_tensor
-        tensor_nums = [t for t in tensor_nums if max_run[t] <= 1]
+        tensor_nums = {t for t in tensor_nums if max_run[t] <= 1}
 
         tensor_fmt = f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{{ind:03d}}.zip'
         delta_fmt = f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{{ind:03d}}.zip'

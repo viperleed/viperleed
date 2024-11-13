@@ -592,6 +592,12 @@ class TestTensorsAndDeltasInfo:
 
     def test_to_discard(self, tensors, simple_history, mocker):
         """Test list_paths_to_discard when Tensor and Delta files exist."""
+        history = simple_history
+        history.last_folder_and_siblings.extend(
+            # Simulate some siblings too
+            mocker.MagicMock(tensor_num=self.tensor_index)
+            for _ in range(4)
+            )
         expected = (
             f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
             f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_index:03d}.zip',
