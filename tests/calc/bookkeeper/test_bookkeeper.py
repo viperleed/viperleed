@@ -131,17 +131,11 @@ class MockInput:  # pylint: disable=too-few-public-methods
 
     def __init__(self, *responses):
         """Initialize with some expected user responses."""
-        self.responses = responses
-        self.current_response = 0
+        self._responses = iter(responses)
 
     def __call__(self, *_):
         """Return a user response."""
-        try:
-            reply = self.responses[self.current_response]
-        except IndexError:
-            return 'yes'
-        self.current_response += 1
-        return reply
+        return next(self._responses, 'yes')
 
 
 class _TestBookkeeperRunBase:
