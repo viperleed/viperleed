@@ -24,7 +24,7 @@ from viperleed.utilities.poscar.base import _PoscarStreamCLI
 logger = logging.getLogger(__name__)
 
 
-def modify_vacuum(slab, vacuum_gap_size, absolute=False):
+def modify_vacuum(slab, vacuum_gap_size, absolute=False, force=False):
     """Modify the vacuum gap size of a slab.
 
     Parameters
@@ -87,10 +87,13 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     try:
         processed_slab.check_vacuum_gap()
     except NotEnoughVacuumError:
-        raise RuntimeError('The resulting vacuum gap would be too small.')
+        if not force:
+            raise RuntimeError('The resulting vacuum gap would be too small.')
     except WrongVacuumPositionError:
-        raise RuntimeError('Cannot modify the vaccum gap as requested. Check '
-                           'that there already is a vacuum gap in the POSCAR.')
+        if not force:
+            raise RuntimeError('Cannot modify the vaccum gap as requested. '
+                               'Check that there already is a vacuum gap in '
+                               'the POSCAR.')
     return processed_slab
 
 
@@ -116,6 +119,12 @@ class ModifyVacuumCLI(_PoscarStreamCLI, cli_name='modify_vacuum'):
                   'or remove from the slab.'),
             action='store_true'
             )
+        parser.add_argument(
+            '-f', '--force',
+            help=('If set, the script will not check if the resulting '
+                  'vacuum gap is valid as long as it is non-negative.'),
+            action='store_true'
+            )
 
     def parse_cli_args(self, args):
         """Check consistency of vacuum and absolute."""
@@ -130,7 +139,9 @@ class ModifyVacuumCLI(_PoscarStreamCLI, cli_name='modify_vacuum'):
         if args.absolute:
             logger.debug('Using absolute vacuum gap size.')
         try:
-            return modify_vacuum(slab, args.vacuum, absolute=args.absolute)
+            return modify_vacuum(
+                slab, args.vacuum, absolute=args.absolute, force=args.force
+            )
         except RuntimeError as exc:
             self.parser.error(str(exc))
         return slab  # This is unreachable as parser.error sys-exits
