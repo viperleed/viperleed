@@ -7,35 +7,35 @@ SECTION_HEADER_PATTERN = re.compile(
 
 OFFSETS_LINE_PATTERN = re.compile(
     r"^(?P<type>geo|vib|occ)\s+"
-    r"(?P<targets>[^\s=,]+(?:\s+\d+)*(?:\s*,\s*[^\s=,]+(?:\s+\d+)*)*)"
+    r"(?P<targets>[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*(?:\s*,\s*[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*)*)"
     r"(?:\s+(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?))?\s*=\s*"
     r"(?P<value>-?\d+(\.\d+)?)$"
 )
 
 GEO_LINE_PATTERN = re.compile(
     r"^(?P<label>\*?\w+)"
-    r"(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(\s+\d+)*))?"
+    r"(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?"
     r"\s+(?P<dir>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?)"
     r"\s*=\s*(?P<start>-?\d+(\.\d+)?)"
     r"\s+(?P<stop>-?\d+(\.\d+)?)"
     r"(?:\s+(?P<step>-?\d+(\.\d+)?))?$"
 )
 VIB_LINE_PATTERN = re.compile(
-    r"^(?P<label>\*?\w+)(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(\s+\d+)*))?"
+    r"^(?P<label>\*?\w+)(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?"
     r"\s*=\s*(?P<start>-?\d+(\.\d+)?)"
     r"\s+(?P<stop>-?\d+(\.\d+)?)"
     r"(?:\s+(?P<step>-?\d+(\.\d+)?))?$"
 )
 OCC_LINE_PATTERN = re.compile(
     r"^(?P<label>\*?\w+)"
-    r"(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(\s+\d+)*))?"
+    r"(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?"
     r"\s*=\s*(?P<chem_blocks>(?P<chem>\w+)\s+(?P<start>-?\d+(\.\d+)?)"
     r"\s+(?P<stop>-?\d+(\.\d+)?)(?:\s+(?P<step>-?\d+(\.\d+)?))?"
     r"(?:\s*,\s*(?P<additional_blocks>.+))?)$"
 )
 CONSTRAIN_LINE_PATTERN = re.compile(
-    r"^(?P<type>geo|vib|occ)\s+(?P<targets>[^\s=,]+"
-    r"(?:\s*[^\s=,]+)*(?:,\s*[^\s=,]+)*)"
+    r"^(?P<type>geo|vib|occ)\s+(?P<targets>[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*"
+    r"(?:\s*,\s*[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*)*)"
     r"(?:\s+(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?))?"
     r"\s*=\s*(?P<value>linked|-?\d+(\.\d+)?)$"
 )

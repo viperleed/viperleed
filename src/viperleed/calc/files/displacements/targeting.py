@@ -48,8 +48,15 @@ class BSSubtarget:
             )
             self.layers = list(range(start_layer, end_layer + 1))
         else:
-            # It's a list of numbers
-            self.nums = list(map(int, parts[1:]))
+            # Check for a range like "1-4"
+            range_match = re.match(r"(\d+)-(\d+)", parts[1])
+            if range_match:
+                start_num = int(range_match.group(1))
+                end_num = int(range_match.group(2))
+                self.nums = list(range(start_num, end_num + 1))
+            else:
+                # It's a list of numbers
+                self.nums = list(map(int, parts[1:]))
 
     def select(self, base_scatterers):
         """Selects base scatterers that match the subtarget specification."""
