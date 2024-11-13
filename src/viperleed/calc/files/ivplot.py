@@ -12,24 +12,23 @@ import logging
 
 import numpy as np
 
-try:
-    import matplotlib
-except Exception:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
+from viperleed.calc.classes.beam import Beam
+from viperleed.calc.lib.log_utils import at_level
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
+from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
+
+if CAN_PLOT:
+    prepare_matplotlib_for_calc()
     from matplotlib.backends.backend_pdf import PdfPages
+    from matplotlib.colors import is_color_like
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-    plt.style.use('viperleed.calc')
-
-from viperleed.calc.classes.beam import Beam
 
 logger = logging.getLogger(__name__)
 
 
+@log_without_matplotlib(logger, msg='Skipping R-factor plotting.')
 def plot_iv(data, filename, labels=[], annotations=[],
             legends=[], formatting={}):
     '''
@@ -85,12 +84,6 @@ def plot_iv(data, filename, labels=[], annotations=[],
     None
 
     '''
-    global _CAN_PLOT
-    if not _CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "R-factor plotting.")
-        return
-
     # check data
     if type(data) not in (list, tuple):
         raise TypeError("Expected data as a list or tuple, found "
@@ -212,114 +205,110 @@ def plot_iv(data, filename, labels=[], annotations=[],
             axes_visible['bottom'] = False
 
     # the following will spam the logger with debug messages; disable.
-    loglevel = logger.level
-    logger.setLevel(logging.INFO)
-    try:
-        fig_exists = False
-        fig_index_on_page = 0
-        for ct in range(n_beams):   # iterate through beams
-            if all([len(xy_per_beam_per_dataset[i][ct]) == 0
-                    for i in range(len(data))]):
-                continue   # no data for this beam in any dataset, skip
-            if (fig_index_on_page >= figs_per_page) or (not fig_exists):
-                # need a new figure
-                fig_exists = True # at least one fig exists
-                fig_index_on_page = 0
-                fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
-                                        squeeze=False)
-                fig.tight_layout()
-                axs = axs.flatten(order='C')  # flatten row-style
-                fig.subplots_adjust(left=(0.03 / (xfigs * gen_scaling*font_size/10)),
-                                    right=(1 - 0.03 / (xfigs * gen_scaling*font_size/10)),
-                                    bottom=(0.14 / (yfigs * gen_scaling*font_size/10)),
-                                    top=(1 - 0.02 / (yfigs * gen_scaling*font_size/10)),
-                                    wspace=0.04 / gen_scaling*font_size/10,
-                                    hspace=0.02 / gen_scaling*font_size/10)
-                figs.append(fig)
-                [ax.set_xlim(*xlims) for ax in axs]
-                [ax.set_ylim(*ylims) for ax in axs]
-                [ax.get_yaxis().set_visible(False) for ax in axs]
-                [sp.set_linewidth(0.5 * line_width * gen_scaling) for ax in axs
-                 for sp in ax.spines.values()]
-                [ax.xaxis.set_major_locator(majortick) for ax in axs]
-                if minortick is not None:
-                    [ax.xaxis.set_minor_locator(minortick) for ax in axs]
-                for i, ax in enumerate(axs):
-                    for k in axes_visible:
-                        ax.spines[k].set_visible(axes_visible[k])
-                    if (((i//xfigs) + 1 == figs_per_page//xfigs)
-                            or n_beams - (ct + i) <= xfigs):
-                        ax.set_xlabel("Energy (eV)", fontsize=font_size*gen_scaling,
-                                      labelpad=4*gen_scaling)
-                        ax.tick_params(
-                            which='both', bottom=True,
-                            top=axes_visible['top'], axis='x',
-                            direction='in', labelsize=0.9*font_size*gen_scaling,
-                            pad=0.5*font_size*gen_scaling,
-                            width=0.5 * line_width * gen_scaling,
-                            length=ticklen)
-                        ax.spines['bottom'].set_visible(True)
-                    else:
-                        ax.tick_params(
-                            which='both', bottom=axes_visible['bottom'],
-                            top=axes_visible['top'], axis='x', direction='in',
-                            labelbottom=False,
-                            width=0.5 * line_width * gen_scaling,
-                            length=ticklen)
+    with at_level(logger, logging.INFO):
+        try:
+            fig_exists = False
+            fig_index_on_page = 0
+            for ct in range(n_beams):   # iterate through beams
+                if all([len(xy_per_beam_per_dataset[i][ct]) == 0
+                        for i in range(len(data))]):
+                    continue   # no data for this beam in any dataset, skip
+                if (fig_index_on_page >= figs_per_page) or (not fig_exists):
+                    # need a new figure
+                    fig_exists = True # at least one fig exists
+                    fig_index_on_page = 0
+                    fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
+                                            squeeze=False)
+                    fig.tight_layout()
+                    axs = axs.flatten(order='C')  # flatten row-style
+                    fig.subplots_adjust(left=(0.03 / (xfigs * gen_scaling*font_size/10)),
+                                        right=(1 - 0.03 / (xfigs * gen_scaling*font_size/10)),
+                                        bottom=(0.14 / (yfigs * gen_scaling*font_size/10)),
+                                        top=(1 - 0.02 / (yfigs * gen_scaling*font_size/10)),
+                                        wspace=0.04 / gen_scaling*font_size/10,
+                                        hspace=0.02 / gen_scaling*font_size/10)
+                    figs.append(fig)
+                    [ax.set_xlim(*xlims) for ax in axs]
+                    [ax.set_ylim(*ylims) for ax in axs]
+                    [ax.get_yaxis().set_visible(False) for ax in axs]
+                    [sp.set_linewidth(0.5 * line_width * gen_scaling) for ax in axs
+                     for sp in ax.spines.values()]
+                    [ax.xaxis.set_major_locator(majortick) for ax in axs]
                     if minortick is not None:
-                        ax.tick_params(which='minor', length=ticklen*0.5)
-            if plot_colors:
-                if not all([matplotlib.colors.is_color_like(s)
-                            for s in plot_colors]):
-                    plot_colors = []
-                    logger.warning("plot_iv: Specified colors not "
-                                   "recognized, reverting to default colors")
-            for i in range(len(data)):
-                if i < len(curve_line_widths):
-                    lw = curve_line_widths[i] * gen_scaling
-                else:
-                    lw = curve_line_widths[-1]
-                if legends:
-                    label = legends[i]
-                else:
-                    label = 'Beamset {}'.format(i+1)
-                xy = xy_per_beam_per_dataset[i][ct]
-                if i < len(plot_colors):
-                    axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
-                                  linewidth=lw,
-                                  color=plot_colors[i])
-                else:
-                    axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
-                                  linewidth=lw)
-            if labels:
-                axs[fig_index_on_page].annotate(labels[ct], namePos, fontsize=font_size*gen_scaling)
-            if annotations:
-                axs[fig_index_on_page].annotate(annotations[ct], annotationPos,
-                                  fontsize=font_size*gen_scaling)
-            if ((print_legend == 'all'
-                    or (print_legend == 'first' and fig_index_on_page == 0)
-                    or (print_legend == 'tr'
-                        and (fig_index_on_page//xfigs == 0 and ((fig_index_on_page+1) % xfigs == 0
-                                                  or ct + 1 == n_beams))))
-                    and len(data) > 1):
-                legendscale = 1.
-                if len(data) > 2:
-                    legendscale = 1/np.sqrt(len(data)-1)
-                legend = axs[fig_index_on_page].legend(fontsize=0.9*font_size*gen_scaling*legendscale,
-                                         loc="upper right", frameon=False,
-                                         ncol=(len(data) // 3 + 1))
-                legend.get_frame().set_linewidth(line_width)
-            fig_index_on_page += 1
+                        [ax.xaxis.set_minor_locator(minortick) for ax in axs]
+                    for i, ax in enumerate(axs):
+                        for k in axes_visible:
+                            ax.spines[k].set_visible(axes_visible[k])
+                        if (((i//xfigs) + 1 == figs_per_page//xfigs)
+                                or n_beams - (ct + i) <= xfigs):
+                            ax.set_xlabel("Energy (eV)", fontsize=font_size*gen_scaling,
+                                          labelpad=4*gen_scaling)
+                            ax.tick_params(
+                                which='both', bottom=True,
+                                top=axes_visible['top'], axis='x',
+                                direction='in', labelsize=0.9*font_size*gen_scaling,
+                                pad=0.5*font_size*gen_scaling,
+                                width=0.5 * line_width * gen_scaling,
+                                length=ticklen)
+                            ax.spines['bottom'].set_visible(True)
+                        else:
+                            ax.tick_params(
+                                which='both', bottom=axes_visible['bottom'],
+                                top=axes_visible['top'], axis='x', direction='in',
+                                labelbottom=False,
+                                width=0.5 * line_width * gen_scaling,
+                                length=ticklen)
+                        if minortick is not None:
+                            ax.tick_params(which='minor', length=ticklen*0.5)
+                if plot_colors:
+                    if not all(is_color_like(s) for s in plot_colors):
+                        plot_colors = []
+                        logger.warning("plot_iv: Specified colors not "
+                                       "recognized, reverting to default colors")
+                for i in range(len(data)):
+                    if i < len(curve_line_widths):
+                        lw = curve_line_widths[i] * gen_scaling
+                    else:
+                        lw = curve_line_widths[-1]
+                    if legends:
+                        label = legends[i]
+                    else:
+                        label = 'Beamset {}'.format(i+1)
+                    xy = xy_per_beam_per_dataset[i][ct]
+                    if i < len(plot_colors):
+                        axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
+                                      linewidth=lw,
+                                      color=plot_colors[i])
+                    else:
+                        axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
+                                      linewidth=lw)
+                if labels:
+                    axs[fig_index_on_page].annotate(labels[ct], namePos, fontsize=font_size*gen_scaling)
+                if annotations:
+                    axs[fig_index_on_page].annotate(annotations[ct], annotationPos,
+                                      fontsize=font_size*gen_scaling)
+                if ((print_legend == 'all'
+                        or (print_legend == 'first' and fig_index_on_page == 0)
+                        or (print_legend == 'tr'
+                            and (fig_index_on_page//xfigs == 0 and ((fig_index_on_page+1) % xfigs == 0
+                                                      or ct + 1 == n_beams))))
+                        and len(data) > 1):
+                    legendscale = 1.
+                    if len(data) > 2:
+                        legendscale = 1/np.sqrt(len(data)-1)
+                    legend = axs[fig_index_on_page].legend(fontsize=0.9*font_size*gen_scaling*legendscale,
+                                             loc="upper right", frameon=False,
+                                             ncol=(len(data) // 3 + 1))
+                    legend.get_frame().set_linewidth(line_width)
+                fig_index_on_page += 1
 
-        # finally, in case the last figure is empty (i.e. the number of beams
-        # is odd) turn off the last axes (but leave the blank space).
-        if n_beams % figs_per_page != 0:
-            for a in axs[-(figs_per_page - n_beams % figs_per_page):]:
-                a.axis('off')
-    except Exception:
-        logger.error("plot_iv: Error while compiling figures.", exc_info=True)
-    finally:
-        logger.setLevel(loglevel)
+            # finally, in case the last figure is empty (i.e. the number of beams
+            # is odd) turn off the last axes (but leave the blank space).
+            if n_beams % figs_per_page != 0:
+                for a in axs[-(figs_per_page - n_beams % figs_per_page):]:
+                    a.axis('off')
+        except Exception:
+            logger.error("plot_iv: Error while compiling figures.", exc_info=True)
 
     # if a filename is given write to PDF, else return list of figs
     if filename is not None:

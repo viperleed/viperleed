@@ -23,7 +23,7 @@ from viperleed.calc import from_ase as vpr_ase
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import readOUTBEAMS
-from viperleed.calc.lib.base import angle
+from viperleed.calc.lib.math_utils import angle
 
 from ..helpers import TEST_DATA
 from . import cases_ase
@@ -202,7 +202,7 @@ class TestSlabTransforms:
             if all(self.parallel(v, (0, 0, 1)) for v in (_before, _after)):
                 # Skip next for vectors along the rotation axis
                 continue
-            assert np.isclose(np.degrees(angle(_before, _after)),  # in-plane
+            assert np.isclose(np.degrees(angle(_before[:2], _after[:2])),
                               self._theta)
 
     def test_rot_mat_x(self, slab):

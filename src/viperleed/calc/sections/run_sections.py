@@ -15,15 +15,15 @@ __license__ = 'GPLv3+'
 
 import logging
 import os
-import time
-from timeit import default_timer as timer
 
+from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files.displacements import readDISPLACEMENTS
 from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
-from viperleed.calc.lib.base import get_elapsed_time_str
+from viperleed.calc.lib.time_utils import DateTimeFormat
+from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.sections import deltas
 from viperleed.calc.sections import errorcalc
 from viperleed.calc.sections import fd_optimization
@@ -92,7 +92,7 @@ def run_section(index, sl, rp):
             except Exception:
                 pass
     logger.info(o)
-    sectionStartTime = timer()
+    since_section_started = ExecutionTimer()
     rp.runHistory.append(index)
     for dp in rp.domainParams:
         dp.rp.runHistory = rp.runHistory
@@ -218,8 +218,8 @@ def run_section(index, sl, rp):
         logger.error(f"Error in section {sectionNames[index]}")
         raise
     logger.info(
-        f"Finishing section at {time.strftime('%H:%M:%S', time.localtime())}. "
-        f"Section took {get_elapsed_time_str(timer() - sectionStartTime)}."
+        f'Finishing section at {DateTimeFormat.TIME.now()}. '
+        f'Section took {since_section_started.how_long(as_string=True)}.'
         )
 
 
@@ -236,12 +236,17 @@ def section_loop(rp, sl):
 
     Returns
     -------
-    int
+    exit_code : int
         0: exit without errors.
         1: clean exit through KeyboardInterrupt
-        2: exit due to Exception before entering main loop
         3: exit due to Exception during main loop
+    state_recorder : CalcStateRecorder
+        A record of the states of sl and rp at the end of each
+        executed section.
     """
+    # Create a record for states at end of each section
+    state_recorder = CalcStateRecorder()
+
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
     searchLoopR = None
     searchLoopLevel = 0
@@ -266,6 +271,9 @@ def section_loop(rp, sl):
                 sl = rp.pseudoSlab
             if rp.domainParams:
                 rp.setHaltingLevel(max(dp.rp.halt for dp in rp.domainParams))
+
+            # record state to the state recorder
+            state_recorder.record(sl, rp, sec)
 
             # Decide how to proceed
             next_section = next(iter(rp.RUN), None)
@@ -324,12 +332,12 @@ def section_loop(rp, sl):
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")
             cleanup(rp.manifest, rp)
-            return 1
+            return 1, state_recorder
         except Exception:
             logger.error("Exception during viperleed.calc execution: ",
                          exc_info=True)
             cleanup(rp.manifest, rp)
-            return 3
+            return 3, state_recorder
         if rp.halt >= rp.HALTING:
             if not initHalt:
                 logger.info(
@@ -342,5 +350,9 @@ def section_loop(rp, sl):
         if rp.RUN and rp.STOP and not rp.RUN[0] in [11, 12, 31]:
             logger.info("# Stopped by user STOP command.")
             break
+
+    logger.debug("End of section loop.")
+    disp_ranges_str = '\n\t'.join(str(at.disp_ranges) for at in sl)
+    logger.debug(f'Total ranges of all displacements:\n{disp_ranges_str}')
     cleanup(rp.manifest, rp)
-    return 0
+    return 0, state_recorder

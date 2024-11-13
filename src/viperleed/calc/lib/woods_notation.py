@@ -16,9 +16,11 @@ import re
 
 import numpy as np
 
-from viperleed.calc.lib.base import angle, cosvec, parseMathSqrt
+from viperleed.calc.lib.base import parseMathSqrt
+from viperleed.calc.lib.math_utils import angle
 
 logger = logging.getLogger(__name__)
+
 
 def readWoodsNotation(s, ucell):
     """Takes a string that should contain the transformation from the bulk to
@@ -66,7 +68,7 @@ def readWoodsNotation(s, ucell):
         # q = np.linalg.norm(r[1])/np.linalg.norm(r[0])
         # this would be to get from bulk vectors to surface, we have to reverse
         q = 1/(np.linalg.norm(r[1])/np.linalg.norm(r[0]))
-        omega = abs(angle(r[0], r[1]))
+        omega = abs(angle(*r))
         # this is always constant in Wood notation, no need to reverse.
         if t == 'p':
             # matrices from: Klaus Hermann; Crystallography and Surface
@@ -98,6 +100,7 @@ def readWoodsNotation(s, ucell):
         logger.warning("SUPERLATTICE values do not round to "
                        "integer values. Check SUPERLATTICE parameter.")
     return mat
+
 
 def writeWoodsNotation(ucell):
     """Takes a unit cell (as a (2x2) matrix) and attempts to write it in Woods
