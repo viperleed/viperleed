@@ -12,6 +12,7 @@ __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
 from copy import deepcopy
+from dataclasses import dataclass
 import logging
 
 import numpy as np
@@ -24,7 +25,15 @@ from viperleed.utilities.poscar.base import _PoscarStreamCLI
 logger = logging.getLogger(__name__)
 
 
-def modify_vacuum(slab, vacuum_gap_size, absolute=False, force=False):
+@dataclass
+class VacuumGapInfo:
+    """Information about a slab's desired vacuum gap."""
+    size: float
+    absolute: bool = False
+    accept_small_gap: bool = False
+
+
+def modify_vacuum(slab, vacuum_gap_info):
     """Modify the vacuum gap size of a slab.
 
     Parameters
@@ -55,8 +64,9 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False, force=False):
 
     slab_thickness = processed_slab.thickness
     current_gap_size = processed_slab.vacuum_gap
+    vacuum_gap_size = vacuum_gap_info.size
 
-    vacuum_gap_size += current_gap_size if not absolute else 0
+    vacuum_gap_size += current_gap_size if not vacuum_gap_info.absolute else 0
 
     # check there is enough space on top of the slab to reduce the vacuum gap
     if vacuum_gap_size < current_gap_size:
@@ -87,10 +97,10 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False, force=False):
     try:
         processed_slab.check_vacuum_gap()
     except NotEnoughVacuumError:
-        if not force:
+        if not vacuum_gap_info.force:
             raise RuntimeError('The resulting vacuum gap would be too small.')
     except WrongVacuumPositionError:
-        if not force:
+        if not vacuum_gap_info.force:
             raise RuntimeError('Cannot modify the vacuum gap as requested. '
                                'Check that there already is a vacuum gap in '
                                'the POSCAR.')
@@ -136,12 +146,15 @@ class ModifyVacuumCLI(_PoscarStreamCLI, cli_name='modify_vacuum'):
 
     def process_slab(self, slab, args):
         """Return a new slab with modified vacuum."""
+        vacuum_gap_info = VacuumGapInfo(
+            size=args.vacuum,
+            absolute=args.absolute,
+            accept_small_gap=args.force
+        )
         if args.absolute:
             logger.debug('Using absolute vacuum gap size.')
         try:
-            return modify_vacuum(
-                slab, args.vacuum, absolute=args.absolute, force=args.force
-            )
+            return modify_vacuum(slab, vacuum_gap_info)
         except RuntimeError as exc:
             self.parser.error(str(exc))
         return slab  # This is unreachable as parser.error sys-exits
