@@ -40,12 +40,8 @@ def modify_vacuum(slab, vacuum_gap_info):
     ----------
     slab : Slab
         Slab to prepare for relaxation,
-    vacuum_gap_size : float
-        Size of the vacuum gap in Angstroms. If absolute is True, this
-        is the absolute size of the vacuum gap, else it is the amount
-        of vacuum to add or remove from the slab.
-    absolute : bool, optional
-        If True, vacuum_gap_size is the absolute size of the vacuum gap.
+    vacuum_gap_info : VacuumGapInfo
+        Information about the desired vacuum gap.
 
     Returns
     -------
