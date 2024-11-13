@@ -21,10 +21,8 @@ import shutil
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_DELTAS
-from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK
-from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
