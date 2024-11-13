@@ -232,6 +232,19 @@ class _TestBookkeeperRunBase:
         assert not (cwd / DEFAULT_OUT).exists()
         assert not any(cwd.glob('*.log'))
 
+    def collect_directory_contents(self, path, contents, skip=None):
+        """Populate the `contents` dict with the contents of `path`."""
+        # Directories are dictionaries, files
+        # are keys, their contents the values
+        for item in path.iterdir():
+            if skip and item.name in skip:
+                continue
+            if item.is_file():
+                contents[item.name] = item.read_text(encoding='utf-8')
+            elif item.is_dir():
+                contents[item.name] = subfolder = {}
+                self.collect_directory_contents(item, subfolder, skip=skip)
+
     def run_after_archive_and_check(self, after_archive,
                                     check_input_contents=True,
                                     **kwargs):
@@ -476,34 +489,24 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         self.check_root_inputs_untouched(*after_archive)
         self.check_no_warnings(caplog)
 
-    def test_discard_full_after_calc_exec(self, after_calc_execution, caplog):
-        """Check behavior of DISCARD_FULL on a non-ARCHIVEd calc run."""
-        bookkeeper, *_, history_run_path = after_calc_execution
+    def test_discard_full_after_calc_exec(self, after_calc_execution):
+        """Check that a non-ARCHIVEd calc run cannot be DISCARD_FULL-ed."""
+        bookkeeper, *_ = after_calc_execution
         cwd = bookkeeper.cwd
-        notes_in_history_info = (
-            NOTES_TEST_CONTENT in (cwd / HISTORY_INFO_NAME).read_text()
-            )
-        last_entry = bookkeeper.history.info.last_entry
-        bookkeeper.run(mode=self.mode, requires_user_confirmation=False)
-        # Since the run was not archived, the history should be empty
-        assert not history_run_path.is_dir()
-        if notes_in_history_info:
-            # pylint: disable-next=magic-value-comparison
-            assert 'last entry in history.info has user notes' in caplog.text
-        elif last_entry and not last_entry.can_be_removed:
-            expected_logs = (
-                'contains invalid fields that could not be interpreted',
-                'contains fields with non-standard format',
-                'some expected fields were deleted',
-                )
-            assert any(msg in caplog.text for msg in expected_logs)
-        else:
-            expected_logs = (
-                'could not identify directory to remove',
-                'No entries to remove',
-                'inconsistent',
-                )
-            assert any(msg in caplog.text for msg in expected_logs)
+
+        # Collect the contents of the root directory before running.
+        # Skip the bookkeeper.log, i.e., the only one that changes
+        skip = {'bookkeeper.log'}
+        before_run = {}
+        self.collect_directory_contents(cwd, before_run, skip=skip)
+        exit_code = bookkeeper.run(mode=self.mode,
+                                   requires_user_confirmation=False)
+        assert exit_code is BookkeeperExitCode.FAIL
+
+        # Now make sure that the contents are identical
+        after_run = {}
+        self.collect_directory_contents(cwd, after_run, skip=skip)
+        assert after_run == before_run
 
     _consistency_check_fails = (
         FileNotFoundError,

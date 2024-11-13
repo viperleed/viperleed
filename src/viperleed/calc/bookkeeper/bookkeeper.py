@@ -246,6 +246,12 @@ class Bookkeeper:
 
     def _check_may_discard_full(self):
         """Log and raise if it is not possible to DISCARD_FULL."""
+        if self.archiving_required:
+            LOGGER.error(f'Cannot {self._mode.long_flag} when the root '
+                         'directory has not been archived yet. Run '
+                         f'bookkeeper {BookkeeperMode.ARCHIVE.long_flag} '
+                         'before.')
+            raise CantRemoveEntryError
         try:
             self.history.info.may_remove_last_entry()
         except NoHistoryEntryError as exc:
