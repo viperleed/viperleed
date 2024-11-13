@@ -286,7 +286,7 @@ def deltas(sl, rp, subdomain=False):
     auxbeams_file = Path('AUXBEAMS')
     if not auxbeams_file.is_file() and (DEFAULT_SUPP/auxbeams_file).is_file():
         try:
-            shutil.copy2(auxbeams_file, auxbeams_file.name)
+            shutil.copy2(DEFAULT_SUPP/auxbeams_file, auxbeams_file.name)
         except OSError:
             logger.warning(f'Failed to copy {auxbeams_file.name} from '
                            f'{DEFAULT_SUPP} folder. Generating new file...')
