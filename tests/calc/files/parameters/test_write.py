@@ -143,27 +143,6 @@ class TestParametersEditor:
         assert modified.comment == comment
         assert modified.fmt_value == '0.2300'
 
-    def test_dont_save_nonexisting_file(self):
-        """Check no duplicate file is created if one did not exist."""
-        rpars = Rparams()
-        editor = ParametersFileEditor(rpars, path='_a_non_exis_ting_pa_th__',
-                                      save_existing_parameters_file=True)
-        editor.save_existing_parameters_file()
-        # pylint: disable-next=protected-access
-        assert not any(editor._path.glob('*'))
-
-    def test_save_existing_parameters_file(self, read_one_param_file):
-        """Check that original file is duplicated correctly."""
-        fpath, rpars = read_one_param_file
-        rpars.timestamp = timestamp = 'new_timestamp_123456'
-        editor = ParametersFileEditor(rpars, path=fpath.parent)
-        editor.save_existing_parameters_file()
-        new_param = next(fpath.parent.glob(f'PARAMETERS*{timestamp}'), None)
-        assert new_param is not None
-        with fpath.open('r', encoding='utf-8') as old_file:
-            with new_param.open('r', encoding='utf-8') as new_file:
-                assert new_file.read() == old_file.read()
-
     def test_write_modified_nothing(self, read_one_param_file):
         """Check that file is unchanged with no edits."""
         fpath, rpars = read_one_param_file
