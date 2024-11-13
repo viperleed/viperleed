@@ -268,9 +268,11 @@ class Bookkeeper:
             LOGGER.error(f'Error: {exc} Please proceed manually.')
             raise
         except CantRemoveEntryError as exc:
-            LOGGER.error('Error: the most recent history folder is '
-                         'inconsistent with the last entry in history.info. '
-                         f'{exc} Please proceed manually.')
+            LOGGER.error(
+                f'Error: the most recent {self.history.path.name} folder is '
+                f'inconsistent with the last entry in {HISTORY_INFO_NAME}. '
+                f'{exc} Please proceed manually.'
+                )
             raise
 
     def _clean_state(self):
