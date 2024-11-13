@@ -23,8 +23,6 @@ from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
-from viperleed.calc.lib.dataclass_utils import set_frozen_attr
-
 
 # TODO: some of these classes are probably also useful for other
 # files, possibly with little modification. If they are, they
