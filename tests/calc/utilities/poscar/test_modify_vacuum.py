@@ -11,8 +11,11 @@ import numpy as np
 import pytest
 import pytest_cases
 
+from viperleed.utilities.poscar import modify_vacuum
 from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
+from viperleed.utilities.poscar.modify_vacuum import VacuumGapInfo
 from viperleed.calc.classes.slab.surface_slab import _MIN_VACUUM
+from viperleed.calc.classes.slab.errors import WrongVacuumPositionError
 
 from ... import poscar_slabs
 from ...tags import CaseTag as Tag
@@ -63,3 +66,28 @@ class TestModifyVacuum:
         args = parser.parse_args([str(vacuum_gap_size), '-a'])
         with pytest.raises(SystemExit):
             modified_slab = ModifyVacuumCLI().process_slab(slab, args)
+
+    def test_parse_cli_args_absolute_negative_gap(self):
+        """Test that parse_cli_args raises for a negative absolute vacuum gap."""
+        parser = ModifyVacuumCLI()
+        with pytest.raises(SystemExit):
+            parser.parse_cli_args(["-1.0", "--absolute"])
+
+    @pytest.mark.parametrize('vacuum_gap_size', [-1.0, -5.0])
+    @infoless
+    def test_modify_vacuum_negative_gap_raises_error(
+        self, test_slab, vacuum_gap_size):
+        """Test that an Error is raised when the vacuum gap size is negative."""
+        slab, *_ = test_slab
+        vacuum_gap_info = VacuumGapInfo(size=vacuum_gap_size, absolute=True)
+        with pytest.raises(RuntimeError):
+            modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
+
+    @infoless
+    def test_modify_vacuum_not_enough_vacuum_error(self, test_slab):
+        """Test that NotEnoughVacuumError is raised correctly."""
+        slab, *_ = test_slab
+        vacuum_gap_info = VacuumGapInfo(
+            size=0.5, absolute=True, accept_small_gap=False)
+        with pytest.raises(RuntimeError):
+            modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
