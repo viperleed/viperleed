@@ -27,6 +27,7 @@ _HEADER = '''
 # viperleed.calc. It contains information that should NOT BE EDITED.
 # Editing this file may impair the ability of the bookkeeper of
 # interpreting or reconstructing the history of this calculation.
+
 '''
 _METADATA_NAME = 'bookkeeper_meta'
 _EMPTY = '_not_defined_'
