@@ -77,7 +77,8 @@ def modify_vacuum(slab, vacuum_gap_info):
     vacuum_gap_size += current_gap_size if not vacuum_gap_info.absolute else 0
 
     if vacuum_gap_size < 0:
-        raise RuntimeError("The resulting vacuum gap size would be negative.")
+        raise NotEnoughVacuumError(
+            "The resulting vacuum gap size would be negative.", None)
 
     logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
     logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
@@ -92,7 +93,7 @@ def modify_vacuum(slab, vacuum_gap_info):
 
     processed_slab.c_vector[:] = new_c_vector
     processed_slab.collapse_cartesian_coordinates()
-    processed_slab.update_fractional_from_cartesian()
+
     try:
         processed_slab.check_vacuum_gap()
     except NotEnoughVacuumError:
