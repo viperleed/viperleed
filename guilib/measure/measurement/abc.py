@@ -32,8 +32,9 @@ from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
+from viperleed.guilib.measure.dialogs.settingsdialog import (
+    SettingsHandler, SettingsSectionColumnInfo, SettingsTag,
+    )
 from viperleed.guilib.measure.measurement import _meassettings as _settings
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 
@@ -825,10 +826,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                            tooltip=tip
                            )
 
+        column_info = SettingsSectionColumnInfo(1)
         device_section = _settings.DeviceEditor(
-            self.settings, default_folder=settings_path, add_cameras=True
+            self.settings, default_folder=settings_path,
+            add_cameras=True, column_info=column_info,
             )
-        device_section.set_list_height(height)
         handler.add_complex_section(device_section)
 
         return handler

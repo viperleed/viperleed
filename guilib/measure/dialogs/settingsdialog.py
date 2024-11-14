@@ -32,8 +32,9 @@ Part of the code here is inspired by https://github.com/pythonguis/pyqtconfig
 """
 
 import ast
-import copy
 import collections
+import copy
+from dataclasses import dataclass
 import enum
 from pathlib import Path
 from types import MethodType as _bound_method
@@ -152,6 +153,44 @@ class SettingsTag(enum.Flag):
 
 
 Tag = SettingsTag
+
+
+@dataclass
+class SettingsSectionColumnInfo:
+    """Contains information on how to place a settings section.
+
+    Attributes
+    ----------
+    position : int, optional
+        Decides in which column of the SettingsDialog the
+        SettingsSection will be displayed. Default is 0, which
+        means the section will be added to the first column.
+    alignment : Qt.AlignTop or Qt.AlignBottom or Qt.AlignVCenter
+                or None, optional
+        Influences vertical position of the section. Default is None.
+        Qt.AlignTop: Moves section to the top with a bottom stretch.
+        Qt.AlignBottom: Moves section to the bottom with a top stretch.
+        Qt.AlignVCenter: Moves section to the middle with top
+                         and bottom stretches.
+        None: The section will not have any additional stretches.
+
+    Raises
+    ------
+    TypeError
+        If position is not an int, or if alignment is given, but
+        not among the allowed values listed above.
+    """
+
+    position: int = 0
+    alignment: qtc.Qt.Alignment = None
+
+    def __post_init__(self):
+        """Check that we have the correct attribute types."""
+        if not isinstance(self.position, int):
+            raise TypeError('Column position must be an int.')
+        allowed = (qtc.Qt.AlignTop, qtc.Qt.AlignBottom, qtc.Qt.AlignVCenter)
+        if self.alignment and self.alignment not in allowed:
+            raise TypeError('Alignment must be an allowed alignment or None.')
 
 
 class SettingsTagHandler():
@@ -729,6 +768,10 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
             A descriptive text that will be used as tooltip, displayed
             when the mouse cursor hovers over the section title. If an
             empty string no tooltip is shown. Default is an empty string.
+        column_info : SettingsSectionColumnInfo, optional
+            Information on how to display the section. Check out the
+            SettingsSectionColumnInfo class for more information. If
+            not given, the section will be displayed in the main column.
         parent : QWidget, optional
             The parent widget of this SettingsDialogSection. Default
             is None.
@@ -748,14 +791,21 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
         Raises
         -------
         TypeError
-            If no display_name is given
+            If no display_name is given.
+        TypeError
+            If column_info is given, but not an instance
+            of SettingsSectionColumnInfo.
         """
         display_name = kwargs.get('display_name', '')
         if not display_name:
             raise TypeError("Missing display_name")
 
-        tooltip = kwargs.get('tooltip', '')
+        self.column_info = kwargs.get('column_info',
+                                      SettingsSectionColumnInfo())
+        if not isinstance(self.column_info, SettingsSectionColumnInfo):
+            raise TypeError('Column info must be a SettingsSectionColumnInfo.')
 
+        tooltip = kwargs.get('tooltip', '')
         self._info = qtw.QLabel()
         self.central_widget = qtw.QWidget()
         super().__init__(display_name, **kwargs)
@@ -801,7 +851,6 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
         self.central_widget.setSizePolicy(_policy.Minimum, _policy.Minimum)
 
         layout.addWidget(self.central_widget)
-        layout.addStretch(1)                # Keep all options together
 
         self.setSizePolicy(_policy.Minimum, _policy.Minimum)
         self.setLayout(layout)
@@ -1100,21 +1149,37 @@ class SettingsDialog(qtw.QDialog):
         buttons.addButton(self.adv_button, _bbox.ResetRole)
         # self.adv_button.setVisible(self.handler.has_advanced_options())
 
-        layout = qtw.QVBoxLayout()
+        columns = [qtw.QVBoxLayout(),]
         for widg in self.handler.widgets:
             if widg.has_tag(Tag.MEASUREMENT) and not widg.has_tag(Tag.REGULAR):
                 continue
             if isinstance(widg, SettingsDialogSectionBase):
-                layout.addWidget(widg)
+                position = widg.column_info.position
+                alignment = widg.column_info.alignment
+                while(position >= len(columns)):                                # TODO: We could make a defaultlist class similar to defaultdict.
+                    columns.append(qtw.QVBoxLayout())
+                if alignment in (qtc.Qt.AlignVCenter, qtc.Qt.AlignBottom):
+                    columns[position].addStretch(1)
+                columns[position].addWidget(widg)
+                if alignment in (qtc.Qt.AlignVCenter, qtc.Qt.AlignTop):
+                    columns[position].addStretch(1)
                 continue
             # An option. Need to add it in a QFormLayout
             _form = qtw.QFormLayout()
             _form.addRow(*widg)
-            layout.addLayout(_form)
-        layout.addWidget(buttons)
-        layout.setSizeConstraint(layout.SetMinimumSize)
-        self.setLayout(layout)
-        layout.setSpacing(round(layout.spacing()*1.4))
+            columns[0].addLayout(_form)
+        columns[0].addStretch(1)
+
+        section_layout = qtw.QHBoxLayout()
+        for layout in columns:
+            section_layout.addLayout(layout)
+
+        outer_layout = qtw.QVBoxLayout()
+        outer_layout.addLayout(section_layout)
+        outer_layout.addWidget(buttons)
+        outer_layout.setSizeConstraint(outer_layout.SetMinimumSize)
+        self.setLayout(outer_layout)
+        outer_layout.setSpacing(round(outer_layout.spacing()*1.4))
 
         _policy = self.sizePolicy()
         self.setSizePolicy(_policy.Minimum, _policy.Minimum)

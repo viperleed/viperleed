@@ -67,7 +67,7 @@ class DeviceEditor(SettingsDialogSectionBase):
 
     def _compose_and_connect_collapsable_lists(self):
         """Compose the collapsable lists for cameras and controllers."""
-        central_layout = qtw.QVBoxLayout()
+        central_layout = qtw.QHBoxLayout()
         central_layout.addWidget(self._controllers)
         if self._add_cameras:
             central_layout.addWidget(self._cameras)
