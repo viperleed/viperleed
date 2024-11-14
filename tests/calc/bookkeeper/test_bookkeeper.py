@@ -171,6 +171,25 @@ class _TestBookkeeperRunBase:
             assert hist_file.is_file()
             assert MOCK_OUT_CONTENT in hist_file.read_text()
 
+    def check_out_files_untouched(self, bookkeeper, *_):
+        """Ensure all expected files are found in OUT."""
+        out = bookkeeper.cwd / DEFAULT_OUT
+        for file in MOCK_STATE_FILES:
+            out_file = out / f'{file}_OUT'
+            assert out_file.is_file
+            assert MOCK_OUT_CONTENT in out_file.read_text()
+
+    def check_root_after_archive(self, *after_archive,
+                                 check_input_contents=True):
+        """Make sure the root is structured as expected after archiving."""
+        self.check_root_inputs_renamed_to_ori(
+            *after_archive,
+            check_input_contents=check_input_contents
+            )
+        self.check_out_files_untouched(*after_archive)
+        if check_input_contents:
+            self.check_root_inputs_replaced_by_out(*after_archive)
+
     def check_root_inputs_renamed_to_ori(self, bookkeeper, *_,
                                          check_input_contents=True):
         """Check that the input files have now a _ori suffix."""
@@ -197,16 +216,6 @@ class _TestBookkeeperRunBase:
             assert (cwd / file).is_file()
             input_content = (cwd / file).read_text()
             assert MOCK_INPUT_CONTENT in input_content
-
-    def check_root_after_archive(self, *after_archive,
-                                 check_input_contents=True):
-        """Make sure the root is structured as expected after archiving."""
-        self.check_root_inputs_renamed_to_ori(
-            *after_archive,
-            check_input_contents=check_input_contents
-            )
-        if check_input_contents:
-            self.check_root_inputs_replaced_by_out(*after_archive)
 
     def check_root_is_clean(self, bookkeeper, *_):
         """Check that no calc output is present in the main directory."""
