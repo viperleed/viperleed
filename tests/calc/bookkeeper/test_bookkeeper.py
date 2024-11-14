@@ -684,7 +684,7 @@ class TestBookkeeperOthers:
                 'some_stray_directory': {},
                 },
             }
-        not_collected_dirs = tuple(
+        invalid_workhistory = tuple(
             tmp_path/DEFAULT_WORK_HISTORY/entry
             for entry in root_tree[DEFAULT_WORK_HISTORY]
             )
@@ -694,14 +694,14 @@ class TestBookkeeperOthers:
             )
         filesystem_from_dict(root_tree, tmp_path)
         return (tensor_num_unused, not_collected_log,
-                not_collected_dirs, invalid_history_stuff)
+                invalid_workhistory, invalid_history_stuff)
 
     def test_funky_files(self, funky_files, tmp_path):
         """Check that funny files and directories are not considered."""
         bookkeeper = Bookkeeper(cwd=tmp_path)
         (tensor_num_unused,
          not_collected_log,
-         not_collected_dirs,
+         invalid_workhistory,
          invalid_history_stuff) = funky_files
 
         bookkeeper.update_from_cwd(silent=True)
@@ -714,24 +714,37 @@ class TestBookkeeperOthers:
 
         # pylint: disable-next=protected-access           # OK in tests
         assert not any(f in bookkeeper._root._files_to_archive
-                       for f in not_collected_dirs)
+                       for f in invalid_workhistory)
 
         bookkeeper.run('archive')
-        assert not_collected_log.exists()
-        assert not (history_dir/not_collected_log.name).exists()
-        for file in not_collected_dirs:
-            assert (not file.exists() if PREVIOUS_LABEL in file.name
-                    else file.is_dir())
-        assert all(f.exists() for f in invalid_history_stuff)
+        # Funny workhistory stuff untouched, but '_previous' removed.
+        for folder in invalid_workhistory:
+            assert (not folder.exists() if PREVIOUS_LABEL in folder.name
+                    else folder.is_dir())
+        self._check_funky_files_untouched(history_dir,
+                                          not_collected_log,
+                                          invalid_history_stuff)
         assert history_dir.is_dir()                                             # TODO: this sometimes fails??? Failed once with -x --durations=10
         assert history_info.path.read_bytes()
 
-        # Now discard should remove workhistory and all the stuff
+        # Now discard should remove workhistory, the archived
+        # folder, and its corresponding history.info entry.
         bookkeeper.run('discard_full', requires_user_confirmation=False)
-        assert not_collected_log.exists()
+        self._check_funky_files_untouched(history_dir,
+                                          not_collected_log,
+                                          invalid_history_stuff)
         assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()                     # TODO: this sometimes fails too???
         assert not history_dir.exists()
         assert not history_info.path.read_bytes()
+
+    @staticmethod
+    def _check_funky_files_untouched(history_dir,
+                                     not_collected_log,
+                                     invalid_history_stuff):
+        """Check that funny files and folders are not modified."""
+        assert all(f.exists() for f in invalid_history_stuff)
+        assert not_collected_log.exists()
+        assert not (history_dir/not_collected_log.name).exists()
 
     _user_replies = {
         'no reply': ('', False),  # No by default
