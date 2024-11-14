@@ -82,8 +82,8 @@ def fixture_after_archive(after_calc_execution):
 def fixture_before_calc_execution(tmp_path):
     """Yield a temporary directory for testing the bookkeeper.
 
-    This represents a new calculation, i.e., before any viperleed calc or
-    bookkeeper run.
+    This represents a new calculation, i.e., before
+    any viperleed.calc or bookkeeper run.
 
     Parameters
     ----------
@@ -93,32 +93,16 @@ def fixture_before_calc_execution(tmp_path):
     Yields
     ------
     bookkeeper : Bookkeeper
-        A bookkeeper instance ready for running in tmp_path.
+        A bookkeeper instance ready for running in `tmp_path`.
     """
-    # create mock input files
-    for file in MOCK_STATE_FILES:
-        (tmp_path / file).write_text(MOCK_INPUT_CONTENT)
+    # Create mock input files
+    input_files = {f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES}
+    filesystem_from_dict(input_files, tmp_path)
 
     bookkeeper = Bookkeeper(cwd=tmp_path)
     bookkeeper.update_from_cwd(silent=True)
     with execute_in_dir(tmp_path):
         yield bookkeeper
-    # It would be nice to clean up, but the following line causes
-    # a PermissionError. Likely because of logging keeping a hold
-    # of the bookkeeper.log file
-    # shutil.rmtree(tmp_path)
-
-
-@fixture(name='history_path')
-def fixture_history_path(mock_tree_after_calc_execution):
-    """Return the path to a history subfolder after a calc execution."""
-    return mock_tree_after_calc_execution / DEFAULT_HISTORY
-
-
-@fixture(name='history_run_path')
-def fixture_history_run_path(history_path):
-    """Return the path to a history run subfolder of `history_path`."""
-    return history_path / f't000.r001_{MOCK_TIMESTAMP}'
 
 
 def check_too_early():
