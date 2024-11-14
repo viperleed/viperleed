@@ -278,7 +278,7 @@ class _TestBookkeeperRunBase:
             assert moved_file.is_file()
             assert ori_name in moved_file.read_text()
 
-    def run_after_calc_exec_and_check(self, after_calc_execution):
+    def run_after_calc_exec_and_check(self, after_calc_execution, **kwargs):
         """Check that running bookkeeper after calc does some basic stuff."""
         bookkeeper, *_ = after_calc_execution
         # bookkeeper should think that it needs archiving
