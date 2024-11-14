@@ -666,6 +666,11 @@ class TestBookkeeperOthers:
         not_collected_log = tmp_path/'not_a_log.log'
         root_tree = {
             DEFAULT_OUT : {},  # Otherwise 'nothing to do'
+            # A log file, just to make sure we don't need to infer
+            # a timestamp, as this may happen to be different for
+            # the runs we do in test_funky_files, and may lead to
+            # unexpected failures.
+            f'{LOG_PREFIX}-{MOCK_TIMESTAMP}.log': None,
             # Stuff that should not be copied over:
             # - a directory with the name of a log file
             not_collected_log.name: {},
@@ -720,7 +725,7 @@ class TestBookkeeperOthers:
         self._check_funky_files_untouched(history_dir,
                                           not_collected_log,
                                           invalid_history_stuff)
-        assert history_dir.is_dir()                                             # TODO: this sometimes fails??? Failed once with -x --durations=10
+        assert history_dir.is_dir()
         assert history_info.path.read_bytes()
 
         # Now discard should remove workhistory, the archived
@@ -729,7 +734,7 @@ class TestBookkeeperOthers:
         self._check_funky_files_untouched(history_dir,
                                           not_collected_log,
                                           invalid_history_stuff)
-        assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()                     # TODO: this sometimes fails too???
+        assert not (tmp_path/DEFAULT_WORK_HISTORY).exists()                     # TODO: this sometimes fails???
         assert not history_dir.exists()
         assert not history_info.path.read_bytes()
 
