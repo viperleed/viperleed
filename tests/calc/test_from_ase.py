@@ -483,12 +483,11 @@ class TestSuccessfulRefcalc:
          self.ase_atoms) = run_from_ase_refcalc
 
     @pytest.fixture(autouse=True)
-    def read_theobeams_from_results(self, run_refcalc):
+    @pytest.mark.usefixtures('run_refcalc')
+    def read_theobeams_from_results(self):
         """Store a list of full-dynamically calculated beams."""
-        # pylint: disable=attribute-defined-outside-init
-        # See note in fixture_run_refcalc
-        _ = run_refcalc  # Otherwise unused-argument
         theobeams_content, *_ = self.refcalc_results
+        # pylint: disable-next=attribute-defined-outside-init
         self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
 
     @pytest.mark.parametrize('file', ('BEAMLIST', 'VIBROCC', 'IVBEAMS'))
@@ -536,12 +535,11 @@ class TestFailingRefcalc:
          self.ase_atoms) = run_from_ase_refcalc_fails
 
     @pytest.fixture(autouse=True)
-    def read_theobeams_from_results(self, run_refcalc):
+    @pytest.mark.usefixtures('run_refcalc')
+    def read_theobeams_from_results(self):
         """Store an (empty) list of full-dynamically calculated beams."""
-        # pylint: disable=attribute-defined-outside-init
-        # See note in fixture_run_refcalc
-        _ = run_refcalc  # Otherwise unused-argument
         theobeams_content, *_ = self.refcalc_results
+        # pylint: disable-next=attribute-defined-outside-init
         self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
 
     @pytest.mark.parametrize('file', ('BEAMLIST', ))
