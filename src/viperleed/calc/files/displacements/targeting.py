@@ -7,15 +7,16 @@ import numpy as np
 
 
 def generate_label_match_regex(label):
-    """Generate a regex pattern to match variations of the given label."""
-    # Escape any special characters in the label
-    escaped_label = re.escape(label)
+    """Generate a regex pattern to match variations of the given label,
+    with '*' acting as a wildcard for word characters, and matching prefixes."""
+    # Escape any special characters in the label, except for '*'
+    escaped_label = re.escape(label).replace(r"\*", r"\w*")
 
-    # Replace '*' in the label with a regex pattern that matches any characters
-    pattern = escaped_label.replace(r"\*", r"\w*")
+    # Append `\w*` at the end to match strings starting with the pattern
+    pattern = rf"^{escaped_label}\w*"
 
     # Compile the final regex pattern
-    return re.compile(rf"^{pattern}$")
+    return re.compile(pattern)
 
 
 class BSSubtarget:
