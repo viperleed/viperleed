@@ -9,7 +9,8 @@ __license__ = 'GPLv3+'
 
 import numpy as np
 import pytest
-import pytest_cases
+from pytest_cases import parametrize
+from pytest_cases import parametrize_with_cases
 
 from viperleed.utilities.poscar import modify_vacuum
 from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
@@ -20,15 +21,15 @@ from viperleed.calc.classes.slab.errors import WrongVacuumPositionError
 from ... import poscar_slabs
 from ...tags import CaseTag as Tag
 
-infoless = pytest_cases.parametrize_with_cases('test_slab',
-                                               cases=poscar_slabs,
-                                               has_tag=Tag.NO_INFO)
+infoless = parametrize_with_cases('test_slab',
+                                  cases=poscar_slabs,
+                                  has_tag=Tag.NO_INFO)
 
 
 class TestModifyVacuum:
     """Tests for the modify_vacuum utility."""
 
-    @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 15.0, -1.0])
+    @parametrize('vacuum_gap_size', [1.0, 3.14, 15.0, -1.0])
     @infoless
     def test_gap_relative(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with relative vacuum gap."""
@@ -45,7 +46,7 @@ class TestModifyVacuum:
             assert (modified_slab.vacuum_gap
                     == pytest.approx(vacuum_gap_size + original_gap))
 
-    @pytest.mark.parametrize('vacuum_gap_size', [15.0, 100.0])
+    @parametrize('vacuum_gap_size', [15.0, 100.0])
     @infoless
     def test_gap_absolute(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
@@ -57,7 +58,7 @@ class TestModifyVacuum:
         assert modified_slab.vacuum_gap == pytest.approx(vacuum_gap_size)
         assert modified_slab.thickness == pytest.approx(slab.thickness)
 
-    @pytest.mark.parametrize('vacuum_gap_size', [1.0])
+    @parametrize('vacuum_gap_size', [1.0])
     @infoless
     def test_gap_too_small(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
@@ -73,7 +74,7 @@ class TestModifyVacuum:
         with pytest.raises(SystemExit):
             parser.parse_cli_args(["-1.0", "--absolute"])
 
-    @pytest.mark.parametrize('vacuum_gap_size', [-1.0, -5.0])
+    @parametrize('vacuum_gap_size', [-1.0, -5.0])
     @infoless
     def test_negative_gap_raises(self, test_slab, vacuum_gap_size):
         """Check complaints when the vacuum gap size is negative."""
