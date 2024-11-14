@@ -397,7 +397,8 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
             )
         self.check_no_warnings(caplog, exclude_msgs=faulty_entry_logs)
 
-    def test_discard_after_calc_exec(self, after_calc_execution, caplog):
+    def test_discard_after_calc_exec(self, after_calc_execution,
+                                     caplog, mocker):
         """Check behavior of DISCARD after a non-ARCHIVEd calc run.
 
         This may happen, for example, if the previous (calc or
@@ -405,15 +406,24 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 
         Parameters
         ----------
-        after_calc_execution: fixture
-        caplog: fixture
+        after_calc_execution : fixture
+            A bookkeeper and information on a root directory right
+            after viperleed.calc has run, and before any bookkeeper
+            execution (even the default --archive).
+        caplog : fixture
+            The pytest.caplog fixture.
+        mocker : fixture
+            The pytest-mock mocker fixture.
 
         Returns
         -------
         None.
         """
+        bookkeeper, *_ = after_calc_execution
+        mock_discard = mocker.patch.object(bookkeeper.history.info,
+                                           'discard_last_entry')
         self.run_after_calc_exec_and_check(after_calc_execution)
-        self.check_no_warnings(caplog, exclude_msgs=('discarded', 'metadata'))
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
         self.check_root_is_clean(*after_calc_execution)
 
         # Original SHOULD NOT be replaced by output:
@@ -421,10 +431,12 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         # in which case we don't want to overwrite
         self.check_root_inputs_untouched(*after_calc_execution)
 
-        # A 'DISCARDED' note should be in history.info
-        bookkeeper, *_ = after_calc_execution
+        # A 'DISCARDED' note should be in history.info, but should
+        # have been added already when archiving, not as a result
+        # of a call to history.info.discard_last_entry.
         assert bookkeeper.history.info.last_entry_was_discarded
         assert _DISCARDED in bookkeeper.history.info.path.read_text()
+        mock_discard.assert_not_called()
 
 
 class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
