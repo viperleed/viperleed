@@ -53,7 +53,6 @@ from .conftest import MOCK_OUT_CONTENT
 from .conftest import MOCK_TIMESTAMP
 from .conftest import MOCK_STATE_FILES
 from .conftest import MOCK_WORKHISTORY
-from .conftest import NOTES_TEST_CONTENT
 
 
 _UPDATE_METHODS = (
