@@ -87,7 +87,6 @@ class TestModifyVacuum:
     def test_not_enough_vacuum_error(self, test_slab):
         """Test that NotEnoughVacuumError is raised correctly."""
         slab, *_ = test_slab
-        vacuum_gap_info = VacuumGapInfo(
-            size=0.5, absolute=True, accept_small_gap=False)
+        gap = VacuumGapInfo(size=0.5, absolute=True, accept_small_gap=False)
         with pytest.raises(RuntimeError):
-            modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
+            modified_slab = modify_vacuum.modify_vacuum(slab, gap)
