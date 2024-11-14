@@ -35,6 +35,7 @@ from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
+from ...helpers import filesystem_from_dict
 from .history import cases_history
 from .history.entry import cases_entry
 from .history.entry.cases_entry import NOTES_TEST_CONTENT
@@ -64,67 +65,44 @@ with_logs = parametrize(log_file_name=MOCK_LOG_FILES)
 @parametrize_with_cases('history_info_contents',
                         cases=(cases_entry, cases_history),
                         has_tag=Tag.BOOKKEEPER)
-def fixture_mock_tree_after_calc_execution(with_notes, tmp_path, log_file_name,
-                                           history_info_contents):
+def fixture_mock_tree_after_calc_execution(log_file_name, with_notes,
+                                           history_info_contents, tmp_path):
     """Yield a temporary directory for testing the bookkeeper."""
-    deltas_path = tmp_path / DEFAULT_DELTAS
-    tensors_path = tmp_path / DEFAULT_TENSORS
-    out_path = tmp_path / DEFAULT_OUT
-    supp_path = tmp_path / DEFAULT_SUPP
-    history_path = tmp_path / DEFAULT_HISTORY
-    original_inputs_path = supp_path / ORIGINAL_INPUTS_DIR_NAME
-    directories = [
-        deltas_path,
-        tensors_path,
-        out_path,
-        supp_path,
-        original_inputs_path,
-        history_path / 't001.r001_20xxxx-xxxxxx/some_directory',
-        history_path / 't002.r002_20xxxx-xxxxxx/some_directory',
-        ]
-    directories.extend(tmp_path/DEFAULT_WORK_HISTORY/f
-                       for f in MOCK_WORKHISTORY)
+    root_contents = {
+        DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
+        DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
+        log_file_name: None,
 
-    for directory in directories:
-        directory.mkdir(parents=True, exist_ok=True)
+        # Input files
+        **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
 
-    files = {  # path: contents
-        tmp_path / log_file_name: None,
-        deltas_path / f'{DEFAULT_DELTAS}_004.zip': None,
-        tensors_path / f'{DEFAULT_TENSORS}_004.zip': None,
+        # OUT files
+        DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_CONTENT for f in MOCK_STATE_FILES},
+
+        # Original inputs in SUPP
+        f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
+            f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
+            },
+
+        # Pre-existing (empty) history directories
+        f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
+        f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
+
+        # workhistory subfolders, with dummy files
+        **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
+           for f in MOCK_WORKHISTORY},
         }
+    # Files/folders that depend on the arguments
     if with_notes:
-        files[tmp_path / 'notes.txt'] = NOTES_TEST_CONTENT
+        root_contents['notes.txt'] = NOTES_TEST_CONTENT
+    if history_info_contents is not None:  # history.info
+        root_contents[HISTORY_INFO_NAME] = history_info_contents
 
-    # Inputs in root
-    files.update((tmp_path / f, MOCK_INPUT_CONTENT)
-                 for f in MOCK_STATE_FILES)
-    # Original inputs in SUPP
-    files.update((original_inputs_path / f, MOCK_ORIG_CONTENT)
-                 for f in MOCK_STATE_FILES)
-    # OUT
-    files.update((out_path / f'{f}_OUT', MOCK_OUT_CONTENT)
-                 for f in MOCK_STATE_FILES)
-    # history.info
-    if history_info_contents is not None:
-        files[tmp_path / HISTORY_INFO_NAME] = history_info_contents
-
-    # workhistory
-    files.update((tmp_path/DEFAULT_WORK_HISTORY/f/'file', f)
-                 for f in MOCK_WORKHISTORY)
-
-    for file, contents in files.items():
-        if contents is None:
-            file.touch()
-        else:
-            file.write_text(contents, encoding='utf-8')
+    # Actually create files and folders
+    filesystem_from_dict(root_contents, tmp_path)
 
     with execute_in_dir(tmp_path):
         yield tmp_path
-    # It would be nice to clean up, but the following line causes
-    # a PermissionError. Likely because of logging keeping a hold
-    # of the bookkeeper.log file.
-    # shutil.rmtree(tmp_path)
 
 
 @fixture

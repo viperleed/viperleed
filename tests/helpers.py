@@ -187,6 +187,43 @@ def flat_fixture(func, **fixture_args):                                         
     return _decorator(func)
 
 
+def filesystem_from_dict(as_dict, root):
+    """Create files and directories from a dictionary version of a tree.
+
+    Parameters
+    ----------
+    as_dict : dict
+        A dictionary representation of a file-system tree. Directories
+        are dictionaries, whose keys are (relative) paths. File
+        contents are dictionary values: they may be strings or
+        None. In the latter case empty files are created.
+    root : Path
+        The path to the real file-system root directory where `as_dict`
+        contents should be created.
+
+    Returns
+    -------
+    created : set of Path
+        Paths to all files/folders created.
+    """
+    created = set()
+    for entry, contents in as_dict.items():
+        path = root / entry
+        created.add(path)
+        # Directory:
+        if isinstance(contents, dict):
+            path.mkdir(parents=True, exist_ok=True)
+            sub_paths = filesystem_from_dict(contents, path)
+            created.update(sub_paths)
+            continue
+        # File:
+        if contents is None:
+            path.touch()
+        else:
+            path.write_text(contents, encoding='utf-8')
+    return created
+
+
 # ######################   CONTEXT MANAGERS   #########################
 
 @contextmanager

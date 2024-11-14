@@ -22,6 +22,8 @@ from viperleed.calc.bookkeeper.history.meta import _HEADER
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.history.meta import _SECTIONS
 
+from ....helpers import filesystem_from_dict
+
 
 _MOCK_HASH = 'this is a fake hash'
 _MOCK_OTHER_HASH = 'this is another fake hash'
@@ -44,23 +46,13 @@ def fixture_metadata_file(tmp_path):
 class CasesHistoryTree:
     """Collection of test cases that mimic a file-system tree."""
 
-    def _tree_from_dict(self, tree_as_dict, root):
-        """Create files and directories from a dictionary version of a tree."""
-        for entry, contents in tree_as_dict.items():
-            path = root / entry
-            if isinstance(contents, dict):
-                path.mkdir()
-                self._tree_from_dict(contents, path)
-                continue
-            path.write_text(contents)
-
     def case_empty_tree(self, tmp_path):
         """Return a tree without any contents."""
         return tmp_path, None
 
     def case_only_metadata_file(self, tmp_path):
         """Return a tree containing only the metadata file."""
-        self._tree_from_dict({_METADATA_NAME: ''}, tmp_path)
+        filesystem_from_dict({_METADATA_NAME: ''}, tmp_path)
         return tmp_path, None
 
     def case_sample_tree(self, tmp_path):
@@ -77,7 +69,7 @@ class CasesHistoryTree:
                 'subfolder2': {'subfile1.1': sample_file_contents},
                 },
             }
-        self._tree_from_dict(tree, tmp_path)
+        filesystem_from_dict(tree, tmp_path)
         return tmp_path, '9d46c0aae42777a813780a6ba49befec'
 
 

@@ -42,6 +42,7 @@ from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
+from ...helpers import filesystem_from_dict
 from ...helpers import not_raises
 from ...helpers import make_obj_raise
 from ...helpers import raises_exception
@@ -629,73 +630,69 @@ class TestBookkeeperOthers:
     def test_remove_tensors_deltas(self, tmp_path):
         """Check removal of tensor and delta files."""
         bookkeeper = Bookkeeper(cwd=tmp_path)
-        removed_files = (
-            tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_003.zip',
-            tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_003.zip',
-            )
-        surviving_files = (
-            tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_002.zip',
-            tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_001.zip',
-            tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_001.zip',
-            )
-        folders = (
-            tmp_path/DEFAULT_TENSORS,
-            tmp_path/DEFAULT_DELTAS,
-            # Unzipped tensors/deltas should be left untouched
-            tmp_path/f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_003',
-            tmp_path/f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_003',
-            )
-        # We need information in history to actually remove tensors
-        history_stuff = (
-            tmp_path/DEFAULT_HISTORY/'t003.r001_other_stuff/file',
-            tmp_path/DEFAULT_HISTORY/'t002.r001_first_run/file',
-            tmp_path/DEFAULT_HISTORY/'t002.r005_other_run/file',
-            tmp_path/DEFAULT_HISTORY/'t001.r001_first_tensor/file',
-            )
-        for folder in folders:
-            folder.mkdir(parents=True)
-        for file in (*removed_files, *surviving_files):
-            file.touch()
-        for file in history_stuff:
-            file.parent.mkdir(parents=True)
-            file.touch()
+        root_tree = {
+            DEFAULT_TENSORS: {
+                f'{DEFAULT_TENSORS}_003.zip': None,   # This is removed
+                f'{DEFAULT_TENSORS}_002.zip': 'contents',    # This not
+                f'{DEFAULT_TENSORS}_001.zip': 'contents',    # This not
+                f'{DEFAULT_TENSORS}_003': {},  # Unzipped folder, stays
+                },
+            DEFAULT_DELTAS: {
+                f'{DEFAULT_DELTAS}_003.zip': None,    # This is removed
+                f'{DEFAULT_DELTAS}_001.zip': 'contents',     # This not
+                f'{DEFAULT_DELTAS}_003': {},   # Unzipped folder, stays
+                },
+            # History information, needed for removal of Tensors
+            DEFAULT_HISTORY: {   # Dummy empty files for hashing
+                't003.r001_other_stuff': {'file': 'contents'},
+                't002.r001_first_run': {'file': 'contents'},
+                't002.r005_other_run': {'file': 'contents'},
+                't001.r001_first_tensor': {'file': 'contents'},
+                },
+            }
+        original_paths = filesystem_from_dict(root_tree, tmp_path)
+        removed_files = {tmp_path/folder/file
+                         for folder in (DEFAULT_TENSORS, DEFAULT_DELTAS)
+                         for file, contents in root_tree[folder].items()
+                         if contents is None}
         bookkeeper.update_from_cwd()
         # pylint: disable-next=protected-access   # OK in tests
         bookkeeper._root.remove_tensors_and_deltas()
         assert not any(f.exists() for f in removed_files)
-        assert all(f.exists() for f in surviving_files)
-        assert all(f.exists() for f in folders)
+        assert all(f.exists()
+                   for f in original_paths
+                   if f not in removed_files)
 
     @fixture(name='funky_files')
     def fixture_funky_files(self, tmp_path):
         """Prepare a bunch of files/folders that will not be considered."""
-        # Stuff that should not be copied over:
-        not_collected_log = tmp_path/'not_a_log.log'
-        not_collected_log.mkdir()
-
-        (tmp_path/DEFAULT_OUT).mkdir()  # Otherwise 'nothing to do'
-
-        # Stuff that should not be considered for the state
-        workhistory = tmp_path/DEFAULT_WORK_HISTORY
-        not_collected_dirs = (
-            workhistory/'some_folder',
-            workhistory/f't001.r002_{PREVIOUS_LABEL}',
-            )
-        for directory in not_collected_dirs:
-            directory.mkdir(parents=True)
-
-        # Some stuff in history that should not be considered
-        history = tmp_path/DEFAULT_HISTORY
-        history.mkdir()
         tensor_num_unused = 999
-        invalid_history_stuff = (
-            history/f't{tensor_num_unused}.r999_some_file',
-            history/'some_stray_directory',
+        not_collected_log = tmp_path/'not_a_log.log'
+        root_tree = {
+            DEFAULT_OUT : {},  # Otherwise 'nothing to do'
+            # Stuff that should not be copied over:
+            # - a directory with the name of a log file
+            not_collected_log.name: {},
+            # - workhistory subfolders
+            DEFAULT_WORK_HISTORY: {
+                'some_folder': {},
+                f't001.r002_{PREVIOUS_LABEL}': {},
+                },
+            # - history contents with invalid names
+            DEFAULT_HISTORY: {
+                f't{tensor_num_unused}.r999_some_file': None,
+                'some_stray_directory': {},
+                },
+            }
+        not_collected_dirs = tuple(
+            tmp_path/DEFAULT_WORK_HISTORY/entry
+            for entry in root_tree[DEFAULT_WORK_HISTORY]
             )
-        for path in invalid_history_stuff:
-            # pylint: disable-next=magic-value-comparison  # 'file'
-            make = getattr(path, 'touch' if 'file' in path.name else 'mkdir')
-            make()
+        invalid_history_stuff = tuple(
+            tmp_path/DEFAULT_HISTORY/entry
+            for entry in root_tree[DEFAULT_HISTORY]
+            )
+        filesystem_from_dict(root_tree, tmp_path)
         return (tensor_num_unused, not_collected_log,
                 not_collected_dirs, invalid_history_stuff)
 
@@ -850,13 +847,17 @@ class TestBookkeeperRaises:
     @parametrize(method_name=_os_error)
     def test_oserror(self, method_name, tmp_path, caplog):
         """Check complaints when functions raise OSError."""
-        workhistory = tmp_path/DEFAULT_WORK_HISTORY
-        workhistory.mkdir()
-        (workhistory/f't001.r002_some_{PREVIOUS_LABEL}_folder').mkdir()
-        (tmp_path/DEFAULT_OUT).mkdir()
-        (tmp_path/'notes').touch()
-        (tmp_path/f'{LOG_PREFIX}-20xxxx-xxxxxx.log').touch()
-        (tmp_path/'PARAMETERS_ori').touch()
+        # Create some files and directories
+        root_tree = {
+            DEFAULT_WORK_HISTORY: {
+                f't001.r002_some_{PREVIOUS_LABEL}_folder': {},
+                },
+            DEFAULT_OUT: {},
+            'notes': None,
+            f'{LOG_PREFIX}-20xxxx-xxxxxx.log': None,
+            'PARAMETERS_ori': None,
+            }
+        filesystem_from_dict(root_tree, tmp_path)
 
         bookkeeper = Bookkeeper(cwd=tmp_path)
         bookkeeper.update_from_cwd(silent=True)
@@ -935,9 +936,10 @@ class TestBookkeeperComplaints:
     def test_cwd_file_newer(self, caplog, tmp_path):
         """Check warnings when a cwd file is newer than an original_input."""
         bookkeeper = Bookkeeper(cwd=tmp_path)
-        ori_inputs = tmp_path/DEFAULT_SUPP/ORIGINAL_INPUTS_DIR_NAME
-        ori_inputs.mkdir(parents=True)
-        (ori_inputs/'POSCAR').touch()
+        ori_inputs = {
+            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {'POSCAR': None},
+            }
+        filesystem_from_dict(ori_inputs, tmp_path)
         time.sleep(0.05)
         (tmp_path/'POSCAR').touch()
 
@@ -952,8 +954,11 @@ class TestBookkeeperComplaints:
     def test_copy_from_root(self, caplog, tmp_path):
         """Check warnings when no original_input is present."""
         bookkeeper = Bookkeeper(cwd=tmp_path)
-        (tmp_path/'POSCAR').touch()
-        (tmp_path/DEFAULT_OUT).mkdir()  # Otherwise 'nothing to do'
+        root_tree = {
+            DEFAULT_OUT: {},  # Otherwise 'nothing to do'
+            'POSCAR': None,
+            }
+        filesystem_from_dict(root_tree, tmp_path)
         bookkeeper.update_from_cwd()
         target = bookkeeper.history.new_folder.path
         bookkeeper.run('archive')
