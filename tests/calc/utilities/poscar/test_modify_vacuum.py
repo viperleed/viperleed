@@ -72,7 +72,7 @@ class TestModifyVacuum:
         """Test that parse_cli_args raises for a negative absolute gap."""
         parser = ModifyVacuumCLI()
         with pytest.raises(SystemExit):
-            parser.parse_cli_args(["-1.0", "--absolute"])
+            parser.parse_cli_args(['-1.0', '--absolute'])
 
     @parametrize('vacuum_gap_size', [-1.0, -5.0])
     @infoless
