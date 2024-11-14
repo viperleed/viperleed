@@ -12,7 +12,7 @@ import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
-from viperleed.calc.classes.slab.errors import WrongVacuumPositionError
+from viperleed.calc.classes.slab.errors import NotEnoughVacuumError
 from viperleed.calc.classes.slab.surface_slab import _MIN_VACUUM
 from viperleed.utilities.poscar import modify_vacuum
 from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
@@ -80,7 +80,7 @@ class TestModifyVacuum:
         """Check complaints when the vacuum gap size is negative."""
         slab, *_ = test_slab
         vacuum_gap_info = VacuumGapInfo(size=vacuum_gap_size, absolute=True)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(NotEnoughVacuumError):
             modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
 
     @infoless
@@ -90,3 +90,13 @@ class TestModifyVacuum:
         gap = VacuumGapInfo(size=0.5, absolute=True, accept_small_gap=False)
         with pytest.raises(RuntimeError):
             modified_slab = modify_vacuum.modify_vacuum(slab, gap)
+
+    @infoless
+    def test_zero_gap_raises(self, test_slab):
+        """Check complaints when the vacuum gap size is negative."""
+        slab, *_ = test_slab
+        vacuum_gap_info = VacuumGapInfo(size=0., absolute=True)
+        if slab.thickness <= 1e-8:  # monolayer; would lead to zero volume cell
+            return
+        with pytest.raises(RuntimeError):
+            modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
