@@ -60,10 +60,11 @@ with_logs = parametrize(log_file_name=MOCK_LOG_FILES)
 
 @fixture(name='mock_tree_after_calc_execution')
 @with_logs
+@parametrize(with_notes=(True,False))
 @parametrize_with_cases('history_info_contents',
                         cases=(cases_entry, cases_history),
                         has_tag=Tag.BOOKKEEPER)
-def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
+def fixture_mock_tree_after_calc_execution(with_notes, tmp_path, log_file_name,
                                            history_info_contents):
     """Yield a temporary directory for testing the bookkeeper."""
     deltas_path = tmp_path / DEFAULT_DELTAS
@@ -89,10 +90,12 @@ def fixture_mock_tree_after_calc_execution(tmp_path, log_file_name,
 
     files = {  # path: contents
         tmp_path / log_file_name: None,
-        tmp_path / 'notes.txt': NOTES_TEST_CONTENT,
         deltas_path / f'{DEFAULT_DELTAS}_004.zip': None,
         tensors_path / f'{DEFAULT_TENSORS}_004.zip': None,
         }
+    if with_notes:
+        files[tmp_path / 'notes.txt'] = NOTES_TEST_CONTENT
+
     # Inputs in root
     files.update((tmp_path / f, MOCK_INPUT_CONTENT)
                  for f in MOCK_STATE_FILES)

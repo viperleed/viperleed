@@ -232,6 +232,21 @@ class _TestBookkeeperRunBase:
         assert not (cwd / DEFAULT_OUT).exists()
         assert not any(cwd.glob('*.log'))
 
+    def check_workhistory_archived(self, bookkeeper, *_):
+        """Ensure the workhistory folders have been stored correctly."""
+        history = bookkeeper.history.path
+        # pylint: disable-next=protected-access           # OK in tests
+        workhistory = bookkeeper._workhistory.path
+        assert not workhistory.is_dir()
+        for ori_name, hist_name in MOCK_WORKHISTORY.items():
+            if hist_name is None:  # File should be deleted
+                continue
+            moved_dir = history/hist_name
+            moved_file = moved_dir/'file'
+            assert moved_dir.is_dir()
+            assert moved_file.is_file()
+            assert ori_name in moved_file.read_text()
+
     def collect_directory_contents(self, path, contents, skip=None):
         """Populate the `contents` dict with the contents of `path`."""
         # Directories are dictionaries, files
@@ -265,18 +280,7 @@ class _TestBookkeeperRunBase:
             self.check_root_is_clean(*after_archive)
         # Check that the workhistory directories are
         # also where they should be
-        history = bookkeeper.history.path
-        # pylint: disable-next=protected-access           # OK in tests
-        workhistory = bookkeeper._workhistory.path
-        assert not workhistory.is_dir()
-        for ori_name, hist_name in MOCK_WORKHISTORY.items():
-            if hist_name is None:  # File should be deleted
-                continue
-            moved_dir = history/hist_name
-            moved_file = moved_dir/'file'
-            assert moved_dir.is_dir()
-            assert moved_file.is_file()
-            assert ori_name in moved_file.read_text()
+        self.check_workhistory_archived(bookkeeper)
 
     def run_after_calc_exec_and_check(self, after_calc_execution, **kwargs):
         """Check that running bookkeeper after calc does some basic stuff."""
@@ -287,6 +291,7 @@ class _TestBookkeeperRunBase:
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_calc_execution)
         self.check_out_files_in_history(*after_calc_execution)
+        self.check_workhistory_archived(*after_calc_execution)
 
     def run_before_calc_exec_and_check(self, before_calc_execution, **kwargs):
         """Check that running bookkeeper before calc does almost nothing."""
@@ -487,7 +492,15 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         assert not history_run_path.is_dir()
         self.check_root_is_clean(*after_archive)
         self.check_root_inputs_untouched(*after_archive)
-        self.check_no_warnings(caplog)
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
+
+        # "Sibling" folders that were archived from
+        # workhistory should also have been removed.
+        history = bookkeeper.history.path
+        for formerly_archived in MOCK_WORKHISTORY.values():
+            if not formerly_archived:
+                continue
+            assert not (history/formerly_archived).is_dir()
 
     def test_discard_full_after_calc_exec(self, after_calc_execution):
         """Check that a non-ARCHIVEd calc run cannot be DISCARD_FULL-ed."""
