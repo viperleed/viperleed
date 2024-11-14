@@ -12,11 +12,11 @@ import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc.classes.slab.errors import WrongVacuumPositionError
+from viperleed.calc.classes.slab.surface_slab import _MIN_VACUUM
 from viperleed.utilities.poscar import modify_vacuum
 from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
 from viperleed.utilities.poscar.modify_vacuum import VacuumGapInfo
-from viperleed.calc.classes.slab.surface_slab import _MIN_VACUUM
-from viperleed.calc.classes.slab.errors import WrongVacuumPositionError
 
 from ... import poscar_slabs
 from ...tags import CaseTag as Tag
