@@ -87,7 +87,7 @@ def modify_vacuum(slab, vacuum_gap_info):
         processed_slab.c_vector
         / np.linalg.norm(processed_slab.c_vector)
         * (vacuum_gap_size + slab_thickness)
-    )
+        )
     processed_slab.c_vector[:] = new_c_vector
     processed_slab.collapse_cartesian_coordinates()
 
