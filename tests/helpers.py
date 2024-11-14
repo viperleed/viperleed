@@ -166,27 +166,6 @@ def inject_fixture(factory, *args, **kwargs):
     return name, fixture_func
 
 
-def flat_fixture(func, **fixture_args):                                         # TODO: better name. Only usable for parameter-less functions
-    """Turn a function into a fixture with fixture_args.
-
-    For use without decoration, like so:
-    >>> fixture_from_func = flat_fixture(func, name='some_name')
-
-    Parameters
-    ----------
-    func : function
-        The function to be turned into a fixture.
-    **fixture_args : object
-        Argument to pass to the @fixture decorator.
-
-    Returns
-    -------
-    fixture
-    """
-    _decorator = fixture(**fixture_args)
-    return _decorator(func)
-
-
 def filesystem_from_dict(as_dict, root):
     """Create files and directories from a dictionary version of a tree.
 
@@ -222,6 +201,27 @@ def filesystem_from_dict(as_dict, root):
         else:
             path.write_text(contents, encoding='utf-8')
     return created
+
+
+def flat_fixture(func, **fixture_args):                                         # TODO: better name. Only usable for parameter-less functions
+    """Turn a function into a fixture with fixture_args.
+
+    For use without decoration, like so:
+    >>> fixture_from_func = flat_fixture(func, name='some_name')
+
+    Parameters
+    ----------
+    func : function
+        The function to be turned into a fixture.
+    **fixture_args : object
+        Argument to pass to the @fixture decorator.
+
+    Returns
+    -------
+    fixture
+    """
+    _decorator = fixture(**fixture_args)
+    return _decorator(func)
 
 
 # ######################   CONTEXT MANAGERS   #########################
