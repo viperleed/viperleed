@@ -203,6 +203,34 @@ def filesystem_from_dict(as_dict, root):
     return created
 
 
+def filesystem_to_dict(root, skip=None):
+    """Return a dictionary of the contents of the `root` directory.
+
+    Parameters
+    ----------
+    root : Path
+        The path to the file-system directory to be converted.
+    skip : Sequence or None, optional
+        Names of files/folders to be excluded from the collection.
+
+    Returns
+    -------
+    contents : dict
+        Keys are names (as strings) of the (relative) paths to the
+        contents of `root`, values are dictionaries for folders,
+        and strings containing the contents for files.
+    """
+    contents = {}
+    for path in root.iterdir():
+        if skip and path.name in skip:
+            continue
+        if path.is_file():
+            contents[path.name] = path.read_text(encoding='utf-8')
+        elif path.is_dir():
+            contents[path.name] = filesystem_to_dict(path, skip=skip)
+    return contents
+
+
 def flat_fixture(func, **fixture_args):                                         # TODO: better name. Only usable for parameter-less functions
     """Turn a function into a fixture with fixture_args.
 

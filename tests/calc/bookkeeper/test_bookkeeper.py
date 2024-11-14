@@ -43,6 +43,7 @@ from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ...helpers import execute_in_dir
 from ...helpers import filesystem_from_dict
+from ...helpers import filesystem_to_dict
 from ...helpers import not_raises
 from ...helpers import make_obj_raise
 from ...helpers import raises_exception
@@ -240,19 +241,6 @@ class _TestBookkeeperRunBase:
             assert moved_dir.is_dir()
             assert moved_file.is_file()
             assert ori_name in moved_file.read_text()
-
-    def collect_directory_contents(self, path, contents, skip=None):
-        """Populate the `contents` dict with the contents of `path`."""
-        # Directories are dictionaries, files
-        # are keys, their contents the values
-        for item in path.iterdir():
-            if skip and item.name in skip:
-                continue
-            if item.is_file():
-                contents[item.name] = item.read_text(encoding='utf-8')
-            elif item.is_dir():
-                contents[item.name] = subfolder = {}
-                self.collect_directory_contents(item, subfolder, skip=skip)
 
     def run_after_archive_and_check(self, after_archive,
                                     check_input_contents=True,
@@ -511,20 +499,17 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
     def test_discard_full_after_calc_exec(self, after_calc_execution):
         """Check that a non-ARCHIVEd calc run cannot be DISCARD_FULL-ed."""
         bookkeeper, *_ = after_calc_execution
-        cwd = bookkeeper.cwd
 
         # Collect the contents of the root directory before running.
         # Skip the bookkeeper.log, i.e., the only one that changes
-        skip = {'bookkeeper.log'}
-        before_run = {}
-        self.collect_directory_contents(cwd, before_run, skip=skip)
+        skip = {BOOKIE_LOGFILE}
+        before_run = filesystem_to_dict(bookkeeper.cwd, skip=skip)
         exit_code = bookkeeper.run(mode=self.mode,
                                    requires_user_confirmation=False)
         assert exit_code is BookkeeperExitCode.FAIL
 
         # Now make sure that the contents are identical
-        after_run = {}
-        self.collect_directory_contents(cwd, after_run, skip=skip)
+        after_run = filesystem_to_dict(bookkeeper.cwd, skip=skip)
         assert after_run == before_run
 
     _consistency_check_fails = (
