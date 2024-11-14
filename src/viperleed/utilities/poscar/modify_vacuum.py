@@ -76,20 +76,11 @@ def modify_vacuum(slab, vacuum_gap_info):
 
     vacuum_gap_size += current_gap_size if not vacuum_gap_info.absolute else 0
 
-    # check there is enough space on top of the slab to reduce the vacuum gap
-    if vacuum_gap_size < current_gap_size:
-        top_atom_positions = max(at.cartpos[2] for at in slab)
-        gap_on_top = slab.c_vector[2] - top_atom_positions
-        if gap_on_top < (current_gap_size - vacuum_gap_size):
-            raise RuntimeError('The resulting vacuum gap size would be larger '
-                               'than the distance between the topmost atom and '
-                               'the top of the cell.')
+    if vacuum_gap_size < 0:
+        raise RuntimeError("The resulting vacuum gap size would be negative.")
 
     logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
     logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
-
-    if vacuum_gap_size < 0:
-        raise RuntimeError('The resulting vacuum gap size would be negative.')
 
     new_c_vector = (
         processed_slab.c_vector
