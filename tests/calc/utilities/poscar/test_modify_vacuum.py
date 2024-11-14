@@ -30,7 +30,7 @@ class TestModifyVacuum:
 
     @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 15.0, -1.0])
     @infoless
-    def test_modify_vacuum_relative(self, test_slab, vacuum_gap_size):
+    def test_gap_relative(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with relative vacuum gap."""
         parser = ModifyVacuumCLI().parser
         slab, *_ = test_slab
@@ -47,7 +47,7 @@ class TestModifyVacuum:
 
     @pytest.mark.parametrize('vacuum_gap_size', [15.0, 100.0])
     @infoless
-    def test_modify_vacuum_gap_absolute(self, test_slab, vacuum_gap_size):
+    def test_gap_absolute(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
         parser = ModifyVacuumCLI().parser
         slab, *_ = test_slab
@@ -59,7 +59,7 @@ class TestModifyVacuum:
 
     @pytest.mark.parametrize('vacuum_gap_size', [1.0])
     @infoless
-    def test_modify_vacuum_gap_too_small(self, test_slab, vacuum_gap_size):
+    def test_gap_too_small(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
         parser = ModifyVacuumCLI().parser
         slab, *_ = test_slab
@@ -68,23 +68,22 @@ class TestModifyVacuum:
             modified_slab = ModifyVacuumCLI().process_slab(slab, args)
 
     def test_parse_cli_args_absolute_negative_gap(self):
-        """Test that parse_cli_args raises for a negative absolute vacuum gap."""
+        """Test that parse_cli_args raises for a negative absolute gap."""
         parser = ModifyVacuumCLI()
         with pytest.raises(SystemExit):
             parser.parse_cli_args(["-1.0", "--absolute"])
 
     @pytest.mark.parametrize('vacuum_gap_size', [-1.0, -5.0])
     @infoless
-    def test_modify_vacuum_negative_gap_raises_error(
-        self, test_slab, vacuum_gap_size):
-        """Test that an Error is raised when the vacuum gap size is negative."""
+    def test_negative_gap_raises(self, test_slab, vacuum_gap_size):
+        """Check complaints when the vacuum gap size is negative."""
         slab, *_ = test_slab
         vacuum_gap_info = VacuumGapInfo(size=vacuum_gap_size, absolute=True)
         with pytest.raises(RuntimeError):
             modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
 
     @infoless
-    def test_modify_vacuum_not_enough_vacuum_error(self, test_slab):
+    def test_not_enough_vacuum_error(self, test_slab):
         """Test that NotEnoughVacuumError is raised correctly."""
         slab, *_ = test_slab
         vacuum_gap_info = VacuumGapInfo(
