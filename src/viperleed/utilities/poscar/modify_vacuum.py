@@ -27,7 +27,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class VacuumGapInfo:
-    """Information about a slab's desired vacuum gap."""
+    """Information about a slab's desired vacuum gap.
+
+    Attributes
+    ----------
+    size : float
+        Size or size change of the desired vacuum gap.
+    absolute : bool, optional
+        If set, the size is the absolute size of the vacuum gap.
+    accept_small_gap : bool, optional
+        If set, the script will not check if the resulting vacuum gap is valid
+        as long as it is non-negative.
+    """
+
     size: float
     absolute: bool = False
     accept_small_gap: bool = False
