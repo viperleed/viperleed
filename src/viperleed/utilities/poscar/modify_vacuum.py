@@ -145,8 +145,8 @@ class ModifyVacuumCLI(_PoscarStreamCLI, cli_name='modify_vacuum'):
         vacuum_gap_info = VacuumGapInfo(
             size=args.vacuum,
             absolute=args.absolute,
-            accept_small_gap=args.force
-        )
+            accept_small_gap=args.force,
+            )
         if args.absolute:
             logger.debug('Using absolute vacuum gap size.')
         try:
