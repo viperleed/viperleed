@@ -25,6 +25,7 @@ from pytest_cases import parametrize_with_cases
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.constants import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_OUT
@@ -62,51 +63,137 @@ MOCK_WORKHISTORY = {  # name in workhistory: name in history
 @parametrize_with_cases('history_info_contents',
                         cases=(cases_entry, cases_history),
                         has_tag=Tag.BOOKKEEPER)
-def fixture_mock_tree_after_calc_execution(log_file_name, with_notes,
+def factory_mock_tree_after_calc_execution(log_file_name, with_notes,
                                            history_info_contents, tmp_path):
-    """Yield a temporary directory for testing the bookkeeper."""
-    root_contents = {
-        DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
-        DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
-        log_file_name: None,
+    """Return a temporary directory with contents like after a calc run."""
+    def _make():
+        root_contents = {
+            DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
+            DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
+            log_file_name: None,
 
-        # Input files
-        **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
+            # Input files
+            **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
 
-        # OUT files
-        DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_CONTENT for f in MOCK_STATE_FILES},
+            # OUT files
+            DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_CONTENT
+                           for f in MOCK_STATE_FILES},
 
-        # Original inputs in SUPP
-        f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
-            f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
-            },
+            # Original inputs in SUPP
+            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
+                f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
+                },
 
-        # Pre-existing (empty) history directories
-        f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
-        f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
+            # Pre-existing (empty) history directories
+            f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
+            f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
 
-        # workhistory subfolders, with dummy files
-        **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
-           for f in MOCK_WORKHISTORY},
-        }
-    # Files/folders that depend on the arguments
-    if with_notes:
-        root_contents['notes.txt'] = NOTES_TEST_CONTENT
-    if history_info_contents is not None:  # history.info
-        root_contents[HISTORY_INFO_NAME] = history_info_contents
+            # workhistory subfolders, with dummy files
+            **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
+               for f in MOCK_WORKHISTORY},
+            }
+        # Files/folders that depend on the arguments
+        if with_notes:
+            root_contents['notes.txt'] = NOTES_TEST_CONTENT
+        if history_info_contents is not None:  # history.info
+            root_contents[HISTORY_INFO_NAME] = history_info_contents
 
-    # Actually create files and folders
-    filesystem_from_dict(root_contents, tmp_path)
+        # Actually create files and folders
+        filesystem_from_dict(root_contents, tmp_path)
 
-    with execute_in_dir(tmp_path):
-        yield tmp_path
+        with execute_in_dir(tmp_path):
+            return tmp_path
+    return _make
 
 
-@fixture
-def after_calc_execution(mock_tree_after_calc_execution):
-    """Return the bookkeeper, and the path to the history subfolder."""
-    bookkeeper = Bookkeeper(cwd=mock_tree_after_calc_execution)
+@fixture(name='mock_tree_before_calc_execution')
+def factory_mock_tree_before_calc_execution(tmp_path):
+    """Return a directory with input files like before calc runs."""
+    def make_():
+        input_files = {f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES}
+        filesystem_from_dict(input_files, tmp_path)
+        with execute_in_dir(tmp_path):
+            return tmp_path
+    return make_
+
+
+@fixture(name='after_archive')
+def fixture_after_archive(after_calc_execution):
+    """Prepare a directory like the one after ARCHIVE was executed.
+
+    Parameters
+    ----------
+    after_calc_execution : fixture
+        A bookkeeper ready to run in a directory with contents
+        similar to those after calc has finished running, and
+        a path to the main history directory that should be
+        created by bookkeeper in ARCHIVE mode.
+
+    Returns
+    -------
+    bookkeeper : Bookkeeper
+        A Bookkeeper ready to run in a root directory that
+        has been just archived. It is also up to date with
+        the contents of such directory.
+    history_run_path : Path
+        Path to the main history subfolder created by `bookkeeper`
+        as a result of the archiving.
+    """
+    bookkeeper, *_ = after_calc_execution
+    bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+    bookkeeper.update_from_cwd(silent=True)
+    return after_calc_execution
+
+
+@fixture(name='after_calc_execution')
+def fixture_after_calc_execution(mock_tree_after_calc_execution):
+    """Prepare a directory like the one after calc executes.
+
+    Parameters
+    ----------
+    mock_tree_after_calc_execution : fixture
+        Factory that produces a temporary directory containing
+        files like those produced by run_calc when called.
+
+    Returns
+    -------
+    bookkeeper : Bookkeeper
+        A Bookkeeper ready to run in a the temporary directory.
+        It is also up to date with the contents of such directory.
+    history_run_path : Path
+        Path to the main history subfolder that would be created
+        by `bookkeeper` as a result of the archiving.
+    """
+    mock_tree_after_calc_execution()
+    bookkeeper = Bookkeeper()
     bookkeeper.update_from_cwd(silent=True)
     history_path = bookkeeper.cwd / DEFAULT_HISTORY
     history_run_path = history_path / f't004.r001_{MOCK_TIMESTAMP}'
     return bookkeeper, history_run_path
+
+
+@fixture(name='before_calc_execution')
+def fixture_before_calc_execution(mock_tree_before_calc_execution):
+    """Return a bookkeeper ready to run in a directory with calc inputs.
+
+    This represents a new calculation, i.e., before any viperleed.calc
+    or bookkeeper run. However, the bookkeeper is up to date about the
+    contents of its root directory.
+
+    Parameters
+    ----------
+    mock_tree_before_calc_execution : fixture
+        Factory that produces a temporary directory containing
+        calc input files when called.
+
+    Returns
+    ------
+    bookkeeper : Bookkeeper
+        A bookkeeper instance ready for running in the
+        temporary directory.
+    """
+    # Create mock input files
+    mock_tree_before_calc_execution()
+    bookkeeper = Bookkeeper()
+    bookkeeper.update_from_cwd(silent=True)
+    return bookkeeper

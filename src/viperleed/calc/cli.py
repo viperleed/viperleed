@@ -70,9 +70,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             _copy_files_from_manifest(cwd)
             os.chdir(cwd)
 
-        # update bookkeeper with new run info
-        bookkeeper.update_from_cwd()
-        # run bookkeeper in archive mode
+        # Run bookkeeper in archive mode
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested

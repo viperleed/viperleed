@@ -69,41 +69,6 @@ not_raises_oserror = functools.partial(not_raises, exc=OSError)
 
 
 
-@fixture(name='after_archive')
-def fixture_after_archive(after_calc_execution):
-    """Yield a temporary directory for testing the bookkeeper."""
-    bookkeeper, *_ = after_calc_execution
-    bookkeeper.run(mode=Mode.ARCHIVE)
-    bookkeeper.update_from_cwd(silent=True)
-    return after_calc_execution
-
-
-@fixture(name='before_calc_execution')
-def fixture_before_calc_execution(tmp_path):
-    """Yield a temporary directory for testing the bookkeeper.
-
-    This represents a new calculation, i.e., before
-    any viperleed.calc or bookkeeper run.
-
-    Parameters
-    ----------
-    tmp_path : fixture
-        Path to a temporary directory.
-
-    Yields
-    ------
-    bookkeeper : Bookkeeper
-        A bookkeeper instance ready for running in `tmp_path`.
-    """
-    # Create mock input files
-    input_files = {f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES}
-    filesystem_from_dict(input_files, tmp_path)
-
-    bookkeeper = Bookkeeper(cwd=tmp_path)
-    bookkeeper.update_from_cwd(silent=True)
-    with execute_in_dir(tmp_path):
-        yield bookkeeper
-
 
 def check_too_early():
     """Ensure an AttributeError is raised for a too-early getattr."""
@@ -248,7 +213,8 @@ class _TestBookkeeperRunBase:
         bookkeeper, *_ = after_archive
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
-        bookkeeper.run(mode=self.mode, **kwargs)
+        kwargs.setdefault('mode', self.mode)
+        bookkeeper.run(**kwargs)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
@@ -263,27 +229,72 @@ class _TestBookkeeperRunBase:
         # also where they should be
         self.check_workhistory_archived(bookkeeper)
 
-    def run_after_calc_exec_and_check(self, after_calc_execution, **kwargs):
+    def run_after_calc_exec_and_check(self, after_calc_execution,
+                                      check_archiving_required=True,
+                                      **kwargs):
         """Check that running bookkeeper after calc does some basic stuff."""
         bookkeeper, *_ = after_calc_execution
-        # bookkeeper should think that it needs archiving
-        assert bookkeeper.archiving_required
-        bookkeeper.run(mode=self.mode, **kwargs)
+        if check_archiving_required:
+            # bookkeeper should think that it needs archiving
+            assert bookkeeper.archiving_required
+        kwargs.setdefault('mode', self.mode)
+        bookkeeper.run(**kwargs)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_calc_execution)
         self.check_out_files_in_history(*after_calc_execution)
         self.check_workhistory_archived(*after_calc_execution)
 
-    def run_before_calc_exec_and_check(self, before_calc_execution, **kwargs):
+    def run_archive_after_calc_and_check(self, after_calc_execution, caplog,
+                                         check_archiving_required=True):
+        """Check correct storage of history files in ARCHIVE mode."""
+        kwargs = {
+            'check_archiving_required': check_archiving_required,
+            'mode': 'archive',
+            }
+        self.run_after_calc_exec_and_check(after_calc_execution, **kwargs)
+        self.check_root_after_archive(*after_calc_execution)
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
+
+    def run_before_calc_exec_and_check(self, before_calc_execution,
+                                       check_archiving_required=True,
+                                       **kwargs):
         """Check that running bookkeeper before calc does almost nothing."""
         bookkeeper = before_calc_execution
-        # bookkeeper should not think that it needs archiving
-        assert not bookkeeper.archiving_required
-        exit_code = bookkeeper.run(mode=self.mode, **kwargs)
+        if check_archiving_required:
+            # bookkeeper should not think that it needs archiving
+            assert not bookkeeper.archiving_required
+        kwargs.setdefault('mode', self.mode)
+        exit_code = bookkeeper.run(**kwargs)
         # Bookkeeper should not do anything (except for logging)
         self.check_history_folder_empty(before_calc_execution)
         self.check_root_inputs_untouched(before_calc_execution)
         assert exit_code is not BookkeeperExitCode.FAIL
+
+
+class TestBookkeeperDuringCalc(_TestBookkeeperRunBase):
+    """Test the same conditions as when bookkeeper runs around calc."""
+
+    def test_run_around_calc(self,
+                             mock_tree_before_calc_execution,
+                             mock_tree_after_calc_execution,
+                             caplog):
+        """Check reuse of bookkeeper in the default calls around calc."""
+        mock_tree_before_calc_execution()
+        bookkeeper = Bookkeeper()
+        # Before calc, we run in CLEAR mode
+        self.run_before_calc_exec_and_check(bookkeeper,
+                                            check_archiving_required=False,
+                                            mode='clear')
+        # Then, we simulate a calc run that produces some output
+        mock_tree_after_calc_execution()
+        # After calc, we run in ARCHIVE mode
+        after_calc = (
+            bookkeeper,
+            bookkeeper.cwd / DEFAULT_HISTORY / f't004.r001_{MOCK_TIMESTAMP}',
+            )
+        self.run_archive_after_calc_and_check(after_calc,
+                                              caplog,
+                                              check_archiving_required=False)
 
 
 class TestBookkeeperArchive(_TestBookkeeperRunBase):
@@ -293,9 +304,7 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
 
     def test_archive_after_calc_exec(self, after_calc_execution, caplog):
         """Check correct storage of history files in ARCHIVE mode."""
-        self.run_after_calc_exec_and_check(after_calc_execution)
-        self.check_root_after_archive(*after_calc_execution)
-        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
+        self.run_archive_after_calc_and_check(after_calc_execution, caplog)
 
     def test_archive_again(self, after_archive, caplog):
         """Bookkeeper ARCHIVE after ARCHIVE should not do anything."""
