@@ -32,7 +32,7 @@ class VacuumGapInfo:
     Attributes
     ----------
     size : float
-        Size or size change of the desired vacuum gap.
+        Size or size change of the desired vacuum gap, in angstrom.
     absolute : bool, optional
         Whether `size` should be considered as the absolute value of
         the new vacuum gap rather than its change. Default is False.
