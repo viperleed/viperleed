@@ -95,6 +95,8 @@ class TestModifyVacuum:
     def test_accept_small_gap(self, test_slab):
         """Test that NotEnoughVacuumError is raised correctly."""
         slab, *_ = test_slab
+        if slab.thickness <= 1e-8:  # monolayer; would lead to zero volume cell
+            return
         gap = VacuumGapInfo(size=0.0, absolute=True, accept_small_gap=True)
         # gap size recognition likely does not work for slabs with gaps < 5AA
         # so we shouldn't test for the exact gap size
