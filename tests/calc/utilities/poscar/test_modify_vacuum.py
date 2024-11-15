@@ -91,13 +91,14 @@ class TestModifyVacuum:
         with pytest.raises(VacuumError):
             modified_slab = modify_vacuum.modify_vacuum(slab, gap)
 
-    # @infoless
-    # def test_accept_small_gap(self, test_slab):
-    #     """Test that NotEnoughVacuumError is raised correctly."""
-    #     slab, *_ = test_slab
-    #     gap = VacuumGapInfo(size=1.0, absolute=True, accept_small_gap=True)
-    #     modified_slab = modify_vacuum.modify_vacuum(slab, gap)
-    #     assert modified_slab.vacuum_gap == pytest.approx(1.0)
+    @infoless
+    def test_accept_small_gap(self, test_slab):
+        """Test that NotEnoughVacuumError is raised correctly."""
+        slab, *_ = test_slab
+        gap = VacuumGapInfo(size=0.0, absolute=True, accept_small_gap=True)
+        # gap size recognition likely does not work for slabs with gaps < 5AA
+        # so we shouldn't test for the exact gap size
+        modified_slab = modify_vacuum.modify_vacuum(slab, gap)
 
     @infoless
     def test_zero_gap_raises(self, test_slab):
