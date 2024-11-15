@@ -95,7 +95,7 @@ def modify_vacuum(slab, vacuum_gap_info):
         * (vacuum_gap_size + slab_thickness)
         )
     processed_slab.c_vector[:] = new_c_vector
-    processed_slab.collapse_cartesian_coordinates()
+    processed_slab.collapse_cartesian_coordinates(update_origin=True)
 
     try:
         processed_slab.check_vacuum_gap()
