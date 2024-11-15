@@ -80,7 +80,9 @@ def modify_vacuum(slab, vacuum_gap_info):
 
     if vacuum_gap_size < 0:
         raise NotEnoughVacuumError(
-            "The resulting vacuum gap size would be negative.", None)
+            'The resulting vacuum gap size would be negative.',
+            None,
+            )
 
     logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
     logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
