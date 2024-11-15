@@ -34,7 +34,8 @@ class VacuumGapInfo:
     size : float
         Size or size change of the desired vacuum gap.
     absolute : bool, optional
-        If set, the size is the absolute size of the vacuum gap.
+        Whether `size` should be considered as the absolute value of
+        the new vacuum gap rather than its change. Default is False.
     accept_small_gap : bool, optional
         If set, the script will not check if the resulting vacuum gap is valid
         as long as it is non-negative.
