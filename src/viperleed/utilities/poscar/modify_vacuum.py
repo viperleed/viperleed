@@ -34,12 +34,14 @@ class VacuumGapInfo:
     Attributes
     ----------
     size : float
-        Size or size change of the desired vacuum gap.
+        Size or size change of the desired vacuum gap, in angstrom.
     absolute : bool, optional
-        If set, the size is the absolute size of the vacuum gap.
+        Whether `size` should be considered as the absolute value of
+        the new vacuum gap rather than its change. Default is False.
     accept_small_gap : bool, optional
-        If set, the script will not check if the resulting vacuum gap is valid
-        as long as it is non-negative.
+        Whether the script should tolerate a resulting vacuum
+        gap smaller than the minimum value for a viperleed.calc
+        run, as long as it is non-negative. Default is False.
     """
 
     size: float
@@ -80,7 +82,9 @@ def modify_vacuum(slab, vacuum_gap_info):
 
     if vacuum_gap_size < 0:
         raise NotEnoughVacuumError(
-            "The resulting vacuum gap size would be negative.", None)
+            'The resulting vacuum gap size would be negative.',
+            None,
+            )
 
     logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
     logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
@@ -89,7 +93,7 @@ def modify_vacuum(slab, vacuum_gap_info):
         processed_slab.c_vector
         / np.linalg.norm(processed_slab.c_vector)
         * (vacuum_gap_size + slab_thickness)
-    )
+        )
     processed_slab.c_vector[:] = new_c_vector
     processed_slab.collapse_cartesian_coordinates()
 
