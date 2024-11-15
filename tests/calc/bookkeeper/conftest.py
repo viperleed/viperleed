@@ -56,11 +56,8 @@ MOCK_WORKHISTORY = {  # name in workhistory: name in history
     }
 
 
-with_logs = parametrize(log_file_name=MOCK_LOG_FILES)
-
-
 @fixture(name='mock_tree_after_calc_execution')
-@with_logs
+@parametrize(log_file_name=MOCK_LOG_FILES)
 @parametrize(with_notes=(True,False))
 @parametrize_with_cases('history_info_contents',
                         cases=(cases_entry, cases_history),
