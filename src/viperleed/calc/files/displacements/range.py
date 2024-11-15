@@ -1,6 +1,8 @@
 """Module range."""
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__created__ = "2024-10-15"
+
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__created__ = '2024-10-15'
+
 
 class DisplacementsRange:
     _EPS = 1e-6
@@ -32,5 +34,5 @@ class DisplacementsRange:
 
     def __repr__(self):
         if self.has_step:
-            return f"(start={self.start}, stop={self.stop}, step={self.step})"
-        return f"(start={self.start}, stop={self.stop})"
+            return f'(start={self.start}, stop={self.stop}, step={self.step})'
+        return f'(start={self.start}, stop={self.stop})'

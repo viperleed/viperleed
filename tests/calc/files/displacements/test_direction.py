@@ -1,33 +1,32 @@
 import numpy as np
 import pytest
 
-
 from viperleed_jax.files.displacements.direction import Direction
 
 
 # Test the Direction class
 @pytest.mark.parametrize(
-    "direction_str, expected_vectors, ucell, fractional, num_free_directions",
+    'direction_str, expected_vectors, ucell, fractional, num_free_directions',
     [
         (
-            "xyz",
+            'xyz',
             np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
             np.eye(3),
             False,
             3,
         ),
-        ("xy[1 0]", np.array([[1, 0, 0]]), np.eye(3), False, 1),
-        ("x", np.array([[1, 0, 0]]), np.eye(3), False, 1),
-        ("xy[0 1]", np.array([[0, 1, 0]]), np.eye(3), False, 1),
+        ('xy[1 0]', np.array([[1, 0, 0]]), np.eye(3), False, 1),
+        ('x', np.array([[1, 0, 0]]), np.eye(3), False, 1),
+        ('xy[0 1]', np.array([[0, 1, 0]]), np.eye(3), False, 1),
         (
-            "abc",
-            np.array([[1., 0.0, 0.0], [0.0, 1., 0.0], [0.0, 0.0, 1.]]),
+            'abc',
+            np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
             np.array([[3.5, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 5.0]]),
             True,
             3,
         ),
         (
-            "ab[1 0]",
+            'ab[1 0]',
             np.array([[1.0, 0.0, 0.0]]),
             np.array([[3.5, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 5.0]]),
             True,
@@ -48,11 +47,11 @@ def test_direction(
 
 
 @pytest.mark.parametrize(
-    "invalid_direction",
+    'invalid_direction',
     [
-        "xab",  # Mixing fractional and Cartesian coordinates
-        "xy[0 0]",  # Zero-length vector
-        "invalid[1 0]",  # Invalid format
+        'xab',  # Mixing fractional and Cartesian coordinates
+        'xy[0 0]',  # Zero-length vector
+        'invalid[1 0]',  # Invalid format
     ],
 )
 def test_invalid_directions(invalid_direction):

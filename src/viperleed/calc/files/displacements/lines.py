@@ -1,25 +1,24 @@
 """Module lines."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__created__ = "2024-10-04"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__created__ = '2024-10-04'
 
 from collections import namedtuple
 
-from .targeting import BSTarget
 from .direction import Direction
 from .range import DisplacementsRange
+from .targeting import BSTarget
 
-
-LoopMarkerLine = namedtuple("LoopMarkerLine", ["type"])
-SearchHeaderLine = namedtuple("SearchHeaderLine", ["label"])
-SectionHeaderLine = namedtuple("SectionHeaderLine", ["section"])
+LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
+SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
+SectionHeaderLine = namedtuple('SectionHeaderLine', ['section'])
 
 
 def _get_target(label, which):
     if which is None:
         return BSTarget(label)
     else:
-        return BSTarget(f"{label} {which}")
+        return BSTarget(f'{label} {which}')
 
 
 class GeoDeltaLine:
@@ -40,6 +39,7 @@ class GeoDeltaLine:
 
     def __repr__(self):
         return self.line
+
 
 class VibDeltaLine:
     def __init__(self, line, label, which, start, stop, step):
@@ -82,15 +82,15 @@ class ConstraintLine:
     def __init__(self, line, constraint_type, targets, direction, value):
         self.line = line
         self.constraint_type = constraint_type
-        if self.constraint_type == "geo":
+        if self.constraint_type == 'geo':
             if direction is not None:
                 self.direction = Direction(direction)
             else:
                 self.direction = None
-        elif self.constraint_type != "geo" and direction is not None:
+        elif self.constraint_type != 'geo' and direction is not None:
             raise ValueError(
-                f"A direction is not allowed for {self.constraint_type} "
-                f"constraints."
+                f'A direction is not allowed for {self.constraint_type} '
+                f'constraints.'
             )
         self.targets = BSTarget(targets)
         self.value = value
@@ -114,15 +114,15 @@ class OffsetsLine:
         self.offset_type = offset_type
         self.targets = BSTarget(targets)
         self.value = value
-        if self.offset_type == "geo":
+        if self.offset_type == 'geo':
             if direction is not None:
                 self.direction = Direction(direction)
             else:
                 self.direction = None
-        elif self.offset_type != "geo" and direction is not None:
+        elif self.offset_type != 'geo' and direction is not None:
             raise ValueError(
-                f"A direction is not allowed for {self.offset_type} "
-                f"offsets."
+                f'A direction is not allowed for {self.offset_type} '
+                f'offsets.'
             )
 
     def __eq__(self, other):

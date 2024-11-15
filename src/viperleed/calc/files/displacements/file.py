@@ -1,14 +1,25 @@
 """Module file."""
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__created__ = "2024-10-04"
 
-from .errors import InvalidSearchLoopError, OffsetsNotAtBeginningError
-from .errors import InvalidSearchBlocksError
-from .reader import LoopMarker
-from .reader import DisplacementsReader
-from .reader import DisplacementFileSections
-from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine, OffsetsLine
-from .lines import LoopMarkerLine, SearchHeaderLine, SectionHeaderLine
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__created__ = '2024-10-04'
+
+from .errors import (
+    InvalidSearchBlocksError,
+    InvalidSearchLoopError,
+    OffsetsNotAtBeginningError,
+)
+from .lines import (
+    ConstraintLine,
+    GeoDeltaLine,
+    LoopMarkerLine,
+    OccDeltaLine,
+    OffsetsLine,
+    SearchHeaderLine,
+    SectionHeaderLine,
+    VibDeltaLine,
+)
+from .reader import DisplacementFileSections, DisplacementsReader, LoopMarker
+
 
 class SearchBlock:
     """Class to hold all information for a single search block."""
@@ -20,13 +31,13 @@ class SearchBlock:
             DisplacementFileSections.GEO_DELTA: [],
             DisplacementFileSections.VIB_DELTA: [],
             DisplacementFileSections.OCC_DELTA: [],
-            DisplacementFileSections.CONSTRAIN: []
+            DisplacementFileSections.CONSTRAIN: [],
         }
 
     def add_line(self, section, line):
         """Add a line to the corresponding section."""
         if section not in self.sections:
-            raise ValueError(f"Invalid section: {section}")
+            raise ValueError(f'Invalid section: {section}')
         self.sections[section].append(line)
 
     @property
@@ -46,11 +57,12 @@ class SearchBlock:
         return self.sections[DisplacementFileSections.CONSTRAIN]
 
     def __repr__(self):
-        return f"SearchBlock(label={self.label}, sections={self.sections})"
+        return f'SearchBlock(label={self.label}, sections={self.sections})'
+
 
 class OffsetsBlock:
     """Class to hold all information for the (optional) OFFSETS block."""
-    
+
     def __init__(self):
         self.lines = []
 
@@ -60,7 +72,6 @@ class OffsetsBlock:
 
 
 class DisplacementsFile:
-
     def __init__(self):
         self.blocks = []
         self.current_search_block = None
@@ -106,7 +117,7 @@ class DisplacementsFile:
     def read(self, filename):
         """Read the file using the DisplacementsReader."""
         if self.has_been_read:
-            raise ValueError("read() has already been called.")
+            raise ValueError('read() has already been called.')
         self.has_been_read = True
 
         with DisplacementsReader(filename, noisy=True) as reader:
@@ -119,13 +130,19 @@ class DisplacementsFile:
                 # TODO: low level logging: print(f"Read: {read}")
 
                 if isinstance(read, LoopMarkerLine):
-                    if read.type == LoopMarker.LOOP_START and self.unclosed_loop():
+                    if (
+                        read.type == LoopMarker.LOOP_START
+                        and self.unclosed_loop()
+                    ):
                         raise InvalidSearchLoopError(
-                            "Loop started before the previous loop was closed."
+                            'Loop started before the previous loop was closed.'
                         )
-                    if read.type == LoopMarker.LOOP_END and not self.unclosed_loop():
+                    if (
+                        read.type == LoopMarker.LOOP_END
+                        and not self.unclosed_loop()
+                    ):
                         raise InvalidSearchLoopError(
-                            "Loop ended without a matching start."
+                            'Loop ended without a matching start.'
                         )
                     self.finish_block()
                     self.blocks.append(read)
@@ -136,29 +153,43 @@ class DisplacementsFile:
                     self.current_search_block = SearchBlock(read.label)
 
                 elif isinstance(read, SectionHeaderLine):
-                    if read.section == "OFFSETS":
+                    if read.section == 'OFFSETS':
                         if not self.offsets_block_allowed:
                             raise OffsetsNotAtBeginningError(
-                                "The OFFSETS block is only allowed at the beginning of the file."
+                                'The OFFSETS block is only allowed at the beginning of the file.'
                             )
                         self.finish_block()
                         self.current_search_block = OffsetsBlock()
                     # Update the current section in the active search block
-                    self.current_section = DisplacementFileSections[read.section]
+                    self.current_section = DisplacementFileSections[
+                        read.section
+                    ]
 
-                elif isinstance(read, (GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine)):
+                elif isinstance(
+                    read,
+                    (GeoDeltaLine, VibDeltaLine, OccDeltaLine, ConstraintLine),
+                ):
                     # Add lines to the current section in the active search block
                     if not self.current_search_block:
-                        raise ValueError("No active search block for section line.")
-                    self.current_search_block.add_line(self.current_section, read)
+                        raise ValueError(
+                            'No active search block for section line.'
+                        )
+                    self.current_search_block.add_line(
+                        self.current_section, read
+                    )
 
                 elif isinstance(read, OffsetsLine):
-                    if not self.current_section is DisplacementFileSections.OFFSETS:
-                        raise ValueError("Offsets line found outside of an OFFSETS block.")
+                    if (
+                        not self.current_section
+                        is DisplacementFileSections.OFFSETS
+                    ):
+                        raise ValueError(
+                            'Offsets line found outside of an OFFSETS block.'
+                        )
                     self.current_search_block.add_line(read)
 
                 else:
-                    raise ValueError(f"Unexpected line type: {read}")
+                    raise ValueError(f'Unexpected line type: {read}')
 
                 # OFFSETS block is only allowed in the first search block, thus
                 # we set the flag to False after the first block
@@ -166,7 +197,7 @@ class DisplacementsFile:
 
     def parse(self, tl_backend):
         if self.has_been_parsed:
-            raise ValueError("parse() has already been called.")
+            raise ValueError('parse() has already been called.')
         # After reading, process the blocks
         # There are two steps to this:
         # 1. Check that the general structure is valid, ie. line order, etc.
@@ -184,14 +215,16 @@ class DisplacementsFile:
                 new_blocks.append(block)
                 continue
             can_handle, replacement = tl_backend.can_handle_search_block(
-                self.offsets_block, block)
+                self.offsets_block, block
+            )
             if can_handle:
                 new_blocks.append(block)
                 continue
             if replacement is None:
                 raise ValueError(
-                    f"Tensor LEED backend {tl_backend.name }cannot handle "
-                    f"search block  {block.label}.")
+                    f'Tensor LEED backend {tl_backend.name }cannot handle '
+                    f'search block  {block.label}.'
+                )
             # replace the block with the replacement blocks
             new_blocks.extend(replacement)
 

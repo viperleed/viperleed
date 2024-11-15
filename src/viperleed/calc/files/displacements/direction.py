@@ -1,10 +1,11 @@
 """Module direction."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__created__ = "2024-10-14"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__created__ = '2024-10-14'
+
+import re
 
 import numpy as np
-import re
 
 
 class Direction:
@@ -13,7 +14,7 @@ class Direction:
 
     def __init__(self, direction_str):
         self._fractional = (
-            "a" in direction_str or "b" in direction_str or "c" in direction_str
+            'a' in direction_str or 'b' in direction_str or 'c' in direction_str
         )
         self.direction_str = direction_str
         self._vectors, self.num_free_directions = self._parse_direction(
@@ -23,22 +24,22 @@ class Direction:
     def _parse_direction(self, direction_str):
         """Parse the direction string and return normalized 3D vectors and
         number of free directions."""
-        dir_labels = "abc" if self._fractional else "xyz"
+        dir_labels = 'abc' if self._fractional else 'xyz'
 
-        if "[" in direction_str:  # Handle vector cases like 'xy[1 1]'
+        if '[' in direction_str:  # Handle vector cases like 'xy[1 1]'
             vector_match = re.match(
-                rf"^(?P<dir>[{dir_labels}]+)\[(?P<vec>[\d\s]+)\]$",
+                rf'^(?P<dir>[{dir_labels}]+)\[(?P<vec>[\d\s]+)\]$',
                 direction_str,
             )
             if vector_match:
-                directions = list(vector_match.group("dir"))
+                directions = list(vector_match.group('dir'))
                 vector_components = list(
-                    map(float, vector_match.group("vec").split())
+                    map(float, vector_match.group('vec').split())
                 )
                 if len(directions) != len(vector_components):
                     raise ValueError(
-                        "Mismatch between directions and vector components "
-                        f"in {direction_str}"
+                        'Mismatch between directions and vector components '
+                        f'in {direction_str}'
                     )
 
                 # Embed the 2D/1D vector into 3D space
@@ -51,8 +52,8 @@ class Direction:
             # Handle simple cases like 'x', 'xy', 'abc'
             if not all(c in dir_labels for c in direction_str):
                 raise ValueError(
-                    "Mixing of fractional and Cartesian coordinates is not "
-                    "allowed."
+                    'Mixing of fractional and Cartesian coordinates is not '
+                    'allowed.'
                 )
             directions = list(direction_str)
             vectors = [
@@ -61,25 +62,25 @@ class Direction:
             vectors = self._normalize_vectors(vectors)
             return np.array(vectors), len(vectors)
 
-        raise ValueError(f"Invalid direction format: {direction_str}")
+        raise ValueError(f'Invalid direction format: {direction_str}')
 
     def _get_basis_vector(self, direction, dir_labels):
         """Return the 3D basis vector or a placeholder for fractional
         coordinates 'a', 'b', 'c'."""
         basis_vectors = {
-            "x": [1, 0, 0],
-            "y": [0, 1, 0],
-            "z": [0, 0, 1],
-            "a": "a",
-            "b": "b",
-            "c": "c",
+            'x': [1, 0, 0],
+            'y': [0, 1, 0],
+            'z': [0, 0, 1],
+            'a': 'a',
+            'b': 'b',
+            'c': 'c',
         }
         return basis_vectors[direction]
 
     def _embed_vector_in_3d(self, directions, vector_components, dir_labels):
         """Embed the 2D/1D vector into a 3D space."""
         embedded_vector = np.zeros(3)
-        dir_map = {"x": 0, "y": 1, "z": 2, "a": 0, "b": 1, "c": 2}
+        dir_map = {'x': 0, 'y': 1, 'z': 2, 'a': 0, 'b': 1, 'c': 2}
         for direction, component in zip(directions, vector_components):
             embedded_vector[dir_map[direction]] = component
         return embedded_vector
@@ -96,14 +97,14 @@ class Direction:
             else:
                 norm = np.linalg.norm(vec)
                 if norm == 0:
-                    raise ValueError(f"Zero-length vector found: {vec}")
+                    raise ValueError(f'Zero-length vector found: {vec}')
                 normalized_vectors.append(np.array(vec) / norm)
         return normalized_vectors
 
     def get_frac_vectors(self, ucell):
         """Return the fractional vectors, scaled by the unit cell."""
         if not self._fractional:
-            raise ValueError("No fractional coordinates in this direction")
+            raise ValueError('No fractional coordinates in this direction')
         return self.get_cart_vectors(
             ucell
         )  # The fractional coordinates in this case correspond to the scaled ones
@@ -120,9 +121,9 @@ class Direction:
             if isinstance(vec, str):
                 # Map 'a', 'b', 'c' to corresponding unit cell vectors
                 direction_map = {
-                    "a": ucell[:, 0],
-                    "b": ucell[:, 1],
-                    "c": ucell[:, 2],
+                    'a': ucell[:, 0],
+                    'b': ucell[:, 1],
+                    'c': ucell[:, 2],
                 }
                 scaled_vectors.append(direction_map[vec])
             else:
@@ -148,7 +149,7 @@ class Direction:
 
     def __repr__(self):
         return (
-            f"Direction(vectors={self._vectors}, "
-            f"num_free_directions={self.num_free_directions}, "
-            f"fractional={self._fractional})"
+            f'Direction(vectors={self._vectors}, '
+            f'num_free_directions={self.num_free_directions}, '
+            f'fractional={self._fractional})'
         )

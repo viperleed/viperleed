@@ -1,30 +1,39 @@
 """Module file."""
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__created__ = "2024-10-04"
 
-from enum import Enum
-from collections import namedtuple
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__created__ = '2024-10-04'
+
 import re
+from collections import namedtuple
+from enum import Enum
 
-from .errors import InvalidDisplacementsSyntaxError
-from .errors import SymmetryViolationError
-from .lines import GeoDeltaLine, VibDeltaLine, OccDeltaLine
-from .lines import ConstraintLine, OffsetsLine
-from .lines import LoopMarkerLine, SearchHeaderLine, SectionHeaderLine
-from .regex import match_constrain_line
-from .regex import match_geo_line
-from .regex import match_occ_line
-from .regex import match_offsets_line
-from .regex import match_vib_line
-from .regex import SEARCH_HEADER_PATTERN
-from .regex import SECTION_HEADER_PATTERN
-
-DisplacementFileSections = Enum(
-    "DisplacementFileSections",
-    ["OFFSETS", "GEO_DELTA", "VIB_DELTA", "OCC_DELTA", "CONSTRAIN"],
+from .errors import InvalidDisplacementsSyntaxError, SymmetryViolationError
+from .lines import (
+    ConstraintLine,
+    GeoDeltaLine,
+    LoopMarkerLine,
+    OccDeltaLine,
+    OffsetsLine,
+    SearchHeaderLine,
+    SectionHeaderLine,
+    VibDeltaLine,
+)
+from .regex import (
+    SEARCH_HEADER_PATTERN,
+    SECTION_HEADER_PATTERN,
+    match_constrain_line,
+    match_geo_line,
+    match_occ_line,
+    match_offsets_line,
+    match_vib_line,
 )
 
-LoopMarker = Enum("LoopMarker", ["LOOP_START", "LOOP_END"])
+DisplacementFileSections = Enum(
+    'DisplacementFileSections',
+    ['OFFSETS', 'GEO_DELTA', 'VIB_DELTA', 'OCC_DELTA', 'CONSTRAIN'],
+)
+
+LoopMarker = Enum('LoopMarker', ['LOOP_START', 'LOOP_END'])
 
 from viperleed.calc.files.input_reader import InputFileReader
 from viperleed.calc.lib.string_utils import strip_comments
@@ -56,10 +65,10 @@ class DisplacementsReader(InputFileReader):
             return None
 
         # check for loop markers
-        if stripped_line == r"<loop>":
+        if stripped_line == r'<loop>':
             self.current_section = None
             return LoopMarkerLine(LoopMarker.LOOP_START)
-        elif stripped_line == r"<\loop>":
+        elif stripped_line == r'<\loop>':
             self.current_section = None
             return LoopMarkerLine(LoopMarker.LOOP_END)
 

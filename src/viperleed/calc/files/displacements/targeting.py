@@ -1,8 +1,10 @@
 """Module targeting."""
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__created__ = "2024-10-14"
+
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__created__ = '2024-10-14'
 
 import re
+
 import numpy as np
 
 
@@ -10,10 +12,10 @@ def generate_label_match_regex(label):
     """Generate a regex pattern to match variations of the given label,
     with '*' acting as a wildcard for word characters, and matching prefixes."""
     # Escape any special characters in the label, except for '*'
-    escaped_label = re.escape(label).replace(r"\*", r"\w*")
+    escaped_label = re.escape(label).replace(r'\*', r'\w*')
 
     # Append `\w*` at the end to match strings starting with the pattern
-    pattern = rf"^{escaped_label}\w*"
+    pattern = rf'^{escaped_label}\w*'
 
     # Compile the final regex pattern
     return re.compile(pattern)
@@ -30,7 +32,7 @@ class BSSubtarget:
         """Parse the site, and optional nums or layers from the target string."""
         parts = self.target_str.split()
         if not parts:
-            raise ValueError("Subtarget string is empty")
+            raise ValueError('Subtarget string is empty')
         site_str = parts[0]
         self.regex = generate_label_match_regex(site_str)
 
@@ -39,7 +41,7 @@ class BSSubtarget:
             return
 
         # Check if we have a layer specification
-        layer_match = re.match(r"L\((\d+)(-(\d+))?\)", parts[1])
+        layer_match = re.match(r'L\((\d+)(-(\d+))?\)', parts[1])
         if layer_match:
             start_layer = int(layer_match.group(1))
             end_layer = (
@@ -50,7 +52,7 @@ class BSSubtarget:
             self.layers = list(range(start_layer, end_layer + 1))
         else:
             # Check for a range like "1-4"
-            range_match = re.match(r"(\d+)-(\d+)", parts[1])
+            range_match = re.match(r'(\d+)-(\d+)', parts[1])
             if range_match:
                 start_num = int(range_match.group(1))
                 end_num = int(range_match.group(2))
@@ -64,8 +66,9 @@ class BSSubtarget:
         mask = np.full(len(base_scatterers), True)
 
         # mask based on the site
-        matches = np.array([self.regex.match(bs.site) is not None 
-                            for bs in base_scatterers])
+        matches = np.array(
+            [self.regex.match(bs.site) is not None for bs in base_scatterers]
+        )
         mask = mask & matches
 
         # mask based on the labels
@@ -76,15 +79,15 @@ class BSSubtarget:
             # check range for nums
             if any(num < 1 or num > len(base_scatterers) for num in self.nums):
                 raise ValueError(
-                    "Invalid atom number for subtarget: " f"{self.target_str}"
+                    'Invalid atom number for subtarget: ' f'{self.target_str}'
                 )
             num_mask = np.array([bs.num in self.nums for bs in base_scatterers])
             # check if any of the given nums have the wrong label
             wrong_label = np.logical_and(num_mask, ~label_mask)
             if np.any(wrong_label):
                 raise ValueError(
-                    "Atom numbers do not match label for subtarget: "
-                    f"{self.target_str}"
+                    'Atom numbers do not match label for subtarget: '
+                    f'{self.target_str}'
                 )
             mask = mask & num_mask
 
@@ -96,7 +99,7 @@ class BSSubtarget:
 
         if mask.sum() == 0:
             raise ValueError(
-                f"No atoms selected for subtarget: {self.target_str}"
+                f'No atoms selected for subtarget: {self.target_str}'
             )
 
         return mask
@@ -118,7 +121,7 @@ class BSTarget:
 
     def _parse_target(self, target_str):
         """Parse multiple subtargets separated by commas."""
-        subtarget_strs = target_str.split(",")
+        subtarget_strs = target_str.split(',')
         self.subtargets = [BSSubtarget(sub.strip()) for sub in subtarget_strs]
 
     def select(self, base_scatterers):
@@ -139,4 +142,4 @@ class BSTarget:
         return True
 
     def __repr__(self):
-        return f"BSTarget({self.target_str})"
+        return f'BSTarget({self.target_str})'
