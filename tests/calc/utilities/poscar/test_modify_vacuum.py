@@ -38,7 +38,7 @@ class TestModifyVacuum:
         args = parser.parse_args([str(vacuum_gap_size)])
         original_gap = slab.vacuum_gap
         if vacuum_gap_size + original_gap < _MIN_VACUUM:
-            with pytest.raises(VacuumError):
+            with pytest.raises(SystemExit):
                 modified_slab = ModifyVacuumCLI().process_slab(slab, args)
         else:
             modified_slab = ModifyVacuumCLI().process_slab(slab, args)
@@ -65,7 +65,7 @@ class TestModifyVacuum:
         parser = ModifyVacuumCLI().parser
         slab, *_ = test_slab
         args = parser.parse_args([str(vacuum_gap_size), '-a'])
-        with pytest.raises(VacuumError):
+        with pytest.raises(SystemExit):
             modified_slab = ModifyVacuumCLI().process_slab(slab, args)
 
     def test_parse_cli_args_absolute_negative_gap(self):
@@ -90,6 +90,14 @@ class TestModifyVacuum:
         gap = VacuumGapInfo(size=0.5, absolute=True, accept_small_gap=False)
         with pytest.raises(VacuumError):
             modified_slab = modify_vacuum.modify_vacuum(slab, gap)
+
+    # @infoless
+    # def test_accept_small_gap(self, test_slab):
+    #     """Test that NotEnoughVacuumError is raised correctly."""
+    #     slab, *_ = test_slab
+    #     gap = VacuumGapInfo(size=1.0, absolute=True, accept_small_gap=True)
+    #     modified_slab = modify_vacuum.modify_vacuum(slab, gap)
+    #     assert modified_slab.vacuum_gap == pytest.approx(1.0)
 
     @infoless
     def test_zero_gap_raises(self, test_slab):
