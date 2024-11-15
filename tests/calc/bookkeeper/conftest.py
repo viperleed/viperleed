@@ -2,11 +2,20 @@
 
 Fixtures
 --------
+after_archive
+    Prepare a directory like the one after ARCHIVE was executed.
 after_calc_execution
-    Return the path to a temporary directory after a bookkeeper
-    execution.
+    Prepare a directory like the one after calc executes.
+before_calc_execution
+    Return a bookkeeper ready to run in a directory with calc inputs.
 mock_tree_after_calc_execution
-    Yield a temporary directory for testing the bookkeeper.
+    Factory that produces and returns a temporary directory with
+    contents like after a calc run. It also changes the current
+    directory to the temporary one.
+mock_tree_before_calc_execution
+    Factory that produces and returns a temporary directory with
+    input files like those of calc. It also changes the current
+    directory to the temporary one.
 """
 
 __authors__ = (
