@@ -37,8 +37,9 @@ class VacuumGapInfo:
         Whether `size` should be considered as the absolute value of
         the new vacuum gap rather than its change. Default is False.
     accept_small_gap : bool, optional
-        If set, the script will not check if the resulting vacuum gap is valid
-        as long as it is non-negative.
+        Whether the script should tolerate a resulting vacuum
+        gap smaller than the minimum value for a viperleed.calc
+        run, as long as it is non-negative. Default is False.
     """
 
     size: float
