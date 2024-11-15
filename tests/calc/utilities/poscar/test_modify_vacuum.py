@@ -12,7 +12,7 @@ import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
-from viperleed.calc.classes.slab.errors import NotEnoughVacuumError
+from viperleed.calc.classes.slab.errors import VacuumError
 from viperleed.calc.classes.slab.surface_slab import _MIN_VACUUM
 from viperleed.utilities.poscar import modify_vacuum
 from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
@@ -38,7 +38,7 @@ class TestModifyVacuum:
         args = parser.parse_args([str(vacuum_gap_size)])
         original_gap = slab.vacuum_gap
         if vacuum_gap_size + original_gap < _MIN_VACUUM:
-            with pytest.raises(SystemExit):
+            with pytest.raises(VacuumError):
                 modified_slab = ModifyVacuumCLI().process_slab(slab, args)
         else:
             modified_slab = ModifyVacuumCLI().process_slab(slab, args)
@@ -65,7 +65,7 @@ class TestModifyVacuum:
         parser = ModifyVacuumCLI().parser
         slab, *_ = test_slab
         args = parser.parse_args([str(vacuum_gap_size), '-a'])
-        with pytest.raises(SystemExit):
+        with pytest.raises(VacuumError):
             modified_slab = ModifyVacuumCLI().process_slab(slab, args)
 
     def test_parse_cli_args_absolute_negative_gap(self):
@@ -80,7 +80,7 @@ class TestModifyVacuum:
         """Check complaints when the vacuum gap size is negative."""
         slab, *_ = test_slab
         vacuum_gap_info = VacuumGapInfo(size=vacuum_gap_size, absolute=True)
-        with pytest.raises(NotEnoughVacuumError):
+        with pytest.raises(VacuumError):
             modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
 
     @infoless
@@ -88,7 +88,7 @@ class TestModifyVacuum:
         """Test that NotEnoughVacuumError is raised correctly."""
         slab, *_ = test_slab
         gap = VacuumGapInfo(size=0.5, absolute=True, accept_small_gap=False)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(VacuumError):
             modified_slab = modify_vacuum.modify_vacuum(slab, gap)
 
     @infoless
@@ -98,5 +98,5 @@ class TestModifyVacuum:
         vacuum_gap_info = VacuumGapInfo(size=0., absolute=True)
         if slab.thickness <= 1e-8:  # monolayer; would lead to zero volume cell
             return
-        with pytest.raises(RuntimeError):
+        with pytest.raises(VacuumError):
             modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)

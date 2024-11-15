@@ -17,7 +17,9 @@ import logging
 
 import numpy as np
 
-from viperleed.calc.classes.slab.errors import (NotEnoughVacuumError,
+from viperleed.calc.classes.slab.errors import (
+                                                NotEnoughVacuumError,
+                                                VacuumError,
                                                 WrongVacuumPositionError)
 from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
@@ -93,14 +95,15 @@ def modify_vacuum(slab, vacuum_gap_info):
 
     try:
         processed_slab.check_vacuum_gap()
-    except NotEnoughVacuumError:
+    except NotEnoughVacuumError as err:
         if not vacuum_gap_info.accept_small_gap:
-            raise RuntimeError('The resulting vacuum gap would be too small.')
-    except WrongVacuumPositionError:
+            raise NotEnoughVacuumError(
+                'The resulting vacuum gap would be too small.', None) from err
+    except WrongVacuumPositionError as err:
         if not vacuum_gap_info.accept_small_gap:
-            raise RuntimeError('Cannot modify the vacuum gap as requested. '
-                               'Check that there already is a vacuum gap in '
-                               'the POSCAR.')
+            raise WrongVacuumPositionError(
+                'Cannot modify the vacuum gap as requested. Check that there '
+                'already is a vacuum gap in the POSCAR.', None) from err
     return processed_slab
 
 
@@ -152,7 +155,7 @@ class ModifyVacuumCLI(_PoscarStreamCLI, cli_name='modify_vacuum'):
             logger.debug('Using absolute vacuum gap size.')
         try:
             return modify_vacuum(slab, vacuum_gap_info)
-        except RuntimeError as exc:
+        except VacuumError as exc:
             self.parser.error(str(exc))
         return slab  # This is unreachable as parser.error sys-exits
 
