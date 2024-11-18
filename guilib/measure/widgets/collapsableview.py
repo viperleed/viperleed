@@ -270,7 +270,7 @@ class CollapsableDeviceView(CollapsableView):
     @property
     def settings_file(self):
         """Return the path to the selected settings file."""
-        if self._is_dummy_device():
+        if self.is_dummy_device():
             return self._original_settings
         return self._settings_file_selector.currentData()
 
@@ -307,7 +307,7 @@ class CollapsableDeviceView(CollapsableView):
     def _check_for_handler(self):
         """Check if creating a handler is possible."""
         if not self._enabled or not self._settings_file_selector.isEnabled():
-            if not self._is_dummy_device():
+            if not self.is_dummy_device():
                 return
         self._get_settings_handler()
 
@@ -351,7 +351,7 @@ class CollapsableDeviceView(CollapsableView):
         if not self._device_cls or self._settings_folder.path == Path():
             return
 
-        if self._is_dummy_device():
+        if self.is_dummy_device():
             if self._original_settings:
                 matching_settings = (self._original_settings,)
             else:
@@ -369,7 +369,7 @@ class CollapsableDeviceView(CollapsableView):
             self._settings_file_selector.setEnabled(True)
             self._check_for_handler()
 
-    def _is_dummy_device(self):
+    def is_dummy_device(self):
         """Returns whether the view is a dummy object or not."""
         return not self._device_info.hardware_interface
 
@@ -426,15 +426,23 @@ class CollapsableDeviceView(CollapsableView):
 class CollapsableCameraView(CollapsableDeviceView):
     """A CollapsableView for cameras."""
 
+    def _connect_camera(self, device):
+        """Connect camera."""
+        if self.is_dummy_device():
+            return
+        device.connect_()
+        device.start()
+
     def _get_settings_handler(self):
         """Get the settings handler of the handled device."""
         device = self._make_device()
         # TODO: handle cameras from settings that are not connected
         if not device:
             return
-        if not self._is_dummy_device():
-            device.connect_()
-            device.start()
+        try:
+            self._connect_camera(device)
+        except device.exceptions:
+            pass
         self._make_handler_for_device(device)
         self._build_device_settings()
         device.disconnect_()
@@ -474,7 +482,7 @@ class CollapsableControllerView(CollapsableDeviceView):
     @qtc.pyqtSlot()
     def _build_device_settings_widgets(self):
         """Get the handler and quantity widgets for the device settings."""
-        if self._is_dummy_device():
+        if self.is_dummy_device():
             settings = ViPErLEEDSettings.from_settings(self.original_settings)
         else:
             settings = self.sender().settings
@@ -510,7 +518,7 @@ class CollapsableControllerView(CollapsableDeviceView):
             return
         self._trying_to_get_settings = True
         self._make_handler_for_device(device)
-        if self._is_dummy_device():
+        if self.is_dummy_device():
             self._trying_to_get_settings = False
             self._build_device_settings()
             return
@@ -583,6 +591,11 @@ class CollapsableDeviceList(qtw.QScrollArea):
             view.add_top_widget(widget)
             self.views[view].append(widget)
 
+    def _update_stored_settings(self):
+        """Update the internally stored settings."""
+        # Must be implemented in subclasses if the subclass
+        # stores device settings internally.
+
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
         """Detect devices and add them as views."""
@@ -609,6 +622,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
     def _emit_settings_changed(self, *_):
         """Emit if any settings changes."""
         self.settings_changed.emit()
+        self._update_stored_settings()
 
     def _get_relative_path(self, path):
         """Get a str path that is relative to the default path if possible."""
@@ -790,6 +804,11 @@ class CollapsableControllerList(CollapsableDeviceList):
             )
         self._views[view][1].setEnabled(False)
         self._views[view][1].toggled.connect(self._emit_settings_changed)
+
+    def _update_stored_settings(self):
+        """Update the interally stored controller settings."""
+        self._primary_settings = self.get_primary_settings()
+        self._secondary_settings = self.get_secondary_settings()
 
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
