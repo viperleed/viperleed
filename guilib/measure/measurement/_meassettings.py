@@ -75,7 +75,9 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._controllers.settings_changed.connect(self.settings_changed)
         self._cameras.settings_changed.connect(self.settings_changed)
         self._controllers.error_occurred.connect(self.error_occurred)
+        self._controllers.settings_ok_changed.connect(self.settings_ok_changed)
         self._cameras.error_occurred.connect(self.error_occurred)
+        self._cameras.settings_ok_changed.connect(self.settings_ok_changed)
         self._controllers.requires_device = True
         meas = self._settings.get('measurement_settings', 'measurement_class')
         if meas == 'IVVideo':

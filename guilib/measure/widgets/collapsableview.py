@@ -547,6 +547,10 @@ class CollapsableDeviceList(qtw.QScrollArea):
     # This is signal is emitted when the device/quantity selection changes.
     settings_changed = qtc.pyqtSignal()
 
+    # This signal is emitted when settings, which decide
+    # whether a measurement can start at all, change.
+    settings_ok_changed = qtc.pyqtSignal()
+
     error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, parent=None):
@@ -625,6 +629,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
     def _emit_settings_changed(self, *_):
         """Emit if any settings changes."""
         self.settings_changed.emit()
+        self.settings_ok_changed.emit()
         self._update_stored_settings()
 
     def _get_relative_path(self, path):
@@ -735,6 +740,7 @@ class CollapsableCameraList(CollapsableDeviceList):
         """Detect controllers, add them as views and preselect them."""
         super()._detect_and_add_devices()
         self._set_camera_settings()
+        self.settings_ok_changed.emit()
 
     def _set_camera_settings(self):
         """Set camera settings."""
@@ -837,6 +843,7 @@ class CollapsableControllerList(CollapsableDeviceList):
         super()._detect_and_add_devices()
         self._set_primary_from_settings()
         self._set_secondary_from_settings()
+        self.settings_ok_changed.emit()
 
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)

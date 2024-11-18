@@ -752,6 +752,13 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
     # SettingsHandler to notify of changes.
     settings_changed = qtc.pyqtSignal()
 
+    # This signal can be used to trigger a check whether the
+    # settings in a SettingsDialog are ok to be accepted. For
+    # this to work, the are_settings_ok() method must be
+    # reimplemented to check whether the settings of the
+    # section are ok.
+    settings_ok_changed = qtc.pyqtSignal()
+
     # The next signal is emitted when this section undergoes
     # an automatic update of its widgets that should trigger
     # a redraw of the dialog
@@ -816,6 +823,10 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
     def __repr__(self):
         """Return a string representation of self."""
         return f"{self.__class__.__name__}(display_name='{self.title()}')"
+
+    def are_settings_ok(self):
+        """Return whether the section settings are acceptable."""
+        return True
 
     def set_info(self, info_text):
         """Add informative text in a QLabel."""
@@ -1262,7 +1273,12 @@ class MeasurementSettingsDialog(SettingsDialog):
         super()._compose_and_connect()
         self._ctrls['accept'].setText('Start measurement')
         self._ctrls['apply'].setVisible(False)
-        self.handler.settings_changed.connect(self._check_if_settings_ok)
+        for widget in self.handler.widgets:
+            try:
+                widget.settings_ok_changed.connect(self._check_if_settings_ok)
+            except AttributeError:
+                pass
+
 
     @qtc.pyqtSlot()
     def accept(self):
