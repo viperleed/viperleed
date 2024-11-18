@@ -1014,16 +1014,17 @@ class SettingsDialog(qtw.QDialog):
             handler.make_from_config()
         self.handler = handler
 
-        self.__settings = {'current': settings,
-                           'applied': copy.deepcopy(settings),
-                           'original': copy.deepcopy(settings)}
+        self._settings = {'current': settings,
+                          'applied': copy.deepcopy(settings),
+                          'original': copy.deepcopy(settings)}
 
         # Set up children widgets and self
-        self.__ctrls = {
+        self._ctrls = {
+            'accept': None, # Will be an 'Accept' button
             'apply': None,  # Will be an 'Apply' button
             'advanced': qtw.QPushButton("Show less"),
             }
-        self.__compose_and_connect()
+        self._compose_and_connect()
 
         # And finally the window properties
         self.update_title(title, settings)
@@ -1033,12 +1034,12 @@ class SettingsDialog(qtw.QDialog):
     @property
     def adv_button(self):
         """Return the advanced settings button."""
-        return self.__ctrls['advanced']
+        return self._ctrls['advanced']
 
     @property
     def settings(self):
         """Return the settings currently displayed."""
-        return self.__settings['current']
+        return self._settings['current']
 
     @property
     def handled_object(self):
@@ -1051,7 +1052,7 @@ class SettingsDialog(qtw.QDialog):
         self.__on_apply_pressed()
 
         # Ask to save the settings to file.
-        if self.settings != self.__settings['original']:
+        if self.settings != self._settings['original']:
             reply = _MSGBOX.question(
                 self, "Save settings to file?",
                 f"{self.windowTitle()} were edited.\n\n"
@@ -1067,7 +1068,7 @@ class SettingsDialog(qtw.QDialog):
                     # the settings could be saved.                              # TODO: open QMessageBox to ask the user how to proceed from here. Ask whether the user wants to save the settings and if yes, ask where and under which name.
                     pass
                 finally:
-                    self.__settings['original'].read_dict(self.settings)
+                    self._settings['original'].read_dict(self.settings)
             self.settings_saved.emit(_saved)
         super().accept()
 
@@ -1079,8 +1080,8 @@ class SettingsDialog(qtw.QDialog):
             return
 
         # Ask confirmation if settings changed
-        _changed = self.__ctrls['apply'].isEnabled()
-        _changed |= self.__settings['original'] != self.__settings['applied']
+        _changed = self._ctrls['apply'].isEnabled()
+        _changed |= self._settings['original'] != self._settings['applied']
         if _changed:
             reply = _MSGBOX.question(
                 self, "Discard changes?",
@@ -1091,9 +1092,9 @@ class SettingsDialog(qtw.QDialog):
             if reply == _MSGBOX.Cancel:
                 return
 
-        self.settings.read_dict(self.__settings['original'])
+        self.settings.read_dict(self._settings['original'])
         self.__on_apply_pressed()
-        if self.__settings['original'] != self.__settings['applied']:
+        if self._settings['original'] != self._settings['applied']:
             self.settings_saved.emit(False)
         super().reject()
 
@@ -1109,7 +1110,7 @@ class SettingsDialog(qtw.QDialog):
             # Update all settings with the current ones, and
             # fix the enabled state of the "Apply" button
             for key in ('applied', 'original'):
-                self.__settings[key] = copy.deepcopy(self.settings)
+                self._settings[key] = copy.deepcopy(self.settings)
             self.__update_apply_enabled()
         super().showEvent(event)
 
@@ -1128,7 +1129,7 @@ class SettingsDialog(qtw.QDialog):
             title += " settings"
         self.setWindowTitle(title)
 
-    def __compose_and_connect(self):
+    def _compose_and_connect(self):
         """Place and update children widgets."""
         self.handler.error_occurred.connect(self.error_occurred)
         self.handler.update_widgets()  # Fill widgets from settings
@@ -1137,7 +1138,8 @@ class SettingsDialog(qtw.QDialog):
         _bbox = QNoDefaultDialogButtonBox
         buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
 
-        self.__ctrls['apply'] = apply_btn = buttons.buttons()[-1]
+        self._ctrls['apply'] = apply_btn = buttons.buttons()[-1]
+        self._ctrls['accept'] = buttons.buttons()[0]
         apply_btn.setEnabled(False)
 
         self.adv_button.setDefault(False)
@@ -1197,10 +1199,10 @@ class SettingsDialog(qtw.QDialog):
     @qtc.pyqtSlot(bool)
     def __on_apply_pressed(self, _=False):
         """React to the user pressing 'Apply'."""
-        self.__ctrls['apply'].setEnabled(False)
-        if self.settings != self.__settings['applied']:
+        self._ctrls['apply'].setEnabled(False)
+        if self.settings != self._settings['applied']:
             self.settings_changed.emit()
-        self.__settings['applied'].read_dict(self.settings)
+        self._settings['applied'].read_dict(self.settings)
 
     @qtc.pyqtSlot(bool)
     def __on_show_advanced_toggled(self, visible):
@@ -1236,22 +1238,46 @@ class SettingsDialog(qtw.QDialog):
 
     def __update_apply_enabled(self):
         """Enable/disable 'Apply' depending on whether anything changed."""
-        settings_changed = self.settings != self.__settings['applied']
-        self.__ctrls['apply'].setEnabled(settings_changed)
+        settings_changed = self.settings != self._settings['applied']
+        self._ctrls['apply'].setEnabled(settings_changed)
 
 
 class MeasurementSettingsDialog(SettingsDialog):
     """A dialog to display measurement settings."""
 
+    def _check_if_settings_ok(self):
+        """Check if settings are ok and enable/disable accept button."""
+        settings_ok = True
+        for widget in self.handler.widgets:
+            try:
+                settings_ok = widget.are_settings_ok()
+            except AttributeError:
+                pass
+            if not settings_ok:
+                break
+        self._ctrls['accept'].setEnabled(settings_ok)
+
+    def _compose_and_connect(self):
+        """Place and update children widgets."""
+        super()._compose_and_connect()
+        self._ctrls['accept'].setText('Start measurement')
+        self._ctrls['apply'].setVisible(False)
+        self.handler.settings_changed.connect(self._check_if_settings_ok)
+
     @qtc.pyqtSlot()
     def accept(self):
-        """Notify if settings changed, then close."""
+        """Store device settings, then notify if settings changed."""
         for widget in self.handler.widgets:
             try:
                 widget.store_lower_level_settings()
             except AttributeError:
                 pass
         super().accept()
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Check if the updated widgets have faulty settings."""
+        super().showEvent(event)
+        self._check_if_settings_ok()
 
 
 class StaticSettingsDialogOption(SettingsDialogOption):

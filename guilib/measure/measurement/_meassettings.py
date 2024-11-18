@@ -76,6 +76,10 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._cameras.settings_changed.connect(self.settings_changed)
         self._controllers.error_occurred.connect(self.error_occurred)
         self._cameras.error_occurred.connect(self.error_occurred)
+        self._controllers.requires_device = True
+        meas = self._settings.get('measurement_settings', 'measurement_class')
+        if meas == 'IVVideo':
+            self._cameras.requires_device = True
 
     @qtc.pyqtSlot()
     def _store_device_settings(self):
@@ -86,6 +90,12 @@ class DeviceEditor(SettingsDialogSectionBase):
                            str(self._controllers.get_secondary_settings()))
         self._settings.set('devices', 'cameras',
                            str(self._cameras.get_camera_settings()))
+
+    def are_settings_ok(self):
+        """Return whether the device selection is acceptable."""
+        controllers_ok = self._controllers.are_settings_ok()
+        cameras_ok = self._cameras.are_settings_ok()
+        return controllers_ok and cameras_ok
 
     def set_list_height(self, height):
         """Set the height of the collapsable lists."""

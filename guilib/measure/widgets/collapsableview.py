@@ -436,7 +436,6 @@ class CollapsableCameraView(CollapsableDeviceView):
     def _get_settings_handler(self):
         """Get the settings handler of the handled device."""
         device = self._make_device()
-        # TODO: handle cameras from settings that are not connected
         if not device:
             return
         try:
@@ -563,6 +562,10 @@ class CollapsableDeviceList(qtw.QScrollArea):
         self.setWidgetResizable(True)
         self.setVerticalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOn)
         self._make_scroll_area()
+        # If requires_device is True, the CollapsableDeviceList must
+        # contain at least one selected valid device for the
+        # are_settings_ok() method to return True.
+        self.requires_device = False
 
     @property
     def default_settings_folder(self):
@@ -674,6 +677,20 @@ class CollapsableDeviceList(qtw.QScrollArea):
         view.settings_changed.connect(self._emit_settings_changed)
         return view
 
+    def are_settings_ok(self):
+        """Return whether the device selection is acceptable."""
+        # First we check if any dummy device is selected.
+        # We should never allow this to be the case.
+        for view in self.views:
+            if view.button.isEnabled() and view.is_dummy_device():
+                return False
+        # The we check if any device has to be selected at all.
+        if not self.requires_device:
+            return True
+        # Should we require a selected device, then we now know
+        # selected devices are not dummy devices.
+        return any(view.button.isEnabled() for view in self.views)
+
     def store_settings(self):
         """Store the settings of the selected devices."""
         try:
@@ -708,6 +725,10 @@ class CollapsableCameraList(CollapsableDeviceList):
         view.set_top_widget_geometry(
             self._views[view][0], width=self._widths[self._top_labels[1]]
             )
+
+    def _update_stored_settings(self):
+        """Update the interally stored camera settings."""
+        self._camera_settings = self.get_camera_settings()
 
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
