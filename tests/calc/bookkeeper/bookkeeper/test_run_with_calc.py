@@ -26,8 +26,8 @@ class TestBookkeeperDuringCalc(_TestBookkeeperRunBase):
                              mock_tree_after_calc_execution,
                              caplog):
         """Check reuse of bookkeeper in the default calls around calc."""
-        mock_tree_before_calc_execution()
-        bookkeeper = Bookkeeper()
+        tmp_path = mock_tree_before_calc_execution()
+        bookkeeper = Bookkeeper(cwd=tmp_path)
         # Before calc, we run in CLEAR mode
         self.run_before_calc_exec_and_check(bookkeeper,
                                             check_archiving_required=False,
