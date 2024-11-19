@@ -7,7 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-04-05'
 __license__ = 'GPLv3+'
 
-import numpy as np
 import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
@@ -24,6 +23,7 @@ from ...tags import CaseTag as Tag
 infoless = parametrize_with_cases('test_slab',
                                   cases=poscar_slabs,
                                   has_tag=Tag.NO_INFO)
+SINGLE_LAYER = 1e-8  # Slab thickness of a one-layer slab
 
 
 class TestModifyVacuum:
@@ -66,7 +66,7 @@ class TestModifyVacuum:
         slab, *_ = test_slab
         args = parser.parse_args([str(vacuum_gap_size), '-a'])
         with pytest.raises(SystemExit):
-            modified_slab = ModifyVacuumCLI().process_slab(slab, args)
+            ModifyVacuumCLI().process_slab(slab, args)
 
     def test_parse_cli_args_absolute_negative_gap(self):
         """Test that parse_cli_args raises for a negative absolute gap."""
@@ -81,7 +81,7 @@ class TestModifyVacuum:
         slab, *_ = test_slab
         vacuum_gap_info = VacuumGapInfo(size=vacuum_gap_size, absolute=True)
         with pytest.raises(VacuumError):
-            modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
+            modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
 
     @infoless
     def test_not_enough_vacuum_error(self, test_slab):
@@ -89,25 +89,25 @@ class TestModifyVacuum:
         slab, *_ = test_slab
         gap = VacuumGapInfo(size=0.5, absolute=True, accept_small_gap=False)
         with pytest.raises(VacuumError):
-            modified_slab = modify_vacuum.modify_vacuum(slab, gap)
+            modify_vacuum.modify_vacuum(slab, gap)
 
     @infoless
     def test_accept_small_gap(self, test_slab):
         """Test that NotEnoughVacuumError is raised correctly."""
         slab, *_ = test_slab
-        if slab.thickness <= 1e-8:  # monolayer; would lead to zero volume cell
-            return
+        if slab.thickness <= SINGLE_LAYER:
+            pytest.skip('Single layer; would lead to zero volume cell')
         gap = VacuumGapInfo(size=0.0, absolute=True, accept_small_gap=True)
         # gap size recognition likely does not work for slabs with gaps < 5AA
         # so we shouldn't test for the exact gap size
-        modified_slab = modify_vacuum.modify_vacuum(slab, gap)
+        modify_vacuum.modify_vacuum(slab, gap)
 
     @infoless
     def test_zero_gap_raises(self, test_slab):
         """Check complaints when the vacuum gap size is negative."""
         slab, *_ = test_slab
         vacuum_gap_info = VacuumGapInfo(size=0., absolute=True)
-        if slab.thickness <= 1e-8:  # monolayer; would lead to zero volume cell
-            return
+        if slab.thickness <= SINGLE_LAYER:
+            pytest.skip('Single layer; would lead to zero volume cell')
         with pytest.raises(VacuumError):
-            modified_slab = modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
+            modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
