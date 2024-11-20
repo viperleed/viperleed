@@ -40,18 +40,15 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
 
         Parameters
         ----------
-        after_calc_execution: fixture
-        caplog: fixture
+        after_calc_execution : fixture
+            A bookkeeper and information on a root directory right
+            after viperleed.calc has run, and before any bookkeeper
+            execution (even the default --archive).
+        caplog : fixture
+            The pytest.caplog fixture.
 
         Returns
         -------
         None.
         """
-        self.run_after_calc_exec_and_check(after_calc_execution)
-        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
-        self.check_root_is_clean(*after_calc_execution)
-
-        # Original SHOULD NOT be replaced by output:
-        # ARCHIVE does not run only if the run crashed,
-        # in which case we don't want to overwrite
-        self.check_root_inputs_untouched(*after_calc_execution)
+        self.run_and_check_prerun_archiving(after_calc_execution, caplog)

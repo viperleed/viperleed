@@ -79,18 +79,11 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         bookkeeper, *_ = after_calc_execution
         mock_discard = mocker.patch.object(bookkeeper.history.info,
                                            'discard_last_entry')
-        self.run_after_calc_exec_and_check(after_calc_execution)
-        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
-        self.check_root_is_clean(*after_calc_execution)
+        self.run_and_check_prerun_archiving(after_calc_execution, caplog)
 
-        # Original SHOULD NOT be replaced by output:
-        # ARCHIVE does not run only if the run crashed,
-        # in which case we don't want to overwrite
-        self.check_root_inputs_untouched(*after_calc_execution)
-
-        # A 'DISCARDED' note should be in history.info, but should
-        # have been added already when archiving, not as a result
-        # of a call to history.info.discard_last_entry.
+        # A 'DISCARDED' note should be in history.info...
         assert bookkeeper.history.info.last_entry_was_discarded
         assert _DISCARDED in bookkeeper.history.info.path.read_text()
+        # ...but should have been added already when archiving, not
+        # as a result of a call to history.info.discard_last_entry.
         mock_discard.assert_not_called()

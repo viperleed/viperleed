@@ -26,6 +26,7 @@ from viperleed.calc.constants import DEFAULT_SUPP
 
 from ..conftest import MOCK_INPUT_CONTENT
 from ..conftest import MOCK_OUT_CONTENT
+from ..conftest import MOCK_ORIG_CONTENT
 from ..conftest import MOCK_STATE_FILES
 from ..conftest import MOCK_WORKHISTORY
 
@@ -38,6 +39,19 @@ class _TestBookkeeperRunBase:
     def check_metadata_exists(self, history_folder):
         """Test that the metadata file is present in `history_folder`."""
         assert (history_folder / _METADATA_NAME).is_file()
+
+    def check_input_files_in_history(self, *run, check_input_contents=True):
+        """Make sure that input files were stored in history."""
+        *_, history_run_path = run
+        expected_contents = (MOCK_INPUT_CONTENT,)
+        if self.mode.uses_ori_files_as_fallback:
+            expected_contents += (MOCK_ORIG_CONTENT,)
+        for file in MOCK_STATE_FILES:
+            archived_input = history_run_path / file
+            assert archived_input.is_file()
+            if check_input_contents:
+                contents = archived_input.read_text()
+                assert any(e in contents for e in expected_contents)
 
     def check_history_exists(self, bookkeeper, history_run_path):
         """Test that history_path and directory/history.info exist."""
@@ -160,6 +174,10 @@ class _TestBookkeeperRunBase:
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
+        self.check_input_files_in_history(
+            *after_archive,
+            check_input_contents=check_input_contents,
+            )
         if self.mode is BookkeeperMode.ARCHIVE:
             self.check_root_after_archive(
                 *after_archive,
@@ -185,6 +203,17 @@ class _TestBookkeeperRunBase:
         self.check_history_exists(*after_calc_execution)
         self.check_out_files_in_history(*after_calc_execution)
         self.check_workhistory_archived(*after_calc_execution)
+
+    def run_and_check_prerun_archiving(self, after_calc_execution, caplog):
+        """Execute bookkeeper, and verify it has archived a calc run."""
+        self.run_after_calc_exec_and_check(after_calc_execution)
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
+        self.check_root_is_clean(*after_calc_execution)
+
+        # Original SHOULD NOT be replaced by output:
+        # ARCHIVE does not run only if the run crashed,
+        # in which case we don't want to overwrite
+        self.check_root_inputs_untouched(*after_calc_execution)
 
     def run_archive_after_calc_and_check(self, after_calc_execution, caplog,
                                          check_archiving_required=True):
