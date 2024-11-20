@@ -1,4 +1,7 @@
-"""Contains generic functions used in the TensErLEED scripts."""
+"""Module base of viperleed.calc.lib.
+
+Contains generic functions used in the TensErLEED scripts.
+"""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
@@ -22,19 +25,6 @@ import numpy as np
 import scipy.spatial as sps
 
 logger = logging.getLogger(__name__)
-COLLAPSE_EPS = 1e-8  # Default for collapsing fractional coordinates
-
-###############################################
-#                EXCEPTIONS                   #
-###############################################
-
-class NonIntegerMatrixError(ValueError):                                         # TODO: move somewhere else
-    """A matrix that should have integer values does not."""
-
-
-class SingularMatrixError(ValueError, ZeroDivisionError):
-    """A matrix that needs inversion is singular."""
-
 
 ###############################################
 #                 CLASSES                     #
@@ -98,379 +88,9 @@ class BackwardsReader:                                                          
             self.data.pop()
 
 
-class CustomLogFormatter(logging.Formatter):
-    """Logging Formatter for level-dependent message formatting"""
-    FORMATS = {
-        logging.DEBUG: "dbg: %(msg)s",
-        logging.INFO: "%(msg)s",
-        logging.WARNING: "# WARNING: %(msg)s",
-        logging.ERROR: "### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n"
-                       "# %(msg)s \n#############",
-        logging.CRITICAL: "### CRITICAL ### in %(module)s:%(funcName)s:"
-                          "%(lineno)s\n# %(msg)s \n################",
-        "DEFAULT": "%(msg)s",
-    }
-
-    def format(self, record):
-        # debug log format for everything at DEBUG level or lower
-        if record.levelno < logging.DEBUG:
-            log_fmt = self.FORMATS.get(logging.DEBUG)
-        else:
-            log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
-
-
 ###############################################
 #                FUNCTIONS                    #
 ###############################################
-
-def add_edges_and_corners(cartesian, fractional, releps, ucell, props=None):
-    """Add atoms at edges and corners to the Cartesian coordinates given.
-
-    Notice that edges and corners will be added only for dimensions
-    up to the smallest among: shape(fractional)[1], len(releps),
-    len(ucell). The only requirements are that `fractional` contains
-    at most the same number of elements as `cartesian`, and that the
-    second axis of `cartesian` and `ucell` are broadcastable. This
-    allows, e.g., to pass in 3D coordinates but only add repeats
-    for 2D edges and corners.
-
-    Parameters
-    ----------
-    cartesian : Sequence
-        The Cartesian coordinates to which replicas of atoms at
-        edges and corners will be appended. Shape (N, 2) or (N, 3).
-    fractional : Sequence
-        Fractional coordinates corresponding to `cartesian`. Should
-        have shape (M, m), with M <= N.
-    releps : Sequence
-        Tolerance on fractional coordinates to consider an atom from
-        `cartesian` to be close to an edge. Shape (2,) or (3,).
-    ucell : Sequence
-        Unit cell to be used for the displacement of atoms close to
-        edges/corners. Shape (2, 2) or (3, 3), and such that unit
-        cell vectors are rows. The second dimension should match
-        the second one of `cartesian`.
-    props : list or None, optional
-        If given, it should have the same length as `cartesian`. It
-        is interpreted as a list of properties that should also be
-        duplicated whenever an atom is duplicated. Default is None.
-
-    Returns
-    -------
-    cartesian_extended : numpy.ndarray
-        Cartesian atomic coordinates to which extra atoms have been
-        appended at the end for all those atoms in `cartesian` that
-        were at edges/corners.
-    props_extended : list or None
-        Corresponding properties of the added atoms. None if `props`
-        was not given to begin with.
-    """
-    for i, pos in enumerate(fractional):
-        addlist = []
-        for posj, epsj, uvec in zip(pos, releps, ucell):
-            if abs(posj) < epsj:        # 'left' edge
-                addlist.append(cartesian[i] + uvec)
-            elif abs(posj - 1) < epsj:  # 'right' edge
-                addlist.append(cartesian[i] - uvec)
-        if len(addlist) == 2:
-            # 2D corner - add the diagonally opposed one
-            addlist.append(sum(addlist) - cartesian[i])
-        elif len(addlist) == 3:
-            # 3D corner - add all diagonally opposed points
-            addlist.extend(
-                p1 + p2 - cartesian[i]
-                for p1, p2 in itertools.combinations(addlist, 2)
-                )
-            addlist.append(sum(addlist[:3]) - 2 * cartesian[i])
-
-        if not addlist:
-            continue
-        cartesian = np.concatenate((cartesian, addlist))
-        if props is not None:
-            props.extend([props[i]]*len(addlist))
-    return cartesian, props
-
-
-def collapse(cartesians, ucell, ucell_inv=None, method='floor'):
-    """Collapse Cartesian coordinates to the base cell.
-
-    Parameters
-    ----------
-    cartesians : numpy.ndarray
-        Cartesian coordinates to be collapsed. Shape (N, 2) or (N, 3).
-    ucell : numpy.ndarray
-        Basis vectors (rows) of the unit cell to be used for collapsing.
-    ucell_inv : numpy.ndarray or None, optional
-        The inverse of ucell. If not given or None, it is computed
-        on the fly. Default is None.
-    method : {'floor', 'round'}, optional
-        Which method should be used for collapsing. 'floor'
-        returns Cartesian coordinates collapsed to the (0, 0)
-        cell, i.e., with all fractional coordinates in range
-        [0, 1]. 'round' collapses the coordinates so that they
-        are as close to zero as possible. Fractional coordinates
-        are then in range [-0.5, 0.5].
-
-    Returns
-    -------
-    collapsed_cartesians : numpy.ndarray
-        The Cartesian coordinates, collapsed according to method
-    fractional_coordinates : numpy.ndarray
-        The corresponding fractional coordinates
-    """
-    if ucell_inv is None:
-        ucell_inv = np.linalg.inv(ucell)
-    fractional = collapse_fractional(cartesians.dot(ucell_inv),
-                                     method=method)
-    return fractional.dot(ucell), fractional
-
-
-def _floor_eps(eps):
-    """Return the floored-int version of values after adding eps."""
-    def _floor(values):
-        return np.floor(values + eps)
-    return _floor
-
-
-def collapse_fractional(coordinates, method='floor',
-                        eps=COLLAPSE_EPS, in_place=False):
-    """Collapse fractional coordinates to the base cell.
-
-    Parameters
-    ----------
-    coordinates : numpy.ndarray
-        Fractional coordinates to be collapsed. Shape (N, 2) or (N, 3).
-    method : {'floor', 'round'}, optional
-        Which method should be used for collapsing.  'round' collapses
-        the coordinates so that they are as close to zero as possible.
-        Fractional coordinates are then in range [-0.5, 0.5]. 'floor'
-        returns fractional coordinates collapsed to the (0, 0) cell,
-        that is, with all fractional coordinates in range [-`eps`,
-        1-`eps`]. This ensures that collapsing a fractional coordinate
-        of (essentially) 1 gives (essentially) zero. Default is 'floor'.
-    eps : float or Sequence, optional
-        Used only if method == 'floor'. The (fractional) tolerance
-        for collapsing. If a sequence, it should have as many items
-        as the second axis of coordinates. Default is 1e-8.
-    in_place : bool, optional
-        If True, the function modifies directly `coordinates`. Can be
-        used to save some memory. Default is False.
-
-    Returns
-    -------
-    collapsed : numpy.ndarray
-        The collapsed fractional coordinates. Will be the same object
-        passed in if in_place is True-thy.
-
-    Raises
-    ------
-    ValueError
-        If method is not one of the valid methods.
-    """
-    _methods = {'f': _floor_eps(eps), 'r': np.round}
-    try:
-        round_ = _methods[method[0]]
-    except (TypeError, IndexError, KeyError):
-        raise ValueError(f'collapse_fractional: Unknown method={method}')
-    if in_place:
-        collapsed = coordinates
-        collapsed -= round_(coordinates)
-    else:
-        collapsed = coordinates - round_(coordinates)
-    return collapsed
-
-
-def ensure_integer_matrix(matrix, eps=1e-6):
-    """Return a rounded version of matrix. Raise if matrix isn't integer."""
-    rounded = np.round(matrix)
-    if np.any(abs(matrix - rounded) > eps):
-        raise NonIntegerMatrixError(matrix)
-    return rounded
-
-
-def pairwise(iterable):
-    """Return a generator of pairs of subsequent elements."""
-    try:
-        # pairwise is available in py >= 3.10
-        return itertools.pairwise(iterable)
-    except AttributeError:
-        pass
-    # Rough equivalent from the python docs
-    orig, offset = itertools.tee(iterable)
-    next(offset, None)
-    return zip(orig, offset)
-
-
-def rotation_matrix(angle, dim=2):
-    """Returns a (2x2) matrix for in-plane rotation of the given rotation
-    angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
-    if dim < 2:
-        raise ValueError('Rotation matrix needs at least dimension 2')
-    m = np.eye(dim, dtype=float)
-    m[:2, :2] = np.array([[np.cos(angle), -np.sin(angle)],
-                          [np.sin(angle), np.cos(angle)]])
-    return m
-
-
-def rotation_matrix_order(order, dim=2):
-    """Returns a (2x2) matrix for in-plane rotation of the given rotation
-    order. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
-    angle = 2*np.pi/order
-    return rotation_matrix(angle, dim=dim)
-
-
-def fortranContLine(s):
-    """Takes a sting that might be too long to fit on a single line of fortran
-    code and splits it into continuation lines as necessary. Returns a string
-    with ampersands and line breaks."""
-    limit = 72  # fortran line length limit
-    if len(s) <= limit:
-        return s
-    o = s[:6]
-    s = s[6:]
-    while len(s) > (limit-6):   # 6 characters for beginning of line
-        o += s[:(limit-6)]
-        o += "&\n     &"
-        s = s[(limit-6):]
-    o += s
-    return o
-
-
-def readIntRange(s):
-    """Takes a string, returns a list of integers. If the string is a single
-    int or space-separated ints, the return value is a list containing only
-    those int. If the string contains i1-i2 or i1:i2, the list is
-    range(i1, i2+1), i.e. contains both i1 and i2."""
-    out = []
-    sl = s.split()
-    for ss in sl:
-        try:
-            out.append(int(ss))
-        except ValueError:
-            try:
-                start, stop = split_string_range(ss)
-            except ValueError:
-                return []
-
-            try:
-                out.extend(range(int(start), int(stop)+1))
-            except ValueError:
-                return []
-    return list(dict.fromkeys(out))  # Like set, but keep order
-
-
-def split_string_range(range_string):
-    """Return start and stop as strings from "start:stop" or "start-stop"."""
-    range_list = []
-    if '-' in range_string:
-        range_list = range_string.split('-')
-    elif ':' in range_string:
-        range_list = range_string.split(':')
-    try:
-        return range_list[0], range_list[-1]
-    except IndexError:
-        raise ValueError(f"Invalid range string: {range_string}") from None
-
-
-def range_to_str(il):
-    """Takes a list of integers, sorts them and returns a string short form.
-    For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
-    will be ignored."""
-    if not all(isinstance(v, int) for v in il):
-        t = next(type(v) for v in il if not isinstance(v, int))
-        raise TypeError(
-            f"range_to_str: expected list of int, found type {t.__name__}"
-            )
-    sl = sorted(il, reverse=True)
-    prev = sl.pop()
-    rmin = prev
-    out = str(prev)
-    while sl:
-        v = sl.pop()
-        if v == prev:
-            continue
-        if v - prev == 1:
-            prev = v
-            continue
-        if prev != rmin:
-            out += f"-{prev}, {v}"
-        else:
-            out += f", {v}"
-        prev = v
-        rmin = v
-    if prev != rmin:
-        out += f"-{prev}"
-    return out
-
-
-def readVector(s, ucell=None, defRelaltive=False):
-    """Takes a string 'xyz[f1 f2 f3]', 'abc[f1 f2 f3]' or just '[f1 f2 f3]'
-    and returns the corresponding vector in cartesian coordinates, or None if
-    the string cannot be parsed."""
-    m = re.match(r'\s*(xyz|abc)?\[\s*(?P<v1>[-0-9.]+)\s+'
-                 r'(?P<v2>[-0-9.]+)\s+(?P<v3>[-0-9.]+)\s*\]', s)
-    if not m:
-        return None
-    try:
-        v1 = float(m.group("v1"))
-        v2 = float(m.group("v2"))
-        v3 = float(m.group("v3"))
-    except (ValueError, IndexError):
-        return None
-    if "abc" in s:
-        if ucell is None:
-            return None
-        uct = ucell.T
-        return np.dot((v1, v2, v3), ucell.T)
-    # xyz
-    return np.array([v1, v2, v3])
-
-
-def readIntLine(line, width=3):                                                 # TODO: Probably better ways with list comprehension
-    """
-    Reads an (arbitrary length) line of integers with fixed width. Will try
-    to interpret everything as integers until the line ends.
-
-    Parameters
-    ----------
-    line : str
-        The line to interpret
-    width : integer, optional
-        The width of each integer. The default is 3.
-
-    Returns
-    -------
-    Tuple of integers
-    """
-    line = line.rstrip()
-    out = []
-    while line:
-        chunk, line = line[:width], line[width:]
-        out.append(int(chunk))
-    return tuple(out)
-
-
-def cosvec(x, y):
-    """
-    Returns the cosine of the angle between two vectors
-
-    Parameters
-    ----------
-    x : numpy.array
-        First vector
-    y : numpy.array
-        Second vector
-
-    Returns
-    -------
-    float
-        Cosine of the angle between the two vectors
-
-    """
-    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
-
 
 def dict_equal(d1, d2):                                                         # TODO: d1 == d2 works the same
     """
@@ -494,26 +114,7 @@ def dict_equal(d1, d2):                                                         
     return False
 
 
-def lcm(a, b):
-    "Calculate the lowest common multiple of two integers a and b"
-    return a * b // np.gcd(a, b)
-
-
-def max_diff(list_):
-    """Find the index in a list such that list[i] - list[i-1] is the largest
-    value difference in the list (after sorting). Return i and the difference.
-    """
-    if len(list_) < 2:
-        return None, None
-    list_ = sorted(list_)
-    maxdiff = max([list_[i] - list_[i-1] for i in range(1, len(list_))])
-    m = [i for i in range(1, len(list_)) if list_[i] - list_[i-1] == maxdiff]
-    if m:
-        return m[0], maxdiff
-    return None, maxdiff
-
-
-def parseMathSqrt(s):
+def parseMathSqrt(s):                                                           # TODO: replace with guilib math parser after refactor
     try:
         f = float(s)
     except ValueError:
@@ -553,24 +154,8 @@ def parseMathSqrt(s):
                         raise
     return f
 
-# def angle(v1, v2, acute=True):
-#     """Returns the angle between two vectors"""
-#  !! UNSIGNED!
-#     angle = np.arccos(np.dot(v1, v2)
-#                       / (np.linalg.norm(v1)*np.linalg.norm(v2)))
-#     if acute == True:
-#         return angle
-#     else:
-#         return 2 * np.pi - angle
 
-
-def angle(v1, v2):
-    """Returns the angle between two 2D vectors"""
-    # Use cross product for sine, dot product for cosine
-    return np.arctan2(v1[0]*v2[1] - v1[1]*v2[0], v1[0]*v2[0] + v1[1]*v2[1])
-
-
-def dist_from_line(p1, p2, r):
+def dist_from_line(p1, p2, r):                                                  # TODO: will be removed in #51
     """
     Calculates the distance of a point from a line, with the line defined by
     two other points. Works in both 2 and 3 dimensions.
@@ -597,42 +182,7 @@ def dist_from_line(p1, p2, r):
     raise ValueError("Vector dimensions have to be either 2 or 3.")
 
 
-def parent_name(dotted_name, remove=''):
-    """Return a version of dotted_name with the last attribute removed.
-
-    Parameters
-    ----------
-    dotted_name : str
-        The dotted name (e.g., the name of an attribute or a module).
-    remove : str, optional
-        What should be removed from the right side. It may, or may
-        not contain a dot. If it does not begin with a leading dot,
-        a single dot is prepended to `remove`. If not given, the
-        last dotted portion is removed. Default is an empty string.
-
-    Returns
-    -------
-    stripped_name : str
-        A version of dotted_name with [.]remove removed from the right.
-    """
-    remove = remove or '.'
-    if not remove.startswith('.'):
-        remove = '.' + remove
-    stripped_name, *_ = dotted_name.rsplit(remove, maxsplit=1)
-    return stripped_name
-
-
-def strip_comments(line):
-    """Return the part of line to the left of comments."""
-    for comment_char in "!#%":
-        try:
-            line, *_ = line.split(comment_char)
-        except ValueError:  # Nothing left to split
-            return ''
-    return line.strip()
-
-
-def readToExc(llist):                                                           # TODO: unused; could be an iterator
+def readToExc(llist):                                                           # TODO: remove after vibrocc refactor; could be an iterator
     """For reading PARAMETERS files; takes a list, returns elements until the
     first one that starts with an exclamation mark."""
     read = True
@@ -646,6 +196,18 @@ def readToExc(llist):                                                           
     return newlist
 
 
+# TODO: This function is confusing. It is used to 'recombine' elements
+# that were space-split before into 'sep'-then-space-split lists. E.g.,
+# in OCC_DELTA DISPLACEMENTS:
+#    chem start stop step, other_chem start stop step
+# --> by space first: ['chem', 'start', 'stop', 'step,',
+#                      'other_chem', 'start', 'stop', 'step']
+# --> splitSublists:  [['chem', 'start', 'stop', 'step'],
+#                      ['other_chem', 'start', 'stop', 'step']]
+# It would be way cleaner to do the splitting in the correct order:
+# --> split first on comma: ['chem start stop step',
+#                            'other_chem start stop step']
+# then each item on spaces.
 def splitSublists(llist, sep):                                                  # TODO: could be an iterator
     """Takes a list and a separator, splits strings in the list by the
     separator, returns results as list of lists"""
@@ -672,32 +234,7 @@ def splitSublists(llist, sep):                                                  
     return(newlist)
 
 
-def splitMaxRight(s, sep):
-    """Same as s.split(sep, maxsplit=1), but splitting at the first instance
-    from the right."""
-    sr = s[::-1]
-    L = sr.split(sep, maxsplit=1)
-    L.reverse()
-    nl = []
-    for ns in L:
-        nl.append(ns[::-1])
-    return nl
-
-
-def recombineListElements(llist, com):
-    """Takes a list, checks in each element whether the first/last characters
-    are the given combination character, and if so, combines list elements with
-    the list element before/after."""
-    i = 0
-    newlist = llist[:]
-    while i < len(newlist)-1:
-        if newlist[i][-1] == com or newlist[i+1][0] == com:
-            newlist[i] += newlist.pop(i+1)
-        else:
-            i += 1
-    return newlist
-
-
+# TODO: remove next in #51
 def addUnequalPoints(l1, l2, eps, uniqueLists=False):
     """Adds all points from l1 to l2, if they are not already in l2
     (+- epsilon)."""
@@ -724,6 +261,9 @@ def addUnequalPoints(l1, l2, eps, uniqueLists=False):
     return nl2
 
 
+# TODO: consider using psutil instead. See
+# https://psutil.readthedocs.io/en/latest/index.html#psutil.cpu_count
+# Adapted from https://stackoverflow.com/questions/1006289/
 def available_cpu_count():
     """ Number of available virtual or physical CPUs on this system, i.e.
     user/real as output by time(1) when called with an optimally scaling
@@ -853,19 +393,3 @@ def copytree_exists_ok(source, destination):
         else:  # file
             shutil.copy2(srcentry, dstentry)
     shutil.copystat(source, destination)
-
-
-def make_unique_list(w_duplicates):                                             # TODO: better function in guilib.helpers
-    """Helper function to remove duplicates from list. Does same as creating a set but preservers order.
-
-    Args:
-        w_duplicates (iterable): list with duplicates
-
-    Returns:
-        list: list with duplictes removed
-    """
-    unique_list = []
-    for item in w_duplicates:
-        if item not in unique_list:
-            unique_list.append(item)
-    return unique_list

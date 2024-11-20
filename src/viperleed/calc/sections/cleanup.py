@@ -19,6 +19,7 @@ from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
 # files to go in SUPP
@@ -488,7 +489,6 @@ def cleanup(manifest, rp=None):
                 logger.info("- "+s)
     logger.info("")
     # shut down logger
-    while logger.handlers:
-        logger.removeHandler(logger.handlers[0])
+    close_all_handlers(logger)
     logging.shutdown()
     return

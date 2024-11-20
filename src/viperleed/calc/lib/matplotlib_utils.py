@@ -1,7 +1,7 @@
-"""Functions useful for handling matplotlib.
+"""Module matplotlib_utils of viperleed.calc.lib.
 
-In particular, stuff that makes new matplotlib features available in
-older python versions.
+Functions useful for handling matplotlib. In particular, stuff that
+makes new matplotlib features available in older python versions.
 """
 
 __authors__ = (

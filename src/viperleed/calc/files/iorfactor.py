@@ -24,6 +24,7 @@ from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.log_utils import at_level
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
@@ -726,32 +727,27 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
         logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
                      .format(analysisFile))
         return
-    # the following will spam the logger with debug messages; disable.
-    loglevel = logger.level
-    logger.setLevel(logging.INFO)
-    try:
-        for i, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
-                                                         xyTheo, xyExp)):
 
-            if len(exp) == 0:
-                continue
-            ytheo = leedbase.getYfunc(theo, v0i)
-            yexp = leedbase.getYfunc(exp, v0i)
-
-            plot_analysis(exp, figs, figsize, name, namePos, oritick,
-                          plotcolors, rPos, rfact, theo, xlims, yexp,
-                          ylims, ytheo, v0i)
-
-        for fig in figs:
-            pdf.savefig(fig)
-            plt.close(fig)
-    except Exception:
-        logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
-                     exc_info=True)
-    finally:
-        pdf.close()
-        logger.setLevel(loglevel)
-    return
+    # The following will spam the logger with debug messages; disable.
+    with at_level(logger, logging.INFO):
+        try:
+            for i, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
+                                                             xyTheo, xyExp)):
+                if len(exp) == 0:
+                    continue
+                ytheo = leedbase.getYfunc(theo, v0i)
+                yexp = leedbase.getYfunc(exp, v0i)
+                plot_analysis(exp, figs, figsize, name, namePos, oritick,
+                              plotcolors, rPos, rfact, theo, xlims, yexp,
+                              ylims, ytheo, v0i)
+            for fig in figs:
+                pdf.savefig(fig)
+                plt.close(fig)
+        except Exception:
+            logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
+                         exc_info=True)
+        finally:
+            pdf.close()
 
 
 def prepare_analysis_plot(formatting, xyExp, xyTheo):
@@ -905,38 +901,32 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
         logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
                      .format(analysisFile))
         return
-    # the following will spam the logger with debug messages; disable.
-    loglevel = logger.level
-    logger.setLevel(logging.INFO)
+    # The following will spam the logger with debug messages; disable.
+    with at_level(logger, logging.INFO):
+        # proper minus character
+        labels = [label.replace("-", "−") for label in labels]
+        try:
+            for i in range(n_beams):
+                exp = exp_xy[i]
+                theo = theo_xy[i]
+                beam_energies = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
+                y_exp = np.empty([n_E_beams[i], 2])
+                y_theo = np.empty([n_E_beams[i], 2])
+                y_exp[:, 0] = beam_energies
+                y_exp[:, 1] = y_1[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
+                y_theo[:, 0] = beam_energies
+                y_theo[:, 1] = y_2[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
 
-    # proper minus character
-    labels = [label.replace("-", "−") for label in labels]
-
-    try:
-        for i in range(n_beams):
-            exp = exp_xy[i]
-            theo = theo_xy[i]
-            beam_energies = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
-            y_exp = np.empty([n_E_beams[i], 2])
-            y_theo = np.empty([n_E_beams[i], 2])
-            y_exp[:, 0] = beam_energies
-            y_exp[:, 1] = y_1[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
-            y_theo[:, 0] = beam_energies
-            y_theo[:, 1] = y_2[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
-
-            plot_analysis(exp, figs, figsize, labels[i], namePos, oritick, plotcolors, rPos, rfactor_beams[i],
-                          theo, xlims, y_exp, ylims, y_theo, v0i)
-
-        for fig in figs:
-            pdf.savefig(fig)
-            plt.close(fig)
-    except Exception:
-        logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
-                     exc_info=True)
-    finally:
-         pdf.close()
-         logger.setLevel(loglevel)
-    return
+                plot_analysis(exp, figs, figsize, labels[i], namePos, oritick, plotcolors, rPos, rfactor_beams[i],
+                              theo, xlims, y_exp, ylims, y_theo, v0i)
+            for fig in figs:
+                pdf.savefig(fig)
+                plt.close(fig)
+        except Exception:
+            logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
+                         exc_info=True)
+        finally:
+             pdf.close()
 
 
 def beamlist_to_array(beams):
