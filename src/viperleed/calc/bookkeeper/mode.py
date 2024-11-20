@@ -48,11 +48,6 @@ class BookkeeperMode(Enum):
     FIX = 'fix'
 
     @property
-    def uses_ori_files_as_fallback(self):
-        """Return whether '*_ori' files are used as fallback for archiving."""
-        return self in (BookkeeperMode.CLEAR, BookkeeperMode.DISCARD)
-
-    @property
     def flags(self):
         """Return the CLI flags to select this mode."""
         # First modes that only have a long version
@@ -69,3 +64,17 @@ class BookkeeperMode(Enum):
         """Return the long CLI flag for this mode."""
         long_flag = self.value.replace('_', '-')
         return f'--{long_flag}'
+
+    @property
+    def uses_ori_files_as_fallback(self):
+        """Return whether '*_ori' files are used as fallback for archiving.
+
+        This is the case if an input file in original_inputs is not
+        found, but it is present in the current directory with an
+        _ori suffix.
+
+        Returns
+        -------
+        bool
+        """
+        return self in (BookkeeperMode.CLEAR, BookkeeperMode.DISCARD)

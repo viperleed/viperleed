@@ -344,7 +344,8 @@ class Bookkeeper:
             elif file in RUNTIME_GENERATED_INPUT_FILES:
                 # Ignore optional inputs in root. If the user gave
                 # these explicitly, they have already been copied
-                # by calc to original_inputs
+                # by calc to original_inputs, and they should be
+                # already handled by "elif original_file.is_file()".
                 continue
             elif cwd_file.is_file():  # Copy cwd and warn
                 copy_file, with_name = cwd_file, f'{cwd_file.name}{_FROM_ROOT}'
