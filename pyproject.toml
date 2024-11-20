@@ -219,6 +219,7 @@ xfail_strict = true
     ignore = [
         'ANN',    # do not require annotations
         'Q000',   # do not highlight quotes in ruff check, as format will do it
+        'TD',     # allow todo comments
     ]
     flake8-quotes.inline-quotes='single'
 
