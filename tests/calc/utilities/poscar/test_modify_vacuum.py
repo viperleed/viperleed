@@ -13,9 +13,9 @@ from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.classes.slab.errors import VacuumError
 from viperleed.calc.classes.slab.surface_slab import _MIN_VACUUM
-from viperleed.utilities.poscar import modify_vacuum
 from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
 from viperleed.utilities.poscar.modify_vacuum import VacuumGapInfo
+from viperleed.utilities.poscar.modify_vacuum import modify_vacuum
 
 from ... import poscar_slabs
 from ...tags import CaseTag as Tag
@@ -81,7 +81,7 @@ class TestModifyVacuum:
         slab, *_ = test_slab
         vacuum_gap_info = VacuumGapInfo(size=vacuum_gap_size, absolute=True)
         with pytest.raises(VacuumError):
-            modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
+            modify_vacuum(slab, vacuum_gap_info)
 
     @infoless
     def test_not_enough_vacuum_error(self, test_slab):
@@ -89,7 +89,7 @@ class TestModifyVacuum:
         slab, *_ = test_slab
         gap = VacuumGapInfo(size=0.5, absolute=True, accept_small_gap=False)
         with pytest.raises(VacuumError):
-            modify_vacuum.modify_vacuum(slab, gap)
+            modify_vacuum(slab, gap)
 
     @infoless
     def test_accept_small_gap(self, test_slab):
@@ -100,7 +100,7 @@ class TestModifyVacuum:
         gap = VacuumGapInfo(size=0.0, absolute=True, accept_small_gap=True)
         # gap size recognition likely does not work for slabs with gaps < 5AA
         # so we shouldn't test for the exact gap size
-        modify_vacuum.modify_vacuum(slab, gap)
+        modify_vacuum(slab, gap)
 
     @infoless
     def test_zero_gap_raises(self, test_slab):
@@ -110,4 +110,4 @@ class TestModifyVacuum:
         if slab.thickness <= SINGLE_LAYER:
             pytest.skip('Single layer; would lead to zero volume cell')
         with pytest.raises(VacuumError):
-            modify_vacuum.modify_vacuum(slab, vacuum_gap_info)
+            modify_vacuum(slab, vacuum_gap_info)
