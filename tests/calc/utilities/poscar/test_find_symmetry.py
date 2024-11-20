@@ -12,7 +12,6 @@ import pytest_cases
 from viperleed.utilities.poscar.find_symmetry import FindSymmetryCLI
 
 from ... import poscar_slabs
-from ...tags import CaseTag as Tag
 
 with_info = pytest_cases.parametrize_with_cases(
     'test_slab',
@@ -28,6 +27,7 @@ def test_find_symmetry_parser(test_slab):
     args = parser.parse_args([])
 
     # Check if the correct symmetry group is found
-    found_plane_group = FindSymmetryCLI().process_slab(slab, args).foundplanegroup
+    found_plane_group = (
+        FindSymmetryCLI().process_slab(slab, args).foundplanegroup)
     assert found_plane_group == expected_plane_group
 
