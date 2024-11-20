@@ -23,11 +23,12 @@ with_info = pytest_cases.parametrize_with_cases(
 def test_find_symmetry_parser(test_slab):
     slab, _, info = test_slab
     expected_plane_group = info.symmetry.hermann
-    parser = FindSymmetryCLI().parser
+    cli = FindSymmetryCLI()
+    parser = cli.parser
     args = parser.parse_args([])
 
     # Check if the correct symmetry group is found
     found_plane_group = (
-        FindSymmetryCLI().process_slab(slab, args).foundplanegroup)
+        cli.process_slab(slab, args).foundplanegroup)
     assert found_plane_group == expected_plane_group
 
