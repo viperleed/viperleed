@@ -54,9 +54,10 @@ def modify_vacuum(slab, vacuum_gap_info):
     Parameters
     ----------
     slab : Slab
-        Slab to prepare for relaxation,
+        The slab to prepare for relaxation.
     vacuum_gap_info : VacuumGapInfo
-        Information about the desired vacuum gap.
+        Information about the desired vacuum gap, including whether the size 
+        is absolute or relative and whether small gaps are acceptable.
 
     Returns
     -------
@@ -65,8 +66,19 @@ def modify_vacuum(slab, vacuum_gap_info):
 
     Raises
     ------
-    RuntimeError
-        If the resulting vacuum gap size is negative.
+    NotEnoughVacuumError
+        If the resulting vacuum gap size is negative or too small and 
+        `accept_small_gap` is not enabled in `vacuum_gap_info`.
+    WrongVacuumPositionError
+        If the vacuum gap cannot be modified due to an incorrect existing
+        vacuum position in the POSCAR and `accept_small_gap` is not enabled.
+
+    Notes
+    -----
+    The method checks and modifies the `c_vector` of the slab to adjust 
+    the vacuum gap. It ensures that the `a` and `b` vectors lie in-plane 
+    and recalculates Cartesian coordinates from fractional coordinates 
+    as necessary.
     """
     processed_slab = deepcopy(slab)
     processed_slab.check_a_b_in_plane()
