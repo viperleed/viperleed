@@ -248,6 +248,7 @@ class _PoscarSymmetryCLI(_PoscarStreamCLI, ABC, cli_name=None):
 
     def add_parser_arguments(self, parser):
         """Add SYMMETRY_EPS optional arguments."""
+        super().add_parser_arguments(parser)
         parser.add_argument(
             '-e', '--symmetry-eps',
             help=('Epsilon for symmetry detection in angstrom. '
