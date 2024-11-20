@@ -220,6 +220,8 @@ xfail_strict = true
         'ANN',    # do not require annotations
         'Q000',   # do not highlight quotes in ruff check, as format will do it
         'TD',     # allow todo comments
+        'FA100',  # don't check for 'from __future__ import annotations'
+        'G004',   # allow f-strings in logging
     ]
     flake8-quotes.inline-quotes='single'
 
