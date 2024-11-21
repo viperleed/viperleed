@@ -26,6 +26,19 @@ class TestFindSymmetry:
     """Tests for the find_symmetry utility."""
 
     @with_info
+    def test_pipe_poscar(self, test_case, capsys, mocker):
+        """Check correct reading of a POSCAR file from stdin."""
+        *_, info = test_case
+        poscar_path = POSCAR_PATH/info.poscar.name
+        expected_plane_group = info.symmetry.hermann
+        mock_stdin = StringIO(poscar_path.read_text())
+        mocker.patch('sys.stdin', mock_stdin)
+        find_symmetry_cli = FindSymmetryCLI()
+        find_symmetry_cli([])
+        captured = capsys.readouterr()
+        assert captured.out.rstrip() == expected_plane_group
+
+    @with_info
     def test_plane_group_to_outfile(self, test_case, tmp_path):
         """Check identification of plane group with an explicit outfile."""
         *_, info = test_case
