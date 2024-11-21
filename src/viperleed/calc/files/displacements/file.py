@@ -180,7 +180,8 @@ class DisplacementsFile:
 
                 elif isinstance(read, OffsetsLine):
                     if (
-                        self.current_section is not DisplacementFileSections.OFFSETS
+                        self.current_section
+                        is not DisplacementFileSections.OFFSETS
                     ):
                         raise ValueError(
                             'Offsets line found outside of an OFFSETS block.'
