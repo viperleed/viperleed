@@ -171,8 +171,7 @@ class _TestBookkeeperRunBase:
         bookkeeper, *_ = after_archive
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
-        kwargs.setdefault('mode', self.mode)
-        bookkeeper.run(**kwargs)
+        self._run_bookkeeper(bookkeeper, kwargs)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
@@ -199,8 +198,7 @@ class _TestBookkeeperRunBase:
         if check_archiving_required:
             # bookkeeper should think that it needs archiving
             assert bookkeeper.archiving_required
-        kwargs.setdefault('mode', self.mode)
-        bookkeeper.run(**kwargs)
+        self._run_bookkeeper(bookkeeper, kwargs)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_calc_execution)
         self.check_out_files_in_history(*after_calc_execution)
@@ -236,9 +234,13 @@ class _TestBookkeeperRunBase:
         if check_archiving_required:
             # bookkeeper should not think that it needs archiving
             assert not bookkeeper.archiving_required
-        kwargs.setdefault('mode', self.mode)
-        exit_code = bookkeeper.run(**kwargs)
+        exit_code = self._run_bookkeeper(bookkeeper, kwargs)
         # Bookkeeper should not do anything (except for logging)
         self.check_history_folder_empty(before_calc_execution)
         self.check_root_inputs_untouched(before_calc_execution)
         assert exit_code is not BookkeeperExitCode.FAIL
+
+    def _run_bookkeeper(self, bookkeeper, kwargs):
+        """Execute a bookkeeper run and return its exit code."""
+        kwargs.setdefault('mode', self.mode)
+        return bookkeeper.run(**kwargs)
