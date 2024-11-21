@@ -7,7 +7,8 @@ SECTION_HEADER_PATTERN = re.compile(
 
 OFFSETS_LINE_PATTERN = re.compile(
     r'^(?P<type>geo|vib|occ)\s+'
-    r'(?P<targets>[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*(?:\s*,\s*[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*)*)'
+    r'(?P<targets>[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*'
+    r'(?:\s*,\s*[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*)*)'
     r'(?:\s+(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?))?\s*=\s*'
     r'(?P<value>-?\d+(\.\d+)?)$'
 )
@@ -21,7 +22,8 @@ GEO_LINE_PATTERN = re.compile(
     r'(?:\s+(?P<step>-?\d+(\.\d+)?))?$'
 )
 VIB_LINE_PATTERN = re.compile(
-    r'^(?P<label>\*|\*?\w+)(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?'
+    r'^(?P<label>\*|\*?\w+)'
+    r'(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?'
     r'\s*=\s*(?P<start>-?\d+(\.\d+)?)'
     r'\s+(?P<stop>-?\d+(\.\d+)?)'
     r'(?:\s+(?P<step>-?\d+(\.\d+)?))?$'
