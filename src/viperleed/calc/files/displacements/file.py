@@ -87,7 +87,7 @@ class DisplacementsFile:
         for block in reversed(self.blocks):
             if block == LoopMarker.LOOP_START:
                 return True
-            elif block == LoopMarker.LOOP_END:
+            if block == LoopMarker.LOOP_END:
                 break
         return False
 
@@ -180,8 +180,7 @@ class DisplacementsFile:
 
                 elif isinstance(read, OffsetsLine):
                     if (
-                        not self.current_section
-                        is DisplacementFileSections.OFFSETS
+                        self.current_section is not DisplacementFileSections.OFFSETS
                     ):
                         raise ValueError(
                             'Offsets line found outside of an OFFSETS block.'

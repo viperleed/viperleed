@@ -17,8 +17,7 @@ SectionHeaderLine = namedtuple('SectionHeaderLine', ['section'])
 def _get_target(label, which):
     if which is None:
         return BSTarget(label)
-    else:
-        return BSTarget(f'{label} {which}')
+    return BSTarget(f'{label} {which}')
 
 
 class GeoDeltaLine:

@@ -4,10 +4,9 @@ __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-04'
 
 import re
-from collections import namedtuple
 from enum import Enum
 
-from .errors import InvalidDisplacementsSyntaxError, SymmetryViolationError
+from .errors import InvalidDisplacementsSyntaxError
 from .lines import (
     ConstraintLine,
     GeoDeltaLine,
@@ -68,7 +67,7 @@ class DisplacementsReader(InputFileReader):
         if stripped_line == r'<loop>':
             self.current_section = None
             return LoopMarkerLine(LoopMarker.LOOP_START)
-        elif stripped_line == r'<\loop>':
+        if stripped_line == r'<\loop>':
             self.current_section = None
             return LoopMarkerLine(LoopMarker.LOOP_END)
 
@@ -100,18 +99,17 @@ class DisplacementsReader(InputFileReader):
         section = DisplacementFileSections[self.current_section]
         if section is DisplacementFileSections.OFFSETS:
             return self._read_offsets_line(line)
-        elif section is DisplacementFileSections.GEO_DELTA:
+        if section is DisplacementFileSections.GEO_DELTA:
             return self._read_geo_delta_line(line)
-        elif section is DisplacementFileSections.VIB_DELTA:
+        if section is DisplacementFileSections.VIB_DELTA:
             return self._read_vib_delta_line(line)
-        elif section is DisplacementFileSections.OCC_DELTA:
+        if section is DisplacementFileSections.OCC_DELTA:
             return self._read_occ_delta_line(line)
-        elif section is DisplacementFileSections.CONSTRAIN:
+        if section is DisplacementFileSections.CONSTRAIN:
             return self._read_constraints_line(line)
-        else:
-            raise ValueError(
-                f"Cannot parse line '{line}' without a section header."
-            )
+        raise ValueError(
+            f"Cannot parse line '{line}' without a section header."
+        )
 
     def _read_offsets_line(self, line):
         """Parse a line in the OFFSETS section."""

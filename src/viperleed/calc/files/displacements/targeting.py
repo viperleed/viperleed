@@ -10,7 +10,8 @@ import numpy as np
 
 def generate_label_match_regex(label):
     """Generate a regex pattern to match variations of the given label,
-    with '*' acting as a wildcard for word characters, and matching prefixes."""
+    with '*' acting as a wildcard for word characters, and matching prefixes.
+    """
     # Escape any special characters in the label, except for '*'
     escaped_label = re.escape(label).replace(r'\*', r'\w*')
 

@@ -10,7 +10,8 @@ import numpy as np
 
 class Direction:
     """Class to parse and handle direction information in 3D space, supporting
-    either Cartesian or fractional coordinates."""
+    either Cartesian or fractional coordinates.
+    """
 
     def __init__(self, direction_str):
         self._fractional = (
@@ -23,7 +24,8 @@ class Direction:
 
     def _parse_direction(self, direction_str):
         """Parse the direction string and return normalized 3D vectors and
-        number of free directions."""
+        number of free directions.
+        """
         dir_labels = 'abc' if self._fractional else 'xyz'
 
         if '[' in direction_str:  # Handle vector cases like 'xy[1 1]'
@@ -66,7 +68,8 @@ class Direction:
 
     def _get_basis_vector(self, direction, dir_labels):
         """Return the 3D basis vector or a placeholder for fractional
-        coordinates 'a', 'b', 'c'."""
+        coordinates 'a', 'b', 'c'.
+        """
         basis_vectors = {
             'x': [1, 0, 0],
             'y': [0, 1, 0],
@@ -87,7 +90,8 @@ class Direction:
 
     def _normalize_vectors(self, vectors):
         """Normalize vectors and raise error if zero-length vector is
-        detected."""
+        detected.
+        """
         normalized_vectors = []
         for vec in vectors:
             if isinstance(vec, str):
@@ -115,7 +119,8 @@ class Direction:
         ucell[:,0] is the x vector, ucell[:,1] is the y vector, and ucell[:,2]
         is the z vector.
         Only applies to 'a', 'b', and 'c' directions, returns cartesian
-        coordinates."""
+        coordinates.
+        """
         scaled_vectors = []
         for vec in self._vectors:
             if isinstance(vec, str):
