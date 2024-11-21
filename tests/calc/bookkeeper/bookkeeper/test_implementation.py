@@ -105,7 +105,10 @@ class TestBookkeeperComplaints:
         """Check warnings when no original_input is present."""
         bookkeeper = Bookkeeper(cwd=tmp_path)
         root_tree = {
-            DEFAULT_OUT: {},  # Otherwise 'nothing to do'
+            # A log file to ensure timestamps don't shift by 1 sec. See
+            # also comments in fixture_funky_files. This is also enough
+            # to ensure that there is something to archive.
+            f'{LOG_PREFIX}-{MOCK_TIMESTAMP}.log': None,
             'POSCAR': None,
             }
         filesystem_from_dict(root_tree, tmp_path)
