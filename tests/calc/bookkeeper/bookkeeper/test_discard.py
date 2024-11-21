@@ -24,6 +24,12 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 
     mode = BookkeeperMode.DISCARD
 
+    def check_last_entry_discarded(self, bookkeeper, *_):
+        """Ensure the last history.info entry has a DISCARDED tag."""
+        info = bookkeeper.history.info
+        assert info.last_entry_was_discarded
+        assert _DISCARDED in info.path.read_text()
+
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in CLEAR mode."""
         self.run_before_calc_exec_and_check(before_calc_execution)
@@ -43,9 +49,10 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
             out_content = (cwd / file).read_text()
             assert MOCK_INPUT_CONTENT in out_content
         # A 'DISCARDED' note should be in history.info
-        assert _DISCARDED in bookkeeper.history.info.path.read_text()
-        # Some fields are knowingly faulty,
-        # but we can still DISCARD them.
+        self.check_last_entry_discarded(*after_archive)
+
+        # Some history.info fields are knowingly faulty,
+        # but we can still DISCARD the entry.
         faulty_entry_logs = (
             'Found entry with',
             'Could not understand',
@@ -82,8 +89,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         self.run_and_check_prerun_archiving(after_calc_execution, caplog)
 
         # A 'DISCARDED' note should be in history.info...
-        assert bookkeeper.history.info.last_entry_was_discarded
-        assert _DISCARDED in bookkeeper.history.info.path.read_text()
+        self.check_last_entry_discarded(*after_calc_execution)
         # ...but should have been added already when archiving, not
         # as a result of a call to history.info.discard_last_entry.
         mock_discard.assert_not_called()
