@@ -41,13 +41,8 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
     def test_discard_after_archive(self, after_archive, caplog):
         """Check reverting of state when DISCARDing an ARCHIVEd calc run."""
         self.run_after_archive_and_check(after_archive)
+        self.check_root_reverted_to_previous_calc_run(*after_archive)
 
-        # Original be replaced by output                                        # TODO: this does something else!
-        bookkeeper, *_ = after_archive
-        cwd = bookkeeper.cwd
-        for file in MOCK_STATE_FILES:
-            out_content = (cwd / file).read_text()
-            assert MOCK_INPUT_CONTENT in out_content
         # A 'DISCARDED' note should be in history.info
         self.check_last_entry_discarded(*after_archive)
 

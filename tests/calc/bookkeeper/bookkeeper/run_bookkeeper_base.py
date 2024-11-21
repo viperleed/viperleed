@@ -145,6 +145,11 @@ class _TestBookkeeperRunBase:
         assert not (cwd / DEFAULT_OUT).exists()
         assert not any(cwd.glob('*.log'))
 
+    def check_root_reverted_to_previous_calc_run(self, bookkeeper, *_):
+        """Ensure root contains the same as after the previous calc run."""
+        self.check_root_is_clean(bookkeeper)
+        self.check_root_inputs_untouched(bookkeeper)
+
     def check_workhistory_archived(self, bookkeeper, *_):
         """Ensure the workhistory folders have been stored correctly."""
         history = bookkeeper.history.path

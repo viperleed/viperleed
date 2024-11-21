@@ -73,8 +73,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
             assert history_run_path.is_dir()
             return
         assert not history_run_path.is_dir()
-        self.check_root_is_clean(*after_archive)
-        self.check_root_inputs_untouched(*after_archive)
+        self.check_root_reverted_to_previous_calc_run(*after_archive)
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
         # "Sibling" folders that were archived from
