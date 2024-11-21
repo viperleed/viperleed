@@ -36,6 +36,13 @@ class _TestBookkeeperRunBase:
 
     mode = None
 
+    @staticmethod
+    def _check_file_contents(path, *expected_contents):
+        """Check that the file at path has any of the expected_contents."""
+        assert path.is_file()
+        contents = path.read_text()
+        assert any(e in contents for e in expected_contents)
+
     def check_metadata_exists(self, history_folder):
         """Test that the metadata file is present in `history_folder`."""
         assert (history_folder / _METADATA_NAME).is_file()
@@ -50,8 +57,7 @@ class _TestBookkeeperRunBase:
             archived_input = history_run_path / file
             assert archived_input.is_file()
             if check_input_contents:
-                contents = archived_input.read_text()
-                assert any(e in contents for e in expected_contents)
+                self._check_file_contents(archived_input, *expected_contents)
 
     def check_history_exists(self, bookkeeper, history_run_path):
         """Test that history_path and directory/history.info exist."""
@@ -89,16 +95,14 @@ class _TestBookkeeperRunBase:
         *_, history_run_path = run
         for file in MOCK_STATE_FILES:
             hist_file = history_run_path / DEFAULT_OUT / f'{file}_OUT'
-            assert hist_file.is_file()
-            assert MOCK_OUT_CONTENT in hist_file.read_text()
+            self._check_file_contents(hist_file, MOCK_OUT_CONTENT)
 
     def check_out_files_untouched(self, bookkeeper, *_):
         """Ensure all expected files are found in OUT."""
         out = bookkeeper.cwd / DEFAULT_OUT
         for file in MOCK_STATE_FILES:
             out_file = out / f'{file}_OUT'
-            assert out_file.is_file
-            assert MOCK_OUT_CONTENT in out_file.read_text()
+            self._check_file_contents(out_file, MOCK_OUT_CONTENT)
 
     def check_root_after_archive(self, *after_archive,
                                  check_input_contents=True):
@@ -116,27 +120,21 @@ class _TestBookkeeperRunBase:
         """Check that the input files have now a _ori suffix."""
         cwd = bookkeeper.cwd
         for file in MOCK_STATE_FILES:
-            ori_contents = (cwd / f'{file}_ori').read_text()
-            assert MOCK_INPUT_CONTENT in ori_contents
-            if not check_input_contents:
-                continue
-            input_content = (cwd / file).read_text()
-            assert MOCK_OUT_CONTENT in input_content
+            self._check_file_contents(cwd/f'{file}_ori', MOCK_INPUT_CONTENT)
+            if check_input_contents:
+                self._check_file_contents(cwd/file, MOCK_OUT_CONTENT)
 
     def check_root_inputs_replaced_by_out(self, bookkeeper, *_):
         """Check that the input files in root come from OUT."""
         cwd = bookkeeper.cwd
         for file in MOCK_STATE_FILES:
-            out_content = (cwd / file).read_text()
-            assert MOCK_OUT_CONTENT in out_content
+            self._check_file_contents(cwd/file, MOCK_OUT_CONTENT)
 
     def check_root_inputs_untouched(self, bookkeeper, *_):
         """Check the the original state files have not been moved."""
         cwd = bookkeeper.cwd
         for file in MOCK_STATE_FILES:
-            assert (cwd / file).is_file()
-            input_content = (cwd / file).read_text()
-            assert MOCK_INPUT_CONTENT in input_content
+            self._check_file_contents(cwd/file, MOCK_INPUT_CONTENT)
 
     def check_root_is_clean(self, bookkeeper, *_):
         """Check that no calc output is present in the main directory."""
@@ -159,8 +157,7 @@ class _TestBookkeeperRunBase:
             moved_dir = history/hist_name
             moved_file = moved_dir/'file'
             assert moved_dir.is_dir()
-            assert moved_file.is_file()
-            assert ori_name in moved_file.read_text()
+            self._check_file_contents(moved_file, ori_name)
 
     def run_after_archive_and_check(self, after_archive,
                                     check_input_contents=True,
