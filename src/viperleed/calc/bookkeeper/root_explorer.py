@@ -226,7 +226,7 @@ class RootExplorer:
             try:
                 ori_file.replace(state_file)
             except OSError:
-                LOGGER.error(f'Failed to move {ori_file} '
+                LOGGER.error(f'Failed to rename {ori_file.name} '
                              f'to {state_file.name}.')
                 raise
 

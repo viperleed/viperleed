@@ -143,8 +143,8 @@ class WorkhistoryHandler:
             try:
                 shutil.rmtree(directory)
             except OSError:
-                LOGGER.error(f'Failed to delete {directory} directory '
-                             f'from {self.path}', exc_info=True)
+                LOGGER.error(f'Failed to delete {directory.name} directory '
+                             f'from {self.path.name}', exc_info=True)
 
     def _find_directories(self, contains=''):
         """Return a generator of subfolders in the current workhistory folder.
@@ -217,6 +217,9 @@ class WorkhistoryHandler:
             try:
                 directory.replace(target)
             except FileExistsError:
+                # TODO: this and the next logging errors could
+                # be improved by shortening the faulty paths
+                # to be relative to the self.bookkeeper.cwd
                 LOGGER.error(f'Error: Failed to move {directory} to {target}: '
                              'Target path already exists. Stopping...')
                 raise

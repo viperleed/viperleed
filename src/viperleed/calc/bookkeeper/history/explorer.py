@@ -133,7 +133,8 @@ class HistoryExplorer:
             try:
                 shutil.rmtree(folder_path)
             except OSError:
-                LOGGER.error(f'Error: Failed to delete {folder_path}.')
+                folder_name = folder_path.relative_to(self.root)
+                LOGGER.error(f'Error: Failed to delete {folder_name}.')
                 raise
 
     def find_new_history_directory(self, tensor_number, suffix):

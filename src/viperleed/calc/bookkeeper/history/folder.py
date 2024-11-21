@@ -162,7 +162,10 @@ class HistoryFolder(IncompleteHistoryFolder):
         try:
             self.metadata.read()  # pylint: disable=no-member  # Inference
         except FileNotFoundError:
-            LOGGER.warning(f'No metadata file found at {self.path}. Consider '
-                           f'running bookkeeper {Mode.FIX.long_flag}.')
+            folder_name = f'{self.path.parent.name}/{self.path.name}'
+            LOGGER.warning(
+                f'No metadata file found in {folder_name}. '
+                f'Consider running bookkeeper {Mode.FIX.long_flag}.'
+                )
             # pylint: disable-next=no-member  # It's BookkeeperMetaFile
             self.metadata.compute_hash()   # Don't write to file though
