@@ -7,47 +7,50 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-11-20'
 __license__ = 'GPLv3+'
 
-import pytest
-import pytest_cases
+from io import StringIO
+
+from pytest_cases import parametrize_with_cases
 
 from viperleed.utilities.poscar.find_symmetry import FindSymmetryCLI
 
+from ....helpers import POSCAR_PATH
 from ... import poscar_slabs
 
-with_info = pytest_cases.parametrize_with_cases(
-    'test_slab',
+with_info = parametrize_with_cases(
+    'test_case',
     cases=poscar_slabs.CasePOSCARSlabs.case_poscar,
-)
+    )
 
 
-@with_info
-def test_find_symmetry_parser(test_slab):
-    slab, _, info = test_slab
-    expected_plane_group = info.symmetry.hermann
-    find_symmetry_cli = FindSymmetryCLI()
-    parser = find_symmetry_cli.parser
-    args = parser.parse_args([])
+class TestFindSymmetry:
+    """Tests for the find_symmetry utility."""
 
-    # Check if the correct symmetry group is found
-    found_plane_group = (
-        find_symmetry_cli.process_slab(slab, args).foundplanegroup)
-    assert found_plane_group == expected_plane_group
+    @with_info
+    def test_plane_group_to_outfile(self, test_case, tmp_path):
+        """Check identification of plane group with an explicit outfile."""
+        *_, info = test_case
+        poscar_path = POSCAR_PATH/info.poscar.name
+        out_path = tmp_path / f'out_{info.poscar.name}.txt'
+        expected_plane_group = info.symmetry.hermann
+        find_symmetry_cli = FindSymmetryCLI()
+        find_symmetry_cli([
+            '-o', str(out_path),
+            '-i', str(poscar_path),
+            ])
 
-@with_info
-def test_find_symmetry_to_outfile(test_slab, tmp_path):
-    slab, _, info = test_slab
-    out_path = tmp_path / f'out_{info.poscar.name}.txt'
-    expected_plane_group = info.symmetry.hermann
-    cli = FindSymmetryCLI()
-    parser = cli.parser
-    args = parser.parse_args(['-o', str(out_path)])
+        # Check that the correct symmetry group is written to file
+        read_plane_group = out_path.read_text(encoding='utf-8').strip()
+        assert read_plane_group == expected_plane_group
 
-    # process the slab and write the output to the outfile
-    processed_slab = cli.process_slab(slab, args)
-    cli.write_output(processed_slab, args)
-    args.outfile.close()
-
-    # Check if the correct symmetry group is written to the outfile
-    with open(out_path, 'r') as f:
-        read_plane_group = f.read().strip()
-    assert read_plane_group == expected_plane_group
+    @with_info
+    def test_plane_group_to_stdout(self, test_case, capsys):
+        """Check that the correct plane group is printed to STDOUT."""
+        *_, info = test_case
+        poscar_path = POSCAR_PATH/info.poscar.name
+        expected_plane_group = info.symmetry.hermann
+        find_symmetry_cli = FindSymmetryCLI()
+        find_symmetry_cli([
+            '-i', str(poscar_path),
+            ])
+        captured = capsys.readouterr()
+        assert captured.out.rstrip() == expected_plane_group
