@@ -62,7 +62,6 @@ class TestModifyVacuum:
     def test_parser_gap_relative(self, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with relative vacuum gap."""
         modify_vacuum_cli = ModifyVacuumCLI()
-        parser = ModifyVacuumCLI().parser
         parsed_args = modify_vacuum_cli.parse_cli_args([str(vacuum_gap_size)])
         assert parsed_args.vacuum == vacuum_gap_size
         assert parsed_args.absolute is False
@@ -71,7 +70,6 @@ class TestModifyVacuum:
     def test_parser_gap_absolute(self, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with relative vacuum gap."""
         modify_vacuum_cli = ModifyVacuumCLI()
-        parser = ModifyVacuumCLI().parser
         parsed_args = modify_vacuum_cli.parse_cli_args(
             [str(vacuum_gap_size), '-a'])
         assert parsed_args.vacuum == vacuum_gap_size
