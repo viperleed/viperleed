@@ -67,8 +67,9 @@ def modify_vacuum(slab, vacuum_gap_info):
     Raises
     ------
     NotEnoughVacuumError
-        If the resulting vacuum gap size is negative or too small and 
-        `accept_small_gap` is not enabled in `vacuum_gap_info`.
+        If the resulting vacuum-gap size is negative, or if
+        `accept_small_gap` is not enabled in `vacuum_gap_info`
+        and the resulting vacuum-gap size is smaller than 5 A.
     WrongVacuumPositionError
         If the vacuum gap cannot be modified due to an incorrect existing
         vacuum position in the POSCAR and `accept_small_gap` is not enabled.
