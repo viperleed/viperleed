@@ -1,7 +1,8 @@
-"""Module interpolation
+"""Module interpolation.
 
 This module is a reworking of scipy's and my Bspline interpolation methods.
-It can interpolate functions efficiently and in a JAX-compatible way."""
+It can interpolate functions efficiently and in a JAX-compatible way.
+"""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-02-19'
@@ -52,8 +53,7 @@ def interpolate_ragged_array(
             x, y[:, dim], axis=0, bc_type=bc_type, extrapolate=None
         )
         all_coeffs[:, start_id : start_id + spline.c.shape[1], dim] = spline.c
-    spline = interpax.PPoly.construct_fast(all_coeffs, x)
-    return spline
+    return interpax.PPoly.construct_fast(all_coeffs, x)
 
 
 ##############################################################################
@@ -74,7 +74,7 @@ B_TO_PP_SPLINE_BASIS_TRANSFORMATION = np.array(
 
 
 def translate_cubic_pp_spline_coeffs(s):
-    """Returns a transformation matrix that translates spline coeffiecients.
+    """Return a transformation matrix that translates spline coeffiecients.
 
     The return transformation can be applied to the coefficients (a,b,c,d) of a
     cubic (spline) in the piecewise-polynomial basis, i.e.:
