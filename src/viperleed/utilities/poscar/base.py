@@ -79,7 +79,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                             help=help_,
                             default=sys.stdin)
 
-    def add_outfile_argument(self, parser, help_=None):
+    def add_outfile_argument(self, parser):
         """Add an optional --outfile/-o argument to parser.
 
         This method is automatically called by the base implementation
@@ -204,6 +204,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
             return poscar.read(args.infile)
         except (ValueError, poscar.POSCARError) as exc:
             self.parser.error(f'Failed to read POSCAR. Stopping. Info: {exc}')
+        return None  # Unreachable as .error does SystemExit
 
     def write_output(self, processed_slab, args):
         """Write output to an output file or the terminal.
