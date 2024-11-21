@@ -222,6 +222,9 @@ xfail_strict = true
         'TD',     # allow todo comments
         'FA100',  # don't suggest for 'from __future__ import annotations'
         'G004',   # allow f-strings in logging
+        'COM812', # avoids conflicts with formatter
+        'ISC001', # avoids conflicts with formatter
+        'TRY003', # allow long error messages
     ]
     flake8-quotes.inline-quotes='single'
 
