@@ -46,6 +46,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         slab = self.read_poscar(parsed_args)
         processed_slab = self.process_slab(slab, parsed_args)
         self.write_output(processed_slab, parsed_args)
+        self._close_open_files(parsed_args)
         return 0
 
     def add_infile_argument(self, parser):
@@ -218,7 +219,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
             The slab processed by this utility.
         args : argparse.Namespace
             The processed command-line arguments.
-        
+
         Raises
         ------
         AttributeError
@@ -239,6 +240,19 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                      filename=args.outfile,
                      comments='none',
                      silent=debug_or_lower(self.get_logger()))
+
+    def _close_open_files(self, args):
+        """Close any open file in args."""
+        cli_args = ('infile', 'outfile')
+        for cli_arg in cli_args:
+            try:
+                file = getattr(args, cli_arg)
+            except AttributeError:
+                # Someone has removed the CLI argument. Don't complain
+                pass
+            if file in (sys.stdin, sys.stdout):  # Leave terminal open
+                continue
+            file.close()
 
 
 EPS_DEFAULT = PARAM_DEFAULTS['SYMMETRY_EPS']
