@@ -115,8 +115,8 @@ class TestModifyVacuum:
         if slab.thickness <= SINGLE_LAYER:
             pytest.skip('Single layer; would lead to zero volume cell')
         gap = VacuumGapInfo(size=0.0, absolute=True, accept_small_gap=True)
-        # gap size recognition likely does not work for slabs with gaps < 5AA
-        # so we shouldn't test for the exact gap size
+        # gap size recognition likely does not work for slabs with
+        # gaps < 5AA so we shouldn't test for the exact gap size
         modify_vacuum(slab, gap)
 
     @infoless
