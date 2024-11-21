@@ -175,7 +175,7 @@ class _TestBookkeeperRunBase:
             *after_archive,
             check_input_contents=check_input_contents,
             )
-        if self.mode is BookkeeperMode.ARCHIVE:
+        if kwargs['mode'] is BookkeeperMode.ARCHIVE:
             self.check_root_after_archive(
                 *after_archive,
                 check_input_contents=check_input_contents,
