@@ -1,3 +1,8 @@
+"""Module displacements/regex."""
+
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__created__ = '2024-10-03'
+
 import contextlib
 import re
 
