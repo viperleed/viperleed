@@ -90,7 +90,7 @@ class TestGenerateBeamlist:
         # range of applicable TensErLEED versions
         folder_to_range = {}
         for folder in (data_path / 'BEAMLISTs').iterdir():
-            version_min_max = [Version(v) for v in folder.name.split('-')]
+            version_min_max = [Version(v) for v in folder.name.split('-') if v]
             # pylint: disable-next=magic-value-comparison
             if len(version_min_max) < 2:
                 version_min_max.append(None)
