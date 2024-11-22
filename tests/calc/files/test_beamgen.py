@@ -83,7 +83,7 @@ class TestGenerateBeamlist:
         return slab, rpars, info
 
     @fixture(name='get_expected_beamlist', scope='class')
-    def fixture_get_expected_beamlist(data_path):
+    def fixture_get_expected_beamlist(self, data_path):
         """Return a path to the test-data file for the right beam list."""
         # Find a mapping between subfolders and the
         # range of applicable TensErLEED versions
