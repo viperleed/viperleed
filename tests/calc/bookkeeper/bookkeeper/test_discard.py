@@ -32,7 +32,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in CLEAR mode."""
-        self.run_before_calc_exec_and_check(before_calc_execution)
+        self.run_before_calc_exec_and_check(before_calc_execution, caplog)
         self.check_no_warnings(
             caplog,
             exclude_msgs=('Failed to mark last entry as discarded',),
@@ -40,7 +40,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 
     def test_discard_after_archive(self, after_archive, caplog):
         """Check reverting of state when DISCARDing an ARCHIVEd calc run."""
-        self.run_after_archive_and_check(after_archive)
+        self.run_after_archive_and_check(after_archive, caplog)
         self.check_root_reverted_to_previous_calc_run(*after_archive)
 
         # A 'DISCARDED' note should be in history.info

@@ -23,12 +23,12 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in CLEAR mode."""
-        self.run_before_calc_exec_and_check(before_calc_execution)
+        self.run_before_calc_exec_and_check(before_calc_execution, caplog)
         self.check_no_warnings(caplog)
 
     def test_clear_after_archive(self, after_archive, caplog):
         """Check behavior of CLEAR after ARCHIVE (e.g., manual call)."""
-        self.run_after_archive_and_check(after_archive)
+        self.run_after_archive_and_check(after_archive, caplog)
         self.check_root_inputs_replaced_by_out(*after_archive)
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 

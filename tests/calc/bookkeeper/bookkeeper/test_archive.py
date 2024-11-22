@@ -35,6 +35,7 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         for file in MOCK_STATE_FILES:
             (cwd / file).write_text(sentinel_text)
         self.run_after_archive_and_check(after_archive,
+                                         caplog,
                                          check_input_contents=False)
         for file in MOCK_STATE_FILES:
             assert (cwd / file).read_text() == sentinel_text
@@ -42,5 +43,5 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check no archiving happens before calc runs."""
-        self.run_before_calc_exec_and_check(before_calc_execution)
+        self.run_before_calc_exec_and_check(before_calc_execution, caplog)
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))

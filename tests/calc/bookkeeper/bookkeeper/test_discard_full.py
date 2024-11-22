@@ -45,6 +45,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         None.
         """
         self.run_before_calc_exec_and_check(before_calc_execution,
+                                            caplog,
                                             requires_user_confirmation=False)
         self.check_no_warnings(
             caplog,

@@ -30,6 +30,7 @@ class TestBookkeeperDuringCalc(_TestBookkeeperRunBase):
         bookkeeper = Bookkeeper(cwd=tmp_path)
         # Before calc, we run in CLEAR mode
         self.run_before_calc_exec_and_check(bookkeeper,
+                                            caplog,
                                             check_archiving_required=False,
                                             mode='clear')
         # Then, we simulate a calc run that produces some output

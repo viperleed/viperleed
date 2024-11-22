@@ -73,6 +73,12 @@ class _TestBookkeeperRunBase:
                             if f.name != BOOKIE_LOGFILE)
         assert not any(history_contents)
 
+    def check_no_duplicate_logs(self, caplog):
+        """Ensure no warning is repeated twice."""
+        records = caplog.records
+        messages = set(r.getMessage() for r in records)
+        assert len(messages) == len(records)
+
     def check_no_warnings(self, caplog, contain=None, exclude_msgs=()):
         """Check that there are no warnings or errors."""
         if contain is None:
@@ -164,14 +170,16 @@ class _TestBookkeeperRunBase:
             assert moved_dir.is_dir()
             self._check_file_contents(moved_file, ori_name)
 
-    def run_after_archive_and_check(self, after_archive,
+    def run_after_archive_and_check(self,
+                                    after_archive,
+                                    caplog,
                                     check_input_contents=True,
                                     **kwargs):
         """Check that running bookkeeper after ARCHIVE does basic stuff."""
         bookkeeper, *_ = after_archive
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
-        self._run_bookkeeper(bookkeeper, kwargs)
+        self._run_bookkeeper(bookkeeper, kwargs, caplog)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
@@ -190,7 +198,9 @@ class _TestBookkeeperRunBase:
         # also where they should be
         self.check_workhistory_archived(bookkeeper)
 
-    def run_after_calc_exec_and_check(self, after_calc_execution,
+    def run_after_calc_exec_and_check(self,
+                                      after_calc_execution,
+                                      caplog,
                                       check_archiving_required=True,
                                       **kwargs):
         """Check that running bookkeeper after calc does some basic stuff."""
@@ -198,7 +208,7 @@ class _TestBookkeeperRunBase:
         if check_archiving_required:
             # bookkeeper should think that it needs archiving
             assert bookkeeper.archiving_required
-        self._run_bookkeeper(bookkeeper, kwargs)
+        self._run_bookkeeper(bookkeeper, kwargs, caplog)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_calc_execution)
         self.check_out_files_in_history(*after_calc_execution)
@@ -206,7 +216,7 @@ class _TestBookkeeperRunBase:
 
     def run_and_check_prerun_archiving(self, after_calc_execution, caplog):
         """Execute bookkeeper, and verify it has archived a calc run."""
-        self.run_after_calc_exec_and_check(after_calc_execution)
+        self.run_after_calc_exec_and_check(after_calc_execution, caplog)
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))
         self.check_root_is_clean(*after_calc_execution)
 
@@ -222,11 +232,15 @@ class _TestBookkeeperRunBase:
             'check_archiving_required': check_archiving_required,
             'mode': 'archive',
             }
-        self.run_after_calc_exec_and_check(after_calc_execution, **kwargs)
+        self.run_after_calc_exec_and_check(after_calc_execution,
+                                           caplog,
+                                           **kwargs)
         self.check_root_after_archive(*after_calc_execution)
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
-    def run_before_calc_exec_and_check(self, before_calc_execution,
+    def run_before_calc_exec_and_check(self,
+                                       before_calc_execution,
+                                       caplog,
                                        check_archiving_required=True,
                                        **kwargs):
         """Check that running bookkeeper before calc does almost nothing."""
@@ -234,13 +248,15 @@ class _TestBookkeeperRunBase:
         if check_archiving_required:
             # bookkeeper should not think that it needs archiving
             assert not bookkeeper.archiving_required
-        exit_code = self._run_bookkeeper(bookkeeper, kwargs)
+        exit_code = self._run_bookkeeper(bookkeeper, kwargs, caplog)
         # Bookkeeper should not do anything (except for logging)
         self.check_history_folder_empty(before_calc_execution)
         self.check_root_inputs_untouched(before_calc_execution)
         assert exit_code is not BookkeeperExitCode.FAIL
 
-    def _run_bookkeeper(self, bookkeeper, kwargs):
+    def _run_bookkeeper(self, bookkeeper, kwargs, caplog):
         """Execute a bookkeeper run and return its exit code."""
         kwargs.setdefault('mode', self.mode)
-        return bookkeeper.run(**kwargs)
+        exit_code = bookkeeper.run(**kwargs)
+        self.check_no_duplicate_logs(caplog)
+        return exit_code

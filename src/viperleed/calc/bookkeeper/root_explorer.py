@@ -12,6 +12,7 @@ __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
 from collections import namedtuple
+from contextlib import nullcontext
 from functools import partial
 from operator import attrgetter
 from pathlib import Path
@@ -24,6 +25,7 @@ from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
+from viperleed.calc.lib.log_utils import logging_silent
 
 from .constants import CALC_LOG_PREFIXES
 from .constants import STATE_FILES
@@ -98,15 +100,21 @@ class RootExplorer:
         self.logs.discard()
         self._remove_out_and_supp()
         self._remove_ori_files()
-        self.collect_info()
+        # Let's not complain again about funny stuff. We have already
+        # done so when collect_info was called the first time. Notice
+        # that this must have happened, as this method relies on the
+        # logs attribute to be up to date.
+        self.collect_info(silent=True)
 
-    def collect_info(self):
+    def collect_info(self, silent=False):
         """Collect information from the root directory."""
-        self._logs = LogFiles(self.path)
-        self._logs.collect()
-        self.tensors.collect()
-        self._collect_files_to_archive()
-        self.history.collect_subfolders()
+        log_context = logging_silent if silent else nullcontext
+        with log_context():
+            self._logs = LogFiles(self.path)
+            self._logs.collect()
+            self.tensors.collect()
+            self._collect_files_to_archive()
+            self.history.collect_subfolders()
 
     def infer_run_info(self):
         """Return a dictionary of information read from the newest calc log."""
@@ -175,7 +183,11 @@ class RootExplorer:
         self.logs.discard()
         self._remove_out_and_supp()
         self._replace_state_files_from_ori()
-        self.collect_info()
+        # Let's not complain again about funny stuff. We have already
+        # done so when collect_info was called the first time. Notice
+        # that this must have happened, as this method relies on the
+        # logs attribute to be up to date.
+        self.collect_info(silent=True)
 
     def update_state_files_from_out(self):
         """Move state files from OUT to root. Rename old to '_ori'."""
