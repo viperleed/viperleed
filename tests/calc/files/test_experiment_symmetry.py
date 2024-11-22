@@ -55,3 +55,22 @@ def test_write_fails_without_bulk_info(args, tmp_path):
 
     with pytest.raises(MissingBulkSlabError):
         experiment_symmetry.write(slab, rpars)
+
+@parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                        has_tag=Tag.BULK_PROPERTIES)
+def test_write_failing(args, monkeypatch):
+    slab, rpars, info = args
+
+    # create bulkslab
+    slab.make_bulk_slab(rpars)
+
+    # Monkey patch the `open` function to raise OSError
+    def mock_open(*args, **kwargs):
+        raise OSError("Mocked OSError")
+
+    # put some fake THEO_ENERGIES
+    rpars.THEO_ENERGIES = rpars.THEO_ENERGIES.from_value([10, 100, 2])
+
+    monkeypatch.setattr('builtins.open', mock_open)
+    with pytest.raises(OSError):
+        experiment_symmetry.write(slab, rpars)
