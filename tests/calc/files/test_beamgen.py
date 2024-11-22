@@ -88,17 +88,18 @@ class TestGenerateBeamlist:
         """Return a path to the test-data file for the right beam list."""
         # Find a mapping between subfolders and the
         # range of applicable TensErLEED versions
-        range_to_folder = {}
+        folder_to_range = {}
         for folder in (data_path / 'BEAMLISTs').iterdir():
             version_min_max = [Version(v) for v in folder.name.split('-')]
+            # pylint: disable-next=magic-value-comparison
             if len(version_min_max) < 2:
                 version_min_max.append(None)
-            range_to_folder[tuple(version_min_max)] = folder
+            folder_to_range[folder] = tuple(version_min_max)
 
         def _get_tl_version_path(rpars):
             """Return which of the 'BEAMLISTs' subfolders applies."""
             version = rpars.TL_VERSION
-            for (v_min, v_max), folder in range_to_folder.items():
+            for folder, (v_min, v_max) in folder_to_range.items():
                 if version < v_min:
                     continue
                 if v_max and version > v_max:
