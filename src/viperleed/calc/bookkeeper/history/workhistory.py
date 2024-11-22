@@ -22,24 +22,26 @@ __license__ = 'GPLv3+'
 from operator import attrgetter
 import shutil
 
+from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ..constants import HISTORY_FOLDER_RE
 from ..log import LOGGER
+from ..utils import make_property
 from .meta import BookkeeperMetaFile
 
 
 class WorkhistoryHandler:
     """A class that takes care of the workhistory folder."""
 
-    def __init__(self, work_history_path, bookkeeper):
+    def __init__(self, root, bookkeeper):
         """Initialize an instance to handle `work_history_path`.
 
         Parameters
         ----------
-        work_history_path : Path
-            The path to the 'workhistory' folder
-            that this instance will work on.
+        root : Path
+            The path to the folder containing the 'workhistory'
+            directory that this instance will work on.
         bookkeeper : Bookkeeper
             The Bookkeeper instance associated
             with this WorkhistoryHandler.
@@ -48,8 +50,11 @@ class WorkhistoryHandler:
         -------
         None.
         """
-        self.path = work_history_path
+        self._path = root / DEFAULT_WORK_HISTORY
         self.bookkeeper = bookkeeper
+
+    path = make_property('_path')
+    root = make_property('path.parent')
 
     @property
     def history(self):

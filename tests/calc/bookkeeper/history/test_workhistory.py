@@ -15,6 +15,7 @@ from unittest.mock import patch
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.calc.bookkeeper.history.workhistory import WorkhistoryHandler
 
@@ -47,9 +48,10 @@ def fixture_workhistory(mock_path, mock_bookkeeper):
 
 
 @fixture(name='patched_path')
-def factory_patched_path(mock_path):
+def factory_patched_path(workhistory):
     """Return a fake Path with methods patched as specified."""
     def _patch(**methods_and_return):
+        mock_path = workhistory.path
         for method_name, return_value in methods_and_return.items():
             method = getattr(mock_path, method_name)
             setattr(method, 'return_value', return_value)
@@ -62,7 +64,7 @@ class TestWorkhistoryHandler:
 
     def test_init(self, workhistory, mock_path, mock_bookkeeper):
         """Test initialization."""
-        assert workhistory.path is mock_path
+        assert workhistory.path == mock_path / DEFAULT_WORK_HISTORY
         assert workhistory.bookkeeper is mock_bookkeeper
 
     def test_history_property(self, workhistory, mock_bookkeeper):

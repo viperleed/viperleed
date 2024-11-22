@@ -23,7 +23,6 @@ from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
 
@@ -63,10 +62,8 @@ class RootExplorer:
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
         self.history = HistoryExplorer(self.path)
-        self.workhistory = WorkhistoryHandler(
-            work_history_path=self.path / DEFAULT_WORK_HISTORY,
-            bookkeeper=bookkeeper,
-            )
+        self.workhistory = WorkhistoryHandler(root=self.path,
+                                              bookkeeper=bookkeeper)
 
     # Simple read-only properties
     logs = make_property('_logs', needs_update=True, updater='collect_info')
