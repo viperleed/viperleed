@@ -4,8 +4,9 @@
 test.py
 *wrong*
 
-# editable install files and folders
+# editable install files and folders and other distribution stuff
 **/*egg-info*
+dist
 
 # macOS files
 .DS_Store

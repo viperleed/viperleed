@@ -106,8 +106,8 @@ can use to locate the :ref:`tensor-LEED code<install_tensorleed>`.
 
         .. code-block:: bash
 
-            echo '# Set environment variable for viperleed-tensorleed' > ~/.bashrc
-            echo 'export VIPERLEED_TENSORLEED="<path/to/your/local/copy/of/viperleed-tensorleed>"' > ~/.bashrc
+            echo '# Set environment variable for viperleed-tensorleed' >> ~/.bashrc
+            echo 'export VIPERLEED_TENSORLEED="<path/to/your/local/copy/of/viperleed-tensorleed>"' >> ~/.bashrc
 
   .. tab-item:: Windows, via CMD
 
@@ -194,6 +194,21 @@ This section provides a guide on how to install the Intel Fortran compiler
 :term:`mpiifort`. All the necessary components are packaged as part of the
 |oneAPI| toolkits.
 
+.. _ifort_deprecation:
+.. warning::
+    The :program:`ifort` compiler (named "Fortran Compiler Classic") was
+    `deprecated by Intel <https://community.intel.com/t5/Blogs/Tech-Innovation/Tools/Deprecation-of-The-Intel-Fortran-Compiler-Classic-ifort/post/1541699>`__
+    in 2023, and has been replaced with the new LLVM-based :program:`ifx`
+    compiler. :program:`ifort` is no longer distributed with |oneAPI|
+    starting from version 2025.0. The most recent version that ships
+    :program:`ifort` is therefore 2024.2. |calc| currently **does not**
+    **support** :program:`ifx`. Be sure to use a version
+    :math:`\leq` 2024.2 when installing |oneAPI|.
+    If you cannot obtain an old-enough version that contains :program:`ifort`,
+    you may `ask Intel <https://community.intel.com/t5/oneAPI-Registration-Download/bd-p/registration-download-licensing-instal>`__
+    to provide you with a direct-download link. You can also contact us
+    on `GitHub <https://github.com/viperleed/viperleed/issues>`__.
+
 ViPErLEED requires the |oneAPI| Base Toolkit and the |oneAPI| HPC Toolkit.
 
 .. note::
@@ -232,8 +247,13 @@ The full documentation of the |oneAPI| is available from the
 
     .. code-block:: bash
 
-        sudo apt install intel-basekit -y
-        sudo apt install intel-hpckit -y
+        sudo apt install intel-basekit-<version> -y
+        sudo apt install intel-hpckit-<version> -y
+
+    .. warning::
+        Be sure to pick a ``<version>`` of |oneAPI| (e.g., replace
+        ``<version>`` above with ``2024.2``) that includes the :program:`ifort`
+        compiler. See also the :ref:`warning <ifort_deprecation>` above.
 
     Once installation completes, we need to configure the system and add the
     compilers to our system path. First, we need to make sure the required
@@ -270,7 +290,7 @@ The full documentation of the |oneAPI| is available from the
 
   .. tab-item:: macOS
 
-    .. warning::
+    .. note::
         Newer Macs using "Apple Silicon" ARM-based chips are incompatible
         with the Intel compilers (since they don't use Intel chips).
         Use :ref:`install_gcc` instead.
@@ -280,6 +300,10 @@ The full documentation of the |oneAPI| is available from the
     to install the |oneAPI| toolkits under macOS. As for
     :ref:`Linux<ifort_linux>`, you will need to install the |oneAPI| Base
     Toolkit and the |oneAPI| HPC Toolkit.
+
+    .. warning::
+        Be sure to pick a version of |oneAPI| that includes the :program:`ifort`
+        compiler. See also the :ref:`warning <ifort_deprecation>` above.
 
   .. tab-item:: Windows Subsystem for Linux
 
@@ -311,6 +335,10 @@ The full documentation of the |oneAPI| is available from the
     to install the |oneAPI| toolkits under Windows. As for Linux, you will
     need to install the |oneAPI| Base Toolkit and the |oneAPI| HPC Toolkit.
 
+    .. warning::
+        Be sure to pick a version of |oneAPI| that includes the :program:`ifort`
+        compiler. See also the :ref:`warning <ifort_deprecation>` above.
+
     The |oneAPI| toolkits require specific environment variables to be set
     before compilers can be used. The toolkits come with dedicated ``.bat``
     scripts that must be executed on each session of the terminal. For more
@@ -318,54 +346,64 @@ The full documentation of the |oneAPI| is available from the
     `this guide <https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2024-1/use-the-setvars-script-with-windows.html>`__
     from Intel.
 
-    Notice that :program:`cmd` can use a mechanism similar to the
-    :file:`.bashrc` startup script for Linux's :program:`bash`. This
-    means that dedicated commands can be executed upon startup of each
-    :program:`cmd` session. To set this up:
+    Notice that :program:`cmd` can, in principle, use a mechanism similar
+    to the :file:`.bashrc` startup script for Linux's :program:`bash`.
+    However, there are limitations, and the |oneAPI| batch scripts
+    **cannot be run automatically** together with :program:`cmd`.
 
-    -  Open the Windows registry editor via the :guilabel:`Run` dialog
-       (\ :kbd:`Win+R`): type ``regedit``, then press :kbd:`Enter`. Confirm
-       the administrator permissions.
-    -  Navigate to
-       :guilabel:`HKEY_CURRENT_USER/Software/Microsoft/Command Processor/`.
-       If :guilabel:`Command Processor` does not exist, right click on
-       :guilabel:`Microsoft`, select :menuselection:`New --> Key`, and
-       name the new entry ``Command Processor``.
-    -  Find the :guilabel:`AutoRun` entry in the right
-       panel. If no :guilabel:`AutoRun` exists, create
-       a :menuselection:`New --> String value` by right
-       clicking. Name it ``AutoRun``.
-    -  Skip this passage if the :guilabel:`AutoRun` entry already has a value.
-       :menuselection:`Modify...` the empty value of the :guilabel:`AutoRun`
-       entry to ``%USERPROFILE%\cmd-autorun.bat``. ``%USERPROFILE%`` is the
-       path to your user directory. You can find its value by typing
+    The easiest alternative is to create an alias batch file, and add its
+    location to the :envvar:`Path` environment variable to limit the amount
+    of typing. This way the alias batch file will be available in every
+    :program:`cmd` session. Here the steps for an example setting:
 
-       .. code-block:: bat
+    -   Navigate to your user-profile directory in :program:`Explorer`. To find
+        the location of your user directory type
 
-          echo %USERPROFILE%
+        .. code-block:: bat
 
-       in a terminal. On Windows 10 and later, you can also directly navigate
-       to the location in :program:`Explorer` by typing ``%USERPROFILE%`` in
-       the Windows Start menu or in the address bar of an :program:`Explorer`
-       window.
-    -  Navigate to the file path set as a value for the :guilabel:`AutoRun`
-       entry. You can create a new file with the correct name if it does not
-       exist. Then append the following lines to the end:
+            echo %USERPROFILE%
 
-       .. code-block:: bat
+        in a terminal. On Windows 10 and later, you can also directly navigate
+        to the location in :program:`Explorer` by typing ``%USERPROFILE%`` in
+        the Windows Start menu or in the address bar of an :program:`Explorer`
+        window.
+    -   Create a folder :file:`.cmd_aliases`
+    -   There, create a file :file:`activate_intel.bat` with the following
+        contents
 
-         @echo off
-         call "<full/path/to/correct/intel/oneapi/bat/file>"
-         @echo on
+        .. code-block:: bat
 
-    -  Close the registry editor.
-    -  Open a new :program:`cmd` session, and test that the |oneAPI| compilers
-       are now visible via
+            @echo off
+            call "<full/path/to/correct/intel/oneapi/bat/file>" 1>nul
+            echo Done
+    -   Add the path to :file:`.cmd_aliases` to your :envvar:`Path`
+        environment variable. See :ref:`set_envvar` for how to access the
+        environment-variable settings on Windows. Edit the :envvar:`Path`
+        environment variable by appending :file:`%USERPROFILE%\\.cmd_aliases`.
+        On Windows 7, use a semicolon as separator.
+    -   Open a new :program:`cmd` session. Activate |oneAPI| by typing
 
-       .. code-block:: bat
+        .. code-block:: bat
 
-         ifort --version
-         mpiifort --version
+            activate_intel.bat
+
+        and wait for the "``Done``" reply. Then check that the |oneAPI|
+        compilers are now visible via
+
+        .. code-block:: bat
+
+            ifort -D
+            mpiifort -D
+    
+    .. important::
+        You will have to
+        
+        .. code-block:: bat
+
+            activate_intel.bat
+        
+        **every time** you open a **new** :program:`cmd` session to have
+        the |oneAPI| compilers available.
 
 
 .. _install_gcc:

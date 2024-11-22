@@ -785,11 +785,21 @@ class TestOptimize(_TestInterpretBase):
         rpars.RUN.append(6)
         self.check_raises(interpreter, val, exc, flags_str=flag)
 
-    def test_interpret_superfluous(self, interpreter):
+    _dont_interpret = {id_: (value, flag)  # No exception info
+                       for id_, (value, flag, _) in invalid.items()}
+    _dont_interpret['flag_and_value'] = valid['flag_and_value'][:2]
+
+    @parametrize('value,flag', _dont_interpret.values(), ids=_dont_interpret)
+    def test_interpret_superfluous(self, value, flag,
+                                   interpreter, caplog, subtests):
         """Ensure that defining OPTIMIZE without RUN=6 complains."""
-        val, flag, *_ = self.valid['flag_and_value']
-        self.check_raises(interpreter, val, err.SuperfluousParameterError,
-                           flags_str=flag)
+        self.interpret(interpreter, value, flags_str=flag)
+        rpars = interpreter.rpars
+        interpreted = self.rpars_value(interpreter)
+        with subtests.test('value unchanged'):
+            assert interpreted == rpars.get_default(self.param)
+        with subtests.test('log warning'):
+            assert 'RUN does not include' in caplog.text
 
 
 class TestParabolaFit(_TestInterpretBase):

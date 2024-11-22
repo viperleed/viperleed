@@ -4,10 +4,6 @@ RUN = 0
 LOG_DEBUG = True
 THEO_ENERGIES =   50 350 3
 
-! Test that FORTRAN_COMP works without quotes
-FORTRAN_COMP = gfortran
-FORTRAN_COMP post = -llapack -lpthread -lblas
-
 
 ! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
 
