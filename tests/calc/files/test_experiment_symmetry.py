@@ -21,8 +21,10 @@ from ..tags import CaseTag as Tag
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
 
-@parametrize_with_cases('args', cases=CasePOSCARSlabs,
-                        has_tag=Tag.BULK_PROPERTIES)
+with_bulk_info = parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                                        has_tag=Tag.BULK_PROPERTIES)
+
+@with_bulk_info
 def test_write_experiment_symmetry(args, tmp_path):
     slab, rpars, info = args
 
@@ -56,8 +58,7 @@ def test_write_fails_without_bulk_info(args, tmp_path):
     with pytest.raises(MissingBulkSlabError):
         experiment_symmetry.write(slab, rpars)
 
-@parametrize_with_cases('args', cases=CasePOSCARSlabs,
-                        has_tag=Tag.BULK_PROPERTIES)
+@with_bulk_info
 def test_write_failing(args, monkeypatch):
     slab, rpars, info = args
 
