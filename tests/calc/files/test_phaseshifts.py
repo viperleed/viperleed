@@ -47,8 +47,7 @@ def test_phaseshifts_not_empty(run_phaseshift):
 
 
 def test_check_consistency_element_order_no_false_positives(run_phaseshift):
-    """Test for __check_consitency_element_order().
-    Checks that non of the example systems produce false positives."""
+    """Check that no example system produces false positives for elements."""
     rpars, slab, _, phaseshift = run_phaseshift
     inconsistencies = phaseshifts.__check_consitency_element_order(
         rpars, slab, phaseshift)
