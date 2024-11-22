@@ -326,7 +326,7 @@ class BaseSlab(AtomContainer):
 
     @property
     def top_atom(self):
-        """Return the atom currently at the bottom of this slab."""
+        """Return the atom currently at the top of this slab."""
         # Do it the most efficient way possible, i.e., with the
         # atom container that should have the fewest atoms. We
         # rely on the z-sorting of layers and sublayers.

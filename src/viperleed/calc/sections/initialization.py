@@ -815,7 +815,7 @@ def _check_and_warn_layer_cuts(rpars, slab):
         logger.warning(
             f"Layer cuts are very close together. The minimum spacing "
             f"between layers is {min_spacing:.2f} Å. This may lead to "
-            "covergence issues in the reference calculation. Check the "
+            "convergence issues in the reference calculation. Check the "
             "LAYERS_CUTS parameter in the PARAMETERS file."
             )
 
