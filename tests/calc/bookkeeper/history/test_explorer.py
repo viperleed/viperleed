@@ -89,7 +89,7 @@ class TestHistoryExplorer:
         """Check that exceptions while removing folders are propagated."""
         mocker.patch.object(history,
                             'list_paths_to_discard',
-                            return_value=('some value',))
+                            return_value=(history.path/'some_subfolder',))
         with raises_exception('shutil.rmtree', OSError):
             history.discard_most_recent_run()
 

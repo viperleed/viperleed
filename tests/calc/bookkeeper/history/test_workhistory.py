@@ -206,7 +206,7 @@ class TestWorkhistoryHandlerRaises:
         """Check that failing to remove "previous" does not break."""
         mocker.patch.object(workhistory,
                             '_find_directories',
-                            return_value=(1,))
+                            return_value=(workhistory.path/'some_folder',))
         with make_obj_raise('shutil.rmtree', OSError):
             # pylint: disable-next=protected-access       # OK in tests
             workhistory._discard_previous()
