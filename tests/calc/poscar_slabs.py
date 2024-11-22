@@ -137,6 +137,7 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
                      {'Ni': 402, 'Al': 134+132+188, 'O': 188+213},
                      'p3'),
     _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
+    _get_poscar_info('POSCAR_SiC_H', 17, 'p3m1',),
     )
 
 
