@@ -10,6 +10,7 @@ __license__ = 'GPLv3+'
 
 from contextlib import nullcontext
 
+import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import symmetry
