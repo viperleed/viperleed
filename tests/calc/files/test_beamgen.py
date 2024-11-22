@@ -116,6 +116,7 @@ class TestGenerateBeamlist:
                 raise FileNotFoundError(f'Found no {beamlist_name} '
                                         f'file in {folder}')
             return beamlist_file
+        return _get_path_to_beamlist_file
 
     @fixture(name='make_beamlist', scope='class')
     def fixture_make_beamlist(self, prepare_for_beamlist,
