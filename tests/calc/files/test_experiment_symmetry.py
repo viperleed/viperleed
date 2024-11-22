@@ -9,7 +9,9 @@ __license__ = 'GPLv3+'
 
 import os
 
+import pytest
 from pytest_cases import parametrize_with_cases
+from viperleed.calc.classes.slab import MissingBulkSlabError
 from viperleed.calc.files import experiment_symmetry
 
 from pathlib import Path
@@ -39,3 +41,17 @@ def test_write_experiment_symmetry(args, tmp_path):
     content = (path / 'experiment_symmetry.ini').read_text()
     assert 'superlattice' in content
     assert 'eMax = 100.00' in content
+
+
+@parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                        has_tag=Tag.NO_INFO)
+def test_write_fails_without_bulk_info(args, tmp_path):
+    slab, rpars, info = args
+
+    os.chdir(tmp_path)
+
+    # put some fake THEO_ENERGIES
+    rpars.THEO_ENERGIES = rpars.THEO_ENERGIES.from_value([10, 100, 2])
+
+    with pytest.raises(MissingBulkSlabError):
+        experiment_symmetry.write(slab, rpars)
