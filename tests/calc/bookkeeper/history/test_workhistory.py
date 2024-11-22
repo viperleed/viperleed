@@ -237,6 +237,7 @@ class TestWorkhistoryHandlerRaises:
         mocker.patch.object(workhistory,
                             'find_current_directories',
                             return_value=(directory,))
+        mocker.patch.object(type(workhistory), 'history')
         raises_ = raises_exception(directory, FileExistsError, 'replace')
         with patch_rmtree, raises_:
             # pylint: disable-next=protected-access       # OK in tests

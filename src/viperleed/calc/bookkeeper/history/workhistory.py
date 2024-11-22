@@ -222,14 +222,15 @@ class WorkhistoryHandler:
             try:
                 directory.replace(target)
             except FileExistsError:
-                # TODO: this and the next logging errors could
-                # be improved by shortening the faulty paths
-                # to be relative to the self.bookkeeper.cwd
-                LOGGER.error(f'Error: Failed to move {directory} to {target}: '
-                             'Target path already exists. Stopping...')
+                LOGGER.error(
+                    f'Error: Failed to move {directory.relative_to(self.root)}'
+                    f' to {target.relative_to(self.root)}: Target path already'
+                    ' exists. Stopping...'
+                    )
                 raise
             except OSError:
-                LOGGER.error(f'Error: Failed to move {directory}.',
+                LOGGER.error('Error: Failed to move '
+                             f'{directory.relative_to(self.root)}.',
                              exc_info=True)
                 continue
             tensor_nums.add(tensor_num)
