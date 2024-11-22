@@ -180,7 +180,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     # Check consitency of phaseshift values (unless we
     # already know we have to make a new file anyway)
     if not newpsGen:
-        __check_consitency_element_order(rp, sl, phaseshifts)
+        __check_consistency_element_order(rp, sl, phaseshifts)
 
     return firstline, phaseshifts, newpsGen, newpsWrite
 
@@ -365,7 +365,7 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen):
     return newpsGen
 
 
-def __check_consitency_element_order(rp, sl, phaseshifts,
+def __check_consistency_element_order(rp, sl, phaseshifts,
                                      eps=None, l_max_cutoff=3):
     """Determine if elements may have been assigned wrong phaseshifts.
 
