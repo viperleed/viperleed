@@ -11,10 +11,18 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+from pytest_cases import fixture
+
 from viperleed.calc.bookkeeper.history.entry.notes_field import _DISCARDED
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
 from .run_bookkeeper_base import _TestBookkeeperRunBase
+
+
+@fixture(name='after_discard')
+def fixture_after_discard(after_archive, after_bookkeper_run):
+    """Prepare a directory like the one after DISCARD was executed."""
+    return after_bookkeper_run(after_archive, BookkeeperMode.DISCARD)
 
 
 class TestBookkeeperDiscard(_TestBookkeeperRunBase):
@@ -86,3 +94,12 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         # ...but should have been added already when archiving, not
         # as a result of a call to history.info.discard_last_entry.
         mock_discard.assert_not_called()
+
+    def test_discard_twice(self, after_discard, caplog):
+        """Check that double discarding does nothing."""
+        warnings = (
+            'metadata',
+            'already discarded',
+            )
+        self.run_again_and_check_nothing_changed(after_discard, caplog,
+                                                 acceptable_warnings=warnings)

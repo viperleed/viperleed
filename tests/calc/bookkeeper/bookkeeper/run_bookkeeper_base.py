@@ -24,6 +24,7 @@ from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 
+from ....helpers import filesystem_to_dict
 from ..conftest import MOCK_INPUT_CONTENT
 from ..conftest import MOCK_OUT_CONTENT
 from ..conftest import MOCK_ORIG_CONTENT
@@ -47,7 +48,7 @@ class _TestBookkeeperRunBase:
         """Test that the metadata file is present in `history_folder`."""
         assert (history_folder / _METADATA_NAME).is_file()
 
-    def check_input_files_in_history(self, *run, check_input_contents=True):
+    def check_input_files_in_history(self, *run):
         """Make sure that input files were stored in history."""
         *_, history_run_path = run
         expected_contents = (MOCK_INPUT_CONTENT,)
@@ -56,8 +57,7 @@ class _TestBookkeeperRunBase:
         for file in MOCK_STATE_FILES:
             archived_input = history_run_path / file
             assert archived_input.is_file()
-            if check_input_contents:
-                self._check_file_contents(archived_input, *expected_contents)
+            self._check_file_contents(archived_input, *expected_contents)
 
     def check_history_exists(self, bookkeeper, history_run_path):
         """Test that history_path and directory/history.info exist."""
@@ -110,25 +110,18 @@ class _TestBookkeeperRunBase:
             out_file = out / f'{file}_OUT'
             self._check_file_contents(out_file, MOCK_OUT_CONTENT)
 
-    def check_root_after_archive(self, *after_archive,
-                                 check_input_contents=True):
+    def check_root_after_archive(self, *after_archive):
         """Make sure the root is structured as expected after archiving."""
-        self.check_root_inputs_renamed_to_ori(
-            *after_archive,
-            check_input_contents=check_input_contents
-            )
+        self.check_root_inputs_renamed_to_ori(*after_archive)
         self.check_out_files_untouched(*after_archive)
-        if check_input_contents:
-            self.check_root_inputs_replaced_by_out(*after_archive)
+        self.check_root_inputs_replaced_by_out(*after_archive)
 
-    def check_root_inputs_renamed_to_ori(self, bookkeeper, *_,
-                                         check_input_contents=True):
+    def check_root_inputs_renamed_to_ori(self, bookkeeper, *_):
         """Check that the input files have now a _ori suffix."""
         cwd = bookkeeper.cwd
         for file in MOCK_STATE_FILES:
             self._check_file_contents(cwd/f'{file}_ori', MOCK_INPUT_CONTENT)
-            if check_input_contents:
-                self._check_file_contents(cwd/file, MOCK_OUT_CONTENT)
+            self._check_file_contents(cwd/file, MOCK_OUT_CONTENT)
 
     def check_root_inputs_replaced_by_out(self, bookkeeper, *_):
         """Check that the input files in root come from OUT."""
@@ -170,11 +163,7 @@ class _TestBookkeeperRunBase:
             assert moved_dir.is_dir()
             self._check_file_contents(moved_file, ori_name)
 
-    def run_after_archive_and_check(self,
-                                    after_archive,
-                                    caplog,
-                                    check_input_contents=True,
-                                    **kwargs):
+    def run_after_archive_and_check(self, after_archive, caplog, **kwargs):
         """Check that running bookkeeper after ARCHIVE does basic stuff."""
         bookkeeper, *_ = after_archive
         # bookkeeper should not think that it needs archiving
@@ -183,15 +172,9 @@ class _TestBookkeeperRunBase:
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
         self.check_out_files_in_history(*after_archive)
-        self.check_input_files_in_history(
-            *after_archive,
-            check_input_contents=check_input_contents,
-            )
+        self.check_input_files_in_history(*after_archive)
         if kwargs['mode'] is BookkeeperMode.ARCHIVE:
-            self.check_root_after_archive(
-                *after_archive,
-                check_input_contents=check_input_contents,
-                )
+            self.check_root_after_archive(*after_archive)
         else:
             self.check_root_is_clean(*after_archive)
         # Check that the workhistory directories are
@@ -213,6 +196,31 @@ class _TestBookkeeperRunBase:
         self.check_history_exists(*after_calc_execution)
         self.check_out_files_in_history(*after_calc_execution)
         self.check_workhistory_archived(*after_calc_execution)
+
+    def run_again_and_check_nothing_changed(self, run, caplog,
+                                            acceptable_warnings=()):
+        """Ensure running bookkeeper again with the same mode does nothing."""
+        bookkeeper, *_ = run
+        # We will collect the current state of the root folder (except
+        # for the bookkeeper.log that changes) and ensure that running
+        # doesn't change it.
+        kwargs, skip = {}, {BOOKIE_LOGFILE}
+
+        # To ensure the input files are not fiddled with, replace
+        # their contents with some other text.
+        sentinel_text = ('This is some other text to ensure file contents '
+                         'are not modified when running twice')
+        cwd = bookkeeper.cwd
+        for file in MOCK_STATE_FILES:
+            (cwd / file).write_text('something else')
+        before_run = filesystem_to_dict(cwd, skip=skip)
+        exit_code = self._run_bookkeeper(bookkeeper, kwargs, caplog)
+        after_run = filesystem_to_dict(cwd, skip=skip)
+
+        # Exit code should be SUCCESS or NOTHING_TO_DO
+        assert exit_code is not BookkeeperExitCode.FAIL
+        assert after_run == before_run
+        self.check_no_warnings(caplog, exclude_msgs=acceptable_warnings)
 
     def run_and_check_prerun_archiving(self, after_calc_execution, caplog):
         """Execute bookkeeper, and verify it has archived a calc run."""
@@ -248,6 +256,9 @@ class _TestBookkeeperRunBase:
         if check_archiving_required:
             # bookkeeper should not think that it needs archiving
             assert not bookkeeper.archiving_required
+        # NOTICE: we do not update_from_cwd on purpose. This way,
+        # the bookkeeper is left in the exact same state it has
+        # after a execution as part of the viperleed.calc CLI.
         exit_code = self._run_bookkeeper(bookkeeper, kwargs, caplog)
         # Bookkeeper should not do anything (except for logging)
         self.check_history_folder_empty(before_calc_execution)
@@ -258,5 +269,8 @@ class _TestBookkeeperRunBase:
         """Execute a bookkeeper run and return its exit code."""
         kwargs.setdefault('mode', self.mode)
         exit_code = bookkeeper.run(**kwargs)
+        # NOTICE: we do not update_from_cwd on purpose. This way,
+        # the bookkeeper is left in the exact same state it has
+        # after a execution as part of the viperleed.calc CLI.
         self.check_no_duplicate_logs(caplog)
         return exit_code

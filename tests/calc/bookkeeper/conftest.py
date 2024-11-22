@@ -4,6 +4,9 @@ Fixtures
 --------
 after_archive
     Prepare a directory like the one after ARCHIVE was executed.
+after_bookkeper_run
+    Factory that runs bookkeeper in a given mode on a given
+    pre-run tree.
 after_calc_execution
     Prepare a directory like the one after calc executes.
 before_calc_execution
@@ -60,6 +63,17 @@ MOCK_WORKHISTORY = {  # name in workhistory: name in history
     f't004.r001_RDS_{MOCK_TIMESTAMP}': f't004.r001.001_RDS_{MOCK_TIMESTAMP}',
     f't004.r002_RDS_{MOCK_TIMESTAMP}': f't004.r001.002_RDS_{MOCK_TIMESTAMP}',
     }
+
+
+@fixture(name='after_bookkeper_run')
+def factory_after_bookkeeper_run():
+    """Prepare a directory like the one after `mode` was executed."""
+    def _make(before_this_run, mode):
+        bookkeeper, *_ = before_this_run
+        bookkeeper.run(mode=mode)
+        bookkeeper.update_from_cwd(silent=True)
+        return before_this_run
+    return _make
 
 
 @fixture(name='mock_tree_after_calc_execution')
@@ -121,7 +135,7 @@ def factory_mock_tree_before_calc_execution(tmp_path):
 
 
 @fixture(name='after_archive')
-def fixture_after_archive(after_calc_execution):
+def fixture_after_archive(after_calc_execution, after_bookkeper_run):
     """Prepare a directory like the one after ARCHIVE was executed.
 
     Parameters
@@ -131,6 +145,9 @@ def fixture_after_archive(after_calc_execution):
         similar to those after calc has finished running, and
         a path to the main history directory that should be
         created by bookkeeper in ARCHIVE mode.
+    after_bookkeper_run : fixture
+        The after_bookkeper_run fixture factory, that will execute
+        bookkeeper in ARCHIVE mode on the tree `after_calc_execution`.
 
     Returns
     -------
@@ -142,10 +159,7 @@ def fixture_after_archive(after_calc_execution):
         Path to the main history subfolder created by `bookkeeper`
         as a result of the archiving.
     """
-    bookkeeper, *_ = after_calc_execution
-    bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
-    bookkeeper.update_from_cwd(silent=True)
-    return after_calc_execution
+    return after_bookkeper_run(after_calc_execution, BookkeeperMode.ARCHIVE)
 
 
 @fixture(name='after_calc_execution')

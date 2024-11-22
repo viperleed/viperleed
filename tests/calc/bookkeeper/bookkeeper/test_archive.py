@@ -26,20 +26,11 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         """Check correct storage of history files in ARCHIVE mode."""
         self.run_archive_after_calc_and_check(after_calc_execution, caplog)
 
-    def test_archive_again(self, after_archive, caplog):
+    def test_archive_twice(self, after_archive, caplog):
         """Bookkeeper ARCHIVE after ARCHIVE should not do anything."""
-        bookkeeper, *_ = after_archive
-        # Write stuff to files to check they are not overwritten
-        cwd = bookkeeper.cwd
-        sentinel_text = 'something else'
-        for file in MOCK_STATE_FILES:
-            (cwd / file).write_text(sentinel_text)
-        self.run_after_archive_and_check(after_archive,
-                                         caplog,
-                                         check_input_contents=False)
-        for file in MOCK_STATE_FILES:
-            assert (cwd / file).read_text() == sentinel_text
-        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
+        warnings = ('metadata',)
+        self.run_again_and_check_nothing_changed(after_archive, caplog,
+                                                 acceptable_warnings=warnings)
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check no archiving happens before calc runs."""

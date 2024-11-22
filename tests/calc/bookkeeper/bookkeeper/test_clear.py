@@ -11,9 +11,17 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+from pytest_cases import fixture
+
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
 from .run_bookkeeper_base import _TestBookkeeperRunBase
+
+
+@fixture(name='after_clear')
+def fixture_after_clear(after_archive, after_bookkeper_run):
+    """Prepare a directory like the one after CLEAR was executed."""
+    return after_bookkeper_run(after_archive, BookkeeperMode.CLEAR)
 
 
 class TestBookkeeperClear(_TestBookkeeperRunBase):
@@ -52,3 +60,9 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         None.
         """
         self.run_and_check_prerun_archiving(after_calc_execution, caplog)
+
+    def text_clear_twice(self, after_clear, caplog):
+        """Ensure running CLEAR twice does nothing."""
+        warnings = ('metadata',)
+        self.run_again_and_check_nothing_changed(after_clear, caplog,
+                                                 acceptable_warnings=warnings)
