@@ -9,8 +9,7 @@ __license__ = 'GPLv3+'
 
 import os
 
-import pytest
-from pytest_cases import parametrize, parametrize_with_cases
+from pytest_cases import parametrize_with_cases
 from viperleed.calc.files import experiment_symmetry
 
 from pathlib import Path
