@@ -14,8 +14,6 @@ __license__ = 'GPLv3+'
 from viperleed.calc.bookkeeper.history.entry.notes_field import _DISCARDED
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
-from ..conftest import MOCK_INPUT_CONTENT
-from ..conftest import MOCK_STATE_FILES
 from .run_bookkeeper_base import _TestBookkeeperRunBase
 
 
