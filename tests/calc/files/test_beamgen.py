@@ -137,13 +137,16 @@ class TestGenerateBeamlist:
             numbered=True,
             )
         beamlist = tmp_dir / 'BEAMLIST'
-        with context:
+        with context as exc_info:
             beamgen.calc_and_write_beamlist(slab,
                                             rpars,
                                             beamlist_name=beamlist)
-            if expected is None:
-                # Use the exception text as a skip reason
-                pytest.skip(context.value.args[0])
+        if expected is None:
+            # Skip all tests that use this fixture if there was
+            # an understandable exception. This typically means
+            # that the structure is unsupported in the TensErLEED
+            # version under test.
+            pytest.skip(str(exc_info.value))
         return slab, rpars, info, expected, beamlist
 
     def test_generate_beamlist(self, make_beamlist):
