@@ -29,6 +29,7 @@ from .known_parameters import did_you_mean
 from .known_parameters import from_alias
 from .utils import Assignment
 
+
 class ParametersReader(InputFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
 
