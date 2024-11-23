@@ -25,8 +25,8 @@ from viperleed.calc.lib.periodic_table import (get_atomic_number,
 
 if CAN_PLOT:
     prepare_matplotlib_for_calc()
+    from matplotlib import pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
 
 
 logger = logging.getLogger(__name__)
