@@ -139,6 +139,7 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
     close_figures(plt, fig)
 
 
+@log_without_matplotlib(logger, msg='Skipping error plotting.')
 def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
                            filename="FD_Optimization_beams.pdf"):
     """
@@ -164,12 +165,6 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
     None.
 
     """
-
-    if not CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "error plotting.")
-        return
-
     new_order = points[:, 0].argsort()
     tmpdirs = list(np.array(tmpdirs)[new_order])
     points = points[new_order]
