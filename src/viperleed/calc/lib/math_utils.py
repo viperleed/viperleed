@@ -18,7 +18,7 @@ import numpy as np
 
 
 def _with_two_args(func):
-    """Raise TypeError if `func` is not called with exactly 2 arguments."""
+    """Raise if `func` is not called with 2 arguments with same shape."""
     nargs = 2
     @wraps(func)
     def _wrapper(*args):
