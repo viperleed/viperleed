@@ -2,7 +2,7 @@
 
 Contains functions and definitions related to our handling of time
 formats, and extensions to the time and datetime standard libraries.
-It also defined the ExecutionTimer and its subclasses, to keep track
+It also defines the ExecutionTimer and its subclasses, to keep track
 of the time spent doing stuff.
 """
 
@@ -116,7 +116,7 @@ class ExecutionTimer:
             The time interval passed since this timer was started.
             When a string (`as_string == True`), it is formatted as:
                 - "H:MM hours"     if interval is longer than 1 h
-                - "M:SS minutes"   if interval is less more than 1 min
+                - "M:SS minutes"   if interval is between 1 and 60 min
                 - "S.mm seconds"   if interval is shorter than 1 min
         """
         interval = self.now() - self.started_at
@@ -148,7 +148,7 @@ class ExpiringOnCountTimer(ExecutionTimer):
             addition with `count_start`.
         count_start : object
             The starting value for the stuff to be "counted". Must
-            support subtraction with other objects to be counted.
+            support subtraction with objects to be counted.
         started_at : float, optional
             When this timer was started. If not given, the timer
             is started right now. Default is None.
@@ -228,9 +228,9 @@ class ExpiringTimer(ExecutionTimer):
         return self._interval
 
     def has_expired(self):
-        """Return whether this interval has gone by and how long in total.
+        """Return whether this interval has gone by.
 
-        If the timer has expired its internal clock for the
+        If the timer has expired, its internal clock for the
         interval is also reset to right now.
 
         Returns
@@ -299,7 +299,7 @@ def _elapsed_time_as_str(interval):
     interval_str : str
         A formatted version of interval. The current formats are:
             - "H:MM hours"     if interval is longer than 1 h
-            - "M:SS minutes"   if interval is less more than 1 min
+            - "M:SS minutes"   if interval is between 1 and 60 min
             - "S.mm seconds"   if interval is shorter than 1 min
     """
     delta = timedelta(seconds=interval)
