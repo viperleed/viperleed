@@ -220,7 +220,7 @@ def _find_type_origin(type_hint):
     if isinstance(actual_type, _SpecialType):
         # Case of typing.Union[...] or typing.ClassVar[...] or ...
         args = ty_get_args(type_hint)
-        all_origins = tuple(tuple(_find_type_origin(arg)) for arg in args)
+        all_origins = (tuple(_find_type_origin(arg)) for arg in args)
         for origins in all_origins:
             yield from origins
     else:
