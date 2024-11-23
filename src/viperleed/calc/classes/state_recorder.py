@@ -27,11 +27,10 @@ class NoStateError(StateError):
     """No states available."""
 
 
-# A state is given by a tuple (slab, rpars).
 CalcState = namedtuple('State', 'slab, rpars, section')
 
 
-# Do not use Sequence as a base class to avoid risking given the
+# Do not use Sequence as a base class to avoid risking giving the
 # impression that this is an immutable object, as Sequence usually
 # is reserved for immutable ones, like tuple or str. However, the
 # full set of methods available for a Sequence is implemented
@@ -108,7 +107,23 @@ class _StateSequence(metaclass=ABCMeta):
         self._recorded_states.pop()
 
     def _check_unexpected_args(self, accepted, *args, **kwargs):
-        """Raise if any argument is passed."""
+        """Raise if any argument is passed.
+
+        Parameters
+        ----------
+        accepted : str
+            Which arguments are acceptable. Used only for the
+            exception message.
+        *args : object
+            Unexpected positional arguments.
+        **kwargs : object
+            Unexpected keyword arguments.
+
+        Raises
+        ------
+        TypeError
+            If any `args` or `kwargs` are given.
+        """
         if args or kwargs:
             raise TypeError(f'{type(self).__name__!r}: Only '
                             f'{accepted} argument(s) are acceptable.')
@@ -127,7 +142,7 @@ class CalcStateRecorder(_StateSequence):
 
     __slots__ = ()  # Prevent adding new attributes at runtime.
 
-    def get_last_section_state(self, section):
+    def get_last_state_for_section(self, section):
         """Return the last state recorded for a given section."""
         section = CalcSection(section)
         try:
@@ -141,18 +156,22 @@ class CalcStateRecorder(_StateSequence):
     # We're just providing a different signature for this concrete
     # implementation. We also check that there are no extra arguments
     # passed, so it's OK to have a different number of arguments. The
-    # others will not cause a TypeError from python, but an more
-    # understandable one.
+    # others will not cause a TypeError from python, but a more
+    # understandable one, via _check_unexpected_args.
     # pylint: disable-next=arguments-differ
     def record(self, slab, rpars, section, *args, **kwargs):
         """Freeze and record the current state."""
-        self._check_unexpected_args('slab, rpars, and slab', *args, **kwargs)
+        self._check_unexpected_args('slab, rpars, and section',
+                                    *args,
+                                    **kwargs)
         super().record(slab, rpars, section)
 
     # pylint: disable-next=arguments-differ              # Like .record
     def _make_new_state(self, slab, rpars, section, *args, **kwargs):
         """Return a new CalcState."""
-        self._check_unexpected_args('slab, rpars, and slab', *args, **kwargs)
+        self._check_unexpected_args('slab, rpars, and section',
+                                    *args,
+                                    **kwargs)
         return CalcState(slab=deepcopy(slab),
                          rpars=deepcopy(rpars),
                          section=CalcSection(section))
