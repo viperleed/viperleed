@@ -238,8 +238,8 @@ class TestCycle:
         'tuple': (tuple(range(10)),
                   21,
                   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                  0]),
+                   0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                   0]),
         }
 
     @parametrize('sequence,n_items,expect', _simple.values(), ids=_simple)
@@ -284,21 +284,23 @@ class TestCycle:
         seq.append(4)
         assert list(islice(gen, 7)) == [2, 3, 4, 1, 2, 3, 4]
 
-    _start = {
+    _start_raises = {
         'string': ([1, 2, 3], 'a', TypeError),
         'float': ([1, 2, 3], 2.5, TypeError),
         'negative for non sequence': ((2*i for i in range(5)), -1, ValueError),
         }
 
-    @parametrize('iterable,start,exc', _start.values(), ids=_start)
+    @parametrize('iterable,start,exc',
+                 _start_raises.values(),
+                 ids=_start_raises)
     def test_raises_start(self, iterable, start, exc):
-        """check complaints for wrong start types."""
+        """Check complaints for wrong start types."""
         with pytest.raises(exc):
             list(islice(cycle(iterable, start=start), 6))
 
 
 class TestNWise:
-    """Tests for the n_wise class."""
+    """Tests for the n_wise iterator."""
 
     _init = {
         'empty string': ('', 5, []),
@@ -316,7 +318,7 @@ class TestNWise:
 
     @parametrize('arg,n_items,expect', _init.values(), ids=_init)
     def test_list(self, arg, n_items, expect):
-        """Check expected outcome for list(pairwise(arg))."""
+        """Check expected outcome for consuming n_wise(arg, n_items)."""
         assert list(n_wise(arg, n_items)) == expect
 
     _raises = {
@@ -327,7 +329,7 @@ class TestNWise:
 
     @parametrize('n_items,exc', _raises.values(), ids=_raises)
     def test_raises(self, n_items, exc):
-        """Check complaints for funny n_wise values."""
+        """Check complaints for funny n_items values."""
         with pytest.raises(exc):
             tuple(n_wise(range(10), n_items))
 
@@ -422,7 +424,7 @@ class TestPairwise:
     @parametrize('reenter_at,expect', _reenter.values(), ids=_reenter)
     @pytest.mark.xfail(sys.version_info < PY_310, reason=xfail_reason)
     def test_reenter(self, reenter_at, expect):
-        """Check that reentering pairwise after reenter_at yields expected."""
+        """Check that reentering pairwise after reenter_at yields expect."""
         iterator = ReenteringIterator(reenter_at, pairwise).iterator
         for item in expect:
             assert next(iterator) == item
