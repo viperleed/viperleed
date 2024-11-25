@@ -47,6 +47,28 @@ class TestModifyVacuum:
                     == pytest.approx(vacuum_gap_size + original_gap))
 
     @parametrize('vacuum_gap_size', [15.0, 100.0])
+    @parametrize("vacuum_gap_size", [1.0, 3.14, 15.0, -1.0])
+    @infoless
+    def test_shifted_slab_down(self, test_slab, vacuum_gap_size):
+        """Test that we get the same result if we shift the slab down."""
+        parser = ModifyVacuumCLI().parser
+        slab, *_ = test_slab
+        min_z = min(at.pos[2] for at in slab)
+        for at in slab:
+            at.pos[2] -= min_z
+        args = parser.parse_args([str(vacuum_gap_size)])
+        original_gap = slab.vacuum_gap
+        if vacuum_gap_size + original_gap < _MIN_VACUUM:
+            with pytest.raises(SystemExit):
+                modified_slab = ModifyVacuumCLI().process_slab(slab, args)
+        else:
+            modified_slab = ModifyVacuumCLI().process_slab(slab, args)
+            # check if vacuum gap size is modified correctly
+            assert modified_slab.vacuum_gap == pytest.approx(
+                vacuum_gap_size + original_gap
+            )
+
+    @parametrize("vacuum_gap_size", [15.0, 100.0])
     @infoless
     def test_gap_absolute(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
