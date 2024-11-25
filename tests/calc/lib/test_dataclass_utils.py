@@ -42,9 +42,7 @@ class SampleFrozenClass:
 
     attr: int
     optional_attr: Optional[int] = None
-    non_init: List[int] = non_init_field(
-        default_factory=lambda: [1, 'a', {}]
-        )
+    non_init: List = non_init_field(default_factory=lambda: [1, 'a', {}])
 
 
 @dataclass
