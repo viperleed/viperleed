@@ -101,7 +101,7 @@ def modify_vacuum(slab, vacuum_gap_info):
     logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
     logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
 
-    new_c_vector = (
+    new_c_vector = (                                                            # TODO: it may be necessary to shift the slab "down" before expanding c!
         processed_slab.c_vector
         / np.linalg.norm(processed_slab.c_vector)
         * (vacuum_gap_size + slab_thickness)
