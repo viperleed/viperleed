@@ -99,8 +99,8 @@ class TestFortranCompUpdated:
     def test_verified(self, comp, checker, rpars_with_attrs, mocker):
         """Check that an automatic comp is verified."""
         rpars = rpars_with_attrs(**comp)
-        mock_mpi = mocker.patch.object(rpars, 'getFortranComp')
-        mock_non_mpi = mocker.patch.object(rpars, 'getFortranMpiComp')
+        mock_mpi = mocker.patch.object(rpars, 'getFortranMpiComp')
+        mock_non_mpi = mocker.patch.object(rpars, 'getFortranComp')
         checker.check_parameter_conflicts(rpars)
         mock_mpi.assert_called_once()
         mock_non_mpi.assert_called_once()
