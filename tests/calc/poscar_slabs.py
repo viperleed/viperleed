@@ -129,6 +129,8 @@ _PRESETS = {
               'superlattice_defined': True},
     }
 
+# IMPORTANT: when adding a POSCAR file to this tuple, also add:
+# - corresponding BEAMLIST files in the 'BEAMLISTs' directory
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
