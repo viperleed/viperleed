@@ -52,7 +52,7 @@ from .special.base import SpecialParameter
 
 _LOGGER = logging.getLogger(parent_name(__name__))
 if CAN_PLOT:
-    import matplotlib.pyplot as plt
+    from matplotlib import pyplot as plt
     use_calc_style()
 
 

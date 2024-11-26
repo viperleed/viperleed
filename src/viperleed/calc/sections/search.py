@@ -97,8 +97,8 @@ class MaxIntensitiesError(SearchParameterError, TensErLEEDSearchError):
     detailed_message = (
         'TensErLEED stopped due to unreasonably high beam amplitudes.\n'
         'This may be caused by convergence problems due to a too small '
-        'value of LMAX. Alternatively, this error may be caused either '
-        'by scatterers with very small distances as a result of a very '
+        'value of LMAX. Alternatively, this error may be caused by '
+        'scatterers with very small distances as a result of a very '
         'large range used in DISPLACEMENTS. Check your input files and '
         'consider increasing LMAX or decreasing the DISPLACEMENTS ranges.'
         )
