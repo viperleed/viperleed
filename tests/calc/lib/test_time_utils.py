@@ -69,7 +69,7 @@ class MockTime:
 
 @frozen(order=True)
 class MockCountable:
-    """Come object that can be counted."""
+    """An object that can be counted."""
 
     value: float = 0.0
 
@@ -96,7 +96,7 @@ class TestExecutionTimer:
         return mock, timer
 
     def make_timer(self, *args, **kwargs):
-        """Return a time of the type tested by this class."""
+        """Return a timer of the type tested by this class."""
         args = args or self.timer_args
         return self.timer_cls(*args, **kwargs)
 
