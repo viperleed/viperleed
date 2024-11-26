@@ -1,4 +1,4 @@
-"""Tests for the log_utils module of viperleed/calc/lib."""
+"""Tests for the log_utils module of viperleed.calc.lib."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',

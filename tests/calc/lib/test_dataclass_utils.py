@@ -1,4 +1,4 @@
-"""Tests for dataclasses_utils module of viperleed/calc/lib."""
+"""Tests for dataclasses_utils module of viperleed.calc.lib."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',

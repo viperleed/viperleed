@@ -1,4 +1,4 @@
-"""Tests for module time_utils.py of viperleed/calc/lib."""
+"""Tests for module time_utils.py of viperleed.calc.lib."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
