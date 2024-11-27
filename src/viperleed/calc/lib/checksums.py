@@ -30,7 +30,8 @@ import sys
 from warnings import warn
 
 from viperleed import VIPERLEED_TENSORLEED_ENV
-from viperleed.calc.files.tenserleed import KNOWN_TL_VERSIONS, OLD_TL_VERSION_NAMES
+from viperleed.calc.files.tenserleed import KNOWN_TL_VERSIONS
+from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.lib.version import Version
 

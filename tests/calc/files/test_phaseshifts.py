@@ -44,3 +44,11 @@ def test_phaseshifts_not_empty(run_phaseshift):
     """Ensure run_phaseshift has generated some PHASESHIFTS."""
     *_, phaseshift = run_phaseshift
     assert len(phaseshift)
+
+
+def test_check_consistency_element_order_no_false_positives(run_phaseshift):
+    """Check that no example system produces false positives for elements."""
+    rpars, slab, _, phaseshift = run_phaseshift
+    _check = phaseshifts.__check_consistency_element_order
+    inconsistencies = _check(rpars, slab, phaseshift)
+    assert not inconsistencies

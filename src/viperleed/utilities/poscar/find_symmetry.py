@@ -20,6 +20,7 @@ class FindSymmetryCLI(_PoscarSymmetryCLI, cli_name='find_symmetry'):
         """Find the plane group of slab."""
         rpars = self.prepare_rpars(slab, args)
         symmetry.findSymmetry(slab, rpars)
+        return slab
 
     def write_output(self, processed_slab, args):
         """Write the detected plane group to the args.outfile."""

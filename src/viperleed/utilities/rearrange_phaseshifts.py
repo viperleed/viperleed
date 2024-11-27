@@ -12,11 +12,12 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2019-12-16'
 __license__ = 'GPLv3+'
 
-import time
 
 from viperleed.calc.files.phaseshifts import (readPHASESHIFTS,
                                               writePHASESHIFTS)
+from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.cli_base import ViPErLEEDCLI
+
 
 _HEADER = '''
 This utility reads a phase-shifts file (e.g., PHASESHIFTS) and
@@ -69,8 +70,7 @@ class RearrangePhaseShiftsCLI(ViPErLEEDCLI,
         firstline = f'{n_blocks:>3d}{firstline[3:]}'
 
         # write new file
-        timestamp = time.strftime('%y%m%d-%H%M%S', time.localtime())
-        filename = f'PHASESHIFTS_mod_{timestamp}'
+        filename = f'PHASESHIFTS_mod_{DateTimeFormat.FILE_SUFFIX.now()}'
         try:
             writePHASESHIFTS(firstline, phaseshifts, file_path=filename)
         except Exception:

@@ -16,7 +16,7 @@ from re import I
 import sys
 
 import fortranformat as ff
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 from numba import njit, prange
 import numpy as np
 from numpy import cos, sin, sqrt
@@ -82,9 +82,9 @@ def read_delta_file(filename, n_E):
     # Lists and Arrays needed; E,VPI,VV are numpy arrays that get returned, the others are lists that help saving the other data
     HeaderBlock1 = []
     HeaderBlock2 = []
-    E_kin_array = np.full(n_E, fill_value=np.NaN)
-    VPI_array = np.full(n_E, fill_value=np.NaN)
-    VV_array = np.full(n_E, fill_value=np.NaN)
+    E_kin_array = np.full(n_E, fill_value=np.nan)
+    VPI_array = np.full(n_E, fill_value=np.nan)
+    VV_array = np.full(n_E, fill_value=np.nan)
     listdummy = []
     listdummy2 = []
 
@@ -122,7 +122,7 @@ def read_delta_file(filename, n_E):
             listdummy2.append(part)
         # dieses if wieder redundant?
         if len(listdummy2) >= 2 * int0:
-            beam_indices = np.full(shape=[int0, 2], fill_value=np.NaN)
+            beam_indices = np.full(shape=[int0, 2], fill_value=np.nan)
             for i in range(int0):
                 for j in range(2):
                     beam_indices[i, j] = listdummy2[2 * i + j]
@@ -137,7 +137,7 @@ def read_delta_file(filename, n_E):
             listdummy2.append(part)
         # if redundant?
         if len(listdummy2) >= 3 * n_atoms:
-            Cundisp = np.full(shape=[n_atoms, 3], fill_value=np.NaN)
+            Cundisp = np.full(shape=[n_atoms, 3], fill_value=np.nan)
             for i in range(n_atoms):
                 for j in range(3):
                     Cundisp[i, j] = listdummy2[3 * i + j]
@@ -152,7 +152,7 @@ def read_delta_file(filename, n_E):
             listdummy2.append(part)
             # maybe getting rid of the if again
         if len(listdummy2) >= 3 * n_atoms * nc_steps:
-            CDisp = np.full(shape=[nc_steps, n_atoms, 3], fill_value=np.NaN)
+            CDisp = np.full(shape=[nc_steps, n_atoms, 3], fill_value=np.nan)
             for j in range(nc_steps):  # some syntax error here
                 for k in range(n_atoms):
                     for l in range(3):
@@ -167,7 +167,7 @@ def read_delta_file(filename, n_E):
         for part in listdummy:
             listdummy2.append(part)
         if len(listdummy2) >= nc_steps:
-            Aid = np.full(shape=[nc_steps], fill_value=np.NaN)
+            Aid = np.full(shape=[nc_steps], fill_value=np.nan)
             for i in range(nc_steps):
                 Aid[i] = listdummy2[i]
     listdummy.clear()
@@ -637,7 +637,7 @@ def Transform(n_E, directory):
     n_files = len(filename_list)
 
     # int0, n_atoms, nc_steps in an array(nc_steps can change, n_atoms maybe too)
-    Beam_variables = np.full(shape=[n_files, 3], fill_value=np.NaN, dtype=int)
+    Beam_variables = np.full(shape=[n_files, 3], fill_value=np.nan, dtype=int)
     for i, name in enumerate(filename_list):
         Beam_variables[i, :] = data_list_all[name][2]
 
@@ -646,9 +646,9 @@ def Transform(n_E, directory):
     nc_steps_max = int(np.max(Beam_variables[:, 2]))
 
     # saving the changing data in arrays
-    CDisp = np.full(shape=(n_files, nc_steps_max, n_atoms_max, 3), fill_value=np.NaN)
+    CDisp = np.full(shape=(n_files, nc_steps_max, n_atoms_max, 3), fill_value=np.nan)
     amplitudes_del = np.full(
-        shape=(n_files, n_E, nc_steps_max, int0), fill_value=np.NaN, dtype=complex
+        shape=(n_files, n_E, nc_steps_max, int0), fill_value=np.nan, dtype=complex
     )
     for i, name in enumerate(filename_list):
         int0, n_atoms, nc_steps = Beam_variables[i]
@@ -768,8 +768,8 @@ def PlotMaker(
     # ATSAS_matrix:
     # Array that contains the intensities of the different beams with each energy
 
-    matrix_differenz = np.full(shape=(len(E_array), int0), fill_value=np.NaN)
-    array = np.full(shape=(101, 101), fill_value=np.NaN)
+    matrix_differenz = np.full(shape=(len(E_array), int0), fill_value=np.nan)
+    array = np.full(shape=(101, 101), fill_value=np.nan)
     for i in tqdm(
         range(101)
     ):  # gerade weird dringend drüber nachdenken, 0.1 schritte ist dann diese range sinnvoll?
@@ -869,8 +869,8 @@ def PlotMaker1D(
     number_z_steps,
 ):
 
-    array4 = np.full(shape=(101), fill_value=np.NaN)
-    matrix_differenz = np.full(shape=(len(E_array), int0), fill_value=np.NaN)
+    array4 = np.full(shape=(101), fill_value=np.nan)
+    matrix_differenz = np.full(shape=(len(E_array), int0), fill_value=np.nan)
 
     for i in tqdm(range(101)):
 

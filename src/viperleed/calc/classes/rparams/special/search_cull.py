@@ -15,6 +15,8 @@ from dataclasses import InitVar, dataclass, field
 from enum import Enum  # Unfortunately StrEnum was introduced in py3.11
 from numbers import Real
 
+from viperleed.calc.lib.dataclass_utils import non_init_field
+
 from ..defaults import NO_VALUE
 from .base import SpecialParameter
 
@@ -65,9 +67,9 @@ class SearchCull(SpecialParameter, param='SEARCH_CULL'):
     """
 
     _value: InitVar[Real]
-    _type: SearchCullType = field(default=NO_VALUE, repr=False)
-    _int: int = field(init=False, default=NO_VALUE, repr=False)
-    _fraction: float = field(init=False, default= NO_VALUE, repr=False)
+    _type: SearchCullType = field(default=NO_VALUE)
+    _int: int = non_init_field(default=NO_VALUE)
+    _fraction: float = non_init_field(default= NO_VALUE)
 
     def __post_init__(self, _value):
         """Assign integer or fractional values for this SearchCull."""
