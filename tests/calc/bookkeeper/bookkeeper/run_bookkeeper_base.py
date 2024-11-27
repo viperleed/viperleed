@@ -51,9 +51,7 @@ class _TestBookkeeperRunBase:
     def check_input_files_in_history(self, *run):
         """Make sure that input files were stored in history."""
         *_, history_run_path = run
-        expected_contents = (MOCK_INPUT_CONTENT,)
-        if self.mode.uses_ori_files_as_fallback:
-            expected_contents += (MOCK_ORIG_CONTENT,)
+        expected_contents = (MOCK_INPUT_CONTENT, MOCK_ORIG_CONTENT)
         for file in MOCK_STATE_FILES:
             archived_input = history_run_path / file
             assert archived_input.is_file()

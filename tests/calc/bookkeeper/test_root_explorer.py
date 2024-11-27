@@ -31,6 +31,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from ...helpers import make_obj_raise
 from ...helpers import not_raises
 from ...helpers import raises_exception
+from .conftest import MOCK_STATE_FILES
 
 
 _MOCK_ROOT = '/mock/root'
@@ -287,6 +288,22 @@ class TestRootExplorer:
         for mock_ in (mock_copy2, mock_replace):
             assert_ok = getattr(mock_, called_or_not(moved))
             assert_ok()
+
+    def test_update_state_files_from_out_fails(self, explorer, mocker, caplog):
+        """Check that failure to make _ori files are reported."""
+        mocker.patch('shutil.copy2')
+        mocker.patch('pathlib.Path.is_dir', return_value=True)
+        mocker.patch('pathlib.Path.is_file', return_value=True)
+        mock_replace = mocker.patch('pathlib.Path.replace')
+
+        exc_msg = 'this is a test error'
+        mock_replace.side_effect = OSError(exc_msg)
+        with pytest.raises(OSError) as exc_info:
+            explorer.update_state_files_from_out()
+        logs = caplog.text
+        for file in MOCK_STATE_FILES:
+            assert exc_info.match(file)
+            assert all(s in logs for s in (file, f'{file}_ori', f'{file}_OUT'))
 
 
 class TestRootExplorerListFiles:

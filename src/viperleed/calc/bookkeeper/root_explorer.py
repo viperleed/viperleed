@@ -187,10 +187,11 @@ class RootExplorer:
         self.collect_info(silent=True)
 
     def update_state_files_from_out(self):
-        """Move state files from OUT to root. Rename old to '_ori'."""
+        """Copy state files from OUT to root. Rename old to '_ori'."""
         out_path = self.path / DEFAULT_OUT
         if not out_path.is_dir():
             return
+        failed = {}
         for file in STATE_FILES:
             out_file = out_path / f'{file}_OUT'
             cwd_file = self.path / file
@@ -201,9 +202,25 @@ class RootExplorer:
             # works for the same file system. Notice also the use of
             # replace rather than rename, as the behavior of rename
             # is not identical for all platforms.
-            cwd_file.replace(self.path / f'{file}_ori')
+            try:
+                cwd_file.replace(self.path / f'{file}_ori')
+            except OSError as exc:
+                failed[file] = exc
+                continue
             # The OUT file is copied, however: .replace would move it
             shutil.copy2(out_file, cwd_file)
+        if not failed:
+            return
+        # Report failures, so people can do it manually.
+        LOGGER.error('Failed to copy OUT files to the current directory '
+                     'and to rename the original inputs there.')
+        LOGGER.error('The following files could not be processed:')
+        for file in failed:
+            LOGGER.error(f'{file} -x-> {file}_ori. '
+                         f'{out_path.name}/{file}_OUT -x-> {file}')
+        exc_msgs = (f'{file}: raised {type(exc).__name__} - {exc}'
+                    for file, exc in failed.items())
+        raise OSError('\n'.join(exc_msgs))
 
     @_needs_collect('_logs')
     def _collect_files_to_archive(self):

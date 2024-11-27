@@ -304,7 +304,6 @@ class Bookkeeper:
         self.__init__(cwd=self.cwd)
         self._state_info['logger_prepared'] = logger_prepared
 
-    @needs_update_for_attr('_mode', updater='run')
     def _copy_input_files_from_original_inputs_or_cwd(self):
         """Copy input files to the history subfolder.
 
@@ -319,14 +318,10 @@ class Bookkeeper:
         -------
         None.
         """
-        use_ori = self._mode.uses_ori_files_as_fallback
         history_folder = self.history.new_folder
         for file in ALL_INPUT_FILES:
             original_file = self.orig_inputs_dir / file
             cwd_file = self.cwd / file
-            if file in STATE_FILES and use_ori:
-                cwd_file = self.cwd / f'{file}_ori'
-
             copy_file, with_name = None, file
             if original_file.is_file() and cwd_file.is_file():
                 # Copy original, but warn if cwd is newer

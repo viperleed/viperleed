@@ -22,15 +22,6 @@ def test_bookkeeper_mode_enum():
     assert Mode.FIX is Mode('fix')
 
 
-def test_uses_ori_files():
-    """Check the uses_ori_files_as_fallback property."""
-    assert not Mode.ARCHIVE.uses_ori_files_as_fallback
-    assert not Mode.DISCARD_FULL.uses_ori_files_as_fallback
-    assert not Mode.FIX.uses_ori_files_as_fallback
-    assert Mode.CLEAR.uses_ori_files_as_fallback
-    assert Mode.DISCARD.uses_ori_files_as_fallback
-
-
 long_flags = {
     Mode.ARCHIVE: '--archive',
     Mode.CLEAR: '--clear',
