@@ -1,4 +1,4 @@
-"""Tests for the log_utils module of viperleed/calc/lib."""
+"""Tests for the log_utils module of viperleed.calc.lib."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -93,7 +93,7 @@ class TestAtLevel:
 
 
 # About the pylint disable: while it is true that this class only has
-# one method, the not-so.simple parametrize seems a good-enough reason
+# one method, the not-so-simple parametrize seems a good-enough reason
 # to keep it localized into a test class.
 class TestCalcLogFormatter:  # pylint: disable=too-few-public-methods
     """Tests for the CalcLogFormatter class."""
@@ -354,7 +354,7 @@ class TestSilent:
             assert self.inside_context in caplog.text
 
     def test_logging_logs_above_level(self, caplog):
-        """Check that no messages are logged at module level when silenced."""
+        """Check emission of messages above the module-silence level."""
         logging.warning(self.outside_context)
         assert self.outside_context in caplog.text
         with logging_silent(level=logging.WARNING):

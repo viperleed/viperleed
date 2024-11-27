@@ -20,6 +20,7 @@ __license__ = 'GPLv3+'
 import re
 
 from viperleed.calc.files.input_reader import InputFileReader
+from viperleed.calc.files.input_reader import ShouldSkipLineError
 from viperleed.calc.lib.string_utils import strip_comments
 
 from .errors import MissingEqualsError
@@ -29,18 +30,9 @@ from .known_parameters import did_you_mean
 from .known_parameters import from_alias
 from .utils import Assignment
 
+
 class ParametersReader(InputFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
-
-    def __next__(self):
-        """Return the next understandable information in the file."""
-        for line in self._file_obj:
-            self._current_line += 1
-            param, *rest = self._read_one_line(line)
-            if not param:
-                continue
-            return (param, *rest)
-        raise StopIteration
 
     def _complain_about_line_parse_errors(self, line, exc):
         """Re-raise an exception occurred while line was being parsed."""
@@ -82,16 +74,16 @@ class ParametersReader(InputFileReader):
 
         if '=' not in line:
             self._complain_about_missing_equals(line)
-            return '', None
+            raise ShouldSkipLineError
 
         try:
             param, assignment = self._parse_line(line)
         except (ParameterNotRecognizedError, ParameterHasNoValueError) as exc:
-            if not self.noisy:
-                return '', None
-            self._complain_about_line_parse_errors(line, exc)
+            if self.noisy:
+                self._complain_about_line_parse_errors(line, exc)
+            raise ShouldSkipLineError from exc
         if not param:
-            return '', None
+            raise ShouldSkipLineError
         return param.upper(), assignment
 
     def _parse_line(self, line):
@@ -145,5 +137,8 @@ class RawLineParametersReader(ParametersReader):
 
     def _read_one_line(self, line):
         """Return a parameter, and the whole raw line it was in."""
-        param, *_ = super()._read_one_line(line)
+        try:
+            param, *_ = super()._read_one_line(line)
+        except ShouldSkipLineError:
+            param = ''
         return param, line

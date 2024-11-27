@@ -289,7 +289,7 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
         if n_beams > n_beams_max:
             raise ValueError(
                 f'Too many beams in beam set ({n_beams}). TensErLEED v'
-                f'{tl_version:.2f} code supports at most {n_beams_max}.'
+                f'{tl_version} code supports at most {n_beams_max}.'
                 )
         yield fmt['n_beams'].write([n_beams]) + '\n'
 

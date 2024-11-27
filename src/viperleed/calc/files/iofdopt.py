@@ -22,9 +22,9 @@ from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 
 if CAN_PLOT:
     prepare_matplotlib_for_calc()
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
     from matplotlib import cm
+    from matplotlib import pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
 
 
 logger = logging.getLogger(__name__)

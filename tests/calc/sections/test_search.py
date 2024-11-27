@@ -39,7 +39,7 @@ class TestSearchAg100:
         """Check that structure search exits without errors."""
         assert not search_files_ag100.failed
         assert search_files_ag100.records is not None
-        assert search_files_ag100.records.get_last_section_state('search')
+        assert search_files_ag100.records.get_last_state_for_section('search')
 
     @parametrize('expected_file', ('search.steu',))
     def test_search_input_exist(self, search_files_ag100, expected_file):

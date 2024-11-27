@@ -33,10 +33,10 @@ from viperleed.calc.lib.version import Version
 
 if CAN_PLOT:
     prepare_matplotlib_for_calc()
+    from matplotlib import pyplot as plt
+    from matplotlib import ticker as plticker
     from matplotlib.backends.backend_pdf import PdfPages
     from matplotlib.colors import is_color_like
-    import matplotlib.pyplot as plt
-    import matplotlib.ticker as plticker
 
 logger = logging.getLogger(__name__)
 

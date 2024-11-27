@@ -16,7 +16,7 @@ class TestDeltasAg100:
         """Check that delta-amplitude calculation exits without errors."""
         assert not delta_files_ag100.failed
         assert delta_files_ag100.records is not None
-        assert delta_files_ag100.records.get_last_section_state('delta')
+        assert delta_files_ag100.records.get_last_state_for_section('delta')
 
     def test_delta_input_written(self, delta_files_ag100):
         """Check that an input file was correctly written."""

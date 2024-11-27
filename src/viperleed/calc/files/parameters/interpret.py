@@ -26,12 +26,6 @@ from pathlib import Path
 import re
 
 import numpy as np
-try:
-    from matplotlib.colors import is_color_like  # For PLOT_IV
-except ImportError:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
 
 from viperleed import __version__
 from viperleed.calc.classes.rparams import EnergyRange
@@ -42,6 +36,8 @@ from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
 from viperleed.calc.lib.sequence_utils import recombine_items
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import read_int_range
@@ -49,6 +45,9 @@ from viperleed.calc.lib.string_utils import read_vector
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.sections.calc_section import CalcSection as Section
+
+if CAN_PLOT:
+    from matplotlib.colors import is_color_like  # For PLOT_IV
 
 from .checker import ParametersChecker
 from .errors import ParameterBooleanConversionError
@@ -1019,11 +1018,9 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterRangeError(param, given_value=ps_eps,
                                       allowed_range=(0, 1))
 
+    @skip_without_matplotlib
     def interpret_plot_iv(self, assignment):
         """Assign parameter PLOT_IV."""
-        if not _CAN_PLOT:
-            # Cannot interpret this parameter
-            return
         param = 'PLOT_IV'
         self._ensure_single_flag_assignment(assignment)
         flag_aliases = {

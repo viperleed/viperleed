@@ -99,8 +99,8 @@ class TestFortranCompUpdated:
     def test_verified(self, comp, checker, rpars_with_attrs, mocker):
         """Check that an automatic comp is verified."""
         rpars = rpars_with_attrs(**comp)
-        mock_mpi = mocker.patch.object(rpars, 'getFortranComp')
-        mock_non_mpi = mocker.patch.object(rpars, 'getFortranMpiComp')
+        mock_mpi = mocker.patch.object(rpars, 'getFortranMpiComp')
+        mock_non_mpi = mocker.patch.object(rpars, 'getFortranComp')
         checker.check_parameter_conflicts(rpars)
         mock_mpi.assert_called_once()
         mock_non_mpi.assert_called_once()
@@ -133,7 +133,7 @@ class TestNCoresChecked:
         assert not caplog.text
 
     def test_too_few_cpus(self, checker, rpars_with_attrs, caplog, mocker):
-        """Check no warnings with N_CORES < nr. CPUs."""
+        """Check warnings are emitted when N_CORES > nr. CPUs."""
         rpars = rpars_with_attrs(N_CORES=5)
         mocker.patch(f'{_MODULE}.available_cpu_count', return_value=1)
         checker.check_parameter_conflicts(rpars)

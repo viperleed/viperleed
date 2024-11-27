@@ -29,8 +29,8 @@ from viperleed.calc.lib.string_utils import range_to_str
 
 if CAN_PLOT:
     prepare_matplotlib_for_calc()
+    from matplotlib import pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)  # Mute matplotlib debug messages                 # TODO: perhaps nicer to use at_level only in the relevant spots? See also iorfactor and ivplot

@@ -1,4 +1,4 @@
-"""Tests for dataclasses_utils module of viperleed/calc/lib."""
+"""Tests for dataclasses_utils module of viperleed.calc.lib."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -42,9 +42,7 @@ class SampleFrozenClass:
 
     attr: int
     optional_attr: Optional[int] = None
-    non_init: List[int] = non_init_field(
-        default_factory=lambda: [1, 'a', {}]
-        )
+    non_init: List = non_init_field(default_factory=lambda: [1, 'a', {}])
 
 
 @dataclass
@@ -140,13 +138,13 @@ class TestCheckTypes:
             check_types(instance)
 
     def test_dont_check_items(self):
-        """Check complaints for an invalid type of list items."""
+        """Check there's no complaints for invalid types of list items."""
         instance = SampleClass(attr=1, mutable_optional=[None, 'string'])
         with not_raises(TypeError):  # We don't check items
             check_types(instance)
 
     def test_dont_check_initvar(self):
-        """Check complaints for an invalid type of list items."""
+        """Check there's no complaints for InitVar arguments."""
         instance = ComplexClass(attr=1, init_only_var='something wrong')
         with not_raises(TypeError):
             check_types(instance)
@@ -154,7 +152,7 @@ class TestCheckTypes:
     def test_init_only(self):
         """Check no complaints if only types of init fields are verified."""
         instance = SampleClass(1)
-        instance.non_init_with_default = []  # should be int
+        instance.non_init_with_default = []  # Should be int
         with pytest.raises(TypeError):
             check_types(instance)
         with not_raises(TypeError):

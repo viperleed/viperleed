@@ -19,8 +19,8 @@ from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
 
 if CAN_PLOT:
     prepare_matplotlib_for_calc()
+    from matplotlib import pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
     from matplotlib.markers import MarkerStyle
 
 

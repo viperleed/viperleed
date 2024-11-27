@@ -8,11 +8,15 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-06-09'
 __license__ = 'GPLv3+'
 
+from contextlib import nullcontext
+
+import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files import beamgen
+from viperleed.calc.lib.version import Version
 
 from ...helpers import exclude_tags
 from ..poscar_slabs import CasePOSCARSlabs
@@ -63,50 +67,98 @@ class TestGenerateBeamlist:
     @parametrize_with_cases('args', **_BEAMGEN_CASES)
     def fixture_prepare_for_beamlist(self, args, tensorleed_path):
         """Return slab, parameters, info and the path to a 'BEAMLIST'."""
-        slab, param, info = args
-        slab.create_layers(param)
-        slab.make_bulk_slab(param)
-        symmetry.findSymmetry(slab, param)
-        symmetry.findSymmetry(slab.bulkslab, param, bulk=True)
-        symmetry.findBulkSymmetry(slab.bulkslab, param)
+        slab, rpars, info = args
+        slab.create_layers(rpars)
+        slab.make_bulk_slab(rpars)
+        symmetry.findSymmetry(slab, rpars)
+        symmetry.findSymmetry(slab.bulkslab, rpars, bulk=True)
+        symmetry.findBulkSymmetry(slab.bulkslab, rpars)
 
         # Limit energy range for performance reasons. 300 eV is more
         # than enough to generate a sizeable number of beams for any
         # reasonable system
-        param.THEO_ENERGIES = EnergyRange(stop=300)
-        param.initTheoEnergies()
-        param.source_dir = tensorleed_path
-        param.updateDerivedParams()  # for TL_VERSION
-        return slab, param, info
+        rpars.THEO_ENERGIES = EnergyRange(stop=300)
+        rpars.initTheoEnergies()
+        rpars.source_dir = tensorleed_path
+        rpars.updateDerivedParams()  # for TL_VERSION
+        return slab, rpars, info
+
+    @fixture(name='get_expected_beamlist', scope='class')
+    def fixture_get_expected_beamlist(self, data_path):
+        """Return a path to the test-data file for the right beam list."""
+        # Find a mapping between subfolders and the
+        # range of applicable TensErLEED versions
+        folder_to_range = {}
+        for folder in (data_path / 'BEAMLISTs').iterdir():
+            version_min_max = [Version(v) for v in folder.name.split('-') if v]
+            # pylint: disable-next=magic-value-comparison
+            if len(version_min_max) < 2:
+                version_min_max.append(None)
+            folder_to_range[folder] = tuple(version_min_max)
+
+        def _get_tl_version_path(rpars):
+            """Return which of the 'BEAMLISTs' subfolders applies."""
+            version = rpars.TL_VERSION
+            for folder, (v_min, v_max) in folder_to_range.items():
+                if version < v_min:
+                    continue
+                if v_max and version > v_max:
+                    continue
+                return folder
+            raise ValueError('Found no subfolder of BEAMLISTs with '
+                             f'data for TensErLEED v{version}')
+
+        def _get_path_to_beamlist_file(rpars, info):
+            beamlist_name = info.poscar.name.replace('POSCAR', 'BEAMLIST')
+            folder = _get_tl_version_path(rpars)
+            beamlist_file = folder / beamlist_name
+            if not beamlist_file.is_file():
+                raise FileNotFoundError(f'Found no {beamlist_name} '
+                                        f'file in {folder}')
+            return beamlist_file
+        return _get_path_to_beamlist_file
 
     @fixture(name='make_beamlist', scope='class')
-    def fixture_make_beamlist(self, prepare_for_beamlist, tmp_path_factory):
+    def fixture_make_beamlist(self, prepare_for_beamlist,
+                              get_expected_beamlist,
+                              tmp_path_factory):
         """Create a 'BEAMLIST', and return slab, parameters, info, and path."""
-        slab, param, info = prepare_for_beamlist
+        slab, rpars, info = prepare_for_beamlist
+        try:
+            expected = get_expected_beamlist(rpars, info)
+        except FileNotFoundError:
+            expected = None
+            context = pytest.raises(ValueError, match='Too many beams')
+        else:
+            context = nullcontext()
+
         tmp_dir = tmp_path_factory.mktemp(
             basename=f'{info.poscar.name}_beamlist',
-            numbered=True
+            numbered=True,
             )
         beamlist = tmp_dir / 'BEAMLIST'
-        beamgen.calc_and_write_beamlist(slab, param, beamlist_name=beamlist)
-        return slab, param, info, beamlist
+        with context as exc_info:
+            beamgen.calc_and_write_beamlist(slab,
+                                            rpars,
+                                            beamlist_name=beamlist)
+        if expected is None:
+            # Skip all tests that use this fixture if there was
+            # an understandable exception. This typically means
+            # that the structure is unsupported in the TensErLEED
+            # version under test.
+            pytest.skip(str(exc_info.value))
+        return slab, rpars, info, expected, beamlist
 
     def test_generate_beamlist(self, make_beamlist):
         """Check successful generation of a 'BEAMLIST' file."""
         *_, beamlist = make_beamlist
         assert beamlist.exists()
-        # check that file is not empty
-        with open(beamlist, 'r', encoding='utf-8') as file:
-            assert file.read()
+        # Check that file is not empty
+        assert beamlist.read_text(encoding='utf-8').strip()
 
-    def test_beamlist_is_correct(self, make_beamlist, data_path):
+    def test_beamlist_is_correct(self, make_beamlist):
         """Check that the BEAMLIST file matches the expected contents."""
-        *_, info, beamlist = make_beamlist
-        with open(beamlist, 'r', encoding='utf-8') as file:
-            contents = file.read()
-        # get the expected contents
-        beamlist_name = info.poscar.name.replace('POSCAR', 'BEAMLIST')
-        beamlist_path = data_path / 'BEAMLISTs' / beamlist_name
-        with beamlist_path.open('r', encoding='utf-8') as file:
-            expected_contents = file.read()
-        assert contents == expected_contents
+        *_, path_to_expected, beamlist = make_beamlist
+        contents = beamlist.read_text(encoding='utf-8')
+        expected = path_to_expected.read_text(encoding='utf-8')
+        assert contents == expected
