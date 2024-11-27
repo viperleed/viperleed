@@ -43,6 +43,7 @@ from .entry import cases_entry
 
 
 all_history_cases = cases_history, cases_entry
+_MODULE = 'viperleed.calc.bookkeeper.history.info'
 
 
 @fixture(name='make_history_file', scope='session')
@@ -103,6 +104,19 @@ class TestHistoryInfoFile:
             expect = contents + expect
         assert info.last_entry is new_entry
         assert last_entry_raw == expect
+
+    def test_append_entry_fails(self, history_info_file, mocker):
+        """Check that failure to append an entry emits log messages."""
+        entry_str = cases_entry.CasesInfoEntryCorrect().case_no_notes()
+        new_entry = HistoryInfoEntry.from_string(entry_str)
+        info, _ = history_info_file
+        mocker.patch('builtins.open', side_effect=OSError)
+        mock_log = mocker.patch(f'{_MODULE}.LOGGER.error')
+        with pytest.raises(OSError):
+            info.append_entry(new_entry, fix_time_format=False)
+        mock_log.assert_called_once()
+        error_msg, *_ = mock_log.call_args[0]
+        assert str(new_entry) in error_msg
 
     _empty = parametrize_with_cases('contents',
                                     cases=cases_history,

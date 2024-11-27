@@ -128,12 +128,20 @@ class TestIncompleteHistoryFolder:
         target = incomplete_folder.path / mock_path.name
         mock_copy.assert_called_once_with(mock_path, target)
 
-    def test_copy_file_fails(self, incomplete_folder, mock_path, mocker):
+    @parametrize(with_name=(None, 'nowhere'))
+    def test_copy_file_fails(self, with_name,
+                             incomplete_folder,
+                             mock_path,
+                             mocker):
         """Check complaints when failing to copy a file."""
         mocker.patch('shutil.copy2', side_effect=OSError)
         mock_error = mocker.patch(f'{_MODULE}.LOGGER.error')
-        incomplete_folder.copy_file_or_directory(mock_path, 'nowhere')
+        incomplete_folder.copy_file_or_directory(mock_path, with_name)
         mock_error.assert_called_once()
+        error_msg, *_ = mock_error.call_args[0]
+        assert mock_path.name in error_msg
+        if with_name:
+            assert with_name in error_msg
 
 
 class TestHistoryFolder(TestIncompleteHistoryFolder):

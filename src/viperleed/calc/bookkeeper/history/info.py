@@ -129,8 +129,13 @@ class HistoryInfoFile:
         new_text += entry_text
         self._entries.append(entry)
         self.raw_contents += new_text
-        with open(self.path, 'a', encoding='utf-8') as history_info:
-            history_info.write(new_text)
+        try:
+            with open(self.path, 'a', encoding='utf-8') as history_info:
+                history_info.write(new_text)
+        except OSError:
+            LOGGER.error('Failed to append entry to '
+                         f'{HISTORY_INFO_NAME} file:\n{new_text}')
+            raise
 
     def discard_last_entry(self):
         """Mark the last entry in the history.info file as discarded."""

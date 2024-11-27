@@ -232,7 +232,7 @@ class TestWorkhistoryHandlerRaises:
 
     def test_move_folders_exists(self, workhistory, caplog, mocker):
         """Test _move_folders_to_history handling FileExistsError."""
-        directory = mocker.MagicMock()
+        directory = mocker.MagicMock(spec=Path)
         directory.name=f't001.r001.003_{workhistory.timestamp}'
         mocker.patch.object(workhistory,
                             'find_current_directories',
@@ -244,14 +244,17 @@ class TestWorkhistoryHandlerRaises:
             workhistory._move_folders_to_history(None)
         self.check_has_error(caplog)
 
-    def test_move_folders_os_error(self, workhistory, caplog, mocker):
+    def test_move_folders_os_error(self, workhistory, caplog,
+                                   mocker, monkeypatch):
         """Test _move_folders_to_history handling OSError."""
-        directory = mocker.MagicMock()
+        directory = mocker.MagicMock(spec=Path)
         directory.name=f't001.r001.003_{workhistory.timestamp}'
         mocker.patch.object(workhistory,
                             'find_current_directories',
                             return_value=(directory,))
-        with make_obj_raise(directory, OSError, 'replace'):
+        raises_ = make_obj_raise(directory, OSError, 'replace')
+        with raises_, monkeypatch.context() as patch:
+            patch.setattr('pathlib.Path.relative_to', mocker.MagicMock())
             # pylint: disable-next=protected-access       # OK in tests
             tensor_nums = workhistory._move_folders_to_history(None)
             assert not any(tensor_nums)

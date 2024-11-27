@@ -75,7 +75,11 @@ class IncompleteHistoryFolder:
         try:
             copy(file_path, self.path / dest_name)
         except OSError:
-            LOGGER.error(f'Failed to copy {file_path.name} to history.')
+            err_msg = f'Failed to copy {file_path.name}'
+            if with_name:
+                err_msg += f' as {dest_name}'
+            err_msg += ' to history.'
+            LOGGER.error(err_msg)
 
     def _analyze_path(self):
         """Collect information from the history folder at self.path."""

@@ -410,6 +410,9 @@ class Bookkeeper:
             LOGGER.error('Error: Could not create target directory '
                          f'{self.history.new_folder.name}\n Stopping...')
             raise
+        LOGGER.info(f'Created history folder {self.history.new_folder.name} '
+                    'for storing results of the most-recent viperleed.calc '
+                    'execution')
         self._copy_out_and_supp()
         self._copy_input_files_from_original_inputs_or_cwd()
         self._copy_log_files()

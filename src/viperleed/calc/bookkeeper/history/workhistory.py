@@ -175,7 +175,7 @@ class WorkhistoryHandler:
                 if d.is_dir() and HISTORY_FOLDER_RE.match(d.name))
 
     def _move_folders_to_history(self, main_metadata):
-        """Move relevant folders from the current work history to history.
+        """Move relevant folders from the current workhistory to history.
 
         Parameters
         ----------
@@ -188,7 +188,7 @@ class WorkhistoryHandler:
         Returns
         -------
         tensor_nums : set
-            The tensor numbers of the folders that have been moved.
+            The tensor numbers of the relevant work-history folders.
 
         Raises
         ------
@@ -230,7 +230,8 @@ class WorkhistoryHandler:
                 raise
             except OSError:
                 LOGGER.error('Error: Failed to move '
-                             f'{directory.relative_to(self.root)}.',
+                             f'{directory.relative_to(self.root)} '
+                             f'to {target.relative_to(self.root)}',
                              exc_info=True)
                 continue
             tensor_nums.add(tensor_num)
