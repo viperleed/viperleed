@@ -13,11 +13,15 @@ __created__ = '2022-10-17'
 __license__ = 'GPLv3+'
 
 import datetime
+import sys
+from pathlib import Path
 
 import sphinx_rtd_theme
 
 import viperleed
 
+
+sys.path.append(str(Path('./_ext').resolve()))
 
 # -- Project information ---------------------------------------------- https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -46,6 +50,7 @@ extensions = [
     'sphinxcontrib.bibtex',    # To use .bib files for bibliography
     'sphinxcontrib.inkscapeconverter',  # For SVG images
     'sphinxcontrib.spelling',  # spell checking for the docs ;)
+    'secref',                  # custom extension for section references
     ]
 
 source_suffix = '.rst'
@@ -64,6 +69,8 @@ bibtex_bibfiles = ['references.bib']
 bibtex_default_style = 'unsrt' # use numbers
 bibtex_reference_style = 'label' # use numbers in text too
 
+# For TODO boxes. Can be changed to False for 'production' docs
+todo_include_todos = True
 
 # -- Options for HTML output ----------------------------------------- https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
