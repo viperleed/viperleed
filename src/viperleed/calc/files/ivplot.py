@@ -174,6 +174,9 @@ def plot_iv(data, filename, labels=[], annotations=[],
 
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
+    # Pylint can't tell that we will not execute this,
+    # as per decorator, if we fail to import matplotlib
+    # pylint: disable-next=possibly-used-before-assignment
     oritick = plticker.MultipleLocator(base=tick)
     majortick = oritick
     minortick = None
@@ -217,6 +220,9 @@ def plot_iv(data, filename, labels=[], annotations=[],
                     # need a new figure
                     fig_exists = True # at least one fig exists
                     fig_index_on_page = 0
+                    # Pylint can't tell that we will not execute this,
+                    # as per decorator, if we fail to import matplotlib
+                    # pylint: disable-next=possibly-used-before-assignment
                     fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
                                             squeeze=False)
                     fig.tight_layout()
@@ -313,6 +319,9 @@ def plot_iv(data, filename, labels=[], annotations=[],
     # if a filename is given write to PDF, else return list of figs
     if filename is not None:
         try:
+            # Pylint can't tell that we will not execute this,
+            # as per decorator, if we fail to import matplotlib
+            # pylint: disable-next=possibly-used-before-assignment
             pdf = PdfPages(filename)
         except PermissionError:
             logger.error(f"writeRfactorPdf: Cannot open file {filename}. "
@@ -322,6 +331,9 @@ def plot_iv(data, filename, labels=[], annotations=[],
         try:
             for fig in figs:
                 pdf.savefig(fig, bbox_inches='tight')
+                # Pylint can't tell that we will not execute this,
+                # as per decorator, if we fail to import matplotlib
+                # pylint: disable-next=possibly-used-before-assignment
                 plt.close(fig)
         except Exception:
             logger.error("plot_iv: Error while writing {}: ".format(filename),

@@ -157,6 +157,9 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
 
     # R-FACTOR AND GENERATION DELTA
     # create figure
+    # Pylint can't tell that we will not execute this,
+    # as per decorator, if we fail to import matplotlib
+    # pylint: disable-next=possibly-used-before-assignment
     fig, (rfp, dgp) = plt.subplots(2, 1, sharex=True, figsize=figsize)
     dgp.set_xlabel('Generations')
     rfp.set_ylabel('R-Factor')
@@ -277,6 +280,10 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                     vals = []
                     for (j, conf) in enumerate(lastconfig):
                         if mode != "dom":
+                            # Pylint can't tell that we will not
+                            # execute this, as per decorator, if we
+                            # fail to import matplotlib
+                            # pylint: disable-next=E0606
                             val = ((conf[confindex][1][crp.searchpars
                                                        .index(par)]-1)
                                    / (par.steps-1))
@@ -365,6 +372,9 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                     pltpoints[i] = (x, y, c, s)
                     i += 1
                 if predict:
+                    # Pylint can't tell that we will not execute this,
+                    # as per decorator, if we fail to import matplotlib
+                    # pylint: disable-next=E0606
                     m = MarkerStyle("D")
                     m._transform.scale(1.0, 0.5)
                     err_off = 0.08  # error bar offset
@@ -437,6 +447,9 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
         close_figures(plt, *rp.lastParScatterFigs[searchname])
     rp.lastParScatterFigs[searchname] = figs[1:]
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(outname)
         for fig in figs:
             pdf.savefig(fig)

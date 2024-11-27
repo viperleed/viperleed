@@ -21,7 +21,6 @@ from zipfile import ZipFile
 
 import numpy as np
 
-from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
@@ -31,6 +30,9 @@ from viperleed.calc.classes.slab import NoVacuumError
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import iotensors
 from viperleed.calc.files import parameters
@@ -52,11 +54,19 @@ from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 logger = logging.getLogger(__name__)
 
 
+OPTIONAL_INPUT_FILES = ('BEAMLIST',)
+
+
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
         rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
+
+    # preserve unmodified input files to original_inputs directory
+    if not subdomain:
+        rp.inputs_dir = rp.workdir / ORIGINAL_INPUTS_DIR_NAME
+        _preserve_original_input(rp, origin_dir=Path.cwd().resolve())
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
         init_domains(rp)
@@ -127,11 +137,10 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
-        poscar.write(tmpslab, filename='POSCAR', comments='all')
+        poscar.write(tmpslab, filename='POSCAR_OUT', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
-    rp.manifest.append('POSCAR')
     # generate POSCAR_oricell
     tmpslab.revert_unit_cell()
     try:
@@ -381,8 +390,6 @@ def initialization(sl, rp, subdomain=False):
     # Create directory compile_logs in which logs from compilation will be saved
     make_compile_logs_dir(rp)
 
-    # At the end of initialization preserve the original input files
-    _preserve_original_input(rp, logger)
     return
 
 
@@ -417,24 +424,27 @@ def init_domains(rp):
                                          target_dir=target)
                 except Exception as exc:
                     tensorIndex = 0
-                    logger.warning(f"Error fetching Tensors: {exc}")
+                    logger.warning(f"Error fetching {DEFAULT_TENSORS}: {exc}")
             if tensorIndex != 0:
-                tensorDir = target / "Tensors" / f"Tensors_{tensorIndex:03d}"
+                tensorDir = (
+                    target
+                    / f"{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensorIndex:03d}"
+                    )
                 for file in (checkFiles + ["IVBEAMS"]):
                     if os.path.isfile(tensorDir / file):
                         shutil.copy2(tensorDir / file, target / file)
                     else:
                         logger.warning(f"Input file {file} is missing in "
-                                       "Tensors directory. A new reference "
-                                       "calculation is required.")
+                                       f"{DEFAULT_TENSORS} directory. A new "
+                                       "reference calculation is required.")
                         tensorIndex = 0
                         break
             if tensorIndex != 0:
                 dp.tensorDir = tensorDir
             else:       # no usable tensors in that dir; get input
                 dp.refcalcRequired = True
-                logger.info("No previous Tensors found, reference calculation "
-                            "is required.")
+                logger.info(f"No previous {DEFAULT_TENSORS} found, "
+                            "reference calculation is required.")
                 for file in checkFiles:
                     if os.path.isfile(os.path.join(path, file)):
                         try:
@@ -457,7 +467,10 @@ def init_domains(rp):
                 tensorIndex = leedbase.getMaxTensorIndex(target)
             except Exception:
                 tensorIndex = 0
-            tensorDir = target / "Tensors" / f"Tensors_{tensorIndex + 1:03d}"
+            tensorDir = (
+                target
+                / f"{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensorIndex + 1:03d}"
+                )
             try:
                 tensorDir.mkdir(parents=True, exist_ok=True)
             except Exception:
@@ -466,15 +479,17 @@ def init_domains(rp):
                 with ZipFile(path, 'r') as archive:
                     archive.extractall(tensorDir)                               # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
-                logger.error("Failed to unpack Tensors for domain "
-                             f"{name} from file {path}")
+                logger.error(f"Failed to unpack {DEFAULT_TENSORS} for "
+                             f"domain {name} from file {path}")
                 raise RuntimeError("Error getting domain input files")
             for file in (checkFiles + ["IVBEAMS"]):
                 if (tensorDir / file).is_file():
                     shutil.copy2(tensorDir / file, target / file)
                 else:
-                    logger.error(f"Required file {file} for domain {name} not "
-                                 f"found in Tensor directory {tensorDir}")
+                    logger.error(
+                        f"Required file {file} for domain {name} not "
+                        f"found in {DEFAULT_TENSORS} directory {tensorDir}"
+                        )
                     raise RuntimeError("Error getting domain input files")
             dp.tensorDir = tensorDir
         try:
@@ -482,12 +497,19 @@ def init_domains(rp):
             os.chdir(target)
             logger.info(f"Reading input files for domain {name}")
             try:
-                dp.sl = poscar.read()
-                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
-                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
+
+                # run _preserve_original_input separately for each domain
+                dp.rp.inputs_dir = dp.rp.workdir / ORIGINAL_INPUTS_DIR_NAME / name
+                _preserve_original_input(dp.rp, origin_dir=Path.cwd().resolve())
+
+                dp.sl = poscar.read(dp.rp.inputs_dir / "POSCAR")
+                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
+                dp.rp.inputs_dir = Path.cwd().resolve()
+
                 parameters.interpret(dp.rp, slab=dp.sl,
                                      silent=rp.LOG_LEVEL > logging.DEBUG)
                 dp.sl.full_update(dp.rp)
@@ -516,6 +538,7 @@ def init_domains(rp):
                              f"PARAMETERS for domain {name}")
                 raise
             logger.info(f"Running initialization for domain {name}")
+
             try:
                 initialization(dp.sl, dp.rp, subdomain=True)
             except Exception:
@@ -705,16 +728,14 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def _preserve_original_input(rp, init_logger, path=""):
-    """Create original_inputs directory and copies the input files there."""
-    path = Path(path)
-    orig_inputs_path = path / ORIGINAL_INPUTS_DIR_NAME
+def _preserve_original_input(rp, origin_dir):
+    """Create the original_inputs directory and copy input files there."""
     try:
-        orig_inputs_path.mkdir(parents=True, exist_ok=True)
+        rp.inputs_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        raise RuntimeError(f"Could not create directory "
-                           f"{ORIGINAL_INPUTS_DIR_NAME}. "
-                           "Check disk permissions.") from exc
+        raise RuntimeError(f'Could not create directory '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}. '
+                           'Check disk permissions.') from exc
 
     # We will copy all files that have potentially been used as
     # inputs. Make sure the correct version of EXPBEAMS is stored
@@ -723,21 +744,24 @@ def _preserve_original_input(rp, init_logger, path=""):
     if rp.expbeams_file_name:
         files_to_preserve.add(rp.expbeams_file_name)
 
+
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:
         # save under name EXPBEAMS.csv
-        file_path = path / file
+        file_path = origin_dir / file
         if not file_path.is_file():
-            init_logger.warning(f"Could not find file {file}. "
-                                    "It will not be stored in "
-                                    f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            if file in OPTIONAL_INPUT_FILES:
+                continue
+            logger.warning(f'Could not find file {file}. '
+                           'It will not be stored in '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rp.setHaltingLevel(1)
             return
         try:
-            shutil.copy2(file_path, orig_inputs_path)
+            shutil.copy2(file_path, rp.inputs_dir)
         except OSError:
-            init_logger.warning(f"Could not copy file {file} to "
-                                f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            logger.warning(f'Could not copy file {file} to '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rp.setHaltingLevel(1)
 
 
@@ -833,8 +857,10 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
         poscar.write(exc.fixed_slab, 'POSCAR_vacuum_corrected')
         exc_type = type(exc)
         _msg = exc.message
-        _msg += '. This may cause problems with layer assignment! '
-        _msg += 'You can find a POSCAR_vacuum_corrected file in SUPP with '
+        _msg += (
+            '. This may cause problems with layer assignment! You can '
+            f'find a POSCAR_vacuum_corrected file in {DEFAULT_SUPP} with '
+            )
         _msg += ('the correct position of vacuum. '
                  if exc_type is WrongVacuumPositionError
                  else 'a large enough vacuum gap. ')

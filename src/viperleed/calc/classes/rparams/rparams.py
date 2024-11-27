@@ -27,6 +27,8 @@ import shutil
 import numpy as np
 
 from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
@@ -164,7 +166,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = ['SUPP', 'OUT']
+        self.manifest = [DEFAULT_SUPP, DEFAULT_OUT]
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
             'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,
@@ -867,6 +869,9 @@ class Rparams:
         None.
         """
         for figures in self.lastParScatterFigs.values():
+            # Pylint can't tell that we will not execute this,
+            # as per decorator, if we fail to import matplotlib
+            # pylint: disable-next=possibly-used-before-assignment
             close_figures(plt, *figures)
 
     def generateSearchPars(self, sl, subdomain=False):

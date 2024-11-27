@@ -28,6 +28,7 @@ from viperleed.calc.lib.log_utils import at_level
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
+from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
 from viperleed.calc.lib.version import Version
 
 if CAN_PLOT:
@@ -722,6 +723,9 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims = prepare_analysis_plot(formatting, xyExp, xyTheo)
 
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(analysisFile)
     except PermissionError:
         logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
@@ -742,6 +746,9 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                               ylims, ytheo, v0i)
             for fig in figs:
                 pdf.savefig(fig)
+                # Pylint can't tell that we will not execute this,
+                # as per decorator, if we fail to import matplotlib
+                # pylint: disable-next=possibly-used-before-assignment
                 plt.close(fig)
         except Exception:
             logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
@@ -750,6 +757,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             pdf.close()
 
 
+@skip_without_matplotlib
 def prepare_analysis_plot(formatting, xyExp, xyTheo):
     # write R-factor analysis
     # find min and max values of x and y for plotting all curves
@@ -761,6 +769,9 @@ def prepare_analysis_plot(formatting, xyExp, xyTheo):
     dy = ymax - ymin
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
+    # Pylint can't tell that we will not execute this,
+    # as per decorator, if we fail to import matplotlib
+    # pylint: disable-next=possibly-used-before-assignment
     oritick = plticker.MultipleLocator(base=tick)
     xlims = (np.floor(xmin / tick) * tick,
              np.ceil(xmax / tick) * tick)
@@ -896,6 +907,9 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
 
 
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(analysisFile)
     except PermissionError:
         logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
@@ -921,6 +935,9 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
                               theo, xlims, y_exp, ylims, y_theo, v0i)
             for fig in figs:
                 pdf.savefig(fig)
+                # Pylint can't tell that we will not execute this,
+                # as per decorator, if we fail to import matplotlib
+                # pylint: disable-next=possibly-used-before-assignment
                 plt.close(fig)
         except Exception:
             logger.error("writeRfactorPdf: Error while writing analysis pdf: ",

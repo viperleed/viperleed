@@ -19,9 +19,11 @@ from pathlib import Path
 import shutil
 
 from viperleed import __version__
-from viperleed.calc import LOG_PREFIX
 from viperleed.calc import LOGGER as logger
 from viperleed.calc.classes import rparams
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.log_utils import close_all_handlers
@@ -96,7 +98,7 @@ def run_calc(system_name=None,
                 + DateTimeFormat.LOG_CONTENTS.now())
     logger.info(f"This is ViPErLEED version {__version__}\n")
 
-    tmp_manifest = ["SUPP", "OUT", log_name]
+    tmp_manifest = [DEFAULT_SUPP, DEFAULT_OUT, log_name]
     try:
         rp = parameters.read()
     except FileNotFoundError:

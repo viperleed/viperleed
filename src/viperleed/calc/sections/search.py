@@ -31,6 +31,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
 from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iosearch
 from viperleed.calc.files import parameters
 from viperleed.calc.files import searchpdf
@@ -721,7 +722,7 @@ def search(sl, rp):
             rpt.disp_block_read = True
         # get Deltas
         if 2 not in rpt.runHistory:
-            if "Tensors" in rpt.manifest:
+            if DEFAULT_TENSORS in rpt.manifest:
                 logger.error("New tensors were calculated, but no new delta "
                              "files were generated. Cannot execute search.")
                 raise RuntimeError("Delta calculations was not run for "

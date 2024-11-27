@@ -10,6 +10,8 @@ ag100_with_displacements_and_offsets
     A Ag(100) Slab and an Rparams, after reading a DISPLACEMENTS block.
 make_poscar (factory)
     Return a Slab from POSCAR, an Rparams and a TestInfo from a TestInfo.
+mock_path
+    A fake path-like object.
 poscars_path
     Path to the data directory containing POSCAR files.
 run_phaseshift
@@ -28,6 +30,7 @@ __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
 import os
+from pathlib import Path
 
 import pytest
 import pytest_cases
@@ -81,6 +84,12 @@ def ag100_with_displacements_and_offsets(ag100, data_path):
     displacements.readDISPLACEMENTS(param, str(displacements_path))
     displacements.readDISPLACEMENTS_block(param, slab, param.disp_blocks[0])
     return slab, param
+
+
+@pytest_cases.fixture
+def mock_path(mocker):
+    """Return a fake pathlib.Path."""
+    return mocker.MagicMock(spec=Path)
 
 
 # Notice that we need to exclude POSCARs without information as some

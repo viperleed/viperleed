@@ -203,8 +203,7 @@ def get_file_checksum(file_path):
     # The latter seems to appear in files synced with git on Windows:
     # line endings are automatically changed with the default
     # git/GitHub Desktop configuration.
-    content = content.replace(b'\r\n', b'\n')
-    return hashlib.sha256(content).hexdigest()
+    return hashlib.sha256(with_posix_line_endings(content)).hexdigest()
 
 
 def validate_checksum(tl_version, filename):
@@ -312,6 +311,11 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     # If you arrive here, checksums were successful
     logger.debug('Checksums of TensErLEED source '
                  f'files for {calc_part_name} validated.')
+
+
+def with_posix_line_endings(bytes_):
+    """Return modified bytes with b'\n' as line endings."""
+    return bytes_.replace(b'\r\n', b'\n')
 
 
 def encode_checksums(source_file_checksums):

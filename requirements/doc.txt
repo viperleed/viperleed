@@ -25,8 +25,4 @@ setuptools  # Workaround for sphinxcontrib-bibtex #345
 
 # Additional dependencies not related to sphinx, but necessary in
 # some of our build scripts that should be used for the documentation
-
-# 1. Dependencies of build/scripts/embed_fonts.py
-brotli     # Some dependency of parsel? We do not use it explicitly
-fontTools
-parsel
+-r dev_scripts.txt

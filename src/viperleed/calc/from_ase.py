@@ -22,12 +22,12 @@ import warnings
 
 import numpy as np
 
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.rparams import IVShiftRange
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.classes.slab import Slab
+from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import iorfactor as rf_io
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.beams import readOUTBEAMS

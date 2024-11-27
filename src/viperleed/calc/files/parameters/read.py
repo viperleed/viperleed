@@ -86,7 +86,7 @@ def read(filename='PARAMETERS'):
             're-insert it if you actually want to stop.'
             )
         comment_out(rpars, 'STOP', comment='Disabled at program start',
-                    path=filename.parent, suppress_ori=True)
+                    path=filename.parent)
     return rpars
 
 

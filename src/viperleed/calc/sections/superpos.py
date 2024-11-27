@@ -15,6 +15,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
+from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.files import iosuperpos
 from viperleed.calc.files.beams import averageBeams
 from viperleed.calc.files.beams import writeFdOut
@@ -227,7 +228,9 @@ def _best_config_from_sdtl(rp):                                                 
     """Return the best configuration from the most recent search."""
     # check for an SD.TL file
     cwd = Path()
-    sdtl_files = (f for f in (cwd/"SD.TL", cwd/"OUT"/"SD.TL") if f.is_file())
+    sdtl_files = (
+        f for f in (cwd/"SD.TL", cwd/{DEFAULT_OUT}/"SD.TL") if f.is_file()
+        )
     sdtl_file = next(sdtl_files, None)
     if not sdtl_file:
         logger.error("Superpos: Found no stored results from recent "
