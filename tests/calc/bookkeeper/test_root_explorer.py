@@ -399,6 +399,7 @@ class TestRootExplorerRaises:
         'clear_for_next_calc_run',
         'infer_run_info',
         'list_paths_to_discard',
+        'mark_edited_files',
         'remove_tensors_and_deltas',
         'revert_to_previous_calc_run',
         '_collect_files_to_archive',

@@ -55,7 +55,12 @@ MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_ORIG_CONTENT = 'This is a test original input file.'
 MOCK_OUT_CONTENT = 'This is a test output file.'
 MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
-MOCK_TIMESTAMP = '210203-040506'
+# Notice that the year for the timestamp is such that all files
+# created in the tests are considered "not later than". This
+# is to prevent labeling files as "_edited". As of 2024, "68"
+# is translated to 2068, as per POSIX specification of stptime:
+# https://pubs.opengroup.org/onlinepubs/9799919799/functions/strptime.html
+MOCK_TIMESTAMP = '680203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
 MOCK_WORKHISTORY = {  # name in workhistory: name in history
     f't003.r005_DS_{MOCK_TIMESTAMP}': f't003.r001.005_DS_{MOCK_TIMESTAMP}',

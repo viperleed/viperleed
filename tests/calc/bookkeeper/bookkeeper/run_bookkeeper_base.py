@@ -15,6 +15,7 @@ __license__ = 'GPLv3+'
 
 import logging
 
+from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
@@ -230,6 +231,10 @@ class _TestBookkeeperRunBase:
         # ARCHIVE does not run only if the run crashed,
         # in which case we don't want to overwrite
         self.check_root_inputs_untouched(*after_calc_execution)
+        
+        # There should be no file marked as _edited
+        bookkeeper, *_ = after_calc_execution
+        assert not any(bookkeeper.cwd.glob(f'*{EDITED_SUFFIX}'))
 
     def run_archive_after_calc_and_check(self, after_calc_execution, caplog,
                                          check_archiving_required=True):

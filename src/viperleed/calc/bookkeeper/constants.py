@@ -20,6 +20,9 @@ CALC_LOG_PREFIXES = (
     # be in historical order of use: Most recent first!
     'tleedm',
     )
+# A suffix for input files that were edited by the user since
+# the most-recent calc execution, and before bookkeeper ran.
+EDITED_SUFFIX = '_edited'
 HISTORY_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3})\.r(?P<job_num>[0-9]{3})(?P<rest>.*)'
     )

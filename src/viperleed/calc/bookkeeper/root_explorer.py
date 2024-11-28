@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 
 from collections import namedtuple
 from contextlib import nullcontext
+from datetime import datetime
 from functools import partial
 from operator import attrgetter
 from pathlib import Path
@@ -23,15 +24,20 @@ from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
+from viperleed.calc.lib.time_utils import DateTimeFormat
+from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 
 from .constants import CALC_LOG_PREFIXES
+from .constants import EDITED_SUFFIX
 from .constants import STATE_FILES
 from .history.explorer import HistoryExplorer
 from .history.workhistory import WorkhistoryHandler
 from .log import LOGGER
 from .utils import discard_files
+from .utils import file_contents_identical
 from .utils import make_property
 from .utils import needs_update_for_attr
 
@@ -83,6 +89,11 @@ class RootExplorer:
     def needs_archiving(self):
         """Return whether there are files/folder that should go to history."""
         return any(self._files_to_archive)
+
+    @property
+    def orig_inputs_dir(self):
+        """Return the path to the folder containing untouched input files."""
+        return self.path / DEFAULT_SUPP / ORIGINAL_INPUTS_DIR_NAME
 
     def clear_for_next_calc_run(self):
         """Clean up the root directory for a clean calc execution.
@@ -142,6 +153,32 @@ class RootExplorer:
             *self.tensors.list_paths_to_discard(self.history)
             )
         return tuple(p for p in to_discard if p.exists())
+
+    def mark_edited_files(self):
+        """Mark as _edited the files that were modified since calc started."""
+        try:
+            calc_started = datetime.strptime(self.calc_timestamp,
+                                             DateTimeFormat.FILE_SUFFIX.value)
+        except TypeError:  # No calc log in root
+            assert self.calc_timestamp is None
+            return
+
+        ori_path = self.orig_inputs_dir
+        for filename in ALL_INPUT_FILES:
+            cwd_file = self.path / filename
+            try:
+                mod_time = datetime.utcfromtimestamp(cwd_file.stat().st_mtime)
+            except FileNotFoundError:
+                continue
+            if mod_time < calc_started:
+                continue
+            # The input file was modified. See whether its contents
+            # differ from the one we have copied in original_inputs.
+            # If they differ (or there is no file in original_inputs),
+            # label this file as having been user-edited.
+            if not file_contents_identical(cwd_file, ori_path / filename):
+                LOGGER.info(f"Renaming {filename} to _edited: mod={mod_time}, calc={calc_started}")
+                cwd_file.replace(self.path / (filename + EDITED_SUFFIX))
 
     def read_and_clear_notes_file(self):
         """Return notes read from file. Clear the file contents."""
