@@ -10,6 +10,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
+import filecmp
 from functools import wraps
 from operator import attrgetter
 import shutil
@@ -33,6 +34,14 @@ def discard_files(*file_paths):
             shutil.rmtree(file)
         except OSError:
             LOGGER.error(f'Failed to discard directory {file.name}.')
+
+
+def file_contents_identical(file_one, file_two):
+    """Return whether two files have the same contents."""
+    try:
+        return filecmp.cmp(file_one, file_two, shallow=False)
+    except FileNotFoundError:
+        return False
 
 
 def make_property(attr, needs_update=False, updater='update_from_cwd'):

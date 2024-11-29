@@ -13,7 +13,6 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
-from ..conftest import MOCK_STATE_FILES
 from .run_bookkeeper_base import _TestBookkeeperRunBase
 
 
@@ -31,6 +30,14 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         warnings = ('metadata',)
         self.run_again_and_check_nothing_changed(after_archive, caplog,
                                                  acceptable_warnings=warnings)
+
+    def test_archive_with_edited_file(self,
+                                      after_calc_with_edited_file,
+                                      caplog):
+        """Check expected directory tree after running ARCHIVE."""
+        bookkeeper, _, expect = after_calc_with_edited_file
+        self._run_bookkeeper(bookkeeper, {}, caplog)
+        assert self.collect_root_contents(bookkeeper) == expect
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check no archiving happens before calc runs."""

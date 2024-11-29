@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 
 from collections import namedtuple
 from contextlib import nullcontext
+from datetime import datetime
 from functools import partial
 from operator import attrgetter
 from pathlib import Path
@@ -23,16 +24,21 @@ from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
+from viperleed.calc.lib.time_utils import DateTimeFormat
 
 from .constants import CALC_LOG_PREFIXES
+from .constants import EDITED_SUFFIX
 from .constants import ORI_SUFFIX
 from .constants import STATE_FILES
+from .errors import FileOperationFailedError
 from .history.explorer import HistoryExplorer
 from .history.workhistory import WorkhistoryHandler
 from .log import LOGGER
 from .utils import discard_files
+from .utils import file_contents_identical
 from .utils import make_property
 from .utils import needs_update_for_attr
 
@@ -85,6 +91,11 @@ class RootExplorer:
         """Return whether there are files/folder that should go to history."""
         return any(self._files_to_archive)
 
+    @property
+    def orig_inputs_dir(self):
+        """Return the path to the folder containing untouched input files."""
+        return self.path / DEFAULT_SUPP / ORIGINAL_INPUTS_DIR_NAME
+
     def clear_for_next_calc_run(self):
         """Clean up the root directory for a clean calc execution.
 
@@ -136,6 +147,60 @@ class RootExplorer:
             *self.tensors.list_paths_to_discard(self.history)
             )
         return tuple(p for p in to_discard if p.exists())
+
+    def mark_edited_files(self):
+        """Mark as _edited the files that were modified since calc started."""
+        try:
+            calc_started = datetime.strptime(self.calc_timestamp,
+                                             DateTimeFormat.FILE_SUFFIX.value)
+        except TypeError:  # No calc log in root
+            assert self.calc_timestamp is None
+            return
+
+        ori_path = self.orig_inputs_dir
+        for filename in STATE_FILES:
+            cwd_file = self.path / filename
+            try:
+                mod_time = datetime.fromtimestamp(cwd_file.stat().st_mtime)
+            except FileNotFoundError:
+                continue
+            if mod_time < calc_started:
+                continue
+            # The input file was modified. See whether its contents
+            # differ from the one we have copied in original_inputs.
+            # If they differ (or there is no file in original_inputs),
+            # label this file as having been user-edited.
+            if file_contents_identical(cwd_file, ori_path / filename):
+                continue
+            edited = filename + EDITED_SUFFIX
+            LOGGER.warning(f'File {filename} was modified after calc '
+                           f'started. Renaming it to {edited}.')
+            try:
+                cwd_file.replace(self.path / edited)
+            except OSError:
+                LOGGER.error(f'Failed to rename {filename} to {edited}. '
+                             'It may be overwritten by the corresponding '
+                             f'file in {DEFAULT_OUT}.')
+
+    def prepare_for_next_calc_run(self):
+        """Rename inputs to '_ori', pull new ones from OUT/original_inputs."""
+        errors = []
+        try:
+            self._mark_state_files_as_ori()
+        except FileOperationFailedError as exc:  # Re-raise it later
+            errors.append(exc)
+
+        # At this point, all STATE_FILES should have been renamed
+        # to either _ori (above) or _edited (via an external call
+        # to mark_edited_files).
+        try:  # Pull in the inputs for the next calc run.
+            self._copy_state_files_from_out_or_original_inputs()
+        except FileOperationFailedError as exc:
+            errors.append(exc)
+
+        self._complain_about_edited_files()
+        if errors:
+            raise OSError('\n'.join(str(e) for e in errors))
 
     def read_and_clear_notes_file(self):
         """Return notes read from file. Clear the file contents."""
@@ -193,47 +258,12 @@ class RootExplorer:
         self.logs.discard()
         self._remove_out_and_supp()
         deal_with_ori_files()
+        self._complain_about_edited_files()
         # Let's not complain again about funny stuff. We have already
         # done so when collect_info was called the first time. Notice
         # that this must have happened, as this method relies on the
         # logs attribute to be up to date.
         self.collect_info(silent=True)
-
-    def update_state_files_from_out(self):
-        """Copy state files from OUT to root. Rename old to '_ori'."""
-        out_path = self.path / DEFAULT_OUT
-        if not out_path.is_dir():
-            return
-        failed = {}
-        for file in STATE_FILES:
-            out_file = out_path / f'{file}_OUT'
-            cwd_file = self.path / file
-            if not out_file.is_file():
-                continue
-            # NB: all the moving around is local to the same folder
-            # tree, so we don't really need shutil. Path.replace always
-            # works for the same file system. Notice also the use of
-            # replace rather than rename, as the behavior of rename
-            # is not identical for all platforms.
-            try:
-                cwd_file.replace(self.path / f'{file}{ORI_SUFFIX}')
-            except OSError as exc:
-                failed[file] = exc
-                continue
-            # The OUT file is copied, however: .replace would move it
-            shutil.copy2(out_file, cwd_file)
-        if not failed:
-            return
-        # Report failures, so people can do it manually.
-        LOGGER.error('Failed to copy OUT files to the current directory '
-                     'and to rename the original inputs there.')
-        LOGGER.error('The following files could not be processed:')
-        for file in failed:
-            LOGGER.error(f'{file} -x-> {file}{ORI_SUFFIX}. '
-                         f'{out_path.name}/{file}_OUT -x-> {file}')
-        exc_msgs = (f'{file}: raised {type(exc).__name__} - {exc}'
-                    for file, exc in failed.items())
-        raise OSError('\n'.join(exc_msgs))
 
     @_needs_collect('_logs')
     def _collect_files_to_archive(self):
@@ -249,6 +279,135 @@ class RootExplorer:
             )
         self._files_to_archive = tuple(p for p in to_archive
                                        if p.is_file() or p.is_dir())
+
+    def _complain_about_edited_files(self):
+        """Log warnings if any _edited file is found in root."""
+        edited_files = tuple(str(f.relative_to(self.path))
+                             for f in self.path.glob(f'*{EDITED_SUFFIX}*'))
+        if not edited_files:
+            return
+        edited = ','.join(edited_files)
+        inputs = ','.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
+        LOGGER.warning(f'Found user-edited files {edited}. Make sure to port '
+                       'any desired changes to the corresponding input files '
+                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX}'
+                       ' files.')
+
+    def _copy_state_files_from(self, source, *name_fmts, only_files=None):
+        """Copy input files from `source` to the root directory.
+
+        Parameters
+        ----------
+        source : Path
+            The path where state files should be copied from.
+            It must be a subfolder of self.path.
+        *name_fmts : str
+            Strings that will be .format()ted with the name of
+            each state file to pick which file should be copied
+            from `source`. The order of `name_fmts` corresponds
+            to the priority in which files are searched. If no
+            format is given, files are assumed to be named
+            identically to their destination name.
+        only_files : iterable or None
+            Only consider these file names when copying. If
+            None or not given, all the "state" input files are
+            considered. The default is None.
+
+        Raises
+        ------
+        FileOperationFailedError
+            If any copying fails.
+        """
+        failed = {}
+        name_fmts = name_fmts or ('{}',)
+        if only_files is None:
+            only_files = STATE_FILES
+        for file in only_files:
+            cwd_file = self.path / file
+            new_inputs = [source / fmt.format(file) for fmt in name_fmts]
+            try:
+                new_input = next(f for f in new_inputs if f.is_file())
+            except StopIteration:
+                failed[file] = new_inputs
+                continue
+            try:
+                shutil.copy2(new_input, cwd_file)
+            except OSError as exc:
+                failed[file] = exc
+        if failed:
+            raise FileOperationFailedError(failed)
+
+    def _copy_state_files_from_out_or_original_inputs(self):
+        """Copy to root OUT or original_inputs files as new calc inputs."""
+        # Try OUT first
+        failed_out = {}
+        try:
+            self._copy_state_files_from(self.path / DEFAULT_OUT, '{}_OUT')
+        except FileOperationFailedError as exc:
+            failed_out.update(exc.failures)
+
+        # Then original_inputs, for those that were not found in OUT
+        failed_ori = {}
+        try:
+            self._copy_state_files_from(self.orig_inputs_dir,
+                                        only_files=failed_out)
+        except FileOperationFailedError as exc:
+            failed_ori.update(exc.failures)
+
+        # Consider failed those that failed in both attempts.
+        # Report exceptions with higher priority than files we tried.
+        failed = {}
+        for file in failed_ori:  # pylint: disable=C0206
+            reasons = failed_out[file], failed_ori[file]
+            try:
+                failed[file] = next(r for r in reasons
+                                    if isinstance(r, Exception))
+            except StopIteration:  # Both are lists of files
+                failed[file] = sum(reasons, [])
+        if failed:
+            self._log_failures_when_copying_input_files(failed)
+            raise FileOperationFailedError(failed)
+
+    def _log_failures_when_copying_input_files(self, failed):
+        """Emit logging errors about failures to pull input files.
+
+        Parameters
+        ----------
+        failed : dict
+            Keys are names of input files that we failed
+            to copy to the root folder. Values are either
+            exceptions that occurred while copying, or list
+            of paths of the files that we attempted to copy.
+
+        Returns
+        -------
+        None.
+        """
+        LOGGER.error('Failed to collect input files for the next calc run:')
+        for file, info in failed.items():
+            if isinstance(info, Exception):
+                reason = f'raised {type(info).__name__} - {info}'
+            else:  # List of paths to files that were tried
+                files = ' or '.join(str(f.relative_to(self.path))
+                                    for f in info)
+                reason = f'No {files} found'
+            LOGGER.error(f'    {file}: {reason}')
+
+    def _mark_state_files_as_ori(self):
+        """Suffix input files in root as _ori. Raise on failure."""
+        failed = {}
+        for file in STATE_FILES:
+            file_ori = f'{file}{ORI_SUFFIX}'
+            cwd_file = self.path / file
+            try:
+                cwd_file.replace(self.path / file_ori)
+            except FileNotFoundError:  # May have been _edited
+                continue
+            except OSError as exc:
+                LOGGER.error(f'Failed to rename {file} to {file_ori}.')
+                failed[file] = exc
+        if failed:
+            raise FileOperationFailedError(failed)
 
     def _remove_ori_files(self):
         """Delete '_ori'-suffixed files from root."""

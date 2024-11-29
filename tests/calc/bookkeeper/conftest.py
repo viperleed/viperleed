@@ -27,12 +27,16 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+from copy import deepcopy
+
 from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.constants import CALC_LOG_PREFIXES
+from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
+from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_DELTAS
@@ -41,6 +45,7 @@ from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
@@ -55,7 +60,12 @@ MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_ORIG_CONTENT = 'This is a test original input file.'
 MOCK_OUT_CONTENT = 'This is a test output file.'
 MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
-MOCK_TIMESTAMP = '210203-040506'
+# Notice that the year for the timestamp is such that all files
+# created in the tests are considered "not later than". This
+# is to prevent labeling files as "_edited". As of 2024, "68"
+# is translated to 2068, as per POSIX specification of stptime:
+# https://pubs.opengroup.org/onlinepubs/9799919799/functions/strptime.html
+MOCK_TIMESTAMP = '680203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
 MOCK_WORKHISTORY = {  # name in workhistory: name in history
     f't003.r005_DS_{MOCK_TIMESTAMP}': f't003.r001.005_DS_{MOCK_TIMESTAMP}',
@@ -163,7 +173,7 @@ def fixture_after_archive(after_calc_execution, after_bookkeper_run):
 
 
 @fixture(name='after_calc_execution')
-def fixture_after_calc_execution(mock_tree_after_calc_execution):
+def fixture_after_calc_execution(mock_tree_after_calc_execution, mocker):
     """Prepare a directory like the one after calc executes.
 
     Parameters
@@ -171,6 +181,8 @@ def fixture_after_calc_execution(mock_tree_after_calc_execution):
     mock_tree_after_calc_execution : fixture
         Factory that produces a temporary directory containing
         files like those produced by run_calc when called.
+    mocker : fixture
+        The pytest-mock fixture.
 
     Returns
     -------
@@ -180,13 +192,15 @@ def fixture_after_calc_execution(mock_tree_after_calc_execution):
     history_run_path : Path
         Path to the main history subfolder that would be created
         by `bookkeeper` as a result of the archiving.
+    mocker : fixture
+        The pytest-mock fixture.
     """
     tmp_path = mock_tree_after_calc_execution()
     bookkeeper = Bookkeeper(cwd=tmp_path)
     bookkeeper.update_from_cwd(silent=True)
     history_path = bookkeeper.cwd / DEFAULT_HISTORY
     history_run_path = history_path / f't004.r001_{MOCK_TIMESTAMP}'
-    return bookkeeper, history_run_path
+    return bookkeeper, history_run_path, mocker
 
 
 @fixture(name='before_calc_execution')
@@ -214,3 +228,76 @@ def fixture_before_calc_execution(mock_tree_before_calc_execution):
     bookkeeper = Bookkeeper(cwd=tmp_path)
     bookkeeper.update_from_cwd(silent=True)
     return bookkeeper
+
+
+@fixture(name='after_calc_with_edited_file')
+def fixture_after_calc_with_edited(tmp_path):
+    """Prepare a directory like the one after calc executes.
+
+    However, modify one file as if the user had done so after
+    calc started running. The tree is structured as in
+    https://github.com/viperleed/viperleed/pull/198#issuecomment-2506549827.
+
+    Parameters
+    ----------
+    tmp_path : fixture
+        The pytest fixture for creating a temporary directory.
+
+    Returns
+    -------
+    bookkeeper : Bookkeeper
+        A bookkeeper instance ready to run in `tmp_path`.
+    before : dict
+        A dictionary representation of the current contents
+        of `tmp_path`.
+    archived : dict
+        A dictionary representation of the expected contents
+        of `tmp_path` after a successful ARCHIVE run.
+    """
+    # Use a time in the past. All files will be created AFTER this,
+    # but we also check their contents to decide whether they were
+    # edited since.
+    calc_started = '250128-235532'
+    before = {
+        f'{LOG_PREFIX}-{calc_started}.log': '',
+        'PARAMETERS': MOCK_ORIG_CONTENT,
+        'VIBROCC': MOCK_ORIG_CONTENT,
+        'POSCAR': MOCK_INPUT_CONTENT,  # This will be marked as _edited
+        DEFAULT_SUPP : {
+            ORIGINAL_INPUTS_DIR_NAME: {
+                'PARAMETERS': MOCK_ORIG_CONTENT,  # Same as root file
+                'VIBROCC': MOCK_ORIG_CONTENT,     # Same as root file
+                'POSCAR': MOCK_ORIG_CONTENT,  # Differs from root one
+                },
+            },
+        DEFAULT_OUT : {
+            'PARAMETERS_OUT': MOCK_OUT_CONTENT,
+            # Notice that there is no POSCAR nor VIBROCC in OUT
+            },
+        }
+
+    # Now what we expect from an ARCHIVE run:
+    # (1) History folder structure
+    in_history = deepcopy(before)
+    in_history['POSCAR'] = (
+        # The only difference is the POSCAR file, which is pulled from
+        # original_inputs rather than from the root directory
+        before[DEFAULT_SUPP][ORIGINAL_INPUTS_DIR_NAME]['POSCAR']
+        )
+    archived = deepcopy(before)
+    archived[DEFAULT_HISTORY] = {f't000.r001_{calc_started}': in_history}
+
+    # (2) The rest of the root
+    archived[f'PARAMETERS{ORI_SUFFIX}'] = before['PARAMETERS']
+    archived['PARAMETERS'] = before[DEFAULT_OUT]['PARAMETERS_OUT']
+    archived[f'VIBROCC{ORI_SUFFIX}'] = before['VIBROCC']
+    # No VIBROCC in OUT, so new input stays the same
+    archived[f'POSCAR{EDITED_SUFFIX}'] = before['POSCAR']
+    archived['POSCAR'] = (  # No OUT. Pulled from original_inputs.
+        before[DEFAULT_SUPP][ORIGINAL_INPUTS_DIR_NAME]['POSCAR']
+        )
+
+    filesystem_from_dict(before, tmp_path)
+    bookkeeper = Bookkeeper(cwd=tmp_path)
+    bookkeeper.update_from_cwd(silent=True)
+    return bookkeeper, before, archived

@@ -29,4 +29,5 @@ STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
 
 # SUFFIXES FOR INPUT FILES
+EDITED_SUFFIX = '_edited'  # Edited after calc and before bookkeeper
 ORI_SUFFIX = '_ori'        # Non-edited input file; used at ARCHIVE

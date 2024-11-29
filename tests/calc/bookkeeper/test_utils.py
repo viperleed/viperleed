@@ -11,8 +11,10 @@ from pathlib import Path
 
 import pytest
 from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.utils import discard_files
+from viperleed.calc.bookkeeper.utils import file_contents_identical
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.bookkeeper.utils import _get_attr_or_dict_item
@@ -120,6 +122,35 @@ class TestDiscardFiles:
         discard_files(mock_file, mock_dir)
         mock_file.unlink.assert_called_once()
         mock_rmtree.assert_called_once_with(mock_dir)
+
+
+class TestFileContentsIdentical:
+    """Tests for the file_contents_identical function."""
+
+    @fixture(name='mock_files')
+    def factory_mock_files(self, tmp_path):
+        """Create files with contents in a temporary directory."""
+        def _make(*contents, n_files=2):
+            n_files = max(n_files, len(contents))
+            files = [tmp_path / f'file_{i}' for i in range(n_files)]
+            for file, file_contents in zip(files, contents):
+                file.write_text(file_contents)
+            return files
+        return _make
+
+    _valid = {
+        'same': (('same', 'same'), True),
+        'different': (('contents A', 'contents B'), False),
+        'one missing': (('first file',), False),
+        'both missing': ((), False),
+        }
+
+    @parametrize('contents,expect', _valid.values(), ids=_valid)
+    def test_file_compare(self, contents, expect, mock_files):
+        """Check the expected return of file_contents_identical."""
+        files = mock_files(*contents, n_files=2)
+        result = file_contents_identical(*files)
+        assert result == expect
 
 
 class TestMakeProperty:

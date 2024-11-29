@@ -116,7 +116,7 @@ class TestBookkeeperComplaints:
         target = bookkeeper.history.new_folder.path
         bookkeeper.run('archive')
         assert _FROM_ROOT in caplog.text
-        assert (tmp_path/'POSCAR').is_file()
+        assert (tmp_path/'POSCAR_ori').is_file()
         assert (target/'POSCAR_from_root').is_file()
 
 
@@ -154,8 +154,10 @@ class TestBookkeeperOthers:
     def test_no_state_files_in_out(self):
         """Check correct behavior when there is no file in OUT to be used."""
         bookkeeper = Bookkeeper()
-        # pylint: disable-next=protected-access           # OK in tests
-        bookkeeper._root.update_state_files_from_out()    # No OUT dir
+        # There are neither OUT nor SUPP/original_inputs directories
+        with pytest.raises(OSError):
+            # pylint: disable-next=protected-access       # OK in tests
+            bookkeeper._root.prepare_for_next_calc_run()
         assert not any(Path(f).exists() for f in MOCK_STATE_FILES)
 
     def test_remove_tensors_deltas(self, tmp_path):

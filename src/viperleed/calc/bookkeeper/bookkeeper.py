@@ -369,24 +369,44 @@ class Bookkeeper:
                 continue
             history_folder.copy_file_or_directory(directory)
 
-    def _do_prerun_archiving(self):
+    def _do_prerun_archiving_and_mark_edited(self):
         """If needed, archive files from root to history.
 
-        This is a simple wrapper around the
-        _archive_to_history_and_add_info_entry
-        method that does nothing if no archiving
-        is needed, logs an info message otherwise.
+        If any archiving is needed, input files in the current
+        working directory that have been modified by the user
+        since calc started and before bookkeeper ran are marked
+        as '_edited'.
 
         Returns
         -------
         did_archive : bool
             Whether anything was archived at all.
         """
+        in_archive_mode = self._mode is BookkeeperMode.ARCHIVE
+        if in_archive_mode and self.history.new_folder.exists:
+            LOGGER.info(
+                f'History directory for run {self.history.new_folder.name} '
+                'exists. Exiting without doing anything.'
+                )
+            return False
+        if in_archive_mode and not self.files_need_archiving:
+            LOGGER.info(f'No files to be moved to {self.history.path.name}. '
+                        'Exiting without doing anything.')
+            return False
         if not self.archiving_required:
             return False
-        LOGGER.info(f'History folder {self.history.new_folder.name} '
-                    'does not exist yet. Running archive mode first.')
+        if not in_archive_mode:
+            LOGGER.info(f'History folder {self.history.new_folder.name} '
+                        'does not exist yet. Running archive mode first.')
         self._archive_to_history_and_add_info_entry()
+
+        # Notice that it is OK to decide now whether files should
+        # be marked as edited rather than before archiving. In
+        # fact, during archiving we recognize the right files to
+        # pull (in _copy_input_files_from_original_inputs_or_cwd):
+        # always copy from original_inputs if possible, otherwise
+        # copy with a _FROM_ROOT suffix.
+        self._root.mark_edited_files()
         return True
 
     def _make_and_copy_to_history(self):
@@ -478,26 +498,23 @@ class Bookkeeper:
 
     def _run_archive_mode(self):
         """Execute bookkeeper in ARCHIVE mode."""
-        if self.history.new_folder.exists:
-            LOGGER.info(
-                f'History directory for run {self.history.new_folder.name} '
-                'exists. Exiting without doing anything.'
-                )
-            return BookkeeperExitCode.NOTHING_TO_DO
-        if not self.files_need_archiving:
-            LOGGER.info('No files to be moved to history. Exiting '
-                        'without doing anything.')
+        # Copy all the relevant files to history, add
+        # a history.info entry, mark edited input files...
+        did_archive = self._do_prerun_archiving_and_mark_edited()
+        if not did_archive:
             return BookkeeperExitCode.NOTHING_TO_DO
 
-        # Copy all relevant files to history, add an entry...
-        self._archive_to_history_and_add_info_entry()
-        # ...and move old inputs to _ori, replacing them from OUT
-        self._root.update_state_files_from_out()
+        # ...mark non-edited inputs as _ori, and prepare inputs for
+        # the next execution of calc (from OUT or original_inputs)
+        try:
+            self._root.prepare_for_next_calc_run()
+        except OSError:
+            return BookkeeperExitCode.FAIL
         return BookkeeperExitCode.SUCCESS
 
     def _run_clear_mode(self):
         """Execute bookkeeper in CLEAR mode."""
-        self._do_prerun_archiving()
+        self._do_prerun_archiving_and_mark_edited()
         self._root.clear_for_next_calc_run()
         return BookkeeperExitCode.SUCCESS
 
@@ -534,7 +551,7 @@ class Bookkeeper:
 
     def _run_discard_mode(self):
         """Execute bookkeeper in DISCARD mode."""
-        did_archive = self._do_prerun_archiving()
+        did_archive = self._do_prerun_archiving_and_mark_edited()
         self._root.revert_to_previous_calc_run()
         if did_archive:
             # We had to archive the contents of the root directory.
