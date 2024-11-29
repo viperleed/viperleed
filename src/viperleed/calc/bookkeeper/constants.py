@@ -26,3 +26,7 @@ HISTORY_FOLDER_RE = re.compile(
 
 # Input/output files that may have _ori or _OUT suffix
 STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
+
+
+# SUFFIXES FOR INPUT FILES
+ORI_SUFFIX = '_ori'        # Non-edited input file; used at ARCHIVE

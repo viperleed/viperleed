@@ -15,6 +15,7 @@ __license__ = 'GPLv3+'
 
 import logging
 
+from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
@@ -118,7 +119,8 @@ class _TestBookkeeperRunBase:
         """Check that the input files have now a _ori suffix."""
         cwd = bookkeeper.cwd
         for file in MOCK_STATE_FILES:
-            self._check_file_contents(cwd/f'{file}_ori', MOCK_INPUT_CONTENT)
+            self._check_file_contents(cwd/f'{file}{ORI_SUFFIX}',
+                                      MOCK_INPUT_CONTENT)
             self._check_file_contents(cwd/file, MOCK_OUT_CONTENT)
 
     def check_root_inputs_replaced_by_out(self, bookkeeper, *_):
@@ -137,7 +139,7 @@ class _TestBookkeeperRunBase:
         """Check that no calc output is present in the main directory."""
         cwd = bookkeeper.cwd
         for file in MOCK_STATE_FILES:
-            assert not (cwd / f'{file}_ori').is_file()
+            assert not (cwd / f'{file}{ORI_SUFFIX}').is_file()
         assert not (cwd / DEFAULT_SUPP).exists()
         assert not (cwd / DEFAULT_OUT).exists()
         assert not any(cwd.glob('*.log'))

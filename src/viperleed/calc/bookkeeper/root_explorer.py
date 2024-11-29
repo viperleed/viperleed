@@ -27,6 +27,7 @@ from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
 
 from .constants import CALC_LOG_PREFIXES
+from .constants import ORI_SUFFIX
 from .constants import STATE_FILES
 from .history.explorer import HistoryExplorer
 from .history.workhistory import WorkhistoryHandler
@@ -120,7 +121,7 @@ class RootExplorer:
             (<file_that_will_be_deleted>, <file_that will_be_renamed>).
             All items are Paths to the files.
         """
-        ori_files = {self.path/file: self.path/f'{file}_ori'
+        ori_files = {self.path/file: self.path/f'{file}{ORI_SUFFIX}'
                      for file in STATE_FILES}
         ori_files = {file: ori_file for file, ori_file in ori_files.items()
                      if ori_file.exists()}
@@ -215,7 +216,7 @@ class RootExplorer:
             # replace rather than rename, as the behavior of rename
             # is not identical for all platforms.
             try:
-                cwd_file.replace(self.path / f'{file}_ori')
+                cwd_file.replace(self.path / f'{file}{ORI_SUFFIX}')
             except OSError as exc:
                 failed[file] = exc
                 continue
@@ -228,7 +229,7 @@ class RootExplorer:
                      'and to rename the original inputs there.')
         LOGGER.error('The following files could not be processed:')
         for file in failed:
-            LOGGER.error(f'{file} -x-> {file}_ori. '
+            LOGGER.error(f'{file} -x-> {file}{ORI_SUFFIX}. '
                          f'{out_path.name}/{file}_OUT -x-> {file}')
         exc_msgs = (f'{file}: raised {type(exc).__name__} - {exc}'
                     for file, exc in failed.items())
@@ -251,7 +252,7 @@ class RootExplorer:
 
     def _remove_ori_files(self):
         """Delete '_ori'-suffixed files from root."""
-        ori_files = (self.path / f'{file}_ori' for file in STATE_FILES)
+        ori_files = (self.path / f'{file}{ORI_SUFFIX}' for file in STATE_FILES)
         discard_files(*ori_files)
 
     def _remove_out_and_supp(self):

@@ -20,6 +20,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.constants import STATE_FILES
+from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.root_explorer import LogFiles
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
 from viperleed.calc.bookkeeper.root_explorer import TensorAndDeltaInfo
@@ -217,7 +218,7 @@ class TestRootExplorer:
 
 
     _remove_files = {
-        '_remove_ori_files': [f'{file}_ori' for file in STATE_FILES],
+        '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
         '_remove_out_and_supp': (DEFAULT_OUT, DEFAULT_SUPP),
         }
 
@@ -303,7 +304,8 @@ class TestRootExplorer:
         logs = caplog.text
         for file in MOCK_STATE_FILES:
             assert exc_info.match(file)
-            assert all(s in logs for s in (file, f'{file}_ori', f'{file}_OUT'))
+            assert all(s in logs
+                       for s in (file, f'{file}{ORI_SUFFIX}', f'{file}_OUT'))
 
 
 class TestRootExplorerListFiles:
@@ -350,7 +352,7 @@ class TestRootExplorerListFiles:
     @parametrize(state_files=_ori_files.values(), ids=_ori_files)
     def test_to_replace_ori_files_exist(self, state_files, explorer, mocker):
         """Test list_files_to_replace when '_ori' files are present."""
-        mock_ori = [explorer.path / f'{f}_ori' for f in state_files]
+        mock_ori = [explorer.path / f'{f}{ORI_SUFFIX}' for f in state_files]
         mocker.patch.object(Path, 'exists', new=mock_exists(mock_ori))
         files_to_replace = explorer.list_files_to_replace()
         expected_files_to_replace = {
