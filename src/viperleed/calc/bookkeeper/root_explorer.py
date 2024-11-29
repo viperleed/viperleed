@@ -94,14 +94,7 @@ class RootExplorer:
         -------
         None.
         """
-        self.logs.discard()
-        self._remove_out_and_supp()
-        self._remove_ori_files()
-        # Let's not complain again about funny stuff. We have already
-        # done so when collect_info was called the first time. Notice
-        # that this must have happened, as this method relies on the
-        # logs attribute to be up to date.
-        self.collect_info(silent=True)
+        self._clean_up_root(deal_with_ori_files=self._remove_ori_files)
 
     def collect_info(self, silent=False):
         """Collect information from the root directory."""
@@ -177,9 +170,28 @@ class RootExplorer:
             If replacing input files with their '_ori'-suffixed
             version fails.
         """
+        self._clean_up_root(
+            deal_with_ori_files=self._replace_state_files_from_ori
+            )
+
+    def _clean_up_root(self, deal_with_ori_files):
+        """Clean the root directory from calc results.
+
+        Notice that workhistory files and the workhistory
+        directory itself are left untouched.
+
+        Parameters
+        ----------
+        deal_with_ori_files : callable
+            A callable that handles _ori-suffixed files.
+
+        Returns
+        -------
+        None.
+        """
         self.logs.discard()
         self._remove_out_and_supp()
-        self._replace_state_files_from_ori()
+        deal_with_ori_files()
         # Let's not complain again about funny stuff. We have already
         # done so when collect_info was called the first time. Notice
         # that this must have happened, as this method relies on the
