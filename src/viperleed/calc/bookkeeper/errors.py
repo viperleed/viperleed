@@ -1,6 +1,6 @@
 """Module errors of viperleed.calc.bookkeeper.
 
-Defines the base BookkeperError exception and its subclasses.
+Defines the base BookkeeperError exception and its subclasses.
 """
 
 __authors__ = (
@@ -11,9 +11,9 @@ __created__ = '2024-11-29'
 __license__ = 'GPLv3+'
 
 
-class BookkeperError(Exception):
+class BookkeeperError(Exception):
     """Base class of all bookkeeper-related errors."""
 
 
-class _FileNotOlderError(BookkeperError):
+class _FileNotOlderError(BookkeeperError):
     """Exception used internally for file-age checks."""
