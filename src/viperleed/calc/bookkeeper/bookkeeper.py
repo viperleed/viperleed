@@ -240,6 +240,8 @@ class Bookkeeper:
         tensor_nums.add(self.tensor_number)
         # ...and add a history.info entry
         self._add_history_info_entry(tensor_nums)
+        LOGGER.info('Done archiving the current directory '
+                    f'to {self.history.path.name}')
 
     def _check_may_discard_full(self):
         """Log and raise if it is not possible to DISCARD_FULL."""
