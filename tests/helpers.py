@@ -31,7 +31,7 @@ from pytest_cases.filters import get_case_tags
 # https://github.com/nteract/testbook/issues/4
 
 
-TEST_DATA = Path(__file__).parent / '_test_data'
+TEST_DATA = Path(__file__).resolve().parent / '_test_data'
 POSCAR_PATH = TEST_DATA / 'POSCARs'
 
 # ##############################   EXCEPTIONS   ###############################

@@ -96,7 +96,7 @@ class TestInputFileReader:
             reader.__exit__(None, None, None)
 
     def test_current_line_updated(self, tmp_path):
-        """Check that the line numbers a tracked."""
+        """Check that the line numbers are tracked."""
         file = tmp_path / 'test.txt'
         file.write_text('line1\nline2\nline3\n')
         with MockInputFileReader(file) as reader:

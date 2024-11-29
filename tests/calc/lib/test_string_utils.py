@@ -91,7 +91,7 @@ class TestRangeToStr:
 
     @parametrize('iterable,kwargs,exc', _raises.values(), ids=_raises)
     def test_raises(self, iterable, kwargs, exc):
-        """Check complaints when using an invalid iterable."""
+        """Check complaints with invalid arguments."""
         with pytest.raises(exc):
             range_to_str(iterable, **kwargs)
 
@@ -248,7 +248,7 @@ class TestSplitStringRange:
         '1:5': ('1', '5'),
         'start:stop': ('start', 'stop'),
         }
-    _fail = { # Should these all raise some form of syntax error?
+    _fail = {  # TODO: Should these raise some form of syntax error?
         'partial range': ('1-', ('1', '')),
         'multi dashes': ('1--5', ('1', '5')),
         'multi colons': ('1::5', ('1', '5')),

@@ -54,7 +54,7 @@ def debug_or_lower(logger, effective=True):
 
 @contextmanager
 def logging_silent(level=logging.CRITICAL):
-    """Mute all logging messages with at least `level` for ALL loggers.
+    """Mute all logging messages below `level` for ALL loggers.
 
     Parameters
     ----------

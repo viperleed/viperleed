@@ -117,7 +117,7 @@ def read_int_range(ranges):
     ----------
     ranges : str
         The string containing the integers. It may contain multiple,
-        space-separated, range specifications in the form i1-i2/i1:i2.
+        space-separated range specifications in the form i1-i2/i1:i2.
         In this case, the bounds are considered inclusive, i.e., the
         return value contains both i1 and i2.
 

@@ -30,11 +30,11 @@ from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
+from viperleed.calc.lib import fortran_utils
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
-from viperleed.calc.lib import fortran_utils
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
@@ -52,7 +52,7 @@ from .special.base import SpecialParameter
 
 _LOGGER = logging.getLogger(parent_name(__name__))
 if CAN_PLOT:
-    import matplotlib.pyplot as plt
+    from matplotlib import pyplot as plt
     use_calc_style()
 
 

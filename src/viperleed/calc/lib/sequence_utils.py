@@ -18,7 +18,7 @@ from viperleed.calc.lib.itertools_utils import pairwise
 
 # Adapted from https://stackoverflow.com/questions/45382174
 def conditional_sort(sequence, skip, key=None):
-    """Return a sorted list of items in sequence, skipping some.
+    """Return a sorted list of items in `sequence`, skipping some.
 
     Parameters
     ----------
@@ -27,7 +27,7 @@ def conditional_sort(sequence, skip, key=None):
     skip : callable
         A callable that will be called on each item. Should return True
         for those items that the user wants to stay in their place and
-        not be sorted. Only those items for which skip returns False
+        not be sorted. Only those items for which `skip` returns False
         are sorted.
     key : callable, optional
         Same meaning as for the sorted built-in function.

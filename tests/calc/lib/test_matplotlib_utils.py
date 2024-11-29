@@ -14,7 +14,6 @@ from unittest.mock import Mock
 import pytest
 from pytest_cases import fixture, parametrize
 
-# Import the module
 from viperleed.calc.lib import matplotlib_utils
 from viperleed.calc.lib.log_utils import at_level
 from viperleed.calc.lib.matplotlib_utils import _LOGGER
@@ -113,7 +112,7 @@ class TestCanPlot:
                             log_without_matplotlib(_LOGGER),
                             raise_without_matplotlib))
     def test_returns_expected(self, decorated, decorator):
-        """Check that decorating returns None without matplotlib."""
+        """Check that decorating does not affect the return value."""
         func = decorated(decorator)
         assert func() == MOCK_RETURN
 

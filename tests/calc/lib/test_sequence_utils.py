@@ -18,7 +18,7 @@ from viperleed.calc.lib.sequence_utils import recombine_items
 class TestConditionalSort:
     """Tests for the conditional_sort function."""
 
-    _valid = {
+    _valid = {  # sequence, skip, key, expect
         'empty': ([], lambda x: False, None, []),
         'mixed types': (['cherry', 'apple', 8, 'banana', 2],
                         lambda x: isinstance(x, str),
@@ -32,7 +32,8 @@ class TestConditionalSort:
         'with key': (
             # pylint: disable-next=magic-value-comparison
             ['apple_long', 'banana', 'cherry'], lambda x: x == 'banana', len,
-            ['cherry', 'banana', 'apple_long']),
+            ['cherry', 'banana', 'apple_long']
+            ),
         }
 
     @parametrize('seq,skip,key,expect', _valid.values(), ids=_valid)
