@@ -217,22 +217,25 @@ xfail_strict = true
     select = ['ALL']
 
     ignore = [
-        'ANN',    # do not require annotations
-        'Q000',   # do not highlight quotes in check, as format can fix it
-        'TD',     # allow todo comments
-        'FA100',  # don't suggest for 'from __future__ import annotations'
-        'G004',   # allow f-strings in logging
-        'COM812', # avoids conflicts with formatter
-        'ISC001', # avoids conflicts with formatter
-        'TRY003', # allow long error messages
+        'ANN',      # do not require annotations
+        'Q000',     # do not highlight quotes in check, as format can fix it
+        'TD',       # allow todo comments
+        'FA100',    # don't suggest for 'from __future__ import annotations'
+        'G004',     # allow f-strings in logging
+        'COM812',   # avoids conflicts with formatter
+        'ISC001',   # avoids conflicts with formatter
+        'TRY003',   # allow long error messages
+        'EM101',    # allow string literals in errors
     ]
     flake8-quotes.inline-quotes='single'
 
     [tool.ruff.lint.per-file-ignores]
     # Ignore specific rules in tests
     'tests/*' = [
-        'D',      # ignore docstring checks in tests
-        'S101'    # allow asserts
+        'D',        # ignore docstring checks in tests
+        'S101',     # allow asserts
+        'PLR2004',  # allow magic value comparison in tests
+        'SLF001',   # allow checking private members
     ]
 
     [tool.ruff.lint.pydocstyle]
