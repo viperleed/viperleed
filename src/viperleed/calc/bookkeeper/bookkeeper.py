@@ -22,6 +22,7 @@ from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 
 from . import log
 from .constants import STATE_FILES
+from .errors import _FileNotOlderError
 from .history.constants import HISTORY_INFO_NAME
 from .history.entry.entry import HistoryInfoEntry
 from .history.errors import CantDiscardEntryError
@@ -42,10 +43,6 @@ RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 # Suffix for files moved from root rather than original_inputs
 _FROM_ROOT = '_from_root'
-
-
-class _FileNotOlderError(Exception):
-    """Exception used internally for file age checks."""
 
 
 class BookkeeperExitCode(IntEnum):

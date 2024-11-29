@@ -12,8 +12,10 @@ __license__ = 'GPLv3+'
 
 from enum import Enum
 
+from ..errors import BookkeeperError
 
-class HistoryInfoError(Exception):
+
+class HistoryInfoError(BookkeeperError):
     """Base class for all errors related to the history.info file."""
 
 
