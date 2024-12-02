@@ -13,9 +13,10 @@ __created__ = '2024-03-27'
 __license__ = 'GPLv3+'
 
 from abc import ABC, abstractmethod
-from argparse import FileType
 from copy import deepcopy
+from io import TextIOWrapper
 import logging
+import pathlib
 import sys
 
 from viperleed.calc.classes.rparams import Rparams, SymmetryEps
@@ -46,7 +47,6 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         slab = self.read_poscar(parsed_args)
         processed_slab = self.process_slab(slab, parsed_args)
         self.write_output(processed_slab, parsed_args)
-        self._close_open_files(parsed_args)
         return 0
 
     def add_infile_argument(self, parser):
@@ -75,9 +75,9 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         help_ = ('Name of the POSCAR input file. Default: read text '
                  'from the standard-input stream (i.e., the terminal)')
         parser.add_argument('--infile', '-i',
-                            type=FileType('r'),
+                            type=pathlib.Path,
                             help=help_,
-                            default=sys.stdin)
+                            default='-')
 
     def add_outfile_argument(self, parser):
         """Add an optional --outfile/-o argument to parser.
@@ -105,9 +105,9 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         help_ = ('Name of the POSCAR output file. Default: write text '
                  'to the standard-output stream (i.e., the terminal)')
         parser.add_argument('--outfile', '-o',
-                            type=FileType('w'),
+                            type=pathlib.Path,
                             help=help_,
-                            default=sys.stdout)
+                            default='-')
 
     def add_parser_arguments(self, parser):
         """Add generic arguments to this CLI.
@@ -198,10 +198,14 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'also overriding read_poscar, make sure to '
                                  'call add_infile_argument in your overridden '
                                  'add_parser_arguments') from None
-        if args.infile.isatty():
-            print('Please input the contents of a POSCAR file:')
+        # if args.infile.isatty():
+        #     print('Please input the contents of a POSCAR file:')
+        if str(args.infile) == '-':  # default to stdin
+            return poscar.read(TextIOWrapper(sys.stdin.buffer,
+                                             encoding='utf-8'))
         try:
-            return poscar.read(args.infile)
+            with open(args.infile.resolve(), 'r') as infile:
+                return poscar.read(infile)
         except (ValueError, poscar.POSCARError) as exc:
             self.parser.error(f'Failed to read POSCAR. Stopping. Info: {exc}')
         return None  # Unreachable as .error does SystemExit
@@ -237,23 +241,17 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'also overriding write_output, make sure to '
                                  'call add_outfile_argument in your overridden'
                                  ' add_parser_arguments') from None
-        poscar.write(processed_slab,
-                     filename=args.outfile,
-                     comments='none',
-                     silent=debug_or_lower(self.get_logger()))
-
-    def _close_open_files(self, args):
-        """Close any open file in args."""
-        cli_args = ('infile', 'outfile')
-        for cli_arg in cli_args:
-            try:
-                file = getattr(args, cli_arg)
-            except AttributeError:
-                # Someone has removed the CLI argument. Don't complain
-                pass
-            if file in (sys.stdin, sys.stdout):  # Leave terminal open
-                continue
-            file.close()
+        if str(args.outfile) == '-':  # default to stdout
+            poscar.write(processed_slab,
+                        filename=TextIOWrapper(sys.stdout.buffer,
+                                               encoding='utf-8'),
+                        comments='none',
+                        silent=debug_or_lower(self.get_logger()))
+        with args.outfile.resolve() as outfile:
+            poscar.write(processed_slab,
+                        filename=outfile,
+                        comments='none',
+                        silent=debug_or_lower(self.get_logger()))
 
 
 EPS_DEFAULT = PARAM_DEFAULTS['SYMMETRY_EPS']
