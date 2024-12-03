@@ -13,8 +13,8 @@ __created__ = '2024-03-27'
 __license__ = 'GPLv3+'
 
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from copy import deepcopy
-from io import TextIOWrapper
 import logging
 import pathlib
 import sys
@@ -143,6 +143,30 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         self.add_outfile_argument(parser)
         self.add_verbose_option(parser)
 
+    @contextmanager
+    def infile_context(self, args):
+        """Return a context manager for the input file."""
+        if str(args.infile) == "-":
+            yield sys.stdin
+        else:
+            resource = args.infile.resolve().open("r", encoding="utf-8")
+            try:
+                yield resource
+            finally:
+                resource.close()
+
+    @contextmanager
+    def outfile_context(self, args):
+        """Return a context manager for the output file."""
+        if str(args.outfile) == "-":
+            yield sys.stdout
+        else:
+            resource = args.outfile.resolve().open("w", encoding="utf-8")
+            try:
+                yield resource
+            finally:
+                resource.close()
+
     @abstractmethod
     def process_slab(self, slab, args):
         """Return a processed slab from slab.
@@ -198,16 +222,13 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'also overriding read_poscar, make sure to '
                                  'call add_infile_argument in your overridden '
                                  'add_parser_arguments') from None
-        # if args.infile.isatty():
-        #     print('Please input the contents of a POSCAR file:')
-        if str(args.infile) == '-':  # default to stdin
-            return poscar.read(TextIOWrapper(sys.stdin.buffer,
-                                             encoding='utf-8'))
-        try:
-            with open(args.infile.resolve(), 'r') as infile:
+
+        with self.infile_context(args) as infile:
+            try:
                 return poscar.read(infile)
-        except (ValueError, poscar.POSCARError) as exc:
-            self.parser.error(f'Failed to read POSCAR. Stopping. Info: {exc}')
+            except (ValueError, poscar.POSCARError) as exc:
+                self.parser.error('Failed to read POSCAR. Stopping.'
+                                  f'Info: {exc}')
         return None  # Unreachable as .error does SystemExit
 
     def write_output(self, processed_slab, args):
@@ -241,13 +262,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'also overriding write_output, make sure to '
                                  'call add_outfile_argument in your overridden'
                                  ' add_parser_arguments') from None
-        if str(args.outfile) == '-':  # default to stdout
-            poscar.write(processed_slab,
-                        filename=TextIOWrapper(sys.stdout.buffer,
-                                               encoding='utf-8'),
-                        comments='none',
-                        silent=debug_or_lower(self.get_logger()))
-        with args.outfile.resolve() as outfile:
+        with self.outfile_context(args) as outfile:
             poscar.write(processed_slab,
                         filename=outfile,
                         comments='none',
