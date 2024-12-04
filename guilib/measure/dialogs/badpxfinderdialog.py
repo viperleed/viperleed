@@ -459,7 +459,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.active_camera.error_occurred.connect(self.__on_error_occurred)
         self.active_camera.started.connect(self.adjustSize)
         self.active_camera.preparing.connect(self.__on_camera_preparing)
-        self.active_camera.settings = settings
+        # Set settings again and make sure the camera connects.
+        self.active_camera.uses_default_settings = False
+        self.active_camera.set_settings(settings)
         self.__update_controls()
 
     @qtc.pyqtSlot(tuple)
