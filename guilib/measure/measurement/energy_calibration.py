@@ -14,10 +14,13 @@ between "energy the user asks" and "values that have to be set in the
 primary controller".
 """
 from configparser import NoSectionError, NoOptionError
+from contextlib import nullcontext
 
+from numpy import printoptions
 from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
+from viperleed import NUMPY2_OR_LATER
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
@@ -267,8 +270,18 @@ class MeasureEnergyCalibration(MeasurementABC):
                 )
             return
 
-        primary.settings.set('energy_calibration', 'coefficients',
-                             str(list(fit_polynomial.coef)))
+        # Since numpy 2.0 (numpy/numpy/pull/22449), numpy data types
+        # are printed out together with scalars. This means that
+        # str(np.int(x)) == 'np.int(x)' rather than 'x'. Reverting the
+        # behavior to the v1.25 one ensures that we can then read the
+        # information back using ast.
+        print_np_scalar_as_number = (
+            printoptions(legacy='1.25') if NUMPY2_OR_LATER
+            else nullcontext()
+            )
+        with print_np_scalar_as_number:
+            primary.settings.set('energy_calibration', 'coefficients',
+                                 str(list(fit_polynomial.coef)))
         primary.settings.set('energy_calibration', 'domain', str(domain))
 
         # TODO: may not want to save this to file yet and ask user.
