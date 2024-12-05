@@ -35,7 +35,7 @@ class TolerantCommaSpinBox(qtw.QDoubleSpinBox):
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
         """Replace commas with dots."""
         super().keyPressEvent(self.__make_dot_key_event(event))
-    
+
     def keyReleaseEvent(self, event):    # pylint: disable=invalid-name
         """Replace commas with dots."""
         super().keyReleaseEvent(self.__make_dot_key_event(event))
@@ -52,11 +52,106 @@ class TolerantCommaSpinBox(qtw.QDoubleSpinBox):
             )
 
 
-class InfIntSpinBox(qtw.QDoubleSpinBox):
-    """A spin-box that allows inputting an infinite integer number."""
+class CoercingDoubleSpinBox(TolerantCommaSpinBox):
+    """Coercing QDoubleSpinBox that sets limits after edit is done."""
 
-    def __init__(self, parent=None):
-        """Initialize instance."""
-        super().__init__(parent)
-        self.setRange(0, float('inf'))
-        self.setDecimals(0)
+    def __init__(self, decimals=None, soft_range=tuple(), step=1, suffix='',
+                 **kwargs):
+        """Initialise widget.
+
+        Parameters
+        ----------
+        decimals : int, optional
+            The amount of decimals. If not given or None,
+            use the default decimal places. Default is None.
+        soft_range : tuple, optional
+            The soft minimum and maximum.
+        step : int or float, optional
+            The increment of the SpinBox value. Default is 1.
+        suffix : str, optional
+            The suffix of the SpinBox. Default is '', no suffix.
+
+        Returns
+        -------
+        None
+        """
+        super().__init__(**kwargs)
+        self.setRange(-float('inf'), float('inf'))
+        self._soft_min = -float('inf')
+        self._soft_max = float('inf')
+        if decimals is not None:
+            self.setDecimals(decimals)
+        self.setSingleStep(step)
+        if soft_range:
+            self.soft_range = soft_range
+        if suffix:
+            self.setSuffix(suffix)
+        self.editingFinished.connect(self._adjust_value)
+
+    @property
+    def soft_minimum(self):
+        """Return soft minimum."""
+        return self._soft_min
+
+    @soft_minimum.setter
+    def soft_minimum(self, new_minimum):
+        """Set soft minimum."""
+        if new_minimum > self.soft_maximum:
+            raise ValueError('The minimum cannot be larger than the maximum.')
+        self._soft_min = new_minimum
+
+    @property
+    def soft_maximum(self):
+        """Return soft maximum."""
+        return self._soft_max
+
+    @soft_maximum.setter
+    def soft_maximum(self, new_maximum):
+        """Set soft maximum."""
+        if new_maximum < self.soft_minimum:
+            raise ValueError('The maximum cannot be lower than the minimum.')
+        self._soft_max = new_maximum
+
+    @property
+    def soft_range(self):
+        """Return soft limits."""
+        return self.soft_minimum, self.soft_maximum
+
+    @soft_range.setter
+    def soft_range(self, values):
+        """Set soft limits."""
+        new_minimum, new_maximum = values
+        if new_minimum > new_maximum:
+            new_maximum, new_minimum = new_minimum, new_maximum
+        self._soft_max = new_maximum
+        self._soft_min = new_minimum
+
+    @qtc.pyqtSlot()
+    def _adjust_value(self):
+        """Check if value is whithin the limits and adjust it if necessary."""
+        value = self.value()
+        if value > self.soft_maximum:
+            self.setValue(self.soft_maximum)
+        if value < self.soft_minimum:
+            self.setValue(self.soft_minimum)
+
+    @qtc.pyqtSlot(int)
+    def stepBy(self, steps):
+        """Adjust set vaöue through steps according to soft limits."""
+        _, value, _ = sorted((self.soft_minimum, self.soft_maximum,
+                              self.value() + steps*self.singleStep()))
+        self.setValue(value)
+
+
+class CoercingSpinBox(CoercingDoubleSpinBox):
+    """Coercing QSpinBox that sets limits after edit is done."""
+
+    def __init__(self, step=1, soft_range=tuple(), suffix='', **kwargs):
+        """Initialise widget."""
+        super().__init__(soft_range=soft_range, step=step,
+                         suffix=suffix, **kwargs)
+        super().setDecimals(0)
+
+    def setDecimals(self, _):
+        """Disable setting decimals."""
+        raise AttributeError('CoercingSpinBox cannot setDecimals.')
