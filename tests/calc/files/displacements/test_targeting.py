@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from pytest_cases import case, parametrize_with_cases
 
-from viperleed_jax.base_scatterers import get_base_scatterers
+from viperleed_jax.base_scatterers import BaseScatterers
 from viperleed_jax.files.displacements.targeting import BSTarget
 
 # Test cases for valid target with the expected mask
@@ -32,7 +32,7 @@ class ValidTargets:
         self, cu_111_fixed_l_max_state_after_init, target_str_mask
     ):
         slab, _ = cu_111_fixed_l_max_state_after_init
-        base_scatterers = get_base_scatterers(slab)
+        base_scatterers = BaseScatterers(slab)
         target_str, expected_mask = target_str_mask
         return base_scatterers, target_str, expected_mask
 
@@ -46,7 +46,7 @@ class InvalidTargets:
         self, cu_111_fixed_l_max_state_after_init, target_str
     ):
         slab, _ = cu_111_fixed_l_max_state_after_init
-        base_scatterers = get_base_scatterers(slab)
+        base_scatterers = BaseScatterers(slab)
         return base_scatterers, target_str
 
 
