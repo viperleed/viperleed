@@ -7,6 +7,9 @@ import re
 
 import numpy as np
 
+class TargetingError(ValueError):
+    """Base class for errors in the targeting module."""
+
 
 def generate_label_match_regex(label):
     """Generate a regex pattern to match variations of the given label,
@@ -63,7 +66,7 @@ class BSSubtarget:
                 self.nums = list(map(int, parts[1:]))
 
     def select(self, base_scatterers):
-        """Selects base scatterers that match the subtarget specification."""
+        """Select base scatterers that match the subtarget specification."""
         mask = np.full(len(base_scatterers), True)
 
         # mask based on the site
@@ -79,17 +82,17 @@ class BSSubtarget:
         if self.nums is not None:
             # check range for nums
             if any(num < 1 or num > len(base_scatterers) for num in self.nums):
-                raise ValueError(
-                    'Invalid atom number for subtarget: ' f'{self.target_str}'
-                )
+                msg = f'Invalid atom number for subtarget: {self.target_str}'
+                raise TargetingError(msg)
             num_mask = np.array([bs.num in self.nums for bs in base_scatterers])
             # check if any of the given nums have the wrong label
             wrong_label = np.logical_and(num_mask, ~label_mask)
             if np.any(wrong_label):
-                raise ValueError(
+                msg = (
                     'Atom numbers do not match label for subtarget: '
                     f'{self.target_str}'
                 )
+                raise TargetingError(msg)
             mask = mask & num_mask
 
         # If layers are specified, apply the selection based on layers
@@ -100,9 +103,8 @@ class BSSubtarget:
             )
 
         if mask.sum() == 0:
-            raise ValueError(
-                f'No atoms selected for subtarget: {self.target_str}'
-            )
+            msg = f'No atoms selected for subtarget: {self.target_str}'
+            raise TargetingError(msg)
 
         return mask
 
