@@ -10,6 +10,8 @@ SEARCH_HEADER_PATTERN = re.compile(r'^=+\s+(?i:search)\s+(.*)$')
 SECTION_HEADER_PATTERN = re.compile(
     r'^=+\s*(OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
 )
+LOOP_START_PATTERN = re.compile(r'<loop>')
+LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
 
 # Common components
 LABEL_PATTERN = (

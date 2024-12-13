@@ -18,6 +18,8 @@ from .lines import (
     VibDeltaLine,
 )
 from .regex import (
+    LOOP_END_PATTERN,
+    LOOP_START_PATTERN,
     SEARCH_HEADER_PATTERN,
     SECTION_HEADER_PATTERN,
     match_constrain_line,
@@ -64,10 +66,10 @@ class DisplacementsReader(InputFileReader):
             return None
 
         # check for loop markers
-        if stripped_line == r'<loop>':
+        if LOOP_START_PATTERN.match(stripped_line):
             self.current_section = None
             return LoopMarkerLine(LoopMarker.LOOP_START)
-        if stripped_line == r'<\loop>':
+        if LOOP_END_PATTERN.match(stripped_line):
             self.current_section = None
             return LoopMarkerLine(LoopMarker.LOOP_END)
 
