@@ -7,6 +7,7 @@ import re
 
 import numpy as np
 
+_DIR_PATTERN = rf'^(?:(?P<dir>[{dir_labels}]+))?\[(?P<vec>[\d\s]+)\]$'
 
 class Direction:
     """Class to parse and handle direction information in 3D space, supporting
@@ -29,10 +30,7 @@ class Direction:
         dir_labels = 'abc' if self._fractional else 'xyz'
 
         if '[' in direction_str:  # Handle vector cases like 'xy[1 1]'
-            vector_match = re.match(
-                rf'^(?:(?P<dir>[{dir_labels}]+))?\[(?P<vec>[\d\s]+)\]$',
-                direction_str,
-            )
+            vector_match = re.match(_DIR_PATTERN, direction_str)
             if vector_match:
                 dir_match = vector_match.group('dir')
                 # if dir is not provided interpret [n m] as ab[n m]
