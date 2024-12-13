@@ -25,6 +25,16 @@ SECTION_HEADER_PATTERN = re.compile(
     r'^=+\s*(OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
 )
 
+CHEM_BLOCKS_PATTERN = (
+    r'(?P<chem_blocks>(?P<chem>\w+)\s+'
+    + START_PATTERN
+    + r'\s+'
+    + STOP_PATTERN
+    + r'(?:\s+'
+    + STEP_PATTERN
+    + r'(?:\s*,\s*(?P<additional_blocks>.+))?)?)'
+)
+
 # Patterns
 OFFSETS_LINE_PATTERN = re.compile(
     rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
@@ -52,15 +62,7 @@ CONSTRAIN_LINE_PATTERN = re.compile(
     rf'(?:\s+{DIRECTION_PATTERN})?\s*=\s*(?P<value>linked|{VALUE_PATTERN})$'
 )
 
-CHEM_BLOCKS_PATTERN = (
-    r'(?P<chem_blocks>(?P<chem>\w+)\s+'
-    + START_PATTERN
-    + r'\s+'
-    + STOP_PATTERN
-    + r'(?:\s+'
-    + STEP_PATTERN
-    + r'(?:\s*,\s*(?P<additional_blocks>.+))?)?)'
-)
+
 
 def match_geo_line(line):
     """Match and parse a GEO_DELTA line, returning the values."""
