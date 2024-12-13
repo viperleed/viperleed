@@ -16,7 +16,9 @@ LABEL_PATTERN = (
     r'(?P<label>\*|\*?\w+\*?)'  # Match '*' or labels with/without wildcards
 )
 WHICH_PATTERN = r'(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?'
-DIRECTION_PATTERN = r'(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?)'
+DIRECTION_PATTERN = (
+    r'(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?|(?:\[[^\]]+\]))'
+)
 START_PATTERN = r'(?P<start>-?\d+(\.\d+)?)'
 STOP_PATTERN = r'(?P<stop>-?\d+(\.\d+)?)'
 STEP_PATTERN = r'(?P<step>-?\d+(\.\d+)?)'
@@ -39,16 +41,18 @@ CHEM_BLOCKS_PATTERN = (
     + r'(?:\s*,\s*(?P<additional_blocks>.+))?)?)'
 )
 
-# Patterns
+# Line patterns
 OFFSETS_LINE_PATTERN = re.compile(
     rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
     rf'(?:\s+{DIRECTION_PATTERN})?\s*=\s*{VALUE_PATTERN}$'
 )
 
 GEO_LINE_PATTERN = re.compile(
-    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
-    rf'\s+{DIRECTION_PATTERN}\s*=\s*{START_PATTERN}\s+{STOP_PATTERN}'
-    rf'(?:\s+{STEP_PATTERN})?$'
+    rf'^{LABEL_PATTERN}'         # Match the label
+    rf'(?:\s+{WHICH_PATTERN})?'  # Match the optional 'which' group
+    rf'\s+{DIRECTION_PATTERN}'   # Match the direction
+    rf'\s*=\s*{START_PATTERN}\s+{STOP_PATTERN}'  # Match the ranges
+    rf'(?:\s+{STEP_PATTERN})?$'  # Match the optional step size
 )
 
 VIB_LINE_PATTERN = re.compile(
