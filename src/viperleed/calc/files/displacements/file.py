@@ -112,6 +112,7 @@ class DisplacementsFile:
         return True
 
     def offsets_block(self):
+        """Return the OFFSETS block if present, else None."""
         if isinstance(self.blocks[0], OffsetsBlock):
             return self.blocks[0]
         return None
