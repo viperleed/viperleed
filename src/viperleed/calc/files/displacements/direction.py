@@ -24,8 +24,9 @@ class Direction:
         )
 
     def _parse_direction(self, direction_str):
-        """Parse the direction string and return normalized 3D vectors and
-        number of free directions.
+        """Parse the direction string.
+
+        Returns normalized 3D vectors and number of free directions.
         """
         dir_labels = 'abc' if self._fractional else 'xyz'
 
@@ -64,12 +65,11 @@ class Direction:
             vectors = self._normalize_vectors(vectors)
             return np.array(vectors), len(vectors)
 
-        raise ValueError(f'Invalid direction format: {direction_str}')
+        msg = f'Invalid direction format: {direction_str}'
+        raise ValueError(msg)
 
     def _get_basis_vector(self, direction, dir_labels):
-        """Return the 3D basis vector or a placeholder for fractional
-        coordinates 'a', 'b', 'c'.
-        """
+        """Return the 3D basis vector or a placeholder."""
         basis_vectors = {
             'x': [1, 0, 0],
             'y': [0, 1, 0],
@@ -89,9 +89,7 @@ class Direction:
         return embedded_vector
 
     def _normalize_vectors(self, vectors):
-        """Normalize vectors and raise error if zero-length vector is
-        detected.
-        """
+        """Normalize vectors and raise if zero-length vector is detected."""
         normalized_vectors = []
         for vec in vectors:
             if isinstance(vec, str):
