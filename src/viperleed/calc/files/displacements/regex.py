@@ -19,7 +19,7 @@ OFFSETS_LINE_PATTERN = re.compile(
     r'(?P<value>-?\d+(\.\d+)?)$'
 )
 GEO_LINE_PATTERN = re.compile(
-    r'^(?P<label>\*|\*?\w+)'
+    r'^(?P<label>\*|\*?\w+\*?)'
     r'(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?'
     r'\s+(?P<dir>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?)'
     r'\s*=\s*(?P<start>-?\d+(\.\d+)?)'
@@ -27,14 +27,14 @@ GEO_LINE_PATTERN = re.compile(
     r'(?:\s+(?P<step>-?\d+(\.\d+)?))?$'
 )
 VIB_LINE_PATTERN = re.compile(
-    r'^(?P<label>\*|\*?\w+)'
+    r'^(?P<label>\*|\*?\w+\*?)'
     r'(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?'
     r'\s*=\s*(?P<start>-?\d+(\.\d+)?)'
     r'\s+(?P<stop>-?\d+(\.\d+)?)'
     r'(?:\s+(?P<step>-?\d+(\.\d+)?))?$'
 )
 OCC_LINE_PATTERN = re.compile(
-    r'^(?P<label>\*|\*?\w+)'
+    r'^(?P<label>\*|\*?\w+\*?)'
     r'(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?'
     r'\s*=\s*(?P<chem_blocks>(?P<chem>\w+)\s+(?P<start>-?\d+(\.\d+)?)'
     r'\s+(?P<stop>-?\d+(\.\d+)?)(?:\s+(?P<step>-?\d+(\.\d+)?))?'
