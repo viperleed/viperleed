@@ -6,52 +6,61 @@ __created__ = '2024-10-03'
 import contextlib
 import re
 
+# Common components
+LABEL_PATTERN = r'(?P<label>\*|\*?\w+\*?)'
+WHICH_PATTERN = r'(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?'
+DIRECTION_PATTERN = r'(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?)'
+START_PATTERN = r'(?P<start>-?\d+(\.\d+)?)'
+STOP_PATTERN = r'(?P<stop>-?\d+(\.\d+)?)'
+STEP_PATTERN = r'(?P<step>-?\d+(\.\d+)?))?'
+VALUE_PATTERN = r'(?P<value>-?\d+(\.\d+)?)'
+
+# Use the label pattern to construct the targets pattern
+TARGETS_PATTERN = (
+    rf'(?P<targets>{LABEL_PATTERN}(?:\s+\d+|\s+\d+-\d+)*'
+    rf'(?:\s*,\s*{LABEL_PATTERN}(?:\s+\d+|\s+\d+-\d+)*)*)'
+)
 SEARCH_HEADER_PATTERN = re.compile(r'^=+\s+(?i:search)\s+(.*)$')
 SECTION_HEADER_PATTERN = re.compile(
     r'^=+\s*(OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
 )
 
+# Patterns
 OFFSETS_LINE_PATTERN = re.compile(
-    r'^(?P<type>geo|vib|occ)\s+'
-    r'(?P<targets>[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*'
-    r'(?:\s*,\s*[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*)*)'
-    r'(?:\s+(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?))?\s*=\s*'
-    r'(?P<value>-?\d+(\.\d+)?)$'
+    rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
+    rf'(?:\s+{DIRECTION_PATTERN})?\s*=\s*{VALUE_PATTERN}$'
 )
+
 GEO_LINE_PATTERN = re.compile(
-    r'^(?P<label>\*|\*?\w+\*?)'
-    r'(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?'
-    r'\s+(?P<dir>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?)'
-    r'\s*=\s*(?P<start>-?\d+(\.\d+)?)'
-    r'\s+(?P<stop>-?\d+(\.\d+)?)'
-    r'(?:\s+(?P<step>-?\d+(\.\d+)?))?$'
+    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
+    rf'\s+{DIRECTION_PATTERN}\s*=\s*{START_PATTERN}\s+{STOP_PATTERN}'
+    rf'(?:\s+{STEP_PATTERN})?$'
 )
+
 VIB_LINE_PATTERN = re.compile(
-    r'^(?P<label>\*|\*?\w+\*?)'
-    r'(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?'
-    r'\s*=\s*(?P<start>-?\d+(\.\d+)?)'
-    r'\s+(?P<stop>-?\d+(\.\d+)?)'
-    r'(?:\s+(?P<step>-?\d+(\.\d+)?))?$'
+    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
+    rf'\s*=\s*{START_PATTERN}\s+{STOP_PATTERN}(?:\s+{STEP_PATTERN})?$'
 )
+
 OCC_LINE_PATTERN = re.compile(
-    r'^(?P<label>\*|\*?\w+\*?)'
-    r'(?:\s+(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?)?'
-    r'\s*=\s*(?P<chem_blocks>(?P<chem>\w+)\s+(?P<start>-?\d+(\.\d+)?)'
-    r'\s+(?P<stop>-?\d+(\.\d+)?)(?:\s+(?P<step>-?\d+(\.\d+)?))?'
-    r'(?:\s*,\s*(?P<additional_blocks>.+))?)$'
+    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
+    rf'\s*=\s*{CHEM_BLOCKS_PATTERN}$'
 )
+
 CONSTRAIN_LINE_PATTERN = re.compile(
-    r'^(?P<type>geo|vib|occ)\s+(?P<targets>[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*'
-    r'(?:\s*,\s*[^\s=,]+(?:\s+\d+|\s+\d+-\d+)*)*)'
-    r'(?:\s+(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?))?'
-    r'\s*=\s*(?P<value>linked|-?\d+(\.\d+)?)$'
+    rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
+    rf'(?:\s+{DIRECTION_PATTERN})?\s*=\s*(?P<value>linked|{VALUE_PATTERN})$'
 )
 
-CHEM_BLOCK_PATTERN = re.compile(
-    r'(?P<chem>\w+)\s+(?P<start>-?\d+(\.\d+)?)(?:\s+(?P<stop>-?\d+(\.\d+)?)'
-    r'(?:\s+(?P<step>-?\d+(\.\d+)?))?)?'
+CHEM_BLOCKS_PATTERN = (
+    r'(?P<chem_blocks>(?P<chem>\w+)\s+'
+    + START_PATTERN
+    + r'\s+'
+    + STOP_PATTERN
+    + r'(?:\s+'
+    + STEP_PATTERN
+    + r'(?:\s*,\s*(?P<additional_blocks>.+))?)?)'
 )
-
 
 def match_geo_line(line):
     """Match and parse a GEO_DELTA line, returning the values."""
