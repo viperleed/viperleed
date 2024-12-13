@@ -30,11 +30,13 @@ class Direction:
 
         if '[' in direction_str:  # Handle vector cases like 'xy[1 1]'
             vector_match = re.match(
-                rf'^(?P<dir>[{dir_labels}]+)\[(?P<vec>[\d\s]+)\]$',
+                rf'^(?:(?P<dir>[{dir_labels}]+))?\[(?P<vec>[\d\s]+)\]$',
                 direction_str,
             )
             if vector_match:
-                directions = list(vector_match.group('dir'))
+                dir_match = vector_match.group('dir')
+                # if dir is not provided interpret [n m] as ab[n m]
+                directions = list(dir_match) if dir_match else 'ab'
                 vector_components = list(
                     map(float, vector_match.group('vec').split())
                 )
