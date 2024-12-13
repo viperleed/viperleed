@@ -83,11 +83,13 @@ class DisplacementsFile:
         self.offsets_block_allowed = True
 
     def unclosed_loop(self):
-        # Check if there is a loop that was started but not closed
+        """Return True if there is a loop that was started but not closed."""
         for block in reversed(self.blocks):
-            if block == LoopMarker.LOOP_START:
+            if not isinstance(block, LoopMarkerLine):
+                continue
+            if block.type == LoopMarker.LOOP_START:
                 return True
-            if block == LoopMarker.LOOP_END:
+            if block.type == LoopMarker.LOOP_END:
                 break
         return False
 
