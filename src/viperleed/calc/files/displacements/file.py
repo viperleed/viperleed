@@ -117,6 +117,14 @@ class DisplacementsFile:
             return self.blocks[0]
         return None
 
+    def first_block(self):
+        """Return the first non loop-marker search block."""
+        non_loop_blocks = [
+            block for block in self.blocks
+            if not isinstance(block, LoopMarkerLine)
+        ]
+        return non_loop_blocks[0]
+
     def read(self, filename):
         """Read the file using the DisplacementsReader."""
         if self.has_been_read:
