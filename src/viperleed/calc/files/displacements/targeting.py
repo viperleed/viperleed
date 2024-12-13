@@ -95,7 +95,8 @@ class BSSubtarget:
         # If layers are specified, apply the selection based on layers
         if self.layers is not None:
             mask = mask & np.array(
-                [bs.layer in self.layers for bs in base_scatterers]
+                # TODO: layer counting from 1; can we unify this somewhere?
+                [bs.layer+1 in self.layers for bs in base_scatterers]
             )
 
         if mask.sum() == 0:
