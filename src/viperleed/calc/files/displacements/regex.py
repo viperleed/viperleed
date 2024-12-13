@@ -11,21 +11,22 @@ SECTION_HEADER_PATTERN = re.compile(
     r'^=+\s*(OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
 )
 
-# components
+# Common components
 LABEL_PATTERN = (
-    r'(?:\*|\*?\w+\*?)'  # Non-capturing group to avoid name conflicts
+    r'(?P<label>\*|\*?\w+\*?)'  # Match '*' or labels with/without wildcards
 )
 WHICH_PATTERN = r'(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?'
 DIRECTION_PATTERN = r'(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?)'
 START_PATTERN = r'(?P<start>-?\d+(\.\d+)?)'
 STOP_PATTERN = r'(?P<stop>-?\d+(\.\d+)?)'
-STEP_PATTERN = r'(?P<step>-?\d+(\.\d+)?(?:\s+))?'
-VALUE_PATTERN = r'(?P<value>-?\d+(\.\d+)?)'
+STEP_PATTERN = r'(?P<step>-?\d+(\.\d+)?)'
+VALUE_PATTERN = r'-?\d+(\.\d+)?'
 
-# Use the label pattern to construct the targets pattern
+# TARGETS_PATTERN
 TARGETS_PATTERN = (
-    rf'(?P<targets>{LABEL_PATTERN}(?:\s+\d+|\s+\d+-\d+)*'
-    rf'(?:\s*,\s*{LABEL_PATTERN}(?:\s+\d+|\s+\d+-\d+)*)*)'
+    r'(?P<targets>\*(?:\s+\d+|\s+\d+-\d+)*'
+    r'|\*?\w+\*?(?:\s+\d+|\s+\d+-\d+)*'
+    r'(?:\s*,\s*(?:\*|\*?\w+\*?)(?:\s+\d+|\s+\d+-\d+)*)*)'
 )
 
 CHEM_BLOCKS_PATTERN = (
@@ -45,24 +46,24 @@ OFFSETS_LINE_PATTERN = re.compile(
 )
 
 GEO_LINE_PATTERN = re.compile(
-    rf'^(?P<label>{LABEL_PATTERN})(?:\s+{WHICH_PATTERN})?'
+    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
     rf'\s+{DIRECTION_PATTERN}\s*=\s*{START_PATTERN}\s+{STOP_PATTERN}'
     rf'(?:\s+{STEP_PATTERN})?$'
 )
 
 VIB_LINE_PATTERN = re.compile(
-    rf'^(?P<label>{LABEL_PATTERN})(?:\s+{WHICH_PATTERN})?'
+    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
     rf'\s*=\s*{START_PATTERN}\s+{STOP_PATTERN}(?:\s+{STEP_PATTERN})?$'
 )
 
 OCC_LINE_PATTERN = re.compile(
-    rf'^(?P<label>{LABEL_PATTERN})(?:\s+{WHICH_PATTERN})?'
+    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
     rf'\s*=\s*{CHEM_BLOCKS_PATTERN}$'
 )
 
 CONSTRAIN_LINE_PATTERN = re.compile(
     rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
-    rf'(?:\s+{DIRECTION_PATTERN})?\s*=\s*(?P<value>linked|-?\d+(\.\d+)?)$'
+    rf'(?:\s+{DIRECTION_PATTERN})?\s*=\s*(?P<value>linked|{VALUE_PATTERN})$'
 )
 
 
@@ -73,7 +74,7 @@ def match_geo_line(line):
         return None
     label = match.group('label')
     which = match.group('which')  # optional, can be None
-    direction = match.group('dir')
+    direction = match.group('direction')
     start = float(match.group('start'))
     stop = (
         float(match.group('stop')) if match.group('stop') is not None else None
