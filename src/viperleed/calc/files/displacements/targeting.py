@@ -113,8 +113,7 @@ class BSSubtarget:
         # implicit symmetry, but we'll ignore that for now
         if not isinstance(other, BSSubtarget):
             return False
-        if self.target_str != other.target_str:
-            return False
+        return not self.target_str != other.target_str
 
 
 class BSTarget:
