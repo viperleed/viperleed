@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from pytest_cases import case, parametrize_with_cases
 
-from viperleed_jax.base_scatterers import AtomBasis
+from viperleed_jax.atom_basis import AtomBasis
 from viperleed_jax.files.displacements.targeting import BSTarget
 
 # Test cases for valid target with the expected mask
