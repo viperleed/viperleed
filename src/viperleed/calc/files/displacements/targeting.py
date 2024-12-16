@@ -65,13 +65,13 @@ class BSSubtarget:
                 # It's a list of numbers
                 self.nums = list(map(int, parts[1:]))
 
-    def select(self, base_scatterers):
+    def select(self, atom_basis):
         """Select base scatterers that match the subtarget specification."""
-        mask = np.full(len(base_scatterers), True)
+        mask = np.full(len(atom_basis), True)
 
         # mask based on the site
         matches = np.array(
-            [self.regex.match(bs.site) is not None for bs in base_scatterers]
+            [self.regex.match(bs.site) is not None for bs in atom_basis]
         )
         mask = mask & matches
 
@@ -81,10 +81,10 @@ class BSSubtarget:
         # If nums are specified, apply the selection based on nums
         if self.nums is not None:
             # check range for nums
-            if any(num < 1 or num > len(base_scatterers) for num in self.nums):
+            if any(num < 1 or num > len(atom_basis) for num in self.nums):
                 msg = f'Invalid atom number for subtarget: {self.target_str}'
                 raise TargetingError(msg)
-            num_mask = np.array([bs.num in self.nums for bs in base_scatterers])
+            num_mask = np.array([bs.num in self.nums for bs in atom_basis])
             # check if any of the given nums have the wrong label
             wrong_label = np.logical_and(num_mask, ~label_mask)
             if np.any(wrong_label):
@@ -99,7 +99,7 @@ class BSSubtarget:
         if self.layers is not None:
             mask = mask & np.array(
                 # TODO: layer counting from 1; can we unify this somewhere?
-                [bs.layer+1 in self.layers for bs in base_scatterers]
+                [bs.layer+1 in self.layers for bs in atom_basis]
             )
 
         if mask.sum() == 0:
@@ -127,11 +127,11 @@ class BSTarget:
         subtarget_strs = target_str.split(',')
         self.subtargets = [BSSubtarget(sub.strip()) for sub in subtarget_strs]
 
-    def select(self, base_scatterers):
+    def select(self, atom_basis):
         """Take the 'or' of all subtargets, combining masks."""
-        combined_mask = np.full(len(base_scatterers), False)
+        combined_mask = np.full(len(atom_basis), False)
         for subtarget in self.subtargets:
-            combined_mask = combined_mask | subtarget.select(base_scatterers)
+            combined_mask = combined_mask | subtarget.select(atom_basis)
         return combined_mask
 
     def __eq__(self, other):
