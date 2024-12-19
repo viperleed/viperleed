@@ -22,9 +22,9 @@ Date: 09.02.2022
 // changed!
 #define BOX_ID  1
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.9
+// Firmware version (MAX: v255.255). CURENTLY: v0.10
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    9  // max 255
+#define FIRMWARE_VERSION_MINOR    10  // max 255
 
 
 
@@ -567,6 +567,12 @@ void prepareForAutogain(){
     // Gains to zero, where we will measure for the gain optimization
     adc0Gain = 0;
     adc1Gain = 0;
+
+    // Set measurement arrays for ripple measurement to zero.
+    maximumPeak[0] = 0;
+    maximumPeak[1] = 0;
+    minimumPeak[0] = 0;
+    minimumPeak[1] = 0;
 
     // Calibrate at the high frequency used for autogain
     selfCalibrateAllADCs(AD7705_500HZ);  // Takes ~13 ms
