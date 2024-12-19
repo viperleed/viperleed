@@ -787,18 +787,17 @@ class ViPErLEEDSerial(SerialABC):
         local_version = self.firmware_version
         major, minor, *hardware = message[:4]
         firmware_version = base.Version(major, minor)
-        # if firmware_version > local_version: This should be the correct thing
-        if firmware_version < local_version:
+        if firmware_version > local_version:
+            # If the firmware version of the controller is greater than
+            # the firmware version of the PC, then we have to emit an
+            # error as the controller may respond with messages we
+            # cannot interpret.
             base.emit_error(self,
                             ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
                             arduino_version=firmware_version,
                             local_version=local_version)
-        # TODO: Shouldn't we rather complain if the local version is
-        # smaller than the firmware_version installed on the controller?
-        # We cannot know what newer firmware versions may respond with,
-        # but we always know what older versions used to send.
-        # TODO: here we may want to report a (non fatal) warning in
-        # case the firmware version in the hardware is newer than the
+        # TODO: We may want to report a (non fatal) warning in
+        # case the firmware version in the hardware is older than the
         # one of the settings.
 
         hardware_bits = self.settings['hardware_bits']
