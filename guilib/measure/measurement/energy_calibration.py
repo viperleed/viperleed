@@ -21,7 +21,6 @@ from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
 from viperleed import NUMPY2_OR_LATER
-from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
@@ -40,8 +39,7 @@ class MeasureEnergyCalibration(MeasurementABC):
     def __init__(self, measurement_settings):
         """Initialise instance from settings."""
         super().__init__(measurement_settings)
-        self.__old_coefficients = ""
-        self.data_points.time_resolved = False
+        self._old_coefficients = ""
 
     @property
     def start_energy(self):
@@ -71,7 +69,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         return max(min_e, start_e)
 
     @property
-    def __delta_energy(self):
+    def _delta_energy(self):
         """Return the amplitude of an energy step in eV."""
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
@@ -87,14 +85,14 @@ class MeasureEnergyCalibration(MeasurementABC):
         except (TypeError, ValueError, NoSectionError, NoOptionError):
             # Not a float or not present
             delta = fallback
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/delta_energy', fallback
                 )
         return delta
 
     @property
-    def __end_energy(self):
+    def _end_energy(self):
         """Return the energy (in eV) at which the energy ramp ends."""
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
@@ -109,69 +107,86 @@ class MeasureEnergyCalibration(MeasurementABC):
         except (TypeError, ValueError, NoSectionError, NoOptionError):
             # Not a float or not present
             egy = fallback
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/end_energy', fallback
                 )
         return egy                                                              # TODO: warn if end == 1000
 
     @qtc.pyqtSlot()
-    def begin_preparation(self):
-        """Start preparation for measurements.
+    def abort(self):
+        """Abort all current actions."""
+        if (hasattr(self, "_old_coefficients")
+                and self._old_coefficients):
+            self.primary_controller.settings.set('energy_calibration',
+                                                 'coefficients',
+                                                 self._old_coefficients)
+        super().abort()
 
-        Prepare the controllers for a measurement which starts
-        the measurement cycle. This function only performs the
-        first part. (Everything that is done before the starting
-        energy is set.)
+    def are_runtime_settings_ok(self):
+        """Return whether runtime settings are ok.
+
+        Checks whether at least one controller measures the beam energy
+        and whether the energy range and sample size is large enough to
+        perform any kind of energy calibration.
+
+        Returns
+        -------
+        settings_ok : bool
+            True if the runtime settings are
+            sufficient to start a measurement.
 
         Emits
         -----
-        __preparation_started
-            Starts the measurement preparation and carries
-            a tuple of energies and times with it.
+        error_occurred
+            If the primary controller is missing or if the settings
+            are insufficient to perform an energy calibration.
         """
-        if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
-                'devices/primary_controller or devices/secondary_controllers',
-                '\nCannot run an energy calibration if no '
-                'controller measures the beam energy.'
-                )
-            return
-
-        egy_range = self.__end_energy - self.start_energy
-        n_steps = 1 + round(egy_range/self.__delta_energy)
-
-        if egy_range < 10:
-            # Require at least 10 eV for a reasonable calibration
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
-                'measurement_settings/start_energy and /end_energy',
-                f"\nToo small energy range ({abs(egy_range)} eV) for "
-                "calibration. It should be at least 10 eV."
-                )
-            return
-
-        if n_steps < 10:
-            # Require at least 10 data points for a decent fit
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
-                'measurement_settings/start_energy, /end_energy, '
-                'and /delta_energy',
-                f"\nToo few energies ({n_steps}) for a reasonable fit "
-                "of the calibration curve. Expected at least 10 energies."
-                )
-            return
-
-        self.__old_coefficients = self.primary_controller.settings.get(
+        if not super().are_runtime_settings_ok():
+            return False
+        self._old_coefficients = self.primary_controller.settings.get(
             'energy_calibration', 'coefficients', fallback=''
             )
 
         self.primary_controller.settings.set('energy_calibration',
                                              'coefficients', '(0, 1)')
-        super().begin_preparation()
 
-    def start_next_measurement(self):
+        if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
+                'devices/primary_controller or devices/secondary_controllers',
+                '\nCannot run an energy calibration if no '
+                'controller measures the beam energy.'
+                )
+            return False
+
+        egy_range = self._end_energy - self.start_energy
+        n_steps = 1 + round(egy_range/self._delta_energy)
+
+        if egy_range < 10:
+            # Require at least 10 eV for a reasonable calibration
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
+                'measurement_settings/start_energy and /end_energy',
+                f"\nToo small energy range ({abs(egy_range)} eV) for "
+                "calibration. It should be at least 10 eV."
+                )
+            return False
+
+        if n_steps < 10:
+            # Require at least 10 data points for a decent fit
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
+                'measurement_settings/start_energy, /end_energy, '
+                'and /delta_energy',
+                f"\nToo few energies ({n_steps}) for a reasonable fit "
+                "of the calibration curve. Expected at least 10 energies."
+                )
+            return False
+
+        return True
+
+    def begin_next_energy_step(self):
         """Set energy and measure.
 
         Set energy via the primary controller. Once this is done
@@ -182,7 +197,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         -------
         None.
         """
-        super().start_next_measurement()
+        super().begin_next_energy_step()
         for device in self.devices:
             # Make all controllers busy, so we do not risk going to the
             # next energy step too early: the secondary controllers may
@@ -190,28 +205,6 @@ class MeasureEnergyCalibration(MeasurementABC):
             device.busy = True
         self.set_leed_energy(*self.step_profile,
                              self.current_energy, self.hv_settle_time)
-
-    def _is_finished(self):
-        """Check if the full measurement cycle is done.
-
-        If the energy is above the __end_energy the cycle is
-        completed. If not, then the delta energy is added
-        and the next measurement is started.
-
-        Returns
-        -------
-        bool
-        """
-        super()._is_finished()
-        if self.current_energy + self.__delta_energy > self.__end_energy:
-            self.calibrate_energy_setpoint()
-            return True
-        self.current_energy += self.__delta_energy
-        return False
-
-    def _make_cameras(self):
-        """Make sure we have no camera."""
-        self.settings.set('devices', 'cameras', '()')
 
     def calibrate_energy_setpoint(self):                                        # TODO: move this to DataPoints?
         """Calibrate the energy setpoint of the LEED electronics.
@@ -253,8 +246,8 @@ class MeasureEnergyCalibration(MeasurementABC):
                                                   fallback=(-10, 1100))
         except NotASequenceError:
             domain = (-10, 1100)
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'energy_calibration/domain', domain
                 )
 
@@ -268,8 +261,8 @@ class MeasureEnergyCalibration(MeasurementABC):
         if (abs(offs) > 50               # Can't be more than 50 eV off
             or gain < 1e-3 or gain > 50  # Gain should be >0 and small
                 or residuals > 100):     # Most of the time < 1
-            base.emit_error(
-                self, MeasurementErrors.RUNTIME_ERROR,
+            self.emit_error(
+                MeasurementErrors.RUNTIME_ERROR,
                 "Energy calibration fit failed, or fit coefficients "
                 f"are poor:\n\nCoefficients=({offs:.2f}, {gain:.2f}) "
                 f"[expected ~(0, 1)]\nSum of residuals={residuals[0]:.2f}"
@@ -304,19 +297,50 @@ class MeasureEnergyCalibration(MeasurementABC):
                                                      'primary_controller')
         except (NotASequenceError, ValueError):
             # Something wrong with the settings?
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/primary_controller', '')
             return
 
         with open(file_name, 'w', encoding='utf-8') as configfile:
             primary.settings.write(configfile)
 
-    @qtc.pyqtSlot()
-    def abort(self):
-        """Abort all current actions."""
-        if (hasattr(self, "__old_coefficients")
-                and self.__old_coefficients):
-            self.primary_controller.settings.set('energy_calibration',
-                                                 'coefficients',
-                                                 self.__old_coefficients)
-        super().abort()
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        handler = super().get_settings_handler()
+        min_energy = self.settings.getfloat('measurement_settings',
+                                            'min_energy', fallback=5.)
+        option = handler['measurement_settings']['start_energy']
+        option.handler_widget.soft_minimum = min_energy
+        option.set_info_text(
+            '<nobr>The energy at which the measurement starts.</nobr> The '
+            f'minimum start energy is {min_energy} eV.'
+            )
+        return handler
+
+    def set_settings(self, new_settings):
+        """Change settings of the measurement."""
+        settings_ok = super().set_settings(new_settings)
+        self.data_points.time_resolved = False
+        return settings_ok
+
+    def _is_finished(self):
+        """Check if the full measurement cycle is done.
+
+        If the energy is above the _end_energy the cycle is
+        completed. If not, then the delta energy is added
+        and the next measurement is started.
+
+        Returns
+        -------
+        bool
+        """
+        super()._is_finished()
+        if self.current_energy + self._delta_energy > self._end_energy:
+            self.calibrate_energy_setpoint()
+            return True
+        self.current_energy += self._delta_energy
+        return False
+
+    def _make_cameras(self):
+        """Make sure we have no camera."""
+        self.settings.set('devices', 'cameras', '()')

@@ -23,7 +23,6 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.classes.abc import QMetaABC
 from viperleed.guilib.measure.classes.abc import QObjectWithError
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.guilib.measure.hardwarebase import emit_error
 
 
 _ALIASES = {
@@ -441,7 +440,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
                 )
         for quantity, values in new_data.items():
             if quantity not in self[-1]:
-                emit_error(self, DataErrors.INVALID_MEASUREMENT)
+                self.emit_error(DataErrors.INVALID_MEASUREMENT)
                 continue
             # In continuous-time-resolved mode, store only the first
             # timestamp (it is strictly needed only for the primary)
@@ -486,8 +485,8 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
                 # duration is so small that a controller did not yet
                 # return any measurement.
                 if complain:
-                    emit_error(self, DataErrors.NO_DATA_FOR_CONTROLLER,
-                               ctrl.address)
+                    self.emit_error(DataErrors.NO_DATA_FOR_CONTROLLER,
+                                    ctrl.address)
                 continue
 
             if self.continuous:
@@ -757,8 +756,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
          invalid) = self.__make_column_header_map(first_row)
 
         if invalid:
-            emit_error(self, DataErrors.UNKNOWN_QUANTITIES,
-                       ", ".join(invalid))
+            self.emit_error(DataErrors.UNKNOWN_QUANTITIES, ", ".join(invalid))
 
         _egy = QuantityInfo.ENERGY
         # Prepare a dummy data point dictionary

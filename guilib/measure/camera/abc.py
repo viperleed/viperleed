@@ -31,10 +31,11 @@ from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.classes.abc import DeviceABC
 from viperleed.guilib.measure.classes.abc import DeviceABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
-from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
-from viperleed.guilib.measure.widgets.spinboxes import TolerantCommaSpinBox
+from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -88,11 +89,6 @@ class CameraABC(DeviceABC):
     # to deduce the camera mode.
     started = qtc.pyqtSignal()
     stopped = qtc.pyqtSignal()
-
-    # camera_connected is emitted any time the camera is connected
-    # or disconnected. It carries the connection state. May be emitted
-    # multiple times with the same connection state.
-    camera_connected = qtc.pyqtSignal(bool)
 
     # preparing is emitted every time a camera begins (True)
     # or finishes (False) any pre-acquisition tasks.
@@ -153,6 +149,8 @@ class CameraABC(DeviceABC):
             Other unused keyword arguments.
         """
         super().__init__(settings=settings, parent=parent)
+        if not driver:
+            raise RuntimeError('No camera driver given!')
         self.driver = driver
         self.__connected = False
         self.__bad_pixels = None
@@ -243,8 +241,8 @@ class CameraABC(DeviceABC):
 
         min_bin, max_bin = self.get_binning_limits()
         if binning_factor < min_bin or binning_factor > max_bin:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 f'{binning_factor} '
                 f'[out of range ({min_bin}, {max_bin})]',
                 'camera_settings/binning', 1
@@ -295,11 +293,13 @@ class CameraABC(DeviceABC):
         """
         return self.__connected
 
-    @connected.setter
+    @connected.setter                                                           # TODO: Check if this is used outside of CameraABC. Replace with private set method
     def connected(self, is_connected):
         """Set whether the camera is currently connected. For internal use."""
+        was_connected = self.connected
         self.__connected = bool(is_connected)
-        self.camera_connected.emit(self.connected)
+        if was_connected != self.connected:
+            self.connection_changed.emit(self.connected)
 
     @property
     @abstractmethod
@@ -338,7 +338,7 @@ class CameraABC(DeviceABC):
 
         min_exp, max_exp = self.get_exposure_limits()
         if exposure_time < min_exp or exposure_time > max_exp:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/exposure',
                             f'\nInfo: out of range ({min_exp}, {max_exp})')
             exposure_time = min_exp
@@ -395,7 +395,7 @@ class CameraABC(DeviceABC):
 
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/gain',
                             f'\nInfo: out of range ({min_gain}, {max_gain})')
             gain = min_gain
@@ -457,8 +457,8 @@ class CameraABC(DeviceABC):
                                  fallback='triggered')
 
         if mode not in ('live', 'triggered'):
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 mode, 'camera_settings/mode', 'triggered'
                 )
             mode = 'triggered'
@@ -482,8 +482,8 @@ class CameraABC(DeviceABC):
 
         min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 f'{n_frames} [out of range ({min_n}, {max_n})]',
                 'measurement_settings/n_frames', 1
                 )
@@ -552,7 +552,7 @@ class CameraABC(DeviceABC):
         full_roi = 0, 0, *size_max
 
         if not self.__is_valid_roi(roi, limits):
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/roi', '\nInfo: ROI is invalid. '
                             f'You can use the full sensor: roi = {full_roi}')
             self.settings.set('camera_settings', 'roi', 'None')
@@ -754,12 +754,13 @@ class CameraABC(DeviceABC):
     def connect_(self):
         """Connect to the camera."""
         if not self.open():
-            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
+            self.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             self.connected = False
             return
         self.load_camera_settings()
         self.connected = True
 
+    @qtc.pyqtSlot()
     def disconnect_(self):
         """Disconnect the device."""
         self.__reported_errors = set()
@@ -774,6 +775,10 @@ class CameraABC(DeviceABC):
         handler = super().get_settings_handler(), and then add
         appropriate sections and/or options to it using the
         handler.add_section, and handler.add_option methods.
+
+        Use the QNoDefaultPushButton from the basewidgets module
+        in order to prevent any button from being set as the
+        default button of the dialog.
 
         The base-class implementation returns a handler that
         already contains the following settings:
@@ -793,22 +798,23 @@ class CameraABC(DeviceABC):
         """
         handler = super().get_settings_handler()
         handler.add_option('camera_settings', 'mode',
-                           handler_widget=qtw.QLabel,
-                           read_only=True)
-        handler.add_section('measurement_settings', display_name="Acquisition")
-        handler.add_section('camera_settings', display_name="Image Properties")
+                           handler_widget=qtw.QLabel(self.mode.capitalize()),
+                           tags=SettingsTag.READ_ONLY | SettingsTag.REGULAR)
+        handler.add_section('measurement_settings', display_name="Acquisition",
+                            tags=SettingsTag.MEASUREMENT | SettingsTag.REGULAR)
+        handler.add_section('camera_settings', display_name="Image Properties",
+                            tags=SettingsTag.REGULAR)
 
         # pylint: disable=redefined-variable-type
         # Triggered for _widget. While this is true, it clear what
         # _widget is used for in each portion of filling the handler
 
         # Exposure time in ms
-        _widget = TolerantCommaSpinBox()                                          # TODO: use prefix-adaptive widget
-        _widget.setRange(*self.get_exposure_limits())
-        _widget.setSuffix(" ms")
+        _widget = CoercingDoubleSpinBox(soft_range=self.get_exposure_limits(),  # TODO: use prefix-adaptive widget
+                                        decimals=2, step=5., suffix=' ms')
         _widget.setStepType(_widget.AdaptiveDecimalStepType)
-        _widget.setSingleStep(5.0)
         _widget.setAccelerated(True)
+        _widget.setMinimum(_widget.soft_minimum)
         _tip = (
             "<nobr>Exposure time used for each frame. For LEED\u2011IV "
             "videos it is best</nobr> to choose the exposure time <b>as long "
@@ -821,9 +827,8 @@ class CameraABC(DeviceABC):
                            handler_widget=_widget, tooltip=_tip)
 
         # Gain in dB                                                            # TODO: add also a gain factor!
-        _widget = TolerantCommaSpinBox()
-        _widget.setRange(*self.get_gain_limits())
-        _widget.setSuffix(" dB")
+        _widget = CoercingDoubleSpinBox(soft_range=self.get_gain_limits(),
+                                        decimals=1, suffix=" dB")
         _widget.setAccelerated(True)
         _tip = (
             "<nobr>ADC gain used for each frame. For LEED\u2011IV videos it "
@@ -839,8 +844,8 @@ class CameraABC(DeviceABC):
             _range = self.get_n_frames_limits()
         else:
             _range = (1, float('inf'))
-        _widget = InfIntSpinBox()
-        _widget.setRange(*_range)
+        _widget = CoercingSpinBox(soft_range=_range)
+        _widget.setMinimum(0)
         _widget.setAccelerated(True)
         _tip = (
             "<nobr>Number of frames to be averaged for saving images.</nobr> "
@@ -853,6 +858,8 @@ class CameraABC(DeviceABC):
                            handler_widget=_widget, tooltip=_tip,
                            display_name="No. frames")
 
+        if not self.connected:
+            return handler
         # ROI
         _widget = ROIEditor()
         size_min, size_max, _d_size, _d_offset = self.get_roi_size_limits()
@@ -880,8 +887,8 @@ class CameraABC(DeviceABC):
                            tooltip=_tip)
 
         # Binning factor                                                        # TODO: add a mention of the image size after processing. Also, add some warning if > 10
-        _widget = qtw.QSpinBox()
-        _widget.setRange(*self.get_binning_limits())
+        _widget = CoercingSpinBox(soft_range=self.get_binning_limits())
+        _widget.setMinimum(0)
         _tip = (
             "<nobr>Binning factor used to reduce the size of images. Binning "
             "consists</nobr> in averaging pixel intensities over a (bin "
@@ -904,8 +911,8 @@ class CameraABC(DeviceABC):
             # We may ignore errors related to the bad-pixels path
             self.settings['camera_settings']['bad_pixels_path'] = ''
         handler.add_option('camera_settings', 'bad_pixels_path',
-                           handler_widget=PathSelector, read_only=True,
-                           tooltip=_tip)
+                           handler_widget=PathSelector,
+                           tags=SettingsTag.READ_ONLY, tooltip=_tip)
         return handler
 
     @abstractmethod
@@ -915,13 +922,15 @@ class CameraABC(DeviceABC):
         This method must return a list of SettingsInfo instances. The
         SettingsInfo class is located in the classes.abc module. Each
         camera is represented by a single SettingsInfo instance. The
-        SettingsInfo object contains the uninque device name and a dict
-        holding additional information about the device. If there is
-        no additional information about the camera, then this dict can
-        be empty. The information contained within a SettingsInfo must
-        be enough to determine a suitable settings file for the device
-        from it. Subclasses should raise a DefaultSettingsError if they
-        fail to create instances from the settings in the DEFAULTS_PATH.
+        SettingsInfo object must contain a .unique_name, a boolean
+        which is true if the device has a hardware interface present,
+        and a dict holding .more information about the device. If
+        there is no additional information about the camera, then this
+        dict can be empty. The information contained within a
+        SettingsInfo must be enough to determine a suitable settings
+        file for the device from it. Subclasses should raise a
+        DefaultSettingsError if they fail to create instances from the
+        settings in the DEFAULTS_PATH.
 
         Returns
         -------
@@ -1003,14 +1012,14 @@ class CameraABC(DeviceABC):
         bad_pix_path = self.settings.get("camera_settings", "bad_pixels_path",
                                          fallback='')
         if not bad_pix_path:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
                             '\nInfo: No bad_pixels_path found.')
             return
         try:
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
                             f'\nInfo: {err}')
             return
@@ -1136,7 +1145,7 @@ class CameraABC(DeviceABC):
         min_exposure, max_exposure : float
             Shortest and longest exposure times in milliseconds
         """
-        return
+        return 1, np.inf
 
     @abstractmethod
     def get_frame_rate(self):
@@ -1194,7 +1203,7 @@ class CameraABC(DeviceABC):
         min_gain, max_gain : float
             Smallest and largest gain factors in decibel
         """
-        return
+        return - np.inf, np.inf
 
     @abstractmethod
     def get_mode(self):
@@ -1545,7 +1554,7 @@ class CameraABC(DeviceABC):
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
         """
         if self.mode != 'triggered':
-            base.emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
+            self.emit_error(CameraErrors.UNSUPPORTED_OPERATION,
                             'trigger', 'live')
             return False
         self.busy = True
@@ -1575,7 +1584,7 @@ class CameraABC(DeviceABC):
             self.settings.set('camera_settings', 'roi', str(roi))
             return roi
 
-        base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+        self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                         'camera_settings/roi',
                         f'\nInfo: ROI {roi} is invalid after '
                         'adjusting top-left corner position')
@@ -1599,7 +1608,7 @@ class CameraABC(DeviceABC):
         error = (CameraErrors.BINNING_ROI_MISMATCH,
                  roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
         if not self.__already_reported(error):
-            # base.emit_error(self, *error)                                     # TODO: make this a non-critical warning!
+            # self.emit_error(*error)                                           # TODO: make this a non-critical warning!
             self.__reported_errors.add(error)
 
         # Update the ROI in the settings only if the
@@ -1746,7 +1755,7 @@ class CameraABC(DeviceABC):
     @qtc.pyqtSlot()
     def __on_timed_out(self):
         """Report a timeout error while in triggered mode."""
-        base.emit_error(self, CameraErrors.TIMEOUT, self.name, 5)
+        self.emit_error(CameraErrors.TIMEOUT, self.name, 5)
 
     @qtc.pyqtSlot()
     def __report_init_errors(self):

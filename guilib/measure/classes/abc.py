@@ -10,11 +10,10 @@ Author: Florian Doerr
 
 This module contains QObjectSettingsErrors, DeviceABCErrors,
 QObjectWithError, QObjectWithSettingsABC, HardwareABC and DeviceABC.
-QObjectWithError is the base class of QObjectWithSettingsABC,
-CalibrationTask, and DataPoints. QObjectWithSettingsABC is the base
-class of HardwareABC and MeasurementABC. HardwareABC is the base class
-of DeviceABC and SerialABC. DeviceABC is the base class of ControllerABC
-and CameraABC.
+QObjectWithError is the base class of QObjectWithSettingsABC.
+QObjectWithSettingsABC is the base class of HardwareABC and
+MeasurementABC. HardwareABC is the base class of DeviceABC and
+SerialABC. DeviceABC is the base class of ControllerABC and CameraABC.
 
 Note that all of the classes defined in this module are subclasses of
 QObject. Any subclass of a QObject cannot inherit from a second QObject,
@@ -31,10 +30,7 @@ from pathlib import Path
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.guilib.measure import hardwarebase
-from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
-from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.guilib.measure.hardwarebase import emit_error
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.settings import (
     NoDefaultSettingsError,
     NoSettingsError,
@@ -49,7 +45,7 @@ class QMetaABC(ABCMeta, type(qtc.QObject)):
     """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
 
 
-class DeviceABCErrors(ViPErLEEDErrorEnum):
+class DeviceABCErrors(base.ViPErLEEDErrorEnum):
     """Errors of ViPErLEED devices."""
 
     DEVICE_NOT_FOUND = (
@@ -60,7 +56,7 @@ class DeviceABCErrors(ViPErLEEDErrorEnum):
         )
 
 
-class QObjectSettingsErrors(ViPErLEEDErrorEnum):
+class QObjectSettingsErrors(base.ViPErLEEDErrorEnum):
     """Settings errors of ViPErLEED objects."""
 
     MISSING_SETTINGS = (100,
@@ -77,7 +73,7 @@ class QObjectSettingsErrors(ViPErLEEDErrorEnum):
         '{!r}. Using {} instead. Consider fixing your configuration file.'
         )
     DEFAULT_SETTINGS_CORRUPTED = (103,
-                                  'Default settings corrupted. {!r} '
+                                  'Default settings corrupted. {} '
                                   'Contact the ViPErLEED team to fix '
                                   'your default settings.')
 
@@ -88,7 +84,7 @@ class QObjectWithError(qtc.QObject):                                            
     # information about the error in the form (code, message).
     error_occurred = qtc.pyqtSignal(tuple)
 
-    emit_error = hardwarebase.emit_error
+    emit_error = base.emit_error
 
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
@@ -232,7 +228,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             and an exact match was asked for.
         """
         settings = self.find_matching_settings_files(
-            find_from, DEFAULTS_PATH, match_exactly,
+            find_from, base.DEFAULTS_PATH, match_exactly,
             )
         if not settings:
             # No default settings was found.
@@ -282,12 +278,12 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             worst.
         """
         directory = Path(directory).resolve()
-        default = True if directory == DEFAULTS_PATH else False
+        default = True if directory == base.DEFAULTS_PATH else False
         settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
             settings_files = [file for file in settings_files
-                              if not '_defaults' in str(file)]
+                              if '_defaults' not in str(file)]
 
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
@@ -405,7 +401,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             True if the settings file is for the class.
         """
 
-    def are_settings_invalid(self, new_settings):
+    def are_settings_invalid(self, settings):
         """Check if there are any invalid settings.
 
         Subclasses may add additional mandatory settings at
@@ -416,7 +412,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Parameters
         ----------
-        new_settings : ViPErLEEDSettings
+        settings : ViPErLEEDSettings
             The new settings.
 
         Returns
@@ -431,7 +427,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             invalid setting.
         """
         return [(invalid,) for invalid in
-                new_settings.has_settings(*self._mandatory_settings)]
+                settings.has_settings(*self._mandatory_settings)]
 
     @abstractmethod
     def get_settings_handler(self):
@@ -444,6 +440,10 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         The base-class implementation returns a handler that
         contains the location of the settings file.
+
+        Use the QNoDefaultPushButton from the basewidgets module
+        in order to prevent any button from being set as the
+        default button of the dialog.
 
         Returns
         -------
@@ -493,11 +493,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         try:                                                                    # TODO: #242 make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except (ValueError, NoSettingsError):
-            emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS)
+            self.emit_error(QObjectSettingsErrors.MISSING_SETTINGS)
             return False
         invalid = self.are_settings_invalid(new_settings)
         for missing, *info in invalid:
-            emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                        missing, ' '.join(info))
             return False
 
@@ -513,6 +513,10 @@ class HardwareABC(QObjectWithSettingsABC):
     # Emitted whenever the busy state of the device changes.
     # Contains the new busy state of the device.
     busy_changed = qtc.pyqtSignal(bool)
+
+    # Emitted right after the hardware connection status has changed.
+    # Cointains the new connection status of the hardware.
+    connection_changed = qtc.pyqtSignal(bool)
 
     def __init__(self, *args, **kwargs):
         """Initialise instance."""
@@ -588,12 +592,13 @@ class DeviceABC(HardwareABC):
 
         This method must return a list of SettingsInfo instances. Each
         device is represented by a single SettingsInfo instance. The
-        SettingsInfo object must contain a .unique_name and can contain
-        .more information as a dict. The information contained within
-        a SettingsInfo must be enough to determine settings files that
-        contain the correct settings for this device. Subclasses should
-        raise a DefaultSettingsError if they fail to create instances
-        from the settings in the DEFAULTS_PATH.
+        SettingsInfo object must contain a .unique_name, a
+        .hardware_interface boolean, and can contain .more information
+        as a dict. The information contained within a SettingsInfo must
+        be enough to determine settings files that contain the correct
+        settings for this device. Subclasses should raise a
+        DefaultSettingsError if they fail to create instances from the
+        settings in the DEFAULTS_PATH.
 
         Returns
         -------
@@ -614,14 +619,20 @@ class SettingsInfo:
     ----------
     unique_name : str
         Unique name identifying the device.
+    hardware_interface : bool
+        Whether the device has a hardware interface or not.
     more : dict
         Extra, optional, information about the device.
     """
     unique_name: str
+    hardware_interface: bool
     more: dict = field(default_factory=dict)
 
     def __post_init__(self):
-        """Check that we have a string unique_name."""
+        """Check that we have the correct attribute types."""
         if not isinstance(self.unique_name, str):
             raise TypeError(f'{type(self).__name__}: '
                             'unique_name must be a string')
+        if not isinstance(self.hardware_interface, bool):
+            raise TypeError(f'{type(self).__name__}: '
+                            'hardware_interface must be a bool')

@@ -27,7 +27,6 @@ import sys
 
 from wrapt import synchronized  # thread-safety decorator
 
-from viperleed import guilib as gl
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 

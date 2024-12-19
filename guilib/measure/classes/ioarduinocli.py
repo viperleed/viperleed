@@ -35,6 +35,9 @@ from PyQt5 import QtNetwork as qtn
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes import settings
+from viperleed.guilib.measure.classes.abc import QObjectWithError
+from viperleed.guilib.measure.classes.decorators import emit_default_faulty
+from viperleed.guilib.measure.classes.settings import DefaultSettingsError
 
 
 NOT_SET = '\u2014'
@@ -87,10 +90,8 @@ class ViPErLEEDFirmwareError(base.ViPErLEEDErrorEnum):
         'Press "Upgrade Arduino CLI" to install the required core.'
         )
 
-class ArduinoCLI(qtc.QObject):
+class ArduinoCLI(QObjectWithError):
     """Base class that looks for the Arduino CLI in the file system."""
-
-    error_occurred = qtc.pyqtSignal(tuple)
 
     # Emitted after the check whether the Arduino CLI is installed.
     # Two bool values, the first one is true if a CLI version is
@@ -208,8 +209,7 @@ class ArduinoCLI(qtc.QObject):
         try:
             cli = str(self.get_arduino_cli())
         except FileNotFoundError:
-            base.emit_error(
-                self,
+            self.emit_error(
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path,
                 )
@@ -257,8 +257,7 @@ class ArduinoCLI(qtc.QObject):
 
     def on_arduino_cli_failed(self, err):
         """Report an Arduino CLI process failure."""
-        base.emit_error(
-            self,
+        self.emit_error(
             ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
             err.returncode,
             err.stderr.decode()
@@ -343,10 +342,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
 
         # Check if connection failed.
         if reply.error():
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
-                )
+            self.emit_error(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
             return
         self.progress_occurred.emit(10)
 
@@ -360,10 +356,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
         elif 'linux' in platform:
             os_name = 'Linux'
         else:
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI
-                )
+            self.emit_error(ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI)
             return
 
         url_latest = ''
@@ -376,10 +369,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
                 self._archive_name = asset['name']
                 break
         else:
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI
-                )
+            self.emit_error(ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI)
             return
         self.progress_occurred.emit(15)
 
@@ -463,8 +453,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
         try:
             cli = str(self.get_arduino_cli())
         except FileNotFoundError:
-            base.emit_error(
-                self,
+            self.emit_error(
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -504,8 +493,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
         try:
             cli = str(self.get_arduino_cli())
         except FileNotFoundError:
-            base.emit_error(
-                self,
+            self.emit_error(
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -514,10 +502,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
         try:
             subprocess.run([cli, 'update'], capture_output=True, check=True)
         except subprocess.CalledProcessError:
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
-                )
+            self.emit_error(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
             return
 
         self.progress_occurred.emit(90)
@@ -613,11 +598,15 @@ class FirmwareUploader(ArduinoCLI):
         selected_ctrl_exists = any(self.ctrls_with_port(available_ctrls, port))
         if selected_ctrl_exists:
             return False
-        base.emit_error(self,
-                        ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
+        self.emit_error(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
                         port)
         self.controllers_detected.emit(available_ctrls)
         return True
+
+    @emit_default_faulty
+    def _detect_controllers(self):
+        """Detect and return controllers."""
+        return base.get_devices('controller')
 
     def _get_boards(self):
         """Get a list of the available Arduino boards.
@@ -646,8 +635,7 @@ class FirmwareUploader(ArduinoCLI):
         try:
             cli = str(self.get_arduino_cli())
         except FileNotFoundError:
-            base.emit_error(
-                self,
+            self.emit_error(
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -716,8 +704,7 @@ class FirmwareUploader(ArduinoCLI):
         try:
             cli = str(self.get_arduino_cli())
         except FileNotFoundError:
-            base.emit_error(
-                self,
+            self.emit_error(
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -731,8 +718,7 @@ class FirmwareUploader(ArduinoCLI):
             self.cli_failed.emit()
             return
         if missing_cores:
-            base.emit_error(self,
-                            ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND,
+            self.emit_error(ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND,
                             missing_cores)
             self.cli_failed.emit()
             return
@@ -843,7 +829,12 @@ class FirmwareUploader(ArduinoCLI):
             return ctrl_dict
 
         # Detect ViPErLEED controllers.
-        for name, (cls, info) in base.get_devices('controller').items():
+        try:
+            controllers = self._detect_controllers()
+        except DefaultSettingsError:
+            controllers = {}
+
+        for name, (cls, info) in controllers.items():
             port = info.more.get('address')
             ctrl = next(self.ctrls_with_port(ctrl_dict, port), None)
             if not ctrl:
