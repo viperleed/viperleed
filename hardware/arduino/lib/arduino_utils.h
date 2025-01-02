@@ -4,6 +4,7 @@
 @author: Michael Schmid
 @author: Florian Doerr
 @author: Christoph Pfungen
+@author: Stefan Mitterhöfer
 **/
 
 #ifndef _VIPERLEED_ARDUINO_UTILS
@@ -22,6 +23,16 @@ void setChipSelectHigh(byte ioPin) {
     pinMode(ioPin, INPUT_PULLUP);
     digitalWrite(ioPin, HIGH);
     pinMode(ioPin, OUTPUT);
+}
+
+void SPI_initialize() {
+    /**
+    Initialize the SPI bus.
+    Set Serial Clock SCK (Pin PB1) and MOSI (Pin PB2) aus OUTPUT.
+    Set MISO (Pin PB3) as INPUT.
+    **/
+    SPI.begin();
+    pinMode(MISO, INPUT);
 }
 
 
@@ -51,5 +62,20 @@ uint16_t analogReadMedian(byte pin) {
   uint16_t a2 = analogRead(pin);
   return getMedian16(a0, a1, a2);
 }
+
+#define sgn(x) (x < 0 ? -1 : 1)
+//static inline int8_t sgn(float val) {
+//  if (val < 0) return -1;
+////  if (val == 0) return 0;
+//  return 1;
+//}
+
+#define log2(x) (log(x)/log(2))
+//float log2(float val)
+//{
+//   return log(val) / log(2);
+//}
+
+
 
 #endif
