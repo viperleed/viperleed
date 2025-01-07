@@ -20,7 +20,7 @@ oxide surface with medium complexity and will compare experimental |LEED-IV|
 data with a theory calculation in ViPErLEED.
 
 This example is a simplified version of the example calculation shown in the
-main ViPErLEED paper :cite:p:`viperleedCalc`. For more details on the full
+main ViPErLEED paper :cite:p:`kraushoferViPErLEEDPackageCalculation2025`. For more details on the full
 calculation, see the paper and the supplementary information.
 
 .. todo:: add citation for supplementary information
@@ -200,7 +200,7 @@ The detected layers and bulk repeat vector are also shown in
    Visualization of the crystal structure with highlighted layers, and the bulk
    repeat vector. Fe atoms are depicted as large yellow spheres, O atoms as
    small red ones. This figure is taken from the first ViPErLEED paper
-   :cite:p:`viperleedCalc`.
+   :cite:p:`kraushoferViPErLEEDPackageCalculation2025`.
 
 
 At this stage, before proceeding, you should always check the detected bulk
