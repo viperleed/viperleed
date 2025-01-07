@@ -21,7 +21,7 @@ and glide planes. :numref:`fig_plane_groups`, shows an overview of the 17
 plane groups, allowed symmetry operations and possible subgroups. There,
 an "×" indicates the point used by ViPErLEED as the conventional position
 of the origin of the unit cell. See the relevant ViPErLEED publication for
-more details :cite:p:`viperleedCalc`.
+more details :cite:p:`kraushoferViPErLEEDPackageCalculation2025`.
 
 ..
     In principle, one would like to do it this way:

@@ -1,40 +1,36 @@
-@article{viperleedCalc,
-  title = {
-    {ViPErLEED} package {I}: {Calculation} of
-    {I(V)} curves and structural optimization
-    },
-  author = {Kraushofer, F.
-            and Imre, A. M.
-            and Franceschi, G.
-            and Kißlinger, T.
-            and Rheinfrank, E.
-            and Schmid, M.
-            and Diebold, U.
-            and Hammer, L.
-            and Riva, M.},
-  year = {2024},
-  journal = {Phys. Rev. Research (submitted)},
-  doi = {10.48550/arXiv.2406.18821},
-  note = {arXiv:2406.18821},
-  }
+@article{kraushoferViPErLEEDPackageCalculation2025,
+  title      = {{{ViPErLEED}} Package {{I}}: {{Calculation}} of {{I}} ( {{V}} ) Curves and Structural Optimization},
+  shorttitle = {{{ViPErLEED}} Package {{I}}},
+  author     = {Kraushofer, Florian and Imre, Alexander M. and Franceschi, Giada and Ki{\ss}linger, Tilman and Rheinfrank, Erik and Schmid, Michael and Diebold, Ulrike and Hammer, Lutz and Riva, Michele},
+  year       = {2025},
+  month      = jan,
+  journal    = {Physical Review Research},
+  volume     = {7},
+  number     = {1},
+  pages      = {013005},
+  issn       = {2643-1564},
+  doi        = {10.1103/PhysRevResearch.7.013005},
+  urldate    = {2025-01-07},
+  abstract   = {Low-energy electron diffraction (LEED) is a widely used technique in surface-science laboratories. Yet, it is rarely used to its full potential. The quantitative information about the surface structure, contained in the modulation of the intensities of the diffracted beams as a function of incident electron energy, LEED                                                   I                   (                   V                   )                                               , is underutilized. To acquire these data, only minor adjustments would be required in most experimental setups, but existing analysis software is cumbersome to use and often computationally inefficient. The ViPErLEED (Vienna package for Erlangen LEED) project lowers these barriers, introducing a combined solution for user-friendly data acquisition, extraction, and computational analysis. These parts are discussed in three separate publications. Here, the focus is on the computational part of ViPErLEED, which performs highly automated LEED-                                                   I                   (                   V                   )                                               calculations and structural optimizations. Minimal user input is required, and the functionality is significantly enhanced compared to existing solutions. Computation is performed by embedding the existing Erlangen tensor-LEED package (). ViPErLEED manages additional parallelization, monitors convergence, and processes all input and output. This makes LEED                                                   I                   (                   V                   )                                               more accessible to new users while minimizing the potential for errors and the manual labor. Added functionalities include intelligent structure-dependent defaults for most calculation parameters, automatic detection of bulk and surface symmetries and their relationship, automated search procedures that preserve the symmetry and speed up convergence, adjustments to the  code to handle larger systems than before, as well as parallelization and optimization. Modern file formats are used as input and output, and there is a direct interface to the atomic simulation environment (ASE) package. The software is implemented primarily in  (version                                                   {$\geq$}                   3.7                                               ) and provided as an open-source package (GNU GPLv3 or any later version). A structure determination of the                                                   {$\alpha$}                                        -Fe                     2                                                           O                     3                                                           (                     1                                            1                       {\textasciimacron}                                          02                     )                                                     -                                    (                   1                   {\texttimes}                   1                   )                                               surface is presented as an example for the application of the software.                                                                                            Published by the American Physical Society                   2025},
+  langid     = {english},
+}
 
-@article{viperleedSpot,
-  title = {
-    {ViPErLEED} package {II}: {Spot} tracking,
-    extraction and processing of {I(V)} curves
-    },
-  author = {Schmid, M.
-            and Kraushofer, F.
-            and Imre, A. M.
-            and Kißlinger, T.
-            and Hammer, L.
-            and Diebold, U.
-            and Riva, M.},
-  year = {2024},
-  journal = {Phys. Rev. Research (submitted)},
-  doi = {10.48550/arXiv.2406.18413},
-  note = {arXiv:2406.18413},
-  }
+@article{schmidViPErLEEDPackageII2025,
+  title      = {{{ViPErLEED}} Package {{II}}: {{Spot}} Tracking, Extraction, and Processing of {{I}} ( {{V}} ) Curves},
+  shorttitle = {{{ViPErLEED}} Package {{II}}},
+  author     = {Schmid, Michael and Kraushofer, Florian and Imre, Alexander M. and Ki{\ss}linger, Tilman and Hammer, Lutz and Diebold, Ulrike and Riva, Michele},
+  year       = {2025},
+  month      = jan,
+  journal    = {Physical Review Research},
+  volume     = {7},
+  number     = {1},
+  pages      = {013006},
+  issn       = {2643-1564},
+  doi        = {10.1103/PhysRevResearch.7.013006},
+  urldate    = {2025-01-07},
+  abstract   = {As part of the Vienna package for Erlangen LEED, low-energy electron diffraction (ViPErLEED) project, computer programs have been developed for facile and user-friendly data extraction from movies of LEED images. The programs make use of some concepts from astronomical image processing and analysis. As a first step, flat-field and dark-frame corrections reduce the effects of inhomogeneities of the camera and screen. In a second step, for identifying all diffraction maxima (``spots''), it is sufficient to manually mark and label a single spot or very few spots. Then the program can automatically identify all other spots and determine the distortions of the image. This forms the basis for automatic spot tracking (i.e., following the spots as they move across the LEED screen) and intensity measurement. Even for complex structures with hundreds to a few thousand diffraction beams, this step takes less than a minute. The package also includes a program for further processing of these                                                   I                   (                   V                   )                                               curves (averaging of equivalent beams, manual and/or automatic selection, smoothing) as well as several utilities. The software is implemented as a set of plugins for the public-domain image processing program  and provided as an open-source package.                                                                                            Published by the American Physical Society                   2025},
+  langid     = {english},
+}
 
 @article{viperleedMeasure,
   title = {
@@ -43,7 +39,7 @@
     },
   author = {Dörr, F. and Schmid, M. and Hammer, L.
             and Diebold, U. and Riva, M.},
-  year = {2024},
+  year = {2025},
   journal = {in preparation},
   }
 
