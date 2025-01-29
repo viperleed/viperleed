@@ -15,6 +15,12 @@ block starting with the
 header flag, followed by a list of displacements for each of the atoms that
 one wants to move during the search.
 
+.. note::
+    Geometric displacements for any atom can only be applied along one
+    :ref:`direction<geodelta_direction>`` (e.g. z, x, y, along arcs etc.) at a
+    time. To optimize positions in multiple directions, multiple subsequent 
+    search blocks are necessary.
+
 **Example**:
 
 ..  code-block:: none
@@ -45,6 +51,8 @@ atom, you can also clear the offset without specifying a direction:
    O 1 offset = 0         ! center around original atom position, instead of the position resulting from previous searches
    O 1 offset = clear     ! equivalent
    O 1 offset = original  ! equivalent
+
+.. _geodelta_direction:
 
 Direction
 ---------

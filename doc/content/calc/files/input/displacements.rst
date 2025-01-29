@@ -50,6 +50,13 @@ detail here:
 -  :ref:`Vibrational amplitudes<VIBDELTA>`
 -  :ref:`Chemical substitution<OCCDELTA>`
 
+.. note::
+    Geometric displacements for any atom can only be applied along one
+    :ref:`direction<geodelta_direction>`` (e.g. z, x, y, along arcs etc.) at a
+    time. To optimize positions in multiple directions, multiple subsequent 
+    search blocks are necessary.
+
+
 Generally, any displacement applied to one atom will also be applied to
 all symmetry-equivalent atoms (see Linking in :ref:`POSCAR`), such that
 the symmetry is preserved during the search (eg. in-plane geometrical
