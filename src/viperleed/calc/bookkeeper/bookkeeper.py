@@ -21,7 +21,6 @@ from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 
 from . import log
-from .constants import STATE_FILES
 from .errors import _FileNotOlderError
 from .history.constants import HISTORY_INFO_NAME
 from .history.entry.entry import HistoryInfoEntry
@@ -34,7 +33,6 @@ from .log import LOGGER
 from .mode import BookkeeperMode
 from .root_explorer import RootExplorer
 from .utils import make_property
-from .utils import needs_update_for_attr
 
 
 # Input files that may be generated at runtime - don't warn if missing

@@ -253,8 +253,8 @@ class TestWorkhistoryHandlerRaises:
                             'find_current_directories',
                             return_value=(directory,))
         raises_ = make_obj_raise(directory, OSError, 'replace')
-        with raises_, monkeypatch.context() as patch:
-            patch.setattr('pathlib.Path.relative_to', mocker.MagicMock())
+        with raises_, monkeypatch.context() as patch_:
+            patch_.setattr('pathlib.Path.relative_to', mocker.MagicMock())
             # pylint: disable-next=protected-access       # OK in tests
             tensor_nums = workhistory._move_folders_to_history(None)
             assert not any(tensor_nums)

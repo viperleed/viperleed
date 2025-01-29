@@ -129,8 +129,8 @@ class HistoryInfoFile:
         new_text += entry_text
         self._entries.append(entry)
         self.raw_contents += new_text
-        try:
-            with open(self.path, 'a', encoding='utf-8') as history_info:
+        try:  # pylint: disable=too-many-try-statements  # OK with open
+            with self.path.open('a', encoding='utf-8') as history_info:
                 history_info.write(new_text)
         except OSError:
             LOGGER.error('Failed to append entry to '
