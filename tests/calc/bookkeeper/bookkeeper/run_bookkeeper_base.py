@@ -63,11 +63,10 @@ class _TestCheckers:
     def check_input_files_in_history(self, *run):
         """Make sure that input files were stored in history."""
         *_, history_run_path, _ = run
-        expected_contents = (MOCK_INPUT_CONTENT, MOCK_ORIG_CONTENT)
         for file in MOCK_STATE_FILES:
             archived_input = history_run_path / file
             assert archived_input.is_file()
-            self._check_file_contents(archived_input, *expected_contents)
+            self._check_file_contents(archived_input, MOCK_ORIG_CONTENT)
 
     def check_history_exists(self, bookkeeper, history_run_path, *_):
         """Test that history_path and directory/history.info exist."""
