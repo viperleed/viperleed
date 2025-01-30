@@ -744,7 +744,6 @@ def _preserve_original_input(rp, origin_dir):
     if rp.expbeams_file_name:
         files_to_preserve.add(rp.expbeams_file_name)
 
-
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:
         # save under name EXPBEAMS.csv
@@ -756,7 +755,7 @@ def _preserve_original_input(rp, origin_dir):
                            'It will not be stored in '
                            f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rp.setHaltingLevel(1)
-            return
+            continue
         try:
             shutil.copy2(file_path, rp.inputs_dir)
         except OSError:
