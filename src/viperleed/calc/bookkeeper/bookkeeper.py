@@ -516,6 +516,11 @@ class Bookkeeper:
         self._root.clear_for_next_calc_run()
         return BookkeeperExitCode.SUCCESS
 
+    # TODO: how to handle the TENSOR_INDEX case? Currently we attempt
+    # removal of the MAXIMUM tensor number, not the LAST one that ran.
+    # The latter would be available from .history.last_folder.tensor_num
+    # if we would sort the history folders not by name but by creation
+    # datetime (https://stackoverflow.com/questions/168409).
     def _run_discard_full_mode(self):
         """Execute bookkeeper in DISCARD_FULL mode."""
         try:
