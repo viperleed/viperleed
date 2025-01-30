@@ -18,6 +18,7 @@ __license__ = 'GPLv3+'
 
 from collections import defaultdict
 import copy
+from dataclasses import dataclass
 import logging
 import os
 from pathlib import Path
@@ -50,10 +51,49 @@ from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
 
 
+COMPILE_LOGS_DIRNAME = 'compile_logs'
 _LOGGER = logging.getLogger(parent_name(__name__))
 if CAN_PLOT:
     from matplotlib import pyplot as plt
     use_calc_style()
+
+
+@dataclass
+class _RunPaths:
+    """A container for paths to directories relevant for execution.
+
+    All paths are assumed to be absolute.
+
+    Attributes
+    ----------
+    source : Path
+        The directory in which the TensErLEED code can be found.
+    work : Path
+        The directory in which calculations are executed, before
+        results are copied back to home. For a DOMAINS calculation,
+        this is the **main** one, not the one for the subdomains.
+
+    Read-only attributes
+    --------------------
+    compile_logs : Path
+        Where log files generated during compilation of the Fortran
+        code are stored.
+    """
+
+    # !!! Add new attributes in ALPHABETIC ORDER !!!
+    source: Path = None
+    work: Path = None
+
+    @property
+    def compile_logs(self):
+        """Return the path where Fortran-compilation log files are saved."""
+        return self.work / COMPILE_LOGS_DIRNAME
+
+    def __post_init__(self):
+        """Update work unless it was given already."""
+        if self.work is None:
+            self.work = Path.cwd()
+
 
 
 class Rparams:
@@ -149,10 +189,7 @@ class Rparams:
 
         # RUN VARIABLES
         self.timer = ExecutionTimer()
-        self.source_dir = None  # where to find 'tensorleed'
-        # .workdir is the MAIN WORK DIRECTORY; where to find input
-        self.workdir = Path.cwd().resolve()
-        self.compile_logs_dir = None
+        self.paths = _RunPaths()
         self.searchConvInit = {
             'gaussian': None, 'dgen': {'all': None, 'best': None, 'dec': None}}
         self.searchEvalTime = DEFAULTS['SEARCH_EVAL_TIME']  # time interval for reading SD.TL
@@ -346,7 +383,7 @@ class Rparams:
     def get_tenserleed_directory(self, wanted_version=None):                           # TODO: replace the default for TL_VERSION with Version('unknown')
         """Return the Path to a TensErLEED directory.
 
-        The directory is looked up in Rparams.source_dir.
+        The directory is looked up in Rparams.paths.source.
 
         Parameters
         ----------
@@ -364,21 +401,23 @@ class Rparams:
         Raises
         ------
         RuntimeError
-            If this method is called before `Rparams.source_dir` is set
+            If this method is called before `Rparams.paths.source`
+            is set
         FileNotFoundError
-            If `Rparams.source_dir` has no 'TensErLEED' subdirectories
+            If `Rparams.paths.source` has no 'TensErLEED'
+            subdirectories
         FileNotFoundError
             If `version` is given, but the corresponding directory
             was not found
         """
-        if not self.source_dir:
+        if not self.paths.source:
             raise RuntimeError(
                 f'{type(self).__name__}.get_tenserleed_directory: '
-                'source_dir is not set'
+                'TensErLEED source directory is not set'
                 )
-        source_tree = self.source_dir.resolve()
-        wanted_version = (Version(wanted_version) if wanted_version else
-                          self.TL_VERSION)
+        source_tree = self.paths.source
+        wanted_version = (Version(wanted_version) if wanted_version
+                          else self.TL_VERSION)
         sources = get_tenserleed_sources(source_tree)
         # sort sources by .version attribute
         sources = sorted(sources, key=lambda x: x.version)
@@ -409,7 +448,7 @@ class Rparams:
         if self.TENSOR_INDEX is None:
             self.TENSOR_INDEX = leedbase.getMaxTensorIndex()
         # TL_VERSION:
-        if self.source_dir is None:
+        if self.paths.source is None:
             raise RuntimeError('Cannot determine highest TensErLEED version '
                                'without specifying a source directory')
         if self.TL_VERSION is None:

@@ -182,10 +182,10 @@ def run_calc(system_name=None,
 
     # set source directory
     try:
-        rp.source_dir = get_tensorleed_path(source)
+        rp.paths.source = get_tensorleed_path(source).resolve()
     except (ValueError, FileNotFoundError) as exc:
         logger.warning(f'{exc} This may cause errors.')
-        rp.source_dir = Path(source or '').resolve()
+        rp.paths.source = Path(source or '').resolve()
 
     if system_name is None:
         system_name = _get_parent_directory_name()

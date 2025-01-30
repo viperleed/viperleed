@@ -307,9 +307,10 @@ def initialization(sl, rp, subdomain=False):
                     + rp.phaseshifts_firstline[36:]
                     )
     if newpsGen:
+        source = rp.paths.source
         # Check for old executable. Used to be called EEASiSSS.x
-        if (not Path(rp.source_dir / "eeasisss").is_file()
-                and Path(rp.source_dir / "EEASiSSS.x").is_file()):
+        if (not (source / 'eeasisss').is_file()
+                and (source / 'EEASiSSS.x').is_file()):
             rundgrenpath = 'EEASiSSS.x'
         else:
             # let psgen catch the error if neither executable is found
@@ -485,8 +486,8 @@ def init_domains(rp):
                 dp.sl = poscar.read()
                 dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
-                dp.rp.workdir = home
-                dp.rp.source_dir = rp.source_dir
+                dp.rp.paths.work = home
+                dp.rp.paths.source = rp.paths.source
                 dp.rp.timestamp = rp.timestamp
                 parameters.interpret(dp.rp, slab=dp.sl,
                                      silent=rp.LOG_LEVEL > logging.DEBUG)
@@ -667,8 +668,7 @@ def init_domains(rp):
         logger.info("The following domains require new reference "
                     f"calculations: {', '.join(d.name for d in rr)}")
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams",
-                        "source_dir"]:
+            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
                 dp.rp.LMAX.max = rp.LMAX.max
@@ -743,14 +743,11 @@ def _preserve_original_input(rp, init_logger, path=""):
 
 def make_compile_logs_dir(rp):
     """Create compile_logs directory where compilation logs are saved."""
-    # put into rp
-    rp.compile_logs_dir = Path(rp.workdir) / "compile_logs"
-
-    # makes compile_logs directory
+    directory = rp.paths.compile_logs
     try:
-        rp.compile_logs_dir.mkdir(exist_ok=True)
+        directory.mkdir(exist_ok=True)
     except OSError:
-        logger.warning(f"Could not create directory {rp.compile_logs_dir}")
+        logger.warning(f'Could not create directory {directory}')
         rp.setHaltingLevel(1)
 
 

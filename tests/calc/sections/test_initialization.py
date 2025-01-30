@@ -65,7 +65,7 @@ class TestInitializationRaises:
     def fixture_ag100_init(self, ag100, make_section_tempdir, tensorleed_path):
         """Yield slab and rpars ready to execute in a temporary directory."""
         slab, rpars, *_ = ag100
-        rpars.source_dir = tensorleed_path
+        rpars.paths.source = tensorleed_path
         tmp = make_section_tempdir('Ag(100)', 'init')
         with execute_in_dir(tmp):  # Not to spam with files
             yield slab, rpars

@@ -53,7 +53,7 @@ class TestPhaseshiftsGen:
     def test_phaseshift_log_exists(self, run_phaseshift):
         """Ensure a log file was written to disk."""
         param, *_ = run_phaseshift
-        assert any(param.workdir.glob('phaseshift*.log'))
+        assert any(param.paths.work.glob('phaseshift*.log'))
 
     @parametrize_with_cases('args', cases=POSCARSlabs.case_poscar_lsmo_001_rt2)
     def test_phaseshift_input_mixed_sites(self, args, tensorleed_path,
@@ -61,8 +61,8 @@ class TestPhaseshiftsGen:
         """Test that phaseshift generation works with mixed sites."""
         tmp_path = tmp_path_factory.mktemp(basename='phaseshifts').resolve()
         slab, rpars, _ = args
-        rpars.source_dir = tensorleed_path
-        rpars.workdir = tmp_path
+        rpars.paths.source = tensorleed_path
+        rpars.paths.work = tmp_path
         rpars.THEO_ENERGIES = rpars.THEO_ENERGIES.from_value((50,100,5))
         with execute_in_dir(tmp_path):
             firstline, _ = runPhaseshiftGen_old(slab, rpars)
