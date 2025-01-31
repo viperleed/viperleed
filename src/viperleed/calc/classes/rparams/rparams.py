@@ -82,7 +82,7 @@ class _RunPaths:
 
     # !!! Add new attributes in ALPHABETIC ORDER !!!
     source: Path = None
-    work: Path = None
+    work: Path = None                                                           # TODO: see if we can get rid of this
 
     @property
     def compile_logs(self):
