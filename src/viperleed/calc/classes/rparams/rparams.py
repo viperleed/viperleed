@@ -88,7 +88,7 @@ class _RunPaths:
     work: Path = None                                                           # TODO: see if we can get rid of this
 
     @property
-    def compile_logs(self):
+    def compile_logs(self):                                                     # TODO: Should compile_logs go to domain subfolders?
         """Return the path where Fortran-compilation log files are saved."""
         return self.work / COMPILE_LOGS_DIRNAME
 
