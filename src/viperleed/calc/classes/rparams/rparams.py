@@ -66,6 +66,8 @@ class _RunPaths:
 
     Attributes
     ----------
+    home : Path
+        The directory in which viperleed.calc was originally called.
     source : Path
         The directory in which the TensErLEED code can be found.
     work : Path
@@ -81,6 +83,7 @@ class _RunPaths:
     """
 
     # !!! Add new attributes in ALPHABETIC ORDER !!!
+    home: Path = None
     source: Path = None
     work: Path = None                                                           # TODO: see if we can get rid of this
 

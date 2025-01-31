@@ -36,11 +36,14 @@ from viperleed.calc.sections.run_sections import section_loop
 
 
 
-def run_calc(system_name=None,
-             console_output=True,
-             slab=None,
-             preset_params=None,
-             source=None):
+def run_calc(
+    system_name=None,
+    console_output=True,
+    slab=None,
+    preset_params=None,
+    source=None,
+    home=None,
+    ):
     """Run a ViPErLEED calculation.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
@@ -71,6 +74,11 @@ def run_calc(system_name=None,
         or None, try taking it from the environment variable
         VIPERLEED_TENSORLEED. As a last resort, use the current
         directory. Default is None.
+    home : pathlike, optional
+        Path to the folder in which viperleed.calc was originally
+        executed, i.e., before moving to the work directory. If
+        not given or None, take the parent of the current directory.
+        Default is None.
 
     Returns
     -------
@@ -110,6 +118,11 @@ def run_calc(system_name=None,
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmp_manifest)
         return 2, None
+
+    # Store the directory in which the calculation originally started
+    if home is None:
+        home = Path.cwd().parent
+    rp.paths.home = Path(home)
 
     # check if this is going to be a domain search
     domains = False
