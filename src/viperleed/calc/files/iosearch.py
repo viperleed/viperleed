@@ -422,9 +422,9 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         with open(file_path, 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error(f"Failed to write {_file_path}")
+        logger.error(f"Failed to write {file_path}")
         raise
-    logger.debug(f"Wrote to {_file_path} successfully")
+    logger.debug(f"Wrote to {file_path} successfully")
     return output
 
 
