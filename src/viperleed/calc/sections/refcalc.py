@@ -676,26 +676,25 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                           path=os.path.join("Tensors", dn), suppress_ori=True)
 
     # remove references to Deltas from old tensors
-    _reinitialize_deltas(rp, sl)
+    _reinitialize_deltas(sl)
 
     return
 
 
-def _reinitialize_deltas(param, slab):
-    """Removes references to deltas from previous tensors.
-    Delete old delta files in main work folder, if necessary.
-    (there should not be any, unless there was an error)
-    Also empty all atom.known_deltas because they would refer to
+def _reinitialize_deltas(slab):
+    """Remove references to deltas from previous tensors.
+
+    Delete old delta files in main work folder, if necessary
+    (there should not be any, unless there was an error). Also,
+    empty all atom.known_deltas because they would refer to
     previous tensors.
 
     Parameters
     ----------
-    param : Rparam
     slab : Slab
     """
     # delete old delta files in main work folder, if necessary
-    deltas_to_remove = (f for f in param.paths.work.glob('DEL_*')
-                        if f.is_file())
+    deltas_to_remove = (f for f in Path().glob('DEL_*') if f.is_file())
     for delta_file in deltas_to_remove:
         try:
             delta_file.unlink()

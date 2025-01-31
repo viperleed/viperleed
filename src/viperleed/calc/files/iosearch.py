@@ -349,9 +349,8 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         equivalent beams.
     rp : Rparams
         Run parameters.
-    file_path : pathlike or str
-        Pathlike to or name of the output file. If str uses
-        rp.paths.work/filename. The default is "rf.info".
+    file_path : pathlike
+        Path to the output file. The default is "rf.info".
 
     Returns
     -------
@@ -419,10 +418,8 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
                                    version=rp.TL_VERSION)
     output += auxexpbeams
 
-    _file_path = (rp.paths.work / file_path if isinstance(file_path, str)
-                  else file_path)
     try:
-        with open(_file_path, 'w') as wf:
+        with open(file_path, 'w') as wf:
             wf.write(output)
     except Exception:
         logger.error(f"Failed to write {_file_path}")

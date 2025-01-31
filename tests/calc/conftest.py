@@ -111,6 +111,8 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
         The PARAMETERS used during the PHASESHIFTS calculation.
     slab : Slab
         The Slab for which PHASESHIFTS were calculated.
+    tmp_path : Path
+        Path to the directory in which the calculation was executed.
     firstline : str
         The first line of the PHASESHIFTS file, that contains the
         coefficients for the real part of the inner potential.
@@ -119,13 +121,12 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
     """
     slab, rpars, *_ = args
     rpars.paths.source = tensorleed_path
-    rpars.paths.work = tmp_path_factory.mktemp(basename='phaseshifts',
-                                               numbered=True)
+    tmp_path = tmp_path_factory.mktemp(basename='phaseshifts', numbered=True)
     rpars.initTheoEnergies()
     executable = 'eeasisss'
 
     # run eeasisss in the temporary directory
-    with execute_in_dir(rpars.paths.work):
+    with execute_in_dir(tmp_path):
         results = psgen.runPhaseshiftGen_old(slab, rpars,
                                              psgensource=executable)
-        yield (rpars, slab, *results)
+        yield (rpars, slab, tmp_path, *results)

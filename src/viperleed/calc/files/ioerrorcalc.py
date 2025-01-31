@@ -49,10 +49,10 @@ def extract_var_r(errors):
     return var_r_info
 
 
-def write_errors_summary_csv(summary_content, summary_path,
+def write_errors_summary_csv(summary_content,
                              summary_fname="Errors_summary.csv"):
     try:
-        with open(summary_path/summary_fname, "w", encoding="utf-8") as wf:
+        with open(summary_fname, "w", encoding="utf-8") as wf:
             wf.write(summary_content)
     except Exception as err:
         logger.error("Failed to write error calculation summary "
@@ -60,11 +60,10 @@ def write_errors_summary_csv(summary_content, summary_path,
 
 
 def write_errors_archive(individual_files,
-                         archive_path,
                          compression_level=2,
                          archive_fname="Errors.zip"):
     try:
-        with ZipFile(archive_path/archive_fname, 'w',
+        with ZipFile(archive_fname, 'w',
                      compression=ZIP_DEFLATED,
                      compresslevel=compression_level) as err_archive:
             for fname, content in individual_files.items():
