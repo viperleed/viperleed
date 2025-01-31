@@ -421,6 +421,11 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             logger.error("Exception during writePARAM: ",
                          exc_info=rp.is_debug_mode)
             raise
+        # TODO: see if we can remove paths.work here. Was introduced in         # TODO
+        # 7c6018c455d95440ae2f0b5b5c18ad1379600d85 due to a problem of
+        # not-reverting-back-to-home in case of failures. The better
+        # solution there seems to be use a try...finally block, or the
+        # execute_in_dir context manager.
         comp_tasks.append(RefcalcCompileTask(param, lm, rp.FORTRAN_COMP,
                                              tl_path, basedir=rp.paths.work))
         collect_param += f"### PARAM file for LMAX = {lm} ###\n\n{param}\n\n"

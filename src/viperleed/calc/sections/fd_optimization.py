@@ -32,10 +32,12 @@ class FullDynamicCalculationError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
+
 class FullDynamicOptimizationOutOfBoundsError(FullDynamicCalculationError):
     """Raised when the optimization is out of bounds."""
     def __init__(self, message):
         super().__init__(message)
+
 
 def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     """
@@ -59,7 +61,7 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
         The r-factor obtained for the sl, rp combination
     """
     rp.TENSOR_OUTPUT = [0]
-    rp.paths.work = Path(work_dir).resolve()
+    rp.paths.work = Path(work_dir).resolve()                                    # TODO: can we remove this paths.work?
     # internally transform theta, phi to within range
     if rp.THETA < 0:
         rp.THETA = abs(rp.THETA)
