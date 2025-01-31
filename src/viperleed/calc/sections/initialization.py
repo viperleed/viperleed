@@ -409,7 +409,7 @@ def init_domains(rp):
         else:
             target.mkdir()
         logger.info(f"Fetching input files for domain {name}")
-        if os.path.isdir(path):
+        if path.is_dir():
             # check the path for Tensors
             tensorIndex = leedbase.getMaxTensorIndex(path)
             if tensorIndex != 0:
@@ -422,8 +422,8 @@ def init_domains(rp):
             if tensorIndex != 0:
                 tensorDir = target / "Tensors" / f"Tensors_{tensorIndex:03d}"
                 for file in (checkFiles + ["IVBEAMS"]):
-                    if os.path.isfile(tensorDir / file):
-                        shutil.copy2(tensorDir / file, target / file)
+                    if (tensorDir / file).is_file():
+                        shutil.copy2(tensorDir / file, target)
                     else:
                         logger.warning(f"Input file {file} is missing in "
                                        "Tensors directory. A new reference "
@@ -437,10 +437,9 @@ def init_domains(rp):
                 logger.info("No previous Tensors found, reference calculation "
                             "is required.")
                 for file in checkFiles:
-                    if os.path.isfile(os.path.join(path, file)):
+                    if (path / file).is_file():
                         try:
-                            shutil.copy(os.path.join(path, file),
-                                        os.path.join(target, file))
+                            shutil.copy2(path / file, target)
                         except Exception:
                             if file != "PHASESHIFTS":
                                 logger.error(
@@ -453,7 +452,7 @@ def init_domains(rp):
                         logger.error(f"Required file {file} for domain {name} "
                                      f"not found in origin folder {path}")
                         raise RuntimeError("Error getting domain input files")
-        elif os.path.isfile(path):
+        elif path.is_file():
             try:
                 tensorIndex = leedbase.getMaxTensorIndex(target)
             except Exception:

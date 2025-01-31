@@ -30,6 +30,7 @@ from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.utils import NumericBounds as Bounds
 from viperleed.calc.lib.version import Version
 
+from ....helpers import execute_in_dir
 from ...poscar_slabs import CasePOSCARSlabs
 from .case_parameters import case_parameters_slab
 
@@ -331,26 +332,42 @@ class TestDomain(_TestInterpretBase):
         """Test correct interpretation of a path with a domain name."""
         domain_path = tmp_path / 'domain1'
         domain_path.mkdir()
-        domain_path = str(domain_path)
-        self.interpret(interpreter, domain_path, flags_str='domain1')
+        self.interpret(interpreter, str(domain_path), flags_str='domain1')
         assert interpreter.rpars.DOMAINS == {'domain1': domain_path}
 
     def test_interpret_path_no_flag(self, interpreter, tmp_path):
         """Test correct interpretation of a path without a domain name."""
-        tmp_path = str(tmp_path)
-        self.interpret(interpreter, tmp_path)
+        self.interpret(interpreter, str(tmp_path))
         assert interpreter.rpars.DOMAINS == {'1': tmp_path}
+
+    def test_interpret_path_relative_to_cwd(self, interpreter, tmp_path):
+        """Test correct interpretation of a path relative to cwd."""
+        relative_path = 'domain'
+        domain_path = tmp_path / relative_path
+        domain_path.mkdir()
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, relative_path)
+        assert interpreter.rpars.DOMAINS == {'1': domain_path}
+
+    def test_interpret_path_relative_to_calc(self, interpreter, tmp_path):
+        """Test correct interpretation of a path relative to cwd."""
+        relative_path = 'domain'
+        calc_path = tmp_path / 'calc_was_started_here'
+        domain_path = calc_path / relative_path
+        domain_path.mkdir(parents=True)
+        interpreter.rpars.paths.home = calc_path
+        self.interpret(interpreter, relative_path)
+        assert interpreter.rpars.DOMAINS == {'1': domain_path}
 
     def test_interpret_zip_file(self, interpreter, tmp_path):
         """Test correct interpretation of a zip file."""
         zip_file = tmp_path / 'domain.zip'
         zip_file.touch()
-        zip_file_name = str(zip_file)
-        self.interpret(interpreter, zip_file_name)
-        assert interpreter.rpars.DOMAINS == {'1': zip_file_name}
+        self.interpret(interpreter, str(zip_file))
+        assert interpreter.rpars.DOMAINS == {'1': zip_file}
         self.interpret(interpreter, str(zip_file.with_suffix('')))
-        assert interpreter.rpars.DOMAINS == {'1': zip_file_name,
-                                             '2': zip_file_name}
+        assert interpreter.rpars.DOMAINS == {'1': zip_file,
+                                             '2': zip_file}
 
     def test_interpret_invalid(self, interpreter):
         """Ensure invalid DOMAIN raises exceptions."""

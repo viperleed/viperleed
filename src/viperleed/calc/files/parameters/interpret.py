@@ -623,18 +623,28 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 i += 1
             name = str(i)
 
-        # Check path
-        right_side = assignment.values_str.strip()
-        if Path(right_side).exists():
-            path = right_side
-        elif Path(right_side).with_suffix('.zip').is_file():
-            path = right_side + '.zip'
-        else:
+        # Check path: prioritize absolute paths and those relative
+        # to the current working directory. Then look for paths
+        # relative to the directory where calc was started from
+        right_side = Path(assignment.values_str.strip())
+        candidates = right_side, right_side.with_suffix('.zip')
+        if self.rpars.paths.home is not None:
+            candidates += tuple(self.rpars.paths.home / p for p in candidates)
+        full_path = next((p.resolve() for p in candidates if p.exists()),
+                         None)
+
+        # Must be a file if it's .zip, a folder otherwise
+        is_valid = (
+            full_path is not None
+            and (full_path.is_file() if full_path.suffix == '.zip'
+                 else full_path.is_dir())
+            )
+        if not is_valid:
             error_message = (f'Value for DOMAIN {name} could not be '
                              'interpreted as either a path or a .zip file')
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(param, message=error_message)
-        self.rpars.DOMAINS[name] = path
+        self.rpars.DOMAINS[name] = full_path
 
     def interpret_domain_step(self, assignment):
         """Assign parameter DOMAIN_STEP."""
