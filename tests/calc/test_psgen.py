@@ -10,6 +10,7 @@ __license__ = 'GPLv3+'
 
 import numpy as np
 import pytest
+from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.psgen import adjust_phaseshifts
@@ -69,43 +70,44 @@ class TestPhaseshiftsGen:
 
 
 class TestAdjustPhaseshifts:
-    """"Tests for the wrap_phaseshifts function."""
+    """"Tests for the adjust_phaseshifts function."""
 
     linear_increasing = np.linspace(0.1, 2*np.pi, 50)
     linear_decreasing = np.linspace(2*np.pi, 0.1, 50)
     sinusoidal = np.sin(np.linspace(0, 2*np.pi, 50))
     mock_phaseshifts = {
-    'linear_increasing' : linear_increasing,
-    'linear_increasing_offset' : linear_increasing + 10*np.pi,
-    'linear_decreasing' : linear_decreasing,
-    'linear_through_0_from_pos' : linear_decreasing - 0.5,
-    'linear_through_0_from_neg' : linear_increasing - 0.5,
-    'linear_through_pi_from_pos' : linear_increasing + np.pi - 0.2,
-    'linear_through_pi_from_neg' : np.pi + 0.3 - linear_increasing,
-    'linear_with_jumps_from_pos' : (linear_increasing + np.pi - 0.2)  % np.pi,
-    'linear_with_jumps_from_neg' : (np.pi + 0.3 - linear_increasing)  % np.pi,
-    'sinusoidal' : sinusoidal,
-    'sinusoidal_offset' : sinusoidal + 10*np.pi,
-    'sinusoidal_start_neg' : sinusoidal - 0.5,
-    'sinusoidal_through_pi' : sinusoidal + np.pi - 0.2,
-    }
+        'linear_increasing' : linear_increasing,
+        'linear_increasing_offset' : linear_increasing + 10*np.pi,
+        'linear_decreasing' : linear_decreasing,
+        'linear_through_0_from_pos' : linear_decreasing - 0.5,
+        'linear_through_0_from_neg' : linear_increasing - 0.5,
+        'linear_through_pi_from_pos' : linear_increasing + np.pi - 0.2,
+        'linear_through_pi_from_neg' : np.pi + 0.3 - linear_increasing,
+        'linear_with_jumps_from_pos' : (
+            (linear_increasing + np.pi - 0.2) % np.pi
+            ),
+        'linear_with_jumps_from_neg' : (
+            (np.pi + 0.3 - linear_increasing) % np.pi
+            ),
+        'sinusoidal' : sinusoidal,
+        'sinusoidal_offset' : sinusoidal + 10*np.pi,
+        'sinusoidal_start_neg' : sinusoidal - 0.5,
+        'sinusoidal_through_pi' : sinusoidal + np.pi - 0.2,
+        }
 
-    @pytest.mark.parametrize('phaseshifts', mock_phaseshifts.values(),
-                             ids=mock_phaseshifts.keys())
+    @parametrize(phaseshifts=mock_phaseshifts.values(), ids=mock_phaseshifts)
     def test_adjust_phaseshifts_is_constrained(self, phaseshifts):
         """Assert that the adjusted phaseshifts don't diverge."""
         adjusted_ps = adjust_phaseshifts(phaseshifts)
         assert np.max(np.abs(adjusted_ps)) < np.max(np.abs(phaseshifts))*3
 
-    @pytest.mark.parametrize('phaseshifts', mock_phaseshifts.values(),
-                                ids=mock_phaseshifts.keys())
+    @parametrize(phaseshifts=mock_phaseshifts.values(), ids=mock_phaseshifts)
     def test_adjust_phaseshifts_is_continuous(self, phaseshifts):
         """Assert that the adjusted phaseshifts are continuous."""
         adjusted_ps = adjust_phaseshifts(phaseshifts)
         assert np.all(np.abs(np.diff(adjusted_ps)) < 0.2)
 
-    @pytest.mark.parametrize('phaseshifts', mock_phaseshifts.values(),
-                             ids=mock_phaseshifts.keys())
+    @parametrize(phaseshifts=mock_phaseshifts.values(), ids=mock_phaseshifts)
     def test_adjust_phaseshifts_first_value_is_wrapped(self, phaseshifts):
         """Assert that the first value is wrapped."""
         adjusted_ps = adjust_phaseshifts(phaseshifts)
