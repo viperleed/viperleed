@@ -398,11 +398,11 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    home = Path.cwd().resolve()
+    main_work = Path.cwd().resolve()
     for name, path in rp.DOMAINS.items():
         # determine the target path
         target = Path(f"Domain_{name}").resolve()
-        dp = DomainParameters(target, home, name)
+        dp = DomainParameters(target, main_work, name)
         if target.is_dir():
             logger.warning(f"Folder {target} already exists. "
                            "Contents may get overwritten.")
@@ -485,7 +485,7 @@ def init_domains(rp):
                 dp.sl = poscar.read()
                 dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
-                dp.rp.paths.work = home
+                dp.rp.paths.work = main_work
                 dp.rp.paths.tensorleed = rp.paths.tensorleed
                 dp.rp.timestamp = rp.timestamp
                 parameters.interpret(dp.rp, slab=dp.sl,
@@ -526,7 +526,7 @@ def init_domains(rp):
             logger.error(f"Error while initializing domain {name}")
             raise
         finally:
-            os.chdir(home)
+            os.chdir(main_work)
     if len(rp.domainParams) < len(rp.DOMAINS):
         raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
@@ -685,7 +685,7 @@ def init_domains(rp):
             logger.error(f"Error while re-initializing domain {dp.name}")
             raise
         finally:
-            os.chdir(home)
+            os.chdir(main_work)
 
     if 4 not in rp.RUN and 1 not in rp.RUN and rr:
         logger.error(
