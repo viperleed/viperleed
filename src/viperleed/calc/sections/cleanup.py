@@ -25,6 +25,8 @@ from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
+from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 
 # files to go in SUPP
@@ -60,6 +62,12 @@ _SUPP_FILES = (
     )
 
 _SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
+
+# Files that may be generated automatically and do not need
+# storage into original_inputs.
+OPTIONAL_INPUT_FILES = (
+    'BEAMLIST',
+    )
 
 # files to go in OUT
 _OUT_FILES = (
@@ -205,6 +213,7 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, work_path,
                             compression_level)
     _organize_supp_out(work_path)
+
 
 def _organize_supp_out(work_path):
     """Helper function for organizing SUPP and OUT directories."""
@@ -562,3 +571,56 @@ def cleanup(manifest, rp=None):
     close_all_handlers(logger)
     logging.shutdown()
     return
+
+
+def preserve_original_inputs(rpars):
+    """Create the original_inputs directory and copy input files there.
+
+    The original_inputs directory is created in the current directory
+    if it does not exist yet. Input files are also taken from the
+    current directory. Notice that all potentially relevant input
+    files are stored, irrespective of whether they are used in the
+    calculation or not.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The current run parameters. Used only for error reporting.
+
+    Raises
+    ------
+    OSError
+        If creating the directory fails.
+    """
+    orig_inputs = Path(ORIGINAL_INPUTS_DIR_NAME).resolve()
+    try:
+        orig_inputs.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OSError(f'Could not create directory {orig_inputs}. '
+                      'Check disk permissions.') from exc
+
+    # We will copy all files that have potentially been used as
+    # inputs. Make sure the correct version of EXPBEAMS is stored
+    files_to_preserve = ALL_INPUT_FILES - set(EXPBEAMS_NAMES)
+    try:
+        files_to_preserve.add(
+            next(f for f in EXPBEAMS_NAMES if Path(f).is_file())
+            )
+    except StopIteration:  # No EXPBEAMS
+        pass
+
+    for filename in files_to_preserve:
+        file = Path(filename)
+        if not file.is_file() and filename in OPTIONAL_INPUT_FILES:
+            continue
+        if not file.is_file():
+            logger.warning(f'Could not find file {file}. It will not '
+                           f'be stored in {ORIGINAL_INPUTS_DIR_NAME}.')
+            rpars.setHaltingLevel(1)
+            continue
+        try:
+            shutil.copy2(file, orig_inputs)
+        except OSError:
+            logger.warning(f'Could not copy file {file} to '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
+            rpars.setHaltingLevel(1)

@@ -31,6 +31,7 @@ from viperleed.calc.lib.log_utils import prepare_calc_logger
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import prerun_clean
+from viperleed.calc.sections.cleanup import preserve_original_inputs
 from viperleed.calc.sections.initialization import (
     warn_if_slab_has_atoms_in_multiple_c_cells
     )
@@ -203,6 +204,7 @@ def run_calc(system_name=None,
     logger.info(f"ViPErLEED is using TensErLEED version {str(rp.TL_VERSION)}.")
 
     prerun_clean(rp, log_name)
+    preserve_original_inputs(rp)  # Store input files BEFORE any edit!
     exit_code, state_recorder = section_loop(rp, slab)
 
     # Finalize logging - if not done, will break unit testing

@@ -50,11 +50,9 @@ from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
+from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
-
-
-OPTIONAL_INPUT_FILES = ('BEAMLIST',)
 
 
 def initialization(sl, rp, subdomain=False):
@@ -62,11 +60,6 @@ def initialization(sl, rp, subdomain=False):
     if not subdomain:
         rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
-
-    # preserve unmodified input files to original_inputs directory
-    if not subdomain:
-        rp.inputs_dir = rp.workdir / ORIGINAL_INPUTS_DIR_NAME
-        _preserve_original_input(rp, origin_dir=Path.cwd().resolve())
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
         init_domains(rp)
@@ -497,18 +490,21 @@ def init_domains(rp):
             os.chdir(target)
             logger.info(f"Reading input files for domain {name}")
             try:
+                # NB: if we are running from stored Tensors, then
+                # this PARAMETERS will be a copy of the one stored
+                # in the Tensors, not the one the user may have given
+                # in the current Domain directory (it is overwritten
+                # when fetching files above).
+                dp.rp = parameters.read()
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
 
-                # run _preserve_original_input separately for each domain
-                dp.rp.inputs_dir = dp.rp.workdir / ORIGINAL_INPUTS_DIR_NAME / name
-                _preserve_original_input(dp.rp, origin_dir=Path.cwd().resolve())
+                # Store input files for each domain, BEFORE any edit
+                preserve_original_input(dp.rp)
 
-                dp.sl = poscar.read(dp.rp.inputs_dir / "POSCAR")
-                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                dp.sl = poscar.read()
                 warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
-                dp.rp.inputs_dir = Path.cwd().resolve()
 
                 parameters.interpret(dp.rp, slab=dp.sl,
                                      silent=rp.LOG_LEVEL > logging.DEBUG)
@@ -726,42 +722,6 @@ def init_domains(rp):
         rp.RUN.insert(rp.RUN.index(4), 2)
         rp.RUN.insert(rp.RUN.index(4), 3)
         rp.RUN.remove(4)
-
-
-def _preserve_original_input(rp, origin_dir):
-    """Create the original_inputs directory and copy input files there."""
-    try:
-        rp.inputs_dir.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
-        raise RuntimeError(f'Could not create directory '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}. '
-                           'Check disk permissions.') from exc
-
-    # We will copy all files that have potentially been used as
-    # inputs. Make sure the correct version of EXPBEAMS is stored
-    files_to_preserve = ALL_INPUT_FILES.copy()
-    files_to_preserve.remove('EXPBEAMS')
-    if rp.expbeams_file_name:
-        files_to_preserve.add(rp.expbeams_file_name)
-
-    # copy all files to orig_inputs that were used as original input
-    for file in files_to_preserve:
-        # save under name EXPBEAMS.csv
-        file_path = origin_dir / file
-        if not file_path.is_file():
-            if file in OPTIONAL_INPUT_FILES:
-                continue
-            logger.warning(f'Could not find file {file}. '
-                           'It will not be stored in '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
-            rp.setHaltingLevel(1)
-            continue
-        try:
-            shutil.copy2(file_path, rp.inputs_dir)
-        except OSError:
-            logger.warning(f'Could not copy file {file} to '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
-            rp.setHaltingLevel(1)
 
 
 def make_compile_logs_dir(rp):
