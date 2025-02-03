@@ -46,9 +46,6 @@ from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.sections.calc_section import CalcSection as Section
 
-if CAN_PLOT:
-    from matplotlib.colors import is_color_like  # For PLOT_IV
-
 from .checker import ParametersChecker
 from .errors import ParameterBooleanConversionError
 from .errors import ParameterConversionError
@@ -67,6 +64,9 @@ from .errors import ParameterValueError
 from .errors import SuperfluousParameterError
 from .known_parameters import KNOWN_PARAMS, is_deprecated, warn_if_deprecated
 from .utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
+
+if CAN_PLOT:
+    from matplotlib.colors import is_color_like  # For PLOT_IV
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
@@ -623,18 +623,28 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 i += 1
             name = str(i)
 
-        # Check path
-        right_side = assignment.values_str.strip()
-        if Path(right_side).exists():
-            path = right_side
-        elif Path(right_side).with_suffix('.zip').is_file():
-            path = right_side + '.zip'
-        else:
+        # Check path: prioritize absolute paths and those relative
+        # to the current working directory. Then look for paths
+        # relative to the directory where calc was started from
+        right_side = Path(assignment.values_str.strip())
+        candidates = right_side, right_side.with_suffix('.zip')
+        if self.rpars.paths.home is not None:
+            candidates += tuple(self.rpars.paths.home / p for p in candidates)
+        full_path = next((p.resolve() for p in candidates if p.exists()),
+                         None)
+
+        # Must be a file if it's .zip, a folder otherwise
+        is_valid = (
+            full_path is not None
+            and (full_path.is_file() if full_path.suffix == '.zip'
+                 else full_path.is_dir())
+            )
+        if not is_valid:
             error_message = (f'Value for DOMAIN {name} could not be '
                              'interpreted as either a path or a .zip file')
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(param, message=error_message)
-        self.rpars.DOMAINS[name] = path
+        self.rpars.DOMAINS[name] = full_path
 
     def interpret_domain_step(self, assignment):
         """Assign parameter DOMAIN_STEP."""
@@ -875,7 +885,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         try:
             self.rpars.LMAX = self.rpars.LMAX.from_value(values)
         except ValueError as exc:  # out-of-range
-            raise ParameterRangeError(param, message=str(exc))
+            raise ParameterRangeError(param, message=str(exc)) from None
 
     def interpret_log_level(self, assignment):
         """Assign parameter LOG_LEVEL."""
@@ -1723,12 +1733,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         self._ensure_simple_assignment(assignment)
         version_str = assignment.value.lower()
         version_str = version_str.replace('v', '')
-        if version_str in OLD_TL_VERSION_NAMES.keys():
-            version_str = OLD_TL_VERSION_NAMES[version_str]
+        version_str = OLD_TL_VERSION_NAMES.get(version_str, version_str)
         try:
             self.rpars.TL_VERSION = Version(version_str)
-        except ValueError:
-            raise ParameterConversionError(param, version_str)
+        except ValueError as exc:
+            raise ParameterConversionError(param, version_str) from exc
 
     def interpret_v0_real(self, assignment):
         """Assign parameter V0_REAL."""
