@@ -307,10 +307,10 @@ def initialization(sl, rp, subdomain=False):
                     + rp.phaseshifts_firstline[36:]
                     )
     if newpsGen:
-        source = rp.paths.source
+        tensorleed = rp.paths.tensorleed
         # Check for old executable. Used to be called EEASiSSS.x
-        if (not (source / 'eeasisss').is_file()
-                and (source / 'EEASiSSS.x').is_file()):
+        if (not (tensorleed / 'eeasisss').is_file()
+                and (tensorleed / 'EEASiSSS.x').is_file()):
             rundgrenpath = 'EEASiSSS.x'
         else:
             # let psgen catch the error if neither executable is found
@@ -486,7 +486,7 @@ def init_domains(rp):
                 dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
                 dp.rp.paths.work = home                                         # TODO: get rid of paths.work, or, at least, point to target here.
-                dp.rp.paths.source = rp.paths.source
+                dp.rp.paths.tensorleed = rp.paths.tensorleed
                 dp.rp.timestamp = rp.timestamp
                 parameters.interpret(dp.rp, slab=dp.sl,
                                      silent=rp.LOG_LEVEL > logging.DEBUG)

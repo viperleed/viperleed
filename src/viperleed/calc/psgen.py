@@ -85,16 +85,16 @@ def runPhaseshiftGen_old(sl, rp,
     files and extracts information for PHASESHIFTS file, then returns that
     information (without writing PHASESHIFTS)."""
 
-    if rp.paths.source is None:
+    if rp.paths.tensorleed is None:
         raise RuntimeError("No tensorleed source directory specified")
 
     # Since there's a limit on the path length, pick the shortest one
     # we can find around. Use './' and '../' shorthands if necessary.
     # Notice that we use os.path.rel_path and not Path.relative_to as
     # the latter does not produce './' and '../' shorthands
-    shortpath = str(rp.paths.source)
-    if len(os.path.relpath(rp.paths.source)) < len(shortpath):
-        shortpath = os.path.relpath(rp.paths.source, start=rp.paths.work)
+    shortpath = str(rp.paths.tensorleed)
+    if len(os.path.relpath(rp.paths.tensorleed)) < len(shortpath):
+        shortpath = os.path.relpath(rp.paths.tensorleed, start=rp.paths.work)
 
     manual_copy = len(shortpath) > 62
     if manual_copy:
@@ -106,7 +106,7 @@ def runPhaseshiftGen_old(sl, rp,
     # Here it is important NOT TO .resolve() excosource that will
     # end up in the input file. Otherwise all the mess above with
     # deciding what's the shortest possible way is useless
-    psgensource = Path(rp.paths.source, psgensource)
+    psgensource = Path(rp.paths.tensorleed, psgensource)
     excosource = Path(shortpath, excosource)
 
     if os.name == 'nt':
@@ -260,7 +260,7 @@ def runPhaseshiftGen_old(sl, rp,
                     "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             logger.error(_err)
             raise RuntimeError(_err)
-        el_charge_density_path = (rp.paths.source / "atom_density_files" /
+        el_charge_density_path = (rp.paths.tensorleed / "atom_density_files" /
                                   chemel / (f"chgden{chemel}")).resolve()
         charge_density_short_path = (Path(atdenssource) / chemel /
                                     f"chgden{chemel}")
@@ -599,16 +599,16 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     ###############################################
 
     psgensource = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    psgensource = rp.paths.source / psgensource # otherwise the location would not be known
+    psgensource = rp.paths.tensorleed / psgensource # otherwise the location would not be known
     atlib_dir = os.path.join('tensorleed', 'eeasisss_new', 'atlib/') # atom density files, by Sernelius
-    atlib_dir = rp.paths.source / atlib_dir
+    atlib_dir = rp.paths.tensorleed / atlib_dir
     outdir_path = os.path.join(".",ps_outdir+"/")
     # create directory for individual phaseshift files if not yet present
     os.makedirs(outdir_path, exist_ok=True)
 
     # execution of EEASISSS requires the executable eeasisss to be copied to work directory
     eeasisss_exec_path = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    eeasisss_exec_path = rp.paths.source / eeasisss_exec_path
+    eeasisss_exec_path = rp.paths.tensorleed / eeasisss_exec_path
     try:
         shutil.copy2(eeasisss_exec_path, rp.paths.work)
     except Exception:

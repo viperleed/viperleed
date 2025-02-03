@@ -118,7 +118,7 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
         The PHASESHIFTS that were generated.
     """
     slab, rpars, *_ = args
-    rpars.paths.source = tensorleed_path
+    rpars.paths.tensorleed = tensorleed_path
     rpars.paths.work = tmp_path_factory.mktemp(basename='phaseshifts',
                                                numbered=True)
     rpars.initTheoEnergies()

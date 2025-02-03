@@ -386,7 +386,7 @@ class Rparams:
     def get_tenserleed_directory(self, wanted_version=None):                    # TODO: replace the default for TL_VERSION with Version('unknown')
         """Return the Path to a TensErLEED directory.
 
-        The directory is looked up in Rparams.paths.source.
+        The directory is looked up in Rparams.paths.tensorleed.
 
         Parameters
         ----------
@@ -404,21 +404,21 @@ class Rparams:
         Raises
         ------
         RuntimeError
-            If this method is called before `Rparams.paths.source`
+            If this method is called before `Rparams.paths.tensorleed`
             is set
         FileNotFoundError
-            If `Rparams.paths.source` has no 'TensErLEED'
+            If `Rparams.paths.tensorleed` has no 'TensErLEED'
             subdirectories
         FileNotFoundError
             If `version` is given, but the corresponding directory
             was not found
         """
-        if not self.paths.source:
+        if not self.paths.tensorleed:
             raise RuntimeError(
                 f'{type(self).__name__}.get_tenserleed_directory: '
                 'TensErLEED source directory is not set'
                 )
-        source_tree = self.paths.source
+        source_tree = self.paths.tensorleed
         wanted_version = (Version(wanted_version) if wanted_version
                           else self.TL_VERSION)
         sources = get_tenserleed_sources(source_tree)
@@ -451,7 +451,7 @@ class Rparams:
         if self.TENSOR_INDEX is None:
             self.TENSOR_INDEX = leedbase.getMaxTensorIndex()
         # TL_VERSION:
-        if self.paths.source is None:
+        if self.paths.tensorleed is None:
             raise RuntimeError('Cannot determine highest TensErLEED version '
                                'without specifying a source directory')
         if self.TL_VERSION is None:
