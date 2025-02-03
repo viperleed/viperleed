@@ -350,7 +350,7 @@ class TestDomain(_TestInterpretBase):
         assert interpreter.rpars.DOMAINS == {'1': domain_path}
 
     def test_interpret_path_relative_to_calc(self, interpreter, tmp_path):
-        """Test correct interpretation of a path relative to cwd."""
+        """Test interpretation of a path relative to where calc was started."""
         relative_path = 'domain'
         calc_path = tmp_path / 'calc_was_started_here'
         domain_path = calc_path / relative_path
