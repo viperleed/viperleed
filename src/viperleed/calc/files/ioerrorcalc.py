@@ -50,27 +50,27 @@ def extract_var_r(errors):
 
 
 def write_errors_summary_csv(summary_content,
-                             summary_fname="Errors_summary.csv"):
+                             summary_fname='Errors_summary.csv'):
     try:
-        with open(summary_fname, "w", encoding="utf-8") as wf:
-            wf.write(summary_content)
-    except Exception as err:
-        logger.error("Failed to write error calculation summary "
-                     f"{summary_fname}:\n{err}")
+        with open(summary_fname, 'w', encoding='utf-8') as summary:
+            summary.write(summary_content)
+    except OSError as exc:
+        logger.error('Failed to write error calculation summary '
+                     f'{summary_fname}:\n{exc}')
 
 
 def write_errors_archive(individual_files,
                          compression_level=2,
-                         archive_fname="Errors.zip"):
+                         archive_fname='Errors.zip'):
     try:
         with ZipFile(archive_fname, 'w',
                      compression=ZIP_DEFLATED,
-                     compresslevel=compression_level) as err_archive:
+                     compresslevel=compression_level) as archive:
             for fname, content in individual_files.items():
-                err_archive.writestr(fname, content)
-    except Exception as err:
-        logger.error("Failed to write error calculation archive "
-                     f"{archive_fname}:\n{err}")
+                archive.writestr(fname, content)
+    except OSError as exc:
+        logger.error('Failed to write error calculation archive '
+                     f'{archive_fname}:\n{exc}')
 
 
 def generate_errors_csv(errors, sep=","):
