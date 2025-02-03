@@ -61,7 +61,7 @@ class TestPhaseshiftsGen:
         """Test that phaseshift generation works with mixed sites."""
         tmp_path = tmp_path_factory.mktemp(basename='phaseshifts').resolve()
         slab, rpars, _ = args
-        rpars.paths.source = tensorleed_path
+        rpars.paths.tensorleed = tensorleed_path
         rpars.THEO_ENERGIES = rpars.THEO_ENERGIES.from_value((50,100,5))
         with execute_in_dir(tmp_path):
             firstline, _ = runPhaseshiftGen_old(slab, rpars)
