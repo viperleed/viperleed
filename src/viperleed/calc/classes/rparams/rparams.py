@@ -68,8 +68,9 @@ class _RunPaths:
     ----------
     home : Path
         The directory in which viperleed.calc was originally called.
-    source : Path
-        The directory in which the TensErLEED code can be found.
+    tensorleed : Path
+        The directory in which the TensErLEED and EEASiSSS code can
+        be found.
     work : Path
         The directory in which calculations are executed, before
         results are copied back to home. For a DOMAINS calculation,
@@ -84,7 +85,7 @@ class _RunPaths:
 
     # !!! Add new attributes in ALPHABETIC ORDER !!!
     home: Path = None
-    source: Path = None
+    tensorleed: Path = None
     work: Path = None                                                           # TODO: see if we can get rid of this
 
     @property
