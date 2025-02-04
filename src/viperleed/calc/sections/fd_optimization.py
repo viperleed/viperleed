@@ -59,7 +59,7 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
         The r-factor obtained for the sl, rp combination
     """
     rp.TENSOR_OUTPUT = [0]
-    rp.workdir = Path(work_dir).resolve()
+    rp.paths.work = Path(work_dir).resolve()
     # internally transform theta, phi to within range
     if rp.THETA < 0:
         rp.THETA = abs(rp.THETA)
@@ -291,10 +291,13 @@ def fd_optimization(sl, rp):
             dname = f"{which}_{x}"
         else:
             dname = f"{which}_{x:.4f}"
-        workdir = rp.workdir / dname
+        workdir = rp.paths.work / dname
         tmpdirs.append(workdir)
         logger.info(f"STARTING CALCULATION AT {which} = {x:.4f}")
-        r, rfaclist = get_fd_r(tsl, trp, work_dir=workdir, home_dir=rp.workdir)
+        r, rfaclist = get_fd_r(tsl,
+                               trp,
+                               work_dir=workdir,
+                               home_dir=rp.paths.work)
         known_points = np.append(known_points, np.array([[x, r]]), 0)
         rfactor_lists.append(rfaclist)
         if not best_explicit_r or r < best_explicit_r[0]:

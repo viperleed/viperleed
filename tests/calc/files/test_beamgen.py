@@ -79,7 +79,7 @@ class TestGenerateBeamlist:
         # reasonable system
         rpars.THEO_ENERGIES = EnergyRange(stop=300)
         rpars.initTheoEnergies()
-        rpars.source_dir = tensorleed_path
+        rpars.paths.tensorleed = tensorleed_path
         rpars.updateDerivedParams()  # for TL_VERSION
         return slab, rpars, info
 

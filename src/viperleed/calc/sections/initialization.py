@@ -309,9 +309,10 @@ def initialization(sl, rp, subdomain=False):
                     + rp.phaseshifts_firstline[36:]
                     )
     if newpsGen:
+        tensorleed = rp.paths.tensorleed
         # Check for old executable. Used to be called EEASiSSS.x
-        if (not Path(rp.source_dir / "eeasisss").is_file()
-                and Path(rp.source_dir / "EEASiSSS.x").is_file()):
+        if (not (tensorleed / 'eeasisss').is_file()
+                and (tensorleed / 'EEASiSSS.x').is_file()):
             rundgrenpath = 'EEASiSSS.x'
         else:
             # let psgen catch the error if neither executable is found
@@ -397,18 +398,18 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    home = Path.cwd().resolve()
+    main_work = Path.cwd().resolve()
     for name, path in rp.DOMAINS.items():
         # determine the target path
         target = Path(f"Domain_{name}").resolve()
-        dp = DomainParameters(target, home, name)
+        dp = DomainParameters(target, main_work, name)
         if target.is_dir():
             logger.warning(f"Folder {target} already exists. "
                            "Contents may get overwritten.")
         else:
             target.mkdir()
         logger.info(f"Fetching input files for domain {name}")
-        if os.path.isdir(path):
+        if path.is_dir():
             # check the path for Tensors
             tensorIndex = leedbase.getMaxTensorIndex(path)
             if tensorIndex != 0:
@@ -424,8 +425,8 @@ def init_domains(rp):
                     / f"{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensorIndex:03d}"
                     )
                 for file in (checkFiles + ["IVBEAMS"]):
-                    if os.path.isfile(tensorDir / file):
-                        shutil.copy2(tensorDir / file, target / file)
+                    if (tensorDir / file).is_file():
+                        shutil.copy2(tensorDir / file, target)
                     else:
                         logger.warning(f"Input file {file} is missing in "
                                        f"{DEFAULT_TENSORS} directory. A new "
@@ -439,10 +440,9 @@ def init_domains(rp):
                 logger.info(f"No previous {DEFAULT_TENSORS} found, "
                             "reference calculation is required.")
                 for file in checkFiles:
-                    if os.path.isfile(os.path.join(path, file)):
+                    if (path / file).is_file():
                         try:
-                            shutil.copy(os.path.join(path, file),
-                                        os.path.join(target, file))
+                            shutil.copy2(path / file, target)
                         except Exception:
                             if file != "PHASESHIFTS":
                                 logger.error(
@@ -455,7 +455,7 @@ def init_domains(rp):
                         logger.error(f"Required file {file} for domain {name} "
                                      f"not found in origin folder {path}")
                         raise RuntimeError("Error getting domain input files")
-        elif os.path.isfile(path):
+        elif path.is_file():
             try:
                 tensorIndex = leedbase.getMaxTensorIndex(target)
             except Exception:
@@ -496,8 +496,8 @@ def init_domains(rp):
                 # in the current Domain directory (it is overwritten
                 # when fetching files above).
                 dp.rp = parameters.read()
-                dp.rp.workdir = home
-                dp.rp.source_dir = rp.source_dir
+                dp.rp.paths.work = main_work
+                dp.rp.paths.tensorleed = rp.paths.tensorleed
                 dp.rp.timestamp = rp.timestamp
 
                 # Store input files for each domain, BEFORE any edit
@@ -545,7 +545,7 @@ def init_domains(rp):
             logger.error(f"Error while initializing domain {name}")
             raise
         finally:
-            os.chdir(home)
+            os.chdir(main_work)
     if len(rp.domainParams) < len(rp.DOMAINS):
         raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
@@ -686,8 +686,7 @@ def init_domains(rp):
         logger.info("The following domains require new reference "
                     f"calculations: {', '.join(d.name for d in rr)}")
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams",
-                        "source_dir"]:
+            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
                 dp.rp.LMAX.max = rp.LMAX.max
@@ -705,7 +704,7 @@ def init_domains(rp):
             logger.error(f"Error while re-initializing domain {dp.name}")
             raise
         finally:
-            os.chdir(home)
+            os.chdir(main_work)
 
     if 4 not in rp.RUN and 1 not in rp.RUN and rr:
         logger.error(
@@ -726,14 +725,11 @@ def init_domains(rp):
 
 def make_compile_logs_dir(rp):
     """Create compile_logs directory where compilation logs are saved."""
-    # put into rp
-    rp.compile_logs_dir = Path(rp.workdir) / "compile_logs"
-
-    # makes compile_logs directory
+    directory = rp.paths.compile_logs
     try:
-        rp.compile_logs_dir.mkdir(exist_ok=True)
+        directory.mkdir(exist_ok=True)
     except OSError:
-        logger.warning(f"Could not create directory {rp.compile_logs_dir}")
+        logger.warning(f'Could not create directory {directory}')
         rp.setHaltingLevel(1)
 
 

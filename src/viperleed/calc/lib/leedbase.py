@@ -727,21 +727,22 @@ def copy_compile_log(rp, logfile, log_name="fortran-compile"):
 
     Parameters
     ----------
-    rp : RunParameters
+    rp : Rparams
         rp object of the calculation.
     logfile : pathlike or str
         Path to the logfile that should be copied.
     log_name : str, optional
-        Name to be used to identify logfile, eg. "refcalc". Default: "fortran-compile"
+        Name to be used to identify logfile, e.g. 'refcalc'.
+        Default is 'fortran-compile'.
+
+    Returns
+    -------
+    None.
     """
     _logfile = Path(logfile)
-    if rp.compile_logs_dir is None:
-        # Compile directory not set. Cannot copy. Do not bother complaining.
-        return
-    target_path = (rp.compile_logs_dir / log_name).with_suffix(".log")
+    target_path = (rp.paths.compile_logs / log_name).with_suffix('.log')
     try:
         shutil.copy2(_logfile, target_path)
     except OSError as err:
-        logger.warning(
-            f"Unable to copy compilation log file {str(_logfile)}. Info: {err}"
-        )
+        logger.warning('Unable to copy compilation log '
+                       f'file {_logfile}. Info: {err}')
