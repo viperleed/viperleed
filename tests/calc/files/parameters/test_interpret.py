@@ -28,9 +28,9 @@ from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.known_parameters import is_deprecated
 from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.utils import NumericBounds as Bounds
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 
-from ....helpers import execute_in_dir
 from ...poscar_slabs import CasePOSCARSlabs
 from .case_parameters import case_parameters_slab
 

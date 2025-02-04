@@ -16,7 +16,6 @@ import copy
 from dataclasses import dataclass, fields
 import functools
 import inspect
-import os
 from pathlib import Path
 
 import pytest
@@ -253,17 +252,6 @@ def flat_fixture(func, **fixture_args):                                         
 
 
 # ######################   CONTEXT MANAGERS   #########################
-
-@contextmanager
-def execute_in_dir(path):
-    """Safely execute code in a specific directory."""
-    home = Path().resolve()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(home)
-
 
 @contextmanager
 def not_raises(exc):

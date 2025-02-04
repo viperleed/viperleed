@@ -39,9 +39,10 @@ from viperleed.calc import psgen
 from viperleed.calc.files import displacements
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.tenserleed import get_tensorleed_path
+from viperleed.calc.lib.context import execute_in_dir
 
 from ..helpers import POSCAR_PATH
-from ..helpers import exclude_tags, execute_in_dir
+from ..helpers import exclude_tags
 from . import poscar_slabs
 from .tags import CaseTag
 

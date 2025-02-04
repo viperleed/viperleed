@@ -17,12 +17,11 @@ import pytest
 
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 from viperleed.calc.sections.cleanup import OPTIONAL_INPUT_FILES
-
-from ...helpers import execute_in_dir
 
 _MODULE = 'viperleed.calc.sections.cleanup'
 

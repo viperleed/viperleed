@@ -34,10 +34,11 @@ import pytest_cases
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import tenserleed
 from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
 
-from ...helpers import TEST_DATA, execute_in_dir
+from ...helpers import TEST_DATA
 
 
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')

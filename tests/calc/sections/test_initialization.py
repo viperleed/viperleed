@@ -12,9 +12,10 @@ import pytest
 
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import poscar
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.initialization import initialization
 
-from ...helpers import execute_in_dir, raises_test_exception
+from ...helpers import raises_test_exception
 
 
 class TestSetup:

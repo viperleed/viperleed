@@ -17,9 +17,8 @@ from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.files.parameters.write import ModifiedParameterValue
 from viperleed.calc.files.parameters.write import ParametersFileEditor
 from viperleed.calc.files.parameters.write import comment_out, modify
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import strip_comments
-
-from ....helpers import execute_in_dir
 
 
 class TestModifiedParameterValue:
