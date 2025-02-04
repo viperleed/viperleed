@@ -28,6 +28,7 @@ import shutil
 import numpy as np
 
 from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.constants import COMPILE_LOGS_DIRNAME
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
@@ -53,7 +54,6 @@ from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
 
 
-COMPILE_LOGS_DIRNAME = 'compile_logs'
 _LOGGER = logging.getLogger(parent_name(__name__))
 if CAN_PLOT:
     from matplotlib import pyplot as plt
