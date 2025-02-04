@@ -23,6 +23,7 @@ from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
+from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
 from viperleed.calc.lib.sequence_utils import max_diff
 from viperleed.calc.lib.string_utils import range_to_str
 
@@ -361,6 +362,9 @@ def make_errors_figs(errors, formatting=None):
                                   != np.sign(err_y[err][i]-rv))]
         # plot combined figure
         rmax = max(r for err in mode_errors for r in err.rfacs)
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         fig = plt.figure(figsize=(5.8, 5.8))
         ax = fig.add_subplot(1, 1, 1)
         [sp.set_linewidth(0.7 * line_width) for sp in ax.spines.values()]
@@ -575,11 +579,15 @@ def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
         ha='center', va='top', fontsize=4*font_size_scale,)
 
 
+@skip_without_matplotlib
 def write_errors_pdf(figs, filename="Errors.pdf"):
     """Writes a list of figures to a pdf file."""
     if not figs:
         raise ValueError("No figures to write.")
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(filename)
         for fig in figs:
             pdf.savefig(fig)

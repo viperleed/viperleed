@@ -14,6 +14,7 @@ and :ref:`poscar utilities<poscar_utils>`. The ViPErLEED graphical user
 interface can also be invoked from the command line via ``viperleed gui``
 (currently, only on systems that have access to a graphical display).
 
+.. _cli_viperleed:
 
 ``viperleed``
 -------------

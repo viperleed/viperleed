@@ -18,11 +18,11 @@ import os
 from pathlib import Path
 import shutil
 
-from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK
-from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc.bookkeeper import BookkeeperMode
-from viperleed.calc.bookkeeper import bookkeeper
+from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
+from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
@@ -49,12 +49,8 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         presets = {}  # Replace selected PARAMETERS
         _verbosity_to_log_level(args, presets)
 
-        print('Running bookkeeper...')                                          # TODO: This is lost to stdout if we don't log it
-        # NB: job_name is None, as we're cleaning up the previous run
-        bookkeeper(mode=BookkeeperMode.DEFAULT,
-                   job_name=None,
-                   history_name=args.history_name,
-                   work_history_name=args.work_history_name)
+        bookkeeper = Bookkeeper()
+        bookkeeper.run(mode=BookkeeperMode.CLEAR)
 
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
         _copy_input_files_to_work(work_path)
@@ -75,12 +71,8 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             _copy_files_from_manifest(cwd)
             os.chdir(cwd)
 
-        # Call bookkeeper again to clean up unless --no-cont is set
-        if not args.no_cont:
-            bookkeeper(mode=BookkeeperMode.CONT,
-                       job_name=args.job_name,
-                       history_name=args.history_name,
-                       work_history_name=args.work_history_name)
+        # Run bookkeeper in archive mode
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested
         if args.delete_workdir:
@@ -114,7 +106,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             )
 
         # PATHS
-        parser.add_argument(                                                    # TODO: bookkeeper always assumes DEFAULT_WORK!
+        parser.add_argument(
             '-w', '--work',
             help='specify execution work directory',
             type=str
@@ -126,41 +118,13 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             type=str
             )
 
-        # BOOKKEPER
-        parser.add_argument(
-            '--no-cont',
-            help='do not overwrite POSCAR/VIBROCC with those after a search',
-            action='store_true'
-            )
-        parser.add_argument(                                                    # TODO: implement (for cont at end; warn if called with --no_cont)
-            '-j', '--job-name',
-            help=('define a name for the current run. Will be appended to the '
-                  'name of the history folder that is created, and is logged '
-                  'in history.info. Passed along to the bookkeeper'),
-            type=str
-            )
-        parser.add_argument(
-            '--history-name',
-            help=('define the name of the history folder that is '
-                  'created/used. Passed along to the bookkeeper. '
-                  f'Default is {DEFAULT_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_HISTORY
-            )
-        parser.add_argument(
-            '--work-history-name',
-           help=('define the name of the workhistory folder that '
-                 'is created/used. Passed along to the bookkeeper. '
-                 f'Default is {DEFAULT_WORK_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_WORK_HISTORY
-            )
-
         # CREATING/DELETING DIRECTORIES
         parser.add_argument(
             '--all-tensors',
-            help=('copy all Tensors to the work directory. Required if using '
-                  'the TENSORS parameter to calculate from old tensors'),
+            help=(
+                f'copy all {DEFAULT_TENSORS} to the work directory. Required '
+                'if using the TENSORS parameter to calculate from old tensors'
+                ),
             action='store_true'
             )
         parser.add_argument(
@@ -201,7 +165,7 @@ def _copy_files_from_manifest(to_path):
 def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
     """Move appropriate files from 'Tensors' and 'Deltas' to work_path."""
     if all_tensors:  # Copy all of them
-        for directory in ('Tensors', 'Deltas'):
+        for directory in (DEFAULT_TENSORS, DEFAULT_DELTAS):
             try:
                 copytree_exists_ok(directory, work_path / directory)
             except FileNotFoundError:
@@ -213,7 +177,7 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
     if not tensor_num:
         return
 
-    for local_dir in ('Tensors', 'Deltas'):
+    for local_dir in (DEFAULT_TENSORS, DEFAULT_DELTAS):
         local_file = Path(f'{local_dir}/{local_dir}_{tensor_num:03d}.zip')
         if not local_file.is_file():
             continue

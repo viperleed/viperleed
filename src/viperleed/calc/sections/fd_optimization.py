@@ -349,7 +349,7 @@ def fd_optimization(sl, rp):
         apply_scaling(sl, rp, which, new_min)
         if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
             parameters.modify(rp, "BULK_REPEAT", comment=comment)
-        poscar.write(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
+        poscar.write(sl, filename=f"POSCAR_OUT", comments="all")
 
     # fetch I(V) data from all, plot together
     best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]

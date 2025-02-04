@@ -34,17 +34,13 @@ from .reader import RawLineParametersReader
 _LOGGER = logging.getLogger(parent_name(__name__))
 
 
-def comment_out(rpars, modpar, comment='', path='', suppress_ori=False):
+def comment_out(rpars, modpar, comment='', path=''):
     """Comment out modpar in the PARAMETERS file."""
-    editor = ParametersFileEditor(
-        rpars, path=path,
-        save_existing_parameters_file=not suppress_ori
-        )
-    with editor:
+    with ParametersFileEditor(rpars, path=path) as editor:
         editor.comment_out_parameter(modpar, comment=comment)
 
 
-def modify(rpars, modpar, new=None, comment='', path='', suppress_ori=False):
+def modify(rpars, modpar, new=None, comment='', path=''):
     """Change the value for `modpar` in the PARAMETERS file.
 
     The lines that contains `modpar` are commented out, and
@@ -66,8 +62,6 @@ def modify(rpars, modpar, new=None, comment='', path='', suppress_ori=False):
     path : str or Path, optional
         Where to find the PARAMETERS file that should be modified.
         Default is an empty string, i.e., the current directory.
-    suppress_ori : bool, optional
-        If True, no 'PARAMETERS_original' file will be created.
 
     Returns
     -------
@@ -75,11 +69,7 @@ def modify(rpars, modpar, new=None, comment='', path='', suppress_ori=False):
         String value of the parameter as inserted in the
         PARAMETERS file.
     """
-    editor = ParametersFileEditor(
-        rpars, path=path,
-        save_existing_parameters_file=not suppress_ori
-        )
-    with editor:
+    with ParametersFileEditor(rpars, path=path) as editor:
         new_param = editor.modify_param(modpar, new_value=new, comment=comment)
     return new_param.fmt_value
 
@@ -97,7 +87,7 @@ class ModifiedParameterValue:
         Whether this parameter was already written to file.
     comment : str
         An optional comment that should accompany this
-        modified parameter when it will be written to file
+        modified parameter when it will be written to file.
     fmt_value : str
         A formatted version of the new value. This normally
         includes only the part on the right side of the equals
@@ -269,11 +259,10 @@ class ParametersFileEditor(AbstractContextManager):
 
 """
 
-    def __init__(self, rpars, path='', save_existing_parameters_file=True):
+    def __init__(self, rpars, path=''):
         """Initialize instance."""
         self._path = Path(path).resolve()
         self._rpars = rpars
-        self._should_save_existing_file = save_existing_parameters_file
 
         self._to_modify = {}  # Parameters to modify/comment out
         self._has_header = False
@@ -309,32 +298,9 @@ class ParametersFileEditor(AbstractContextManager):
         self._to_modify[param] = mod_param
         return mod_param
 
-    def save_existing_parameters_file(self):
-        """Save a copy of an existing PARAMETERS file as 'ori_<timestamp>'."""
-        if not self._should_save_existing_file:
-            return
-
-        oriname = f'{self._filename}_ori_{self._rpars.timestamp}'
-        if not self._file.is_file() or oriname in self._rpars.manifest:
-            self._should_save_existing_file = False
-            return
-
-        try:
-            shutil.copy2(self._file, self._path / oriname)
-        except OSError:
-            _LOGGER.error(
-                f'parameters.modify: Could not copy {self._filename} file to '
-                f'{self._filename}_ori. Proceeding. Original file will be lost'
-                )
-        self._rpars.manifest.append(oriname)
-        self._should_save_existing_file = False
-
     def write_modified_parameters(self):
         """Write a new PARAMETERS, modifying all the requested lines."""
-        self.save_existing_parameters_file()
         cwd = Path().resolve()
-        if self._filename not in self._rpars.manifest and self._path == cwd:
-            self._rpars.manifest.append(self._filename)
 
         if not self._to_modify:
             return

@@ -19,9 +19,11 @@ from pathlib import Path
 import shutil
 
 from viperleed import __version__
-from viperleed.calc import LOG_PREFIX
 from viperleed.calc import LOGGER as logger
 from viperleed.calc.classes import rparams
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.log_utils import close_all_handlers
@@ -29,6 +31,7 @@ from viperleed.calc.lib.log_utils import prepare_calc_logger
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import prerun_clean
+from viperleed.calc.sections.cleanup import preserve_original_inputs
 from viperleed.calc.sections.initialization import (
     warn_if_slab_has_atoms_in_multiple_c_cells
     )
@@ -104,7 +107,7 @@ def run_calc(
                 + DateTimeFormat.LOG_CONTENTS.now())
     logger.info(f"This is ViPErLEED version {__version__}\n")
 
-    tmp_manifest = ["SUPP", "OUT", log_name]
+    tmp_manifest = [DEFAULT_SUPP, DEFAULT_OUT, log_name]
     try:
         rp = parameters.read()
     except FileNotFoundError:
@@ -214,6 +217,7 @@ def run_calc(
     logger.info(f"ViPErLEED is using TensErLEED version {str(rp.TL_VERSION)}.")
 
     prerun_clean(rp, log_name)
+    preserve_original_inputs(rp)  # Store input files BEFORE any edit!
     exit_code, state_recorder = section_loop(rp, slab)
 
     # Finalize logging - if not done, will break unit testing

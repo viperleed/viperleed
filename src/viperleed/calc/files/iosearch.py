@@ -23,6 +23,7 @@ import time
 import fortranformat as ff
 import numpy as np
 
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.iorfactor import largest_nr_grid_points
@@ -800,10 +801,10 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         controlpath = ""
         if os.path.isfile("control.chem"):
             controlpath = "control.chem"
-        elif os.path.isfile(os.path.join("SUPP", "control.chem")):
-            controlpath = os.path.join("SUPP", "control.chem")
+        elif os.path.isfile(os.path.join(DEFAULT_SUPP, "control.chem")):
+            controlpath = os.path.join(DEFAULT_SUPP, "control.chem")
             logger.warning("No control.chem file found in working folder, "
-                           "using SUPP/control.chem")
+                           f"using {DEFAULT_SUPP}/control.chem")
             rp.setHaltingLevel(1)
         else:
             logger.warning("No control.chem file found. Defaulting to random "
@@ -1192,27 +1193,27 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                     at.offset_occ[el] -= offset_occ
                 if el in at.offset_vib:
                     at.offset_vib[el] -= offset_vib
-    fn = "POSCAR_OUT" + suffix + "_" + rp.timestamp
+    poscar_fn = "POSCAR_OUT" + suffix
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
-        poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
+        poscar.write(tmpslab, filename=poscar_fn, comments="all", silent=silent)
     except OSError:
         logger.error("Exception occurred while writing POSCAR_OUT" + suffix,
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.make_subcell(rp, rp.SYMMETRY_CELL_TRANSFORM)
-        fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
+        poscar_mincell_fn = "POSCAR_OUT_mincell" + suffix
         try:
-            poscar.write(tmpslab, filename=fn, silent=silent)
+            poscar.write(tmpslab, filename=poscar_mincell_fn, silent=silent)
         except OSError:
             logger.warning(
                 "Exception occurred while writing POSCAR_OUT_mincell" + suffix,
                 exc_info=rp.is_debug_mode)
-    fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
+    vibrocc_fn = "VIBROCC_OUT" + suffix
     try:
-        writeVIBROCC(sl, rp, filename=fn, silent=silent)
+        writeVIBROCC(sl, rp, filename=vibrocc_fn, silent=silent)
     except Exception:
         logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
                      exc_info=rp.is_debug_mode)

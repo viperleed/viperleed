@@ -3,34 +3,53 @@
 Bookkeeper
 ==========
 
-The bookkeeper is a utility that runs in between executions of ViPErLEED
-calculations to clean up directory and keep track of the history of a
-calculation. Its purpose is to collect input and output files from the
-previous run and store them in a "history" subfolder for future reference.
+The bookkeeper is a built-in ViPErLEED utility that automatically runs after and
+before each ViPErLEED calculation.
+It moves input and output files to a "history" directory, keeping the main
+folder organized while also keeping track of all relevant changes.
+in between executions of ViPErLEED calculations to clean up directory and keep track of the history of a calculation.
 
 See :ref:`cli_bookkeeper` for details on how to run the bookkeeper manually.
 
-The bookkeeper has three modes:
+The bookkeeper has four modes as described below.
+It runs automatically before and after each ViPErLEED calculation, but can also be run manually at any time.
+Most importantly, the bookkeeper automatically moves and updates the file
+:ref:`PARAMETERS<parameters>`, :ref:`POSCAR<poscar>` and
+:ref:`VIBROCC<vibrocc>`.
+By default these files are overwritten by the output files of the previous calculation, so that a new calculation can
+be started without having to manually copy the output files.
 
-- **Default**: Stores results from the previous run in a "history" directory,
-  but *does not overwrite* any input files.
-- **Continuation**: Stores the results from the previous run in a "history"
-  directory, and *overwrites* the :ref:`POSCAR<poscar>` and
-  :ref:`VIBROCC<vibrocc>` files in the main folder with the latest
-  :ref:`POSCAR_OUT<poscar_out>` and :ref:`VIBROCC_OUT<vibrocc_out>` files.
-- **Discard**: Discards the previous run as if it never happened and does
-  not store anything in the history.
+- **Archive**: Stores the results of the previous calculation into the 
+  ``history`` directory, and overwrites the input files 
+  :ref:`PARAMETERS<parameters>`, :ref:`POSCAR<poscar>` and
+  :ref:`VIBROCC<vibrocc>` with the results of the previous calculation stored
+  in the ``OUT`` directory. The previous input files are renamed to 
+  ``PARAMETERS_ori``, ``POSCAR_ori`` and ``VIBROCC_ori`` for reference
+  Runs automatically **at the end of every calculation**.
+
+- **Clear**: Removes files belonging to a previous run if they were already
+  stored to ``history``.
+  This includes all ``*_ori`` files, ``*.log`` files and the ``OUT`` and
+  ``SUPP`` directories.
+  Runs automatically **at the start of every calculation**.
+
+- **Discard**: Discards the results of the previous run and restores the input
+  files to their original state.
+  This is useful if the previous run was not successful and you want to start
+  over.
+  Input and output files of the previous run will still be stored in the 
+  ``history`` directory for reference.
+  Needs to be run manually with ``viperleed bookkeeper --discard``.
+
+- **Discard full**: Same as **Discard**, but also removes the input and output
+  files of the previous run from the ``history`` directory as if it had never
+  happened.
+  Needs to be run manually with ``viperleed bookkeeper --discard-full``.
 
 
-The bookkeeper always runs in *default* mode at the start of a ViPErLEED
-calculation (invoked by :ref:`viperleed calc<cli_calc>`). This way, any
-remaining output files will be committed to history without overwriting
-any (potentially user modified) input files.
+.. versionchanged:: 0.12.0
+    The bookkeeper behavior was overhauled and the names of the modes were changed.
 
-By default, the bookkeeper also runs in *continuation* mode at the end of
-every ViPErLEED calculation, as long as it terminates normally (i.e., not
-due to a keyboard interrupt or other error). This can be disabled by
-providing the ``--no-cont`` flag to :ref:`viperleed calc<cli_calc>`.
 
 
 .. _history_info:

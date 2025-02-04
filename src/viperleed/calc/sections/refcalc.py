@@ -18,6 +18,7 @@ import subprocess
 import fortranformat as ff
 import numpy as np
 
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import beams
 from viperleed.calc.files import iorefcalc
 from viperleed.calc.files import parameters
@@ -28,6 +29,16 @@ from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+_TENSOR_INPUT_FILES = (
+    # These are input/output files of the calculation that are stored
+    # inside Tensors_XXX.zip files for purposes of reverting to the
+    # same state without re-running a full reference calculation
+    'IVBEAMS',
+    'PARAMETERS',
+    'PHASESHIFTS',
+    'POSCAR',
+    'VIBROCC',
+    )
 
 # TODO: we should have a parent class for compile tasks (issue #43)
 # CompileTask subclasses would need a class-level list of
@@ -457,7 +468,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                 logger.warning(
                     "Failed to delete existing folder "
                     + os.path.basename(collection_dir) + ". This may cause "
-                    "old data to end up in the final Tensors, check results!")
+                    f"old data to end up in the final {DEFAULT_TENSORS}, "
+                    "check results!"
+                    )
         os.makedirs(collection_dir, exist_ok=True)
     # collect run tasks
     ref_tasks = []
@@ -643,47 +656,46 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                        "refcalc-amp.out")
     if 1 not in rp.TENSOR_OUTPUT:
         return
-    # move and zip tensor files
+
+    # Move and zip tensor files
     rp.TENSOR_INDEX = leedbase.getMaxTensorIndex() + 1
-    if "Tensors" not in rp.manifest:
-        rp.manifest.append("Tensors")
-    dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
-    os.makedirs(os.path.join(".", "Tensors", dn), exist_ok=True)
-    try:
-        for tf in [f for f in os.listdir('.') if f.startswith("T_")]:
-            shutil.move(tf, os.path.join(".", "Tensors", dn, tf))
-    except Exception:
-        logger.error("Error moving Tensor files: ")
-        raise
-    tInputFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS",
-                   "PHASESHIFTS"]
-    for f in [f for f in tInputFiles if f in os.listdir('.')]:
-        of = f
-        for fn in ["POSCAR", "VIBROCC"]:
-            if (f == fn and 3 in rp.runHistory
-                    and os.path.isfile(fn + "_OUT_" + rp.timestamp)):
-                of = fn + "_OUT_" + rp.timestamp
+    if DEFAULT_TENSORS not in rp.manifest:
+        rp.manifest.append(DEFAULT_TENSORS)
+    tensor_folder = Path(DEFAULT_TENSORS)
+    tensor_folder /= f'{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}'
+    tensor_folder.mkdir(parents=True, exist_ok=True)
+    for tensor_file in Path().glob('T_*'):
         try:
-            shutil.copy2(of, os.path.join("Tensors", dn, f))
-        except Exception:
-            logger.warning("Failed to add input file " + f
-                           + " to Tensors folder.")
+            tensor_file.replace(tensor_folder / tensor_file.name)
+        except OSError:
+            logger.error('Error moving Tensor files: ')
+            raise
+    for input_file in _TENSOR_INPUT_FILES:
+        input_file = Path(input_file)
+        if not input_file.is_file():
+            # If there was no input, there is also no output
+            continue
+        output_file = Path(input_file.name + '_OUT')
+        should_take_out_suffixed = (
+            input_file.name in {'POSCAR', 'VIBROCC', 'PARAMETERS'}
+            and 3 in rp.runHistory  # Search
+            and output_file.is_file()
+            )
+        if not should_take_out_suffixed:
+                output_file = input_file
+        try:
+            shutil.copy2(output_file, tensor_folder / input_file.name)
+        except OSError:
+            logger.warning(f'Failed to add input file {input_file.name} to '
+                           f'{DEFAULT_TENSORS} folder {tensor_folder.name}.')
     try:
-        shutil.copy2("refcalc-fd.out",
-                     os.path.join("Tensors", dn, "refcalc-fd.out"))
+        shutil.copy2('refcalc-fd.out', tensor_folder / 'refcalc-fd.out')
     except Exception:
-        logger.warning("Failed to copy refcalc-fd.out to Tensors folder.")
-    # modify PARAMETERS to contain the energies and LMAX that were really used
-    if os.path.isfile(os.path.join("Tensors", dn, "PARAMETERS")):
-        parameters.modify(rp, "THEO_ENERGIES",
-                          path=os.path.join("Tensors", dn), suppress_ori=True)
-        parameters.modify(rp, "LMAX",
-                          path=os.path.join("Tensors", dn), suppress_ori=True)
+        logger.warning('Failed to copy refcalc-fd.out '
+                       f'to {DEFAULT_TENSORS} folder.')
 
     # remove references to Deltas from old tensors
     _reinitialize_deltas(sl)
-
-    return
 
 
 def _reinitialize_deltas(slab):
