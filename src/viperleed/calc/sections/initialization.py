@@ -671,14 +671,14 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def make_compile_logs_dir(rp):
+def make_compile_logs_dir(rpars):
     """Create compile_logs directory where compilation logs are saved."""
-    directory = rp.paths.compile_logs
+    directory = rpars.paths.compile_logs
     try:
         directory.mkdir(exist_ok=True)
     except OSError:
         logger.warning(f'Could not create directory {directory}')
-        rp.setHaltingLevel(1)
+        rpars.setHaltingLevel(1)
 
 
 def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
