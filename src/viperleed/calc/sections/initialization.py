@@ -813,7 +813,7 @@ def _read_inputs_for_domain(domain, main_rpars):
     rpars.timestamp = main_rpars.timestamp
 
     # Store input files for each domain, BEFORE any edit
-    preserve_original_input(rpars)
+    preserve_original_inputs(rpars)
 
     domain.sl = slab = poscar.read()
     warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain.name)
