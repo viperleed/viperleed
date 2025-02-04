@@ -883,7 +883,7 @@ def search(sl, rp):
         leedbase.fortran_compile_batch(ctasks, logname=compile_log)
     except Exception:
         leedbase.copy_compile_log(rp, Path(compile_log),
-                                  log_name="search-compile")
+                                  save_as='search-compile')
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
