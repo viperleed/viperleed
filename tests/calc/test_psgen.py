@@ -9,7 +9,6 @@ __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
 import numpy as np
-import pytest
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 

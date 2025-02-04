@@ -8,8 +8,6 @@ __created__ = '2025-02-03'
 __license__ = 'GPLv3+'
 
 from pathlib import Path
-import shutil
-from unittest.mock import MagicMock, patch
 
 from pytest_cases import fixture
 from pytest_cases import parametrize
@@ -19,7 +17,6 @@ from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
-from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 from viperleed.calc.sections.cleanup import OPTIONAL_INPUT_FILES
 
@@ -86,14 +83,12 @@ class TestPreserveOriginalInputs:
         copy, logger, rpars = run_preserve(missing_required)
 
         logger.warning.assert_called()
-        # pylint: disable=magic-value-comparison
         assert copy.call_count == 1
         assert rpars.halt == 1
 
     def test_copy_fails(self, run_preserve):
         """Check expected complaints when failing to copy files."""
-        copy, logger, rpars = run_preserve(ALL_INPUT_FILES,
-                                           side_effect=OSError)
+        _, logger, rpars = run_preserve(ALL_INPUT_FILES, side_effect=OSError)
         assert logger.warning.call_count == len(ALL_INPUT_FILES) - 1
         assert rpars.halt == 1
 

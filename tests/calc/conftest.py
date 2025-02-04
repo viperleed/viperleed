@@ -29,7 +29,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
-import os
 from pathlib import Path
 
 import pytest
