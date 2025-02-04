@@ -79,7 +79,7 @@ def _fetch_and_check_spectra(rp, index, name):
     directory = None
     path = None
     if fn.is_file():
-        directory = rp.workdir.name
+        directory = Path.cwd().name
         path = fn
     elif (DEFAULT_OUT / fn).is_file():
         directory = DEFAULT_OUT
