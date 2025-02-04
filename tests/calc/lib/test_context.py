@@ -71,3 +71,11 @@ class TestExecuteInDir:
         with pytest.raises(ValueError, match='is not a directory'):
             with execute_in_dir(file_path):
                 pytest.fail('Should not reach here')
+
+    def test_path_changed_only_in_context(self, test_dir):
+        """Ensure that creating the context maintains the path unchanged."""
+        here = Path.cwd()
+        context = execute_in_dir(test_dir)
+        assert Path.cwd() == here
+        with context:
+            assert Path.cwd() == test_dir
