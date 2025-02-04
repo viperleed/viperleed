@@ -818,7 +818,8 @@ def _read_inputs_for_domain(domain, main_rpars):
     domain.sl = slab = poscar.read()
     warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain.name)
 
-    parameters.interpret(rpars, slab=slab, silent=rp.LOG_LEVEL > logging.DEBUG)
+    silent = rpars.LOG_LEVEL > logging.DEBUG
+    parameters.interpret(rpars, slab=slab, silent=silent)
     slab.full_update(rpars)
     rpars.fileLoaded['POSCAR'] = True
     rpars.updateDerivedParams()
