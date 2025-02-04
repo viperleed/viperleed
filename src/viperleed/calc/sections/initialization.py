@@ -501,7 +501,7 @@ def init_domains(rp):
                 dp.rp.timestamp = rp.timestamp
 
                 # Store input files for each domain, BEFORE any edit
-                preserve_original_input(dp.rp)
+                preserve_original_inputs(dp.rp)
 
                 dp.sl = poscar.read()
                 warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
