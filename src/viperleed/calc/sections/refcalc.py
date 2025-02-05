@@ -147,14 +147,14 @@ def compile_refcalc(comptask):
     try:
         with open('PARAM', 'w', encoding='utf-8') as param_file:
             param_file.write(comptask.param)
-    except Exception:
+    except OSError:
         logger.error('Error writing PARAM file: ', exc_info=True)
         return (f'Error encountered by {comptask} '
                 'while trying to write PARAM file.')
 
     try:
         comptask.copy_source_files_to_local()
-    except Exception:
+    except OSError:
         logger.error('Error getting TensErLEED files for refcalc: ',
                      exc_info=True)
         return (f'Error encountered by {comptask} while '
