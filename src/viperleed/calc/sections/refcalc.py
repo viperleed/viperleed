@@ -3,6 +3,7 @@
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-11'
@@ -157,8 +158,7 @@ def compile_refcalc(comptask):
     os.chdir(workfolder)
     # write PARAM:
     try:
-        with open('PARAM', 'w', encoding='utf-8') as param_file:
-            param_file.write(comptask.param)
+        Path('PARAM').write_text(comptask.param, encoding='utf-8')
     except OSError:
         logger.error('Error writing PARAM file: ', exc_info=True)
         return (f'Error encountered by {comptask} '
@@ -240,14 +240,13 @@ def run_refcalc(runtask):
         os.chdir(workfolder)
 
     if runtask.single_threaded:
-        logname = runtask.logname
+        log_file = Path(runtask.logname)
         fin = runtask.fin
     else:
-        logname = 'refcalc.log'
+        log_file = Path('refcalc.log')
         fin = edit_fin_energy_lmax(runtask)
         try:
-            with open('refcalc-FIN', 'w', encoding='utf-8') as fin_file:
-                fin_file.write(fin)
+            Path('refcalc-FIN').write_text(fin, encoding='utf-8')
         except OSError:
             pass  # local FIN is just for information...
 
@@ -261,7 +260,7 @@ def run_refcalc(runtask):
                 'Failed to get refcalc executable.')
     # run execution
     try:
-        with open(logname, 'w', encoding='utf-8') as log:
+        with log_file.open('w', encoding='utf-8') as log:
             subprocess.run(str(workfolder/exename),
                            input=fin,
                            encoding='ascii',
@@ -308,10 +307,9 @@ def run_refcalc(runtask):
     # append log
     log = ''
     try:
-        with open(logname, 'r', encoding='utf-8') as local_log:
-            log = local_log.read()
+        log = log_file.read_text(encoding='utf-8')
     except OSError:
-        logger.warning(f'Could not read local refcalc log {logname}')
+        logger.warning(f'Could not read local refcalc log {log_file}')
     if log:
         global_log_path = base / runtask.logname
         try:

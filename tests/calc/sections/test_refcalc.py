@@ -72,7 +72,9 @@ class TestCompileRefcalc:
                   mkdir_raises=None,
                   chdir_raises=None,
                   compile_raises=None):
-            mocker.patch('builtins.open', create=True, side_effect=open_raises)
+            mocker.patch('pathlib.Path.open',
+                         create=True,
+                         side_effect=open_raises)
             mocker.patch('os.mkdir', side_effect=mkdir_raises)
             mocker.patch('os.chdir', side_effect=chdir_raises)
             mocker.patch('viperleed.calc.lib.leedbase.fortran_compile_batch',
@@ -178,7 +180,9 @@ class TestRunRefcalc:
                 # as we want to make sure to run things in a dedicated
                 # folder! This would also mess around with the
                 # execute_in_dir context that we use in the tests
-                'builtins.open': ('open_raises', None),
+                'pathlib.Path.open': ('open_raises', None),
+                'pathlib.Path.read_text': ('path_read', None),
+                'pathlib.Path.write_text': ('path_write', None),
                 'shutil.copy2': ('copy_raises', None),
                 'shutil.rmtree': ('rmtree_raises', None),
                 'subprocess.run': ('subprocess_raises', None),
@@ -292,12 +296,7 @@ class TestRunRefcalc:
     def test_log_read_fails(self, runtask, mock_implementation,
                             caplog, mocker):
         """Check warnings when failing to read the local log file."""
-        def _open_log_fails(file, mode, **__):
-            # pylint: disable-next=magic-value-comparison
-            if Path(file).suffix == '.log' and mode == 'r':
-                raise OSError
-            return mocker.MagicMock()
-        mock_implementation(open_raises=_open_log_fails)
+        mock_implementation(path_read=OSError)
         error = run_refcalc(runtask)
         expect_log = 'Could not read local refcalc log'
         assert not error
@@ -338,15 +337,10 @@ class TestRunRefcalc:
             if Path(src).name != runtask.comptask.exename:
                 pytest.fail('copy2 was unexpectedly called. Arguments '
                             f'were src={src} and dst={dst}')
-        def _fail_open_except_log(fname, mode, *_, **__):
-            # pylint: disable-next=magic-value-comparison
-            if Path(fname).name != runtask.logname or mode != 'w':
-                pytest.fail('Should only open log file in write mode. '
-                            f'Attempted opening {fname} in {mode!r} mode')
-            return mocker.MagicMock()
         mocks = mock_implementation(
             copy_raises=_fail_copy_except_refcalc_exe,
-            open_raises=_fail_open_except_log,
+            path_read=OSError,
+            path_write=OSError,
             )
         mocks['os.mkdir'] = mocker.patch('os.mkdir')
         mocks['os.chdir'] = mocker.patch('os.chdir')
