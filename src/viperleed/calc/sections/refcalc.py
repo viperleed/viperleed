@@ -67,13 +67,17 @@ class RefcalcCompileTask():
         if os.name == 'nt':
             self.exename += '.exe'
 
+    def __str__(self):
+        """Return a string representation of this RefcalcCompileTask."""
+        return f'{type(self).__name__} {self.foldername}'
+
     @property
     def logfile(self):
         return self.basedir / self.foldername / "fortran-compile.log"
 
     @property
     def compile_log_name(self):
-        # name as it should appear in the compile_logs directory
+        """Name of the log file as it should appear in compile_logs."""
         return self.foldername
 
     def get_source_files(self):
@@ -114,59 +118,75 @@ class RefcalcRunTask():
 
 
 def compile_refcalc(comptask):
-    """Function meant to be executed by parallelized workers. Executes a
-    RefcalcCompileTask."""
-    workfolder = os.path.join(comptask.basedir, comptask.foldername)
-    # make folder and go there:
-    if os.path.isdir(workfolder):
-        logger.warning("Folder "+comptask.foldername+" already exists. "
-                       "Contents may get overwritten.")
-    else:
-        os.mkdir(workfolder)
+    """Compile a reference calculation executable.
+
+    This function may be executed by parallelized workers.
+
+    Parameters
+    ----------
+    comptask : RefcalcCompileTask
+        Information about the compilation to be performed.
+
+    Returns
+    -------
+    error_info : str
+        Description of any error that occurred while compiling.
+    """
+    workfolder = Path(comptask.basedir) / comptask.foldername
+    # Make compilation subfolder and go there
+    try:
+        workfolder.mkdir()
+    except FileExistsError:
+        logger.warning(f'Folder {workfolder} already exists. '
+                       'Contents may get overwritten.')
     os.chdir(workfolder)
     # write PARAM:
     try:
-        with open("PARAM", "w") as wf:
-            wf.write(comptask.param)
+        with open('PARAM', 'w', encoding='utf-8') as param_file:
+            param_file.write(comptask.param)
     except Exception:
-        logger.error("Error writing PARAM file: ", exc_info=True)
-        return ("Error encountered by RefcalcCompileTask "
-                + comptask.foldername + "while trying to write PARAM file.")
+        logger.error('Error writing PARAM file: ', exc_info=True)
+        return (f'Error encountered by {comptask} '
+                'while trying to write PARAM file.')
 
     try:
         comptask.copy_source_files_to_local()
     except Exception:
-        logger.error("Error getting TensErLEED files for "
-                     "refcalc-amplitudes: ", exc_info=True)
-        return ("Error encountered by RefcalcCompileTask "
-                + comptask.foldername + " while trying to fetch fortran "
-                "source files")
+        logger.error('Error getting TensErLEED files for refcalc: ',
+                     exc_info=True)
+        return (f'Error encountered by {comptask} while '
+                'trying to fetch fortran source files')
 
-    # TODO: we could skip this, if we implemented a general CompileTask (Issue #43)
-    (libname, srcname,
-     _, muftinname) = (
+    # TODO: we could skip this, if we implemented
+    # a general CompileTask (Issue #43)
+    (libname, srcname, _, muftinname) = (
          str(fname.name) if fname is not None else None
          for fname in comptask.get_source_files()
          )
 
-    compile_list = [(libname, "lib.tleed.o"), (srcname, "main.o")]
-    if muftinname:
-        compile_list.append((muftinname, "muftin.o"))
     # compile
-    ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
-               fname, comptask.fortran_comp[1]) for (fname, oname)
-              in compile_list]
-    ctasks.append((comptask.fortran_comp[0] + " -o " + comptask.exename,
-                   " ".join(list(zip(*compile_list))[1]),
-                   comptask.fortran_comp[1]))
+    compiler = comptask.fortran_comp
+    compile_list = [
+        (libname, 'lib.tleed.o'),
+        (srcname, 'main.o'),
+        ]
+    if muftinname:
+        compile_list.append((muftinname, 'muftin.o'))
+    ctasks = [(f'{compiler[0]} -o {oname} -c', fname, compiler[1])
+              for (fname, oname) in compile_list]
+    _, object_files = zip(*compile_list)
+    ctasks.append(
+        (f'{compiler[0]} -o {comptask.exename}',
+         ' '.join(object_files),
+         compiler[1])
+        )
     try:
         leedbase.fortran_compile_batch(ctasks)
-    except Exception as e:
-        logger.error("Error compiling fortran files: " + str(e))
-        return ("Fortran compile error in RefcalcCompileTask "
-                + comptask.foldername)
+    except Exception as exc:
+        logger.error(f'Error compiling fortran files: {exc}')
+        return f'Fortran compile error in {comptask}'
     os.chdir(comptask.basedir)
-    return ""
+    return ''
 
 
 def run_refcalc(runtask):
