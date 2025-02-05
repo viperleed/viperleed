@@ -111,10 +111,19 @@ class RefcalcRunTask():
         self.energy = energy
         self.comptask = comptask
         self.logname = logname
-        self.foldername = "refcalc-part_{:.2f}eV".format(energy)
+        self.foldername = f'refcalc-part_{energy:.2f}eV'
         self.collect_at = collect_at
         self.single_threaded = single_threaded
         self.tl_version = tl_version
+
+    @property
+    def name(self):
+        """Return a name for this task."""
+        return '(single-threaded)' if self.single_threaded else self.foldername
+
+    def __str__(self):
+        """Return a string representation of this RefcalcRunTask."""
+        return f'{type(self).__name__} {self.name}'
 
 
 # TODO: this is largely overlapping with deltas.compile_delta. It could
@@ -193,116 +202,127 @@ def compile_refcalc(comptask):
 
 
 def run_refcalc(runtask):
-    """Runs a part of a reference calculation in a subfolder, or the whole
-    refcalc here if in single-threaded mode."""
-    base = runtask.comptask.basedir
+    """Run (a part of) the reference calculation.
+
+    The calculation is executed in runtask.comptask.basedir
+    (if in single-threaded mode) or a temporary subfolder (if only
+    a subset of energies should be calculated). The subfolder is
+    created when needed, and removed upon successful execution.
+
+    Parameters
+    ----------
+    runtask : RefcalcRunTask
+        The worker that contains information about the (part of
+        the) reference calculation to execute.
+
+    Returns
+    -------
+    error_info : str
+        A message with information about errors occurred during
+        execution of `runtask`.
+    """
+    base = Path(runtask.comptask.basedir).resolve()
     workfolder = base
-    task_name = "(single-threaded)"
     if not runtask.single_threaded:
-        # make folder and go there:
-        workfolder = os.path.join(base, runtask.foldername)
-        task_name = runtask.foldername
-        if os.path.isdir(workfolder):
-            logger.warning("Folder "+runtask.foldername+" already exists. "
-                           "Contents may get overwritten.")
-        else:
-            os.mkdir(workfolder)
+        # Make a subfolder for execution
+        workfolder = base / runtask.foldername
+        try:
+            workfolder.mkdir()
+        except FileExistsError:
+            logger.warning(f'Folder {runtask.foldername} already '
+                           'exists. Contents may get overwritten.')
         os.chdir(workfolder)
 
     if runtask.single_threaded:
-        fin = runtask.fin
         logname = runtask.logname
+        fin = runtask.fin
     else:
-        logname = "refcalc.log"
+        logname = 'refcalc.log'
         fin = edit_fin_energy_lmax(runtask)
         try:
-            with open("refcalc-FIN", "w") as wf:
-                wf.write(fin)
-        except Exception:
+            with open('refcalc-FIN', 'w', encoding='utf-8') as fin_file:
+                fin_file.write(fin)
+        except OSError:
             pass  # local FIN is just for information...
 
     # get executable
     exename = runtask.comptask.exename
     try:
-        shutil.copy2(os.path.join(base, runtask.comptask.foldername, exename),
-                     os.path.join(workfolder, exename))
-    except Exception:
-        logger.error("Error getting refcalc executable: ", exc_info=True)
-        return ("Error encountered by RefcalcRunTask " + task_name
-                + ": Failed to get refcalc executable.")
+        shutil.copy2(base/runtask.comptask.foldername/exename, workfolder)
+    except OSError:
+        logger.error('Error getting refcalc executable: ', exc_info=True)
+        return (f'Error encountered by {runtask}: '
+                'Failed to get refcalc executable.')
     # run execution
     try:
-        with open(logname, "w") as log:
-            subprocess.run(os.path.join(workfolder, exename),
-                           input=fin, encoding="ascii",
-                           stdout=log, stderr=log)
+        with open(logname, 'w', encoding='utf-8') as log:
+            subprocess.run(str(workfolder/exename),
+                           input=fin,
+                           encoding='ascii',
+                           stdout=log,
+                           stderr=log)
     except Exception:
-        logger.error("Error while executing reference calculation "
-                     + task_name + ". Also check refcalc log file.",
+        logger.error('Error while executing reference calculation '
+                     f'{runtask.name}. Also check refcalc log file.',
                      exc_info=True)
-        return ("Error encountered by RefcalcRunTask " + task_name
-                + ": Error during refcalc execution.")
+        return (f'Error encountered by {runtask}: '
+                'Error during refcalc execution.')
 
     if runtask.single_threaded:
-        return ""
+        return ''
 
     # move/copy files out
-    if runtask.collect_at:
-        targetpath = os.path.abspath(runtask.collect_at)
-    else:
-        targetpath = base
-    en_str = "_{:.2f}eV".format(runtask.energy)
-    tensorfiles = [f for f in os.listdir() if f.startswith("T_")
-                   and os.path.isfile(f)]
-    for tf in tensorfiles:
+    targetpath = (Path(runtask.collect_at).resolve() if runtask.collect_at
+                  else base)
+    energy = f'_{runtask.energy:.2f}eV'
+    tensorfiles = (f for f in Path().glob('T_*') if f.is_file())
+    for tensor in tensorfiles:
         try:   # move instead of copy to not duplicate the large files
-            shutil.move(os.path.join(workfolder, tf),
-                        os.path.join(targetpath, tf + en_str))
-        except Exception:
-            logger.error("Failed to copy refcalc output file " + tf +
-                         " to main folder.", exc_info=True)
-            return ("Error encountered by RefcalcRunTask " + task_name
-                    + ": Failed to copy Tensor file out.")
+            shutil.move(tensor, targetpath/f'{tensor.name}{energy}')
+        except OSError:
+            logger.error('Failed to copy refcalc output file '
+                         f'{tensor} to main folder.', exc_info=True)
+            return (f'Error encountered by {runtask}: '
+                    'Failed to copy Tensor file out.')
     try:
-        shutil.copy2(os.path.join(workfolder, "fd.out"),
-                     os.path.join(targetpath, "fd" + en_str + ".out"))
-    except Exception:
-        logger.error("Failed to copy refcalc output file fd.out "
-                     " to main folder.", exc_info=True)
-        return ("Error encountered by RefcalcRunTask " + task_name
-                + ": Failed to copy fd.out file out.")
+        shutil.copy2('fd.out', targetpath/f'fd{energy}.out')
+    except OSError:
+        logger.error('Failed to copy refcalc output file fd.out '
+                     ' to main folder.', exc_info=True)
+        return (f'Error encountered by {runtask}: '
+                'Failed to copy fd.out file out.')
     try:
-        shutil.copy2(os.path.join(workfolder, "amp.out"),
-                     os.path.join(targetpath, "amp" + en_str + ".out"))
+        shutil.copy2('amp.out', targetpath/f'amp{energy}.out')
     except FileNotFoundError:
         if runtask.tl_version >= Version('1.7.3'):
-            logger.warning("Refcalc output file amp.out not found.")
-    except Exception as e:      # warn but continue
-        logger.warning("Failed to copy refcalc output file amp.out "
-                       "to main folder: " + str(e))
+            logger.warning('Refcalc output file amp.out not found.')
+    except OSError as exc:      # warn but continue
+        logger.warning('Failed to copy refcalc output file '
+                       f'amp.out to main folder: {exc}')
     # append log
-    log = ""
+    log = ''
     try:
-        with open(logname, "r") as rf:
-            log = rf.read()
-    except Exception:
-        logger.warning("Could not read local refcalc log " + task_name)
-    if log != "":
-        globallog = os.path.join(base, runtask.logname)
+        with open(logname, 'r', encoding='utf-8') as local_log:
+            log = local_log.read()
+    except OSError:
+        logger.warning(f'Could not read local refcalc log {logname}')
+    if log:
+        global_log_path = base / runtask.logname
         try:
-            with open(globallog, "a") as wf:
-                wf.write("\n\n### STARTING LOG FOR " + task_name
-                         + " ###\n\n" + log)
-        except Exception:
-            logger.warning("Error writing refcalc log part "
-                           + task_name + ": ", exc_info=True)
+            with global_log_path.open('a', encoding='utf-8') as global_log:
+                global_log.write(
+                    f'\n\n### STARTING LOG FOR {runtask.name} ###\n\n{log}'
+                    )
+        except OSError:
+            logger.warning('Error writing refcalc log part '
+                           f'{runtask.name}: ', exc_info=True)
     # clean up
     os.chdir(base)
     try:
         shutil.rmtree(workfolder)
-    except Exception:
-        logger.warning("Error deleting folder " + runtask.foldername)
-    return ""
+    except OSError:
+        logger.warning(f'Error deleting folder {runtask.foldername}')
+    return ''
 
 
 def edit_fin_energy_lmax(runtask):
