@@ -101,6 +101,9 @@ class RefcalcCompileTask():
                 shutil.copy2(filepath, filepath.name)
 
 
+# TODO: similar to RefcalcCompileTask, also RefcalcRunTask could
+# profit from some refactoring to collect portions of code similar
+# to those in deltas.DeltaRunTask (to be done in #43).
 class RefcalcRunTask():
     """Stores information for a worker to create a subfolder, copy input there,
     compile and run a reference calculation, and copy results back."""
@@ -201,6 +204,9 @@ def compile_refcalc(comptask):
     return ''
 
 
+# TODO: there is some repeated code here and in deltas.run_delta.
+# This function could become a concrete method of RefcalcRunTask
+# when we solve #43
 def run_refcalc(runtask):
     """Run (a part of) the reference calculation.
 
