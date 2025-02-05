@@ -99,7 +99,7 @@ class TestPreserveOriginalInputs:
             preserve_original_inputs(rpars)
         assert not (tmp_path / ORIGINAL_INPUTS_DIR_NAME).exists()
 
-    _skip_expbeams = {
+    _skip_expbeams = {  # skip: keep
         'EXPBEAMS': 'EXPBEAMS.csv',
         'EXPBEAMS.csv': 'EXPBEAMS',
         }
@@ -114,4 +114,12 @@ class TestPreserveOriginalInputs:
         assert copy.call_count == nr_files_copied
         logger.warning.assert_not_called()
         assert (tmp_path/expect).is_file()
-        copy.assert_any_call(Path(expect), Path(ORIGINAL_INPUTS_DIR_NAME))
+
+        # Check that we copied the expected one to original_inputs
+        # Notice that we can't just use assert_any_call, as the
+        # arguments may be OS-dependent with Paths (e.g., on WSL)
+        calls = {
+            (Path(src).name, Path(dst).name)
+            for (src, dst), *_ in copy.call_args_list
+            }
+        assert (expect, ORIGINAL_INPUTS_DIR_NAME) in calls
