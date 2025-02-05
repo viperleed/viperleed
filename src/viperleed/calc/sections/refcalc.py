@@ -117,6 +117,9 @@ class RefcalcRunTask():
         self.tl_version = tl_version
 
 
+# TODO: this is largely overlapping with deltas.compile_delta. It could
+# become a method of RefcalcCompileTask (or, better, its ABC once we
+# do #43.
 def compile_refcalc(comptask):
     """Compile a reference calculation executable.
 
