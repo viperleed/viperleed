@@ -18,9 +18,12 @@ from pathlib import Path
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.classes.decorators import emit_default_faulty
 from viperleed.guilib.measure.classes.settings import DefaultSettingsError
+from viperleed.guilib.measure.classes.settings import interpolate_config_path
+from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import NO_HARDWARE_INTERFACE
 from viperleed.guilib.measure.dialogs.settingsdialog import (
@@ -28,6 +31,7 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
     )
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.hardwarebase import class_from_name
+from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import get_devices
 from viperleed.guilib.measure.hardwarebase import make_device
 from viperleed.guilib.measure.hardwarebase import safe_connect
@@ -749,7 +753,15 @@ class CollapsableCameraList(CollapsableDeviceList):
 
     def _set_single_camera_settings(self, camera_settings):
         """Set settings of camera."""
-        settings = ViPErLEEDSettings.from_settings(camera_settings)
+        try:
+            settings = ViPErLEEDSettings.from_settings(camera_settings)
+        except NoSettingsError:
+            settings = [camera_settings,]
+            interpolate_config_path(settings)
+            emit_error(self,
+                       QObjectSettingsErrors.SPECIFIED_SETTINGS_CORRUPTED,
+                       settings[0],)
+            return
         device_name = settings.get('camera_settings', 'device_name')
         correct_view = None
         for view in self.views:
@@ -869,7 +881,15 @@ class CollapsableControllerList(CollapsableDeviceList):
     def _set_controller_settings(self, controller_settings):
         """Set settings of controller."""
         file, quantities = controller_settings
-        settings = ViPErLEEDSettings.from_settings(file)
+        try:
+            settings = ViPErLEEDSettings.from_settings(file)
+        except NoSettingsError:
+            settings = list(controller_settings)
+            interpolate_config_path(settings)
+            emit_error(self,
+                       QObjectSettingsErrors.SPECIFIED_SETTINGS_CORRUPTED,
+                       settings[0],)
+            return
         device_name = settings.get('controller', 'device_name')
         correct_view = None
         for view in self.views:
@@ -913,8 +933,8 @@ class CollapsableControllerList(CollapsableDeviceList):
         """Attempt to select the secondary controllers from settings."""
         if not self._secondary_settings:
             return
-        for controller_settings in self._secondary_settings:
-            self._set_controller_settings(controller_settings)
+        for settings in self._secondary_settings:
+                self._set_controller_settings(settings)
 
     def add_new_view(self, name, cls_and_info):
         """Add a new CollapsableControllerView."""                              # TODO: doc

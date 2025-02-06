@@ -80,6 +80,12 @@ class QObjectSettingsErrors(base.ViPErLEEDErrorEnum):
                                   'Default settings corrupted. {} '
                                   'Contact the ViPErLEED team to fix '
                                   'your default settings.')
+    SPECIFIED_SETTINGS_CORRUPTED = (
+        104,
+        'Unable to read settings at {}. Check if the file is still present. '
+        'If the file is still present, it is most likely corrupted.'
+        )
+
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
