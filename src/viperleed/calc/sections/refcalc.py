@@ -148,12 +148,12 @@ def compile_refcalc(comptask):
     error_info : str
         Description of any error that occurred while compiling.
     """
-    workfolder = Path(comptask.basedir) / comptask.foldername
+    workfolder = (Path(comptask.basedir) / comptask.foldername).resolve()
     # Make compilation subfolder and go there
     try:
         workfolder.mkdir()
     except FileExistsError:
-        logger.warning(f'Folder {workfolder} already exists. '
+        logger.warning(f'Folder {workfolder.name} already exists. '
                        'Contents may get overwritten.')
     os.chdir(workfolder)
     # write PARAM:
