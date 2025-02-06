@@ -548,6 +548,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
 
     if single_threaded:
         home = os.getcwd()
+        logger.info("Compiling fortran files...")
         try:
             r = compile_refcalc(comp_tasks[0])
         except Exception:
@@ -560,7 +561,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         if r:
             logger.error(r)
             raise RuntimeError("Error compiling fortran files.")
-        logger.info("Compiling fortran files...")
         logger.info("Starting reference calculation...\n"
                     "Refcalc log will be written to file "+logname)
         logger.info("Reference calculation running without parallelization. "
