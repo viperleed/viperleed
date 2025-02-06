@@ -96,6 +96,11 @@ class DeltaRunTask():
         self.comptask = comptask
         self.deltalogname = ""
 
+    @property
+    def foldername(self):
+        """Return a name for the subfolder in which this should run."""
+        return f'calculating_{runtask.deltaname}'
+
 
 def runDelta(runtask):
     """Execute a single delta-amplitude DeltaRunTask.
@@ -115,7 +120,7 @@ def runDelta(runtask):
     """
     home = Path.cwd()
     base = Path(runtask.comptask.basedir).resolve()
-    workfolder = base / f'calculating_{runtask.deltaname}'
+    workfolder = base / runtask.foldername
     # Make folder and go there:
     try:
         workfolder.mkdir()
