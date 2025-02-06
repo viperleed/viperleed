@@ -1147,7 +1147,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     def _connect_controller(self, ctrl):
         """Connect serial and signals of a controller."""
-        ctrl.connect_()
+        with ctrl.errors_delayed():
+            ctrl.connect_()
         base.safe_connect(ctrl.data_ready, self._on_controller_data_ready,
                           type=_UNIQUE)
         base.safe_connect(self._request_stop_devices, ctrl.stop, type=_UNIQUE)

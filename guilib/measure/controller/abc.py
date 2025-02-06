@@ -60,7 +60,7 @@ def ensure_connected(method):
                 ) from None
         self.connect_()
         if not self.serial or not self.serial.is_open:
-            self.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
+            # DEVICE_NOT_FOUND error is emitted in connect_()
             return None
         try:
             return method(*args, **kwargs)
@@ -259,7 +259,7 @@ class ControllerABC(DeviceABC):
 
     @property
     def connected(self):
-        """Return whetehr the controller hardware is connected."""
+        """Return whether the controller hardware is connected."""
         return self.serial.is_open
 
     @property
@@ -674,10 +674,14 @@ class ControllerABC(DeviceABC):
     def connect_(self):
         """Connect serial."""
         # TODO: should we complain if ._address is False-y?
-        if not self.serial or self.serial.is_open:
-            # Invalid or already connected
+        if not self.serial:
+            self.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
+            return
+        if self.serial.is_open:
             return
         self.serial.connect_()
+        if not self.connected:
+            self.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
 
     @qtc.pyqtSlot()
     def continue_preparation(self):
