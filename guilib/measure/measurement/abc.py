@@ -619,10 +619,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._camera_timer.stop()
         if self.settings:
             self.settings.set('measurement_settings', 'was_aborted', 'True')
-        if not self.running:
-            self._cleanup_and_end()
-            return
         self._force_end_timer.start()
+        # _force_end_timer performs a delayed call to _cleanup_and_end
+        # which will stop all threads. The quitting of threads must be
+        # delayed in case abort is called while secondary controllers
+        # are still busy.
+        if not self.running:
+            return
         self._prepare_finalization()
 
     def are_runtime_settings_ok(self):
