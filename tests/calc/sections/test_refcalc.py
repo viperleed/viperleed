@@ -134,7 +134,7 @@ class TestCompileRefcalc:
             )
         assert expect_log in caplog.text
         assert all(e in result for e in expect_results)
-    
+
     def test_success(self, make_comptask, run_compile, caplog):
         """Check the results of a successful execution of compile_refcalc."""
         comptask = make_comptask()
@@ -344,14 +344,15 @@ class TestRunRefcalc:
         with pytest.raises(OSError):
             run()
 
-    def test_fails_to_write_local_fin(self, run, caplog, mocker):
+    def test_fails_to_write_local_fin(self, run, mock_implementation,
+                                      caplog, mocker):
         """Check that there are no complaints when writing FIN fails."""
-        def _open_fin_fails(file, *_, **__):
-            # pylint: disable-next=magic-value-comparison
-            if 'FIN' in Path(file).name:
+        def _write_fin_fails(file, *_, **__):
+            if file.name:
                 raise OSError
-            return mocker.MagicMock()
-        run(fails=False, open_raises=_open_fin_fails)
+        mock_implementation()
+        mocker.patch('pathlib.Path.write_text', _write_fin_fails)
+        run(fails=False, mock=False)
         assert not caplog.text
 
     def test_log_read_fails(self, run, caplog):
