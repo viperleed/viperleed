@@ -40,13 +40,13 @@ class DeltaCompileTask():
     track of the folder that the compiled file is in afterwards."""
 
     def __init__(self, param, hash_, source_dir, index):
-        self.param = param
-        self.hash = hash_
-        self.foldername = f'Delta_Compile_{index}'
-        self.exename = f'delta-{index}'
-        self.fortran_comp = ["", ""]
-        self.source_dir = Path(source_dir).resolve()  # where the fortran files are
         self.basedir = Path()    # where the calculation is based
+        self.exename = f'delta-{index}'
+        self.foldername = f'Delta_Compile_{index}'
+        self.fortran_comp = ["", ""]
+        self.hash = hash_
+        self.param = param
+        self.source_dir = Path(source_dir).resolve()  # where the fortran files are
 
         if os.name == 'nt':
             self.exename += '.exe'
@@ -90,12 +90,12 @@ class DeltaRunTask():
     results back."""
 
     def __init__(self, comptask):
-        self.tensorname = ""
-        self.din = ""
-        self.din_short = ""
-        self.deltaname = ""
         self.comptask = comptask
         self.deltalogname = ""
+        self.deltaname = ""
+        self.din = ""
+        self.din_short = ""
+        self.tensorname = ""
 
     @property
     def foldername(self):
