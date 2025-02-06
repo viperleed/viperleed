@@ -39,7 +39,7 @@ _MEASURE_PATH = Path(__file__).parent.parent
 SYSTEM_CONFIG_PATH = _MEASURE_PATH / "_defaults" / "_system_settings.ini"
 
 
-def _interpolate_config_path(filenames):
+def interpolate_config_path(filenames):
     """Interpolate filenames with system settings.
 
     Replaces "__CONFIG__" at the beginning of filenames
@@ -54,7 +54,7 @@ def _interpolate_config_path(filenames):
         done in-place.
     """
     # NB: the next lines should NOT use SystemSettings, as
-    # _interpolate_config_path is used in ViPErLEEDSettings,
+    # interpolate_config_path is used in ViPErLEEDSettings,
     # the ancestor of SystemSettings. This leads to infinite
     # recursion.
     cfg = ConfigParser()
@@ -333,7 +333,7 @@ class ViPErLEEDSettings(ConfigParser):
         if isinstance(filenames, (str, bytes, os.PathLike)):
             filenames = [filenames]
         if self.__interpolate_paths:
-            _interpolate_config_path(filenames)
+            interpolate_config_path(filenames)
 
         read_ok = super().read(filenames, encoding=encoding)
         if read_ok:
