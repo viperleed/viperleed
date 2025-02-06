@@ -399,11 +399,10 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    main_work = Path.cwd().resolve()
     for name, path in rp.DOMAINS.items():
         # determine the target path
         target = Path(f"Domain_{name}").resolve()
-        dp = DomainParameters(target, main_work, name)
+        dp = DomainParameters(target, name)
         if target.is_dir():
             logger.warning(f"Folder {target} already exists. "
                            "Contents may get overwritten.")
