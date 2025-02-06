@@ -692,6 +692,10 @@ class CollapsableDeviceList(qtw.QScrollArea):
         # We should never allow this to be the case.
         for view in self.views:
             if view.button.isEnabled() and view.is_dummy_device():
+                # The selected device is not connected.
+                return False
+            if view.button.isEnabled() and not view.settings_file:
+                # The selected device lacks a suitable settings file.
                 return False
         # The we check if any device has to be selected at all.
         if not self.requires_device:
