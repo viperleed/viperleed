@@ -42,6 +42,7 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import rotation_matrix
@@ -485,15 +486,13 @@ def init_domains(rp):
                         )
                     raise RuntimeError("Error getting domain input files")
             dp.tensorDir = tensorDir
-        try:
-            # initialize for that domain
-            os.chdir(target)
-            _run_initialization_for_domain(dp, rp)
-        except Exception:
-            logger.error(f"Error while initializing domain {name}")
-            raise
-        finally:
-            os.chdir(main_work)
+        with execute_in_dir(target):
+            try:
+                # initialize for that domain
+                _run_initialization_for_domain(dp, rp)
+            except Exception:
+                logger.error(f'Error while initializing domain {name}')
+                raise
     if len(rp.domainParams) < len(rp.DOMAINS):
         raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
@@ -641,18 +640,16 @@ def init_domains(rp):
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
-        logger.info("Re-running initialization with "
-                    f"supercell slab for domain {dp.name}")
-        try:
-            os.chdir(dp.workdir)
-            dp.sl.clear_symmetry_and_ucell_history()
-            dp.rp.SYMMETRY_FIND_ORI = True
-            initialization(dp.sl, dp.rp, subdomain=True)
-        except Exception:
-            logger.error(f"Error while re-initializing domain {dp.name}")
-            raise
-        finally:
-            os.chdir(main_work)
+        logger.info('Re-running initialization with '
+                    f'supercell slab for domain {dp.name}')
+        dp.sl.clear_symmetry_and_ucell_history()
+        dp.rp.SYMMETRY_FIND_ORI = True
+        with execute_in_dir(dp.workdir):
+            try:
+                initialization(dp.sl, dp.rp, subdomain=True)
+            except Exception:
+                logger.error(f'Error while re-initializing domain {dp.name}')
+                raise
 
     if 4 not in rp.RUN and 1 not in rp.RUN and rr:
         logger.error(

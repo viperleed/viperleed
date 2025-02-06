@@ -1182,17 +1182,14 @@ class Rparams:
         """Call generateSearchPars for every domain and collate results."""
         self.searchpars = []
         self.indyPars = len(self.domainParams) - 1
-        home = os.getcwd()
         for dp in self.domainParams:
-            try:
-                os.chdir(dp.workdir)
-                dp.rp.generateSearchPars(dp.sl, subdomain=True)
-            except Exception:
-                _LOGGER.error('Error while creating delta '
-                              f'input for domain {dp.name}')
-                raise
-            finally:
-                os.chdir(home)
+            with execute_in_dir(dp.workdir):
+                try:
+                    dp.rp.generateSearchPars(dp.sl, subdomain=True)
+                except Exception:
+                    _LOGGER.error('Error while creating delta '
+                                  f'input for domain {dp.name}')
+                    raise
             for sp in dp.rp.searchpars:
                 if not isinstance(sp.restrictTo, int):
                     continue

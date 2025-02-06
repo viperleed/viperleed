@@ -38,6 +38,7 @@ from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
@@ -215,21 +216,18 @@ def processSearchResults(sl, rp, search_log_path, final=True):
         doms_info = ((sl, rp, Path.cwd(), ""),)
 
     # Finally write out the best structures
-    home = Path.cwd()
     for (*dom_info, work, name), (_, dom_config) in zip(doms_info, best_doms):
-        os.chdir(work)
-        try:
-            _store_and_write_best_structure(rp, *dom_info,
-                                            dom_config, final)
-        except Exception:                                                       # TODO: catch better
-            _err = "Error while writing search output"
-            if name:
-                _err += f" for domain {name}"
-            logger.error(_err, exc_info=rp.is_debug_mode)
-            rp.setHaltingLevel(2)
-            raise
-        finally:
-            os.chdir(home)
+        with execute_in_dir(work):
+            try:
+                _store_and_write_best_structure(rp, *dom_info,
+                                                dom_config, final)
+            except Exception:                                                   # TODO: catch better
+                _err = "Error while writing search output"
+                if name:
+                    _err += f" for domain {name}"
+                logger.error(_err, exc_info=rp.is_debug_mode)
+                rp.setHaltingLevel(2)
+                raise
 
 
 def _write_control_chem(rp, generation, configs):
