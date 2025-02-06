@@ -636,7 +636,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
         """Get a str path that is relative to the default path if possible."""
         try:
             new_path = str(path.relative_to(self.default_settings_folder))
-        except ValueError:
+        except (ValueError, AttributeError):
             new_path = str(path)
         else:
             new_path = '__CONFIG__/' + new_path
