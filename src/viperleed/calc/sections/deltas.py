@@ -55,6 +55,15 @@ class DeltaCompileTask():
         """Return a string representation of this DeltaCompileTask."""
         return f'{type(self).__name__} {self.foldername}'
 
+    @property
+    def logfile(self):
+        return Path(self.basedir) / self.foldername / "fortran-compile.log"
+
+    @property
+    def compile_log_name(self):
+        """Name of the log file as it should appear in compile_logs."""
+        return self.foldername
+
     def get_source_files(self):
         """Return files needed for a delta-amplitude compilation."""
         srcpath = self.source_dir / 'src'
@@ -72,15 +81,6 @@ class DeltaCompileTask():
         for filepath in self.get_source_files():
             if filepath:
                 shutil.copy2(filepath, filepath.name)
-
-    @property
-    def logfile(self):
-        return Path(self.basedir) / self.foldername / "fortran-compile.log"
-
-    @property
-    def compile_log_name(self):
-        # name as it should appear in the compile_logs directory
-        return self.foldername
 
 
 class DeltaRunTask():
