@@ -99,7 +99,7 @@ class DeltaRunTask():
     @property
     def foldername(self):
         """Return a name for the subfolder in which this should run."""
-        return f'calculating_{runtask.deltaname}'
+        return f'calculating_{self.deltaname}'
 
 
 def runDelta(runtask):
