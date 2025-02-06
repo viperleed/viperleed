@@ -15,7 +15,7 @@ from pytest_cases import fixture
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.deltas import compile_delta
-from viperleed.calc.sections.deltas import runDelta
+from viperleed.calc.sections.deltas import run_delta
 
 from ...helpers import filesystem_from_dict
 from ...helpers import filesystem_to_dict
@@ -56,7 +56,7 @@ class TestCompileDelta(TestCompileRefcalc):
 
 
 class TestRunDelta:
-    """Tests for the runDelta function."""
+    """Tests for the run_delta function."""
 
     @fixture(name='runtask')
     def factory_runtask(self, mocker, tmp_path):
@@ -79,10 +79,8 @@ class TestRunDelta:
 
     @fixture(name='mock_implementation')
     def fixture_mock_implementation(self, mocker):
-        """Replace implementation details of runDelta with mocks."""
+        """Replace implementation details of run_delta with mocks."""
         def _make(**kwargs):
-            mocker.patch('pathlib.Path.is_file',  # Tensors
-                         return_value=True)
             to_mock = {
                 # NB: We purposely DO NOT mock os.chdir and os.mkdir
                 # as we want to make sure to run things in a dedicated
@@ -102,16 +100,16 @@ class TestRunDelta:
 
     @fixture(name='run')
     def fixture_run(self, runtask, mock_implementation):
-        """Execute runDelta, potentially mocking before."""
+        """Execute run_delta, potentially mocking before."""
         def _run(fails=False, mock=True, **mocks):
             if mock or mocks:
                 mock_implementation(**mocks)
-            error = runDelta(runtask)
+            error = run_delta(runtask)
             assert error if fails else not error
             return error
         return _run
 
-    # Here are tests that are common to runDelta and run_refcalc.
+    # Here are tests that are common to run_delta and run_refcalc.
     # They may help highlighting how to generalize the functions
     # in #43. Notice that many of the tests below are implemented
     # only because of slight differences in the error messages
@@ -159,12 +157,9 @@ class TestRunDelta:
         expect_log = 'Error writing delta log part'
         assert expect_log in caplog.text
 
-    def test_fails_on_tensor_not_found(self, run, mock_implementation,
-                                       caplog, mocker):
+    def test_fails_on_tensor_not_found(self, run, caplog, mocker):
         """Check failure when no tensor file is available."""
-        mock_implementation()
-        mocker.patch('pathlib.Path.is_file', return_value=False)
-        result = run(fails=True, mock=False)
+        result = run(fails=True, copy_raises=FileNotFoundError)
         expect_error = 'Tensors not found'
         expect_log = 'Tensors file not found'
         assert expect_error in result

@@ -83,6 +83,7 @@ class DeltaCompileTask():
                 shutil.copy2(filepath, filepath.name)
 
 
+# TODO: see note in refcalc.run_refcalc. #43
 class DeltaRunTask():
     """Stores information needed to copy the correct delta executable and
     tensor file to a subfolder, execute the delta-calculation there, and copy
@@ -99,10 +100,20 @@ class DeltaRunTask():
     @property
     def foldername(self):
         """Return a name for the subfolder in which this should run."""
-        return f'calculating_{self.deltaname}'
+        return f'calculating_{self.name}'
+
+    @property
+    def name(self):
+        """Return a name for this task."""
+        return self.deltaname
+
+    def __str__(self):
+        """Return a string representation of this DeltaRunTask."""
+        return f'{type(self).__name__} {self.name}'
 
 
-def runDelta(runtask):
+# TODO: see note in refcalc.run_refcalc. #43
+def run_delta(runtask):
     """Execute a single delta-amplitude DeltaRunTask.
 
     This function is meant to be executed by parallelized workers.
@@ -110,12 +121,13 @@ def runDelta(runtask):
     Parameters
     ----------
     runtask : DeltaRunTask
-        The delta-amplitudes calculation to be executed.
+        Information about the delta-amplitudes calculation
+        to be executed.
 
     Returns
     -------
     error_info : str
-        An message with information about errors occurred during
+        A message with information about errors occurred during
         execution of `runtask`.
     """
     home = Path.cwd()
@@ -131,26 +143,25 @@ def runDelta(runtask):
 
     # Collect tensor file
     tensor = base / DEFAULT_TENSORS / runtask.tensorname
-    if not tensor.is_file():
-        logger.error(f'{DEFAULT_TENSORS} file not found: {runtask.tensorname}')
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: {DEFAULT_TENSORS} not found.')
     try:
         shutil.copy2(tensor, 'AMP')
+    except FileNotFoundError:
+        logger.error(f'{DEFAULT_TENSORS} file not found: {runtask.tensorname}')
+        return (f'Error encountered by {runtask}: '
+                f'{DEFAULT_TENSORS} not found.')
     except OSError:
         logger.error(f'Error copying {DEFAULT_TENSORS} file: ', exc_info=True)
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: Error copying {DEFAULT_TENSORS} file.')
+        return (f'Error encountered by {runtask}: Error '
+                f'copying {DEFAULT_TENSORS} file.')
 
     # Fetch compiled executable
     exename = runtask.comptask.exename
     try:
-        shutil.copy2(base / runtask.comptask.foldername / exename,
-                     workfolder / exename)
+        shutil.copy2(base / runtask.comptask.foldername / exename, '.')
     except OSError:
         logger.error('Error getting delta executable: ', exc_info=True)
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: Failed to get delta executable.')
+        return (f'Error encountered by {runtask}: '
+                'Failed to get delta executable.')
 
     # Run delta-amplitudes calculation
     log_file = Path('delta.log')
@@ -158,43 +169,41 @@ def runDelta(runtask):
         with log_file.open('w', encoding='utf-8') as log:
             subprocess.run(str(workfolder / exename),
                            input=runtask.din,
-                           encoding="ascii",
+                           encoding='ascii',
                            stdout=log,
                            stderr=log)
     except Exception:
         logger.error('Error while executing delta-amplitudes calculation '
-                     f'for {runtask.deltaname}. Also check delta log file.')
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: Error during delta execution.')
+                     f'for {runtask.name}. Also check delta log file.',
+                     exc_info=True)
+        return (f'Error encountered by {runtask}: '
+                'Error during delta execution.')
 
     # Copy delta file out
     try:
-        shutil.copy2(workfolder / "DELWV", base / runtask.deltaname)
+        shutil.copy2('DELWV', base / runtask.deltaname)
     except OSError:
         logger.error('Failed to copy delta output file DELWV to main '
                      f'folder as {runtask.deltaname}', exc_info=True)
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: Failed to copy result file out.')
+        return (f'Error encountered by {runtask}: '
+                'Failed to copy result file out.')
 
     # Collate log results
     log = ''
     try:
         log = log_file.read_text(encoding='utf-8')
     except OSError:
-        logger.warning('Could not read local delta '
-                       f'log for {runtask.deltaname}')
+        logger.warning(f'Could not read local delta log for {runtask.name}')
     if log:
         deltalog = base / runtask.deltalogname
         try:
             with deltalog.open('a', encoding='utf-8') as collated_log:
                 collated_log.write(
-                    '\n\n'
-                    f'### STARTING LOG FOR {runtask.deltaname} ###\n\n'
-                    + log
+                    f'\n\n### STARTING LOG FOR {runtask.name} ###\n\n{log}'
                     )
         except OSError:
             logger.warning(
-                f'Error writing delta log part {runtask.deltaname}: ',
+                f'Error writing delta log part {runtask.name}: ',
                 exc_info=True
                 )
 
@@ -582,7 +591,7 @@ def deltas(sl, rp, subdomain=False):
     # run executions
     logger.info("Running delta calculations...")
     poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    parallelization.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+    parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
     if rp.STOP:
         return
     logger.info("Delta calculations finished.")
@@ -654,7 +663,7 @@ def deltas_domains(rp):
     if len(deltaRunTasks) > 0:
         logger.info("Running delta calculations...")
         poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        parallelization.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+        parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
         if rp.STOP:
             return
         logger.info("Delta calculations finished.")
