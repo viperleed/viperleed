@@ -428,10 +428,16 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             raise RuntimeError("Fortran compile error")
 
     # first, figure out for which LMAX to compile:
-    if single_threaded or rp.LMAX.has_single_value or rp.TL_VERSION <= Version('1.6'):
+    uses_one_lmax = (
+        single_threaded
+        or rp.LMAX.has_single_value
+        or rp.TL_VERSION <= Version('1.6')
+        )
+    if uses_one_lmax:
         which_lmax = {rp.LMAX.max,}
     else:    # find appropriate LMAX per energy
-        ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV) for (i, ps) in enumerate(rp.phaseshifts)]
+        ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV)
+                 for (i, ps) in enumerate(rp.phaseshifts)]
         lmax = {}  # lmax as a function of energy
         warn_small = True
         warn_large = True
@@ -503,8 +509,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                            "affect execution, proceeding...")
     # set up collection directory
     if not single_threaded:
-        collection_dir = os.path.join(os.getcwd(), "refcalc-out")
-        if os.path.isdir(collection_dir):
+        collection_dir = Path("refcalc-out").resolve()
+        if collection_dir.is_dir():
             try:
                 shutil.rmtree(collection_dir)
             except Exception:
@@ -514,7 +520,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                     f"old data to end up in the final {DEFAULT_TENSORS}, "
                     "check results!"
                     )
-        os.makedirs(collection_dir, exist_ok=True)
+        collection_dir.mkdir(parents=True, exist_ok=True)
     # collect run tasks
     ref_tasks = []
     if not single_threaded:
