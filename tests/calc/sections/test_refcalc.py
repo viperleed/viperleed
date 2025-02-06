@@ -272,14 +272,6 @@ class TestRunRefcalc:
             expect_files[f'{file.stem}_5.00eV{file.suffix}'] = contents
         assert filesystem_to_dict(dest_path) == expect_files
 
-    def test_copy_executable_fails(self, run, caplog):
-        """Check failure when copying the refcalc executable fails."""
-        result = run(fails=True, copy_raises=OSError)
-        expect_error = 'Failed to get refcalc executable'
-        expect_log = 'Error getting refcalc executable'
-        assert expect_error in result
-        assert expect_log in caplog.text
-
     def test_fails_log_append(self, run, mock_implementation, caplog, mocker):
         """Check warnings when failing to extend the main log file."""
         def _open_log_fails(path, mode, *args, **kwargs):
@@ -288,7 +280,7 @@ class TestRunRefcalc:
                 raise OSError
             # pylint: disable-next=unspecified-encoding  # In **kwargs
             return open(path, mode, *args, **kwargs)
-        mock_implementation()  # BEFORE replacing Path.open
+        mock_implementation()  # BEFORE replacing Path.open again
         mocker.patch('pathlib.Path.open', _open_log_fails)
         run(fails=False, mock=False)
         expect_log = 'Error writing refcalc log part'
@@ -312,6 +304,14 @@ class TestRunRefcalc:
         """Check that failing to remove the work folder is not a failure."""
         run(fails=False, rmtree_raises=OSError)
         expect_log = 'Error deleting folder'
+        assert expect_log in caplog.text
+
+    def test_fails_to_copy_executable(self, run, caplog):
+        """Check failure when copying the refcalc executable fails."""
+        result = run(fails=True, copy_raises=OSError)
+        expect_error = 'Failed to get refcalc executable'
+        expect_log = 'Error getting refcalc executable'
+        assert expect_error in result
         assert expect_log in caplog.text
 
     _copy_fails = {  # file: expect_error
