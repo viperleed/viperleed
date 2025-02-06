@@ -805,8 +805,7 @@ def _read_inputs_for_domain(domain, main_rpars):
     # in the current Domain directory (it is overwritten
     # when fetching files above).
     domain.rp = rpars = parameters.read()
-    rpars.paths.work = main_work
-    rpars.paths.tensorleed = rp.paths.tensorleed
+    rpars.paths = copy.copy(main_rpars.paths)
     rpars.timestamp = main_rpars.timestamp
 
     # Store input files for each domain, BEFORE any edit

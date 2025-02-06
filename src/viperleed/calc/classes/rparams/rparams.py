@@ -39,6 +39,7 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
@@ -73,10 +74,6 @@ class _RunPaths:
     tensorleed : Path
         The directory in which the TensErLEED and EEASiSSS code can
         be found.
-    work : Path
-        The directory in which calculations are executed, before
-        results are copied back to home. For a DOMAINS calculation,
-        this is the **main** one, not the one for the subdomains.
 
     Read-only attributes
     --------------------
@@ -88,18 +85,11 @@ class _RunPaths:
     # !!! Add new attributes in ALPHABETIC ORDER !!!
     home: Path = None
     tensorleed: Path = None
-    work: Path = None                                                           # TODO: see if we can get rid of this
 
     @property
     def compile_logs(self):
         """Return the path where Fortran-compilation log files are saved."""
         return Path(COMPILE_LOGS_DIRNAME).resolve()
-
-    def __post_init__(self):
-        """Update work unless it was given already."""
-        if self.work is None:
-            self.work = Path.cwd()
-
 
 
 class Rparams:
