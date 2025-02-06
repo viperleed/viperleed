@@ -42,7 +42,7 @@ class TestRefCalc:
 
 class TestCompileRefcalc:
     """Tests for the compile_refcalc function."""
-    
+
     compile_func = compile_refcalc
     compiler_cls_name = 'RefcalcCompileTask'
     default_sources = 'lib.f90', 'src.f90', None, 'muftin.f90'
@@ -109,10 +109,10 @@ class TestCompileRefcalc:
         (tmp_path / 'test_folder').mkdir()
         comptask = make_comptask(sources=(None, None, None, None))
         run_compile(comptask)
-        assert 'Contents may get overwritten.' in caplog.text
+        expect_log = 'Contents may get overwritten.'
+        assert expect_log in caplog.text
 
-    def test_fails_to_write_param(self, make_comptask, run_compile,
-                                  caplog, mocker):
+    def test_fails_to_write_param(self, make_comptask, run_compile, caplog):
         """Check failure when PARAM can't be written to."""
         comptask = make_comptask()
         result = run_compile(comptask, fails=True, open_raises=OSError)
@@ -122,7 +122,6 @@ class TestCompileRefcalc:
             f'Error encountered by {self.compiler_cls_name} test_folder',
             'while trying to write PARAM file.',
             )
-        print(result)
         assert expect_log in caplog.text
         assert all(e in result for e in expect_results)
 
@@ -203,59 +202,62 @@ class TestRunRefcalc:
                 }
         return _make
 
-    def test_success(self, runtask, mock_implementation, caplog):
+    @fixture(name='run')
+    def fixture_run(self, runtask, mock_implementation):
+        """Execute run_refcalc, potentially mocking before."""
+        def _run(fails=False, mock=True, **mocks):
+            if mock or mocks:
+                mock_implementation(**mocks)
+            error = run_refcalc(runtask)
+            assert error if fails else not error
+            return error
+        return _run
+
+    def test_success(self, run, mock_implementation, caplog):
         """Check expected result of a successful execution."""
         mocks = mock_implementation()
-        error = run_refcalc(runtask)
-        assert not error
+        run(mock=False)
         assert not caplog.text
         for mock in mocks.values():
             mock.assert_called()
 
-    def test_mkdir_fails(self, runtask, mock_implementation, mocker):
+    def test_mkdir_fails(self, run, mocker):
         """Check complaints failing to create work."""
         mocker.patch('pathlib.Path.mkdir', side_effect=OSError)
-        mock_implementation()
         with pytest.raises(OSError):
-            run_refcalc(runtask)
+            run()
 
-    def test_copy_executable_fails(self, runtask, mock_implementation, caplog):
+    def test_copy_executable_fails(self, run, caplog):
         """Check failure when copying the refcalc executable fails."""
-        mock_implementation(copy_raises=OSError)
-        result = run_refcalc(runtask)
+        result = run(fails=True, copy_raises=OSError)
         expect_error = 'Failed to get refcalc executable'
         expect_log = 'Error getting refcalc executable'
         assert expect_error in result
         assert expect_log in caplog.text
 
-    def test_refcalc_exe_fails(self, runtask, mock_implementation, caplog):
+    def test_refcalc_exe_fails(self, run, caplog):
         """Check failure when execution of the compiled refcalc fails."""
-        mock_implementation(subprocess_raises=Exception)
-        result = run_refcalc(runtask)
+        result = run(fails=True, subprocess_raises=Exception)
         expect_error = 'Error during refcalc execution'
         expect_log = 'Error while executing reference calculation'
         assert expect_error in result
         assert expect_log in caplog.text
 
-    def test_cleanup_fails(self, runtask, mock_implementation, caplog):
+    def test_cleanup_fails(self, run, caplog):
         """Check failure when removal of the work folder fails."""
-        mock_implementation(rmtree_raises=OSError)
-        error = run_refcalc(runtask)
+        run(fails=False, rmtree_raises=OSError)
         expect_log = 'Error deleting folder'
-        assert not error
         assert expect_log in caplog.text
 
     # pylint: disable-next=too-many-arguments  # All fixtures
-    def test_move_tensors_fails(self, runtask, mock_implementation,
-                                tmp_path, mocker, caplog):
+    def test_move_tensors_fails(self, runtask, run, tmp_path, mocker, caplog):
         """Check failure when moving Tensor files fails."""
         # Make sure there are some Tensor files
         filesystem_from_dict({runtask.foldername: {'T_1': None}}, tmp_path)
         mocker.patch('shutil.move', side_effect=OSError)
-        mock_implementation()
 
         with execute_in_dir(tmp_path):
-            result = run_refcalc(runtask)
+            result = run(fails=True, mock=True)
         expect_error = 'Failed to copy Tensor file out'
         expect_log = 'Failed to copy refcalc output file T_1'
         assert expect_error in result
@@ -267,15 +269,12 @@ class TestRunRefcalc:
         }
 
     @parametrize('file,expect_error', _copy_fails.items(), ids=_copy_fails)
-    # pylint: disable-next=too-many-arguments  # 3/6 fixtures
-    def test_copy_output_file_fails(self, file, expect_error,
-                                    runtask, mock_implementation, caplog):
+    def test_copy_output_file_fails(self, file, expect_error, run, caplog):
         """Check complaints when failing to copy a refcalc output file."""
         def _copy_file_fails(src, _):
             if Path(src).name == file:
                 raise OSError
-        mock_implementation(copy_raises=_copy_file_fails)
-        error = run_refcalc(runtask)
+        error = run(fails=expect_error, copy_raises=_copy_file_fails)
         expect_log = f'Failed to copy refcalc output file {file}'
         assert expect_error in error if expect_error else not error
         assert expect_log in caplog.text
@@ -288,57 +287,47 @@ class TestRunRefcalc:
 
     @parametrize('version,expect_log', _amp_missing.items(), ids=_amp_missing)
     # pylint: disable-next=too-many-arguments  # 3/6 fixtures
-    def test_amp_out_missing(self, version, expect_log,
-                             runtask, mock_implementation, caplog):
+    def test_amp_out_missing(self, version, expect_log, runtask, run, caplog):
         """Check logging messages when failing to copy amp.out."""
         def _amp_not_found(src, _):
             # pylint: disable-next=magic-value-comparison
             if Path(src).name == 'amp.out':
                 raise FileNotFoundError
         runtask.tl_version = version
-        mock_implementation(copy_raises=_amp_not_found)
-        error = run_refcalc(runtask)
+        run(fails=False, copy_raises=_amp_not_found)
         assert expect_log in caplog.text if expect_log else not caplog.text
-        assert not error
 
-    def test_log_read_fails(self, runtask, mock_implementation,
-                            caplog, mocker):
+    def test_log_read_fails(self, run, caplog):
         """Check warnings when failing to read the local log file."""
-        mock_implementation(path_read=OSError)
-        error = run_refcalc(runtask)
+        run(fails=False, path_read=OSError)
         expect_log = 'Could not read local refcalc log'
-        assert not error
         assert expect_log in caplog.text
 
-    def test_log_append_fails(self, runtask, mock_implementation,
-                              caplog, mocker):
+    def test_log_append_fails(self, run, mock_implementation, caplog, mocker):
         """Check warnings when failing to extend the main log file."""
         def _open_log_fails(path, mode, *args, **kwargs):
             # pylint: disable-next=magic-value-comparison
             if path.suffix == '.log' and mode == 'a':
                 raise OSError
+            # pylint: disable-next=unspecified-encoding  # In **kwargs
             return open(path, mode, *args, **kwargs)
-        mock_implementation()
+        mock_implementation()  # BEFORE replacing Path.open
         mocker.patch('pathlib.Path.open', _open_log_fails)
-        error = run_refcalc(runtask)
+        run(fails=False, mock=False)
         expect_log = 'Error writing refcalc log part'
-        assert not error
         assert expect_log in caplog.text
 
-    def test_write_local_fin_fails(self, runtask, mock_implementation,
-                                   caplog, mocker):
+    def test_write_local_fin_fails(self, run, caplog, mocker):
         """Check that there are no complaints when writing FIN fails."""
         def _open_fin_fails(file, *_, **__):
             # pylint: disable-next=magic-value-comparison
             if 'FIN' in Path(file).name:
                 raise OSError
             return mocker.MagicMock()
-        mock_implementation(open_raises=_open_fin_fails)
-        error = run_refcalc(runtask)
-        assert not error
+        run(fails=False, open_raises=_open_fin_fails)
         assert not caplog.text
 
-    def test_single_threaded_shortcut(self, runtask,
+    def test_single_threaded_shortcut(self, runtask, run,
                                       mock_implementation, mocker):
         """Check that a single-threaded run executes fewer calls."""
         def _fail_copy_except_refcalc_exe(src, dst):
@@ -353,8 +342,7 @@ class TestRunRefcalc:
         mocks['os.mkdir'] = mocker.patch('os.mkdir')
         mocks['os.chdir'] = mocker.patch('os.chdir')
         runtask.single_threaded = True
-        error = run_refcalc(runtask)
-        assert not error
+        run(fails=False, mock=False)
         not_called = (
             'os.mkdir',
             'os.chdir',
@@ -366,7 +354,8 @@ class TestRunRefcalc:
             mock.assert_not_called()
 
     @parametrize(dest=(None, 'another_place'))
-    def test_collects_files(self, dest, runtask, tmp_path, mocker):
+    # pylint: disable-next=too-many-arguments  # 4/6 are fixtures
+    def test_collects_files(self, dest, runtask, run, tmp_path, mocker):
         """Check that files are collected in the right place."""
         work_files = {  # Files that will be moved
             'T_1': 'tensor one',
@@ -390,8 +379,7 @@ class TestRunRefcalc:
         mocker.patch(f'{_MODULE}.edit_fin_energy_lmax', lambda task: task.fin)
         mocker.patch('subprocess.run')
         with execute_in_dir(tmp_path):
-            error = run_refcalc(runtask)
-        assert not error
+            run(fails=False, mock=False)
 
         expect_files = {} if dest else root_files.copy()
         # All the work files should have been
