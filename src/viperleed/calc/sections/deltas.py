@@ -3,6 +3,7 @@
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-11'
@@ -32,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 # TODO: would be nice to replace all os.path with pathlib
 
+
+# TODO: see note in refcalc.run_refcalc. #43
 class DeltaCompileTask():
     """Stores information for a worker to compile a delta file, and keeps
     track of the folder that the compiled file is in afterwards."""
@@ -39,14 +42,18 @@ class DeltaCompileTask():
     def __init__(self, param, hash_, source_dir, index):
         self.param = param
         self.hash = hash_
-        self.foldername = "Delta_Compile_{}".format(index)
-        self.exename = "delta-{}".format(index)
+        self.foldername = f'Delta_Compile_{index}'
+        self.exename = f'delta-{index}'
         self.fortran_comp = ["", ""]
         self.source_dir = Path(source_dir).resolve()  # where the fortran files are
         self.basedir = Path()    # where the calculation is based
 
         if os.name == 'nt':
             self.exename += '.exe'
+
+    def __str__(self):
+        """Return a string representation of this DeltaCompileTask."""
+        return f'{type(self).__name__} {self.foldername}'
 
     def get_source_files(self):
         """Return files needed for a delta-amplitude compilation."""
@@ -195,60 +202,75 @@ def runDelta(runtask):
     return ''
 
 
-def compileDelta(comptask):
-    """Function meant to be executed by parallelized workers. Executes a
-    DeltaCompileTask."""
+# TODO: see not in refcalc.compile_refcalc
+def compile_delta(comptask):
+    """Compile a delta-amplitudes calculation executable.
+
+    This function may be executed by parallelized workers.
+
+    Parameters
+    ----------
+    comptask : DeltaCompileTask
+        Information about the compilation to be performed.
+
+    Returns
+    -------
+    error_info : str
+        Description of any error that occurred while compiling.
+    """
     home = Path.cwd()
     workfolder = (Path(comptask.basedir) / comptask.foldername).resolve()
-
-    # Make folder and go there:
+    # Make compilation subfolder and go there
     try:
         workfolder.mkdir()
     except FileExistsError:
         logger.warning(f'Folder {workfolder.name} already exists. '
                        'Contents may get overwritten.')
     os.chdir(workfolder)
-
     # write PARAM:
     try:
-        with open("PARAM", "w") as wf:
-            wf.write(comptask.param)
-    except Exception:
-        logger.error("Error writing PARAM file: ", exc_info=True)
-        return ("Error encountered by DeltaCompileTask " + comptask.foldername
-                + "while trying to write PARAM file.")
-    # get Fortran source files
+        Path('PARAM').write_text(comptask.param, encoding='utf-8')
+    except OSError:
+        logger.error('Error writing PARAM file: ', exc_info=True)
+        return (f'Error encountered by {comptask} '
+                'while trying to write PARAM file.')
     try:
         comptask.copy_source_files_to_local()
-    except Exception:
-        logger.error("Error getting TensErLEED files for "
-                     "delta-amplitudes: ", exc_info=True)
-        return ("Error encountered by DeltaCompileTask " + comptask.foldername
-                + "while trying to fetch fortran source files")
+    except OSError:
+        logger.error('Error getting TensErLEED files for '
+                     'delta-amplitudes: ', exc_info=True)
+        return (f'Error encountered by {comptask} while '
+                'trying to fetch fortran source files')
 
-    # TODO: we could skip this, if we implemented a general CompileTask (Issue #43)
-    (srcname, lib_tleed,
-     lib_delta, _) = (
+    # TODO: we could skip this, if we implemented
+    # a general CompileTask (Issue #43)
+    (srcname, lib_tleed, lib_delta, _) = (
          str(fname.name) if fname is not None else None
          for fname in comptask.get_source_files()
          )
 
     # compile
-    ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
-               fname, comptask.fortran_comp[1]) for (fname, oname)
-              in [(srcname, "main.o"), (lib_tleed, "lib.tleed.o"),
-                  (lib_delta, "lib.delta.o")]]
-    ctasks.append((comptask.fortran_comp[0] + " -o " + comptask.exename,
-                   "main.o lib.tleed.o lib.delta.o",
-                   comptask.fortran_comp[1]))
+    compiler = comptask.fortran_comp
+    compile_list = [
+        (srcname, 'main.o'),
+        (lib_tleed, 'lib.tleed.o'),
+        (lib_delta, 'lib.delta.o'),
+        ]
+    ctasks = [(f'{compiler[0]} -o {oname} -c', fname, compiler[1])
+              for fname, oname in compile_list]
+    _, object_files = zip(*compile_list)
+    ctasks.append(
+        (f'{compiler[0]} -o {comptask.exename}',
+         ' '.join(object_files),
+         compiler[1])
+        )
     try:
         leedbase.fortran_compile_batch(ctasks)
-    except Exception as e:
-        logger.error("Error compiling fortran files: " + str(e))
-        return ("Fortran compile error in DeltaCompileTask "
-                + comptask.foldername)
+    except Exception as exc:
+        logger.error(f'Error compiling fortran files: {exc}')
+        return f'Fortran compile error in {comptask}'
     os.chdir(home)
-    return ""
+    return ''
 
 
 def deltas(sl, rp, subdomain=False):
@@ -542,7 +564,7 @@ def deltas(sl, rp, subdomain=False):
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
     try:
         parallelization.monitoredPool(rp, poolsize,
-                                      compileDelta,
+                                      compile_delta,
                                       deltaCompTasks)
     except Exception:
         # save log files in case of error:
@@ -618,7 +640,7 @@ def deltas_domains(rp):
         logger.info("Compiling fortran files...")
         poolsize = min(len(deltaCompTasks), rp.N_CORES)
         parallelization.monitoredPool(rp, poolsize,
-                                      compileDelta,
+                                      compile_delta,
                                       deltaCompTasks)
         if rp.STOP:
             return
