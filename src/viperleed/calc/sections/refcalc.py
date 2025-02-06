@@ -57,13 +57,13 @@ class RefcalcCompileTask():
 
     def __init__(self, param, lmax, fortran_comp, sourcedir,
                  basedir=Path()):
-        self.param = param
-        self.lmax = lmax
-        self.fortran_comp = fortran_comp
-        self.source_dir = Path(sourcedir).resolve()  # where the fortran files are
         self.basedir = Path(basedir)  # where the calculation is based
-        self.foldername = f'refcalc-compile_LMAX{lmax}'
         self.exename = f'refcalc-{lmax}'
+        self.foldername = f'refcalc-compile_LMAX{lmax}'
+        self.fortran_comp = fortran_comp
+        self.lmax = lmax
+        self.param = param
+        self.source_dir = Path(sourcedir).resolve()  # where the fortran files are
 
         if os.name == 'nt':
             self.exename += '.exe'
@@ -111,12 +111,12 @@ class RefcalcRunTask():
 
     def __init__(self, fin, energy, comptask, logname,
                  collect_at="", single_threaded=False, tl_version=0.):
-        self.fin = fin
-        self.energy = energy
-        self.comptask = comptask
-        self.logname = logname
-        self.foldername = f'refcalc-part_{energy:.2f}eV'
         self.collect_at = collect_at
+        self.comptask = comptask
+        self.energy = energy
+        self.fin = fin
+        self.foldername = f'refcalc-part_{energy:.2f}eV'
+        self.logname = logname
         self.single_threaded = single_threaded
         self.tl_version = tl_version
 
