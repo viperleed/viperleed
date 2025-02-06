@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # TODO: would be nice to replace all os.path with pathlib
 
 
-# TODO: see note in refcalc.run_refcalc. #43
+# TODO: see note in refcalc. #43
 class DeltaCompileTask():
     """Stores information for a worker to compile a delta file, and keeps
     track of the folder that the compiled file is in afterwards."""
