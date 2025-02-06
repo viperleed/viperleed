@@ -182,13 +182,13 @@ def compile_refcalc(comptask):
     # compile
     compiler = comptask.fortran_comp
     compile_list = [
-        (libname, 'lib.tleed.o'),
         (srcname, 'main.o'),
+        (libname, 'lib.tleed.o'),
         ]
     if muftinname:
         compile_list.append((muftinname, 'muftin.o'))
     ctasks = [(f'{compiler[0]} -o {oname} -c', fname, compiler[1])
-              for (fname, oname) in compile_list]
+              for fname, oname in compile_list]
     _, object_files = zip(*compile_list)
     ctasks.append(
         (f'{compiler[0]} -o {comptask.exename}',
