@@ -123,12 +123,20 @@ class CollapsableView(qtw.QWidget):
         self._button = QNoDefaultIconButton()
         self._outer_layout = qtw.QHBoxLayout()
         self._frame = qtw.QFrame(parent=self)
+        self._bottom_space = qtw.QSpacerItem(1, 1)
         self._compose_and_connect()
 
     @property
     def button(self):
         """Return the main button."""
         return self._button
+
+    def _adjust_bottom_space(self):
+        """Update spacing below the QFrame depending on frame visibility."""
+        spacer_height = (1 if not self._frame.isVisible()
+                         else self._button.sizeHint().height()/2)
+        self._bottom_space.changeSize(1, round(spacer_height))
+        self._bottom_space.invalidate()
 
     def _adjust_button_icon(self, button_up):
         """Change in which direction the icon is pointing."""
@@ -162,7 +170,7 @@ class CollapsableView(qtw.QWidget):
         policy.setHorizontalPolicy(policy.Expanding)
         self.button.setSizePolicy(policy)
 
-        layout.addStretch(1)
+        layout.addItem(self._bottom_space)
         remove_spacing_and_margins(self._outer_layout)
         self._outer_layout.addLayout(layout)
         self.setLayout(self._outer_layout)
@@ -173,6 +181,7 @@ class CollapsableView(qtw.QWidget):
     def _change_frame_visibility(self):
         """Switch frame visibility on and off."""
         self._frame.setVisible(not self._frame.isVisible())
+        self._adjust_bottom_space()
         self._adjust_button_icon(self._frame.isVisible())
 
     def add_collapsable_item(self, item):
@@ -210,6 +219,7 @@ class CollapsableView(qtw.QWidget):
         enable = bool(enable)
         self.button.setEnabled(enable)
         self._frame.setVisible(enable)
+        self._adjust_bottom_space()
         self._adjust_button_icon(enable)
 
     def set_top_widget_geometry(self, widget, width=None, align=_ALIGN_CTR):
@@ -245,7 +255,7 @@ class CollapsableDeviceView(CollapsableView):
 
     def __init__(self, parent=None):
         """Initialise widget."""
-        self._settings_folder = PathSelector(select_file=False)
+        self._settings_folder = PathSelector(select_file=False, max_chars=25)
         self._settings_file_selector = qtw.QComboBox()
         super().__init__(parent=parent)
         self._device_cls = None
@@ -305,6 +315,7 @@ class CollapsableDeviceView(CollapsableView):
                 layout.addLayout(_form)
         new_widget.setLayout(layout)
         self.add_collapsable_item(new_widget)
+        self._adjust_bottom_space()
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
@@ -569,11 +580,13 @@ class CollapsableDeviceList(qtw.QScrollArea):
         self._default_settings_folder = None
         self.setWidgetResizable(True)
         self.setVerticalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOff)
         self._make_scroll_area()
         # If requires_device is True, the CollapsableDeviceList must
         # contain at least one selected valid device for the
         # are_settings_ok() method to return True.
         self.requires_device = False
+        self.setFrameStyle(self.Panel | self.Sunken)
 
     @property
     def default_settings_folder(self):
@@ -659,6 +672,11 @@ class CollapsableDeviceList(qtw.QScrollArea):
         button = QNoDefaultPushButton()
         button.setText('Refresh ' + self._device_type + 's')
         button.clicked.connect(self._detect_and_add_devices)
+        # Button height*15 ensures that the frame shows at least
+        # one fully expanded ViPErLEED primary controller view.
+        minimum_height = button.sizeHint().height()*15
+        minimum_height *= 1.3
+        self.setMinimumHeight(round(minimum_height))
         self._layout.insertWidget(0, button)
 
         top_labels = qtw.QHBoxLayout()

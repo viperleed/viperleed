@@ -516,7 +516,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             return False
 
         if not self._make_primary_ctrl():
-            # Something went wrong (already reported in _make_primary)
+            # Something went wrong (already reported in _make_primary).
             # TODO: probably good to clean up secondaries and cameras!
             return False
 
@@ -785,14 +785,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         line_edit = qtw.QLineEdit()
         handler.add_option('measurement_info', 'tag',
                            handler_widget=line_edit,
-                           display_name='Measurement tag',
+                           display_name='File suffix',
                            )
         text_field = qtw.QTextEdit()
-        height = text_field.sizeHint().height()
-        text_field.setMaximumHeight(int(height/2))
         handler.add_option('measurement_info', 'info',
                            handler_widget=text_field,
-                           display_name='Additional information',
+                           display_name='Comments',
                            )
 
         handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
