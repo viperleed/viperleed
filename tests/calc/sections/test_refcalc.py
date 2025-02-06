@@ -204,12 +204,13 @@ class TestRunRefcalc:
         return _make
 
     @fixture(name='run')
-    def fixture_run(self, runtask, mock_implementation):
+    def fixture_run(self, runtask, mock_implementation, tmp_path):
         """Execute run_refcalc, potentially mocking before."""
         def _run(fails=False, mock=True, **mocks):
             if mock or mocks:
                 mock_implementation(**mocks)
-            error = run_refcalc(runtask)
+            with execute_in_dir(tmp_path):
+                error = run_refcalc(runtask)
             assert error if fails else not error
             return error
         return _run
@@ -379,7 +380,6 @@ class TestRunRefcalc:
         run(fails=False, mock=False)
         not_called = (
             'os.mkdir',
-            'os.chdir',
             'shutil.rmtree',
             f'{_MODULE}.edit_fin_energy_lmax',
             )

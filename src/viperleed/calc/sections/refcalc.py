@@ -27,6 +27,7 @@ from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -55,9 +56,7 @@ class RefcalcCompileTask():
     """Stores information for a worker to compile a refcalc file, and keeps
     track of the folder that the compiled file is in afterwards."""
 
-    def __init__(self, param, lmax, fortran_comp, sourcedir,
-                 basedir=Path()):
-        self.basedir = Path(basedir)  # where the calculation is based
+    def __init__(self, param, lmax, fortran_comp, sourcedir):
         self.exename = f'refcalc-{lmax}'
         self.foldername = f'refcalc-compile_LMAX{lmax}'
         self.fortran_comp = fortran_comp
@@ -68,13 +67,16 @@ class RefcalcCompileTask():
         if os.name == 'nt':
             self.exename += '.exe'
 
+        self._basedir = Path.cwd()  # The main work folder
+
     def __str__(self):
         """Return a string representation of this RefcalcCompileTask."""
         return f'{type(self).__name__} {self.foldername}'
 
     @property
     def logfile(self):
-        return self.basedir / self.foldername / "fortran-compile.log"
+        """Return the (relative) path to the compilation log file."""
+        return Path(self.foldername) / 'fortran-compile.log'
 
     @property
     def compile_log_name(self):
@@ -89,7 +91,7 @@ class RefcalcCompileTask():
         lib_tleed = next(libpath.glob('lib.tleed*'), None)
         srcname = next(srcpath.glob('ref-calc*'), None)
         globalname = srcpath / "GLOBAL"
-        _muftin = self.basedir / "muftin.f"
+        _muftin = self._basedir / "muftin.f"
         muftinname =_muftin if _muftin.is_file() else None
         if any(f is None for f in (srcname, lib_tleed)):
             raise RuntimeError(f"Source files missing in {sourcedir}")          # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
@@ -136,7 +138,9 @@ class RefcalcRunTask():
 def compile_refcalc(comptask):
     """Compile a reference calculation executable.
 
-    This function may be executed by parallelized workers.
+    Compilation is performed in the comptask.foldername
+    subfolder of the current directory. This function may
+    be executed by parallelized workers.
 
     Parameters
     ----------
@@ -148,59 +152,58 @@ def compile_refcalc(comptask):
     error_info : str
         Description of any error that occurred while compiling.
     """
-    workfolder = (Path(comptask.basedir) / comptask.foldername).resolve()
+    workfolder = Path(comptask.foldername).resolve()
     # Make compilation subfolder and go there
     try:
         workfolder.mkdir()
     except FileExistsError:
         logger.warning(f'Folder {workfolder.name} already exists. '
                        'Contents may get overwritten.')
-    os.chdir(workfolder)
-    # write PARAM:
-    try:
-        Path('PARAM').write_text(comptask.param, encoding='utf-8')
-    except OSError:
-        logger.error('Error writing PARAM file: ', exc_info=True)
-        return (f'Error encountered by {comptask} '
-                'while trying to write PARAM file.')
+    with execute_in_dir(workfolder):
+        # write PARAM:
+        try:
+            Path('PARAM').write_text(comptask.param, encoding='utf-8')
+        except OSError:
+            logger.error('Error writing PARAM file: ', exc_info=True)
+            return (f'Error encountered by {comptask} '
+                    'while trying to write PARAM file.')
 
-    try:
-        comptask.copy_source_files_to_local()
-    except OSError:
-        logger.error('Error getting TensErLEED files for refcalc: ',
-                     exc_info=True)
-        return (f'Error encountered by {comptask} while '
-                'trying to fetch fortran source files')
+        try:
+            comptask.copy_source_files_to_local()
+        except OSError:
+            logger.error('Error getting TensErLEED files for refcalc: ',
+                         exc_info=True)
+            return (f'Error encountered by {comptask} while '
+                    'trying to fetch fortran source files')
 
-    # TODO: we could skip this, if we implemented
-    # a general CompileTask (Issue #43)
-    (libname, srcname, _, muftinname) = (
-         str(fname.name) if fname is not None else None
-         for fname in comptask.get_source_files()
-         )
+        # TODO: we could skip this, if we implemented
+        # a general CompileTask (Issue #43)
+        (libname, srcname, _, muftinname) = (
+             str(fname.name) if fname is not None else None
+             for fname in comptask.get_source_files()
+             )
 
-    # compile
-    compiler = comptask.fortran_comp
-    compile_list = [
-        (srcname, 'main.o'),
-        (libname, 'lib.tleed.o'),
-        ]
-    if muftinname:
-        compile_list.append((muftinname, 'muftin.o'))
-    ctasks = [(f'{compiler[0]} -o {oname} -c', fname, compiler[1])
-              for fname, oname in compile_list]
-    _, object_files = zip(*compile_list)
-    ctasks.append(
-        (f'{compiler[0]} -o {comptask.exename}',
-         ' '.join(object_files),
-         compiler[1])
-        )
-    try:
-        leedbase.fortran_compile_batch(ctasks)
-    except Exception as exc:
-        logger.error(f'Error compiling fortran files: {exc}')
-        return f'Fortran compile error in {comptask}'
-    os.chdir(comptask.basedir)
+        # compile
+        compiler = comptask.fortran_comp
+        compile_list = [
+            (srcname, 'main.o'),
+            (libname, 'lib.tleed.o'),
+            ]
+        if muftinname:
+            compile_list.append((muftinname, 'muftin.o'))
+        ctasks = [(f'{compiler[0]} -o {oname} -c', fname, compiler[1])
+                  for fname, oname in compile_list]
+        _, object_files = zip(*compile_list)
+        ctasks.append(
+            (f'{compiler[0]} -o {comptask.exename}',
+             ' '.join(object_files),
+             compiler[1])
+            )
+        try:
+            leedbase.fortran_compile_batch(ctasks)
+        except Exception as exc:
+            logger.error(f'Error compiling fortran files: {exc}')
+            return f'Fortran compile error in {comptask}'
     return ''
 
 
@@ -210,7 +213,7 @@ def compile_refcalc(comptask):
 def run_refcalc(runtask):
     """Run (a part of) the reference calculation.
 
-    The calculation is executed in runtask.comptask.basedir
+    The calculation is executed in the current working directory
     (if in single-threaded mode) or a temporary subfolder (if only
     a subset of energies should be calculated). The subfolder is
     created when needed, and removed upon successful execution.
@@ -227,101 +230,98 @@ def run_refcalc(runtask):
         A message with information about errors occurred during
         execution of `runtask`.
     """
-    base = Path(runtask.comptask.basedir).resolve()
-    workfolder = base
+    base = Path.cwd()
+    workfolder = base if runtask.single_threaded else base/runtask.foldername
     if not runtask.single_threaded:
-        # Make a subfolder for execution
-        workfolder = base / runtask.foldername
         try:
             workfolder.mkdir()
         except FileExistsError:
-            logger.warning(f'Folder {runtask.foldername} already '
+            logger.warning(f'Folder {workfolder.name} already '
                            'exists. Contents may get overwritten.')
-        os.chdir(workfolder)
 
-    if runtask.single_threaded:
-        log_file = Path(runtask.logname)
-        fin = runtask.fin
-    else:
-        log_file = Path('refcalc.log')
-        fin = edit_fin_energy_lmax(runtask)
+    with execute_in_dir(workfolder):
+        if runtask.single_threaded:
+            log_file = Path(runtask.logname)
+            fin = runtask.fin
+        else:
+            log_file = Path('refcalc.log')
+            fin = edit_fin_energy_lmax(runtask)
+            try:
+                Path('refcalc-FIN').write_text(fin, encoding='utf-8')
+            except OSError:
+                pass  # local FIN is just for information...
+
+        # get executable
+        exename = runtask.comptask.exename
         try:
-            Path('refcalc-FIN').write_text(fin, encoding='utf-8')
+            shutil.copy2(base/runtask.comptask.foldername/exename, workfolder)
         except OSError:
-            pass  # local FIN is just for information...
-
-    # get executable
-    exename = runtask.comptask.exename
-    try:
-        shutil.copy2(base/runtask.comptask.foldername/exename, workfolder)
-    except OSError:
-        logger.error('Error getting refcalc executable: ', exc_info=True)
-        return (f'Error encountered by {runtask}: '
-                'Failed to get refcalc executable.')
-    # run execution
-    try:
-        with log_file.open('w', encoding='utf-8') as log:
-            subprocess.run(str(workfolder/exename),
-                           input=fin,
-                           encoding='ascii',
-                           stdout=log,
-                           stderr=log)
-    except Exception:
-        logger.error('Error while executing reference calculation '
-                     f'{runtask.name}. Also check refcalc log file.',
-                     exc_info=True)
-        return (f'Error encountered by {runtask}: '
-                'Error during refcalc execution.')
-
-    if runtask.single_threaded:
-        return ''
-
-    # move/copy files out
-    targetpath = (Path(runtask.collect_at).resolve() if runtask.collect_at
-                  else base)
-    energy = f'_{runtask.energy:.2f}eV'
-    tensorfiles = (f for f in Path().glob('T_*') if f.is_file())
-    for tensor in tensorfiles:
-        try:   # move instead of copy to not duplicate the large files
-            shutil.move(tensor, targetpath/f'{tensor.name}{energy}')
-        except OSError:
-            logger.error('Failed to copy refcalc output file '
-                         f'{tensor} to main folder.', exc_info=True)
+            logger.error('Error getting refcalc executable: ', exc_info=True)
             return (f'Error encountered by {runtask}: '
-                    'Failed to copy Tensor file out.')
-    try:
-        shutil.copy2('fd.out', targetpath/f'fd{energy}.out')
-    except OSError:
-        logger.error('Failed to copy refcalc output file fd.out '
-                     ' to main folder.', exc_info=True)
-        return (f'Error encountered by {runtask}: '
-                'Failed to copy fd.out file out.')
-    try:
-        shutil.copy2('amp.out', targetpath/f'amp{energy}.out')
-    except FileNotFoundError:
-        if runtask.tl_version >= Version('1.7.3'):
-            logger.warning('Refcalc output file amp.out not found.')
-    except OSError as exc:      # warn but continue
-        logger.warning('Failed to copy refcalc output file '
-                       f'amp.out to main folder: {exc}')
-    # append log
-    log = ''
-    try:
-        log = log_file.read_text(encoding='utf-8')
-    except OSError:
-        logger.warning(f'Could not read local refcalc log {log_file}')
-    if log:
-        global_log_path = base / runtask.logname
+                    'Failed to get refcalc executable.')
+        # run execution
         try:
-            with global_log_path.open('a', encoding='utf-8') as global_log:
-                global_log.write(
-                    f'\n\n### STARTING LOG FOR {runtask.name} ###\n\n{log}'
-                    )
+            with log_file.open('w', encoding='utf-8') as log:
+                subprocess.run(str(workfolder/exename),
+                               input=fin,
+                               encoding='ascii',
+                               stdout=log,
+                               stderr=log)
+        except Exception:
+            logger.error('Error while executing reference calculation '
+                         f'{runtask.name}. Also check refcalc log file.',
+                         exc_info=True)
+            return (f'Error encountered by {runtask}: '
+                    'Error during refcalc execution.')
+
+        if runtask.single_threaded:
+            return ''
+
+        # move/copy files out
+        targetpath = (Path(runtask.collect_at).resolve() if runtask.collect_at
+                      else base)
+        energy = f'_{runtask.energy:.2f}eV'
+        tensorfiles = (f for f in Path().glob('T_*') if f.is_file())
+        for tensor in tensorfiles:
+            try:   # move instead of copy to not duplicate the large files
+                shutil.move(tensor, targetpath/f'{tensor.name}{energy}')
+            except OSError:
+                logger.error('Failed to copy refcalc output file '
+                             f'{tensor} to main folder.', exc_info=True)
+                return (f'Error encountered by {runtask}: '
+                        'Failed to copy Tensor file out.')
+        try:
+            shutil.copy2('fd.out', targetpath/f'fd{energy}.out')
         except OSError:
-            logger.warning('Error writing refcalc log part '
-                           f'{runtask.name}: ', exc_info=True)
+            logger.error('Failed to copy refcalc output file fd.out '
+                         ' to main folder.', exc_info=True)
+            return (f'Error encountered by {runtask}: '
+                    'Failed to copy fd.out file out.')
+        try:
+            shutil.copy2('amp.out', targetpath/f'amp{energy}.out')
+        except FileNotFoundError:
+            if runtask.tl_version >= Version('1.7.3'):
+                logger.warning('Refcalc output file amp.out not found.')
+        except OSError as exc:      # warn but continue
+            logger.warning('Failed to copy refcalc output file '
+                           f'amp.out to main folder: {exc}')
+        # append log
+        log = ''
+        try:
+            log = log_file.read_text(encoding='utf-8')
+        except OSError:
+            logger.warning(f'Could not read local refcalc log {log_file}')
+        if log:
+            global_log_path = base / runtask.logname
+            try:
+                with global_log_path.open('a', encoding='utf-8') as global_log:
+                    global_log.write(
+                        f'\n\n### STARTING LOG FOR {runtask.name} ###\n\n{log}'
+                        )
+            except OSError:
+                logger.warning('Error writing refcalc log part '
+                               f'{runtask.name}: ', exc_info=True)
     # clean up
-    os.chdir(base)
     try:
         shutil.rmtree(workfolder)
     except OSError:
@@ -479,13 +479,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             logger.error("Exception during writePARAM: ",
                          exc_info=rp.is_debug_mode)
             raise
-        # TODO: see if we can remove paths.work here. Was introduced in         # TODO
-        # 7c6018c455d95440ae2f0b5b5c18ad1379600d85 due to a problem of
-        # not-reverting-back-to-home in case of failures. The better
-        # solution there seems to be use a try...finally block, or the
-        # execute_in_dir context manager.
-        comp_tasks.append(RefcalcCompileTask(param, lm, rp.FORTRAN_COMP,
-                                             tl_path, basedir=rp.paths.work))
+        comp_tasks.append(
+            RefcalcCompileTask(param, lm, rp.FORTRAN_COMP, tl_path)
+            )
         collect_param += f"### PARAM file for LMAX = {lm} ###\n\n{param}\n\n"
     try:
         with open("refcalc-PARAM", "w") as wf:
@@ -547,7 +543,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                                 rp.TL_VERSION)
 
     if single_threaded:
-        home = os.getcwd()
         logger.info("Compiling fortran files...")
         try:
             r = compile_refcalc(comp_tasks[0])
@@ -556,8 +551,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             leedbase.copy_compile_log(rp, comp_tasks[0].logfile,
                                       comp_tasks[0].compile_log_name)
             raise
-        finally:
-            os.chdir(home)
         if r:
             logger.error(r)
             raise RuntimeError("Error compiling fortran files.")
@@ -565,10 +558,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                     "Refcalc log will be written to file "+logname)
         logger.info("Reference calculation running without parallelization. "
                     "Set the N_CORES parameter to speed it up.")
-        try:
-            r = run_refcalc(ref_tasks[0])
-        finally:
-            os.chdir(home)
+        r = run_refcalc(ref_tasks[0])
         if r:
             logger.error(r)
             raise RuntimeError("Error in reference calculation.")
@@ -602,7 +592,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     for ct in comp_tasks:
         leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
         try:
-            shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
+            shutil.rmtree(ct.foldername)
         except Exception:
             logger.warning("Error deleting refcalc compile folder "
                            + ct.foldername)
@@ -773,20 +763,27 @@ def _reinitialize_deltas(slab):
         at.known_deltas = []
 
 
-def runDomainRefcalc(dp):
-    """Runs the reference calculation for one domain, based on the
-    DomainParameters object."""
-    home = os.getcwd()
-    try:
-        os.chdir(dp.workdir)
-        refcalc(dp.sl, dp.rp, subdomain=True)
-    except Exception:
-        logger.error("Exception during reference calculation for domain {}: "
-                     .format(dp.name), exc_info=True)
-        raise
-    finally:
-        os.chdir(home)
-    return
+def run_refcalc_for_one_domain(domain):
+    """Run the reference calculation for a single domain.
+
+    Parameters
+    ----------
+    domain : DomainParameters
+        Information about the domain for which the reference
+        calculation should be executed.
+
+    Raises
+    ------
+    Exception
+        Should the reference calculation for `domain` fail.
+    """
+    with execute_in_dir(domain.workdir):
+        try:
+            refcalc(domain.sl, domain.rp, subdomain=True)
+        except Exception:
+            logger.error('Exception during reference calculation '
+                         f'for domain {domain.name}: ', exc_info=True)
+            raise
 
 
 def refcalc_domains(rp):
@@ -812,7 +809,7 @@ def refcalc_domains(rp):
     for dp in rr:
         logger.info("Starting reference calculation for domain {}"
                     .format(dp.name))
-        runDomainRefcalc(dp)
+        run_refcalc_for_one_domain(dp)
     logger.info("Domain reference calculations finished.")
 
     if len(rr) < len(rp.domainParams):

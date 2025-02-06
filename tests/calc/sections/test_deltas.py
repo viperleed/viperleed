@@ -99,12 +99,13 @@ class TestRunDelta:
         return _make
 
     @fixture(name='run')
-    def fixture_run(self, runtask, mock_implementation):
+    def fixture_run(self, runtask, mock_implementation, tmp_path):
         """Execute run_delta, potentially mocking before."""
         def _run(fails=False, mock=True, **mocks):
-            if mock or mocks:
-                mock_implementation(**mocks)
-            error = run_delta(runtask)
+            with execute_in_dir(tmp_path):
+                if mock or mocks:
+                    mock_implementation(**mocks)
+                error = run_delta(runtask)
             assert error if fails else not error
             return error
         return _run
