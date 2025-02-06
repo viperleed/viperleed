@@ -188,6 +188,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 
 
 from copy import deepcopy
+import functools
 from pathlib import Path
 from zipfile import ZipFile
 import functools
@@ -233,8 +234,9 @@ from viperleed.guilib.widgetslib import move_to_front
 
 TITLE = 'Measure LEED-IV'
 
-_TIME_CRITICAL = qtc.QThread.TimeCriticalPriority
 _QMSG = qtw.QMessageBox
+_TIME_CRITICAL = qtc.QThread.TimeCriticalPriority
+_UNIQUE = qtc.Qt.UniqueConnection
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -612,21 +614,22 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._timers[timer].timeout.connect(slot)
 
     def _connect_measurement(self):
+        connect = functools.partial(base.safe_connect, type=_UNIQUE)
         measurement = self.measurement
         starter = self._timers['start_measurement'].timeout
 
         # Errors
-        measurement.error_occurred.connect(self._on_error_occurred)
+        connect(measurement.error_occurred, self._on_error_occurred)
         for device in measurement.devices:
-            device.error_occurred.connect(self._on_error_occurred)
+            connect(device.error_occurred, self._on_error_occurred)
 
         # Measurement events and start/stopping
-        measurement.new_data_available.connect(self._on_data_received)
-        measurement.prepared.connect(self._on_measurement_prepared)
-        measurement.finished.connect(self._on_measurement_finished)
-        measurement.finished.connect(self._print_done)
-        starter.connect(measurement.start_measurement)
-        self._ctrls['abort'].clicked.connect(measurement.abort)
+        connect(measurement.new_data_available, self._on_data_received)
+        connect(measurement.prepared, self._on_measurement_prepared)
+        connect(measurement.finished, self._on_measurement_finished)
+        connect(measurement.finished, self._print_done)
+        connect(starter, measurement.start_measurement)
+        connect(self._ctrls['abort'].clicked, measurement.abort)
 
         for camera in measurement.cameras:
             self._dialogs['camera_viewers'].append(
@@ -937,15 +940,17 @@ class Measure(ViPErLEEDPluginBase):                                             
         print("\n\nSTARTING\n")
         dialog = self.sender()
         assert dialog is self._dialogs['measurement_settings']
-        self.measurement.set_settings(dialog.settings.last_file)
-
+        self._connect_measurement()
+        settings_ok = self.measurement.set_settings(dialog.settings.last_file)
         # It is necessary to call deleteLater(), otherwise the measurement
         # object will remain alive and the next dialog may attempt to
         # reuse a measurement object for another measurement.
+        self._connect_measurement()
         self._cleanup_measurement_settings_dialog()
+        if not settings_ok:
+            return
 
         self.measurement.moveToThread(self._measurement_thread)
-        self._connect_measurement()
         plot = self._glob['plot']
         plot.data_points = deepcopy(self.measurement.data_points)
         plot.show()
