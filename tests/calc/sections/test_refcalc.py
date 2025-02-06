@@ -395,9 +395,9 @@ class TestRunRefcalc:
         for mock in mocks.values():
             mock.assert_called()
 
-    def test_work_exists_warning(self, run, runtask, caplog):
+    def test_work_exists_warning(self, run, runtask, caplog, tmp_path):
         """Check that warnings are emitted if work exists already."""
-        work = runtask.comptask.basedir / runtask.foldername
+        work = tmp_path / runtask.foldername
         work.mkdir()
         run(fails=False, mock=True)
         expect_log = 'Contents may get overwritten.'
