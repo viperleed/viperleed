@@ -42,13 +42,18 @@ class TestRefCalc:
 
 class TestCompileRefcalc:
     """Tests for the compile_refcalc function."""
+    
+    compile_func = compile_refcalc
+    compiler_cls_name = 'RefcalcCompileTask'
+    default_sources = 'lib.f90', 'src.f90', None, 'muftin.f90'
+    section_name = 'refcalc'
 
     @fixture(name='make_comptask')
     def factory_comptask(self, tmp_path, mocker):
         """Return a fake RefcalcCompileTask."""
         def _make(sources=None):
             if sources is None:
-                sources = 'lib.f90', 'src.f90', None, 'muftin.f90'
+                sources = self.default_sources
             task = mocker.MagicMock(
                 basedir=str(tmp_path),
                 exename='test_exe',
@@ -57,7 +62,9 @@ class TestCompileRefcalc:
                 param='test_param',
                 copy_source_files_to_local=mocker.MagicMock(),
                 )
-            task.__str__.return_value = f'RefcalcCompileTask {task.foldername}'
+            task.__str__.return_value = (
+                f'{self.compiler_cls_name} {task.foldername}'
+                )
             task.get_source_files.return_value = [
                 mocker.MagicMock(name=s) if isinstance(s, str) else s
                 for s in sources
@@ -83,7 +90,8 @@ class TestCompileRefcalc:
         def _run(task, fails=False, **mocks):
             with execute_in_dir(tmp_path):
                 _mock(**mocks)
-                error = compile_refcalc(task)
+                cls = type(self)
+                error = cls.compile_func(task)  # Avoid to pass self
             assert error if fails else not error
             return error
         return _run
@@ -111,7 +119,7 @@ class TestCompileRefcalc:
 
         expect_log = 'Error writing PARAM file'
         expect_results = (
-            'Error encountered by RefcalcCompileTask test_folder',
+            f'Error encountered by {self.compiler_cls_name} test_folder',
             'while trying to write PARAM file.',
             )
         print(result)
@@ -124,9 +132,9 @@ class TestCompileRefcalc:
         comptask.copy_source_files_to_local.side_effect = OSError
         result = run_compile(comptask, fails=True)
 
-        expect_log = 'Error getting TensErLEED files for refcalc'
+        expect_log = f'Error getting TensErLEED files for {self.section_name}'
         expect_results = (
-            'Error encountered by RefcalcCompileTask test_folder',
+            f'Error encountered by {self.compiler_cls_name} test_folder',
             'while trying to fetch fortran source files',
             )
         assert expect_log in caplog.text
@@ -139,7 +147,7 @@ class TestCompileRefcalc:
 
         expect_log =  'Error compiling fortran files'
         expect_results = (
-            'Fortran compile error in RefcalcCompileTask test_folder',
+            f'Fortran compile error in {self.compiler_cls_name} test_folder',
             )
         assert expect_log in caplog.text
         assert all(e in result for e in expect_results)
