@@ -393,3 +393,11 @@ class TestRunRefcalc:
         assert not caplog.text
         for mock in mocks.values():
             mock.assert_called()
+
+    def test_work_exists_warning(self, run, runtask, caplog):
+        """Check that warnings are emitted if work exists already."""
+        work = runtask.comptask.basedir / runtask.foldername
+        work.mkdir()
+        run(fails=False, mock=True)
+        expect_log = 'Contents may get overwritten.'
+        assert expect_log in caplog.text
