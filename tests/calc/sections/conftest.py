@@ -49,6 +49,9 @@ INIT_SURFACES = (
     'Ag(100)',
     'Ag(100)_el_rename',
     )
+INIT_DOMAINS = (  # In the domains subfolder of TEST_DATA
+    'silver_and_bismuth',
+    )
 REFCALC_SURFACES = ('Ag(100)',)
 AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
     'DISPLACEMENTS_z': 'Deltas_z.zip',
@@ -66,6 +69,7 @@ with_tl_versions = parametrize(
 def fixture_factory_make_section_tempdir(tmp_path_factory):
     """Return a temporary directory for a surface and a calc section."""
     def _make(surface, section, *other_specifiers):
+        surface = surface.replace('/', '_')
         tmp_dir_name = f'{surface}_{section}' + '_'.join(other_specifiers)
         return tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
     return _make
@@ -101,6 +105,8 @@ class BaseCalcFilesSetup:
         self.surface_name = surface_dir
         self.required_files = set(ALWAYS_REQUIRED_FILES)
         self.required_files.update(required_files)
+        if 'domains' in surface_dir:
+            self.required_files.remove('POSCAR')
         self.test_path = tmp_test_path
 
         base_dir = self.inputs_path
@@ -167,6 +173,26 @@ def init_files(surface, tl_version, make_section_tempdir, tensorleed_path):
                        'TL_VERSION': tl_version,}
         )
     return files
+
+
+@fixture(scope='session')
+@parametrize(domains=INIT_DOMAINS)
+@with_tl_versions
+def init_domains(domains, tl_version, make_section_tempdir, tensorleed_path):
+    """Collect input files for a DOMAINS calculation and run initialization."""
+    setup = BaseCalcFilesSetup(
+        surface_dir=f'domains/{domains}',
+        tmp_test_path=make_section_tempdir(domains, 'init'),
+        required_files=['PHASESHIFTS',],
+        copy_dirs=['initialization'],
+        )
+    setup.run_calc_from_setup(
+        source=tensorleed_path,
+        preset_params={'RUN': [0,],  # only initialization
+                       'TL_VERSION': tl_version,}
+        )
+    return setup
+
 
 
 _NON_INIT_TL_VERSION = tenserleed.CURRENT_TL_VERSION  # i.e., most recent       # TODO: to prevent regressions like #101, it's probably better to run this stuff also for other versions!
