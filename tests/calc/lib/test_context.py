@@ -9,8 +9,8 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 
-from pytest_cases import fixture
 import pytest
+from pytest_cases import fixture
 
 from viperleed.calc.lib.context import execute_in_dir
 
