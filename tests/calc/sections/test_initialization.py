@@ -9,6 +9,7 @@ __created__ = '2023-07-19'
 __license__ = 'GPLv3+'
 
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import poscar
@@ -46,16 +47,17 @@ class TestInitialization:                                                       
 
     _expected_files = 'IVBEAMS', 'BEAMLIST', 'VIBROCC', 'PARAMETERS'
 
-    @pytest.mark.parametrize('expected_file', _expected_files)
+    @parametrize(expected_file=_expected_files)
     def test_init_files_present(self, init_files, expected_file):
         """Ensure the expected files are present after initialization."""
         assert init_files.expected_file_exists(expected_file)
 
     def test_parameters_was_updated(self, init_files):
         """Check that PARAMETERS file was updated."""
-        parameters = init_files.work_path / 'PARAMETERS'
-        with parameters.open('r', encoding='utf-8') as param_file:
+        parameters_path = init_files.work_path / 'PARAMETERS'
+        with parameters_path.open('r', encoding='utf-8') as param_file:
             param_content = param_file.read()
+        # pylint: disable-next=magic-value-comparison
         assert 'line commented out automatically' in param_content
 
 
@@ -81,6 +83,7 @@ class TestInitializationRaises:
         # be swallowed) and once when generating PHASESHIFTS. Not
         # checking the logging messages would make this test succeed
         # because the exception is raised while making PHASESHIFTS.
+        # pylint: disable=magic-value-comparison
         messages = (m for m in caplog.messages if 'exception' in m.lower())
         messages = (m for m in messages if 'bulk_appended' in m)
         log_bulk_appended = next(messages, '')
