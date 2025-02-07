@@ -55,7 +55,6 @@ class TestCompileRefcalc:
             if sources is None:
                 sources = self.default_sources
             task = mocker.MagicMock(
-                basedir=str(tmp_path),
                 exename='test_exe',
                 foldername='test_folder',
                 fortran_comp=['gfortran', '-O2'],
