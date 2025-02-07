@@ -53,10 +53,56 @@ _TENSOR_INPUT_FILES = (
 # refactor the tenserleed source class such that we can directly use
 # zipped source directories
 class RefcalcCompileTask():
-    """Stores information for a worker to compile a refcalc file, and keeps
-    track of the folder that the compiled file is in afterwards."""
+    """Information to compile a reference calculation executable.
+
+    Attributes
+    ----------
+    exename : str
+        File name of the executable that will be compiled.
+    foldername : str
+        Name of the folder in which `exename` can be found
+        after successful compilation.
+    fortran_comp : tuple
+        Compiler and compilation flags.
+    lmax : int
+        The maximum angular momentum quantum number used
+        for the reference calculation.
+    param : str
+        Contents of the PARAM file, defining array dimensions
+        for compilation.
+    source_dir : Path
+        Path to the folder containing the static Fortran
+        source files to be compiled.
+
+    Notes
+    -----
+    It is important to create instances of this class while
+    the current directory is the **main** work directory for
+    the reference calculation to be compiled.
+    """
 
     def __init__(self, param, lmax, fortran_comp, sourcedir):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        param : str
+            Contents of the PARAM file, defining array dimensions
+            for compilation.
+        lmax : int
+            The maximum angular momentum quantum number used
+            for the reference calculation. This value affects
+            both the .foldername and the .exename attributes.
+        fortran_comp : tuple
+            Compiler and compilation flags.
+        sourcedir : Path
+            Path to the folder containing the static Fortran
+            source files to be compiled.
+
+        Returns
+        -------
+        None.
+        """
         self.exename = f'refcalc-{lmax}'
         self.foldername = f'refcalc-compile_LMAX{lmax}'
         self.fortran_comp = fortran_comp
