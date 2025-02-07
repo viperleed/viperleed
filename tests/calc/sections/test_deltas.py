@@ -141,7 +141,6 @@ class TestRunDelta:
         expect_files[runtask.deltaname] = outputs['DELWV']
         assert filesystem_to_dict(tmp_path) == expect_files
 
-
     def test_fails_log_append(self, run, mock_implementation, caplog, mocker):
         """Check warnings when failing to extend the main log file."""
         def _open_log_fails(path, mode, *args, **kwargs):
