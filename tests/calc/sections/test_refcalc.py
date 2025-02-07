@@ -159,7 +159,6 @@ class TestRunRefcalc:
     def factory_runtask(self, mocker, tmp_path):
         """Return a fake RefcalcRunTask."""
         comptask = mocker.MagicMock(
-            basedir=tmp_path,
             exename='test_exe',
             foldername='test_folder',
             )
