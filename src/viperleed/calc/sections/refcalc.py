@@ -212,7 +212,6 @@ def compile_refcalc(comptask):
             logger.error('Error writing PARAM file: ', exc_info=True)
             return (f'Error encountered by {comptask} '
                     'while trying to write PARAM file.')
-
         try:
             comptask.copy_source_files_to_local()
         except OSError:
@@ -340,7 +339,7 @@ def run_refcalc(runtask):
             shutil.copy2('fd.out', targetpath/f'fd{energy}.out')
         except OSError:
             logger.error('Failed to copy refcalc output file fd.out '
-                         ' to main folder.', exc_info=True)
+                         'to main folder.', exc_info=True)
             return (f'Error encountered by {runtask}: '
                     'Failed to copy fd.out file out.')
         try:

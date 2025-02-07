@@ -100,7 +100,7 @@ class TestCompileRefcalc:
         comptask = make_comptask(sources=('lib.f90', 'src.f90', None, None))
         result = run_compile(comptask, fails=True, compile_raises=Exception)
 
-        expect_log =  'Error compiling fortran files'
+        expect_log = 'Error compiling fortran files'
         expect_results = (
             f'Fortran compile error in {self.compiler_cls_name} test_folder',
             )
@@ -149,7 +149,6 @@ class TestCompileRefcalc:
         run_compile(comptask)
         expect_log = 'Contents may get overwritten.'
         assert expect_log in caplog.text
-
 
 
 class TestRunRefcalc:
@@ -256,12 +255,11 @@ class TestRunRefcalc:
 
         mocker.patch(f'{_MODULE}.edit_fin_energy_lmax', lambda task: task.fin)
         mocker.patch('subprocess.run')
-        with execute_in_dir(tmp_path):
-            run(fails=False, mock=False)
+        run(fails=False, mock=False)
 
         expect_files = {} if dest else root_files.copy()
         # All the work files should have been
-        # moved to tmp_path and renamed there
+        # moved to dest_path and renamed there
         try:
             del expect_files[runtask.foldername]
         except KeyError:
@@ -292,8 +290,7 @@ class TestRunRefcalc:
         filesystem_from_dict({runtask.foldername: {'T_1': None}}, tmp_path)
         mocker.patch('shutil.move', side_effect=OSError)
 
-        with execute_in_dir(tmp_path):
-            result = run(fails=True, mock=True)
+        result = run(fails=True, mock=True)
         expect_error = 'Failed to copy Tensor file out'
         expect_log = 'Failed to copy refcalc output file T_1'
         assert expect_error in result
@@ -347,7 +344,8 @@ class TestRunRefcalc:
                                       caplog, mocker):
         """Check that there are no complaints when writing FIN fails."""
         def _write_fin_fails(file, *_, **__):
-            if file.name:
+            # pylint: disable-next=magic-value-comparison
+            if 'FIN' in file.name:
                 raise OSError
         mock_implementation()
         mocker.patch('pathlib.Path.write_text', _write_fin_fails)
