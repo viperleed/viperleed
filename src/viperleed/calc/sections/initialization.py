@@ -802,7 +802,7 @@ def _read_inputs_for_domain(domain, main_rpars):
     # this PARAMETERS will be a copy of the one stored
     # in the Tensors, not the one the user may have given
     # in the current Domain directory (it is overwritten
-    # when fetching files above).
+    # when fetching files in init_domains).
     domain.rp = rpars = parameters.read()
     rpars.paths = copy.copy(main_rpars.paths)
     rpars.timestamp = main_rpars.timestamp
