@@ -105,6 +105,7 @@ class BaseCalcFilesSetup:
         self.surface_name = surface_dir
         self.required_files = set(ALWAYS_REQUIRED_FILES)
         self.required_files.update(required_files)
+        # pylint: disable-next=magic-value-comparison
         if 'domains' in surface_dir:
             self.required_files.remove('POSCAR')
         self.test_path = tmp_test_path

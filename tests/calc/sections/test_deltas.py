@@ -45,7 +45,6 @@ class TestDeltasAg100:
 # virtually identical, except for a few error messages and a few
 # variable names. There is no need to add more tests. When doing
 # #43, the tests can be given to the base-class method!
-# pylint: disable-next=too-few-public-methods
 class TestCompileDelta(TestCompileRefcalc):
     """Tests for the compile_delta function."""
 
@@ -59,7 +58,7 @@ class TestRunDelta:
     """Tests for the run_delta function."""
 
     @fixture(name='runtask')
-    def factory_runtask(self, mocker, tmp_path):
+    def factory_runtask(self, mocker):
         """Return a fake RefcalcRunTask."""
         comptask = mocker.MagicMock(
             exename='test_exe',
@@ -67,8 +66,8 @@ class TestRunDelta:
             )
         runtask = mocker.MagicMock(
             comptask=comptask,
-            deltaname = 'test_delta',
-            tensorname = 'test_tensor',
+            deltaname='test_delta',
+            tensorname='test_tensor',
             deltalogname='test_delta.log',
             din='test input',
             name='test_name',
@@ -157,7 +156,7 @@ class TestRunDelta:
         expect_log = 'Error writing delta log part'
         assert expect_log in caplog.text
 
-    def test_fails_on_tensor_not_found(self, run, caplog, mocker):
+    def test_fails_on_tensor_not_found(self, run, caplog):
         """Check failure when no tensor file is available."""
         result = run(fails=True, copy_raises=FileNotFoundError)
         expect_error = 'Tensors not found'

@@ -168,19 +168,21 @@ def run_delta(runtask):
 
         # Run delta-amplitudes calculation
         log_file = Path('delta.log')
-        try:
-            with log_file.open('w', encoding='utf-8') as log:
+        with log_file.open('w', encoding='utf-8') as log:
+            try:
                 subprocess.run(str(workfolder / exename),
                                input=runtask.din,
                                encoding='ascii',
                                stdout=log,
-                               stderr=log)
-        except Exception:
-            logger.error('Error while executing delta-amplitudes calculation '
-                         f'for {runtask.name}. Also check delta log file.',
-                         exc_info=True)
-            return (f'Error encountered by {runtask}: '
-                    'Error during delta execution.')
+                               stderr=log,
+                               check=False)
+            except Exception:
+                logger.error('Error while executing delta-amplitudes '
+                             f'calculation for {runtask.name}. Also '
+                             'check delta log file.',
+                             exc_info=True)
+                return (f'Error encountered by {runtask}: '
+                        'Error during delta execution.')
 
         # Copy delta file out
         try:
@@ -200,7 +202,7 @@ def run_delta(runtask):
                            f'log for {runtask.name}')
         if log:
             deltalog = base / runtask.deltalogname
-            try:
+            try:  # pylint: disable=too-many-try-statements
                 with deltalog.open('a', encoding='utf-8') as collated_log:
                     collated_log.write(
                         f'\n\n### STARTING LOG FOR {runtask.name} ###\n\n{log}'
@@ -214,7 +216,7 @@ def run_delta(runtask):
     # Clean up
     try:
         shutil.rmtree(workfolder)
-    except Exception:
+    except OSError:
         logger.warning(f'Error deleting folder {workfolder.name}')
     return ''
 

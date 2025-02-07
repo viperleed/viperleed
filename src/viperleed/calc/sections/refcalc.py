@@ -22,7 +22,6 @@ import numpy as np
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import beams
 from viperleed.calc.files import iorefcalc
-from viperleed.calc.files import parameters
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
@@ -306,19 +305,20 @@ def run_refcalc(runtask):
             return (f'Error encountered by {runtask}: '
                     'Failed to get refcalc executable.')
         # run execution
-        try:
-            with log_file.open('w', encoding='utf-8') as log:
+        with log_file.open('w', encoding='utf-8') as log:
+            try:
                 subprocess.run(str(workfolder/exename),
                                input=fin,
                                encoding='ascii',
                                stdout=log,
-                               stderr=log)
-        except Exception:
-            logger.error('Error while executing reference calculation '
-                         f'{runtask.name}. Also check refcalc log file.',
-                         exc_info=True)
-            return (f'Error encountered by {runtask}: '
-                    'Error during refcalc execution.')
+                               stderr=log,
+                               check=False)
+            except Exception:
+                logger.error('Error while executing reference calculation '
+                             f'{runtask.name}. Also check refcalc log file.',
+                             exc_info=True)
+                return (f'Error encountered by {runtask}: '
+                        'Error during refcalc execution.')
 
         if runtask.single_threaded:
             return ''
@@ -359,7 +359,7 @@ def run_refcalc(runtask):
             logger.warning(f'Could not read local refcalc log {log_file}')
         if log:
             global_log_path = base / runtask.logname
-            try:
+            try:  # pylint: disable=too-many-try-statements
                 with global_log_path.open('a', encoding='utf-8') as global_log:
                     global_log.write(
                         f'\n\n### STARTING LOG FOR {runtask.name} ###\n\n{log}'

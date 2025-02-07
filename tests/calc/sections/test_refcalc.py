@@ -49,7 +49,7 @@ class TestCompileRefcalc:
     section_name = 'refcalc'
 
     @fixture(name='make_comptask')
-    def factory_comptask(self, tmp_path, mocker):
+    def factory_comptask(self, mocker):
         """Return a fake RefcalcCompileTask."""
         def _make(sources=None):
             if sources is None:
@@ -156,7 +156,7 @@ class TestRunRefcalc:
     """Tests for the run_refcalc function."""
 
     @fixture(name='runtask')
-    def factory_runtask(self, mocker, tmp_path):
+    def factory_runtask(self, mocker):
         """Return a fake RefcalcRunTask."""
         comptask = mocker.MagicMock(
             exename='test_exe',
