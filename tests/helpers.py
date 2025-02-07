@@ -224,7 +224,11 @@ def filesystem_to_dict(root, skip=None):
         if skip and path.name in skip:
             continue
         if path.is_file():
-            contents[path.name] = path.read_text(encoding='utf-8')
+            try:
+                file_contents = path.read_text(encoding='utf-8')
+            except UnicodeDecodeError:  # A binary file
+                file_contents = f'{path.name} is a binary file'
+            contents[path.name] = file_contents
         elif path.is_dir():
             contents[path.name] = filesystem_to_dict(path, skip=skip)
     return contents
