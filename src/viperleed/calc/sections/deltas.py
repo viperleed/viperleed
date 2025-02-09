@@ -221,7 +221,7 @@ def run_delta(runtask):
     return ''
 
 
-# TODO: see not in refcalc.compile_refcalc
+# TODO: see note in refcalc.compile_refcalc. #43
 def compile_delta(comptask):
     """Compile a delta-amplitudes calculation executable.
 
