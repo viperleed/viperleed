@@ -134,21 +134,21 @@ def prerun_clean(rp, logname=""):
             logger.warning(f"Failed to clear {DEFAULT_WORK_HISTORY} folder.")
 
     # remove old SUPP and OUT directories in work
-    for dir in [DEFAULT_SUPP, DEFAULT_OUT]:
-        path = rp.workdir / dir
+    for directory in [DEFAULT_SUPP, DEFAULT_OUT]:
+        path = Path(directory)
         if path.is_dir():
             try:
-                shutil.rmtree(rp.workdir / dir)
+                shutil.rmtree(path)
             except Exception:
-                logger.warning(f"Failed to clear work/{dir} folder.")
+                logger.warning(f"Failed to clear work/{directory} folder.")
 
-    # get rid of old POSCAR_OUT, VIBROCC_OUT, PARAMETERS_OUT and any R_OUT files:
-    old_out_files = rp.workdir.glob('*_OUT*')
-    for file in old_out_files:
+    # Get rid of old POSCAR_OUT, VIBROCC_OUT,
+    # PARAMETERS_OUT and any R_OUT files:
+    for file in Path().glob('*_OUT*'):
         try:
-            os.remove(file)
-        except Exception:
-            logger.warning(f"Failed to delete previous {file} file.")
+            file.unlink()
+        except OSError:
+            logger.warning(f'Failed to delete previous {file} file.')
 
     # clean up old executable files:
     for fn in ["refcalc", "rfactor", "search", "superpos"]:

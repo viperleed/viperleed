@@ -26,6 +26,7 @@ from viperleed.calc.files.iosearch import readSDTL_blocks
 from viperleed.calc.files.iosearch import readSDTL_end
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.context import execute_in_dir
 
 logger = logging.getLogger(__name__)
 
@@ -192,21 +193,18 @@ def superpos_domains(rp, configs):
             logger.error("Error getting search parameters. Superpos will "
                          "stop.")
             return
-    home = os.getcwd()
     percentages = []
     for (percent, params), dp in zip(configs, rp.domainParams):
         percentages.append(percent)
         dp.rp.searchResultConfig = [[(100, params)]]
         logger.info(f"Running superpos calculation for domain {dp.name}")
-        try:
-            os.chdir(dp.workdir)
-            superpos(dp.sl, dp.rp, subdomain=True)
-        except Exception:
-            logger.error("Error while running superpos "
-                         f"calculation for domain {dp.name}")
-            raise
-        finally:
-            os.chdir(home)
+        with execute_in_dir(dp.workdir):
+            try:
+                superpos(dp.sl, dp.rp, subdomain=True)
+            except Exception:
+                logger.error("Error while running superpos "
+                             f"calculation for domain {dp.name}")
+                raise
 
     logger.info("Getting weighted average over domain beams...")
     rp.theobeams["superpos"] = averageBeams(

@@ -16,7 +16,6 @@ import copy
 from dataclasses import dataclass, fields
 import functools
 import inspect
-import os
 from pathlib import Path
 
 import pytest
@@ -225,7 +224,11 @@ def filesystem_to_dict(root, skip=None):
         if skip and path.name in skip:
             continue
         if path.is_file():
-            contents[path.name] = path.read_text(encoding='utf-8')
+            try:
+                file_contents = path.read_text(encoding='utf-8')
+            except UnicodeDecodeError:  # A binary file
+                file_contents = f'{path.name} is a binary file'
+            contents[path.name] = file_contents
         elif path.is_dir():
             contents[path.name] = filesystem_to_dict(path, skip=skip)
     return contents
@@ -253,17 +256,6 @@ def flat_fixture(func, **fixture_args):                                         
 
 
 # ######################   CONTEXT MANAGERS   #########################
-
-@contextmanager
-def execute_in_dir(path):
-    """Safely execute code in a specific directory."""
-    home = Path().resolve()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(home)
-
 
 @contextmanager
 def not_raises(exc):

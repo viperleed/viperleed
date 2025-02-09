@@ -42,6 +42,7 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import rotation_matrix
@@ -398,11 +399,10 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    main_work = Path.cwd().resolve()
     for name, path in rp.DOMAINS.items():
         # determine the target path
         target = Path(f"Domain_{name}").resolve()
-        dp = DomainParameters(target, main_work, name)
+        dp = DomainParameters(target, name)
         if target.is_dir():
             logger.warning(f"Folder {target} already exists. "
                            "Contents may get overwritten.")
@@ -477,7 +477,7 @@ def init_domains(rp):
                 raise RuntimeError("Error getting domain input files")
             for file in (checkFiles + ["IVBEAMS"]):
                 if (tensorDir / file).is_file():
-                    shutil.copy2(tensorDir / file, target / file)
+                    shutil.copy2(tensorDir / file, target)
                 else:
                     logger.error(
                         f"Required file {file} for domain {name} not "
@@ -485,67 +485,13 @@ def init_domains(rp):
                         )
                     raise RuntimeError("Error getting domain input files")
             dp.tensorDir = tensorDir
-        try:
-            # initialize for that domain
-            os.chdir(target)
-            logger.info(f"Reading input files for domain {name}")
+        with execute_in_dir(target):
             try:
-                # NB: if we are running from stored Tensors, then
-                # this PARAMETERS will be a copy of the one stored
-                # in the Tensors, not the one the user may have given
-                # in the current Domain directory (it is overwritten
-                # when fetching files above).
-                dp.rp = parameters.read()
-                dp.rp.paths.work = main_work
-                dp.rp.paths.tensorleed = rp.paths.tensorleed
-                dp.rp.timestamp = rp.timestamp
-
-                # Store input files for each domain, BEFORE any edit
-                preserve_original_inputs(dp.rp)
-
-                dp.sl = poscar.read()
-                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
-
-                parameters.interpret(dp.rp, slab=dp.sl,
-                                     silent=rp.LOG_LEVEL > logging.DEBUG)
-                dp.sl.full_update(dp.rp)
-                dp.rp.fileLoaded["POSCAR"] = True
-                dp.rp.updateDerivedParams()
-                try:
-                    vibrocc.readVIBROCC(dp.rp, dp.sl)
-                    dp.rp.fileLoaded["VIBROCC"] = True
-                except Exception:
-                    logger.error("Error while reading required file VIBROCC")
-                    raise
-                dp.sl.full_update(dp.rp)
-                try:
-                    dp.rp.ivbeams = iobeams.readIVBEAMS()
-                except FileNotFoundError:
-                    pass
-                except Exception:
-                    logger.error(
-                        f"Error while reading IVBEAMS for domain {name}"
-                        )
-                else:
-                    dp.rp.ivbeams_sorted = False
-                    dp.rp.fileLoaded["IVBEAMS"] = True
+                # initialize for that domain
+                _run_initialization_for_domain(dp, rp)
             except Exception:
-                logger.error("Error loading POSCAR and "
-                             f"PARAMETERS for domain {name}")
+                logger.error(f'Error while initializing domain {name}')
                 raise
-            logger.info(f"Running initialization for domain {name}")
-
-            try:
-                initialization(dp.sl, dp.rp, subdomain=True)
-            except Exception:
-                logger.error(f"Error running initialization for domain {name}")
-                raise
-            rp.domainParams.append(dp)
-        except Exception:
-            logger.error(f"Error while initializing domain {name}")
-            raise
-        finally:
-            os.chdir(main_work)
     if len(rp.domainParams) < len(rp.DOMAINS):
         raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
@@ -693,18 +639,16 @@ def init_domains(rp):
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
-        logger.info("Re-running initialization with "
-                    f"supercell slab for domain {dp.name}")
-        try:
-            os.chdir(dp.workdir)
-            dp.sl.clear_symmetry_and_ucell_history()
-            dp.rp.SYMMETRY_FIND_ORI = True
-            initialization(dp.sl, dp.rp, subdomain=True)
-        except Exception:
-            logger.error(f"Error while re-initializing domain {dp.name}")
-            raise
-        finally:
-            os.chdir(main_work)
+        logger.info('Re-running initialization with '
+                    f'supercell slab for domain {dp.name}')
+        dp.sl.clear_symmetry_and_ucell_history()
+        dp.rp.SYMMETRY_FIND_ORI = True
+        with execute_in_dir(dp.workdir):
+            try:
+                initialization(dp.sl, dp.rp, subdomain=True)
+            except Exception:
+                logger.error(f'Error while re-initializing domain {dp.name}')
+                raise
 
     if 4 not in rp.RUN and 1 not in rp.RUN and rr:
         logger.error(
@@ -723,14 +667,14 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def make_compile_logs_dir(rp):
+def make_compile_logs_dir(rpars):
     """Create compile_logs directory where compilation logs are saved."""
-    directory = rp.paths.compile_logs
+    directory = rpars.paths.compile_logs
     try:
         directory.mkdir(exist_ok=True)
     except OSError:
         logger.warning(f'Could not create directory {directory}')
-        rp.setHaltingLevel(1)
+        rpars.setHaltingLevel(1)
 
 
 def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
@@ -834,3 +778,91 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
     if not slab.layers:
         # May have been cleared by shifting slab away from c==0
         slab.create_layers(rpars)
+
+
+def _read_inputs_for_domain(domain, main_rpars):
+    """Read input files for a single domain.
+
+    Parameters
+    ----------
+    domain : DomainParameters
+        The parameters for this domain. At the end of this call,
+        domain.rp and domain.sl are updated to contain the Rparams
+        and Slab objects read (and updated) from file. domain.rp
+        is also up to date with respect to other input files loaded.
+    main_rpars : Rparams
+        The run parameters of the **main** viperleed.calc run.
+
+    Raises
+    ------
+    Exception
+        If reading VIBROCC or an existing IVBEAMS fails.
+    """
+    # NB: if we are running from stored Tensors, then
+    # this PARAMETERS will be a copy of the one stored
+    # in the Tensors, not the one the user may have given
+    # in the current Domain directory (it is overwritten
+    # when fetching files in init_domains).
+    domain.rp = rpars = parameters.read()
+    rpars.paths = copy.copy(main_rpars.paths)
+    rpars.timestamp = main_rpars.timestamp
+
+    # Store input files for each domain, BEFORE any edit
+    preserve_original_inputs(rpars)
+
+    domain.sl = slab = poscar.read()
+    warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain.name)
+
+    silent = rpars.LOG_LEVEL > logging.DEBUG
+    parameters.interpret(rpars, slab=slab, silent=silent)
+    slab.full_update(rpars)
+    rpars.fileLoaded['POSCAR'] = True
+    rpars.updateDerivedParams()
+    try:
+        vibrocc.readVIBROCC(rpars, slab)
+    except Exception:
+        logger.error('Error while reading required file VIBROCC')
+        raise
+    rpars.fileLoaded['VIBROCC'] = True
+    slab.full_update(rpars)
+    try:
+        rpars.ivbeams = iobeams.readIVBEAMS()
+    except FileNotFoundError:
+        pass
+    except Exception:
+        logger.error(f'Error while reading IVBEAMS for domain {domain.name}')
+    else:
+        rpars.ivbeams_sorted = False
+        rpars.fileLoaded['IVBEAMS'] = True
+
+
+def _run_initialization_for_domain(domain, main_rpars):
+    """Execute initialization for a specific domain.
+
+    Parameters
+    ----------
+    domain : DomainParameters
+        The parameters for the domain to be initialized.
+    main_rpars : Rparams
+        The run parameters of the **main** viperleed.calc run.
+
+    Raises
+    ------
+    Exception
+        If reading input files or executing the initialization fail.
+    """
+    logger.info(f'Reading input files for domain {domain.name}')
+    try:
+        _read_inputs_for_domain(domain, main_rpars)
+    except Exception:
+        logger.error(f'Error loading input files for domain {domain.name}')
+        raise
+
+    logger.info(f'Running initialization for domain {domain.name}')
+    try:
+        initialization(domain.sl, domain.rp, subdomain=True)
+    except Exception:
+        logger.error(f'Error running initialization for domain {domain.name}')
+        raise
+
+    main_rpars.domainParams.append(domain)

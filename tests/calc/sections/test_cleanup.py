@@ -8,8 +8,6 @@ __created__ = '2025-02-03'
 __license__ = 'GPLv3+'
 
 from pathlib import Path
-import shutil
-from unittest.mock import MagicMock, patch
 
 from pytest_cases import fixture
 from pytest_cases import parametrize
@@ -17,12 +15,10 @@ import pytest
 
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
-from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 from viperleed.calc.sections.cleanup import OPTIONAL_INPUT_FILES
-
-from ...helpers import execute_in_dir
 
 _MODULE = 'viperleed.calc.sections.cleanup'
 
@@ -87,14 +83,12 @@ class TestPreserveOriginalInputs:
         copy, logger, rpars = run_preserve(missing_required)
 
         logger.warning.assert_called()
-        # pylint: disable=magic-value-comparison
         assert copy.call_count == 1
         assert rpars.halt == 1
 
     def test_copy_fails(self, run_preserve):
         """Check expected complaints when failing to copy files."""
-        copy, logger, rpars = run_preserve(ALL_INPUT_FILES,
-                                           side_effect=OSError)
+        _, logger, rpars = run_preserve(ALL_INPUT_FILES, side_effect=OSError)
         assert logger.warning.call_count == len(ALL_INPUT_FILES) - 1
         assert rpars.halt == 1
 
@@ -105,7 +99,7 @@ class TestPreserveOriginalInputs:
             preserve_original_inputs(rpars)
         assert not (tmp_path / ORIGINAL_INPUTS_DIR_NAME).exists()
 
-    _skip_expbeams = {
+    _skip_expbeams = {  # skip: keep
         'EXPBEAMS': 'EXPBEAMS.csv',
         'EXPBEAMS.csv': 'EXPBEAMS',
         }
@@ -120,4 +114,12 @@ class TestPreserveOriginalInputs:
         assert copy.call_count == nr_files_copied
         logger.warning.assert_not_called()
         assert (tmp_path/expect).is_file()
-        copy.assert_any_call(Path(expect), Path(ORIGINAL_INPUTS_DIR_NAME))
+
+        # Check that we copied the expected one to original_inputs
+        # Notice that we can't just use assert_any_call, as the
+        # arguments may be OS-dependent with Paths (e.g., on WSL)
+        calls = {
+            (Path(src).name, Path(dst).name)
+            for (src, dst), *_ in copy.call_args_list
+            }
+        assert (expect, ORIGINAL_INPUTS_DIR_NAME) in calls

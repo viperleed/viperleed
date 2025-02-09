@@ -68,7 +68,7 @@ class TestGetMaxTensorIndex(AutousePatchPath):
         mock_path.is_dir.return_value = True
         mock_path.glob.return_value = []
         index = getMaxTensorIndex()
-        assert index == 0
+        assert not index
 
     def test_files_and_folders(self, mock_path, mock_tensor):
         """Test getMaxTensorIndex with files/folders with different indices."""
@@ -82,7 +82,7 @@ class TestGetMaxTensorIndex(AutousePatchPath):
             mock_tensor(f'{DEFAULT_TENSORS}_bad_file', is_file=True),
             mock_tensor(f'{DEFAULT_TENSORS}_bad_folder', is_dir=True),
             mock_tensor(f'{DEFAULT_TENSORS}_009'),  # Not a file/folder
-            mock_tensor(f'Not_a_tensor_012', is_dir=True),
+            mock_tensor('Not_a_tensor_012', is_dir=True),
             )
         assert getMaxTensorIndex() == 5
 
@@ -131,7 +131,7 @@ class TestGetTensorIndices(AutousePatchPath):
             mock_tensor(f'{DEFAULT_TENSORS}_bad_folder', is_dir=True),
             mock_tensor(f'{DEFAULT_TENSORS}_123_not_int_folder', is_file=True),
             mock_tensor(f'{DEFAULT_TENSORS}_009'),  # Not a file/folder
-            mock_tensor(f'Not_a_tensor_012', is_dir=True),
+            mock_tensor('Not_a_tensor_012', is_dir=True),
             )
         result = set(get_tensor_indices())
         assert result == {1, 2, 3, 4, 5, 123456}

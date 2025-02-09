@@ -17,15 +17,22 @@ from pathlib import Path
 
 
 class DomainParameters:
-    """Stores workdir, slab and Rparams objects for each domain"""
+    """Information about one structural domain."""
 
-    def __init__(self, workdir, homedir, name):
-        # .workdir is the path to the sub-directory for where this
-        # domain is calculated, .homedir, the one to the main calc
-        # directory
+    def __init__(self, workdir, name):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        workdir : pathlike
+            Path to the sub-directory of the main work directory
+            where calculations for this domain are performed.
+        name : str
+            The name of this domain (e.g., the one defined by
+            the user via the DOMAIN parameter).
+        """
         self.workdir = Path(workdir).resolve()
-        self.homedir = Path(homedir).resolve()
-        self.name = name  # Domain name as defined by user
+        self.name = name
         self.sl = None
         self.rp = None
         self.refcalcRequired = False

@@ -38,6 +38,7 @@ from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
@@ -215,21 +216,18 @@ def processSearchResults(sl, rp, search_log_path, final=True):
         doms_info = ((sl, rp, Path.cwd(), ""),)
 
     # Finally write out the best structures
-    home = Path.cwd()
     for (*dom_info, work, name), (_, dom_config) in zip(doms_info, best_doms):
-        os.chdir(work)
-        try:
-            _store_and_write_best_structure(rp, *dom_info,
-                                            dom_config, final)
-        except Exception:                                                       # TODO: catch better
-            _err = "Error while writing search output"
-            if name:
-                _err += f" for domain {name}"
-            logger.error(_err, exc_info=rp.is_debug_mode)
-            rp.setHaltingLevel(2)
-            raise
-        finally:
-            os.chdir(home)
+        with execute_in_dir(work):
+            try:
+                _store_and_write_best_structure(rp, *dom_info,
+                                                dom_config, final)
+            except Exception:                                                   # TODO: catch better
+                _err = "Error while writing search output"
+                if name:
+                    _err += f" for domain {name}"
+                logger.error(_err, exc_info=rp.is_debug_mode)
+                rp.setHaltingLevel(2)
+                raise
 
 
 def _write_control_chem(rp, generation, configs):
@@ -713,7 +711,7 @@ def search(sl, rp):
     if rp.domainParams:
         initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
     else:
-        initToDo = [(rp, sl, rp.paths.work)]
+        initToDo = [(rp, sl, Path.cwd())]
     for (rpt, slt, path) in initToDo:
         # read DISPLACEMENTS block
         if not rpt.disp_block_read:
@@ -732,7 +730,7 @@ def search(sl, rp):
     rp.updateCores()
     # generate rf.info
     try:
-        rf_info_path = rp.paths.work / "rf.info"
+        rf_info_path = Path('rf.info')
         rf_info_content = iosearch.writeRfInfo(sl, rp, file_path=rf_info_path)
     except Exception:
         logger.error("Error generating search input file rf.info")
@@ -883,13 +881,13 @@ def search(sl, rp):
         leedbase.fortran_compile_batch(ctasks, logname=compile_log)
     except Exception:
         leedbase.copy_compile_log(rp, Path(compile_log),
-                                  log_name="search-compile")
+                                  save_as='search-compile')
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
     # run
     if rp.LOG_SEARCH:
-        search_log_path = (rp.paths.work / searchname).with_suffix(".log")
+        search_log_path = Path(searchname).with_suffix('.log')
         logger.info(f"Search log will be written to file {search_log_path}.")
     else:
         search_log_path = None

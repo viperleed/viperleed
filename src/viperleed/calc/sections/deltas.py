@@ -3,6 +3,7 @@
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-11'
@@ -27,26 +28,42 @@ from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.context import execute_in_dir
 
 logger = logging.getLogger(__name__)
 
 # TODO: would be nice to replace all os.path with pathlib
 
+
+# TODO: see note in refcalc. #43
 class DeltaCompileTask():
     """Stores information for a worker to compile a delta file, and keeps
     track of the folder that the compiled file is in afterwards."""
 
     def __init__(self, param, hash_, source_dir, index):
-        self.param = param
-        self.hash = hash_
-        self.foldername = "Delta_Compile_{}".format(index)
-        self.exename = "delta-{}".format(index)
+        self.exename = f'delta-{index}'
+        self.foldername = f'Delta_Compile_{index}'
         self.fortran_comp = ["", ""]
+        self.hash = hash_
+        self.param = param
         self.source_dir = Path(source_dir).resolve()  # where the fortran files are
-        self.basedir = Path()    # where the calculation is based
 
         if os.name == 'nt':
             self.exename += '.exe'
+
+    def __str__(self):
+        """Return a string representation of this DeltaCompileTask."""
+        return f'{type(self).__name__} {self.foldername}'
+
+    @property
+    def logfile(self):
+        """Return the (relative) path to the compilation log file."""
+        return Path(self.foldername) / 'fortran-compile.log'
+
+    @property
+    def compile_log_name(self):
+        """Name of the log file as it should appear in compile_logs."""
+        return self.foldername
 
     def get_source_files(self):
         """Return files needed for a delta-amplitude compilation."""
@@ -66,189 +83,212 @@ class DeltaCompileTask():
             if filepath:
                 shutil.copy2(filepath, filepath.name)
 
-    @property
-    def logfile(self):
-        return Path(self.basedir) / self.foldername / "fortran-compile.log"
 
-    @property
-    def compile_log_name(self):
-        # name as it should appear in the compile_logs directory
-        return self.foldername
-
-
+# TODO: see note in refcalc.run_refcalc. #43
 class DeltaRunTask():
     """Stores information needed to copy the correct delta executable and
     tensor file to a subfolder, execute the delta-calculation there, and copy
     results back."""
 
     def __init__(self, comptask):
-        self.tensorname = ""
-        self.din = ""
-        self.din_short = ""
-        self.deltaname = ""
         self.comptask = comptask
         self.deltalogname = ""
+        self.deltaname = ""
+        self.din = ""
+        self.din_short = ""
+        self.tensorname = ""
+
+    @property
+    def foldername(self):
+        """Return a name for the subfolder in which this should run."""
+        return f'calculating_{self.name}'
+
+    @property
+    def name(self):
+        """Return a name for this task."""
+        return self.deltaname
+
+    def __str__(self):
+        """Return a string representation of this DeltaRunTask."""
+        return f'{type(self).__name__} {self.name}'
 
 
-def runDelta(runtask):
+# TODO: see note in refcalc.run_refcalc. #43
+def run_delta(runtask):
     """Execute a single delta-amplitude DeltaRunTask.
 
+    The calculation is executed in a subfolder of the current working
+    directory. The subfolder is removed upon successful execution.
     This function is meant to be executed by parallelized workers.
 
     Parameters
     ----------
     runtask : DeltaRunTask
-        The delta-amplitudes calculation to be executed.
+        Information about the delta-amplitudes calculation
+        to be executed.
 
     Returns
     -------
     error_info : str
-        An message with information about errors occurred during
+        A message with information about errors occurred during
         execution of `runtask`.
     """
-    home = Path.cwd()
-    base = Path(runtask.comptask.basedir).resolve()
-    workfolder = base / f'calculating_{runtask.deltaname}'
+    base = Path.cwd()
+    workfolder = base / runtask.foldername
     # Make folder and go there:
     try:
         workfolder.mkdir()
     except FileExistsError:
         logger.warning(f'Folder {workfolder.name} already exists. '
                        'Contents may get overwritten.')
-    os.chdir(workfolder)
-
-    # Collect tensor file
-    tensor = base / DEFAULT_TENSORS / runtask.tensorname
-    if not tensor.is_file():
-        logger.error(f'{DEFAULT_TENSORS} file not found: {runtask.tensorname}')
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: {DEFAULT_TENSORS} not found.')
-    try:
-        shutil.copy2(tensor, 'AMP')
-    except OSError:
-        logger.error(f'Error copying {DEFAULT_TENSORS} file: ', exc_info=True)
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: Error copying {DEFAULT_TENSORS} file.')
-
-    # Fetch compiled executable
-    exename = runtask.comptask.exename
-    try:
-        shutil.copy2(base / runtask.comptask.foldername / exename,
-                     workfolder / exename)
-    except OSError:
-        logger.error('Error getting delta executable: ', exc_info=True)
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: Failed to get delta executable.')
-
-    # Run delta-amplitudes calculation
-    log_file = Path('delta.log')
-    try:
-        with log_file.open('w', encoding='utf-8') as log:
-            subprocess.run(str(workfolder / exename),
-                           input=runtask.din,
-                           encoding="ascii",
-                           stdout=log,
-                           stderr=log)
-    except Exception:
-        logger.error('Error while executing delta-amplitudes calculation '
-                     f'for {runtask.deltaname}. Also check delta log file.')
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: Error during delta execution.')
-
-    # Copy delta file out
-    try:
-        shutil.copy2(workfolder / "DELWV", base / runtask.deltaname)
-    except OSError:
-        logger.error('Failed to copy delta output file DELWV to main '
-                     f'folder as {runtask.deltaname}', exc_info=True)
-        return (f'Error encountered by {type(runtask).__name__} '
-                f'{runtask.deltaname}: Failed to copy result file out.')
-
-    # Collate log results
-    log = ''
-    try:
-        log = log_file.read_text(encoding='utf-8')
-    except OSError:
-        logger.warning('Could not read local delta '
-                       f'log for {runtask.deltaname}')
-    if log:
-        deltalog = base / runtask.deltalogname
+    with execute_in_dir(workfolder):
+        # Collect tensor file
+        tensor = base / DEFAULT_TENSORS / runtask.tensorname
         try:
-            with deltalog.open('a', encoding='utf-8') as collated_log:
-                collated_log.write(
-                    '\n\n'
-                    f'### STARTING LOG FOR {runtask.deltaname} ###\n\n'
-                    + log
-                    )
+            shutil.copy2(tensor, 'AMP')
+        except FileNotFoundError:
+            logger.error(f'{DEFAULT_TENSORS} file not '
+                         f'found: {runtask.tensorname}')
+            return (f'Error encountered by {runtask}: '
+                    f'{DEFAULT_TENSORS} not found.')
         except OSError:
-            logger.warning(
-                f'Error writing delta log part {runtask.deltaname}: ',
-                exc_info=True
-                )
+            logger.error(f'Error copying {DEFAULT_TENSORS} file: ',
+                         exc_info=True)
+            return (f'Error encountered by {runtask}: Error '
+                    f'copying {DEFAULT_TENSORS} file.')
+
+        # Fetch compiled executable
+        exename = runtask.comptask.exename
+        try:
+            shutil.copy2(base / runtask.comptask.foldername / exename, '.')
+        except OSError:
+            logger.error('Error getting delta executable: ', exc_info=True)
+            return (f'Error encountered by {runtask}: '
+                    'Failed to get delta executable.')
+
+        # Run delta-amplitudes calculation
+        log_file = Path('delta.log')
+        with log_file.open('w', encoding='utf-8') as log:
+            try:
+                subprocess.run(str(workfolder / exename),
+                               input=runtask.din,
+                               encoding='ascii',
+                               stdout=log,
+                               stderr=log,
+                               check=False)
+            except Exception:
+                logger.error('Error while executing delta-amplitudes '
+                             f'calculation for {runtask.name}. Also '
+                             'check delta log file.',
+                             exc_info=True)
+                return (f'Error encountered by {runtask}: '
+                        'Error during delta execution.')
+
+        # Copy delta file out
+        try:
+            shutil.copy2('DELWV', base / runtask.deltaname)
+        except OSError:
+            logger.error('Failed to copy delta output file DELWV to main '
+                         f'folder as {runtask.deltaname}', exc_info=True)
+            return (f'Error encountered by {runtask}: '
+                    'Failed to copy result file out.')
+
+        # Collate log results
+        log = ''
+        try:
+            log = log_file.read_text(encoding='utf-8')
+        except OSError:
+            logger.warning('Could not read local delta '
+                           f'log for {runtask.name}')
+        if log:
+            deltalog = base / runtask.deltalogname
+            try:  # pylint: disable=too-many-try-statements
+                with deltalog.open('a', encoding='utf-8') as collated_log:
+                    collated_log.write(
+                        f'\n\n### STARTING LOG FOR {runtask.name} ###\n\n{log}'
+                        )
+            except OSError:
+                logger.warning(
+                    f'Error writing delta log part {runtask.name}: ',
+                    exc_info=True
+                    )
 
     # Clean up
-    os.chdir(home)
     try:
         shutil.rmtree(workfolder)
-    except Exception:
+    except OSError:
         logger.warning(f'Error deleting folder {workfolder.name}')
     return ''
 
 
-def compileDelta(comptask):
-    """Function meant to be executed by parallelized workers. Executes a
-    DeltaCompileTask."""
-    home = Path.cwd()
-    workfolder = (Path(comptask.basedir) / comptask.foldername).resolve()
+# TODO: see note in refcalc.compile_refcalc. #43
+def compile_delta(comptask):
+    """Compile a delta-amplitudes calculation executable.
 
-    # Make folder and go there:
+    Compilation is performed in the comptask.foldername
+    subfolder of the current directory. This function may
+    be executed by parallelized workers.
+
+    Parameters
+    ----------
+    comptask : DeltaCompileTask
+        Information about the compilation to be performed.
+
+    Returns
+    -------
+    error_info : str
+        Description of any error that occurred while compiling.
+    """
+    workfolder = Path(comptask.foldername).resolve()
     try:
         workfolder.mkdir()
     except FileExistsError:
         logger.warning(f'Folder {workfolder.name} already exists. '
                        'Contents may get overwritten.')
-    os.chdir(workfolder)
+    with execute_in_dir(workfolder):
+        # write PARAM:
+        try:
+            Path('PARAM').write_text(comptask.param, encoding='utf-8')
+        except OSError:
+            logger.error('Error writing PARAM file: ', exc_info=True)
+            return (f'Error encountered by {comptask} '
+                    'while trying to write PARAM file.')
+        try:
+            comptask.copy_source_files_to_local()
+        except OSError:
+            logger.error('Error getting TensErLEED files for '
+                         'delta-amplitudes: ', exc_info=True)
+            return (f'Error encountered by {comptask} while '
+                    'trying to fetch fortran source files')
 
-    # write PARAM:
-    try:
-        with open("PARAM", "w") as wf:
-            wf.write(comptask.param)
-    except Exception:
-        logger.error("Error writing PARAM file: ", exc_info=True)
-        return ("Error encountered by DeltaCompileTask " + comptask.foldername
-                + "while trying to write PARAM file.")
-    # get Fortran source files
-    try:
-        comptask.copy_source_files_to_local()
-    except Exception:
-        logger.error("Error getting TensErLEED files for "
-                     "delta-amplitudes: ", exc_info=True)
-        return ("Error encountered by DeltaCompileTask " + comptask.foldername
-                + "while trying to fetch fortran source files")
+        # TODO: we could skip this, if we implemented
+        # a general CompileTask (Issue #43)
+        (srcname, lib_tleed, lib_delta, _) = (
+             str(fname.name) if fname is not None else None
+             for fname in comptask.get_source_files()
+             )
 
-    # TODO: we could skip this, if we implemented a general CompileTask (Issue #43)
-    (srcname, lib_tleed,
-     lib_delta, _) = (
-         str(fname.name) if fname is not None else None
-         for fname in comptask.get_source_files()
-         )
-
-    # compile
-    ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
-               fname, comptask.fortran_comp[1]) for (fname, oname)
-              in [(srcname, "main.o"), (lib_tleed, "lib.tleed.o"),
-                  (lib_delta, "lib.delta.o")]]
-    ctasks.append((comptask.fortran_comp[0] + " -o " + comptask.exename,
-                   "main.o lib.tleed.o lib.delta.o",
-                   comptask.fortran_comp[1]))
-    try:
-        leedbase.fortran_compile_batch(ctasks)
-    except Exception as e:
-        logger.error("Error compiling fortran files: " + str(e))
-        return ("Fortran compile error in DeltaCompileTask "
-                + comptask.foldername)
-    os.chdir(home)
-    return ""
+        # compile
+        compiler = comptask.fortran_comp
+        compile_list = [
+            (srcname, 'main.o'),
+            (lib_tleed, 'lib.tleed.o'),
+            (lib_delta, 'lib.delta.o'),
+            ]
+        ctasks = [(f'{compiler[0]} -o {oname} -c', fname, compiler[1])
+                  for fname, oname in compile_list]
+        _, object_files = zip(*compile_list)
+        ctasks.append(
+            (f'{compiler[0]} -o {comptask.exename}',
+             ' '.join(object_files),
+             compiler[1])
+            )
+        try:
+            leedbase.fortran_compile_batch(ctasks)
+        except Exception as exc:
+            logger.error(f'Error compiling fortran files: {exc}')
+            return f'Fortran compile error in {comptask}'
+    return ''
 
 
 def deltas(sl, rp, subdomain=False):
@@ -522,7 +562,6 @@ def deltas(sl, rp, subdomain=False):
 
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-        ct.basedir = os.getcwd()
 
     if subdomain:   # actual calculations done in deltas_domains
         if len(deltaRunTasks) > 0:
@@ -542,7 +581,7 @@ def deltas(sl, rp, subdomain=False):
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
     try:
         parallelization.monitoredPool(rp, poolsize,
-                                      compileDelta,
+                                      compile_delta,
                                       deltaCompTasks)
     except Exception:
         # save log files in case of error:
@@ -555,16 +594,16 @@ def deltas(sl, rp, subdomain=False):
     # run executions
     logger.info("Running delta calculations...")
     poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    parallelization.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+    parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
     if rp.STOP:
         return
     logger.info("Delta calculations finished.")
 
-    # clean up compile folders - AMI: move logs first to compile_logs !
+    # clean up compile folders
     for ct in deltaCompTasks:
         leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
         try:
-            shutil.rmtree(os.path.join(ct.basedir, ct.foldername)) # AMI here
+            shutil.rmtree(ct.foldername)
         except Exception:
             logger.warning("Error deleting delta compile folder "
                            + ct.foldername)
@@ -574,28 +613,24 @@ def deltas(sl, rp, subdomain=False):
 
 def deltas_domains(rp):
     """Define and run delta calculations for all domains."""
-    home = os.getcwd()
     deltaCompTasks = []
     deltaRunTasks = []
     # get input for all domains
     for dp in rp.domainParams:
-        logger.info("Getting input for delta calculations: domain {}"
-                    .format(dp.name))
-        try:
-            os.chdir(dp.workdir)
-            r = deltas(dp.sl, dp.rp, subdomain=True)
-        except Exception:
-            logger.error("Error while creating delta input for domain {}"
-                         .format(dp.name))
-            raise
-        finally:
-            os.chdir(home)
+        logger.info(f'Getting input for delta calculations: domain {dp.name}')
+        with execute_in_dir(dp.workdir):
+            try:
+                r = deltas(dp.sl, dp.rp, subdomain=True)
+            except Exception:
+                logger.error('Error while creating delta '
+                             f'input for domain {dp.name}')
+                raise
         if type(r) == tuple:  # if no deltas need to be calculated returns None
             deltaCompTasks.extend(r[0])
             deltaRunTasks.extend(r[1])
         elif r is not None:
-            raise RuntimeError("Unknown error while creating delta input for "
-                               "domain {}".format(dp.name))
+            raise RuntimeError('Unknown error while creating '
+                               f'delta input for domain {dp.name}')
 
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION:
@@ -618,7 +653,7 @@ def deltas_domains(rp):
         logger.info("Compiling fortran files...")
         poolsize = min(len(deltaCompTasks), rp.N_CORES)
         parallelization.monitoredPool(rp, poolsize,
-                                      compileDelta,
+                                      compile_delta,
                                       deltaCompTasks)
         if rp.STOP:
             return
@@ -627,7 +662,7 @@ def deltas_domains(rp):
     if len(deltaRunTasks) > 0:
         logger.info("Running delta calculations...")
         poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        parallelization.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+        parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
         if rp.STOP:
             return
         logger.info("Delta calculations finished.")
@@ -635,9 +670,8 @@ def deltas_domains(rp):
     # clean up
     for ct in deltaCompTasks:
         leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name) # copy compile folder
-        d = os.path.join(ct.basedir, ct.foldername)
         try:
-            shutil.rmtree(d)
+            shutil.rmtree(ct.foldername)
         except Exception:
-            logger.warning("Error deleting delta compile folder "
-                           + os.path.relpath(d))
+            logger.warning('Error deleting delta '
+                           f'compile folder {ct.foldername}')
