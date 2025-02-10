@@ -643,8 +643,8 @@ class CollapsableDeviceList(qtw.QScrollArea):
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
-    def _emit_settings_changed(self, *_):
         """Emit if any settings changes."""
+    def _emit_and_update_settings(self, *_):
         self.settings_changed.emit()
         self.settings_ok_changed.emit()
         self._update_stored_settings()
@@ -701,7 +701,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
             view.set_settings_folder(self.default_settings_folder)
         self._add_top_widgets_to_view(view)
         self._layout.insertWidget(self._layout.count()-1, view)
-        view.settings_changed.connect(self._emit_settings_changed)
+        view.settings_changed.connect(self._emit_and_update_settings)
         return view
 
     def are_settings_ok(self):
@@ -752,7 +752,9 @@ class CollapsableCameraList(CollapsableDeviceList):
         """Add the top widget types to the CollapsableView."""
         super()._add_top_widgets_to_view(view)
         self._views[view][0].stateChanged.connect(view.enable_view)
-        self._views[view][0].stateChanged.connect(self._emit_settings_changed)
+        self._views[view][0].stateChanged.connect(
+            self._emit_and_update_settings
+            )
         view.set_top_widget_geometry(
             self._views[view][0], width=self._widths[self._top_labels[1]]
             )
@@ -802,11 +804,11 @@ class CollapsableCameraList(CollapsableDeviceList):
             correct_view = self.add_new_view(name, (cls, settings_info))
 
         safe_disconnect(self._views[correct_view][0].stateChanged,
-                        self._emit_settings_changed)
+                        self._emit_and_update_settings)
         correct_view.original_settings = settings.last_file
         self._views[correct_view][0].setChecked(True)
         safe_connect(self._views[correct_view][0].stateChanged,
-                     self._emit_settings_changed,
+                     self._emit_and_update_settings,
                      type=qtc.Qt.UniqueConnection)
 
     def add_new_view(self, name, cls_and_info):
@@ -854,7 +856,9 @@ class CollapsableControllerList(CollapsableDeviceList):
         super()._add_top_widgets_to_view(view)
         self._views[view][0].stateChanged.connect(view.enable_view)
         self._views[view][0].stateChanged.connect(self._enable_primary)
-        self._views[view][0].stateChanged.connect(self._emit_settings_changed)
+        self._views[view][0].stateChanged.connect(
+            self._emit_and_update_settings
+            )
         view.set_top_widget_geometry(
             self._views[view][0], width=self._widths[self._top_labels[1]]
             )
@@ -864,7 +868,7 @@ class CollapsableControllerList(CollapsableDeviceList):
             self._views[view][1], width=self._widths[self._top_labels[2]]
             )
         self._views[view][1].setEnabled(False)
-        self._views[view][1].toggled.connect(self._emit_settings_changed)
+        self._views[view][1].toggled.connect(self._emit_and_update_settings)
 
     def _update_stored_settings(self):
         """Update the interally stored controller settings."""
@@ -932,17 +936,17 @@ class CollapsableControllerList(CollapsableDeviceList):
             correct_view = self.add_new_view(name, (cls, settings_info))
 
         safe_disconnect(self._views[correct_view][0].stateChanged,
-                        self._emit_settings_changed)
+                        self._emit_and_update_settings)
         safe_disconnect(self._views[correct_view][1].toggled,
-                        self._emit_settings_changed)
+                        self._emit_and_update_settings)
         correct_view.original_settings = settings.last_file
         self._views[correct_view][0].setChecked(True)
         correct_view.set_quantities(quantities)
         safe_connect(self._views[correct_view][0].stateChanged,
-                     self._emit_settings_changed,
+                     self._emit_and_update_settings,
                      type=qtc.Qt.UniqueConnection)
         safe_connect(self._views[correct_view][1].toggled,
-                     self._emit_settings_changed,
+                     self._emit_and_update_settings,
                      type=qtc.Qt.UniqueConnection)
 
     def _set_primary_from_settings(self):
