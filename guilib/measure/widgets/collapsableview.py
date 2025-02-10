@@ -55,11 +55,27 @@ def remove_spacing_and_margins(layout):
 class QuantitySelector(qtw.QFrame):
     """A widget that allows selection of quantities from settings."""
 
-    # This is signal is emitted when the quantity selection changes.
+    # This signal is emitted when the quantity selection changes.
     settings_changed = qtc.pyqtSignal()
 
     def __init__(self, settings, parent=None):
-        """Initialise widget."""
+        """Initialise widget.
+
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The settings of the associated controller. Contains the
+            quantities the controller can measure under 'controller',
+            'measurement_devices'. Each tuple stands for one
+            measurement device and for each tuple, only one quantity
+            can be selected at the same time.
+        parent : QObject
+            The parent QObject of this widget.
+
+        Returns
+        -------
+        None.
+        """
         super().__init__(parent=parent)
         self.setMidLineWidth(1)
         self.setFrameStyle(self.Panel | self.Raised)
@@ -92,7 +108,13 @@ class QuantitySelector(qtw.QFrame):
         self.setLayout(main_layout)
 
     def get_selected_quantities(self):
-        """Return the selected quantties."""
+        """Return the selected quantities.
+
+        Returns
+        -------
+        quantities : tuple
+            The selected quantities.
+        """
         quantities = []
         for group in self._selections:
             if group.checkedButton():
@@ -100,7 +122,17 @@ class QuantitySelector(qtw.QFrame):
         return tuple(quantities)
 
     def set_quantities(self, quantities):
-        """Set quantities from settings."""
+        """Set quantities from settings.
+
+        Parameters
+        ----------
+        quantities : tuple
+            The quantities to set.
+
+        Returns
+        -------
+        None.
+        """
         buttons = tuple(btn for group in self._selections
                         for btn in group.buttons())
         for quantity in quantities:
@@ -118,7 +150,15 @@ class CollapsableView(qtw.QWidget):
     """A widget that can be expanded/collapsed by the press of a button."""
 
     def __init__(self, parent=None):
-        """Initialise widget."""
+        """Initialise widget.
+
+        parent : QObject
+            The parent QObject of this widget.
+
+        Returns
+        -------
+        None.
+        """
         super().__init__(parent=parent)
         self._button = QNoDefaultIconButton()
         self._outer_layout = qtw.QHBoxLayout()
@@ -139,7 +179,17 @@ class CollapsableView(qtw.QWidget):
         self._bottom_space.invalidate()
 
     def _adjust_button_icon(self, button_up):
-        """Change in which direction the icon is pointing."""
+        """Change in which direction the icon in the top button is pointing.
+
+        Parameters
+        ----------
+        button_up : bool
+            True if the button is meant to point upwards.
+
+        Returns
+        -------
+        None.
+        """
         if button_up:
             icon = qtw.QStyle.SP_TitleBarShadeButton
         else:
@@ -185,17 +235,46 @@ class CollapsableView(qtw.QWidget):
         self._adjust_button_icon(self._frame.isVisible())
 
     def add_collapsable_item(self, item):
-        """Add widget to the widgets in the inner collapsable layout."""
+        """Add widget to the widgets in the inner collapsible layout.
+
+        Parameters
+        ----------
+        item : QWidget or QLayout
+            Any widget or layout that should be
+            added to the collapsible frame.
+
+        Returns
+        -------
+        None.
+        """
         if isinstance(item, qtw.QWidget):
             self._frame.layout().addWidget(item)
         elif isinstance(item, qtw.QLayout):
             self._frame.layout().addLayout(item)
         else:
-            raise RuntimeError('Cannot add items to the collapsable view '
+            raise RuntimeError('Cannot add items to the collapsible view '
                                'that are neither a layout nor a widget.')
 
     def add_top_widget(self, widget, width=None, align=_ALIGN_CTR):
-        """Add widget to the widgets in the outer top layout."""
+        """Add widget to the widgets in the outer top layout.
+
+        Parameters
+        ----------
+        widget : QWidget
+            Any widget that should be added next
+            to the constantly displayed button.
+        width : int or None, optional
+            The pixel width the widget should be displayed with.
+            Default is None, which means the widget itself
+            determines the pixel width.
+        align : Qt.AlignmentFlag, optional
+            How the widget should be aligned.
+            Default is central alignment.
+
+        Returns
+        -------
+        None.
+        """
         layout = qtw.QVBoxLayout()
         height = int((self.button.sizeHint().height() -
                       widget.sizeHint().height())/2)
@@ -215,7 +294,19 @@ class CollapsableView(qtw.QWidget):
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
     def enable_view(self, enable):
-        """Collapse inner layout."""
+        """Collapse inner layout.
+
+        Parameters
+        ----------
+        enable : bool or int
+            Converted to bool. Decides whether the collapsible
+            widgets are visible/expanded. True means they become/stay
+            visible.
+
+        Returns
+        -------
+        None.
+        """
         enable = bool(enable)
         self.button.setEnabled(enable)
         self._frame.setVisible(enable)
@@ -223,7 +314,24 @@ class CollapsableView(qtw.QWidget):
         self._adjust_button_icon(enable)
 
     def set_top_widget_geometry(self, widget, width=None, align=_ALIGN_CTR):
-        """Set top widget geometry to the given parameters."""
+        """Set top widget geometry to the given parameters.
+
+        Parameters
+        ----------
+        widget : QWidget
+            The top widget whose geometry should be changed.
+        width : int or None, optional
+            The pixel width the widget should be displayed with.
+            Default is None, which means the widget itself
+            determines the pixel width.
+        align : Qt.AlignmentFlag, optional
+            How the widget should be aligned.
+            Default is central alignment.
+
+        Returns
+        -------
+        None.
+        """
         for lay_i in range(1, self._outer_layout.count()):
             layout = self._outer_layout.itemAt(lay_i)
             try:
@@ -248,13 +356,21 @@ class CollapsableView(qtw.QWidget):
 class CollapsableDeviceView(CollapsableView):
     """A CollapsableView for measurement hardware."""
 
-    # This is signal is emitted when device settings stored
+    # This signal is emitted when device settings stored
     # in the measurement settings file change.
     # (Measured quantities and the device settings file.)
     settings_changed = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
-        """Initialise widget."""
+        """Initialise widget.
+
+        parent : QObject
+            The parent QObject of this widget.
+
+        Returns
+        -------
+        None.
+        """
         self._settings_folder = PathSelector(select_file=False, max_chars=25)
         self._settings_file_selector = qtw.QComboBox()
         super().__init__(parent=parent)
@@ -298,7 +414,15 @@ class CollapsableDeviceView(CollapsableView):
         self._check_if_settings_changed()
 
     def _build_device_settings_widgets(self):
-        """Get the handler widgets for the device settings."""
+        """Get the handler widgets for the device settings.
+
+        Places all widgets in the SettingsHandler with the
+        SettingsTag.MEASUREMENT into the collapsible QFrame.
+
+        Returns
+        -------
+        None.
+        """
         new_widget = qtw.QWidget()
         layout = qtw.QVBoxLayout()
         for widget in self._handler.get_widgets_with_tags(
@@ -327,7 +451,13 @@ class CollapsableDeviceView(CollapsableView):
         self._get_settings_handler()
 
     def _check_if_settings_changed(self):
-        """Check if the current settings differ from the original settings."""
+        """Check if the current settings differ from the original settings.
+
+        Emits
+        -----
+        settings_changed
+            If the device settings have changed.
+        """
         if self.settings_file != self._original_settings:
             self._original_settings = self.settings_file
             self.settings_changed.emit()
@@ -389,7 +519,15 @@ class CollapsableDeviceView(CollapsableView):
         return not self._device_info.hardware_interface
 
     def _make_handler_for_device(self, device):
-        """Make a SettingsHandler for the device."""
+        """Make a SettingsHandler for the device.
+
+        device : DeviceABC
+            A device that can return a SettingsHandler.
+
+        Returns
+        -------
+        None.
+        """
         if self._handler:
             self._remove_handler()
         device.uses_default_settings = False
@@ -410,7 +548,19 @@ class CollapsableDeviceView(CollapsableView):
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
     def enable_view(self, enable):
-        """Collapse inner layout and remove handler when disabled."""
+        """Collapse inner layout and remove handler when disabled.
+
+        Parameters
+        ----------
+        enable : bool or int
+            Converted to bool. Decides whether the collapsible
+            widgets are visible/expanded. True means they become/stay
+            visible.
+
+        Returns
+        -------
+        None.
+        """
         self._enabled = bool(enable)
         if not self._enabled:
             self._remove_handler()
@@ -419,12 +569,34 @@ class CollapsableDeviceView(CollapsableView):
         super().enable_view(enable)
 
     def set_device(self, device_cls, device_info):
-        """Set the device for which this view is meant."""
+        """Set the device for which this view is meant.
+
+        Parameters
+        ----------
+        device_cls : type
+            The class of the device.
+        device_info : SettingsInfo
+            The SettingsInfo necessary to determine the settings.
+
+        Returns
+        -------
+        None.
+        """
         self._device_cls = device_cls
         self._device_info = device_info
 
     def set_settings_folder(self, settings_folder_path):
-        """Set the path of the settings folder to the given path."""
+        """Set the path of the settings folder to the given path.
+
+        Parameters
+        ----------
+        settings_folder_path : Path or str
+            The path to the folder containing the settings.
+
+        Returns
+        -------
+        None.
+        """
         self._settings_folder.path = settings_folder_path
 
     def store_settings(self):
@@ -442,7 +614,17 @@ class CollapsableCameraView(CollapsableDeviceView):
     """A CollapsableView for cameras."""
 
     def _connect_camera(self, device):
-        """Connect camera."""
+        """Connect camera.
+
+        Parameters
+        ----------
+        device : CameraABC
+            A camera class instance.
+
+        Returns
+        -------
+        None.
+        """
         if self.is_dummy_device():
             return
         device.connect_()
@@ -466,7 +648,17 @@ class CollapsableControllerView(CollapsableDeviceView):
     """A CollapsableView for controllers."""
 
     def __init__(self, parent=None):
-        """Initialise widget."""
+        """Initialise widget.
+
+        Parameters
+        ----------
+        parent : QObject
+            The parent QObject of this widget.
+
+        Returns
+        -------
+        None.
+        """
         super().__init__(parent=parent)
         self._is_primary = False
         self._trying_to_get_settings = False
@@ -475,7 +667,17 @@ class CollapsableControllerView(CollapsableDeviceView):
         self._quantities_to_set = ()
 
     def set_quantities(self, quantities):
-        """Set the quantities to measure."""
+        """Set the quantities to measure.
+
+        Parameters
+        ----------
+        quantities : tuple
+            The quantities to set.
+
+        Returns
+        -------
+        None.
+        """
         self._quantities_to_set = quantities
         if not self._quantity_selector:
             return
@@ -488,7 +690,7 @@ class CollapsableControllerView(CollapsableDeviceView):
 
     @property
     def selected_quantities(self):
-        """Return the selected quantties."""
+        """Return the selected quantities."""
         if not self._quantity_selector:
             return tuple()
         return self._quantity_selector.get_selected_quantities()
@@ -520,7 +722,13 @@ class CollapsableControllerView(CollapsableDeviceView):
 
     @qtc.pyqtSlot()
     def _check_if_quantities_changed(self):
-        """Check if the current settings differ from the original settings."""
+        """Check if the current settings differ from the original settings.
+        
+        Emits
+        -----
+        settings_changed
+            If the selected quantities to measure have changed.
+        """
         if self._quantities_to_set != self.selected_quantities:
             self._quantities_to_set = self.selected_quantities
             self.settings_changed.emit()
@@ -543,7 +751,20 @@ class CollapsableControllerView(CollapsableDeviceView):
 
     @qtc.pyqtSlot(bool)
     def set_primary(self, is_primary):
-        """Set whether the device is the primary controller."""
+        """Set whether the device is the primary controller.
+
+        Parameters
+        ----------
+        is_primary : bool
+            Whether this controller is supposed to be the primary
+            controller. If true, the controller will be treated as the
+            primary controller and its settings which are relevant for
+            setting energies will be displayed in the collapsible view.
+
+        Returns
+        -------
+        None.
+        """
         was_primary = self._is_primary
         self._is_primary = is_primary
         if was_primary == is_primary:
@@ -559,7 +780,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
 
     _top_labels = ('Device', )
 
-    # This is signal is emitted when the device/quantity selection changes.
+    # This signal is emitted when the device/quantity selection changes.
     settings_changed = qtc.pyqtSignal()
 
     # This signal is emitted when settings, which decide
@@ -569,7 +790,17 @@ class CollapsableDeviceList(qtw.QScrollArea):
     error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, parent=None):
-        """Initialise widget."""
+        """Initialise widget.
+
+        Parameters
+        ----------
+        parent : QObject
+            The parent QObject of this widget.
+
+        Returns
+        -------
+        None.
+        """
         super().__init__(parent=parent)
         self._views = {}
         self._widths = {}
@@ -595,7 +826,17 @@ class CollapsableDeviceList(qtw.QScrollArea):
 
     @default_settings_folder.setter
     def default_settings_folder(self, settings_folder_path):
-        """Set the default settings folder."""
+        """Set the default settings folder.
+
+        Parameters
+        ----------
+        settings_folder_path : Path or str
+            The path to the folder containing the settings.
+
+        Returns
+        -------
+        None.
+        """
         self._default_settings_folder = settings_folder_path
 
     @property
@@ -604,11 +845,32 @@ class CollapsableDeviceList(qtw.QScrollArea):
         return self._views
 
     def _add_top_widget_types(self, *widg_types):
-        """Extend the list of widgets to add."""
+        """Extend the list of widgets to add.
+
+        Parameters
+        ----------
+        widg_types : QWidget
+            Any amount of widgets that should be added next
+            to the button of each CollapsableView.
+
+        Returns
+        -------
+        None.
+        """
         self._top_widget_types.extend(widg_types)
 
     def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsableView."""
+        """Add the top widget types to the CollapsableView.
+
+        Parameters
+        ----------
+        view : CollapsableView
+            The CollapsableView to which the widgets will be attached.
+
+        Returns
+        -------
+        None.
+        """
         self.views[view] = []
         for widget_type in self._top_widget_types:
             widget = widget_type()
@@ -643,14 +905,33 @@ class CollapsableDeviceList(qtw.QScrollArea):
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
-        """Emit if any settings changes."""
     def _emit_and_update_settings(self, *_):
+        """Emit settings changed, check and update settings.
+
+        Emits
+        -----
+        settings_changed
+            To notify other widgets of a settings change.
+        settings_ok_changed
+            To trigger a settings check.
+        """
         self.settings_changed.emit()
         self.settings_ok_changed.emit()
         self._update_stored_settings()
 
     def _get_relative_path(self, path):
-        """Get a str path that is relative to the default path if possible."""
+        """Get a str path that is relative to the default path if possible.
+
+        Parameters
+        ----------
+        path : Path
+            The settings path that should be turned into a relative path.
+
+        Returns
+        -------
+        new_path : str
+            The relative path as a str.
+        """
         try:
             new_path = str(path.relative_to(self.default_settings_folder))
         except (ValueError, AttributeError):
@@ -668,7 +949,11 @@ class CollapsableDeviceList(qtw.QScrollArea):
         self.setWidget(widget)
 
     def _make_top_items(self):
-        """Make top labels and add them to the QScrollArea."""
+        """Make top labels and add them to the QScrollArea.
+
+        Create the top refresh button, force the QScrollArea to
+        take a certain size, and set the top labels.
+        """
         button = QNoDefaultPushButton()
         button.setText('Refresh ' + self._device_type + 's')
         button.clicked.connect(self._detect_and_add_devices)
@@ -693,7 +978,25 @@ class CollapsableDeviceList(qtw.QScrollArea):
         self._layout.insertLayout(1, top_labels)
 
     def add_new_view(self, view, name, cls_and_info):
-        """Add a new view."""                                                   # TODO: add doc string
+        """Add a new view.
+
+        Parameters
+        ----------
+        view : CollapsableDeviceView
+            The view that is to be inserted into the
+            CollapsableDeviceList.
+        name : str
+            The display name of the device that will be displayed
+            on the button of the CollapsableDeviceView.
+        cls_and_info : tuple of type and SettingsInfo
+            The device class and the SettingsInfo required to determine
+            the device settings.
+
+        Returns
+        -------
+        view : CollapsableDeviceView
+            The added view.
+        """
         view.button.setEnabled(False)
         view.button.setText(name)
         view.set_device(*cls_and_info)
@@ -705,7 +1008,23 @@ class CollapsableDeviceList(qtw.QScrollArea):
         return view
 
     def are_settings_ok(self):
-        """Return whether the device selection is acceptable."""
+        """Return whether the device selection is acceptable.
+
+        If a selected device is either a dummy (disconnected) device,
+        or does not have any settings, the return value must be False
+        because a measurement with such a device will fail. If
+        requires_device is False after the first check, then the return
+        value will be True because the settings do not have to contain
+        a selected device. If requires_device is True, then the return
+        value will only be True if at least one device has been
+        selected.
+
+        Returns
+        -------
+        settings_ok : bool
+            Whether the settings selected in the CollapsableDeviceList
+            are acceptable or not.
+        """
         # First we check if any dummy device is selected.
         # We should never allow this to be the case.
         for view in self.views:
@@ -715,7 +1034,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
             if view.button.isEnabled() and not view.settings_file:
                 # The selected device lacks a suitable settings file.
                 return False
-        # The we check if any device has to be selected at all.
+        # Then we check if any device has to be selected at all.
         if not self.requires_device:
             return True
         # Should we require a selected device, then we now know
@@ -739,7 +1058,17 @@ class CollapsableCameraList(CollapsableDeviceList):
     _top_labels = ('Cameras', 'Use',)
 
     def __init__(self, parent=None):
-        """Initialise widget."""
+        """Initialise widget.
+
+        Parameters
+        ----------
+        parent : QObject
+            The parent QObject of this widget.
+
+        Returns
+        -------
+        None.
+        """
         super().__init__(parent=parent)
         self._device_type = 'camera'
         self._add_top_widget_types(qtw.QCheckBox)
@@ -749,7 +1078,17 @@ class CollapsableCameraList(CollapsableDeviceList):
         self._camera_settings = ()
 
     def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsableView."""
+        """Add the top widget types to the CollapsableView.
+
+        Parameters
+        ----------
+        view : CollapsableView
+            The CollapsableView to which the widgets will be attached.
+
+        Returns
+        -------
+        None.
+        """
         super()._add_top_widgets_to_view(view)
         self._views[view][0].stateChanged.connect(view.enable_view)
         self._views[view][0].stateChanged.connect(
@@ -760,12 +1099,19 @@ class CollapsableCameraList(CollapsableDeviceList):
             )
 
     def _update_stored_settings(self):
-        """Update the interally stored camera settings."""
+        """Update the internally stored camera settings."""
         self._camera_settings = self.get_camera_settings()
 
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
-        """Detect controllers, add them as views and preselect them."""
+        """Detect controllers, add them as views and preselect them.
+
+        Emits
+        -----
+        settings_ok_changed
+            At the end of setting devices from
+            settings to trigger a check.
+        """
         super()._detect_and_add_devices()
         self._set_camera_settings()
         self.settings_ok_changed.emit()
@@ -776,7 +1122,22 @@ class CollapsableCameraList(CollapsableDeviceList):
             self._set_single_camera_settings(settings)
 
     def _set_single_camera_settings(self, camera_settings):
-        """Set settings of camera."""
+        """Set settings of camera.
+
+        Parameters
+        ----------
+        camera_settings : path-like
+            The path to the settings of the camera.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        error_occurred
+            If the settings are missing or corrupted.
+        """
         try:
             settings = ViPErLEEDSettings.from_settings(camera_settings)
         except NoSettingsError:
@@ -812,7 +1173,22 @@ class CollapsableCameraList(CollapsableDeviceList):
                      type=qtc.Qt.UniqueConnection)
 
     def add_new_view(self, name, cls_and_info):
-        """Add a new CollapsableCameraView."""                                  # TODO: doc
+        """Add a new CollapsableCameraView.
+
+        Parameters
+        ----------
+        name : str
+            The display name of the camera that will be displayed
+            on the button of the CollapsableDeviceView.
+        cls_and_info : tuple of type and SettingsInfo
+            The camera class and the SettingsInfo required to determine
+            the camera settings.
+
+        Returns
+        -------
+        view : CollapsableDeviceView
+            The added view.
+        """
         view = CollapsableCameraView()
         return super().add_new_view(view, name, cls_and_info)
 
@@ -826,7 +1202,17 @@ class CollapsableCameraList(CollapsableDeviceList):
         return tuple(settings_files)
 
     def set_cameras_from_settings(self, meas_settings):
-        """Attempt to select the cameras from settings."""
+        """Attempt to select the cameras from settings.
+
+        Parameters
+        ----------
+        meas_settings : ViPErLEEDSettings
+            The settings of the loaded measurement.
+
+        Returns
+        -------
+        None.
+        """
         self._detect_and_add_devices()
         self._camera_settings = meas_settings.getsequence(
             'devices', 'cameras', fallback=()
@@ -840,7 +1226,17 @@ class CollapsableControllerList(CollapsableDeviceList):
     _top_labels = ('Controllers', 'Use', 'Primary',)
 
     def __init__(self, parent=None):
-        """Initialise widget."""
+        """Initialise widget.
+
+        Parameters
+        ----------
+        parent : QObject
+            The parent QObject of this widget.
+
+        Returns
+        -------
+        None.
+        """
         super().__init__(parent=parent)
         self._device_type = 'controller'
         self._add_top_widget_types(qtw.QCheckBox, qtw.QRadioButton)
@@ -852,7 +1248,17 @@ class CollapsableControllerList(CollapsableDeviceList):
         self._secondary_settings = ()
 
     def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsableView."""
+        """Add the top widget types to the CollapsableView.
+
+        Parameters
+        ----------
+        view : CollapsableView
+            The CollapsableView to which the widgets will be attached.
+
+        Returns
+        -------
+        None.
+        """
         super()._add_top_widgets_to_view(view)
         self._views[view][0].stateChanged.connect(view.enable_view)
         self._views[view][0].stateChanged.connect(self._enable_primary)
@@ -871,13 +1277,20 @@ class CollapsableControllerList(CollapsableDeviceList):
         self._views[view][1].toggled.connect(self._emit_and_update_settings)
 
     def _update_stored_settings(self):
-        """Update the interally stored controller settings."""
+        """Update the internally stored controller settings."""
         self._primary_settings = self.get_primary_settings()
         self._secondary_settings = self.get_secondary_settings()
 
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
-        """Detect controllers, add them as views and preselect them."""
+        """Detect controllers, add them as views and preselect them.
+
+        Emits
+        -----
+        settings_ok_changed
+            At the end of setting devices from
+            settings to trigger a check.
+        """
         super()._detect_and_add_devices()
         self._set_primary_from_settings()
         self._set_secondary_from_settings()
@@ -886,7 +1299,19 @@ class CollapsableControllerList(CollapsableDeviceList):
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
     def _enable_primary(self, enable):
-        """Enable/disable QRadioButton."""
+        """Enable/disable QRadioButton (sets primary controller).
+
+        Parameters
+        ----------
+        enable : bool or int
+            Converted to bool. Decides whether the controller is the
+            primary controller. True means the controller is the
+            primary controller.
+
+        Returns
+        -------
+        None.
+        """
         check_box = self.sender()
         enable = bool(enable)
         for check, radio in self.views.values():
@@ -905,7 +1330,22 @@ class CollapsableControllerList(CollapsableDeviceList):
                     break
 
     def _set_controller_settings(self, controller_settings):
-        """Set settings of controller."""
+        """Set settings of controller.
+
+        Parameters
+        ----------
+        controller_settings : path-like
+            The path to the settings of the controller.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        error_occurred
+            If the settings are missing or corrupted.
+        """
         file, quantities = controller_settings
         try:
             settings = ViPErLEEDSettings.from_settings(file)
@@ -963,7 +1403,22 @@ class CollapsableControllerList(CollapsableDeviceList):
                 self._set_controller_settings(settings)
 
     def add_new_view(self, name, cls_and_info):
-        """Add a new CollapsableControllerView."""                              # TODO: doc
+        """Add a new CollapsableControllerView.
+
+        Parameters
+        ----------
+        name : str
+            The display name of the controller that will be displayed
+            on the button of the CollapsableDeviceView.
+        cls_and_info : tuple of type and SettingsInfo
+            The controller class and the SettingsInfo required to
+            determine the controller settings.
+
+        Returns
+        -------
+        view : CollapsableDeviceView
+            The added view.
+        """
         view = CollapsableControllerView()
         return super().add_new_view(view, name, cls_and_info)
 
@@ -987,7 +1442,17 @@ class CollapsableControllerList(CollapsableDeviceList):
         return tuple(settings_files)
 
     def set_controllers_from_settings(self, meas_settings):
-        """Attempt to select controllers from settings."""
+        """Attempt to select controllers from settings.
+
+        Parameters
+        ----------
+        meas_settings : ViPErLEEDSettings
+            The settings of the loaded measurement.
+
+        Returns
+        -------
+        None.
+        """
         self._detect_and_add_devices()
         self._primary_settings = meas_settings.getsequence(
             'devices', 'primary_controller', fallback=()
