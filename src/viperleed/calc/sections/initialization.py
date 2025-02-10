@@ -351,7 +351,7 @@ def initialization(sl, rp, subdomain=False):
         logger.warning("Failed to plot phaseshifts", exc_info=rp.is_debug_mode)
 
     # generate beamlist
-    logger.info("Generating BEAMLIST...")
+    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in init_domains
     calc_and_write_beamlist(sl, rp, beamlist_name="BEAMLIST")
 
     try:
@@ -566,7 +566,7 @@ def init_domains(rp):
     rp.pseudoSlab.bulkslab = BulkSlab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
     # run beamgen for the whole system
-    logger.info("Generating BEAMLIST...")
+    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in the end of initialization
     calc_and_write_beamlist(copy.deepcopy(largestDomain.sl),
                             rp,
                             domains=True,
