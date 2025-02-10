@@ -31,37 +31,40 @@ from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 # files to go in SUPP
 _SUPP_FILES = (
-    "AUXBEAMS",
-    "AUXEXPBEAMS",
-    "AUXGEO",
-    "AUXLATGEO",
-    "AUXNONSTRUCT",
-    "BEAMLIST",
-    "delta-input",
-    "EEASISSS-input.txt",
-    "eeasisss-input",
-    "EEASISSS-log.txt",
-    "muftin.f",
-    "Phaseshifts_plots.pdf",
-    "POSCAR_bulk_appended",
-    "POSCAR_bulk",
-    "POSCAR_mincell",
-    "POSCAR_oricell",
-    "POSCAR_vacuum_corrected",
-    "refcalc-FIN",
-    "refcalc-PARAM",
-    "restrict.f",
-    "rfactor-PARAM",
-    "rfactor-WEXPEL",
-    "search-PARAM",
-    "search-rf.info",
-    "search.steu",
-    "searchpars.info",
-    "superpos-CONTRIN",
-    "superpos-PARAM",
+    'AUXBEAMS',
+    'AUXEXPBEAMS',
+    'AUXGEO',
+    'AUXLATGEO',
+    'AUXNONSTRUCT',
+    'BEAMLIST',
+    'delta-input',
+    'EEASISSS-input.txt',
+    'eeasisss-input',
+    'EEASISSS-log.txt',
+    'muftin.f',
+    'Phaseshifts_plots.pdf',
+    'POSCAR_bulk_appended',
+    'POSCAR_bulk',
+    'POSCAR_mincell',
+    'POSCAR_oricell',
+    'POSCAR_vacuum_corrected',
+    'refcalc-FIN',
+    'refcalc-PARAM',
+    'restrict.f',
+    'rfactor-PARAM',
+    'rfactor-WEXPEL',
+    'search-PARAM',
+    'search-rf.info',
+    'search.steu',
+    'searchpars.info',
+    'superpos-CONTRIN',
+    'superpos-PARAM',
     )
 
-_SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
+_SUPP_DIRS = (
+    ORIGINAL_INPUTS_DIR_NAME,
+    'compile_logs',
+    )
 
 # Files that may be generated automatically and do not need
 # storage into original_inputs.
@@ -71,32 +74,32 @@ OPTIONAL_INPUT_FILES = (
 
 # files to go in OUT
 _OUT_FILES = (
-    "Complex_amplitudes_imag.csv",
-    "Complex_amplitudes_real.csv"
-    "control.chem",
-    "Errors_summary.csv",
-    "Errors.pdf",
-    "Errors.zip",
-    "FD_Optimization_beams.pdf",
-    "FD_Optimization.csv",
-    "FD_Optimization.pdf",
-    "FITBEAMS_norm.csv",
-    "FITBEAMS.csv",
-    "PatternInfo.tlm",
-    "refcalc-amp.out",
-    "Rfactor_analysis_refcalc.pdf",
-    "Rfactor_analysis_superpos.pdf",
-    "Rfactor_plots_refcalc.pdf",
-    "Rfactor_plots_superpos.pdf",
-    "SD.TL",
-    "refcalc-fd.out",
-    "Search-progress.csv",
-    "Search-progress.pdf",
-    "Search-report.pdf",
-    "superpos-spec.out",
-    "THEOBEAMS_norm.csv",
-    "THEOBEAMS.csv",
-    "THEOBEAMS.pdf",
+    'Complex_amplitudes_imag.csv',
+    'Complex_amplitudes_real.csv'
+    'control.chem',
+    'Errors_summary.csv',
+    'Errors.pdf',
+    'Errors.zip',
+    'FD_Optimization_beams.pdf',
+    'FD_Optimization.csv',
+    'FD_Optimization.pdf',
+    'FITBEAMS_norm.csv',
+    'FITBEAMS.csv',
+    'PatternInfo.tlm',
+    'refcalc-amp.out',
+    'Rfactor_analysis_refcalc.pdf',
+    'Rfactor_analysis_superpos.pdf',
+    'Rfactor_plots_refcalc.pdf',
+    'Rfactor_plots_superpos.pdf',
+    'SD.TL',
+    'refcalc-fd.out',
+    'Search-progress.csv',
+    'Search-progress.pdf',
+    'Search-report.pdf',
+    'superpos-spec.out',
+    'THEOBEAMS_norm.csv',
+    'THEOBEAMS.csv',
+    'THEOBEAMS.pdf',
     )
 
 # Label given to workhistory folders when cleaning up stray remains
@@ -104,7 +107,11 @@ _OUT_FILES = (
 PREVIOUS_LABEL = 'previous'
 
 # output files that can be used as input in future runs - keep during prerun
-iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
+_IOFILES = (
+    'control.chem',
+    'refcalc-fd.out',
+    'superpos-spec.out',
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -436,7 +443,7 @@ def move_oldruns(rp, prerun=False):
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in _OUT_FILES or f in _SUPP_FILES)
-                    and f not in rp.manifest and f not in iofiles]
+                    and f not in rp.manifest and f not in _IOFILES]
         dirlist = [DEFAULT_SUPP, DEFAULT_OUT]
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
@@ -447,7 +454,7 @@ def move_oldruns(rp, prerun=False):
             ]
     for f in filelist:
         try:
-            if not prerun or f in iofiles:
+            if not prerun or f in _IOFILES:
                 shutil.copy2(f, work_hist_path / f)
             else:
                 shutil.move(f, work_hist_path / f)
