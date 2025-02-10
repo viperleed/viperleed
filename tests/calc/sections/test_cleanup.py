@@ -7,7 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-02-03'
 __license__ = 'GPLv3+'
 
-import os
 from pathlib import Path
 import shutil
 
@@ -180,10 +179,15 @@ class TestPrerunClean:
     """Tests for the prerun_clean function."""
 
     executables = {  # Some compiled executables
-        'refcalc-010203-040506': 'refcalc exe contents',                        # TODO: Not OK for Windows. Add tests.
+        'refcalc-010203-040506': 'refcalc exe contents',
         'rfactor-999999-888888': 'rfactor exe contents',
         'search-000001-000002': 'search exe contents',
         'superpos-123456-123456': 'superpos exe contents',
+        # And also their windows versions
+        'refcalc-010203-040506.exe': 'refcalc exe windows contents',
+        'rfactor-999999-888888.exe': 'rfactor exe windows contents',
+        'search-000001-000002.exe': 'search exe windows contents',
+        'superpos-123456-123456.exe': 'superpos windows exe contents',
         }
     old_out_files = {
         # Some old-style _OUT files
@@ -234,6 +238,19 @@ class TestPrerunClean:
         with execute_in_dir(tmp_path):
             yield surviving, log_name, mock_move
 
+    def check_fails_to_remove_file(self, file, run, mocker):
+        """Check failure to remove file."""
+        _path_unlink = Path.unlink
+        def _fails_to_remove(path):
+            if path.name == file:
+                raise OSError
+            _path_unlink(path)
+        mocker.patch('pathlib.Path.unlink', new=_fails_to_remove)
+        expect, clean = run()
+        # The failing file should still be there
+        expect[file] = self.calc_tree[file]
+        assert clean == expect
+
     @parametrize(folder=(DEFAULT_WORK_HISTORY, DEFAULT_OUT, DEFAULT_SUPP))
     def test_fails_to_rmdir(self, folder, run, caplog, mocker):
         """Check complaints when deleting a folder fails."""
@@ -253,59 +270,39 @@ class TestPrerunClean:
     def test_fails_to_move_oldruns(self, run, work_tree, caplog):
         """Check warnings when failing to sort previous executions."""
         *_, mock_move = work_tree
-        mock_move.side_effect = Exception
+        mock_move.side_effect = OSError
         expect, clean = run()
         expect_log = 'old files may be lost'
         assert clean == expect
         assert expect_log in caplog.text
 
+    def test_dont_catch_move_oldruns_bugs(self, run, work_tree):
+        """Check that no generic exception is masked."""
+        *_, mock_move = work_tree
+        mock_move.side_effect = Exception
+        with pytest.raises(Exception):
+            run()
+
     @parametrize(file=executables)
     def test_fails_to_remove_executable(self, file, run, caplog, mocker):
         """Check warnings when failing to remove a compiled executable."""
-        _os_remove = os.remove
-        def _fails_to_remove(path):
-            if Path(path).name == file:
-                raise OSError
-            _os_remove(path)
-        mocker.patch('os.remove', new=_fails_to_remove)
         caplog.set_level(0)  # We emit debug
-        expect, clean = run()
-        # The failing file should still be there
-        expect[file] = self.calc_tree[file]
+        self.check_fails_to_remove_file(file, run, mocker)
         expect_log = f'Failed to delete file {file}'
-        assert clean == expect
         assert expect_log in caplog.text
 
     @parametrize(file=silent_fail)
     def test_fails_to_remove_log(self, file, run, caplog, mocker):
         """Check there no complaints when failing to remove some log files."""
-        _os_remove = os.remove
-        def _fails_to_remove(path):
-            if Path(path).name == file:
-                raise OSError
-            _os_remove(path)
-        mocker.patch('os.remove', new=_fails_to_remove)
         caplog.set_level(0)  # Collect all messages
-        expect, clean = run()
-        # The failing file should still be there
-        expect[file] = self.calc_tree[file]
-        assert clean == expect
+        self.check_fails_to_remove_file(file, run, mocker)
         assert not caplog.text
 
     @parametrize(file=old_out_files)
     def test_fails_to_remove_old_out_file(self, file, run, caplog, mocker):
         """Check warnings when failing to remove an old-style _OUT file."""
-        _path_unlink = Path.unlink
-        def _fails_to_remove(path):
-            if path.name == file:
-                raise OSError
-            _path_unlink(path)
-        mocker.patch('pathlib.Path.unlink', new=_fails_to_remove)
-        expect, clean = run()
-        # The failing file should still be there
-        expect[file] = self.calc_tree[file]
+        self.check_fails_to_remove_file(file, run, mocker)
         expect_log = f'Failed to delete previous {file}'
-        assert clean == expect
         assert expect_log in caplog.text
 
     def test_no_need_to_move_oldruns(self, run, work_tree, tmp_path, caplog):
@@ -322,6 +319,15 @@ class TestPrerunClean:
         assert clean == expect
         assert not caplog.text
         move_oldruns.assert_not_called()
+
+    def test_not_an_executable(self, run, tmp_path, caplog):
+        """Check that non-executable files are retained."""
+        not_an_exe = tmp_path/'refcalc-not_a_time'
+        not_an_exe.touch()
+        expect, clean = run()
+        expect[not_an_exe.name] = ''
+        assert clean == expect
+        assert not caplog.text
 
     @parametrize(folder=(DEFAULT_WORK_HISTORY, DEFAULT_OUT, DEFAULT_SUPP))
     # pylint: disable-next=too-many-arguments  # 4/6 are fixtures

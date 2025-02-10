@@ -116,15 +116,15 @@ _IOFILES = (
 logger = logging.getLogger(__name__)
 
 
-def prerun_clean(rp, logname=""):
-    """Clean up the work directory before viperleed.calc starts.
+def prerun_clean(rpars, logname=''):
+    """Clean up the current directory before viperleed.calc starts.
 
     Delete workhistory, old executables, and old logfiles.
     Call move_oldruns if required.
 
     Parameters
     ----------
-    rp : Rparams
+    rpars : Rparams
         The run parameters, needed for move_oldruns.
     logname : str, optional
         Name of the current log file, to be excluded from cleanup.
@@ -133,55 +133,26 @@ def prerun_clean(rp, logname=""):
     -------
     None.
     """
-    # clean out the workhistory folder, if there is one
-    if os.path.isdir(os.path.join(".", DEFAULT_WORK_HISTORY)):
-        try:
-            shutil.rmtree(os.path.join(".", DEFAULT_WORK_HISTORY))
-        except Exception:
-            logger.warning(f"Failed to clear {DEFAULT_WORK_HISTORY} folder.")
+    _delete_old_root_directories()  # workhistory, SUPP, OUT, ...
+    _delete_out_suffixed_files()    # POSCAR_OUT, etc.
+    _delete_old_executables()       # refcalc, etc.
 
-    # remove old SUPP and OUT directories in work
-    for directory in [DEFAULT_SUPP, DEFAULT_OUT]:
-        path = Path(directory)
-        if path.is_dir():
-            try:
-                shutil.rmtree(path)
-            except Exception:
-                logger.warning(f"Failed to clear work/{directory} folder.")
-
-    # Get rid of old POSCAR_OUT, VIBROCC_OUT,
-    # PARAMETERS_OUT and any R_OUT files:
-    for file in Path().glob('*_OUT*'):
+    # If there are old log files, move inputs/outputs to workhistory
+    old_logs = (f for f in Path().glob('*.log')
+                if f.is_file() and f.name != logname)
+    if any(old_logs):
         try:
-            file.unlink()
+            move_oldruns(rpars, prerun=True)
         except OSError:
-            logger.warning(f'Failed to delete previous {file} file.')
+            logger.warning('Exception while trying to clean up from previous '
+                           'run. Program will proceed, but old files may be '
+                           'lost.', exc_info=True)
 
-    # clean up old executable files:
-    for fn in ["refcalc", "rfactor", "search", "superpos"]:
-        p = re.compile(fn+r'-\d{6}-\d{6}')
-        for file in [f for f in os.listdir()
-                  if len(f) == len(fn) + 14 and p.match(f)]:
-            try:
-                os.remove(file)
-            except Exception:
-                logger.debug(f"Failed to delete file {file}")
-
-    # see if there are old logfiles
-    old_logs = [f for f in os.listdir() if os.path.isfile(f) and
-               f.endswith(".log") and f != logname]
-    if len(old_logs) > 0:
-        try:
-            move_oldruns(rp, prerun=True)
-        except Exception:
-            logger.warning("Exception while trying to clean up from previous "
-                           "run. Program will proceed, but old files may be "
-                           "lost.", exc_info=True)
-    if os.path.isfile("fortran-compile.log"):
-        try:
-            os.remove("fortran-compile.log")
-        except Exception:
-            pass
+    # Get rid of other files that may be modified in place
+    other_logs = (
+        'fortran-compile.log',  # We append to this
+        )
+    _silently_remove_files(*other_logs)
 
 
 def organize_workdir(tensor_index, delete_unzipped=False,
@@ -622,6 +593,60 @@ def preserve_original_inputs(rpars):
             logger.warning(f'Could not copy file {file} to '
                            f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rpars.setHaltingLevel(1)
+
+
+def _delete_old_executables():
+    """Remove compiled executables from the current directory."""
+    executables = (  # They have a timestamp.
+        'refcalc',
+        'rfactor',
+        'search',
+        'superpos',
+        )
+    for file_name in executables:
+        pattern = re.compile(file_name + r'-\d{6}-\d{6}')
+        for file in Path().glob(f'{file_name}-*'):
+            if not file.is_file() or not pattern.fullmatch(file.stem):
+                continue
+            try:
+                file.unlink()
+            except OSError:
+                logger.debug(f'Failed to delete file {file}')
+
+
+def _delete_old_root_directories():
+    """Remove calc-created directories from the current directory."""
+    directories = (
+        DEFAULT_WORK_HISTORY,
+        DEFAULT_SUPP,
+        DEFAULT_OUT,
+        )
+    for directory in directories:
+        try:
+            shutil.rmtree(directory)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            logger.warning(f'Failed to clear {directory} folder.')
+
+
+def _delete_out_suffixed_files():
+    """Remove all files containing '_OUT' from the current directory."""
+    for file in Path().glob('*_OUT*'):
+        try:
+            file.unlink()
+        except OSError:
+            logger.warning(f'Failed to delete previous {file} file.')
+
+
+def _silently_remove_files(*files):
+    """Delete files from this directory without complaining for errors."""
+    for file in files:
+        file = Path(file)
+        try:
+            file.unlink()
+        except OSError:
+            pass
 
 
 def _write_manifest_file(manifest_contents):
