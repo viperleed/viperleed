@@ -826,7 +826,7 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
 
     def are_settings_ok(self):
         """Return whether the section settings are acceptable."""
-        return True
+        return True, ''
 
     def set_info(self, info_text):
         """Add informative text in a QLabel."""
@@ -1259,12 +1259,14 @@ class MeasurementSettingsDialog(SettingsDialog):
     def _check_if_settings_ok(self):
         """Check if settings are ok and enable/disable accept button."""
         settings_ok = True
+        self._ctrls['accept'].setToolTip('')
         for widget in self.handler.widgets:
             try:
-                settings_ok = widget.are_settings_ok()
+                settings_ok, reason = widget.are_settings_ok()
             except AttributeError:
                 pass
             if not settings_ok:
+                self._ctrls['accept'].setToolTip(reason)
                 break
         self._ctrls['accept'].setEnabled(settings_ok)
 
@@ -1278,7 +1280,6 @@ class MeasurementSettingsDialog(SettingsDialog):
                 widget.settings_ok_changed.connect(self._check_if_settings_ok)
             except AttributeError:
                 pass
-
 
     @qtc.pyqtSlot()
     def accept(self):

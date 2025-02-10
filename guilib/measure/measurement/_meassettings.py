@@ -95,9 +95,10 @@ class DeviceEditor(SettingsDialogSectionBase):
 
     def are_settings_ok(self):
         """Return whether the device selection is acceptable."""
-        controllers_ok = self._controllers.are_settings_ok()
-        cameras_ok = self._cameras.are_settings_ok()
-        return controllers_ok and cameras_ok
+        ctrl_ok, reason_ctrl = self._controllers.are_settings_ok()
+        cameras_ok, reason_camera = self._cameras.are_settings_ok()
+        reason = ' '.join(filter(lambda x: x!='',(reason_ctrl, reason_camera)))
+        return ctrl_ok and cameras_ok, reason
 
     def set_list_height(self, height):
         """Set the height of the collapsible lists."""

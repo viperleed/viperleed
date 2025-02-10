@@ -1025,21 +1025,23 @@ class CollapsibleDeviceList(qtw.QScrollArea):
             Whether the settings selected in the CollapsibleDeviceList
             are acceptable or not.
         """
-        # First we check if any dummy device is selected.
-        # We should never allow this to be the case.
         for view in self.views:
             if view.button.isEnabled() and view.is_dummy_device():
                 # The selected device is not connected.
-                return False
+                reason = (f'At least one of the selected {self._device_type}s '
+                          'is not connected.' )
+                return False, reason
             if view.button.isEnabled() and not view.settings_file:
                 # The selected device lacks a suitable settings file.
-                return False
-        # Then we check if any device has to be selected at all.
-        if not self.requires_device:
-            return True
-        # Should we require a selected device, then we now know
-        # selected devices are not dummy devices.
-        return any(view.button.isEnabled() for view in self.views)
+                reason = (f'At least one of the selected {self._device_type}s '
+                          'does not have a valid settings file.' )
+                return False, reason
+        # Check if any device has been selected, if a selected device
+        # is required.
+        if not self.requires_device or any(view.button.isEnabled()
+                                           for view in self.views):
+            return True, ''
+        return False , f'At least one {self._device_type} must be selected.'
 
     def store_settings(self):
         """Store the settings of the selected devices."""
