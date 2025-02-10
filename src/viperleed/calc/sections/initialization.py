@@ -568,9 +568,9 @@ def init_domains(rp):
     # run beamgen for the whole system
     logger.info("Generating BEAMLIST...")
     calc_and_write_beamlist(copy.deepcopy(largestDomain.sl),
-                      rp,
-                      domains=True,
-                      beamlist_name='BEAMLIST')
+                            rp,
+                            domains=True,
+                            beamlist_name='BEAMLIST')
     try:
         rp.beamlist = iobeams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True

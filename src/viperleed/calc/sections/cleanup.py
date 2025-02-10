@@ -267,7 +267,7 @@ def _copy_files_and_directories(filelist, directory_list, origin, target):
     except FileExistsError:
         pass
     except OSError:
-        logger.error(f"Error creating {folder} folder: ", exc_info=True)
+        logger.error(f'Error creating {folder} folder: ', exc_info=True)
         return
 
     # Copy files and directories
@@ -278,8 +278,8 @@ def _copy_files_and_directories(filelist, directory_list, origin, target):
         try:
             shutil.copy2(file, target / file.name)
         except OSError:
-            logger.error(f"Error moving {folder} file {file.name}: ",
-                            exc_info=True)
+            logger.error(f'Error moving {folder} file {file.name}: ',
+                         exc_info=True)
 
     for _dir in directory_list:
         if not _dir.is_dir():
@@ -287,8 +287,8 @@ def _copy_files_and_directories(filelist, directory_list, origin, target):
         try:
             copytree_exists_ok(_dir, target / _dir.name)
         except OSError:
-            logger.error(f"Error moving {folder} directory {_dir.name}: ",
-                            exc_info=True)
+            logger.error(f'Error moving {folder} directory {_dir.name}: ',
+                         exc_info=True)
 
 
 def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
@@ -564,7 +564,7 @@ def cleanup(manifest, rp=None):
             "To preserve optimizations for individual domains, please run the "
             "bookkeeper manually in the respective domain directories."
             "The command is: viperleed bookkeeper --archive.\n"
-        )
+            )
 
     if rp:
         if rp.checklist:

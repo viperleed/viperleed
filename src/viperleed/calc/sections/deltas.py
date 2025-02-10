@@ -608,7 +608,6 @@ def deltas(sl, rp, subdomain=False):
             logger.warning("Error deleting delta compile folder "
                            + ct.foldername)
     rp.manifest.append(DEFAULT_DELTAS)
-    return
 
 
 def deltas_domains(rp):
