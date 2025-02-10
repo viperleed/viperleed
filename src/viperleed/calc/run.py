@@ -107,7 +107,7 @@ def run_calc(
                 + DateTimeFormat.LOG_CONTENTS.now())
     logger.info(f"This is ViPErLEED version {__version__}\n")
 
-    tmp_manifest = [DEFAULT_SUPP, DEFAULT_OUT, log_name]
+    tmp_manifest = {DEFAULT_SUPP, DEFAULT_OUT, log_name}
     try:
         rp = parameters.read()
     except FileNotFoundError:
@@ -159,7 +159,7 @@ def run_calc(
                              "execution...")
                 cleanup(tmp_manifest)
                 return 2, None
-            tmp_manifest.append("POSCAR_user")
+            tmp_manifest.add('POSCAR_user')
     try:
         # interpret the PARAMETERS file
         parameters.interpret(rp, slab=slab, silent=False)

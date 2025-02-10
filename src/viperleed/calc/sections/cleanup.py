@@ -360,7 +360,7 @@ def _collect_deltas(tensor_index, path):
 def move_oldruns(rp, prerun=False):
     """Copy relevant files to a new 'workhistory' subfolder.
 
-    Files are copied from SUPP, OUT and the list in rp.manifest.
+    Files are copied from SUPP, OUT, and those in rp.manifest.
     The main log file is excluded.
 
     Parameters
@@ -385,7 +385,7 @@ def move_oldruns(rp, prerun=False):
                      exc_info=True)
         raise
     if not prerun:
-        rp.manifest.append(DEFAULT_WORK_HISTORY)
+        rp.manifest.add(DEFAULT_WORK_HISTORY)
     dl = [n for n in os.listdir(DEFAULT_WORK_HISTORY)
           if os.path.isdir(os.path.join(DEFAULT_WORK_HISTORY, n))]
     maxnum = -1
@@ -480,7 +480,7 @@ def cleanup(manifest, rp=None):
 
     Parameters
     ----------
-    manifest : list of str
+    manifest : set of str
         The files and directories that should be preserved from the work
         folder.
     rp : Rparams, optional
@@ -527,16 +527,7 @@ def cleanup(manifest, rp=None):
             logger.warning("Error sorting files to SUPP/OUT folders: ",
                            exc_info=True)
     # write manifest
-    written = []
-    try:
-        with open("manifest", "w") as wf:
-            for fn in manifest:
-                if fn not in written:
-                    wf.write(fn+"\n")
-                    written.append(fn)
-        logger.info("Wrote manifest file successfully.")
-    except Exception:
-        logger.error("Failed to write manifest file.")
+    _write_manifest_file(manifest)
 
     # write final log message
     elapsed = 'unknown' if not rp else rp.timer.how_long(as_string=True)
@@ -631,3 +622,15 @@ def preserve_original_inputs(rpars):
             logger.warning(f'Could not copy file {file} to '
                            f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rpars.setHaltingLevel(1)
+
+
+def _write_manifest_file(manifest_contents):
+    """Write items in manifest_contents to file 'manifest'."""
+    manifest_contents = set(manifest_contents)
+    manifest = Path('manifest')
+    try:
+        manifest.write_text('\n'.join(manifest_contents) + '\n')
+    except OSError:
+        logger.error(f'Failed to write {manifest} file.')
+    else:
+        logger.info(f'Wrote {manifest} file successfully.')

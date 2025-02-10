@@ -344,7 +344,7 @@ def initialization(sl, rp, subdomain=False):
             raise
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
-    rp.manifest.append("PHASESHIFTS")
+    rp.manifest.add("PHASESHIFTS")
     try:
         phaseshifts.plot_phaseshifts(sl, rp)
     except Exception:
@@ -373,7 +373,7 @@ def initialization(sl, rp, subdomain=False):
                 rp.ivbeams = iobeams.writeIVBEAMS(sl, rp)
                 rp.ivbeams_sorted = False
                 rp.fileLoaded["IVBEAMS"] = True
-                rp.manifest.append("IVBEAMS")
+                rp.manifest.add("IVBEAMS")
             except Exception:
                 logger.error("Error while writing IVBEAMS file based on "
                              "EXPBEAMS data.")
@@ -586,7 +586,7 @@ def init_domains(rp):
             rp.ivbeams = iobeams.writeIVBEAMS(None, rp, domains=True)
             rp.ivbeams_sorted = False
             rp.fileLoaded["IVBEAMS"] = True
-            rp.manifest.append("IVBEAMS")
+            rp.manifest.add("IVBEAMS")
         except Exception:
             logger.error("Error while writing IVBEAMS file based on "
                          "EXPBEAMS data.")

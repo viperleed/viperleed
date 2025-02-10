@@ -747,8 +747,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
 
     # Move and zip tensor files
     rp.TENSOR_INDEX = leedbase.getMaxTensorIndex() + 1
-    if DEFAULT_TENSORS not in rp.manifest:
-        rp.manifest.append(DEFAULT_TENSORS)
+    rp.manifest.add(DEFAULT_TENSORS)
     tensor_folder = Path(DEFAULT_TENSORS)
     tensor_folder /= f'{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}'
     tensor_folder.mkdir(parents=True, exist_ok=True)

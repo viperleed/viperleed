@@ -17,8 +17,11 @@ from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
-from viperleed.calc.sections.cleanup import preserve_original_inputs
 from viperleed.calc.sections.cleanup import OPTIONAL_INPUT_FILES
+from viperleed.calc.sections.cleanup import preserve_original_inputs
+from viperleed.calc.sections.cleanup import _write_manifest_file
+
+from ...helpers import raises_test_exception
 
 _MODULE = 'viperleed.calc.sections.cleanup'
 
@@ -123,3 +126,43 @@ class TestPreserveOriginalInputs:
             for (src, dst), *_ in copy.call_args_list
             }
         assert (expect, ORIGINAL_INPUTS_DIR_NAME) in calls
+
+
+class TestWriteManifest:
+    """Tests for the _write_manifest_file function."""
+
+    _success = {
+        'unique': ('file1.txt', 'file2.txt', 'file3.txt'),
+        'duplicates': ('file1.txt', 'file2.txt', 'file1.txt'),
+        }
+
+    @parametrize(contents=_success.values(), ids=_success)
+    def test_success(self, contents, tmp_path, caplog):
+        """Check successful writing to the manifest file."""
+        caplog.set_level(0)  # All messages
+        with execute_in_dir(tmp_path):
+            _write_manifest_file(contents)
+        manifest = (tmp_path/'manifest')
+        assert manifest.is_file()
+
+        # Check contents
+        written = sorted(manifest.read_text().splitlines())
+        assert written == sorted(set(contents))
+
+        # Check logging
+        expect_log = 'Wrote manifest file successfully.'
+        assert expect_log in caplog.text
+
+    def test_fails(self, tmp_path, mocker, caplog):
+        """Test logging when opening manifest fails."""
+        mocker.patch('pathlib.Path.write_text', side_effect=OSError)
+        with execute_in_dir(tmp_path):
+            _write_manifest_file(('should not write',))
+        expect_log = 'Failed to write manifest file.'
+        assert not (tmp_path/'manifest').is_file()
+        assert expect_log in caplog.text
+
+    def test_raises(self):
+        """Check that only OSError is caught cleanly."""
+        with raises_test_exception('pathlib.Path.write_text'):
+            _write_manifest_file(('should not write',))
