@@ -1,4 +1,4 @@
-"""Module collapsableview of viperleed.guilib.measure.widgets.
+"""Module collapsibleview of viperleed.guilib.measure.widgets.
 
 ===============================================
       ViPErLEED Graphical User Interface
@@ -8,8 +8,8 @@ Created: 2024-07-05
 Author: Michele Riva
 Author: Florian Doerr
 
-Defines the CollapsableView, CollapsableList, CollapsableCameraList, and
-CollapsableControllerList classes.
+Defines the CollapsibleView, CollapsibleList, CollapsibleCameraList, and
+CollapsibleControllerList classes.
 """
 
 from ast import literal_eval
@@ -146,7 +146,7 @@ class QuantitySelector(qtw.QFrame):
                 raise RuntimeError('Passed wrong quantities.')
 
 
-class CollapsableView(qtw.QWidget):
+class CollapsibleView(qtw.QWidget):
     """A widget that can be expanded/collapsed by the press of a button."""
 
     def __init__(self, parent=None):
@@ -234,7 +234,7 @@ class CollapsableView(qtw.QWidget):
         self._adjust_bottom_space()
         self._adjust_button_icon(self._frame.isVisible())
 
-    def add_collapsable_item(self, item):
+    def add_collapsible_item(self, item):
         """Add widget to the widgets in the inner collapsible layout.
 
         Parameters
@@ -353,8 +353,8 @@ class CollapsableView(qtw.QWidget):
             return
 
 
-class CollapsableDeviceView(CollapsableView):
-    """A CollapsableView for measurement hardware."""
+class CollapsibleDeviceView(CollapsibleView):
+    """A CollapsibleView for measurement hardware."""
 
     # This signal is emitted when device settings stored
     # in the measurement settings file change.
@@ -438,7 +438,7 @@ class CollapsableDeviceView(CollapsableView):
                 _form.addRow(*widget)
                 layout.addLayout(_form)
         new_widget.setLayout(layout)
-        self.add_collapsable_item(new_widget)
+        self.add_collapsible_item(new_widget)
         self._adjust_bottom_space()
 
     @qtc.pyqtSlot()
@@ -466,8 +466,8 @@ class CollapsableDeviceView(CollapsableView):
         """Compose and connect."""
         super()._compose_and_connect()
         self._settings_folder.path = Path().resolve()
-        self.add_collapsable_item(self._settings_folder)
-        self.add_collapsable_item(self._settings_file_selector)
+        self.add_collapsible_item(self._settings_folder)
+        self.add_collapsible_item(self._settings_file_selector)
         self._settings_folder.path_changed.connect(
             self._get_device_settings_files
             )
@@ -610,8 +610,8 @@ class CollapsableDeviceView(CollapsableView):
             pass
 
 
-class CollapsableCameraView(CollapsableDeviceView):
-    """A CollapsableView for cameras."""
+class CollapsibleCameraView(CollapsibleDeviceView):
+    """A CollapsibleView for cameras."""
 
     def _connect_camera(self, device):
         """Connect camera.
@@ -644,8 +644,8 @@ class CollapsableCameraView(CollapsableDeviceView):
         device.disconnect_()
 
 
-class CollapsableControllerView(CollapsableDeviceView):
-    """A CollapsableView for controllers."""
+class CollapsibleControllerView(CollapsibleDeviceView):
+    """A CollapsibleView for controllers."""
 
     def __init__(self, parent=None):
         """Initialise widget.
@@ -775,8 +775,8 @@ class CollapsableControllerView(CollapsableDeviceView):
             self._check_for_handler()
 
 
-class CollapsableDeviceList(qtw.QScrollArea):
-    """A widget composed of an arbitrary number of CollapsableViews."""
+class CollapsibleDeviceList(qtw.QScrollArea):
+    """A widget composed of an arbitrary number of CollapsibleViews."""
 
     _top_labels = ('Device', )
 
@@ -813,7 +813,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
         self.setVerticalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOn)
         self.setHorizontalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOff)
         self._make_scroll_area()
-        # If requires_device is True, the CollapsableDeviceList must
+        # If requires_device is True, the CollapsibleDeviceList must
         # contain at least one selected valid device for the
         # are_settings_ok() method to return True.
         self.requires_device = False
@@ -851,7 +851,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
         ----------
         widg_types : QWidget
             Any amount of widgets that should be added next
-            to the button of each CollapsableView.
+            to the button of each CollapsibleView.
 
         Returns
         -------
@@ -860,12 +860,12 @@ class CollapsableDeviceList(qtw.QScrollArea):
         self._top_widget_types.extend(widg_types)
 
     def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsableView.
+        """Add the top widget types to the CollapsibleView.
 
         Parameters
         ----------
-        view : CollapsableView
-            The CollapsableView to which the widgets will be attached.
+        view : CollapsibleView
+            The CollapsibleView to which the widgets will be attached.
 
         Returns
         -------
@@ -982,19 +982,19 @@ class CollapsableDeviceList(qtw.QScrollArea):
 
         Parameters
         ----------
-        view : CollapsableDeviceView
+        view : CollapsibleDeviceView
             The view that is to be inserted into the
-            CollapsableDeviceList.
+            CollapsibleDeviceList.
         name : str
             The display name of the device that will be displayed
-            on the button of the CollapsableDeviceView.
+            on the button of the CollapsibleDeviceView.
         cls_and_info : tuple of type and SettingsInfo
             The device class and the SettingsInfo required to determine
             the device settings.
 
         Returns
         -------
-        view : CollapsableDeviceView
+        view : CollapsibleDeviceView
             The added view.
         """
         view.button.setEnabled(False)
@@ -1022,7 +1022,7 @@ class CollapsableDeviceList(qtw.QScrollArea):
         Returns
         -------
         settings_ok : bool
-            Whether the settings selected in the CollapsableDeviceList
+            Whether the settings selected in the CollapsibleDeviceList
             are acceptable or not.
         """
         # First we check if any dummy device is selected.
@@ -1052,8 +1052,8 @@ class CollapsableDeviceList(qtw.QScrollArea):
                 view.store_settings()
 
 
-class CollapsableCameraList(CollapsableDeviceList):
-    """A CollapsableList for cameras."""
+class CollapsibleCameraList(CollapsibleDeviceList):
+    """A CollapsibleList for cameras."""
 
     _top_labels = ('Cameras', 'Use',)
 
@@ -1078,12 +1078,12 @@ class CollapsableCameraList(CollapsableDeviceList):
         self._camera_settings = ()
 
     def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsableView.
+        """Add the top widget types to the CollapsibleView.
 
         Parameters
         ----------
-        view : CollapsableView
-            The CollapsableView to which the widgets will be attached.
+        view : CollapsibleView
+            The CollapsibleView to which the widgets will be attached.
 
         Returns
         -------
@@ -1173,23 +1173,23 @@ class CollapsableCameraList(CollapsableDeviceList):
                      type=qtc.Qt.UniqueConnection)
 
     def add_new_view(self, name, cls_and_info):
-        """Add a new CollapsableCameraView.
+        """Add a new CollapsibleCameraView.
 
         Parameters
         ----------
         name : str
             The display name of the camera that will be displayed
-            on the button of the CollapsableDeviceView.
+            on the button of the CollapsibleDeviceView.
         cls_and_info : tuple of type and SettingsInfo
             The camera class and the SettingsInfo required to determine
             the camera settings.
 
         Returns
         -------
-        view : CollapsableDeviceView
+        view : CollapsibleDeviceView
             The added view.
         """
-        view = CollapsableCameraView()
+        view = CollapsibleCameraView()
         return super().add_new_view(view, name, cls_and_info)
 
     def get_camera_settings(self):
@@ -1220,8 +1220,8 @@ class CollapsableCameraList(CollapsableDeviceList):
         self._set_camera_settings()
 
 
-class CollapsableControllerList(CollapsableDeviceList):
-    """A CollapsableList for controllers."""
+class CollapsibleControllerList(CollapsibleDeviceList):
+    """A CollapsibleList for controllers."""
 
     _top_labels = ('Controllers', 'Use', 'Primary',)
 
@@ -1248,12 +1248,12 @@ class CollapsableControllerList(CollapsableDeviceList):
         self._secondary_settings = ()
 
     def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsableView.
+        """Add the top widget types to the CollapsibleView.
 
         Parameters
         ----------
-        view : CollapsableView
-            The CollapsableView to which the widgets will be attached.
+        view : CollapsibleView
+            The CollapsibleView to which the widgets will be attached.
 
         Returns
         -------
@@ -1403,23 +1403,23 @@ class CollapsableControllerList(CollapsableDeviceList):
                 self._set_controller_settings(settings)
 
     def add_new_view(self, name, cls_and_info):
-        """Add a new CollapsableControllerView.
+        """Add a new CollapsibleControllerView.
 
         Parameters
         ----------
         name : str
             The display name of the controller that will be displayed
-            on the button of the CollapsableDeviceView.
+            on the button of the CollapsibleDeviceView.
         cls_and_info : tuple of type and SettingsInfo
             The controller class and the SettingsInfo required to
             determine the controller settings.
 
         Returns
         -------
-        view : CollapsableDeviceView
+        view : CollapsibleDeviceView
             The added view.
         """
-        view = CollapsableControllerView()
+        view = CollapsibleControllerView()
         return super().add_new_view(view, name, cls_and_info)
 
     def get_primary_settings(self):

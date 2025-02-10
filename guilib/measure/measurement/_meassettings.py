@@ -21,8 +21,8 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase
     )
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
-from viperleed.guilib.measure.widgets.collapsableview import CollapsableCameraList
-from viperleed.guilib.measure.widgets.collapsableview import CollapsableControllerList
+from viperleed.guilib.measure.widgets.collapsibleview import CollapsibleCameraList
+from viperleed.guilib.measure.widgets.collapsibleview import CollapsibleControllerList
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
@@ -44,14 +44,14 @@ class DeviceEditor(SettingsDialogSectionBase):
         kwargs['tooltip'] = ('This section lists devices, allows their '
                              'selection, and the editing of their settings.')
         super().__init__(**kwargs)
-        self._controllers = CollapsableControllerList()
-        self._cameras = CollapsableCameraList()
+        self._controllers = CollapsibleControllerList()
+        self._cameras = CollapsibleCameraList()
         self._default_settings_folder = None
         if default_settings_folder:
             self.default_settings_folder = default_settings_folder
 
         self.settings_changed.connect(self._store_device_settings)
-        self._compose_and_connect_collapsable_lists()
+        self._compose_and_connect_collapsible_lists()
 
     @property
     def default_settings_folder(self):
@@ -65,8 +65,8 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._cameras.default_settings_folder = settings_path
         self._controllers.default_settings_folder = settings_path
 
-    def _compose_and_connect_collapsable_lists(self):
-        """Compose the collapsable lists for cameras and controllers."""
+    def _compose_and_connect_collapsible_lists(self):
+        """Compose the collapsible lists for cameras and controllers."""
         central_layout = qtw.QHBoxLayout()
         central_layout.addWidget(self._controllers)
         if self._add_cameras:
@@ -100,19 +100,19 @@ class DeviceEditor(SettingsDialogSectionBase):
         return controllers_ok and cameras_ok
 
     def set_list_height(self, height):
-        """Set the height of the collapsable lists."""
-        for collapsable_list in (self._controllers, self._cameras):
-            collapsable_list.setMaximumHeight(height)
-            collapsable_list.setMinimumHeight(height)
+        """Set the height of the collapsible lists."""
+        for collapsible_list in (self._controllers, self._cameras):
+            collapsible_list.setMaximumHeight(height)
+            collapsible_list.setMinimumHeight(height)
 
     def store_lower_level_settings(self):
         """Store the settings of the selected devices."""
-        for collapsable_list in (self._controllers, self._cameras):
-            collapsable_list.store_settings()
+        for collapsible_list in (self._controllers, self._cameras):
+            collapsible_list.store_settings()
 
     @qtc.pyqtSlot()
     def update_widgets(self):
-        """Update collapsable lists."""
+        """Update collapsible lists."""
         if not self.isVisible():
             # If the widget is not visible, we do not want to create
             # device objects that may occupy the serial as the
