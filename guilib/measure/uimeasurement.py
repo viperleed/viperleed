@@ -258,7 +258,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         super().__init__(parent, name=TITLE)
         # Keep references to controls, dialogs, and some globals
         self._ctrls = {
-            'measure': qtw.QPushButton("Start Measurement"),
+            'measure': qtw.QPushButton("New Measurement"),
             'abort': qtw.QPushButton("Abort"),
             'energy_input': qtw.QLineEdit(''),                                  # TODO: QDoubleSpinBox?
             'set_energy': qtw.QPushButton("Set energy"),
