@@ -9,6 +9,7 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 import shutil
+from zipfile import ZipFile
 
 import pytest
 from pytest_cases import fixture
@@ -36,7 +37,8 @@ from viperleed.calc.sections.cleanup import _collect_out_contents
 from viperleed.calc.sections.cleanup import _collect_supp_contents
 from viperleed.calc.sections.cleanup import _copy_files_and_directories
 from viperleed.calc.sections.cleanup import _write_manifest_file
-from viperleed.calc.sections.cleanup import _zip_deltas_and_tensors
+from viperleed.calc.sections.cleanup import _zip_folder
+from viperleed.calc.sections.cleanup import _zip_subfolders
 
 from ...helpers import filesystem_from_dict
 from ...helpers import filesystem_to_dict
@@ -385,25 +387,70 @@ class TestOrganizeWorkdir:
         """Replace implementation details of organize_workdir with mocks."""
         helpers = (
             '_collect_delta_files',
-            '_zip_deltas_and_tensors',
+            '_zip_subfolders',
             '_collect_supp_contents',
             '_collect_out_contents',
             )
         return {helper: mocker.patch(f'{_MODULE}.{helper}')
                 for helper in helpers}
 
-    def test_organize_workdir(self, workdir, mock_implementation):
+    def test_archive_and_delete(self, workdir, mock_implementation, mocker):
         """Check that the implementation is executed as expected."""
-        mocks = mock_implementation
-        args = {
-            '_collect_delta_files': (1,),
-            '_zip_deltas_and_tensors': (False, True, True, 2),
-            '_collect_supp_contents': (),
-            '_collect_out_contents': (),
-            }
         organize_workdir(1, False, True, True, workdir, 2)
-        for helper, mock in mocks.items():
-            mock.assert_called_once_with(*args[helper])
+        calls = {
+            '_collect_delta_files': (mocker.call(1),),
+            '_zip_subfolders': (
+                mocker.call(DEFAULT_TENSORS, True, False, 2),
+                mocker.call(DEFAULT_DELTAS, True, False, 2),
+                ),
+            '_collect_supp_contents': (mocker.call(),),
+            '_collect_out_contents': (mocker.call(),),
+            }
+        for helper, mock in mock_implementation.items():
+            mock.assert_has_calls(calls[helper])
+
+    def test_archive_tensors(self, workdir, mock_implementation, mocker):
+        """Check that the implementation is executed as expected."""
+        organize_workdir(1, False, True, False, workdir, 2)
+        calls = {
+            '_collect_delta_files': (mocker.call(1),),
+            '_zip_subfolders': (
+                mocker.call(DEFAULT_TENSORS, True, False, 2),
+                ),
+            '_collect_supp_contents': (mocker.call(),),
+            '_collect_out_contents': (mocker.call(),),
+            }
+        for helper, mock in mock_implementation.items():
+            mock.assert_has_calls(calls[helper])
+
+    def test_archive_deltas(self, workdir, mock_implementation, mocker):
+        """Check that the implementation is executed as expected."""
+        organize_workdir(1, False, False, True, workdir, 2)
+        calls = {
+            '_collect_delta_files': (mocker.call(1),),
+            '_zip_subfolders': (
+                mocker.call(DEFAULT_DELTAS, True, False, 2),
+                ),
+            '_collect_supp_contents': (mocker.call(),),
+            '_collect_out_contents': (mocker.call(),),
+            }
+        for helper, mock in mock_implementation.items():
+            mock.assert_has_calls(calls[helper])
+
+    def test_delete_only(self, workdir, mock_implementation, mocker):
+        """Check that the implementation is executed as expected."""
+        organize_workdir(1, True, False, False, workdir, 2)
+        calls = {
+            '_collect_delta_files': (mocker.call(1),),
+            '_zip_subfolders': (
+                mocker.call(DEFAULT_TENSORS, False, True, 2),
+                mocker.call(DEFAULT_DELTAS, False, True, 2),
+                ),
+            '_collect_supp_contents': (mocker.call(),),
+            '_collect_out_contents': (mocker.call(),),
+            }
+        for helper, mock in mock_implementation.items():
+            mock.assert_has_calls(calls[helper])
 
 
 class TestOrganizeSuppOut:
@@ -615,59 +662,49 @@ class TestCollectDeltaFiles:
         assert expect_log in caplog.text
 
 
-class TestZipDeltasAndTensors:
-    """Tests for the _zip_deltas_and_tensors function."""
+class TestZipSubfolders:
+    """Tests for the _zip_subfolders function."""
 
-    tree = {
-        DEFAULT_DELTAS: {
-            'Deltas_001': {'file_1': 'file_1 contents'},
-            'Deltas_999': {'file_999': 'file_999 contents'},
-            'not-a-directory': 'some stray file in Deltas',
-            },
-        DEFAULT_TENSORS: {
-            'Tensors_005': {'file_5': 'file_5 contents'},
-            'Tensors_123': {'file_123': 'file_123 contents'},
-            'not-a-directory': 'some stray file in Tensors',
-            },
+    folder = 'test_zipping'
+    contents = {
+        'test_zipping_001': {'file_1': 'file_1 contents'},
+        'test_zipping_999': {'file_999': 'file_999 contents'},
+        'not-a-directory': 'some stray file in test_zipping',
         }
+    tree = {folder: contents}
 
     @property
     def packed_all(self):
         """Return the expected tree after packing self.tree."""
-        packed_all = {d: {} for d in self.tree}
-        for directory, subfolders in self.tree.items():
-            files = {f: c for f, c in subfolders.items() if isinstance(c, str)}
-            files.update({f'{f}.zip': f'{f}.zip is a binary file'
-                          for f in subfolders
-                          if f not in files})
-            packed_all[directory] = files
-        return packed_all
+        files = {f: c for f, c in self.contents.items() if isinstance(c, str)}
+        files.update({f'{f}.zip': f'{f}.zip is a binary file'
+                      for f in self.contents
+                      if f not in files})
+        return {self.folder: files}
 
     @fixture(name='work_tree')
     def fixture_work_tree(self, workdir):
-        """Create a temporary tree with Tensors/Deltas at workdir."""
+        """Create a temporary tree at workdir."""
         filesystem_from_dict(self.tree, workdir)
         return workdir
 
     @fixture(name='run')
     def fixture_run(self, work_tree):
-        """Execute _zip_deltas_and_tensors in workdir."""
+        """Execute _zip_subfolders in workdir."""
         def _run(**kwargs):
             with execute_in_dir(work_tree):
-                _zip_deltas_and_tensors(**kwargs)
+                _zip_subfolders(at_path=self.folder, **kwargs)
             return filesystem_to_dict(work_tree)
         return _run
 
     def test_delete_only(self, run, caplog):
         """Check no deletion of unzipped directories."""
         clean = run(delete_unzipped=True,
-                    tensors=False,
-                    deltas=False,
+                    archive=False,
                     compression_level=2)
-        expect = {  # Only bare files survive
-            d: {f: c for f, c in subfolders.items() if isinstance(c, str)}
-            for d, subfolders in self.tree.items()
-            }
+        expect = {self.folder: {
+            f: c for f, c in self.contents.items() if isinstance(c, str)
+            }}
         assert clean == expect
         assert not caplog.text
 
@@ -675,12 +712,10 @@ class TestZipDeltasAndTensors:
         """Check complaints when deleting an unzipped folder fails."""
         mocker.patch('shutil.rmtree', side_effect=OSError)
         clean = run(delete_unzipped=True,
-                    tensors=True,
-                    deltas=True,
+                    archive=True,
                     compression_level=2)
         expect = self.packed_all
-        for folder, orig_contents in self.tree.items():
-            expect[folder].update(orig_contents)
+        expect[self.folder].update(self.contents)
         expect_log = 'Error deleting unzipped'
         assert clean == expect
         assert expect_log in caplog.text
@@ -688,27 +723,41 @@ class TestZipDeltasAndTensors:
     def test_do_nothing(self, run, caplog):
         """Check correct behavior for not packing nor deleting."""
         unchanged = run(delete_unzipped=False,
-                        tensors=False,
-                        deltas=False,
+                        archive=False,
                         compression_level=2)
         assert unchanged == self.tree
         assert not caplog.text
 
-    def test_pack_and_delete(self, run, caplog):
+    def test_folder_does_not_exist(self, work_tree, caplog):
+        """Check that nothing happens if called with a non-existing folder."""
+        _zip_subfolders('does-not-exist', True, True, 2)
+        unchanged = filesystem_to_dict(work_tree)
+        assert unchanged == self.tree
+        assert not caplog.text
+
+    def test_pack_and_delete(self, run, workdir, caplog):
         """Check packing and deleting of both Tensors and Deltas."""
         clean = run(delete_unzipped=True,
-                    tensors=True,
-                    deltas=True,
+                    archive=True,
                     compression_level=2)
         assert clean == self.packed_all
         assert not caplog.text
+
+        # Check the contents of an archive
+        archived = next(f for f, c in self.contents.items()
+                        if isinstance(c, dict))
+        target = workdir/'extracted'
+        target.mkdir()
+        archive_p = (workdir/self.folder/archived).with_suffix('.zip')
+        shutil.unpack_archive(archive_p, target)
+        extracted = filesystem_to_dict(target)
+        assert extracted == self.contents[archived]
 
     def test_pack_fails(self, run, caplog, mocker):
         """Check nothing is deleted if packing is not successful."""
         mocker.patch(f'{_MODULE}.ZipFile', side_effect=OSError)
         unchanged = run(delete_unzipped=True,  # not honored
-                        tensors=True,
-                        deltas=True,
+                        archive=True,
                         compression_level=2)
         expect_log = 'Error packing'
         assert unchanged == self.tree
@@ -717,40 +766,62 @@ class TestZipDeltasAndTensors:
     def test_pack_only(self, run, caplog):
         """Check no deletion of unzipped directories."""
         clean = run(delete_unzipped=False,
-                    tensors=True,
-                    deltas=True,
+                    archive=True,
                     compression_level=2)
         expect = self.packed_all
-        for folder, orig_contents in self.tree.items():
-            expect[folder].update(orig_contents)
+        expect[self.folder].update(self.contents)
         assert clean == expect
         assert not caplog.text
 
     @pytest.mark.xfail(
         reason=('This supposedly invalid folder name is collected anyway. It '
-                'was meant to fail the match.span check but it is not really '
+                'was meant to fail the match.end check but it is not really '
                 'clear what that check guards')
         )
     def test_invalid_name_format(self, run, workdir, caplog):
         """Check that a folder with invalid format is not processed."""
-        tree = {DEFAULT_DELTAS: {'Deltas_001-invalid-fmt': {}}}
+        tree = {self.folder: {'test_zipping_001-invalid-fmt': {}}}
         filesystem_from_dict(tree, workdir)
         clean = run(delete_unzipped=True,
-                    tensors=True,
-                    deltas=True,
+                    archive=True,
                     compression_level=2)
-        assert clean == tree
+        expect = self.packed_all
+        expect[self.folder].update(tree[self.folder])
+        assert clean == expect
         assert not caplog.text
 
     def test_not_a_valid_folder(self, run, workdir, caplog):
         """Check that a stray subfolder is not packed."""
-        tree = {DEFAULT_DELTAS: {'not-a-Deltas_001': {}}}
+        tree = {self.folder: {'not-a-test_zipping_001': {}}}
         filesystem_from_dict(tree, workdir)
         clean = run(delete_unzipped=True,
-                    tensors=True,
-                    deltas=True,
+                    archive=True,
                     compression_level=2)
-        expect = self.packed_all.copy()
-        expect[DEFAULT_DELTAS].update(tree[DEFAULT_DELTAS])
+        expect = self.packed_all
+        expect[self.folder].update(tree[self.folder])
         assert clean == expect
         assert not caplog.text
+
+
+class TestZipFolder:
+    """Tests for the _zip_folder function."""
+
+    def test_does_not_pack_itself(self, tmp_path):
+        """Check that an existing archive is not included."""
+        folder = 'tst_folder'
+        contents = {'file': 'file contents'}
+        filesystem_from_dict({folder: contents}, tmp_path)
+        # Create also an existing zip file
+        archive = (tmp_path/folder).with_suffix('.zip')
+        with ZipFile(archive, 'w') as zip_:
+            zip_.writestr('pre-existing', 'contents were already there')
+
+        _zip_folder(tmp_path/folder, 2)
+
+        # Check that the archive contains what it should
+        extract_into = tmp_path/'extracted'
+        shutil.unpack_archive(archive, extract_into)
+        extracted = filesystem_to_dict(extract_into)
+        expect = {**contents,
+                  'pre-existing': 'contents were already there'}
+        assert extracted == expect

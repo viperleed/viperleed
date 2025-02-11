@@ -178,8 +178,8 @@ def organize_workdir(tensor_index, delete_unzipped=False,
         The path to work folder that contains the files to be
         reorganized. The default is the current directory.
     compression_level : int
-        Compression level to be applied for ZIP archives of Tensors and
-        Deltas. Default is 2.
+        Compression level to be applied for ZIP archives of
+        Tensors and Deltas. Default is 2.
 
     Returns
     -------
@@ -187,10 +187,14 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     """
     with execute_in_dir(workdir):
         _collect_delta_files(tensor_index)
-        _zip_deltas_and_tensors(delete_unzipped,
-                                tensors,
-                                deltas,
-                                compression_level)
+
+        # Create ZIP files for Tensors and Deltas subfolders
+        zip_args = delete_unzipped, compression_level
+        if tensors or delete_unzipped:
+            _zip_subfolders(DEFAULT_TENSORS, tensors, *zip_args)
+        if deltas or delete_unzipped:
+            _zip_subfolders(DEFAULT_DELTAS, deltas, *zip_args)
+
         _collect_supp_contents()
         _collect_out_contents()
 
@@ -202,9 +206,11 @@ def _collect_supp_contents():
 
     # Also add log files into SUPP: skip calc logs (they go to
     # main dir), and compile logs (they go to compile_logs dir)
-    logs_to_supp = (f for f in Path().glob('*.log')
-                    if (not f.name.startswith(LOG_PREFIX)
-                        and 'compile' not in f.name))
+    logs_to_supp = (
+        f for f in Path().glob('*.log')
+        # pylint: disable-next=magic-value-comparison  # 'compile'
+        if not f.name.startswith(LOG_PREFIX) and 'compile' not in f.name
+        )
     files_to_copy.update(logs_to_supp)
 
     _copy_files_and_directories(files_to_copy,
@@ -232,76 +238,105 @@ def _collect_out_contents():
 
 
 def _copy_files_and_directories(files, directories, target):
-    """Copy files and directories to target."""
-    folder = target.name  # SUPP or OUT
-    # Create the directory
+    """Copy files and directories to target, creating it if not existing."""
     try:
         target.mkdir(parents=True)
     except FileExistsError:
         pass
     except OSError:
-        logger.error(f'Error creating {folder} folder: ', exc_info=True)
+        logger.error(f'Error creating {target.name} folder: ', exc_info=True)
         return
 
-    for file in files:
+    for item in (*files, *directories):
+        _copy = shutil.copy2 if item.is_file() else copytree_exists_ok
         try:
-            shutil.copy2(file, target / file.name)
+            _copy(item, target/item.name)
         except FileNotFoundError:
             pass
         except OSError:
-            logger.error(f'Error moving {folder} file {file.name}: ',
-                         exc_info=True)
-
-    for _dir in directories:
-        try:
-            copytree_exists_ok(_dir, target / _dir.name)
-        except FileNotFoundError:
-            pass
-        except OSError:
-            logger.error(f'Error moving {folder} directory {_dir.name}: ',
+            which = 'file' if item.is_file() else 'directory'
+            logger.error(f'Error moving {target.name} {which} {item.name}: ',
                          exc_info=True)
 
 
-def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas,
-                            compression_level):
-    # If there are unzipped Tensors or Deltas directories, zip them:
-    for folder in (DEFAULT_TENSORS, DEFAULT_DELTAS):
-        todo = tensors if folder is DEFAULT_TENSORS else deltas
-        origin_base = Path(folder)
-        if not origin_base.is_dir():
+def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
+    """Archive all numbered subfolders `at_path`.
+
+    Parameters
+    ----------
+    at_path : Path
+        The folder containing the subfolders to be archived into
+        a ZIP file. Only subfolders whose names begin with
+        '<at_path.name>_ddd' are packed.
+    archive : bool
+        Whether subfolders should be archived or only deleted.
+    delete_unzipped : bool
+        Whether subfolders should be deleted after they have been
+        successfully archived.
+    compression_level : int
+        Compression level to be applied while archiving.
+
+    Returns
+    -------
+    None.
+    """
+    at_path = Path(at_path)
+    if not at_path.is_dir():
+        return
+    root_name = at_path.name
+    rgx = re.compile(rf'{root_name}_[0-9]{{3}}')                                # TODO: maybe we want "three or more" digits, i.e., {{3,}}? Or could we use tensor_index?
+    subfolders = (p for p in at_path.glob('*') if p.is_dir())
+    for subfolder in subfolders:
+        match_ = rgx.match(subfolder.name)
+        if not match_ or match_.end() != len(root_name) + 4:                    # TODO: should this 4 be adjusted to the previous TODO? Unclear what it guards
             continue
-        if not todo and not delete_unzipped:
-            continue
-        rgx = re.compile(rf'{folder}_[0-9]{{3}}')                               # TODO: maybe we want "three or more" digits, i.e., {{3,}}? Or could we use tensor_index?
-        for _dir in origin_base.glob('*'):
-            if not _dir.is_dir():
+        if archive:
+            try:
+                _zip_folder(subfolder, compression_level)
+            except OSError:
                 continue
-            match = rgx.match(_dir.name)
-            if not match or match.span()[1] != len(folder) + 4:                 # TODO: should this 4 be adjusted to the previous TODO? Unclear what it guards
-                continue  # Marked as uncovered, but it is
-            delete = delete_unzipped
-            if todo:
-                logger.info(f'Packing {_dir.name}.zip...')
-                _dir_path = Path(_dir)
-                move_to_archive = _dir_path.glob('*')
-                arch_name = _dir_path.with_suffix('.zip')
-                try:
-                    with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
-                        compresslevel=compression_level) as archive:
-                        for fname in move_to_archive:
-                            archive.write(fname, fname.relative_to(_dir))
-                except OSError:
-                    logger.error(f'Error packing {_dir.name}.zip file: ',
-                                 exc_info=True)
-                    delete = False
-            if delete:
-                try:
-                    shutil.rmtree(_dir)
-                except OSError:
-                    logger.warning(
-                        f'Error deleting unzipped {folder} directory. '
-                        'This will increase the size of the work folder, '
-                        'but not cause any problems.')
+
+        if delete_unzipped:
+            try:
+                shutil.rmtree(subfolder)
+            except OSError:
+                logger.warning(
+                    f'Error deleting unzipped {root_name} directory '
+                    f'{subfolder}. This will increase the size of the '
+                    'work folder, but not cause any problems.'
+                    )
+
+
+def _zip_folder(folder, compression_level):
+    """Create a ZIP with the same name as folder.
+
+    Parameters
+    ----------
+    folder : Path
+        Path to the folder to be compressed. The archive will
+        be saved in the parent of `folder`, with the same name.
+        If the ZIP file already exists, the contents of `folder`
+        are added to it.
+    compression_level : int
+        The level of compression to use when creating the ZIP.
+
+    Raises
+    ------
+    OSError
+        If creating the archive fails.
+    """
+    kwargs = {'compression': ZIP_DEFLATED, 'compresslevel': compression_level}
+    arch_name = folder.with_suffix('.zip')
+    logger.info(f'Packing {arch_name}...')
+    # Don't pack the archive into itself
+    to_pack = (f for f in folder.glob('*') if f != arch_name)
+    try:  # pylint: disable=too-many-try-statements
+        with ZipFile(arch_name, 'a', **kwargs) as archive:
+            for item in to_pack:
+                archive.write(item, item.relative_to(folder))
+    except OSError:
+        logger.error(f'Error packing {arch_name} file: ', exc_info=True)
+        raise
 
 
 def _collect_delta_files(tensor_index):
