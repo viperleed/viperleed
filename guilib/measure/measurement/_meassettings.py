@@ -135,12 +135,6 @@ class DeviceEditor(SettingsDialogSectionBase):
         reason = ' '.join(filter(lambda x: x!='',(reason_ctrl, reason_camera)))
         return ctrl_ok and cameras_ok, reason
 
-    def set_list_height(self, height):
-        """Set the height of the collapsible lists."""
-        for collapsible_list in (self._controllers, self._cameras):
-            collapsible_list.setMaximumHeight(height)
-            collapsible_list.setMinimumHeight(height)
-
     def store_lower_level_settings(self):
         """Store the settings of the selected devices."""
         for collapsible_list in (self._controllers, self._cameras):
