@@ -23,6 +23,7 @@ from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
@@ -175,7 +176,7 @@ def organize_workdir(tensor_index, delete_unzipped=False,
         and should be saved. The default is True.
     workdir : pathlike, optional
         The path to work folder that contains the files to be
-        reorganized. The default is "".
+        reorganized. The default is the current directory.
     compression_level : int
         Compression level to be applied for ZIP archives of Tensors and
         Deltas. Default is 2.
@@ -184,39 +185,40 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     -------
     None.
     """
-    # outfiles with variable names:
-    work_path = Path(workdir)
+    with execute_in_dir(workdir):
+        _collect_delta_files(tensor_index)
+        _zip_deltas_and_tensors(delete_unzipped,
+                                tensors,
+                                deltas,
+                                compression_level)
+        _collect_supp_contents()
+        _collect_out_contents()
 
-    _collect_deltas(tensor_index, work_path)
-    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, work_path,
-                            compression_level)
-    _organize_supp_out(work_path)
 
+def _collect_supp_contents():
+    """Store relevant files/folder from the current directory to SUPP."""
+    files_to_copy = set(Path(f) for f in _SUPP_FILES)
+    directories_to_copy = (Path(d) for d in _SUPP_DIRS)
 
-def _organize_supp_out(work_path):
-    """Helper function for organizing SUPP and OUT directories."""
-    # SUPP
-    supp_path = work_path / DEFAULT_SUPP
-
-    files_to_copy = set(work_path / f for f in _SUPP_FILES)
-    # move directories original_inputs and compile_logs to SUPP
-    directories_to_copy = (work_path / d for d in _SUPP_DIRS)
     # Also add log files into SUPP: skip calc logs (they go to
     # main dir), and compile logs (they go to compile_logs dir)
-    logs_to_supp = (f for f in work_path.glob("*.log")
+    logs_to_supp = (f for f in Path().glob('*.log')
                     if (not f.name.startswith(LOG_PREFIX)
-                        and "compile" not in f.name))
+                        and 'compile' not in f.name))
     files_to_copy.update(logs_to_supp)
 
-    _copy_files_and_directories(files_to_copy, directories_to_copy, work_path,
-                                supp_path)
+    _copy_files_and_directories(files_to_copy,
+                                directories_to_copy,
+                                Path(DEFAULT_SUPP))
 
-    # OUT
-    out_path = work_path / DEFAULT_OUT
-    out_files = set(work_path / f for f in _OUT_FILES)
+
+def _collect_out_contents():
+    """Store relevant files/folder from the current directory to OUT."""
+    out_path = Path(DEFAULT_OUT)
+    out_files = set(Path(f) for f in _OUT_FILES)
     # add POSCAR_OUT, VIBROCC_OUT, PARAMETERS_OUT & any R_OUT files
-    out_files.update(work_path.glob("*_OUT*"))
-    _copy_files_and_directories(out_files, (), work_path, out_path)
+    out_files.update(Path().glob('*_OUT*'))
+    _copy_files_and_directories(out_files, (), out_path)
 
     # Rename OUT/PARAMETERS to OUT/PARAMETERS_OUT for naming consistency
     parameters_path = Path("PARAMETERS")
@@ -229,8 +231,8 @@ def _organize_supp_out(work_path):
                      f"{DEFAULT_OUT}/PARAMETERS_OUT.", exc_info=True)
 
 
-def _copy_files_and_directories(filelist, directory_list, origin, target):
-    """Helper function for copying files and directories to SUPP and OUT."""
+def _copy_files_and_directories(files, directories, target):
+    """Copy files and directories to target."""
     folder = target.name  # SUPP or OUT
     # Create the directory
     try:
@@ -241,39 +243,37 @@ def _copy_files_and_directories(filelist, directory_list, origin, target):
         logger.error(f'Error creating {folder} folder: ', exc_info=True)
         return
 
-    # Copy files and directories
-    for file in filelist:
-        if not file.is_file():
-            continue
-        # copies files into SUPP and OUT directories
+    for file in files:
         try:
             shutil.copy2(file, target / file.name)
+        except FileNotFoundError:
+            pass
         except OSError:
             logger.error(f'Error moving {folder} file {file.name}: ',
                          exc_info=True)
 
-    for _dir in directory_list:
-        if not _dir.is_dir():
-            continue
+    for _dir in directories:
         try:
             copytree_exists_ok(_dir, target / _dir.name)
+        except FileNotFoundError:
+            pass
         except OSError:
             logger.error(f'Error moving {folder} directory {_dir.name}: ',
                          exc_info=True)
 
 
-def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
+def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas,
                             compression_level):
     # If there are unzipped Tensors or Deltas directories, zip them:
     for folder in (DEFAULT_TENSORS, DEFAULT_DELTAS):
         todo = tensors if folder is DEFAULT_TENSORS else deltas
-        origin_base = path / folder
+        origin_base = Path(folder)
         if not origin_base.is_dir():
             continue
         if not todo and not delete_unzipped:
             continue
-        rgx = re.compile(rf"{folder}_[0-9]{{3}}")                               # TODO: maybe we want "three or more" digits, i.e., {{3,}}? Or could we use tensor_index?
-        for _dir in origin_base.glob("*"):
+        rgx = re.compile(rf'{folder}_[0-9]{{3}}')                               # TODO: maybe we want "three or more" digits, i.e., {{3,}}? Or could we use tensor_index?
+        for _dir in origin_base.glob('*'):
             if not _dir.is_dir():
                 continue
             match = rgx.match(_dir.name)
@@ -281,51 +281,63 @@ def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
                 continue  # Marked as uncovered, but it is
             delete = delete_unzipped
             if todo:
-                logger.info(f"Packing {_dir.name}.zip...")
+                logger.info(f'Packing {_dir.name}.zip...')
                 _dir_path = Path(_dir)
                 move_to_archive = _dir_path.glob('*')
-                arch_name = _dir_path.with_suffix(".zip")
+                arch_name = _dir_path.with_suffix('.zip')
                 try:
                     with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
                         compresslevel=compression_level) as archive:
                         for fname in move_to_archive:
                             archive.write(fname, fname.relative_to(_dir))
                 except OSError:
-                    logger.error(f"Error packing {_dir.name}.zip file: ",
-                                    exc_info=True)
+                    logger.error(f'Error packing {_dir.name}.zip file: ',
+                                 exc_info=True)
                     delete = False
             if delete:
                 try:
                     shutil.rmtree(_dir)
                 except OSError:
                     logger.warning(
-                        f"Error deleting unzipped {folder} directory. "
-                        "This will increase the size of the work folder, "
-                        "but not cause any problems.")
+                        f'Error deleting unzipped {folder} directory. '
+                        'This will increase the size of the work folder, '
+                        'but not cause any problems.')
 
 
-def _collect_deltas(tensor_index, path):
+def _collect_delta_files(tensor_index):
+    """Move all 'DEL_' files in the current directory into a Deltas folder.
+
+    Parameters
+    ----------
+    tensor_index : int
+        The index of the Tensors that were used to generate these
+        Deltas. Used to label the Deltas/Deltas_<index> folder.
+
+    Returns
+    -------
+    None.
+    """
     # Clean up deltas
-    deltalist = list(path.glob("DEL_*"))
-    if not deltalist:
+    deltas = tuple(Path().glob('DEL_*'))
+    if not deltas:
         return
-    destination = path/f"{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{tensor_index:03d}"
+    destination = Path(f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{tensor_index:03d}')
     try:
         destination.mkdir(parents=True)
     except FileExistsError:
         pass
     except OSError:
-        logger.error(f"Failed to create {destination} folder: ",
+        logger.error(f'Failed to create {destination} folder: ',
                      exc_info=True)
-    if destination.exists():
-        errors = []
-        for delta_file in deltalist:
-            try:
-                shutil.move(delta_file, destination / delta_file.name)
-            except OSError as err:
-                errors.append(err)
-        if errors:
-            logger.error(f"Error moving Delta files: {errors}")
+        return
+    errors = []
+    for delta_file in deltas:
+        try:
+            delta_file.replace(destination/delta_file)
+        except OSError as exc:
+            errors.append(exc)
+    if errors:
+        logger.error(f'Error moving Delta files: {errors}')
 
 
 def move_oldruns(rp, prerun=False):
