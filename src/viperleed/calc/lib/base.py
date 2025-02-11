@@ -385,6 +385,10 @@ def copytree_exists_ok(source, destination):
     # shutil for py3.8. We assume that source and destination are Path
     # objects, and that we don't have anything special like symlinks.
     # The next line will not work in py<3.5 because of exist_ok.
+    if not source.is_dir():
+        raise FileNotFoundError(
+            f'[Errno 2] No such file or directory \'{source}\''
+            )
     destination.mkdir(parents=True, exist_ok=True)
     for srcentry in source.glob('*'):
         dstentry = destination / srcentry.name
