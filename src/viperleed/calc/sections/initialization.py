@@ -631,9 +631,15 @@ def init_domains(rp):
     if rr:
         logger.info("The following domains require new reference "
                     f"calculations: {', '.join(d.name for d in rr)}")
+        inherited = (
+            'THEO_ENERGIES',
+            'THETA',
+            'PHI',
+            'N_CORES',
+            'ivbeams',
+            )
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams"]:
-                setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
+            dp.rp.inherit_from(rp, *inherited, override=True)
             if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
                 dp.rp.LMAX.max = rp.LMAX.max
 
@@ -804,9 +810,14 @@ def _read_inputs_for_domain(domain, main_rpars):
     # in the current Domain directory (it is overwritten
     # when fetching files in init_domains).
     domain.rp = rpars = parameters.read()
-    rpars.paths = copy.copy(main_rpars.paths)
-    rpars.timestamp = main_rpars.timestamp
-
+    
+    # Inherit some values from the main PARAMETERS
+    inherited = (
+        'paths',
+        'timestamp',
+        )
+    rpars.inherit_from(main_rpars, *inherited)
+    
     # Store input files for each domain, BEFORE any edit
     preserve_original_inputs(rpars)
 
