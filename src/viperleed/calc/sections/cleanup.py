@@ -278,7 +278,7 @@ def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
                 continue
             match = rgx.match(_dir.name)
             if not match or match.span()[1] != len(folder) + 4:                 # TODO: should this 4 be adjusted to the previous TODO? Unclear what it guards
-                continue
+                continue  # Marked as uncovered, but it is
             delete = delete_unzipped
             if todo:
                 logger.info(f"Packing {_dir.name}.zip...")

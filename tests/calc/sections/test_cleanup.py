@@ -10,21 +10,32 @@ __license__ = 'GPLv3+'
 from pathlib import Path
 import shutil
 
+import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
-import pytest
 
 from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.cleanup import _OUT_FILES
+from viperleed.calc.sections.cleanup import _SUPP_DIRS
+from viperleed.calc.sections.cleanup import _SUPP_FILES
 from viperleed.calc.sections.cleanup import OPTIONAL_INPUT_FILES
+from viperleed.calc.sections.cleanup import organize_workdir
 from viperleed.calc.sections.cleanup import prerun_clean
 from viperleed.calc.sections.cleanup import preserve_original_inputs
+from viperleed.calc.sections.cleanup import _collect_deltas
+from viperleed.calc.sections.cleanup import _copy_files_and_directories
+from viperleed.calc.sections.cleanup import _organize_supp_out
 from viperleed.calc.sections.cleanup import _write_manifest_file
+from viperleed.calc.sections.cleanup import _zip_deltas_and_tensors
 
 from ...helpers import filesystem_from_dict
 from ...helpers import filesystem_to_dict
@@ -37,6 +48,14 @@ _MODULE = 'viperleed.calc.sections.cleanup'
 def fixture_rpars():
     """Return an empty Rparams."""
     return Rparams()
+
+
+@fixture(name='workdir')
+def fixture_workdir(tmp_path):
+    """Create a temporary work directory."""
+    workdir = tmp_path / 'work_directory'
+    workdir.mkdir()
+    return workdir
 
 
 class TestPreserveOriginalInputs:
@@ -354,4 +373,367 @@ class TestPrerunClean:
         """Check the successful cleanup of a work directory."""
         expect, clean = run()
         assert clean == expect
+        assert not caplog.text
+
+
+class TestOrganizeWorkdir:
+    """Tests for the organize_workdir function."""
+
+    @fixture(name='mock_implementation')
+    def fixture_mock_implementation(self, mocker):
+        """Replace implementation details of organize_workdir with mocks."""
+        helpers = (
+            '_collect_deltas',
+            '_zip_deltas_and_tensors',
+            '_organize_supp_out',
+            )
+        return {helper: mocker.patch(f'{_MODULE}.{helper}')
+                for helper in helpers}
+
+    def test_organize_workdir(self, workdir, mock_implementation):
+        """Check that the implementation is executed as expected."""
+        mocks = mock_implementation
+        args = {
+            '_collect_deltas': (1, workdir),
+            '_zip_deltas_and_tensors': (False, True, True, workdir, 2),
+            '_organize_supp_out': (workdir,)
+            }
+        organize_workdir(1, False, True, True, workdir, 2)
+        for helper, mock in mocks.items():
+            mock.assert_called_once_with(*args[helper])
+
+
+class TestOrganizeSuppOut:
+    """Tests for the _organize_supp_out function."""
+
+    # Stuff that goes to SUPP
+    to_supp = {f: f'{f} contents' for f in _SUPP_FILES}
+    to_supp.update({d: {'test': f'test file in {d}'} for d in _SUPP_DIRS})
+    to_supp[f'not-a-{LOG_PREFIX}-log.log'] = 'some log contents'
+
+    # Stuff that goes to OUT
+    to_out = {f: f'{f} contents' for f in _OUT_FILES}
+    to_out.update({f'{f}_OUT_blah': f'{f} contents'
+                   for f in ('PARAMETERS', 'POSCAR', 'VIBROCC', 'R')})
+    to_out['PARAMETERS'] = 'was a PARAMETERS file in work'
+
+    # Stuff that is untouched
+    stays = {
+        f'{LOG_PREFIX}-main-log.log': 'fake calc log contents',
+        'a-log-for-a-compile-step.log': 'fake compilation log',
+        'another_folder': {'with-contents.txt': ''},
+        }
+    tree = {**stays, **to_out, **to_supp}
+
+    # PARAMETERS is renamed when copying
+    to_out['PARAMETERS_OUT'] = to_out.pop('PARAMETERS')
+
+    @fixture(name='work_tree')
+    def fixture_work_tree(self, workdir):
+        """Create files to be moved to SUPP/OUT at workdir."""
+        filesystem_from_dict(self.tree, workdir)
+        return workdir
+
+    @fixture(name='run')
+    def fixture_run(self, work_tree):
+        """Execute _organize_supp_out."""
+        def _run():
+            expect = {**self.tree,
+                      DEFAULT_SUPP: self.to_supp,
+                      DEFAULT_OUT: self.to_out}
+            with execute_in_dir(work_tree):                                     # NB: current implementation for renaming PARAMETERS is buggy, as it searches it in CWD!
+                _organize_supp_out(work_tree)
+            organized = filesystem_to_dict(work_tree)
+            return expect, organized
+        return _run
+
+    def test_success(self, run, caplog):
+        """Check a successful copy of contents to SUPP/OUT."""
+        expect, organized = run()
+        assert organized == expect
+        assert not caplog.text
+
+    def test_fails_to_rename_parameters(self, run, caplog, mocker):
+        """Check warnings when renaming OUT/PARAMETERS fails."""
+        _copy = shutil.copy2
+        def _rename_fails(src, dst):
+            # pylint: disable-next=magic-value-comparison
+            if Path(src).name == 'PARAMETERS':
+                raise OSError
+            _copy(src, dst)
+        mocker.patch('shutil.copy2', _rename_fails)
+        expect, organized = run()
+        expect_log = 'Error renaming'
+        expect[DEFAULT_OUT].pop('PARAMETERS_OUT')  # Not renamed
+        assert organized == expect
+        assert expect_log in caplog.text
+
+
+class TestCopyFilesAndDirectories:
+    """Tests for the _copy_files_and_directories helper."""
+
+    tree = {
+        'test.txt': 'test file contents',
+        'test_directory': {'test_subfolder': {'test_file': 'another file'}},
+        }
+
+    def test_copy_directories(self, workdir):
+        """Check a successful copy of directories."""
+        filesystem_from_dict(self.tree, workdir)
+        target = workdir / 'test_target'
+        target.mkdir()
+        dirs = [workdir/d for d, c in self.tree.items() if isinstance(c, dict)]
+        _copy_files_and_directories([], dirs, workdir, target)
+        expect = self.tree.copy()
+        expect[target.name] = {d.name: self.tree[d.name] for d in dirs}
+        copied = filesystem_to_dict(workdir)
+        assert copied == expect
+
+    def test_copy_files(self, workdir):
+        """Check a successful copy of files."""
+        filesystem_from_dict(self.tree, workdir)
+        target = workdir / 'test_target'
+        files = [workdir/f for f, c in self.tree.items() if isinstance(c, str)]
+        _copy_files_and_directories(files, [], workdir, target)
+        expect = self.tree.copy()
+        expect[target.name] = {f.name: self.tree[f.name] for f in files}
+        copied = filesystem_to_dict(workdir)
+        assert copied == expect
+
+    def test_copy_non_existing(self, workdir):
+        """Check no complaints when copying non-existing files/folders."""
+        target = workdir / 'test_target'
+        expect = {target.name: {}}
+        files = (workdir/'non_existing_file.txt',)
+        dirs = (workdir/'non_existing_dir',)
+        _copy_files_and_directories(files, dirs, workdir, target)
+        copied = filesystem_to_dict(workdir)
+        assert copied == expect
+
+    def test_copy_fails(self, workdir, caplog, mocker):
+        """Check logging messages when copying fails."""
+        copy_file = mocker.patch('shutil.copy2', side_effect=OSError)
+        copy_dir = mocker.patch(f'{_MODULE}.copytree_exists_ok',
+                                side_effect=OSError)
+        filesystem_from_dict(self.tree, workdir)
+        expect = self.tree.copy()
+        target = workdir / 'test_target'
+        expect[target.name] = {}
+        files = [workdir/f for f, c in self.tree.items() if isinstance(c, str)]
+        dirs = [workdir/d for d, c in self.tree.items() if isinstance(c, dict)]
+        _copy_files_and_directories(files, dirs, workdir, target)
+        copied = filesystem_to_dict(workdir)
+        assert copied == expect
+        assert copy_file.call_count == len(files)
+        assert copy_dir.call_count == len(dirs)
+        log_msg_file = 'Error moving test_target file {}'
+        log_msg_dir = 'Error moving test_target directory {}'
+        log = caplog.text
+        assert all(log_msg_file.format(f.name) in log for f in files)
+        assert all(log_msg_dir.format(d.name) in log for d in dirs)
+
+    def test_mkdir_fails(self, workdir, caplog, mocker):
+        """Check warnings when making the target fails."""
+        filesystem_from_dict(self.tree, workdir)
+        files = [workdir/f for f, c in self.tree.items() if isinstance(c, str)]
+        target = workdir / 'test_target'
+        mocker.patch('pathlib.Path.mkdir', side_effect=OSError)
+        expect_log = 'Error creating test_target folder'
+        _copy_files_and_directories(files, (), workdir, target)
+        assert filesystem_to_dict(workdir) == self.tree
+        assert expect_log in caplog.text
+
+
+class TestCollectDeltas:
+    """Tests for the _collect_deltas function."""
+
+    def test_success(self, workdir, caplog):
+        """Check results of a successful execution."""
+        tree = {f: f'{f} contents'
+                for f in ('DEL_1', 'DEL_two', 'DEL_tafile')}
+        filesystem_from_dict(tree, workdir)
+        _collect_deltas(123, workdir)
+        expect = {'Deltas': {'Deltas_123': tree}}
+        collected = filesystem_to_dict(workdir)
+        assert collected == expect
+        assert not caplog.text
+
+    def test_nothing_to_collect(self, workdir, caplog):
+        """Check that no folder is created if no files should be collected."""
+        _collect_deltas(9, workdir)
+        assert not (workdir/'Deltas'/'Deltas_009').exists()
+        assert not caplog.text
+
+    def test_delta_folder_exists(self, workdir, caplog):
+        """Check no complaints if the target folder is there already."""
+        (workdir/'Deltas'/'Deltas_123').mkdir(parents=True)
+        self.test_success(workdir, caplog)
+
+    def test_mkdir_fails(self, workdir, caplog, mocker):
+        """Check warnings when failing to create the Deltas directory."""
+        mocker.patch('pathlib.Path.mkdir', side_effect=OSError)
+        tree = {'DEL_1': 'contents'}
+        filesystem_from_dict(tree, workdir)
+        _collect_deltas(5, workdir)
+        expect_log = 'Failed to create'
+        assert filesystem_to_dict(workdir) == tree  # No changes
+        assert expect_log in caplog.text
+
+    def test_file_copy_fails(self, workdir, caplog, mocker):
+        """Check complaints when moving files fails."""
+        mock_move = mocker.patch('shutil.move', side_effect=OSError)
+        tree = {'DEL_1': '', 'DEL_2': ''}
+        filesystem_from_dict(tree, workdir)
+        _collect_deltas(75, workdir)
+        expect = {'Deltas': {'Deltas_075': {}},  # Fails to move all
+                  **tree}
+        expect_log = 'Error moving Delta'
+        assert filesystem_to_dict(workdir) == expect
+        assert mock_move.call_count == len(tree)
+        assert expect_log in caplog.text
+
+
+class TestZipDeltasAndTensors:
+    """Tests for the _zip_deltas_and_tensors function."""
+
+    tree = {
+        DEFAULT_DELTAS: {
+            'Deltas_001': {'file_1': 'file_1 contents'},
+            'Deltas_999': {'file_999': 'file_999 contents'},
+            'not-a-directory': 'some stray file in Deltas',
+            },
+        DEFAULT_TENSORS: {
+            'Tensors_005': {'file_5': 'file_5 contents'},
+            'Tensors_123': {'file_123': 'file_123 contents'},
+            'not-a-directory': 'some stray file in Tensors',
+            },
+        }
+
+    @property
+    def packed_all(self):
+        """Return the expected tree after packing self.tree."""
+        packed_all = {d: {} for d in self.tree}
+        for directory, subfolders in self.tree.items():
+            files = {f: c for f, c in subfolders.items() if isinstance(c, str)}
+            files.update({f'{f}.zip': f'{f}.zip is a binary file'
+                          for f in subfolders
+                          if f not in files})
+            packed_all[directory] = files
+        return packed_all
+
+    @fixture(name='work_tree')
+    def fixture_work_tree(self, workdir):
+        """Create a temporary tree with Tensors/Deltas at workdir."""
+        filesystem_from_dict(self.tree, workdir)
+        return workdir
+
+    def test_delete_only(self, work_tree, caplog):
+        """Check no deletion of unzipped directories."""
+        _zip_deltas_and_tensors(delete_unzipped=True,
+                                tensors=False,
+                                deltas=False,
+                                path=work_tree,
+                                compression_level=2)
+        clean = filesystem_to_dict(work_tree)
+        expect = {  # Only bare files survive
+            d: {f: c for f, c in subfolders.items() if isinstance(c, str)}
+            for d, subfolders in self.tree.items()
+            }
+        assert clean == expect
+        assert not caplog.text
+
+    def test_delete_fails(self, work_tree, caplog, mocker):
+        """Check complaints when deleting an unzipped folder fails."""
+        mocker.patch('shutil.rmtree', side_effect=OSError)
+        _zip_deltas_and_tensors(delete_unzipped=True,
+                                tensors=True,
+                                deltas=True,
+                                path=work_tree,
+                                compression_level=2)
+        clean = filesystem_to_dict(work_tree)
+        expect = self.packed_all
+        for folder, orig_contents in self.tree.items():
+            expect[folder].update(orig_contents)
+        expect_log = 'Error deleting unzipped'
+        assert clean == expect
+        assert expect_log in caplog.text
+
+    def test_do_nothing(self, work_tree, caplog):
+        """Check correct behavior for not packing nor deleting."""
+        _zip_deltas_and_tensors(delete_unzipped=False,
+                                tensors=False,
+                                deltas=False,
+                                path=work_tree,
+                                compression_level=2)
+        unchanged = filesystem_to_dict(work_tree)
+        assert unchanged == self.tree
+        assert not caplog.text
+
+    def test_pack_and_delete(self, work_tree, caplog):
+        """Check packing and deleting of both Tensors and Deltas."""
+        _zip_deltas_and_tensors(delete_unzipped=True,
+                                tensors=True,
+                                deltas=True,
+                                path=work_tree,
+                                compression_level=2)
+        clean = filesystem_to_dict(work_tree)
+        assert clean == self.packed_all
+        assert not caplog.text
+
+    def test_pack_fails(self, work_tree, caplog, mocker):
+        """Check nothing is deleted if packing is not successful."""
+        mocker.patch(f'{_MODULE}.ZipFile', side_effect=OSError)
+        _zip_deltas_and_tensors(delete_unzipped=True,  # not honored
+                                tensors=True,
+                                deltas=True,
+                                path=work_tree,
+                                compression_level=2)
+        unchanged = filesystem_to_dict(work_tree)
+        expect_log = 'Error packing'
+        assert unchanged == self.tree
+        assert expect_log in caplog.text
+
+    def test_pack_only(self, work_tree, caplog):
+        """Check no deletion of unzipped directories."""
+        _zip_deltas_and_tensors(delete_unzipped=False,
+                                tensors=True,
+                                deltas=True,
+                                path=work_tree,
+                                compression_level=2)
+        clean = filesystem_to_dict(work_tree)
+        expect = self.packed_all
+        for folder, orig_contents in self.tree.items():
+            expect[folder].update(orig_contents)
+        assert clean == expect
+        assert not caplog.text
+
+    @pytest.mark.xfail(
+        reason=('This supposedly invalid folder name is collected anyway. It '
+                'was meant to fail the match.span check but it is not really '
+                'clear what that check guards')
+        )
+    def test_invalid_name_format(self, workdir, caplog):
+        """Check that a folder with invalid format is not processed."""
+        tree = {DEFAULT_DELTAS: {'Deltas_001-invalid-fmt': {}}}
+        filesystem_from_dict(tree, workdir)
+        _zip_deltas_and_tensors(delete_unzipped=True,
+                                tensors=True,
+                                deltas=True,
+                                path=workdir,
+                                compression_level=2)
+        clean = filesystem_to_dict(workdir)
+        assert clean == tree
+        assert not caplog.text
+
+    def test_not_a_valid_folder(self, workdir, caplog):
+        """Check that a stray subfolder is not packed."""
+        tree = {DEFAULT_DELTAS: {'not-a-Deltas_001': {}}}
+        filesystem_from_dict(tree, workdir)
+        _zip_deltas_and_tensors(delete_unzipped=True,
+                                tensors=True,
+                                deltas=True,
+                                path=workdir,
+                                compression_level=2)
+        clean = filesystem_to_dict(workdir)
+        assert clean == tree
         assert not caplog.text
