@@ -825,7 +825,17 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
         return f"{self.__class__.__name__}(display_name='{self.title()}')"
 
     def are_settings_ok(self):
-        """Return whether the section settings are acceptable."""
+        """Return whether the section settings are acceptable.
+
+        Returns
+        -------
+        settings_ok : bool
+            Whether the settings selected in the widget are
+            acceptable or not.
+        reason : str
+            A descriptive string elaborating why the settings
+            are not acceptable.
+        """
         return True, ''
 
     def set_info(self, info_text):

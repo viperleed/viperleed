@@ -94,7 +94,17 @@ class DeviceEditor(SettingsDialogSectionBase):
                            str(self._cameras.get_camera_settings()))
 
     def are_settings_ok(self):
-        """Return whether the device selection is acceptable."""
+        """Return whether the device selection is acceptable.
+
+        Returns
+        -------
+        settings_ok : bool
+            Whether the settings selected in the CollapsibleDeviceLists
+            are acceptable or not.
+        reason : str
+            A descriptive string elaborating why the settings
+            are not acceptable.
+        """
         ctrl_ok, reason_ctrl = self._controllers.are_settings_ok()
         cameras_ok, reason_camera = self._cameras.are_settings_ok()
         reason = ' '.join(filter(lambda x: x!='',(reason_ctrl, reason_camera)))
