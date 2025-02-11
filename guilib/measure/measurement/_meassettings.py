@@ -35,7 +35,22 @@ class DeviceEditor(SettingsDialogSectionBase):
     error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, settings, **kwargs):
-        """Initialize instance."""
+        """Initialize instance.
+
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The settings of the loaded measurement.
+        **kwargs : dict
+            Keyword arguments passed on to super().__init__
+            'display_name' : Displayed name of section.
+            'tags' : Tags associated with the section.
+            'tooltip' : Tooltip displayed with the section.
+
+        Returns
+        -------
+        None.
+        """
         self._settings = settings
         self._add_cameras = kwargs.pop('add_cameras', False)
         default_settings_folder = kwargs.pop('default_folder', None)
@@ -60,7 +75,17 @@ class DeviceEditor(SettingsDialogSectionBase):
 
     @default_settings_folder.setter
     def default_settings_folder(self, settings_path):
-        """Set the default settings folder."""
+        """Set the default settings folder.
+
+        Parameters
+        ----------
+        settings_path : Path or str
+            The path to the folder containing the settings.
+
+        Returns
+        -------
+        None.
+        """
         self._default_settings_folder = settings_path
         self._cameras.default_settings_folder = settings_path
         self._controllers.default_settings_folder = settings_path
