@@ -731,7 +731,8 @@ def _write_manifest_file(manifest_contents):
     manifest_contents = set(manifest_contents)
     manifest = Path('manifest')
     try:
-        manifest.write_text('\n'.join(manifest_contents) + '\n')
+        manifest.write_text('\n'.join(manifest_contents) + '\n',
+                            encoding='utf-8')
     except OSError:
         logger.error(f'Failed to write {manifest} file.')
     else:
