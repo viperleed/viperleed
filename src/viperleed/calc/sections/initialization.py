@@ -815,6 +815,7 @@ def _read_inputs_for_domain(domain, main_rpars):
     inherited = (
         'paths',
         'timestamp',
+        'ZIP_COMPRESSION_LEVEL',
         )
     rpars.inherit_from(main_rpars, *inherited)
     
