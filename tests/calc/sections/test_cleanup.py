@@ -114,6 +114,29 @@ class TestCleanup:
             else:
                 mock.assert_called_once_with(arg)
 
+    def test_no_rpars(self, manifest, mock_implementation, mocker):
+        """Check calls when no Rparams is passed."""
+        # Create a "singleton" that we can use to check that
+        # cleanup creates an empty Rparams in this case
+        fake_rpars = mocker.MagicMock()
+        mocker.patch(f'{_MODULE}.Rparams', return_value=fake_rpars)
+
+        cleanup(manifest)
+        calls = {
+            'logger.info': '\nStarting cleanup...',
+            '_organize_all_work_directories': fake_rpars,
+            '_write_manifest_file': fake_rpars.manifest,
+            '_write_final_log_messages': fake_rpars,
+            'close_all_handlers': None,
+            'logging.shutdown': None,
+            }
+        for func, arg in calls.items():
+            mock = mock_implementation[func]
+            if arg is None:
+                mock.assert_called_once()
+            else:
+                mock.assert_called_once_with(arg)
+
 
 class TestPreserveOriginalInputs:
     """Tests for the preserve_original_inputs function."""
@@ -448,13 +471,54 @@ class TestOrganizeWorkdir:
         return {helper: mocker.patch(f'{_MODULE}.{helper}')
                 for helper in helpers}
 
-    def test_archive_and_delete(self, workdir, mock_implementation, mocker):
+    @fixture(name='run')
+    def fixture_run(self, rpars, workdir):
+        """Execute organize_workdir with rpars and path=workdir."""
+        def _run(**kwargs):
+            organize_workdir(rpars, workdir, **kwargs)
+        return _run
+
+    def test_archive_and_delete(self, rpars, run, mock_implementation, mocker):
         """Check that the implementation is executed as expected."""
-        organize_workdir(1, False, True, True, workdir, 2)
+        rpars.TENSOR_INDEX = mocker.MagicMock()
+        rpars.ZIP_COMPRESSION_LEVEL = level = mocker.MagicMock()
+        run(delete_unzipped=False, tensors=True, deltas=True)
         calls = {
-            '_collect_delta_files': (mocker.call(1),),
+            '_collect_delta_files': (mocker.call(rpars.TENSOR_INDEX),),
+            '_zip_subfolders': (
+                mocker.call(DEFAULT_TENSORS, True, False, level),
+                mocker.call(DEFAULT_DELTAS, True, False, level),
+                ),
+            '_collect_supp_contents': (mocker.call(),),
+            '_collect_out_contents': (mocker.call(),),
+            }
+        for helper, mock in mock_implementation.items():
+            mock.assert_has_calls(calls[helper])
+
+    def test_archive_tensors(self, run, mock_implementation, mocker):
+        """Check that the implementation is executed as expected."""
+        run(delete_unzipped=False, tensors=True, deltas=False)
+        calls = {
+            '_collect_delta_files': (
+                mocker.call(0),  # TENSOR_INDEX is None by default
+                ),
             '_zip_subfolders': (
                 mocker.call(DEFAULT_TENSORS, True, False, 2),
+                ),
+            '_collect_supp_contents': (mocker.call(),),
+            '_collect_out_contents': (mocker.call(),),
+            }
+        for helper, mock in mock_implementation.items():
+            mock.assert_has_calls(calls[helper])
+
+    def test_archive_deltas(self, run, mock_implementation, mocker):
+        """Check that the implementation is executed as expected."""
+        run(delete_unzipped=False, tensors=False, deltas=True)
+        calls = {
+            '_collect_delta_files': (
+                mocker.call(0),  # TENSOR_INDEX is None by default
+                ),
+            '_zip_subfolders': (
                 mocker.call(DEFAULT_DELTAS, True, False, 2),
                 ),
             '_collect_supp_contents': (mocker.call(),),
@@ -463,39 +527,13 @@ class TestOrganizeWorkdir:
         for helper, mock in mock_implementation.items():
             mock.assert_has_calls(calls[helper])
 
-    def test_archive_tensors(self, workdir, mock_implementation, mocker):
+    def test_delete_only(self, run, mock_implementation, mocker):
         """Check that the implementation is executed as expected."""
-        organize_workdir(1, False, True, False, workdir, 2)
+        run(delete_unzipped=True, tensors=False, deltas=False)
         calls = {
-            '_collect_delta_files': (mocker.call(1),),
-            '_zip_subfolders': (
-                mocker.call(DEFAULT_TENSORS, True, False, 2),
+            '_collect_delta_files': (
+                mocker.call(0),  # TENSOR_INDEX is None by default
                 ),
-            '_collect_supp_contents': (mocker.call(),),
-            '_collect_out_contents': (mocker.call(),),
-            }
-        for helper, mock in mock_implementation.items():
-            mock.assert_has_calls(calls[helper])
-
-    def test_archive_deltas(self, workdir, mock_implementation, mocker):
-        """Check that the implementation is executed as expected."""
-        organize_workdir(1, False, False, True, workdir, 2)
-        calls = {
-            '_collect_delta_files': (mocker.call(1),),
-            '_zip_subfolders': (
-                mocker.call(DEFAULT_DELTAS, True, False, 2),
-                ),
-            '_collect_supp_contents': (mocker.call(),),
-            '_collect_out_contents': (mocker.call(),),
-            }
-        for helper, mock in mock_implementation.items():
-            mock.assert_has_calls(calls[helper])
-
-    def test_delete_only(self, workdir, mock_implementation, mocker):
-        """Check that the implementation is executed as expected."""
-        organize_workdir(1, True, False, False, workdir, 2)
-        calls = {
-            '_collect_delta_files': (mocker.call(1),),
             '_zip_subfolders': (
                 mocker.call(DEFAULT_TENSORS, False, True, 2),
                 mocker.call(DEFAULT_DELTAS, False, True, 2),
@@ -518,35 +556,29 @@ class TestOrganizeAllWorkDirectories:
     def test_domains(self, rpars, organize, mocker):
         """Check the expected calls for a multi-domain calculation."""
         rpars.closePdfReportFigs = mocker.MagicMock()
-        rpars.ZIP_COMPRESSION_LEVEL = mocker.MagicMock()
-        main_call = mocker.call(0,
+        main_call = mocker.call(rpars=rpars,
+                                path='',
                                 delete_unzipped=True,
                                 tensors=False,
-                                deltas=False,
-                                compression_level=rpars.ZIP_COMPRESSION_LEVEL,
-                                workdir='')
+                                deltas=False)
         # Add some fake domains
         domain_1 = mocker.MagicMock()
         domain_1.workdir = mocker.MagicMock()
         domain_1.rp = Rparams()  # No Tensors/Deltas in manifest
-        domain_1.rp.TENSOR_INDEX = 27
-        call_1 = mocker.call(27,
+        call_1 = mocker.call(rpars=domain_1.rp,
+                             path=domain_1.workdir,
                              delete_unzipped=True,
                              tensors=False,
-                             deltas=False,
-                             compression_level=rpars.ZIP_COMPRESSION_LEVEL,
-                             workdir=domain_1.workdir)
+                             deltas=False)
         domain_2 = mocker.MagicMock()
         domain_2.workdir = mocker.MagicMock()
         domain_2.rp = Rparams()
         domain_2.rp.manifest = {DEFAULT_TENSORS, DEFAULT_DELTAS}
-        domain_2.rp.TENSOR_INDEX = -5
-        call_2 = mocker.call(-5,
+        call_2 = mocker.call(rpars=domain_2.rp,
+                             path=domain_2.workdir,
                              delete_unzipped=True,
                              tensors=True,
-                             deltas=True,
-                             compression_level=rpars.ZIP_COMPRESSION_LEVEL,
-                             workdir=domain_2.workdir)
+                             deltas=True)
         rpars.domainParams = domain_1, domain_2
         calls = main_call, call_1, call_2
 
@@ -559,32 +591,28 @@ class TestOrganizeAllWorkDirectories:
         """Check the expected calls for a single-domain calculation."""
         rpars.closePdfReportFigs = mocker.MagicMock()
         rpars.manifest.add(DEFAULT_TENSORS)  # But not deltas
-        rpars.TENSOR_INDEX = mocker.MagicMock()
-        rpars.ZIP_COMPRESSION_LEVEL = mocker.MagicMock()
 
-        args = (rpars.TENSOR_INDEX,)
         kwargs = {
+            'rpars': rpars,
+            'path': '',
             'delete_unzipped': True,
             'tensors': True,  # Added to manifest
             'deltas': False,
-            'workdir': '',
-            'compression_level': rpars.ZIP_COMPRESSION_LEVEL,
             }
         _organize_all_work_directories(rpars)
-        organize.assert_called_once_with(*args, **kwargs)
+        organize.assert_called_once_with(**kwargs)
 
-    def test_no_rpars(self, organize):
-        """Check the expected calls when rpars is None."""
-        _organize_all_work_directories(None)
-        args = (0,)
+    def test_rpars_empty(self, rpars, organize):
+        """Check the expected calls with an empty Rparams."""
+        _organize_all_work_directories(rpars)
         kwargs = {
+            'rpars': rpars,
+            'path': '',
             'delete_unzipped': True,
             'tensors': False,
             'deltas': False,
-            'workdir': '',
-            'compression_level': 2,
             }
-        organize.assert_called_once_with(*args, **kwargs)
+        organize.assert_called_once_with(**kwargs)
 
     def test_warns_on_exception(self, rpars, organize, caplog):
         """Check that exceptions in organize_workdir emit log messages."""
@@ -621,10 +649,11 @@ class TestWriteFinalLogMessages:
         rpars.checklist = ['Check convergence', 'Verify inputs']
         return rpars
 
-    def test_crashed_early(self, caplog):
+    def test_crashed_early(self, rpars, caplog):
         """Check logging messages when cleanup is called early."""
         caplog.set_level(0)  # All messages
-        _write_final_log_messages(None)
+        rpars.timer = None   # Like cleanup if called with None
+        _write_final_log_messages(rpars)
         expect = (
             re.compile(r'\nFinishing execution at .*'
                        r'\nTotal elapsed time: unknown\n'),

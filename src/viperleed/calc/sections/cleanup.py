@@ -15,6 +15,7 @@ import re
 import shutil
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -156,40 +157,46 @@ def prerun_clean(rpars, logname=''):
     _silently_remove_files(*other_logs)
 
 
-def organize_workdir(tensor_index, delete_unzipped=False,
-                     tensors=True, deltas=True, workdir=Path(),
-                     compression_level=2):
-    """Reorganize files in workdir into SUPP, OUT, Tensors and Deltas.
+def organize_workdir(rpars,
+                     path,
+                     delete_unzipped=False,
+                     tensors=True,
+                     deltas=True):
+    """Reorganize files in path into SUPP, OUT, Tensors and Deltas.
 
     Tensors and Deltas folders are zipped and moved over. All other
     files are copied to appropriate locations in SUPP and OUT.
 
     Parameters
     ----------
-    tensor_index : int
-        Which Delta and Tensor files should be considered.
+    rpars : Rparams
+        The run parameters associated with the calculation that
+        is running in the directory to be cleaned up. Attributes
+        accessed (read-only):
+            TENSOR_INDEX:
+                Picks the name of the Deltas_xxx folder.
+            ZIP_COMPRESSION_LEVEL:
+                Which compression level to use to create ZIP
+                archives for Deltas/Tensors.
+    path : pathlike
+        The path to the work folder that contains the files to
+        be reorganized.
     delete_unzipped : bool, optional
         Whether the original Delta- and Tensor-files should be
         deleted after making the archives. The default is False.
     tensors, deltas : bool, optional
         Whether the Tensor/Delta files contain new information
         and should be saved. The default is True.
-    workdir : pathlike, optional
-        The path to work folder that contains the files to be
-        reorganized. The default is the current directory.
-    compression_level : int
-        Compression level to be applied for ZIP archives of
-        Tensors and Deltas. Default is 2.
 
     Returns
     -------
     None.
     """
-    with execute_in_dir(workdir):
-        _collect_delta_files(tensor_index)
+    with execute_in_dir(path):
+        _collect_delta_files(rpars.TENSOR_INDEX or 0)
 
         # Create ZIP files for Tensors and Deltas subfolders
-        zip_args = delete_unzipped, compression_level
+        zip_args = delete_unzipped, rpars.ZIP_COMPRESSION_LEVEL
         if tensors or delete_unzipped:
             _zip_subfolders(DEFAULT_TENSORS, tensors, *zip_args)
         if deltas or delete_unzipped:
@@ -352,7 +359,6 @@ def _collect_delta_files(tensor_index):
     -------
     None.
     """
-    # Clean up deltas
     deltas = tuple(Path().glob('DEL_*'))
     if not deltas:
         return
@@ -451,13 +457,12 @@ def move_oldruns(rp, prerun=False):
                      exc_info=True)
         raise
     if not prerun:
-        organize_workdir(rp.TENSOR_INDEX, delete_unzipped=False,
-                         tensors=False, deltas=False,
-                         compression_level=rp.ZIP_COMPRESSION_LEVEL)
+        kwargs = {'delete_unzipped': False,
+                  'tensors': False,
+                  'deltas': False}
+        organize_workdir(rp, **kwargs)
         for dp in rp.domainParams:
-            organize_workdir(dp.rp.TENSOR_INDEX, delete_unzipped=False,
-                             tensors=False, deltas=False,
-                             compression_level=rp.ZIP_COMPRESSION_LEVEL)
+            organize_workdir(dp.rp, **kwargs)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in _OUT_FILES or f in _SUPP_FILES)
@@ -491,7 +496,7 @@ def move_oldruns(rp, prerun=False):
     return
 
 
-def cleanup(manifest, rp=None):
+def cleanup(manifest, rpars=None):
     """Finalize a viperleed.calc execution.
 
     After a call to this function:
@@ -514,7 +519,7 @@ def cleanup(manifest, rp=None):
     manifest : set of str
         The files and directories that should be preserved from
         the work folder.
-    rp : Rparams, optional
+    rpars : Rparams, optional
         The run parameters. If None, it is assumed that the run
         crashed before an Rparams object existed.
 
@@ -523,9 +528,14 @@ def cleanup(manifest, rp=None):
     None.
     """
     logger.info('\nStarting cleanup...')
-    _organize_all_work_directories(rp)
+    if rpars is None:  # Make a dummy, essentially empty one
+        rpars = Rparams()
+        rpars.manifest = manifest
+        rpars.timer = None  # To print the correct final message
+
+    _organize_all_work_directories(rpars)
     _write_manifest_file(manifest)
-    _write_final_log_messages(rp)
+    _write_final_log_messages(rpars)
 
     # Shut down logger
     close_all_handlers(logger)
@@ -629,7 +639,7 @@ def _delete_out_suffixed_files():
             logger.warning(f'Failed to delete previous {file} file.')
 
 
-def _organize_all_work_directories(rp):
+def _organize_all_work_directories(rpars):
     """Collect files from the current directory and all domain ones.
 
     After calling this function, files in both the current directory
@@ -638,44 +648,30 @@ def _organize_all_work_directories(rp):
 
     Parameters
     ----------
-    rp : Rparams or None
-        The run parameters of the main calculation. If None,
-        it is assumed that the calculation crashed before
-        an Rparams object existed.
+    rpars : Rparams
+        The run parameters of the main calculation.
 
     Returns
     -------
     None.
     """
-    if rp is None:
-        to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
-                    "path": ""}]
-        compress_level = 2
-    else:
-        rp.closePdfReportFigs()
-        compress_level = rp.ZIP_COMPRESSION_LEVEL
-        if not rp.domainParams:
-            to_sort = [{"newTensors": (DEFAULT_TENSORS in rp.manifest),
-                        "newDeltas": (DEFAULT_DELTAS in rp.manifest),
-                        "tind": rp.TENSOR_INDEX, "path": ""}]
-        else:
-            to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
-                        "path": ""}]
-            for dp in rp.domainParams:
-                to_sort.append(
-                    {"newTensors": (DEFAULT_TENSORS in dp.rp.manifest),
-                    "newDeltas": (DEFAULT_DELTAS in dp.rp.manifest),
-                    "tind": dp.rp.TENSOR_INDEX,
-                    "path": dp.workdir}
-                    )
-    for d in to_sort:
+    rpars.closePdfReportFigs()
+    to_sort = [{'tensors': DEFAULT_TENSORS in rpars.manifest,
+                'deltas': DEFAULT_DELTAS in rpars.manifest,
+                'rpars': rpars,
+                'path': ''}]
+    to_sort.extend(
+        {'tensors': DEFAULT_TENSORS in dp.rp.manifest,
+         'deltas': DEFAULT_DELTAS in dp.rp.manifest,
+         'rpars': dp.rp,
+         'path': dp.workdir}
+        for dp in rpars.domainParams
+        )
+    for kwargs in to_sort:
         try:
-            organize_workdir(d["tind"], delete_unzipped=True,
-                             tensors=d["newTensors"],
-                             deltas=d["newDeltas"], workdir=d["path"],
-                             compression_level=compress_level)
+            organize_workdir(delete_unzipped=True, **kwargs)
         except Exception:
-            logger.warning("Error sorting files to SUPP/OUT folders: ",
+            logger.warning('Error sorting files to SUPP/OUT folders: ',
                            exc_info=True)
 
 
@@ -689,44 +685,45 @@ def _silently_remove_files(*files):
             pass
 
 
-def _write_final_log_messages(rp):
+def _write_final_log_messages(rpars):
     """Emit the last logging messages concerning the calculation."""
-    elapsed = 'unknown' if not rp else rp.timer.how_long(as_string=True)
+    elapsed = ('unknown' if not rpars.timer
+               else rpars.timer.how_long(as_string=True))
     logger.info(f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
                 f'\nTotal elapsed time: {elapsed}\n')
-    history = [] if not rp else rp.runHistory
-    if len(history) > 0:
-        s = ""
-        for ind in history:
-            s += (str(ind)+" ")
-        logger.info("Executed segments: "+s[:-1])
-    if rp is not None:
-        for t in ["refcalc", "superpos"]:
-            if rp.stored_R[t] is not None:
-                o = "Final R ({}): {:.4f}".format(t, rp.stored_R[t][0])
-                if rp.stored_R[t][1] > 0 and rp.stored_R[t][2] > 0:
-                    o += " ({:.4f} / {:.4f})".format(rp.stored_R[t][1],
-                                                     rp.stored_R[t][2])
-                logger.info(o)
+
+    # Write information about executed sections
+    if rpars.runHistory:
+        segments = ' '.join(str(s) for s in rpars.runHistory)
+        logger.info(f'Executed segments: {segments}')
+
+    # Write the final R factors, if any, including integer/fractional
+    for section, r_factors in rpars.stored_R.items():
+        if r_factors is None:
+            continue
+        overall, integer, fractional = r_factors
+        msg = f'Final R ({section}): {overall:.4f}'
+        if integer > 0 and fractional > 0:
+            msg += f' ({integer:.4f} / {fractional:.4f})'
+        logger.info(msg)
 
     # Warn about manually running bookkeeper for domain calculations
-    if rp is not None and rp.domainParams:
+    if rpars.domainParams:
         logger.info(
-            "Domain calculations have been run. Note that the bookkeeper will "
-            "only run automatically in the top level calculation directory. "
-            "To preserve optimizations for individual domains, please run the "
-            "bookkeeper manually in the respective domain directories."
-            "The command is: viperleed bookkeeper --archive.\n"
+            'Domain calculations have been run. Note that the bookkeeper will '
+            'only run automatically in the top level calculation directory. '
+            'To preserve optimizations for individual domains, please run '
+            'bookkeeper manually in the respective domain directories. '
+            'The command is: viperleed bookkeeper --archive.\n'
             )
 
-    if rp:
-        if rp.checklist:
-            logger.info("")
-            logger.info("# The following issues should be checked before "
-                        "starting again:")
-            for s in rp.checklist:
-                logger.info("- "+s)
-    logger.info("")
+    if rpars.checklist:
+        logger.info('')
+        logger.info('# The following issues should be '
+                    'checked before starting again:')
+        for item in rpars.checklist:
+            logger.info(f'- {item}')
+    logger.info('')
 
 
 def _write_manifest_file(manifest_contents):
