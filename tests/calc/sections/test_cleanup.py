@@ -614,13 +614,6 @@ class TestOrganizeAllWorkDirectories:
             }
         organize.assert_called_once_with(**kwargs)
 
-    def test_warns_on_exception(self, rpars, organize, caplog):
-        """Check that exceptions in organize_workdir emit log messages."""
-        organize.side_effect = Exception
-        _organize_all_work_directories(rpars)
-        expect_log = 'Error sorting files to SUPP/OUT folders:'
-        assert expect_log in caplog.text
-
 
 class TestWriteFinalLogMessages:
     """Tests for the _write_final_log_messages function."""

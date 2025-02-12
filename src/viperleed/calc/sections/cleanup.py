@@ -668,11 +668,7 @@ def _organize_all_work_directories(rpars):
         for dp in rpars.domainParams
         )
     for kwargs in to_sort:
-        try:
-            organize_workdir(delete_unzipped=True, **kwargs)
-        except Exception:
-            logger.warning('Error sorting files to SUPP/OUT folders: ',
-                           exc_info=True)
+        organize_workdir(delete_unzipped=True, **kwargs)
 
 
 def _silently_remove_files(*files):
