@@ -315,9 +315,9 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
     """Modify dom_slab to the parameters in best_config. Write it out.
 
     If there is a predicted optimum for the parameters (via parabola
-    fit), POSCAR_OUT and VIBROCC_OUT files are also written for this
-    predicted optimum. However, `dom_slab` will always contain the
-    configuration passed via `best_config` at the end of this call.
+    fit), POSCAR and VIBROCC files are also written for this predicted
+    optimum. However, `dom_slab` will always contain the configuration
+    passed via `best_config` at the end of this call.
 
     Parameters
     ----------
@@ -325,7 +325,7 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
         The PARAMETERS for the whole calculation.
     dom_slab : Slab
         The slab of the domain to be modified, and used to write
-        POSCAR_OUT and VIBROCC_OUT files.
+        POSCAR and VIBROCC files.
     dom_rp : Rparams
         The PARAMETERS for this specific domain to be written out.
     best_config : Sequence
@@ -1169,8 +1169,8 @@ def search(sl, rp):
                             processSearchResults(sl, rp, search_log_path,
                                                  final=False)
                         except Exception as exc:                                # TODO: too general
-                            logger.warning("Failed to update POSCAR_OUT "
-                                           f"and VIBROCC_OUT: {exc}")
+                            logger.warning("Failed to update POSCAR "
+                                           f"and VIBROCC: {exc}")
                 if stop:
                     logger.info("Stopping search...")
                     kill_process(proc, default_pgid=pgid)
@@ -1295,7 +1295,7 @@ def search(sl, rp):
         except Exception:
             logger.warning("Error writing Search-report.pdf",
                            exc_info=True)
-    # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
+    # process SD.TL to get POSCAR and VIBROCC for OUT
     try:
         processSearchResults(sl, rp, search_log_path)
     except FileNotFoundError:

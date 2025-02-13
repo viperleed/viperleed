@@ -30,6 +30,7 @@ __license__ = 'GPLv3+'
 from copy import deepcopy
 
 from pytest_cases import fixture
+from pytest_cases import fixture_ref
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
@@ -59,6 +60,7 @@ from .tag import BookkeeperTag as Tag
 MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_ORIG_CONTENT = 'This is a test original input file.'
 MOCK_OUT_CONTENT = 'This is a test output file.'
+MOCK_OUT_SUFFIXED_CONTENT = 'This is a test output file with _OUT in its name.'
 MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
 # Notice that the year for the timestamp is such that all files
 # created in the tests are considered "not later than". This
@@ -105,8 +107,7 @@ def factory_mock_tree_after_calc_execution(log_file_name, with_notes,
             **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
 
             # OUT files
-            DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_CONTENT
-                           for f in MOCK_STATE_FILES},
+            DEFAULT_OUT : {f: MOCK_OUT_CONTENT for f in MOCK_STATE_FILES},
 
             # Original inputs in SUPP
             f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
@@ -126,6 +127,43 @@ def factory_mock_tree_after_calc_execution(log_file_name, with_notes,
             root_contents['notes.txt'] = NOTES_TEST_CONTENT
         if history_info_contents is not None:  # history.info
             root_contents[HISTORY_INFO_NAME] = history_info_contents
+
+        # Actually create files and folders
+        filesystem_from_dict(root_contents, tmp_path)
+
+        return tmp_path
+    return _make
+
+
+@fixture(name='mock_tree_after_calc_execution_with_out_suffix')
+def factory_mock_tree_after_calc_execution_out_suffix(tmp_path):
+    """Create files like those after calc HAD run before we dropped _OUT."""
+    def _make():
+        root_contents = {
+            DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
+            DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
+            f'{LOG_PREFIX}_{MOCK_TIMESTAMP}.log': None,
+
+            # Input files
+            **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
+
+            # OUT files, with an old-style _OUT suffix
+            DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_SUFFIXED_CONTENT
+                           for f in MOCK_STATE_FILES},
+
+            # Original inputs in SUPP
+            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
+                f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
+                },
+
+            # Pre-existing (empty) history directories
+            f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
+            f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
+
+            # workhistory subfolders, with dummy files
+            **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
+               for f in MOCK_WORKHISTORY},
+            }
 
         # Actually create files and folders
         filesystem_from_dict(root_contents, tmp_path)
@@ -172,13 +210,19 @@ def fixture_after_archive(after_calc_execution, after_bookkeper_run):
     return after_bookkeper_run(after_calc_execution, BookkeeperMode.ARCHIVE)
 
 
+_tree_after_calc_exec = (
+    fixture_ref('mock_tree_after_calc_execution'),
+    fixture_ref('mock_tree_after_calc_execution_with_out_suffix'),
+    )
+
 @fixture(name='after_calc_execution')
-def fixture_after_calc_execution(mock_tree_after_calc_execution, mocker):
+@parametrize(make_calc_tree=_tree_after_calc_exec)
+def fixture_after_calc_execution(make_calc_tree, mocker):
     """Prepare a directory like the one after calc executes.
 
     Parameters
     ----------
-    mock_tree_after_calc_execution : fixture
+    make_calc_tree : fixture
         Factory that produces a temporary directory containing
         files like those produced by run_calc when called.
     mocker : fixture
@@ -195,7 +239,7 @@ def fixture_after_calc_execution(mock_tree_after_calc_execution, mocker):
     mocker : fixture
         The pytest-mock fixture.
     """
-    tmp_path = mock_tree_after_calc_execution()
+    tmp_path = make_calc_tree()
     bookkeeper = Bookkeeper(cwd=tmp_path)
     bookkeeper.update_from_cwd(silent=True)
     history_path = bookkeeper.cwd / DEFAULT_HISTORY
@@ -271,7 +315,7 @@ def fixture_after_calc_with_edited(tmp_path):
                 },
             },
         DEFAULT_OUT : {
-            'PARAMETERS_OUT': MOCK_OUT_CONTENT,
+            'PARAMETERS': MOCK_OUT_CONTENT,
             # Notice that there is no POSCAR nor VIBROCC in OUT
             },
         }
@@ -289,7 +333,7 @@ def fixture_after_calc_with_edited(tmp_path):
 
     # (2) The rest of the root
     archived[f'PARAMETERS{ORI_SUFFIX}'] = before['PARAMETERS']
-    archived['PARAMETERS'] = before[DEFAULT_OUT]['PARAMETERS_OUT']
+    archived['PARAMETERS'] = before[DEFAULT_OUT]['PARAMETERS']
     archived[f'VIBROCC{ORI_SUFFIX}'] = before['VIBROCC']
     # No VIBROCC in OUT, so new input stays the same
     archived[f'POSCAR{EDITED_SUFFIX}'] = before['POSCAR']

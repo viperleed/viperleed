@@ -363,7 +363,7 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
     return vibAmpGenerated
 
 
-def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
+def writeVIBROCC(sl, filename='VIBROCC', silent=False):
     """Writes a new VIBROCC file with the optimized parameters obtained after
     the search. The new file will not follow the ordering of the input VIBROCC
     file."""

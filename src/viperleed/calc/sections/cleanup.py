@@ -61,6 +61,7 @@ _SUPP_FILES = (
     'searchpars.info',
     'superpos-CONTRIN',
     'superpos-PARAM',
+    'VIBROCC_generated',
     )
 
 _SUPP_DIRS = (
@@ -202,13 +203,14 @@ def organize_workdir(rpars,
         if deltas or delete_unzipped:
             _zip_subfolders(DEFAULT_DELTAS, deltas, *zip_args)
 
-        _collect_supp_contents()
-        _collect_out_contents()
+        _collect_supp_contents(rpars)
+        _collect_out_contents(rpars)
 
 
-def _collect_supp_contents():
+def _collect_supp_contents(rpars):
     """Store relevant files/folder from the current directory to SUPP."""
-    files_to_copy = set(Path(f) for f in _SUPP_FILES)
+    files_to_copy = set(Path(f) for f in _SUPP_FILES
+                        if f not in rpars.files_to_out)
     directories_to_copy = (Path(d) for d in _SUPP_DIRS)
 
     # Also add log files into SUPP: skip calc logs (they go to
@@ -225,23 +227,17 @@ def _collect_supp_contents():
                                 Path(DEFAULT_SUPP))
 
 
-def _collect_out_contents():
+def _collect_out_contents(rpars):
     """Store relevant files/folder from the current directory to OUT."""
     out_path = Path(DEFAULT_OUT)
     out_files = set(Path(f) for f in _OUT_FILES)
-    # add POSCAR_OUT, VIBROCC_OUT, PARAMETERS_OUT & any R_OUT files
-    out_files.update(Path().glob('*_OUT*'))
+    # Add R-factor output files
+    out_files.update(Path().glob('R_*R=*'))
+    # And POSCAR, PARAMETERS, VIBROCC files that we generated/edited.
+    # They may be the ones created at initialization, or those from
+    # an optimization.
+    out_files.update(Path(f) for f in rpars.files_to_out)
     _copy_files_and_directories(out_files, (), out_path)
-
-    # Rename OUT/PARAMETERS to OUT/PARAMETERS_OUT for naming consistency
-    parameters_path = Path("PARAMETERS")
-    parameters_out_path = out_path / "PARAMETERS_OUT"
-    try:
-        # copy the file to OUT/PARAMETERS_OUT
-        shutil.copy2(parameters_path, parameters_out_path)
-    except OSError:
-        logger.error(f"Error renaming {DEFAULT_OUT}/PARAMETERS to "
-                     f"{DEFAULT_OUT}/PARAMETERS_OUT.", exc_info=True)
 
 
 def _copy_files_and_directories(files, directories, target):

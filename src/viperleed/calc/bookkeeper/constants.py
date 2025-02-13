@@ -24,7 +24,7 @@ HISTORY_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3})\.r(?P<job_num>[0-9]{3})(?P<rest>.*)'
     )
 
-# Input/output files that may have _ori or _OUT suffix
+# Input/output files that may have _ori or, before #302, _OUT suffix
 STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
 

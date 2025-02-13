@@ -198,6 +198,7 @@ class Rparams:
         self.systemName = ''
         self.timestamp = ''
         self.manifest = {DEFAULT_SUPP, DEFAULT_OUT}
+        self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
             'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,

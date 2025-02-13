@@ -342,7 +342,9 @@ class RootExplorer:
         # Try OUT first
         failed_out = {}
         try:
-            self._copy_state_files_from(self.path / DEFAULT_OUT, '{}_OUT')
+            self._copy_state_files_from(self.path / DEFAULT_OUT,
+                                        '{}',  # First without suffix
+                                        '{}_OUT')
         except FileOperationFailedError as exc:
             failed_out.update(exc.failures)
 

@@ -400,7 +400,7 @@ class TestRootExplorerNextCalc:
             # pylint: disable-next=protected-access       # OK in tests
             explorer._copy_state_files_from_out_or_original_inputs()
         expect_calls = [
-            mocker.call(explorer.path / DEFAULT_OUT, '{}_OUT'),
+            mocker.call(explorer.path / DEFAULT_OUT, '{}', '{}_OUT'),
             mocker.call(explorer.orig_inputs_dir,
                         only_files=out_exc.failures if out_exc else {}),
             ]

@@ -15,6 +15,7 @@ __license__ = 'GPLv3+'
 
 import logging
 import os
+import shutil
 
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.files import beams as iobeams
@@ -152,7 +153,9 @@ def run_section(index, sl, rp):
                         "VIBROCC file was modified with automatically "
                         "generated vibrational amplitudes."
                         )
-                writeVIBROCC(sl, rp, "VIBROCC")
+                writeVIBROCC(sl, 'VIBROCC')
+                rp.files_to_out.add('VIBROCC')
+                shutil.copy2('VIBROCC', 'VIBROCC_generated')
             if rp.T_EXPERIMENT is not None:
                 parameters.comment_out(rp, "T_EXPERIMENT")
             if rp.T_DEBYE is not None:

@@ -1055,7 +1055,7 @@ def _read_control_chem(control_chem_path,
 def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     """
     Modifies data in sl and rp to reflect the search result given by
-    parinds, then writes POSCAR_OUT and VIBROCC_OUT.
+    parinds, then writes POSCAR and VIBROCC.
 
     Parameters
     ----------
@@ -1071,7 +1071,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     silent : bool, optional
         Suppresses output to log. The default is False.
     suffix : str, optional
-        String to be appended to the POSCAR_OUT and VIBROCC_OUT file names.
+        String to be appended to the POSCAR and VIBROCC file names.
 
     Returns
     -------
@@ -1193,29 +1193,35 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                     at.offset_occ[el] -= offset_occ
                 if el in at.offset_vib:
                     at.offset_vib[el] -= offset_vib
-    poscar_fn = "POSCAR_OUT" + suffix
+    poscar_fn = f'POSCAR{suffix}'
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
         poscar.write(tmpslab, filename=poscar_fn, comments="all", silent=silent)
     except OSError:
-        logger.error("Exception occurred while writing POSCAR_OUT" + suffix,
+        logger.error(f'Exception occurred while writing {poscar_fn}',
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
+    else:
+        rp.files_to_out.add(poscar_fn)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.make_subcell(rp, rp.SYMMETRY_CELL_TRANSFORM)
-        poscar_mincell_fn = "POSCAR_OUT_mincell" + suffix
+        poscar_mincell_fn = f'POSCAR_mincell{suffix}'
         try:
             poscar.write(tmpslab, filename=poscar_mincell_fn, silent=silent)
         except OSError:
             logger.warning(
-                "Exception occurred while writing POSCAR_OUT_mincell" + suffix,
-                exc_info=rp.is_debug_mode)
-    vibrocc_fn = "VIBROCC_OUT" + suffix
+                f'Exception occurred while writing {poscar_mincell_fn}',
+                exc_info=rp.is_debug_mode,
+                )
+        else:
+            rp.files_to_out.add(poscar_mincell_fn)
+    vibrocc_fn = f'VIBROCC{suffix}'
     try:
-        writeVIBROCC(sl, rp, filename=vibrocc_fn, silent=silent)
+        writeVIBROCC(sl, filename=vibrocc_fn, silent=silent)
     except Exception:
-        logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
+        logger.error(f'Exception occured while writing {vibrocc_fn}',
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
-    return
+    else:
+        rp.files_to_out.add(vibrocc_fn)

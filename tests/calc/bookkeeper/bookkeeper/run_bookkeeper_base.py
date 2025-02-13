@@ -29,6 +29,7 @@ from viperleed.calc.constants import DEFAULT_SUPP
 from ....helpers import filesystem_to_dict
 from ..conftest import MOCK_INPUT_CONTENT
 from ..conftest import MOCK_OUT_CONTENT
+from ..conftest import MOCK_OUT_SUFFIXED_CONTENT
 from ..conftest import MOCK_ORIG_CONTENT
 from ..conftest import MOCK_STATE_FILES
 from ..conftest import MOCK_WORKHISTORY
@@ -108,25 +109,36 @@ class _TestCheckers:
             ]
         assert not any(faulty), f'Found: {faulty[0].getMessage()!r}'
 
-    def check_out_files_in_history(self, *run):
+    def check_out_files_at_path(self, path, out_suffixed=False):
+        """Check that all output files are found at path/DEFAULT_OUT."""
+        expected_contents = (MOCK_OUT_SUFFIXED_CONTENT if out_suffixed
+                             else MOCK_OUT_CONTENT)
+        out_path = path / DEFAULT_OUT
+        for file in MOCK_STATE_FILES:
+            other_file = file if out_suffixed else f'{file}_OUT'
+            file = f'{file}_OUT' if out_suffixed else file
+            self._check_file_contents(out_path/file, expected_contents)
+            # Only one between _OUT-suffixed and non-suffixed
+            assert not (out_path/other_file).is_file()
+
+    def check_out_files_in_history(self, *run, out_suffixed=False):
         """Check that the expected state files are stored in 'OUT'."""
         *_, history_run_path, _ = run
-        for file in MOCK_STATE_FILES:
-            hist_file = history_run_path / DEFAULT_OUT / f'{file}_OUT'
-            self._check_file_contents(hist_file, MOCK_OUT_CONTENT)
+        self.check_out_files_at_path(history_run_path, out_suffixed)
 
-    def check_out_files_untouched(self, bookkeeper, *_):
+    def check_out_files_untouched(self, bookkeeper, *_, out_suffixed=False):
         """Ensure all expected files are found in OUT."""
-        out = bookkeeper.cwd / DEFAULT_OUT
-        for file in MOCK_STATE_FILES:
-            out_file = out / f'{file}_OUT'
-            self._check_file_contents(out_file, MOCK_OUT_CONTENT)
+        self.check_out_files_at_path(bookkeeper.cwd, out_suffixed)
 
-    def check_root_after_archive(self, *after_archive):
+    def check_root_after_archive(self, *after_archive, out_suffixed=False):
         """Make sure the root is structured as expected after archiving."""
         self.check_root_inputs_renamed_to_ori(*after_archive)
-        self.check_out_files_untouched(*after_archive)
-        self.check_root_inputs_replaced_by_out_or_ori(*after_archive)
+        self.check_out_files_untouched(*after_archive,
+                                       out_suffixed=out_suffixed)
+        self.check_root_inputs_replaced_by_out_or_ori(
+            *after_archive,
+            out_suffixed=out_suffixed,
+            )
 
     def check_root_inputs_renamed_to_ori(self, bookkeeper, *_):
         """Check that the input files have now a _ori suffix."""
@@ -135,12 +147,15 @@ class _TestCheckers:
             self._check_file_contents(cwd/f'{file}{ORI_SUFFIX}',
                                       MOCK_INPUT_CONTENT)
 
-    def check_root_inputs_replaced_by_out_or_ori(self, bookkeeper, *_):
+    def check_root_inputs_replaced_by_out_or_ori(self, bookkeeper, *_,
+                                                 out_suffixed=False):
         """Check that the input files in root come from OUT/original_inputs."""
         cwd = bookkeeper.cwd
+        out_contents = (MOCK_OUT_SUFFIXED_CONTENT if out_suffixed
+                        else MOCK_OUT_CONTENT)
         for file in MOCK_STATE_FILES:
             self._check_file_contents(cwd/file,
-                                      MOCK_OUT_CONTENT,
+                                      out_contents,
                                       MOCK_ORIG_CONTENT)
 
     def check_root_inputs_untouched(self, bookkeeper, *_):
@@ -178,6 +193,23 @@ class _TestCheckers:
             assert moved_dir.is_dir()
             self._check_file_contents(moved_file, ori_name)
 
+    def has_out_suffixed(self, bookkeeper, *_):
+        """Return whether there are any old-style _OUT files in OUT.
+
+        It is critical to execute this function BEFORE bokkeeper runs.
+
+        Parameters
+        ----------
+        bookkeeper : Bookkeeper
+            A bookkeeper instance. Its .cwd/OUT folder is checked
+            for _OUT files.
+
+        Returns
+        -------
+        bool
+        """
+        return any((bookkeeper.cwd/DEFAULT_OUT).glob('*_OUT*'))
+
 
 class _TestBookkeeperRunBase(_TestCheckers):
     """Base class for checking correct execution of bookkeeper."""
@@ -196,15 +228,19 @@ class _TestBookkeeperRunBase(_TestCheckers):
     def run_after_archive_and_check(self, after_archive, caplog, **kwargs):
         """Check that running bookkeeper after ARCHIVE does basic stuff."""
         bookkeeper, *_ = after_archive
+        # See if we have legacy _OUT-suffixed files:
+        has_out_suffixed = self.has_out_suffixed(bookkeeper)
         # bookkeeper should not think that it needs archiving
         assert not bookkeeper.archiving_required
         self._run_bookkeeper(bookkeeper, kwargs, caplog)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_archive)
-        self.check_out_files_in_history(*after_archive)
+        self.check_out_files_in_history(*after_archive,
+                                        out_suffixed=has_out_suffixed)
         self.check_input_files_in_history(*after_archive)
         if kwargs['mode'] is BookkeeperMode.ARCHIVE:
-            self.check_root_after_archive(*after_archive)
+            self.check_root_after_archive(*after_archive,
+                                          out_suffixed=has_out_suffixed)
         else:
             self.check_root_is_clean(*after_archive)
         # Check that the workhistory directories are
@@ -218,6 +254,8 @@ class _TestBookkeeperRunBase(_TestCheckers):
                                       **kwargs):
         """Check that running bookkeeper after calc does some basic stuff."""
         bookkeeper, *_, mocker = after_calc_execution
+        # See if we have legacy _OUT-suffixed files:
+        has_out_suffixed = self.has_out_suffixed(bookkeeper)
         if check_archiving_required:
             # bookkeeper should think that it needs archiving
             assert bookkeeper.archiving_required
@@ -232,7 +270,8 @@ class _TestBookkeeperRunBase(_TestCheckers):
         self._run_bookkeeper(bookkeeper, kwargs, caplog)
         bookkeeper.update_from_cwd(silent=True)
         self.check_history_exists(*after_calc_execution)
-        self.check_out_files_in_history(*after_calc_execution)
+        self.check_out_files_in_history(*after_calc_execution,
+                                        out_suffixed=has_out_suffixed)
         self.check_workhistory_archived(*after_calc_execution)
         check_edited_files.assert_called()
 
@@ -282,6 +321,8 @@ class _TestBookkeeperRunBase(_TestCheckers):
     def run_archive_after_calc_and_check(self, after_calc_execution, caplog,
                                          check_archiving_required=True):
         """Check correct storage of history files in ARCHIVE mode."""
+        # See if we have legacy _OUT-suffixed files:
+        has_out_suffixed = self.has_out_suffixed(*after_calc_execution)
         kwargs = {
             'check_archiving_required': check_archiving_required,
             'mode': 'archive',
@@ -289,7 +330,8 @@ class _TestBookkeeperRunBase(_TestCheckers):
         self.run_after_calc_exec_and_check(after_calc_execution,
                                            caplog,
                                            **kwargs)
-        self.check_root_after_archive(*after_calc_execution)
+        self.check_root_after_archive(*after_calc_execution,
+                                      out_suffixed=has_out_suffixed)
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
     def run_before_calc_exec_and_check(self,

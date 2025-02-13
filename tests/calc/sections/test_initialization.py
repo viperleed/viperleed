@@ -13,6 +13,7 @@ from pytest_cases import parametrize
 
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
@@ -63,6 +64,33 @@ class TestInitialization:                                                       
             param_content = param_file.read()
         # pylint: disable-next=magic-value-comparison
         assert 'line commented out automatically' in param_content
+
+    def test_does_not_write_out_suffixed(self, init_files):
+        """Check that no _OUT-suffixed file is generated."""
+        out_suffixed = init_files.work_path.rglob('*_OUT*')
+        assert not any(out_suffixed)
+
+    def test_vibrocc_generated(self, init_files):
+        """Check that VIBROCC_generated is written if needed."""
+        had_vibrocc_input = any(any(p.glob('VIBROCC'))
+                                for p in init_files.input_files_paths)
+        work = init_files.work_path
+        for_supp = work/'VIBROCC_generated'
+        for_out = work/'VIBROCC'
+        in_supp = work/DEFAULT_SUPP/'VIBROCC_generated'
+        in_out = work/DEFAULT_OUT/'VIBROCC'
+        if had_vibrocc_input:
+            assert not for_supp.exists()
+            assert not in_supp.exists()
+            assert not in_out.exists()
+        else:
+            assert for_supp.is_file()
+            assert for_supp.read_text() == for_out.read_text()
+            assert in_supp.is_file()
+            assert in_out.is_file()
+            # If it has generated a VIBROCC, it also should have
+            # modified PARAMETERS, which should now be in OUT
+            assert (work/DEFAULT_OUT/'PARAMETERS').is_file()
 
 
 class TestInitializationDomains:
