@@ -77,7 +77,7 @@ OPTIONAL_INPUT_FILES = (
 # files to go in OUT
 _OUT_FILES = (
     'Complex_amplitudes_imag.csv',
-    'Complex_amplitudes_real.csv'
+    'Complex_amplitudes_real.csv',
     'control.chem',
     'Errors_summary.csv',
     'Errors.pdf',
