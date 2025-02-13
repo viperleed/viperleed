@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-02-03'
 __license__ = 'GPLv3+'
 
+import logging
 import shutil
 from zipfile import ZipFile
 
@@ -442,6 +443,8 @@ class TestZipSubfolders:
         )
     def test_invalid_name_format(self, run, workdir, caplog):
         """Check that a folder with invalid format is not processed."""
+        # Increase log level: There are INFO for the valid folders
+        caplog.set_level(logging.WARNING)
         tree = {self.folder: {'test_zipping_001-invalid-fmt': {}}}
         filesystem_from_dict(tree, workdir)
         clean = run(delete_unzipped=True,
@@ -454,6 +457,8 @@ class TestZipSubfolders:
 
     def test_not_a_valid_folder(self, run, workdir, caplog):
         """Check that a stray subfolder is not packed."""
+        # Increase log level: There are INFO for the valid folders
+        caplog.set_level(logging.WARNING)
         tree = {self.folder: {'not-a-test_zipping_001': {}}}
         filesystem_from_dict(tree, workdir)
         clean = run(delete_unzipped=True,
@@ -466,6 +471,8 @@ class TestZipSubfolders:
 
     def test_pack_and_delete(self, run, workdir, caplog):
         """Check packing and deleting of both Tensors and Deltas."""
+        # Increase log level: There are INFO messages about packing
+        caplog.set_level(logging.WARNING)
         clean = run(delete_unzipped=True,
                     archive=True,
                     compression_level=2)
@@ -494,6 +501,8 @@ class TestZipSubfolders:
 
     def test_pack_only(self, run, caplog):
         """Check no deletion of unzipped directories."""
+        # Increase log level: There are INFO messages about packing
+        caplog.set_level(logging.WARNING)
         clean = run(delete_unzipped=False,
                     archive=True,
                     compression_level=2)
