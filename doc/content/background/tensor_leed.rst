@@ -36,7 +36,7 @@ accurate diffraction amplitudes for small deviations from the reference
 structure by using a first-order-perturbation approach
 :cite:p:`rousTensorLEEDTechnique1986`. The deviations from the
 reference structure may be geometric (i.e., altered atom positions),
-changes to atomic vibrational amplitudes, or chemical substitutions
+changes to atomic vibration amplitudes, or chemical substitutions
 :cite:p:`kottckeNewApproachAutomated1997`.
 
 Each atom :math:`i` is assigned a "\ :math:`t` matrix", :math:`t_i`, based on
@@ -78,7 +78,7 @@ Delta-amplitude calculation
 ===========================
 
 The individual perturbations to the reference structure may be combinations of
-geometric displacements, changes in the vibrational amplitudes, or chemical
+geometric displacements, changes in the vibration amplitudes, or chemical
 substitutions. As tensor LEED is based on first-order perturbation theory,
 these perturbations — and the resulting amplitude changes — can be treated
 on an atom-by-atom basis.

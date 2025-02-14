@@ -151,7 +151,7 @@ def run_section(index, sl, rp):
                     rp.manifest.append("VIBROCC_user")
                     logger.info(
                         "VIBROCC file was modified with automatically "
-                        "generated vibrational amplitudes."
+                        "generated vibration amplitudes."
                         )
                 writeVIBROCC(sl, 'VIBROCC')
                 rp.files_to_out.add('VIBROCC')

@@ -4,7 +4,7 @@ SYMMETRY_FIX
 ============
 
 SYMMETRY_FIX allows you to constrain the symmetry of the displacements, 
-vibrational amplitudes, and concentrations during LEED optimization.
+vibration amplitudes, and concentrations during LEED optimization.
 
 **Default**: SYMMETRY_FIX = True: Use the symmetry determined 
 automatically from the :ref:`POSCAR` file.

@@ -128,13 +128,13 @@ def generate_errors_csv(errors, sep=","):
 
 
 def geo_errors_csv_content(error):
-    """Generate columns dict for geometrical errors containing the
+    """Generate columns dict for geometric errors containing the
     contents of a file to be written into Errors.zip.
 
     Parameters
     ----------
     error : R_Error
-        Error object for geometrical errors.
+        Error object for geometric errors.
 
     Returns
     -------
@@ -161,13 +161,13 @@ def geo_errors_csv_content(error):
 
 
 def vib_errors_csv_content(error):
-    """Generate columns dict for vibrational errors containing the
+    """Generate columns dict for vibration errors containing the
     contents of a file to be written into Errors.zip.
 
     Parameters
     ----------
     error : R_Error
-        Error object for vibrational errors.
+        Error object for vibration errors.
 
     Returns
     -------
@@ -316,7 +316,7 @@ def make_errors_figs(errors, formatting=None):
     figs = []
 
     titles = {"geo": "Geometry",
-              "vib": "Vibrational amplitudes",
+              "vib": "Vibration amplitudes",
               "occ": "Site occupation"}
 
     for mode in ("geo", "vib", "occ"):

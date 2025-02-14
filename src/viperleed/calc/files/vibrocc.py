@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
     """Reads VIBROCC and adds the information to all sites in the slab.
-    If vibrational amplitudes are automatically calculated here, returns True,
+    If vibration amplitudes are automatically calculated here, returns True,
     else returns False."""
     if not (rp.T_EXPERIMENT is None or rp.T_DEBYE is None):
         generate = True
@@ -34,12 +34,12 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
         rf = open(filename, 'r')
     except FileNotFoundError:
         if generate:
-            logger.info("No VIBROCC file found, generating vibrational "
+            logger.info("No VIBROCC file found, generating vibration "
                         "amplitudes from temperature...")
             for site in slab.sitelist:
                 if site.el not in rp.ELEMENT_MIX:
                     if site.getVibAmp(rp, site.el) is not None:
-                        logger.error("Failed to generate vibrational "
+                        logger.error("Failed to generate vibration "
                                      "amplitude for " + site.el + " in site "
                                      + site.label)
                         raise
@@ -47,7 +47,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                     for subel in rp.ELEMENT_MIX[site.el]:
                         if site.getVibAmp(rp, subel) is not None:
                             logger.error(
-                                "Failed to generate vibrational amplitude for "
+                                "Failed to generate vibration amplitude for "
                                 + site.el + " in site " + site.label)
                             raise
             try:
@@ -84,7 +84,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                     continue
                 else:
                     logger.warning("VIBROCC: Found line starting with '=', "
-                                   "but didn't recognize vibrational "
+                                   "but didn't recognize vibration "
                                    "amplitude or occupation")
                     rp.setHaltingLevel(1)
                 continue
@@ -243,12 +243,12 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
 
 
 def checkVIBROCC(rp, slab, generate=False, silent=False):
-    """Fills default values and does consistency check of site vibrational
-    amplitudes and occupations. If vibrational amplitudes are automatically
+    """Fills default values and does consistency check of site vibration
+    amplitudes and occupations. If vibration amplitudes are automatically
     calculated here, returns True, else returns False."""
     vibAmpGenerated = False
     for site in slab.sitelist:
-        # check if the vibrational amplitude is defined for the main element(s)
+        # check if the vibration amplitude is defined for the main element(s)
         if site.el not in site.vibamp:
             if site.el not in rp.ELEMENT_MIX:
                 if generate:
@@ -257,11 +257,11 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                     else:
                         logger.warning(
                             'VIBROCC file: Failed to get ' + site.el +
-                            ' vibrational amplitude for site ' + site.label)
+                            ' vibration amplitude for site ' + site.label)
                         rp.setHaltingLevel(2)
                 else:
                     logger.warning(
-                        'VIBROCC file: No ' + site.el + ' vibrational '
+                        'VIBROCC file: No ' + site.el + ' vibration '
                         'amplitude defined for site '+site.label)
                     rp.setHaltingLevel(2)
             else:
@@ -275,19 +275,19 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                             v = site.vibamp[subel]
                 if v == -1:
                     logger.error(
-                        'VIBROCC file: No vibrational amplitude defined for '
+                        'VIBROCC file: No vibration amplitude defined for '
                         'any of the main elements in site ' + site.label)
                     rp.setHaltingLevel(3)
                     # !!! raise exception
                 else:
-                    # vibrational amplitudes were defined for some of the
+                    # vibration amplitudes were defined for some of the
                     #  main elements but not all. Fill the other values
                     for subel in rp.ELEMENT_MIX[site.el]:
                         if subel not in site.vibamp:
                             logger.warning(
-                                'VIBROCC file: No ' + subel + ' vibrational '
+                                'VIBROCC file: No ' + subel + ' vibration '
                                 'amplitude defined for site ' + site.label +
-                                '. Using vibrational amplitude from other '
+                                '. Using vibration amplitude from other '
                                 'element in site.')
                             rp.setHaltingLevel(1)
                             site.vibamp[subel] = v
@@ -295,7 +295,7 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
             mainva = site.vibamp[rp.ELEMENT_MIX[site.el][0]]
         else:
             mainva = site.vibamp[site.el]
-        # for other elements, fill vibrational elements with that of the main
+        # for other elements, fill vibration elements with that of the main
         # element (probably not present)
         for el in slab.chemelem:
             if el not in site.vibamp:
@@ -333,14 +333,14 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                 rp.setHaltingLevel(2)
             for el in site.occ:
                 site.occ[el] *= 1/o
-        # finally, check whether we have any vibrational amplitudes or
+        # finally, check whether we have any vibration amplitudes or
         #  occupations assigned to non-existant elements, and if so, drop
         #  them and warn the user about it:
         dl = []
         for el in site.vibamp:
             if el not in slab.chemelem:
                 logger.warning(
-                    'VIBROCC file: Site ' + site.label + ' has a vibrational '
+                    'VIBROCC file: Site ' + site.label + ' has a vibration '
                     'amplitude defined for an unknown element, which will be '
                     'dropped (' + el + ').')
                 rp.setHaltingLevel(1)
@@ -367,7 +367,7 @@ def writeVIBROCC(sl, filename='VIBROCC', silent=False):
     """Writes a new VIBROCC file with the optimized parameters obtained after
     the search. The new file will not follow the ordering of the input VIBROCC
     file."""
-    output = "= Vibrational Amplitudes\n"
+    output = "= Vibration Amplitudes\n"
     for site in sl.sitelist:
         ol = site.label + " = "
         targetels = [el for el in site.vibamp if (site.occ[el] != 0

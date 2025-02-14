@@ -4,7 +4,7 @@ SITE_DEF
 ========
 
 SITE_DEF defines the different types of sites for a given element.
-Different sites can have different occupancies and vibrational amplitudes.
+Different sites can have different occupations and vibration amplitudes.
 
 **Default:** all atoms have site name ``def``.
 
