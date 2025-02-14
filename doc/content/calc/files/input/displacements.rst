@@ -52,7 +52,7 @@ detail here:
 
 .. note::
     Geometric displacements for any atom can only be applied along one
-    :ref:`direction<geodelta_direction>` (e.g. z, x, y, along arcs etc.) at a
+    :ref:`direction <geodelta_direction>` (e.g. z, x, y, along arcs etc.) at a
     time. To optimize positions in multiple directions, multiple subsequent 
     search blocks are necessary.
 
