@@ -19,7 +19,7 @@ The first argument is the element name in the :ref:`POSCAR` file for
 sites that are being defined.
 After the "=" sign, comma-delimited groups should contain names of the sites
 and the atom numbers to be assigned (number of atom in the POSCAR list /
-same as progressional numbers in :term:`VESTA`'s
+same as progressive numbers in :term:`VESTA`'s
 Edit>Data>Structure parameters, **not** the :term:`VESTA` number per type,
 i.e., not the number in 'Fe2', 'O16' etc.). The top(*N*) function selects
 the *N* topmost atoms of the given POSCAR element. ``4-10`` or ``4:10`` will

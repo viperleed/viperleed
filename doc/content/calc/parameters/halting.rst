@@ -24,7 +24,7 @@ stopped more readily.
 -  3: only stop if program crashes, or required input or data is missing
 
 The default value of 2 should be sensible for most users. A value of 1 might
-make sense if the user is sceptical about the input. A value of 3 is **not**
+make sense if the user is skeptical about the input. A value of 3 is **not**
 recommended, but can be applied by experienced users who are very sure of
 their input being correct, or who don't care about wasting computational
 resources if it isn't.
