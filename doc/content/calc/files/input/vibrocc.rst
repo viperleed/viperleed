@@ -125,8 +125,8 @@ occupational offsets from the site's values. This has two use cases:
 -  If a parameter, e.g. the vibration amplitude, is varied independently for
    the different atoms sharing a site type, the search result will likely yield
    different values for these atoms. These values will be written to the
-   VIBROCC_OUT file to intialize a potential continuation job with the exact
-   results from the previous search, instead of an average.
+   OUT/VIBROCC file to initialize a potential continuation job with the
+   exact results from the previous search, instead of an average.
 -  If there are multiple elements sharing a site via :ref:`element_mix`, the
    positions of the different chemical species may be different depending on
    the element. This cannot be mapped in the POSCAR file or the reference
@@ -158,17 +158,28 @@ in ångströms, where positive z means away from the surface.
 
 .. _vibrocc_out:
 
-VIBROCC_OUT
+OUT/VIBROCC
 -----------
 
-After executing a search, a VIBROCC_OUT file will be produced in the OUT
-folder. This takes the same format as the original VIBROCC file, and
-the new vibrational amplitudes and occupations are those of the
-best-fit structure found during the search (i.e., the one with the
-lowest |R factor|). If atoms in the same site were allowed to vary
-independently, the vibrations and occupations written for each site
-will be the average, and values for the single atoms will be written as
-search offsets.
+When VIBROCC is :ref:`automatically generated<vibrocc_auto>` during
+:ref:`initialization`, the resulting VIBROCC file is stored in the
+OUT folder.
+
+After executing a search, the VIBROCC file found in the OUT folder
+contains instead the vibration amplitudes and occupations of the
+best-fit structure found during the (last) search (i.e., the one
+with the smallest |R factor|). If atoms in the same site were
+allowed to vary independently, the vibrations and occupations
+written for each site will be the average, and values for the
+single atoms will be written as search offsets.
+
+.. note::
+    A non-halted execution (i.e., one where :ref:`halting` was set to a
+    value larger than the default) that includes a structure optimization
+    will overwrite an auto-generated OUT/VIBROCC file with the one found by
+    the (last) optimization step. In this case, a copy of the auto-generated
+    VIBROCC file can be found in SUPP (named VIBROCC_generated).
+
 
 .. _vibrocc_auto:
 

@@ -35,9 +35,9 @@ in the *z* direction, but does not necessarily have to be perpendicular to the
 surface. Slabs must be asymmetric, with +*z* pointing away from the surface into
 vacuum, and the lowest-lying layers (i.e. smallest *z* coordinates) bulk-like.
 
-After the |calc| :ref:`initialization` is run for the first time, the original
-POSCAR file will be copied to POSCAR_user. The following changes are then made
-to POSCAR:
+After the |calc| :ref:`initialization<initialization>` is run for the first
+time, the original POSCAR file will be copied to POSCAR_user. The following
+changes are then made to POSCAR:
 
 -  The unit cell will be simplified to a higher-symmetry / lower-circumference
    form, if possible. If this happens, a warning will appear in the log
@@ -61,6 +61,15 @@ to POSCAR:
    in the POSCAR.
 -  Comments will be added in the POSCAR file, which predict the behavior
    of the system during the subsequent calculations (see below).
+
+This modified POSCAR file can be found in the OUT folder after
+:ref:`initialization`.
+
+.. note::
+    A non-halted execution (i.e., one where :ref:`halting` was set to a
+    value larger than the default) that includes a structure optimization
+    will overwrite the :ref:`OUT/POSCAR<poscar_out>` file created during
+    :ref:`initialization` with the one found by the (last) optimization step.
 
 Comment lines
 -------------
@@ -97,6 +106,21 @@ For each atom the following information is given:
    the cell (and therefore the unit vectors) might be different. Bulk atoms
    will be labelled ``bulk`` in this column, since they cannot be moved during
    optimization.
+
+
+.. _poscar_out:
+
+OUT/POSCAR
+----------
+
+After running the :ref:`initialization`, a POSCAR file can be found in the
+OUT folder. This is an edited version of the user-given POSCAR, as described
+:ref:`above<poscar>`.
+
+After executing a structure optimization (i.e., :ref:`search<search>`
+or :ref:`fdoptimization`), the POSCAR file in OUT corresponds to the one
+that realizes the best (i.e., smallest) |R factor|. It has the same format
+as the one after initialization.
 
 
 .. _poscar_oricell:
@@ -138,17 +162,6 @@ POSCAR_mincell
 If the :ref:`SYMMETRY_CELL_TRANSFORM` parameter is set, or if a smaller-area
 unit cell is found during the symmetry search, an additional **POSCAR_mincell**
 file will be written, containing the atoms in the reduced unit cell.
-
-
-.. _poscar_out:
-
-POSCAR_OUT
-----------
-
-After executing a search, a POSCAR_OUT file will be produced in the OUT folder.
-This takes the same format as the POSCAR file after initialization, and the new
-positions are those of the best-fit structure found during the search (i.e.,
-corresponding to the lowest |R factor|).
 
 
 .. _poscar_vacuum_corrected:

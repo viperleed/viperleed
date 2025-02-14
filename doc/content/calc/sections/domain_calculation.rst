@@ -74,10 +74,10 @@ parameter to define the step width for domain-area variations.
     :caption: Example directory tree for a domain calculation.
 
     my_domain_calc/
-    ├── Domain_1/         <-- Created by calc at initialization
-    │   ├── OUT/          <-- Created by calc at end
-    │   │   ├── POSCAR_OUT
-    │   │   ├── VIBROCC_OUT
+    ├── Domain_1/          <-- Created by calc at initialization
+    │   ├── OUT/           <-- Created by calc at end
+    │   │   ├── POSCAR
+    │   │   ├── VIBROCC
     │   │   └── ...
     │   ├── SUPP/          <-- Created by calc at end
     │   │   ├── POSCAR_bulk
@@ -90,8 +90,8 @@ parameter to define the step width for domain-area variations.
     │
     ├── Domain_another/    <-- Created by calc at initialization
     │   ├── OUT/           <-- Created by calc at end
-    │   │   ├── POSCAR_OUT
-    │   │   ├── VIBROCC_OUT
+    │   │   ├── POSCAR
+    │   │   ├── VIBROCC
     │   │   └── ...
     │   ├── SUPP/          <-- Created by calc at end
     │   │   ├── POSCAR_bulk
@@ -103,7 +103,7 @@ parameter to define the step width for domain-area variations.
     │   ├── Rfactor_analysis_superpos.pdf
     │   ├── Search_progress.pdf
     │   └── ...
-    ├── calc-<timestamp>.log
+    ├── viperleed-calc-<timestamp>.log
     ├── EXPBEAMS.csv
     ├── DISPLACEMENTS
     └── PARAMETERS
@@ -128,11 +128,11 @@ You can then run |calc| :ref:`as usual<cli_calc>`. In the base directory,
 a subfolder is created for each domain (folders :file:`Domain_1` and
 :file:`Domain_another` in :numref:`list_domains_directories`). Input
 files for each domain are copied there. All structure-specific output
-files (e.g., :ref:`POSCAR_OUT<poscar>`, :ref:`VIBROCC_OUT<vibrocc>`)
-will go to these subfolders, *not* to the original paths from which
-the inputs were fetched. Output concerning all domains taken together
-will go to the main folder (e.g., the :ref:`searchprogresspdf` file
-and the |R-factor| :ref:`plots<Rfactorplots>` after the :ref:`super_pos`).
+files (e.g., :ref:`poscar`, :ref:`vibrocc`) will go to these subfolders,
+*not* to the original paths from which the inputs were fetched. Output
+concerning all domains taken together will go to the main folder (e.g.,
+the :ref:`searchprogresspdf` file and the |R-factor| :ref:`plots<Rfactorplots>`
+after the :ref:`super_pos`).
 
 To specify which segments should be run, either use the :ref:`RUN` parameter
 as usual, or set ``RUN = 4`` as a shorthand for a domain calculation. This
