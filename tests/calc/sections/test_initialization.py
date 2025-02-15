@@ -79,15 +79,20 @@ class TestInitialization:                                                       
         for_out = work/'VIBROCC'
         in_supp = work/DEFAULT_SUPP/'VIBROCC_generated'
         in_out = work/DEFAULT_OUT/'VIBROCC'
+        in_original_inputs = (
+            work/DEFAULT_SUPP/ORIGINAL_INPUTS_DIR_NAME/'VIBROCC'
+            )
         if had_vibrocc_input:
             assert not for_supp.exists()
             assert not in_supp.exists()
             assert not in_out.exists()
+            assert in_original_inputs.is_file()
         else:
             assert for_supp.is_file()
             assert for_supp.read_text() == for_out.read_text()
             assert in_supp.is_file()
             assert in_out.is_file()
+            assert not in_original_inputs.exists()
             # If it has generated a VIBROCC, it also should have
             # modified PARAMETERS, which should now be in OUT
             assert (work/DEFAULT_OUT/'PARAMETERS').is_file()
