@@ -199,7 +199,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             are actually acquired" is the middle time between the
             beginning and the end of the measurement.
         """
-        n_intervals = (3 + (self.nr_samples - 1) / 2)
+        n_intervals = 3 + (self.nr_samples - 1) / 2
         return n_intervals * self.measurement_interval
 
     @property

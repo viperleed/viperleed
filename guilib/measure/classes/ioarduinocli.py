@@ -608,6 +608,60 @@ class FirmwareUploader(ArduinoCLI):
         """Detect and return controllers."""
         return base.get_devices('controller')
 
+    def _extract_board_data(self, boards):
+        """Extract matching board data from a Arduino CLI board list.
+
+        Parameters
+        ----------
+        boards : list of dicts
+            A list that contains each board as a dict.
+            Each dict representing a controller has the following
+            {key: value} pairs:
+            'matching_boards' : list of dict
+                Holds the board name and the fully qualified board name.
+            'port' : dict
+                Holds information about the port, most importantly the
+                address.
+
+        Returns
+        -------
+        ctrl_dict : dict
+            A dict of the detected Arduino Micro boards containing dicts
+            with information about the controllers. keys are unique
+            names of the detected controllers, including their address,
+            with format '<controller name> (<address>)'. Values are
+            dictionaries with the following {key: value} pairs:
+            'port': str
+                COM port address
+            'name': str
+                Board name
+            'fqbn': str
+                Fully qualified board name
+            'version': str
+                NOT_SET
+        """
+        viperleed_names = ('ViPErLEED', 'Arduino Micro')
+        board_names = [b['matching_boards'][0]['name'] for b in boards]
+        viper_boards = []
+        ctrl_dict = {}
+
+        for name in viperleed_names:
+            for board, board_name in zip(boards, board_names):
+                if name in board_name:
+                    viper_boards.append(board)
+
+        for board in viper_boards:
+            port = board['port']['address']
+            board = board['matching_boards'][0]
+            ctrl = f'{board["name"]} ({port})'
+            ctrl_dict[ctrl] = {
+                'port': port,
+                'name': board['name'],
+                'fqbn': board['fqbn'],
+                'version': NOT_SET,
+                }
+        return ctrl_dict
+
     def _get_boards(self):
         """Get a list of the available Arduino boards.
 
@@ -797,7 +851,6 @@ class FirmwareUploader(ArduinoCLI):
             Contains the detected ViPErLEED controllers. Emitted if
             detect_viperino is True or if no boards have been detected.
         """
-        viperleed_names = ('ViPErLEED', 'Arduino Micro')
         boards = self._get_boards()
         ctrl_dict = {}
 
@@ -806,24 +859,7 @@ class FirmwareUploader(ArduinoCLI):
             return ctrl_dict
 
         # Get all available Arduino Micro controllers.
-        board_names = [b['matching_boards'][0]['name'] for b in boards]
-        viper_boards = []
-        for name in viperleed_names:
-            for board, board_name in zip(boards, board_names):
-                if name in board_name:
-                    viper_boards.append(board)
-
-        # Extract data from controller list.
-        for board in viper_boards:
-            port = board['port']['address']
-            board = board['matching_boards'][0]
-            ctrl = f'{board["name"]} ({port})'
-            ctrl_dict[ctrl] = {
-                'port': port,
-                'name': board['name'],
-                'fqbn': board['fqbn'],
-                'version': NOT_SET,
-                }
+        ctrl_dict = self._extract_board_data(boards)
 
         if not detect_viperino:
             return ctrl_dict

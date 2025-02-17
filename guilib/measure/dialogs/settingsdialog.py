@@ -1179,7 +1179,7 @@ class SettingsDialog(qtw.QDialog):
             if isinstance(widg, SettingsDialogSectionBase):
                 position = widg.column_info.position
                 alignment = widg.column_info.alignment
-                while(position >= len(columns)):                                # TODO: We could make a defaultlist class similar to defaultdict.
+                while position >= len(columns):                                 # TODO: We could make a defaultlist class similar to defaultdict.
                     columns.append(qtw.QVBoxLayout())
                 if alignment in (qtc.Qt.AlignVCenter, qtc.Qt.AlignBottom):
                     columns[position].addStretch(1)

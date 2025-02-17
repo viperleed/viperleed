@@ -17,8 +17,6 @@ from collections.abc import MutableSequence, Sequence
 from collections import defaultdict
 import enum
 
-from PyQt5 import QtCore as qtc
-
 # ViPErLEED modules
 from viperleed.guilib.measure.classes.abc import QMetaABC
 from viperleed.guilib.measure.classes.abc import QObjectWithError
@@ -869,7 +867,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         #            for the first step, and is the same value since.
         #            Otherwise, we just take the last time of the
         #            previous step and go from there.
-        is_first_step = (len(self) == 1)
+        is_first_step = len(self) == 1
         if ctrl == self.primary_controller or is_first_step:
             first_time = timestamps[0] - start
             first_time += ctrl.initial_delay / 1000

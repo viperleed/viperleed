@@ -22,14 +22,12 @@ which means one cannot do: NewClass(QObjectSubclass1, QObjectSubclass2)
 
 from abc import ABCMeta
 from abc import abstractmethod
-from configparser import ConfigParser
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
 
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.settings import (
@@ -322,7 +320,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             worst.
         """
         directory = Path(directory).resolve()
-        default = True if directory == base.DEFAULTS_PATH else False
+        default = bool(directory == base.DEFAULTS_PATH)
         settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
