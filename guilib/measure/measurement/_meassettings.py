@@ -132,7 +132,8 @@ class DeviceEditor(SettingsDialogSectionBase):
         """
         ctrl_ok, reason_ctrl = self._controllers.are_settings_ok()
         cameras_ok, reason_camera = self._cameras.are_settings_ok()
-        reason = ' '.join(filter(lambda x: x!='',(reason_ctrl, reason_camera)))
+        reasons = reason_ctrl, reason_camera
+        reason = ' '.join(r for r in reasons if r)
         return ctrl_ok and cameras_ok, reason
 
     def store_lower_level_settings(self):
