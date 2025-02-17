@@ -39,8 +39,81 @@ from viperleed.guilib.widgets.basewidgets import remove_spacing_and_margins
 from viperleed.guilib.widgets.basewidgets import _PIXEL_SPACING
 
 
-class CollapsibleDeviceList(qtw.QScrollArea, metaclass=QMetaABC):
-    """A widget composed of an arbitrary number of CollapsibleViews."""
+class CollapsibleList(qtw.QScrollArea):
+    """Base class for CollapsibleLists."""
+
+    def __init__(self, parent=None):
+        """Initialise widget.
+
+        Parameters
+        ----------
+        parent : QObject
+            The parent QObject of this widget.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(parent=parent)
+        self._views = {}
+        self._widths = {}
+        self._top_widget_types = []
+        self._layout = None
+        self.setWidgetResizable(True)
+        self.clear_list()
+        self.setFrameStyle(self.Panel | self.Sunken)
+
+    def _add_top_widgets_to_view(self, view):
+        """Add the top widget types to the CollapsibleView.
+
+        Parameters
+        ----------
+        view : CollapsibleView
+            The CollapsibleView to which the widgets will be attached.
+
+        Returns
+        -------
+        None.
+        """
+        self.views[view] = []
+        for widget_type in self._top_widget_types:
+            widget = widget_type()
+            view.add_top_widget(widget)
+            self.views[view].append(widget)
+
+    def _make_scroll_area(self):
+        """Compose QScrollArea."""
+        widget = qtw.QWidget(parent=self)
+        self._layout.addStretch(1)
+        widget.setLayout(self._layout)
+        self.setWidget(widget)
+
+    def insert_view(self, view):
+        """Insert new view at the bottom of the list.
+
+        Parameters
+        ----------
+        view : CollapsibleDeviceView
+            The view that is to be inserted into the
+            CollapsibleList.
+
+        Returns
+        -------
+        None.
+        """
+        self._add_top_widgets_to_view(view)
+        self._layout.insertWidget(self._layout.count()-1, view)
+
+    def clear_list(self):
+        """Make a new layout."""
+        self._views = {}
+        self._layout = qtw.QVBoxLayout()
+        self._layout.setSpacing(0)
+        self._make_scroll_area()
+
+
+class CollapsibleDeviceListABC(CollapsibleList, metaclass=QMetaABC):
+    """A widget composed of an arbitrary number of CollapsibleDeviceViews."""
 
     _top_labels = ('Device', )
 
@@ -66,22 +139,14 @@ class CollapsibleDeviceList(qtw.QScrollArea, metaclass=QMetaABC):
         None.
         """
         super().__init__(parent=parent)
-        self._views = {}
-        self._widths = {}
-        self._top_widget_types = []
-        self._device_type = 'device'
-        self._layout = qtw.QVBoxLayout()
-        self._layout.setSpacing(0)
-        self._default_settings_folder = None
-        self.setWidgetResizable(True)
         self.setVerticalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOn)
         self.setHorizontalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOff)
-        self._make_scroll_area()
-        # If requires_device is True, the CollapsibleDeviceList must
+        self._device_type = 'device'
+        self._default_settings_folder = None
+        # If requires_device is True, the CollapsibleDeviceListABC must
         # contain at least one selected valid device for the
         # are_settings_ok() method to return True.
         self.requires_device = False
-        self.setFrameStyle(self.Panel | self.Sunken)
 
     @property
     def default_settings_folder(self):
@@ -115,7 +180,7 @@ class CollapsibleDeviceList(qtw.QScrollArea, metaclass=QMetaABC):
         ----------
         view : CollapsibleDeviceView
             The view that is to be inserted into the
-            CollapsibleDeviceList.
+            CollapsibleDeviceListABC.
         name : str
             The display name of the device that will be displayed
             on the button of the CollapsibleDeviceView.
@@ -133,8 +198,7 @@ class CollapsibleDeviceList(qtw.QScrollArea, metaclass=QMetaABC):
         view.set_device(*cls_and_info)
         if self.default_settings_folder:
             view.set_settings_folder(self.default_settings_folder)
-        self._add_top_widgets_to_view(view)
-        self._layout.insertWidget(self._layout.count()-1, view)
+        self.insert_view(view)
         view.settings_changed.connect(self._emit_and_update_settings)
         return view
 
@@ -153,31 +217,10 @@ class CollapsibleDeviceList(qtw.QScrollArea, metaclass=QMetaABC):
         """
         self._top_widget_types.extend(widg_types)
 
-    def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsibleView.
-
-        Parameters
-        ----------
-        view : CollapsibleView
-            The CollapsibleView to which the widgets will be attached.
-
-        Returns
-        -------
-        None.
-        """
-        self.views[view] = []
-        for widget_type in self._top_widget_types:
-            widget = widget_type()
-            view.add_top_widget(widget)
-            self.views[view].append(widget)
-
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
         """Detect devices and add them as views."""
-        self._views = {}
-        self._layout = qtw.QVBoxLayout()
-        self._layout.setSpacing(0)
-        self._make_scroll_area()
+        self.clear_list()
         self._make_top_items()
         try:
             detected_devices = self._detect_devices()
@@ -229,13 +272,6 @@ class CollapsibleDeviceList(qtw.QScrollArea, metaclass=QMetaABC):
             new_path = '__CONFIG__/' + new_path
         new_path.replace('\\', '/')
         return new_path
-
-    def _make_scroll_area(self):
-        """Compose QScrollArea."""
-        widget = qtw.QWidget(parent=self)
-        self._layout.addStretch(1)
-        widget.setLayout(self._layout)
-        self.setWidget(widget)
 
     def _make_top_items(self):
         """Make top labels and add them to the QScrollArea.
@@ -309,7 +345,7 @@ class CollapsibleDeviceList(qtw.QScrollArea, metaclass=QMetaABC):
         Returns
         -------
         settings_ok : bool
-            Whether the settings selected in the CollapsibleDeviceList
+            Whether the settings selected in the CollapsibleDeviceListABC
             are acceptable or not.
         reason : str
             A descriptive string elaborating why the settings
@@ -344,7 +380,7 @@ class CollapsibleDeviceList(qtw.QScrollArea, metaclass=QMetaABC):
                 view.store_settings()
 
 
-class CollapsibleCameraList(CollapsibleDeviceList):
+class CollapsibleCameraList(CollapsibleDeviceListABC):
     """A CollapsibleList for cameras."""
 
     _top_labels = ('Cameras', 'Use',)
@@ -512,7 +548,7 @@ class CollapsibleCameraList(CollapsibleDeviceList):
         self._set_camera_settings()
 
 
-class CollapsibleControllerList(CollapsibleDeviceList):
+class CollapsibleControllerList(CollapsibleDeviceListABC):
     """A CollapsibleList for controllers."""
 
     _top_labels = ('Controllers', 'Use', 'Primary',)
