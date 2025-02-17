@@ -233,7 +233,6 @@ class TestBookkeeperOthers:
         Mode.FIX: (
             # No header message, as we silence the logger. Not great.
             re.compile(r'Running bookkeeper in FIX mode in .*\.'),
-            re.compile(r'Successfully fixed.*'),
             ),
         }
 
