@@ -219,20 +219,28 @@ class TestBookkeeperOthers:
         Mode.CLEAR: (
             re.compile(r'\n### Bookkeeper running at.*###'),
             re.compile(r'Running bookkeeper in CLEAR mode in .*\.'),
+            'Found nothing to do. Exiting...',
+            '',
             ),
         Mode.DISCARD: (
             re.compile(r'\n### Bookkeeper running at.*###'),
             re.compile(r'Running bookkeeper in DISCARD mode in .*\.'),
             re.compile('.*No entries to discard.'),
+            'Found nothing to do. Exiting...',
+            '',
             ),
         Mode.DISCARD_FULL: (
             re.compile(r'\n### Bookkeeper running at.*###'),
             re.compile(r'Running bookkeeper in DISCARD_FULL mode in .*\.'),
             re.compile('.*No entries to remove.'),
+            'Found nothing to do. Exiting...',
+            '',
             ),
         Mode.FIX: (
             # No header message, as we silence the logger. Not great.
             re.compile(r'Running bookkeeper in FIX mode in .*\.'),
+            'Found nothing to do. Exiting...',
+            '',
             ),
         }
 

@@ -135,11 +135,19 @@ class Bookkeeper:
         self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
         LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
         try:
-            return runner()
+            exit_code = runner()
         finally:
             # Clean up all the state attributes so we
             # don't risk giving the wrong information.
             self._clean_state()
+        found_nothing = (
+           exit_code is BookkeeperExitCode.NOTHING_TO_DO
+           and mode not in (BookkeeperMode.ARCHIVE,)  # logs already
+           )
+        if found_nothing:
+            LOGGER.info('Found nothing to do. Exiting...')
+        LOGGER.info('')
+        return exit_code
 
     def update_from_cwd(self, silent=False):
         """Update timestamp, tensor number, log lines, etc. from root.
@@ -512,9 +520,11 @@ class Bookkeeper:
 
     def _run_clear_mode(self):
         """Execute bookkeeper in CLEAR mode."""
-        self._do_prerun_archiving_and_mark_edited()
-        self._root.clear_for_next_calc_run()
-        return BookkeeperExitCode.SUCCESS
+        did_archive = self._do_prerun_archiving_and_mark_edited()
+        did_clear_root = self._root.clear_for_next_calc_run()
+        did_anything = did_archive or did_clear_root
+        return (BookkeeperExitCode.SUCCESS if did_anything
+                else BookkeeperExitCode.NOTHING_TO_DO)
 
     # TODO: how to handle the TENSOR_INDEX case? Currently we attempt
     # removal of the MAXIMUM tensor number, not the LAST one that ran.
@@ -574,8 +584,9 @@ class Bookkeeper:
 
     def _run_fix_mode(self):
         """Fix format inconsistencies found in history and history.info."""
-        self.history.fix()
-        return BookkeeperExitCode.SUCCESS
+        did_fix = self.history.fix()
+        return (BookkeeperExitCode.SUCCESS if did_fix
+                else BookkeeperExitCode.NOTHING_TO_DO)
 
     def _user_confirmed(self):
         """Return whether the user wants to proceed with discarding."""
