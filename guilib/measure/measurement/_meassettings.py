@@ -21,8 +21,8 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase
     )
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
-from viperleed.guilib.measure.widgets.collapsibleview import CollapsibleCameraList
-from viperleed.guilib.measure.widgets.collapsibleview import CollapsibleControllerList
+from viperleed.guilib.measure.widgets.collapsiblelists import CollapsibleCameraList
+from viperleed.guilib.measure.widgets.collapsiblelists import CollapsibleControllerList
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
