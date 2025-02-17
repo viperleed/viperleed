@@ -131,10 +131,11 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
-        poscar.write(tmpslab, filename='POSCAR_OUT', comments='all')
+        poscar.write(tmpslab, filename='POSCAR', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
+    rp.files_to_out.add('POSCAR')
     # generate POSCAR_oricell
     tmpslab.revert_unit_cell()
     try:
@@ -344,14 +345,14 @@ def initialization(sl, rp, subdomain=False):
             raise
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
-    rp.manifest.append("PHASESHIFTS")
+    rp.manifest.add("PHASESHIFTS")
     try:
         phaseshifts.plot_phaseshifts(sl, rp)
     except Exception:
         logger.warning("Failed to plot phaseshifts", exc_info=rp.is_debug_mode)
 
     # generate beamlist
-    logger.info("Generating BEAMLIST...")
+    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in init_domains
     calc_and_write_beamlist(sl, rp, beamlist_name="BEAMLIST")
 
     try:
@@ -373,7 +374,7 @@ def initialization(sl, rp, subdomain=False):
                 rp.ivbeams = iobeams.writeIVBEAMS(sl, rp)
                 rp.ivbeams_sorted = False
                 rp.fileLoaded["IVBEAMS"] = True
-                rp.manifest.append("IVBEAMS")
+                rp.manifest.add("IVBEAMS")
             except Exception:
                 logger.error("Error while writing IVBEAMS file based on "
                              "EXPBEAMS data.")
@@ -566,11 +567,11 @@ def init_domains(rp):
     rp.pseudoSlab.bulkslab = BulkSlab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
     # run beamgen for the whole system
-    logger.info("Generating BEAMLIST...")
+    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in the end of initialization
     calc_and_write_beamlist(copy.deepcopy(largestDomain.sl),
-                      rp,
-                      domains=True,
-                      beamlist_name='BEAMLIST')
+                            rp,
+                            domains=True,
+                            beamlist_name='BEAMLIST')
     try:
         rp.beamlist = iobeams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
@@ -586,7 +587,7 @@ def init_domains(rp):
             rp.ivbeams = iobeams.writeIVBEAMS(None, rp, domains=True)
             rp.ivbeams_sorted = False
             rp.fileLoaded["IVBEAMS"] = True
-            rp.manifest.append("IVBEAMS")
+            rp.manifest.add("IVBEAMS")
         except Exception:
             logger.error("Error while writing IVBEAMS file based on "
                          "EXPBEAMS data.")
@@ -631,9 +632,15 @@ def init_domains(rp):
     if rr:
         logger.info("The following domains require new reference "
                     f"calculations: {', '.join(d.name for d in rr)}")
+        inherited = (
+            'THEO_ENERGIES',
+            'THETA',
+            'PHI',
+            'N_CORES',
+            'ivbeams',
+            )
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams"]:
-                setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
+            dp.rp.inherit_from(rp, *inherited, override=True)
             if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
                 dp.rp.LMAX.max = rp.LMAX.max
 
@@ -804,9 +811,15 @@ def _read_inputs_for_domain(domain, main_rpars):
     # in the current Domain directory (it is overwritten
     # when fetching files in init_domains).
     domain.rp = rpars = parameters.read()
-    rpars.paths = copy.copy(main_rpars.paths)
-    rpars.timestamp = main_rpars.timestamp
-
+    
+    # Inherit some values from the main PARAMETERS
+    inherited = (
+        'paths',
+        'timestamp',
+        'ZIP_COMPRESSION_LEVEL',
+        )
+    rpars.inherit_from(main_rpars, *inherited)
+    
     # Store input files for each domain, BEFORE any edit
     preserve_original_inputs(rpars)
 

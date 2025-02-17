@@ -197,7 +197,8 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = [DEFAULT_SUPP, DEFAULT_OUT]
+        self.manifest = {DEFAULT_SUPP, DEFAULT_OUT}
+        self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
             'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,
@@ -341,6 +342,32 @@ class Rparams:
             getattr(self, param_name)  # Raise AttributeError if wrong
             value = self._to_simple_or_special_param(param_name, param_value)
             setattr(self, param_name, value)
+
+    def inherit_from(self, other, *attributes, override=False):
+        """Copy attributes from another Rparams.
+
+        Parameters
+        ----------
+        other : Rparams
+            The instance from which attributes should be copied.
+        *attributes : str
+            Names of attributes to be deep-copied from `other`.
+        override : bool, optional
+            Whether the copy should be unconditional, irrespective
+            of whether the user gave some values for any attribute.
+
+        Raises
+        ------
+        TypeError
+            If `other` is not an Rparams.
+        """
+        if not isinstance(other, Rparams):
+            raise TypeError(f'{type(self).__name__}.inherit_from requires an '
+                            f'Rparams object. Found {type(other).__name__!r}.')
+        for attr in attributes:
+            if attr in self.readParams and not override:
+                continue
+            setattr(self, attr, copy.deepcopy(getattr(other, attr)))
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and

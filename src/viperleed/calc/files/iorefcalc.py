@@ -501,7 +501,7 @@ def writeAUXGEO(sl, rp):
                     except Exception:
                         logger.error(
                             "Exception while trying to write occupation / "
-                            "vibrational amplitude for site " + site.label,
+                            "vibration amplitude for site " + site.label,
                             exc_info=True)
                     output += ol + comment + '\n'
 

@@ -99,19 +99,19 @@ PARAMETERS FOR INTERPRETING POSCAR
 
 PARAMETERS FOR VIBROCC
    In addition to the atomic positions, the calculation of scattering
-   intensities also requires vibrational amplitudes for every atom in
+   intensities also requires vibration amplitudes for every atom in
    the unit cell.
    While the atomic positions are contained in the :ref:`POSCAR` file,
-   the vibrational amplitudes are given in the :ref:`VIBROCC` file.
+   the vibration amplitudes are given in the :ref:`VIBROCC` file.
    However, rather than writing the :ref:`VIBROCC` file ourselves, we
-   can also let ViPErLEED calculate bulk vibrational amplitudes by providing
+   can also let ViPErLEED calculate bulk vibration amplitudes by providing
    the :ref:`T_DEBYE` and :ref:`T_EXPERIMENT` parameters. By further setting
-   :ref:`VIBR_AMP_SCALE`, we guess the vibrational amplitudes for the surface
+   :ref:`VIBR_AMP_SCALE`, we guess the vibration amplitudes for the surface
    atoms.
    The VIBR_AMP_SCALE assignment means that all atoms defined as ``surf`` (via
    SITE_DEF) have vibration amplitudes 1.3 times larger than those calculated
    from the Debye temperature. All other atoms, which are implicitly assigned
-   a ``def`` tag, will be given vibrational amplitudes
+   a ``def`` tag, will be given vibration amplitudes
    :ref:`determined <vibrocc_auto>` from the Debye temperature.
 
 
@@ -144,7 +144,7 @@ electron-scattering phase shifts (based on atomic species and positions)
 to be used as input for the following calculations. They are stored in the
 :ref:`PHASESHIFTS` file that was copied into the source directory.
 This format, however, is hard to interpret for a human reader.
-Instead we can look at a plotted version of the same data in the file
+Instead, we can look at a plotted version of the same data in the file
 :ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the ``SUPP`` subfolder.
 The first page (see :numref:`fig_ag_phaseshifts`) shows the energy-dependent
 phase shifts for the surface atom.
@@ -267,7 +267,7 @@ We change the DISPLACEMENTS accordingly, as in
    :caption: DISPLACEMENTS with a finer grid
 
 Here we allow a :math:`\pm 0.020` Å variation on a :math:`0.004` Å grid.
-Additionally, we also allow the topmost atom to change its vibrational
+Additionally, we also allow the topmost atom to change its vibration
 amplitude.
 This may not seem like much, but already gives :math:`11^5` grid
 points (11 values for 5 varied parameters) and will take about three
@@ -294,7 +294,7 @@ The first page is shown in :numref:`fig_ag_search_progress`.
    structure search (top) and development of atomic parameters (bottom).
 
 The final result of the optimization (POSCAR with coordinates and VIBROCC
-with vibrational amplitudes) are saved in the ``OUT`` directory. Interatomic
+with vibration amplitudes) are saved in the ``OUT`` directory. Interatomic
 distances and angles can easily be measured in a visualization software such
 as :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
 

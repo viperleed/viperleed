@@ -300,8 +300,6 @@ class ParametersFileEditor(AbstractContextManager):
 
     def write_modified_parameters(self):
         """Write a new PARAMETERS, modifying all the requested lines."""
-        cwd = Path().resolve()
-
         if not self._to_modify:
             return
 
@@ -317,6 +315,9 @@ class ParametersFileEditor(AbstractContextManager):
                 self._write_one_line(param, raw_line)
             self._write_missing_parameters()
         self._to_modify.clear()
+
+        # Finally, mark the file as being modified
+        self._rpars.files_to_out.add(self._filename)
 
     def _collect_lines(self):
         """Return lines read from the PARAMETERS file."""

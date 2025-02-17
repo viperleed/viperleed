@@ -42,8 +42,12 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
 
     def test_clear_after_archive(self, after_archive, caplog):
         """Check behavior of CLEAR after ARCHIVE (e.g., manual call)."""
+        has_out_suffixed = self.has_out_suffixed(*after_archive)
         self.run_after_archive_and_check(after_archive, caplog)
-        self.check_root_inputs_replaced_by_out_or_ori(*after_archive)
+        self.check_root_inputs_replaced_by_out_or_ori(
+            *after_archive,
+            out_suffixed=has_out_suffixed,
+            )
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
     def test_clear_after_calc_exec(self, after_calc_execution, caplog):

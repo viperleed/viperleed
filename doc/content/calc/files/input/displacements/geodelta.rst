@@ -2,10 +2,10 @@
 
 .. _geodelta:
 
-Geometrical displacements
-=========================
+Geometric displacements
+=======================
 
-Geometrical displacements to be used during the search must be specified in a
+Geometric displacements to be used during the search must be specified in a
 block starting with the
 
 ..  code-block:: none
@@ -185,7 +185,7 @@ and the other one is out-of-plane:
    -  During one optimization run, an atom can only be displaced along
       **one** axis (so, for example, **not** sampling all in-plane directions
       at once). This is due to the way that the TensErLEED search is currently
-      designed, with geometrical displacements being optimized along a 1D array
+      designed, with geometric displacements being optimized along a 1D array
       of points only. Since LEED is much more sensitive to variations of the
       out-of-plane geometry of your sample (small :math:`k_{\textrm{par}}`),
       it is a good idea to *first* run a few optimization runs on the *z*

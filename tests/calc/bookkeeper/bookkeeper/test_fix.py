@@ -32,10 +32,13 @@ class TestBookkeeperFix(_TestBookkeeperRunBase):
     def test_fix_missing_metadata(self, after_archive):
         """Check correct fixing of missing metadata files in history."""
         bookkeeper, *_ = after_archive
+        has_out_suffixed = self.has_out_suffixed(bookkeeper)
+
         def _metadata_everywhere():
             # pylint: disable-next=protected-access       # OK in tests
             return all(f.has_metadata for f in bookkeeper.history._subfolders)
         assert not _metadata_everywhere()
+
         bookkeeper.run(self.mode)
         assert _metadata_everywhere()
 
@@ -44,7 +47,8 @@ class TestBookkeeperFix(_TestBookkeeperRunBase):
         assert not any(bookkeeper.cwd.glob(f'{HISTORY_INFO_NAME}.bak*'))
 
         # Make sure that nothing was touched
-        self.check_root_after_archive(*after_archive)
+        self.check_root_after_archive(*after_archive,
+                                      out_suffixed=has_out_suffixed)
 
     def test_fix_twice(self, after_fix, caplog):
         """Check that running FIX twice does nothing."""

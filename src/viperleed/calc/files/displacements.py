@@ -602,7 +602,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             rp.setHaltingLevel(1)
             continue
         if mode == 2 or (mode == 1 and "offset" not in dr):
-            # geometrical or vibrational displacement, get range:
+            # geometric or vibration displacement, get range:
             try:
                 fl = [float(s) for s in llist]
             except ValueError:
@@ -672,7 +672,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     for (at, targetel) in targetAtEls:
                         at.clearOffset(1, targetel)
                     continue
-            # geometrical displacement, get direction vector:
+            # geometric displacement, get direction vector:
             drvec = np.array([0., 0., 0.])
             if "azi" not in dr and "r" not in dr:
                 if "z" in dr:
@@ -780,7 +780,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                 'to allow symmetry breaking for this atom.'
                                 )
         elif mode == 2:
-            # vibrational displacement, apply:
+            # vibration displacement, apply:
             for (at, targetel) in targetAtEls:
                 if "offset" in pside:
                     at.clearOffset(mode, targetel)

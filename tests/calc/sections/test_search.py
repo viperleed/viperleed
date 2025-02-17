@@ -56,6 +56,13 @@ class TestSearchAg100:
         """Make sure the expected PDF report files are present."""
         assert search_files_ag100.expected_file_exists(expected_file)
 
+    def test_does_not_write_out_suffixed(self, search_files_ag100):
+        """Check that none of the files generated has an _OUT suffix."""
+        out_suffixed = search_files_ag100.work_path.rglob('*_OUT*')
+        # Skip R_OUT files
+        out_suffixed = (f for f in out_suffixed if 'R=' not in f.name)
+        assert not any(out_suffixed)
+
 
 class TestCheckSearchLog:
     """Tests for the _check_search_log function."""

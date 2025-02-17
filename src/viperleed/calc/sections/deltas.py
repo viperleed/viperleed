@@ -452,7 +452,6 @@ def deltas(sl, rp, subdomain=False):
             "Generating delta files...\n"
             "Delta log will be written to local subfolders, and collected in "
             + deltalogname)
-    # rp.manifest.append(deltalogname) # no longer in manifest, instead moved to SUPP at cleanup
     try:
         with open(deltalogname, "w") as wf:
             wf.write("Logs from multiple delta calculations are collected "
@@ -563,10 +562,11 @@ def deltas(sl, rp, subdomain=False):
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
 
-    if subdomain:   # actual calculations done in deltas_domains
-        if len(deltaRunTasks) > 0:
-            rp.manifest.append(DEFAULT_DELTAS)
-        return (deltaCompTasks, deltaRunTasks)
+    if subdomain and deltaRunTasks:
+        rp.manifest.add(DEFAULT_DELTAS)
+
+    if subdomain:  # Actual calculations done in deltas_domains
+        return deltaCompTasks, deltaRunTasks
 
     rp.updateCores()
 
@@ -607,8 +607,7 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.warning("Error deleting delta compile folder "
                            + ct.foldername)
-    rp.manifest.append(DEFAULT_DELTAS)
-    return
+    rp.manifest.add(DEFAULT_DELTAS)
 
 
 def deltas_domains(rp):

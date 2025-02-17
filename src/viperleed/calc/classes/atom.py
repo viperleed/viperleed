@@ -48,7 +48,7 @@ class Atom:                                                                     
     layer : Layer or None
         Layer object that the atom belongs to (if any).
     site : Sitetype or None
-        Site type of the atom, containing vibrational amplitude and
+        Site type of the atom, containing vibration amplitude and
         occupation. Supplied by the SITE_DEF parameter, assigned by
         the initSites method of Slab.
     cartpos : numpy.ndarray
@@ -300,7 +300,7 @@ class Atom:                                                                     
         mode : int
             What to displace. 1: geo, 2: vib, 3: occ, 4: geo offset
         disprange :
-            The list of displacements. For geometrical offsets, pass
+            The list of displacements. For geometric offsets, pass
             a list with only one element.
         targetel : str, optional
             If given, assignment is made only for that element,
@@ -635,7 +635,7 @@ class Atom:                                                                     
         Merges the offsets from VIBROCC and DISPLACEMENTS into the
         displacements lists from DISPLACEMENTS for the given element.
 
-        For vibrational and occupational offsets a consistency check is
+        For vibration and occupational offsets a consistency check is
         performed. The offset lists will be emptied.
 
         Raises
@@ -662,21 +662,21 @@ class Atom:                                                                     
             self.disp_geo[el] = [geo_step + geo_offset for geo_step in self.disp_geo[el]]
             del self.offset_geo[el]
 
-        # vibrational offsets from VIBROCC
+        # vibration offsets from VIBROCC
         if el not in self.disp_vib:
             self.disp_vib[el] = copy.copy(self.disp_vib['all'])
         if el in self.offset_vib:
             vib_offset = self.offset_vib[el]
             final_vib_steps = [vib_step + vib_offset for vib_step in self.disp_vib[el]]
             if any(np.array(final_vib_steps) + self.site.vibamp[el] < 0):
-                _LOGGER.error(f'Vibrational offset for {self} defined in '
-                              'VIBROCC would result in negative vibrational '
+                _LOGGER.error(f'Vibration offset for {self} defined in '
+                              'VIBROCC would result in negative vibration '
                               'amplitude. Offset will be ignored.')
             else:
                 self.disp_vib[el] = final_vib_steps
             del self.offset_vib[el]
 
-        # vibrational offsets from VIBROCC
+        # vibration offsets from VIBROCC
         if el in self.offset_occ:
             occ_offset = self.offset_occ[el]
             final_occ_steps = [occ_step + occ_offset for occ_step in self.disp_occ[el]]

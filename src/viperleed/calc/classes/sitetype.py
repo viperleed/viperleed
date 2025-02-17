@@ -23,13 +23,13 @@ class Sitetype:
     """Class storing properties of a site.
 
     Site types are identified by (main) element and name, and store
-    vibrational amplitude and occupation"""
+    vibration amplitude and occupation"""
 
     def __init__(self, el, name):
         self.el = el.capitalize() # Element
         self.name = name
         self.label = self.el + '_' + self.name
-        self.vibamp = {}    # vibrational amplitude per element
+        self.vibamp = {}    # vibration amplitude per element
         self.occ = {}       # occupation per element
 
         self.oriState = None    # deep copy of self before a search is applied
@@ -40,7 +40,7 @@ class Sitetype:
 
     def isEquivalent(self, site2):
         """Checks whether two sites are equivalent, i.e. have the same label
-        and the same values for vibrational amplitudes and occupations."""
+        and the same values for vibration amplitudes and occupations."""
         if (self.label == site2.label
                 and self.vibamp == site2.vibamp
                 and self.occ == site2.occ):
@@ -48,11 +48,11 @@ class Sitetype:
         return False
 
     def getVibAmp(self, rp, chemel):
-        """Calculates a default vibrational amplitude for this site for the
+        """Calculates a default vibration amplitude for this site for the
         given chemical element from the element atomic mass, the experimental
         temperature and the material's Debye temperature."""
         if rp.T_DEBYE is None or rp.T_EXPERIMENT is None:
-            logger.error("Cannot generate default vibrational amplitudes: "
+            logger.error("Cannot generate default vibration amplitudes: "
                          "Temperature or Debye temperature undefined.")
             raise ValueError("Temperature and Debye temperature must be float")
         if chemel in rp.ELEMENT_RENAME:
@@ -61,12 +61,12 @@ class Sitetype:
             el = chemel.capitalize()
         if el not in PERIODIC_TABLE:
             logger.error(
-                "Cannot generate default vibrational amplitude for site "
+                "Cannot generate default vibration amplitude for site "
                 + self.label + ": Element " + el + " not recognized.")
             raise ValueError("Element " + el + " not recognized.")
         if el not in ATOMIC_MASS:
             logger.error(
-                "Cannot generate default vibrational amplitude for site "
+                "Cannot generate default vibration amplitude for site "
                 + self.label + ": Element" + el + " atomic mass unknown.")
             raise NotImplementedError("Element" + el + " atomic mass unknown.")
         scaling = 1.0
@@ -126,7 +126,7 @@ class Atom_type(Sitetype):
     @property
     def isEquivalent(self, site2): #TODO: remove, not needed (I think)
         """Checks whether two sites are equivalent, i.e. have the same label
-        and the same values for vibrational amplitudes and occupations."""
+        and the same values for vibration amplitudes and occupations."""
         if (self.label == site2.label
                 and self.vibamp == site2.vibamp
                 and self.occ == site2.occ

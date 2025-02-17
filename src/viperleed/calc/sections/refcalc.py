@@ -747,8 +747,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
 
     # Move and zip tensor files
     rp.TENSOR_INDEX = leedbase.getMaxTensorIndex() + 1
-    if DEFAULT_TENSORS not in rp.manifest:
-        rp.manifest.append(DEFAULT_TENSORS)
+    rp.manifest.add(DEFAULT_TENSORS)
     tensor_folder = Path(DEFAULT_TENSORS)
     tensor_folder /= f'{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}'
     tensor_folder.mkdir(parents=True, exist_ok=True)
@@ -759,22 +758,12 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             logger.error('Error moving Tensor files: ')
             raise
     for input_file in _TENSOR_INPUT_FILES:
-        input_file = Path(input_file)
-        if not input_file.is_file():
-            # If there was no input, there is also no output
-            continue
-        output_file = Path(input_file.name + '_OUT')
-        should_take_out_suffixed = (
-            input_file.name in {'POSCAR', 'VIBROCC', 'PARAMETERS'}
-            and 3 in rp.runHistory  # Search
-            and output_file.is_file()
-            )
-        if not should_take_out_suffixed:
-                output_file = input_file
         try:
-            shutil.copy2(output_file, tensor_folder / input_file.name)
+            shutil.copy2(input_file, tensor_folder)
+        except FileNotFoundError:
+            continue
         except OSError:
-            logger.warning(f'Failed to add input file {input_file.name} to '
+            logger.warning(f'Failed to add input file {input_file} to '
                            f'{DEFAULT_TENSORS} folder {tensor_folder.name}.')
     try:
         shutil.copy2('refcalc-fd.out', tensor_folder / 'refcalc-fd.out')

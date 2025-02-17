@@ -47,7 +47,7 @@ def errorcalc(sl, rp):
     if rp.search_index > 0 and rp.search_index >= len(rp.disp_blocks):
         # running after one or more searches; read the last DISPLACEMENTS block
         rp.search_index -= 1
-    seg_info = {"geo": "geometrical", "vib": "vibrational",
+    seg_info = {"geo": "geometric", "vib": "vibration",
                 "occ": "occupation"}
     for mode in "geo", "vib", "occ":
         sl.restoreOriState()  # reset positions, store any changes as offsets
