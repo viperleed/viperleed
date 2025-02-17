@@ -19,6 +19,7 @@ import functools
 import logging
 from operator import attrgetter
 from pathlib import Path
+import re
 import shutil
 import time
 
@@ -123,6 +124,17 @@ class TestBookkeeperComplaints:
 class TestBookkeeperOthers:
     """Collections of various tests for bits not covered by other tests."""
 
+    @staticmethod
+    def check_has_logs(caplog, expected):
+        """Ensure caplog has exactly the expected records."""
+        records = [r.getMessage() for r in caplog.records]
+        assert len(records) == len(expected)
+        for record, expect in zip(records, expected):
+            if isinstance(expect, str):
+                assert record == expect
+            else:
+                assert expect.fullmatch(record)
+
     # Note about the disable: It is more convenient to modify the key
     # for the glob-all-logs pattern later, as we can then simply edit
     # if we ever change again the naming of log files.
@@ -195,6 +207,50 @@ class TestBookkeeperOthers:
         assert all(f.exists()
                    for f in original_paths
                    if f not in removed_files)
+
+    _basic_logs = {
+        Mode.ARCHIVE: (
+            re.compile(r'\n### Bookkeeper running at.*###'),
+            re.compile(r'Running bookkeeper in ARCHIVE mode in .*\.'),
+            re.compile(r'No files to be moved.*'
+                       r'Exiting without doing anything.'),
+            '',
+            ),
+        Mode.CLEAR: (
+            re.compile(r'\n### Bookkeeper running at.*###'),
+            re.compile(r'Running bookkeeper in CLEAR mode in .*\.'),
+            'Found nothing to do. Exiting...',
+            '',
+            ),
+        Mode.DISCARD: (
+            re.compile(r'\n### Bookkeeper running at.*###'),
+            re.compile(r'Running bookkeeper in DISCARD mode in .*\.'),
+            re.compile('.*No entries to discard.'),
+            'Found nothing to do. Exiting...',
+            '',
+            ),
+        Mode.DISCARD_FULL: (
+            re.compile(r'\n### Bookkeeper running at.*###'),
+            re.compile(r'Running bookkeeper in DISCARD_FULL mode in .*\.'),
+            re.compile('.*No entries to remove.'),
+            'Found nothing to do. Exiting...',
+            '',
+            ),
+        Mode.FIX: (
+            # No header message, as we silence the logger. Not great.
+            re.compile(r'Running bookkeeper in FIX mode in .*\.'),
+            'Found nothing to do. Exiting...',
+            '',
+            ),
+        }
+
+    @parametrize('mode,expect_records', _basic_logs.items())
+    def test_run_logs(self, mode, expect_records, tmp_path, caplog):
+        """Check the emission of basic log messages upon .run()."""
+        bookkeeper = Bookkeeper(tmp_path)
+        caplog.set_level(logging.INFO)
+        bookkeeper.run(mode)
+        self.check_has_logs(caplog, expect_records)
 
     @fixture(name='funky_files')
     def fixture_funky_files(self, tmp_path):

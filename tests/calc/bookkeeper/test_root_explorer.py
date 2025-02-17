@@ -11,6 +11,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 from itertools import combinations
 from itertools import permutations
+from itertools import product
 from operator import attrgetter
 from pathlib import Path
 import time
@@ -183,6 +184,29 @@ class TestRootExplorer:
         """Check calling of expected methods."""
         check_methods_called(explorer, method_name, **called)
 
+    _clean_up_root_internals = tuple(product((True, False), repeat=3))
+
+    @parametrize(inner_returns=_clean_up_root_internals)
+    def test_clean_up_root_return_value(self, inner_returns, explorer, mocker):
+        """Check the expected return value of _clean_up_root."""
+        logs_return, supp_out_return, ori_return = inner_returns
+        explorer.collect_info()  # So .logs is available
+        mocker.patch.object(explorer.logs, 'discard', return_value=logs_return)
+        mocker.patch.object(explorer, '_remove_out_and_supp',
+                            return_value=supp_out_return)
+        # pylint: disable-next=protected-access           # OK in tests
+        result = explorer._clean_up_root(lambda: ori_return)
+        assert result == (logs_return or supp_out_return or ori_return)
+
+    @parametrize(method=('revert_to_previous_calc_run',
+                         'clear_for_next_calc_run'))
+    def test_clean_up_root_callers_return(self, method, explorer, mocker):
+        """Check the expected return value of callers of _clean_up_root."""
+        expect = mocker.MagicMock()
+        mocker.patch.object(explorer, '_clean_up_root', return_value=expect)
+        result = getattr(explorer, method)()
+        assert result is expect
+
     def test_collect_info(self, explorer, mock_attributes, mocker):
         """Check calling of expected method when collecting info."""
         mock_logs = mocker.patch(f'{_MODULE}.LogFiles')
@@ -230,14 +254,17 @@ class TestRootExplorer:
 
     @parametrize('method_name,files', _remove_files.items(), ids=_remove_files)
     @patch_discard
+    # pylint: disable-next=too-many-arguments  # 1/6 patch, 2/6 fixture
     def test_files_discarded(self, discard_files,
                              method_name, files,
-                             explorer):
+                             explorer, mocker):
         """Check that files and folders are removed."""
         method = getattr(explorer, method_name)
-        method()
+        discard_files.return_value = expect = mocker.MagicMock()
+        returned = method()
         removed = (explorer.path / f for f in files)
         discard_files.assert_called_once_with(*removed)
+        assert returned is expect
 
     def test_infer_run_info(self, explorer, mocker):
         """Check correct result of inferring info from log files."""
@@ -280,6 +307,22 @@ class TestRootExplorer:
             with not_raises(FileNotFoundError):
                 # pylint: disable-next=protected-access   # OK in tests
                 explorer._replace_state_files_from_ori()
+
+    _fake_ori_files = {
+        'no files': (),
+        'one file': ((Path('dst'), Path('src')),)
+        }
+
+    @parametrize(files=_fake_ori_files.values(), ids=_fake_ori_files)
+    def test_replace_state_files_from_ori_return(self, files,
+                                                 explorer, mocker):
+        """Check the expected return value of _replace_state_files_from_ori."""
+        mocker.patch.object(explorer, 'list_files_to_replace',
+                            return_value=files)
+        mocker.patch('pathlib.Path.replace')
+        # pylint: disable-next=protected-access           # OK in tests
+        returned = explorer._replace_state_files_from_ori()
+        assert returned == bool(files)
 
 
 class TestRootExplorerNextCalc:

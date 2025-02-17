@@ -104,9 +104,10 @@ class RootExplorer:
 
         Returns
         -------
-        None.
+        bool
+            Whether any file operation took place.
         """
-        self._clean_up_root(deal_with_ori_files=self._remove_ori_files)
+        return self._clean_up_root(deal_with_ori_files=self._remove_ori_files)
 
     def collect_info(self, silent=False):
         """Collect information from the root directory."""
@@ -230,13 +231,18 @@ class RootExplorer:
         Notice that files in the workhistory directory, as
         well as the workhistory directory are not touched.
 
+        Returns
+        -------
+        bool
+            Whether any file operation took place.
+
         Raises
         ------
         OSError
             If replacing input files with their '_ori'-suffixed
             version fails.
         """
-        self._clean_up_root(
+        return self._clean_up_root(
             deal_with_ori_files=self._replace_state_files_from_ori
             )
 
@@ -253,17 +259,19 @@ class RootExplorer:
 
         Returns
         -------
-        None.
+        bool
+            Whether any file operation took place.
         """
-        self.logs.discard()
-        self._remove_out_and_supp()
-        deal_with_ori_files()
+        deleted_logs = self.logs.discard()
+        deleted_out_supp = self._remove_out_and_supp()
+        dealt_with_ori = deal_with_ori_files()
         self._complain_about_edited_files()
         # Let's not complain again about funny stuff. We have already
         # done so when collect_info was called the first time. Notice
         # that this must have happened, as this method relies on the
         # logs attribute to be up to date.
         self.collect_info(silent=True)
+        return any((deleted_logs, deleted_out_supp, dealt_with_ori))
 
     @_needs_collect('_logs')
     def _collect_files_to_archive(self):
@@ -414,21 +422,23 @@ class RootExplorer:
     def _remove_ori_files(self):
         """Delete '_ori'-suffixed files from root."""
         ori_files = (self.path / f'{file}{ORI_SUFFIX}' for file in STATE_FILES)
-        discard_files(*ori_files)
+        return discard_files(*ori_files)
 
     def _remove_out_and_supp(self):
         """Delete the SUPP and OUT directories from root."""
-        discard_files(self.path / DEFAULT_OUT, self.path / DEFAULT_SUPP)
+        return discard_files(self.path / DEFAULT_OUT, self.path / DEFAULT_SUPP)
 
     def _replace_state_files_from_ori(self):
         """Replace input files with their '_ori'-suffixed version."""
-        for state_file, ori_file in self.list_files_to_replace():
+        to_replace = self.list_files_to_replace()
+        for state_file, ori_file in to_replace:
             try:
                 ori_file.replace(state_file)
             except OSError:
                 LOGGER.error(f'Failed to rename {ori_file.name} '
                              f'to {state_file.name}.')
                 raise
+        return any(to_replace)
 
 
 LogInfo = namedtuple('LogInfo', ('timestamp', 'lines'))
@@ -462,9 +472,16 @@ class LogFiles:
         self._read_most_recent()
 
     def discard(self):
-        """Delete all log files at self._path."""
-        discard_files(*self.files)
+        """Delete all log files at self._path.
+
+        Returns
+        -------
+        bool
+            Whether any log file was deleted.
+        """
+        logs_discarded = discard_files(*self.files)
         self.collect()
+        return logs_discarded
 
     # NB: the next one needs _calc, not most_recent, as the latter may
     # be None also if there is no calc log file in the root directory.
