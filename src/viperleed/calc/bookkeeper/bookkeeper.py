@@ -127,13 +127,13 @@ class Bookkeeper:
         except AttributeError as exc:
             raise NotImplementedError from exc
 
-        LOGGER.info(f'\nRunning bookkeeper in {mode.name} mode in {self.cwd}.')
         self._mode = mode
         self._requires_user_confirmation = requires_user_confirmation
         # Do not bother logging messages when the user asked to
         # --fix: some warnings will be fixed anyway. Others will
         # re-appear at the next run.
         self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
+        LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
         try:
             return runner()
         finally:
