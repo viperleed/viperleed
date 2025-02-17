@@ -410,7 +410,25 @@ def get_devices(package):
 
 
 def make_device(settings_file, device_cls, settings_info, **kwargs):
-    """Instantiate a device."""
+    """Instantiate a device.
+
+    Parameters
+    ----------
+    settings_file : dict or ConfigParser or str or Path or ViPErLEEDSettings
+        The device settings.
+    device_cls : type
+        The class of the device.
+    settings_info : SettingsInfo
+        The SettingsInfo necessary to determine the settings.
+    **kwargs : object
+        Keyword arguments.
+
+    Returns
+    -------
+    device : DeviceABC
+        An instance of an implemented DeviceABC subclass object.
+
+    """
     if 'address' in settings_info.more:
         address = settings_info.more['address']
         device = device_cls(settings=settings_file, address=address, **kwargs)
