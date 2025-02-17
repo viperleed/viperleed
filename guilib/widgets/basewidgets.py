@@ -327,7 +327,7 @@ class QNoDefaultIconButton(QNoDefaultPushButton):
         self._label.setAttribute(qtc.Qt.WA_TransparentForMouseEvents, True)
         self.layout().addWidget(self._label)
 
-    def setIcon(self, icon):
+    def setIcon(self, icon):        # pylint: disable=invalid-name
         """Set the desired icon on the button.
 
         Parameters
