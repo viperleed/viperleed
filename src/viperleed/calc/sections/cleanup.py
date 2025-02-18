@@ -1,10 +1,15 @@
-"""Cleanup functions, to be used between sections or before/after execution."""
+"""Module cleanup of viperleed.calc.sections.
+
+Defines clean-up functions, to be used between
+sections or before/after execution.
+"""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
@@ -13,7 +18,8 @@ import os
 from pathlib import Path                                                        # TODO: use everywhere
 import re
 import shutil
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED
+from zipfile import ZipFile
 
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_DELTAS
@@ -31,7 +37,7 @@ from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 
-# files to go in SUPP
+# Files to go in SUPP
 _SUPP_FILES = (
     'AUXBEAMS',
     'AUXEXPBEAMS',
@@ -75,7 +81,7 @@ OPTIONAL_INPUT_FILES = (
     'BEAMLIST',
     )
 
-# files to go in OUT
+# Files to go in OUT
 _OUT_FILES = (
     'Complex_amplitudes_imag.csv',
     'Complex_amplitudes_real.csv',
@@ -109,7 +115,7 @@ _OUT_FILES = (
 # from previous viperleed.calc executions from the work directory
 PREVIOUS_LABEL = 'previous'
 
-# output files that can be used as input in future runs - keep during prerun
+# Output files that may be inputs in future runs - keep during prerun
 _IOFILES = (
     'control.chem',
     'refcalc-fd.out',
