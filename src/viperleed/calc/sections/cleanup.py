@@ -14,8 +14,7 @@ __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
 import logging
-import os
-from pathlib import Path                                                        # TODO: use everywhere
+from pathlib import Path
 import re
 import shutil
 from zipfile import ZIP_DEFLATED
@@ -382,119 +381,150 @@ def _collect_delta_files(tensor_index):
         logger.error(f'Error moving Delta files: {errors}')
 
 
-def move_oldruns(rp, prerun=False):
+def move_oldruns(rpars, prerun=False):
     """Copy relevant files to a new 'workhistory' subfolder.
 
-    Files are copied from SUPP, OUT, and those in rp.manifest.
+    Files are copied from SUPP, OUT, and those in rpars.manifest.
     The main log file is excluded.
 
     Parameters
     ----------
-    rp : Rparams
+    rpars : Rparams
         The run parameters.
     prerun : bool, optional
-        If True, then instead of using the manifest, all potentially
-        interesting files will be copied, and the new folder will get index 0.
-        Then clears out the SUPP and OUT folders and old SUPP and OUT files
-        from the main directory.
+        If True, instead of using the manifest, all potentially
+        interesting files will be copied. The new subfolder is
+        indexed as 0. Then, SUPP, OUT, and old SUPP/OUT files
+        are cleared from the main directory.
 
-    Returns
-    -------
-    None.
+    Raises
+    ------
+    OSError
+        If creation of workhistory or its subfolder fails.
     """
-    sectionabbrv = {1: "R", 2: "D", 3: "S"}
-    try:
-        os.makedirs(os.path.join(".", DEFAULT_WORK_HISTORY), exist_ok=True)
-    except Exception:
-        logger.error(f"Error creating {DEFAULT_WORK_HISTORY} folder: ",
-                     exc_info=True)
-        raise
+    worhistory_subfolder = _make_new_workhistory_subfolder(rpars, prerun)
     if not prerun:
-        rp.manifest.add(DEFAULT_WORK_HISTORY)
-    dl = [n for n in os.listdir(DEFAULT_WORK_HISTORY)
-          if os.path.isdir(os.path.join(DEFAULT_WORK_HISTORY, n))]
-    maxnum = -1
-    rgx = re.compile(r't'+'{:03d}'.format(rp.TENSOR_INDEX)+r'.r[0-9]{3}_')             # TODO: would be nicer to use a capture group for the last three digits, used to decide how to number the new folder
-    for d in dl:
-        m = rgx.match(d)
-        if m:
-            try:
-                i = int(d[6:9])
-                if i > maxnum:
-                    maxnum = i
-            except Exception:
-                pass
-    if maxnum == -1:
-        if prerun:
-            num = 0
-        else:
-            num = 1
-    else:
-        num = maxnum + 1
-    if prerun:
-        oldlogfiles = sorted([f for f in os.listdir() if os.path.isfile(f) and
-                              f.endswith(".log") and f.startswith(LOG_PREFIX)
-                              and f not in rp.manifest])
-        if len(oldlogfiles) > 0:
-            oldTimeStamp = oldlogfiles[-1][-17:-4]
-        else:
-            oldTimeStamp = "moved-" + rp.timestamp
-        dirname = (f"t{rp.TENSOR_INDEX:03d}.r{num:03d}_{PREVIOUS_LABEL}_"
-                   + oldTimeStamp)
-    else:
-        dirname = "t{:03d}.r{:03d}_".format(rp.TENSOR_INDEX, num)
-        for ind in rp.runHistory[len(rp.lastOldruns):]:
-            if ind in sectionabbrv:
-                dirname += sectionabbrv[ind]
-        rp.lastOldruns = rp.runHistory[:]
-        dirname += "_" + rp.timestamp
-
-    # make workhistory directory
-    work_hist_path = Path(".") / DEFAULT_WORK_HISTORY / dirname
-    try:
-        os.mkdir(work_hist_path)
-    except Exception:
-        logger.error(f"Error creating {DEFAULT_WORK_HISTORY} subfolder: ",
-                     exc_info=True)
-        raise
-    if not prerun:
+        rpars.manifest.add(DEFAULT_WORK_HISTORY)
         kwargs = {'delete_unzipped': False,
                   'tensors': False,
                   'deltas': False}
-        organize_workdir(rp, **kwargs)
-        for dp in rp.domainParams:
-            organize_workdir(dp.rp, **kwargs)
+        organize_workdir(rpars, path='', **kwargs)
+        for domain in rpars.domainParams:
+            organize_workdir(domain.rp, path=domain.workdir, **kwargs)
+    _collect_worhistory_contents(rpars, prerun, worhistory_subfolder)
+
+
+def _collect_worhistory_contents(rpars, prerun, to_path):
+    """Copy or move files/directories to a workhistory subfolder."""
+    files, directories = _find_next_workistory_contents(rpars, prerun)
+    _copy = shutil.copy2 if not prerun else shutil.move
+    for file in files:
+        _copyfile = shutil.copy2 if file in _IOFILES else _copy
+        try:
+            _copyfile(file, to_path)
+        except OSError:
+            logger.warning(f'Error copying {file} to {to_path}. '
+                           'File may get overwritten.')
+    _copy = shutil.copytree if not prerun else shutil.move
+    for directory in directories:
+        try:
+            _copy(directory, to_path / directory)
+        except OSError:
+            logger.warning(f'Error copying {directory} to {to_path}. '
+                           'Files in directory may get overwritten.')
+
+
+def _find_next_workistory_contents(rpars, prerun):
+    """Return files/folders for a fresh workhistory directory."""
+    all_dirs = (f.name for f in Path().iterdir() if f.is_dir())
+    all_files = (f.name for f in Path().iterdir() if f.is_file())
     if prerun:
-        filelist = [f for f in os.listdir() if os.path.isfile(f) and
-                    (f.endswith(".log") or f in _OUT_FILES or f in _SUPP_FILES)
-                    and f not in rp.manifest and f not in _IOFILES]
-        dirlist = [DEFAULT_SUPP, DEFAULT_OUT]
-    else:
-        filelist = [f for f in rp.manifest if os.path.isfile(f) and not
-                    (f.startswith(LOG_PREFIX) and f.endswith(".log"))]
-        dirlist = [
-            d for d in rp.manifest if os.path.isdir(d) and
-            d not in {DEFAULT_TENSORS, DEFAULT_DELTAS, DEFAULT_WORK_HISTORY}
+        # Skip manifest, generated, and IO files. Take all logs, as
+        # well as SUPP and OUT directories. Also take root files that
+        # may have already been copied to SUPP/OUT: the sole purpose
+        # is **removing them** from the root directory (via shutil.move
+        # in _collect_worhistory_contents).
+        files = [
+            f for f in all_files
+            if f not in rpars.manifest
+            and f not in rpars.files_to_out
+            and f not in _IOFILES
+            and (f.endswith('.log') or f in _OUT_FILES or f in _SUPP_FILES)
             ]
-    for f in filelist:
+        directories = [d for d in all_dirs if d in (DEFAULT_SUPP, DEFAULT_OUT)]
+    else:
+        # Take only files from manifest, and all directories
+        # that are not potentially used in subsequent runs
+        _calc_log = re.compile(rf'{LOG_PREFIX}.*\.log')
+        _skip_dirs = {DEFAULT_TENSORS, DEFAULT_DELTAS, DEFAULT_WORK_HISTORY}
+        files = [f for f in all_files
+                 if f in rpars.manifest and not _calc_log.fullmatch(f)]
+        directories = [d for d in all_dirs
+                       if d in rpars.manifest and d not in _skip_dirs]
+    return files, directories
+
+
+def _find_next_workistory_dir_name(rpars, prerun):
+    """Return the name of a fresh workhistory subfolder."""
+    run_number = _find_next_workistory_run_number(rpars, prerun)
+    dirname_prefix = f't{rpars.TENSOR_INDEX:03d}.r{run_number:03d}'
+    if prerun:
         try:
-            if not prerun or f in _IOFILES:
-                shutil.copy2(f, work_hist_path / f)
-            else:
-                shutil.move(f, work_hist_path / f)
-        except Exception:
-            logger.warning(f"Error copying {f} to {work_hist_path / f}."
-                           " File may get overwritten.")
-    for d in dirlist:
-        try:
-            if not prerun:
-                shutil.copytree(d, work_hist_path / d)
-            else:
-                shutil.move(d, work_hist_path / d)
-        except Exception:
-            logger.warning(f"Error copying {d} to {work_hist_path / d}."
-                           " Files in directory may get overwritten.")
-    return
+            most_recent_log = max(
+                f.name
+                for f in Path().glob(f'{LOG_PREFIX}*.log')
+                if f.is_file() and f.name not in rpars.manifest
+                )
+        except ValueError:  # No relevant log files
+            old_timestamp = f'moved-{rpars.timestamp}'
+        else:
+            old_timestamp = most_recent_log[-17:-4]
+        return f'{dirname_prefix}_{PREVIOUS_LABEL}_{old_timestamp}'
+
+    sectionabbrv = {1: 'R', 2: 'D', 3: 'S'}
+    new_segments = rpars.runHistory[len(rpars.lastOldruns):]
+    abbreviations = ''.join(sectionabbrv.get(index, '')
+                            for index in new_segments)
+    if abbreviations:
+        abbreviations = '_' + abbreviations
+    rpars.lastOldruns = rpars.runHistory[:]
+    return f'{dirname_prefix}{abbreviations}_{rpars.timestamp}'
+
+
+def _find_next_workistory_run_number(rpars, prerun):
+    """Return a numeric identifier for a fresh workhistory subfolder."""
+    workhistory = Path(DEFAULT_WORK_HISTORY)
+    try:
+        subfolders = tuple(d.name for d in workhistory.iterdir() if d.is_dir())
+    except FileNotFoundError:
+        subfolders = ()
+    # Keep only the subfolders for the specific TENSOR_INDEX
+    rgx = re.compile(rf't{rpars.TENSOR_INDEX:03d}.r(?P<run>[0-9]{{3,}})_')
+    matches = (rgx.match(f) for f in subfolders)
+    run_numbers = (int(m['run']) for m in matches if m)
+    try:
+        return max(run_numbers) + 1
+    except ValueError:  # No matching subfolder
+        return 0 if prerun else 1
+
+
+def _make_new_workhistory_subfolder(rpars, prerun):
+    """Create a fresh subfolder of workhistory for storing previous results."""
+    workhistory = Path(DEFAULT_WORK_HISTORY)
+    try:
+        workhistory.mkdir(exist_ok=True)
+    except OSError:
+        logger.error(f'Error creating {workhistory} folder: ', exc_info=True)
+        raise
+
+    dirname = _find_next_workistory_dir_name(rpars, prerun)
+    subfolder = workhistory / dirname
+    try:
+        subfolder.mkdir()
+    except OSError:
+        logger.error(f'Error creating {subfolder}: ', exc_info=True)
+        raise
+    return subfolder
 
 
 def cleanup(manifest, rpars=None):
