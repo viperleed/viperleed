@@ -94,6 +94,52 @@ class QObjectWithError(qtc.QObject):                                            
 
     emit_error = base.emit_error
 
+    def __init__(self, *args, **kwargs):
+        """Initialise instance.
+
+        Parameters
+        ----------
+        *args : object
+            Positional arguments passed on to the parent class.
+        **kwargs : object
+            Keyword arguments passed on to the parent class.
+        """
+        super().__init__(*args, **kwargs)
+        self._delayed_errors = []
+        self._delay_errors_timer = qtc.QTimer(parent=self)
+        self._delay_errors_timer.setSingleShot(True)
+        self._delay_errors_timer.setInterval(10)
+        self._delay_errors_timer.timeout.connect(self._report_delayed_errors)
+
+    @contextmanager
+    def errors_delayed(self):
+        """Temporarily make the next code block to report errors later.
+
+        This context manager is useful when the error_occurred signal
+        of this QObjectWithError is not yet connected to its final
+        slot, for example, when this object is created.
+        """
+        base.safe_connect(self.error_occurred,
+                          self._on_error_delayed,
+                          type=_UNIQUE)
+        try:
+            yield
+        finally:
+            self.error_occurred.disconnect(self._on_error_delayed)
+
+    @qtc.pyqtSlot(tuple)
+    def _on_error_delayed(self, error):
+        """Collect errors to be delayed."""
+        self._delayed_errors.append(error)
+        self._delay_errors_timer.start()
+
+    @qtc.pyqtSlot()
+    def _report_delayed_errors(self):
+        """Emit errors that we have accumulated."""
+        for error in self._delayed_errors:
+            self.emit_error(error)
+        self._delayed_errors.clear()
+
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     """Abstract base class of measurement objects with settings.
@@ -175,40 +221,6 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             self._settings_to_load = self.find_default_settings()
             self.uses_default_settings = True
         super().__init__(*args, **kwargs)
-        self._delayed_errors = []
-        self._delay_errors_timer = qtc.QTimer(parent=self)
-        self._delay_errors_timer.setSingleShot(True)
-        self._delay_errors_timer.setInterval(10)
-        self._delay_errors_timer.timeout.connect(self._report_delayed_errors)
-
-    @contextmanager
-    def errors_delayed(self):
-        """Temporarily make the next code block to report errors later.
-
-        This context manager is useful when the error_occurred signal
-        of this QObjectWithError is not yet connected to its final
-        slot, for example, when this object is created.
-        """
-        base.safe_connect(self.error_occurred,
-                          self._on_error_delayed,
-                          type=_UNIQUE)
-        try:
-            yield
-        finally:
-            self.error_occurred.disconnect(self._on_error_delayed)
-
-    @qtc.pyqtSlot(tuple)
-    def _on_error_delayed(self, error):
-        """Collect errors to be delayed."""
-        self._delayed_errors.append(error)
-        self._delay_errors_timer.start()
-
-    @qtc.pyqtSlot()
-    def _report_delayed_errors(self):
-        """Emit errors that we have accumulated."""
-        for error in self._delayed_errors:
-            self.emit_error(error)
-        self._delayed_errors.clear()
 
     @property
     def settings(self):
