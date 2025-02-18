@@ -11,7 +11,6 @@ import logging
 import shutil
 from zipfile import ZipFile
 
-import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 

@@ -24,9 +24,6 @@ from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.calc.sections.cleanup import move_oldruns
-from viperleed.calc.sections.cleanup import _IOFILES
-from viperleed.calc.sections.cleanup import _OUT_FILES
-from viperleed.calc.sections.cleanup import _SUPP_FILES
 from viperleed.calc.sections.cleanup import _collect_worhistory_contents
 from viperleed.calc.sections.cleanup import _find_next_workistory_contents
 from viperleed.calc.sections.cleanup import _find_next_workistory_dir_name
@@ -81,6 +78,7 @@ class TestCollectWorhistoryContents:
         }
 
     @parametrize('args,raises', _directories.items())
+    # pylint: disable-next=too-many-arguments  # 3/6 fixtures
     def test_copy_directory_raises(self, args, raises, run, caplog, mocker):
         """Check that failure to move/copy a directory emits warnings."""
         directory, prerun = args
@@ -91,6 +89,7 @@ class TestCollectWorhistoryContents:
         assert expect_log.fullmatch(caplog.text)
 
     @parametrize('args,raises', _files.items())
+    # pylint: disable-next=too-many-arguments  # 3/6 fixtures
     def test_copy_file_raises(self, args, raises, run, caplog, mocker):
         """Check that failure to move/copy a directory emits warnings."""
         file, prerun = args
