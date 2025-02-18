@@ -351,8 +351,8 @@ class ViPErLEEDSerial(SerialABC):
                 self.__is_waiting_for_debug_msg = False
                 return True
             if msg_length == 1 and msg_data[0] == _debug:
-               self.__is_waiting_for_debug_msg = True
-               return True
+                self.__is_waiting_for_debug_msg = True
+                return True
 
         # Check if message length is one of the expected lengths
         if msg_length not in (1, 2, 4, 8, 9):
@@ -550,7 +550,7 @@ class ViPErLEEDSerial(SerialABC):
                 for i, elem in enumerate(data.copy()):
                     data[2*i:2*i+1] = elem.to_bytes(2, self.byte_order)
             elif message == commands['PC_CHANGE_MEAS_MODE']:
-                # Here the data is [mode, time] where time                      TODO: time is not used at this point.
+                # Here the data is [mode, time] where time                      # TODO: time is not used at this point.
                 # has to be turned into 2 bytes. We do not convert
                 # mode as it is hardcoded to 0 (off) or 1 (on).
                 data[1:] = data[1].to_bytes(2, self.byte_order)
@@ -819,4 +819,3 @@ class ViPErLEEDSerial(SerialABC):
             info['serial_nr'] = serial_nr
         info['firmware'] = firmware_version
         return info
-

@@ -26,7 +26,6 @@ from PyQt5 import QtSerialPort as qts
 
 # ViPErLEED modules
 from viperleed.guilib.measure.classes.abc import HardwareABC
-from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 
@@ -1016,4 +1015,3 @@ class SerialABC(HardwareABC):
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
-

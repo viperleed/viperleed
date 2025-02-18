@@ -18,7 +18,6 @@ from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
-from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.guilib.widgets.basewidgets import QCheckBoxInvertedSignal

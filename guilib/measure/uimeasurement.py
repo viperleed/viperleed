@@ -190,9 +190,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 from copy import deepcopy
 import functools
 from pathlib import Path
-from zipfile import ZipFile
-import functools
 import time
+from zipfile import ZipFile
 
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
@@ -1051,7 +1050,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         cls_name = meas_config['measurement_settings']['measurement_class']
         # Use the information in the config for
         # correctly updating the DataPoints
-        datapts.time_resolved = (cls_name == "TimeResolved")
+        datapts.time_resolved = cls_name == "TimeResolved"
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
                                                         'is_continuous')
@@ -1073,7 +1072,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             return False
 
         cls_name = meas_config['measurement_settings']['measurement_class']
-        datapts.time_resolved = (cls_name == 'TimeResolved')
+        datapts.time_resolved = cls_name == 'TimeResolved'
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
                                                         'is_continuous')

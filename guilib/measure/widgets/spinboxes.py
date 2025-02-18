@@ -136,7 +136,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
             self.setValue(self.soft_minimum)
 
     @qtc.pyqtSlot(int)
-    def stepBy(self, steps):
+    def stepBy(self, steps):    # pylint: disable=invalid-name
         """Adjust set vaöue through steps according to soft limits."""
         _, value, _ = sorted((self.soft_minimum, self.soft_maximum,
                               self.value() + steps*self.singleStep()))
@@ -152,6 +152,6 @@ class CoercingSpinBox(CoercingDoubleSpinBox):
                          suffix=suffix, **kwargs)
         super().setDecimals(0)
 
-    def setDecimals(self, _):
+    def setDecimals(self, _):   # pylint: disable=invalid-name
         """Disable setting decimals."""
         raise AttributeError('CoercingSpinBox cannot setDecimals.')

@@ -427,7 +427,6 @@ def make_device(settings_file, device_cls, settings_info, **kwargs):
     -------
     device : DeviceABC
         An instance of an implemented DeviceABC subclass object.
-
     """
     if 'address' in settings_info.more:
         address = settings_info.more['address']
