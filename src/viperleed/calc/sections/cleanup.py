@@ -293,11 +293,10 @@ def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
     if not at_path.is_dir():
         return
     root_name = at_path.name
-    rgx = re.compile(rf'{root_name}_[0-9]{{3}}')                                # TODO: maybe we want "three or more" digits, i.e., {{3,}}? Or could we use tensor_index?
+    rgx = re.compile(rf'{root_name}_[0-9]{{3,}}')
     subfolders = (p for p in at_path.glob('*') if p.is_dir())
     for subfolder in subfolders:
-        match_ = rgx.match(subfolder.name)
-        if not match_ or match_.end() != len(root_name) + 4:                    # TODO: should this 4 be adjusted to the previous TODO? Unclear what it guards
+        if not rgx.fullmatch(subfolder.name):
             continue
         if archive:
             try:
