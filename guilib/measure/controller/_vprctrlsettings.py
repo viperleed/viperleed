@@ -824,7 +824,7 @@ class _InputRangeSelector(qtw.QWidget):
 
     def update_widgets(self):
         """Update the state of children."""
-        for widg in (*self.__range_options.values(), *self.__tooltips):
+        for widg in self.__range_options.values():
             widg.setEnabled(self.editable)
         _enabled = self.__range_change_info.isEnabled()
         self.__range_change_info.setVisible(_enabled and not self.editable)
