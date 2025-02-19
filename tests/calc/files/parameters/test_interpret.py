@@ -342,6 +342,19 @@ class TestDomain(_TestInterpretBase):
             self.interpret(interpreter, str(tmp_path))
         assert interpreter.rpars.DOMAINS == {'1': tmp_path}
 
+    def test_interpret_path_dotted(self, interpreter, tmp_path):
+        """Test correct interpretation of a path relative to cwd."""
+        relative_path = 'domain'
+        calc_path = tmp_path / 'calc_was_started_here'
+        domain_path = calc_path / relative_path
+        domain_path.mkdir(parents=True)
+        # Also make one in cwd to ensure we pick the right one
+        (tmp_path / relative_path).mkdir()
+        interpreter.rpars.paths.home = calc_path
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, f'./{relative_path}')
+        assert interpreter.rpars.DOMAINS == {'1': domain_path}
+
     def test_interpret_path_relative_to_cwd(self, interpreter, tmp_path):
         """Test correct interpretation of a path relative to cwd."""
         relative_path = 'domain'
