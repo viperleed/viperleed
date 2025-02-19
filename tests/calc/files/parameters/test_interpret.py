@@ -332,12 +332,14 @@ class TestDomain(_TestInterpretBase):
         """Test correct interpretation of a path with a domain name."""
         domain_path = tmp_path / 'domain1'
         domain_path.mkdir()
-        self.interpret(interpreter, str(domain_path), flags_str='domain1')
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(domain_path), flags_str='domain1')
         assert interpreter.rpars.DOMAINS == {'domain1': domain_path}
 
     def test_interpret_path_no_flag(self, interpreter, tmp_path):
         """Test correct interpretation of a path without a domain name."""
-        self.interpret(interpreter, str(tmp_path))
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(tmp_path))
         assert interpreter.rpars.DOMAINS == {'1': tmp_path}
 
     def test_interpret_path_relative_to_cwd(self, interpreter, tmp_path):
@@ -355,9 +357,26 @@ class TestDomain(_TestInterpretBase):
         calc_path = tmp_path / 'calc_was_started_here'
         domain_path = calc_path / relative_path
         domain_path.mkdir(parents=True)
+        # Also make one in cwd to ensure we pick the right one
+        (tmp_path / relative_path).mkdir()
         interpreter.rpars.paths.home = calc_path
-        self.interpret(interpreter, relative_path)
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, relative_path)
         assert interpreter.rpars.DOMAINS == {'1': domain_path}
+
+    def test_interpret_path_absolute(self, interpreter, tmp_path):
+        """Test interpretation of an absolute path."""
+        abs_path = tmp_path/'some_folder'/'domain'
+        calc_path = tmp_path / 'calc_was_started_here'
+        abs_path.mkdir(parents=True)
+        # Also make one in cwd to ensure we pick the right one
+        (tmp_path / abs_path.name).mkdir()
+        # and one where calc started
+        (calc_path / abs_path.name).mkdir(parents=True)
+        interpreter.rpars.paths.home = calc_path
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(abs_path))
+        assert interpreter.rpars.DOMAINS == {'1': abs_path}
 
     def test_interpret_zip_file(self, interpreter, tmp_path):
         """Test correct interpretation of a zip file."""
@@ -365,7 +384,8 @@ class TestDomain(_TestInterpretBase):
         zip_file.touch()
         self.interpret(interpreter, str(zip_file))
         assert interpreter.rpars.DOMAINS == {'1': zip_file}
-        self.interpret(interpreter, str(zip_file.with_suffix('')))
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(zip_file.with_suffix('')))
         assert interpreter.rpars.DOMAINS == {'1': zip_file,
                                              '2': zip_file}
 

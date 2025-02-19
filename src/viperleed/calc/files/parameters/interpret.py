@@ -623,13 +623,17 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 i += 1
             name = str(i)
 
-        # Check path: prioritize absolute paths and those relative
-        # to the current working directory. Then look for paths
-        # relative to the directory where calc was started from
+        # Check path: prioritize absolute paths and those relative to
+        # the directory where calc was started from, then check the
+        # ones relative to the current working directory.
         right_side = Path(assignment.values_str.strip())
         candidates = right_side, right_side.with_suffix('.zip')
         if self.rpars.paths.home is not None:
-            candidates += tuple(self.rpars.paths.home / p for p in candidates)
+            candidates = (
+                # NB: if p is absolute, home/p == p
+                tuple(self.rpars.paths.home / p for p in candidates)
+                + candidates
+                )
         full_path = next((p.resolve() for p in candidates if p.exists()),
                          None)
 
