@@ -134,11 +134,6 @@ class ControllerABC(DeviceABC):
         self._serial = None
         self._hash = -1
 
-        self._init_errors = []  # Report these with a little delay
-        self._init_err_timer = qtc.QTimer(self)
-        self._init_err_timer.setSingleShot(True)
-        self._init_err_timer.timeout.connect(self.__report_init_errors)
-
         # Use to force sending a .stop even if the serial is busy,
         # as it may be waiting for an OK. This can happen before
         # the first segment of the preparation is over, where we may
@@ -160,9 +155,8 @@ class ControllerABC(DeviceABC):
         # has be already set.
         self.__can_continue_preparation = False
 
-        self.error_occurred.connect(self.__on_init_errors)
-
-        self.set_settings(self._settings_to_load)
+        with self.errors_delayed():
+            self.set_settings(self._settings_to_load)
 
         # self.time_stamp is used to calculate times of measurements.
         # Even a non-measuring primary controller needs it to enable
@@ -200,9 +194,6 @@ class ControllerABC(DeviceABC):
         if self.serial:
             self.serial.busy_changed.connect(self.send_unsent_messages,
                                              type=_QUEUED_UNIQUE)
-        if self._init_errors:
-            self._init_err_timer.start(20)
-        self.error_occurred.disconnect(self.__on_init_errors)
 
     def __deepcopy__(self, memo):
         """Return self rather than a deep copy."""
@@ -1070,18 +1061,6 @@ class ControllerABC(DeviceABC):
                               self.send_unsent_messages,
                               type=_QUEUED_UNIQUE)
         self.busy = False
-
-    @qtc.pyqtSlot(tuple)
-    def __on_init_errors(self, err):
-        """Collect initialization errors to report later."""
-        self._init_errors.append(err)
-
-    @qtc.pyqtSlot()
-    def __report_init_errors(self):
-        """Emit error_occurred for each initialization error."""
-        for error in self._init_errors:
-            self.error_occurred.emit(error)
-        self._init_errors = []
 
 
 class MeasureControllerABC(ControllerABC):

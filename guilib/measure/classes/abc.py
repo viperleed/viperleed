@@ -106,9 +106,10 @@ class QObjectWithError(qtc.QObject):                                            
         """
         super().__init__(*args, **kwargs)
         self._delayed_errors = []
+        self._delay_errors_timer = None
         self._delay_errors_timer = qtc.QTimer(parent=self)
         self._delay_errors_timer.setSingleShot(True)
-        self._delay_errors_timer.setInterval(10)
+        self._delay_errors_timer.setInterval(20)
         self._delay_errors_timer.timeout.connect(self._report_delayed_errors)
 
     @contextmanager
@@ -130,7 +131,7 @@ class QObjectWithError(qtc.QObject):                                            
     @qtc.pyqtSlot(tuple)
     def _on_error_delayed(self, error):
         """Collect errors to be delayed."""
-        self._delayed_errors.append(error)
+        self._store_delayed_error(error)
         self._delay_errors_timer.start()
 
     @qtc.pyqtSlot()
@@ -139,6 +140,11 @@ class QObjectWithError(qtc.QObject):                                            
         for error in self._delayed_errors:
             self.emit_error(error)
         self._delayed_errors.clear()
+
+    @qtc.pyqtSlot(tuple)
+    def _store_delayed_error(self, error):
+        """Append error message to delayed errors."""
+        self._delayed_errors.append(error)
 
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):

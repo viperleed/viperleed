@@ -361,13 +361,16 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         if not resolved:
             self.__continuous = False
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, _):
         """Return a deep copy of self."""
         cls = self.__class__
-        result = cls.__new__(cls)  # pylint: disable=E1120  # bug?
-        memo[id(self)] = result
-        for key, value in self.__dict__.items():
-            setattr(result, key, deepcopy(value, memo))
+        kwargs = {'primary_controller' : self.primary_controller,
+                  'time_resolved' : self.__time_resolved,
+                  'continuous' : self.__continuous,
+                  'parent' : self.parent(),}
+        result = cls(*deepcopy(self.__list), **kwargs)
+        result.nr_steps_done = self.nr_steps_done
+        result.nr_steps_total = self.nr_steps_total
         return result
 
     def __str__(self):

@@ -129,13 +129,6 @@ class SerialABC(HardwareABC):
         # settings from the controller that instantiates it.
         super().__init__(settings=settings, **kwargs)
 
-        self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(self)
-        self.__init_err_timer.setSingleShot(True)
-
-        self.error_occurred.connect(self.__on_init_errors)
-        self.__init_err_timer.timeout.connect(self.__report_init_errors)
-
         self.__port = qts.QSerialPort(port_name, parent=self)
 
         self.__timeout = qtc.QTimer(parent=self)
@@ -145,7 +138,8 @@ class SerialABC(HardwareABC):
         # Keeps track of whether the serial port is open or not.
         self._open = False
 
-        self.set_settings(self._settings_to_load)
+        with self.errors_delayed():
+            self.set_settings(self._settings_to_load)
 
         # .unprocessed_messages is a list of all the messages
         # that came on the serial line and that have not been
@@ -168,11 +162,6 @@ class SerialABC(HardwareABC):
         # Keep track of whether we got an unacceptable message
         # after a .send_message()
         self.__got_unacceptable_response = False
-
-
-        if self.__init_errors:
-            self.__init_err_timer.start(20)
-        self.error_occurred.disconnect(self.__on_init_errors)
 
         self.__move_to_thread_requested.connect(self.__on_moved_to_thread)
 
@@ -1003,15 +992,3 @@ class SerialABC(HardwareABC):
             f"stopBits: {self.port.stopBits()}",
             sep='\n', end='\n\n'
             )
-
-    @qtc.pyqtSlot(tuple)
-    def __on_init_errors(self, err):
-        """Collect initialization errors to report later."""
-        self.__init_errors.append(err)
-
-    @qtc.pyqtSlot()
-    def __report_init_errors(self):
-        """Emit error_occurred for each initialization error."""
-        for error in self.__init_errors:
-            self.error_occurred.emit(error)
-        self.__init_errors = []

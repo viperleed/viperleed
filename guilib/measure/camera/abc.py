@@ -177,30 +177,21 @@ class CameraABC(DeviceABC):
         self.__retry_stop_timer.setSingleShot(True)
         self.__retry_stop_timer.timeout.connect(self.stop)
 
-        self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(parent=self)
-        self.__init_err_timer.setSingleShot(True)
-
-        self.error_occurred.connect(self.__on_init_errors)
-        self.__init_err_timer.timeout.connect(self.__report_init_errors)
-
         # Number of frames accumulated for averaging
         self.n_frames_done = 0
 
         # Calibration tasks. See calibration_tasks property.
         self.__calibration_tasks = {'bad_pixels': [], 'starting': []}
 
-        try:
-            self.set_settings(self._settings_to_load)
-        except self.exceptions:
-            # Start a short QTimer to report errors that occurred here
-            # AFTER the whole __init__ is done, i.e., when we suppose
-            # that the error_occurred signal is already connected
-            # externally.
-            pass
-        if self.__init_errors:
-            self.__init_err_timer.start(20)
-        self.error_occurred.disconnect(self.__on_init_errors)
+        with self.errors_delayed():
+            try:
+                self.set_settings(self._settings_to_load)
+            except self.exceptions:
+                # Start a short QTimer to report errors that occurred
+                # here AFTER the whole __init__ is done, i.e., when we
+                # suppose that the error_occurred signal is already
+                # connected externally.
+                pass
 
     def __deepcopy__(self, memo):
         """Return self rather than a deep copy of self."""
@@ -1747,19 +1738,7 @@ class CameraABC(DeviceABC):
         if fpath:
             self.image_saved.emit(fpath)
 
-    @qtc.pyqtSlot(tuple)
-    def __on_init_errors(self, err):
-        """Collect initialization errors to report later."""
-        self.__init_errors.append(err)
-
     @qtc.pyqtSlot()
     def __on_timed_out(self):
         """Report a timeout error while in triggered mode."""
         self.emit_error(CameraErrors.TIMEOUT, self.name, 5)
-
-    @qtc.pyqtSlot()
-    def __report_init_errors(self):
-        """Emit error_occurred for each initialization error."""
-        for error in self.__init_errors:
-            self.error_occurred.emit(error)
-        self.__init_errors = []

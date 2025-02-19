@@ -145,14 +145,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self.data_points = DataPoints(parent=self)
         self.data_points.error_occurred.connect(self.error_occurred)
 
-        self._init_errors = []  # Report these with a little delay
-        self._init_err_timer = qtc.QTimer(parent=self)
-        self._init_err_timer.setSingleShot(True)
-        self._init_err_timer.timeout.connect(self._report_init_errors)
-
-        self.error_occurred.connect(self._on_init_errors)
-        self.error_occurred.connect(self._on_hardware_error,  # aborts
-                                    type=_QUEUED)
+        self.error_occurred.connect(self._store_delayed_error)
+        self.error_occurred.connect(self._on_hardware_error, type=_QUEUED)
 
         self._camera_timer = qtc.QTimer(parent=self)
         self._camera_timer.setSingleShot(True)
@@ -166,11 +160,15 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._force_end_timer.setInterval(4500)
         self._force_end_timer.timeout.connect(self._cleanup_and_end)
 
+        # We do not use the delayed_errors context here because the
+        # device.error_occurred signals are not connected yet and
+        # therefore the MeasurementABC collects those errors and
+        # reports them with its own errors.
         self.set_settings(self._settings_to_load)
 
-        if self._init_errors:
-            self._init_err_timer.start(20)
-        self.error_occurred.disconnect(self._on_init_errors)
+        if self._delayed_errors:
+            self._delay_errors_timer.start(20)
+        self.error_occurred.disconnect(self._store_delayed_error)
 
     @property
     def aborted(self):
@@ -1339,7 +1337,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 cam = self._make_camera(settings)
             except RuntimeError:
                 continue
-            cam.error_occurred.connect(self._on_init_errors)
+            cam.error_occurred.connect(self._store_delayed_error)
             cam.error_occurred.connect(self._on_hardware_error)
             cam.process_info.count = 1  # Image counter, start at 1
             cameras.append(cam)
@@ -1445,11 +1443,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         controller = cls(settings=config, address=address,
                          sets_energy=is_primary)
-        # Connect error signal. The connection with _on_init_errors
+        # Connect error signal. The connection with _store_delayed_error
         # has any impact only during initialization of self, but it
         # does not hurt to leave it connected. _on_hardware_error
         # causes abortion of the measurement.
-        controller.error_occurred.connect(self._on_init_errors)
+        controller.error_occurred.connect(self._store_delayed_error)
         controller.error_occurred.connect(self._on_hardware_error)
         controller.set_measurements(measurements)
         return controller
@@ -1602,11 +1600,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # Remove the image just appended to the archive
         img_name.unlink()
 
-    @qtc.pyqtSlot(tuple)
-    def _on_init_errors(self, err):
-        """Collect initialization errors to report later."""
-        self._init_errors.append(err)
-
     def _prepare_finalization(self):
         """Prepare for finalization.
 
@@ -1682,13 +1675,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self._prepare_finalization()
         else:
             self.begin_next_energy_step()
-
-    @qtc.pyqtSlot()
-    def _report_init_errors(self):
-        """Emit error_occurred for each initialization error."""
-        for error in self._init_errors:
-            self.error_occurred.emit(error)
-        self._init_errors = []
 
     def stop_threads(self):
         """Quit all threads immediately."""
