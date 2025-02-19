@@ -37,3 +37,7 @@ class DomainParameters:
         self.rp = None
         self.refcalcRequired = False
         self.tensorDir = None
+
+    def __str__(self):
+        """Return a string representation for this domain."""
+        return f'domain {self.name}'

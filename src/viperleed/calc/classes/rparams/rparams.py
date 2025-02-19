@@ -1204,8 +1204,7 @@ class Rparams:
                 try:
                     dp.rp.generateSearchPars(dp.sl, subdomain=True)
                 except Exception:
-                    _LOGGER.error('Error while creating delta '
-                                  f'input for domain {dp.name}')
+                    _LOGGER.error(f'Error while creating delta input for {dp}')
                     raise
             for sp in dp.rp.searchpars:
                 if not isinstance(sp.restrictTo, int):

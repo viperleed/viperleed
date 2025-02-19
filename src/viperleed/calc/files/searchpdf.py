@@ -259,8 +259,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                 title = labels[mode]
                 addinfo = []
                 if mode != "dom" and rp.domainParams:
-                    addinfo.append("domain {}"
-                                   .format(rp.domainParams[k-1].name))
+                    addinfo.append(str(rp.domainParams[k-1]))
                 if len(crp.disp_blocks) > 1:
                     addinfo.append("search {}".format(searchname[:20]))
                 if addinfo:

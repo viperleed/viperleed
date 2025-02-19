@@ -822,7 +822,7 @@ def run_refcalc_for_one_domain(domain):
             refcalc(domain.sl, domain.rp, subdomain=True)
         except Exception:
             logger.error('Exception during reference calculation '
-                         f'for domain {domain.name}: ', exc_info=True)
+                         f'for {domain}: ', exc_info=True)
             raise
 
 
@@ -847,8 +847,7 @@ def refcalc_domains(rp):
                 + ", ".join([d.name for d in rr]))
 
     for dp in rr:
-        logger.info("Starting reference calculation for domain {}"
-                    .format(dp.name))
+        logger.info(f'Starting reference calculation for {dp}')
         run_refcalc_for_one_domain(dp)
     logger.info("Domain reference calculations finished.")
 

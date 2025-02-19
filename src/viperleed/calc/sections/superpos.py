@@ -197,13 +197,13 @@ def superpos_domains(rp, configs):
     for (percent, params), dp in zip(configs, rp.domainParams):
         percentages.append(percent)
         dp.rp.searchResultConfig = [[(100, params)]]
-        logger.info(f"Running superpos calculation for domain {dp.name}")
+        logger.info(f'Running superpos calculation for {dp}')
         with execute_in_dir(dp.workdir):
             try:
                 superpos(dp.sl, dp.rp, subdomain=True)
             except Exception:
-                logger.error("Error while running superpos "
-                             f"calculation for domain {dp.name}")
+                logger.error('Error while running superpos '
+                             f'calculation for {dp}')
                 raise
 
     logger.info("Getting weighted average over domain beams...")

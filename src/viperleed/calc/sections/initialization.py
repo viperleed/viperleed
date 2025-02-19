@@ -409,7 +409,7 @@ def init_domains(rp):
                            "Contents may get overwritten.")
         else:
             target.mkdir()
-        logger.info(f"Fetching input files for domain {name}")
+        logger.info(f'Fetching input files for {dp}')
         if path.is_dir():
             # check the path for Tensors
             tensorIndex = leedbase.getMaxTensorIndex(path)
@@ -448,12 +448,12 @@ def init_domains(rp):
                             if file != "PHASESHIFTS":
                                 logger.error(
                                     f"Error copying required file {file} for "
-                                    f"domain {name} from origin folder {path}"
+                                    f"{dp} from origin folder {path}"
                                     )
                                 raise RuntimeError("Error getting domain "
                                                    "input files")
                     elif file != "PHASESHIFTS":
-                        logger.error(f"Required file {file} for domain {name} "
+                        logger.error(f"Required file {file} for {dp} "
                                      f"not found in origin folder {path}")
                         raise RuntimeError("Error getting domain input files")
         elif path.is_file():
@@ -474,24 +474,23 @@ def init_domains(rp):
                     archive.extractall(tensorDir)                               # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
                 logger.error(f"Failed to unpack {DEFAULT_TENSORS} for "
-                             f"domain {name} from file {path}")
+                             f"{dp} from file {path}")
                 raise RuntimeError("Error getting domain input files")
             for file in (checkFiles + ["IVBEAMS"]):
                 if (tensorDir / file).is_file():
                     shutil.copy2(tensorDir / file, target)
                 else:
                     logger.error(
-                        f"Required file {file} for domain {name} not "
+                        f"Required file {file} for {dp} not "
                         f"found in {DEFAULT_TENSORS} directory {tensorDir}"
                         )
                     raise RuntimeError("Error getting domain input files")
             dp.tensorDir = tensorDir
         with execute_in_dir(target):
-            try:
-                # initialize for that domain
+            try:  # Initialize for that domain
                 _run_initialization_for_domain(dp, rp)
             except Exception:
-                logger.error(f'Error while initializing domain {name}')
+                logger.error(f'Error while initializing {dp}')
                 raise
     if len(rp.domainParams) < len(rp.DOMAINS):
         raise RuntimeError("Failed to read domain parameters")
@@ -507,16 +506,16 @@ def init_domains(rp):
         if (all(abs(np.linalg.norm(bulkuc0[i]) - np.linalg.norm(bulkuc[i]))
                 < eps for i in range(0, 2))
                 and abs(angle(*bulkuc) - angle(*bulkuc0)) < eps):
-            logger.info(f"Bulk unit cells of domain {rp.domainParams[0].name} "
-                        f"and domain {dp.name} are mismatched, but can be "
-                        f"matched by rotating domain {dp.name}.")
+            logger.info(f"Bulk unit cells of {rp.domainParams[0]} "
+                        f"and {dp} are mismatched, but can be "
+                        f"matched by rotating {dp}.")
             ang = angle(bulkuc[0], bulkuc0[0])
             dp.sl.apply_matrix_transformation(rotation_matrix(ang, dim=3))      # TODO: this changes the coordinate frame. We need to modify BEAM_INCIDENCE! Issue #69, PR #73
         else:
-            logger.error(f"Bulk unit cells of domain {rp.domainParams[0].name}"
-                         f" and domain {dp.name} are mismatched, and cannot be"
-                         "matched by rotation. Domain search cannot proceed. "
-                         "Execution will stop.")
+            logger.error(f'Bulk unit cells of {rp.domainParams[0]} '
+                         f'and {dp} are mismatched, and cannot be '
+                         'matched by rotation. Domain search cannot '
+                         'proceed. Execution will stop.')
             rp.setHaltingLevel(3)
             return
     logger.debug("Domain bulk unit cells are compatible.")
@@ -542,11 +541,11 @@ def init_domains(rp):
                 trans = np.dot(uc0, np.linalg.inv(uc))
                 if np.any(abs(trans - np.round(trans)) > 1e-4):
                     logger.error(
-                        f"Surface unit cell of domain {dp.name} cannot be "
-                        "transformed to the largest surface unit cell (domain "
-                        f"{largestDomain.name}) by an integer transformation. "
-                        "Execution will stop. Please supply all domain "
-                        "structures as matching supercells."
+                        f'Surface unit cell of {dp} cannot be transformed '
+                        f'to the largest surface unit cell ({largestDomain}) '
+                        'by an integer transformation. Execution will stop. '
+                        'Please supply all domain structures as matching '
+                        'supercells.'
                         )
                     rp.setHaltingLevel(3)
                     return
@@ -602,7 +601,7 @@ def init_domains(rp):
     for dp in rp.domainParams:
         if dp.refcalcRequired:
             continue
-        cmessage = f"Reference calculation required for domain {dp.name}: "
+        cmessage = f'Reference calculation required for {dp}: '
         # check energies
         if not dp.rp.THEO_ENERGIES.contains(rp.THEO_ENERGIES):
             logger.info("%sEnergy range is mismatched.", cmessage)
@@ -646,15 +645,14 @@ def init_domains(rp):
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
-        logger.info('Re-running initialization with '
-                    f'supercell slab for domain {dp.name}')
+        logger.info(f'Re-running initialization with supercell slab for {dp}')
         dp.sl.clear_symmetry_and_ucell_history()
         dp.rp.SYMMETRY_FIND_ORI = True
         with execute_in_dir(dp.workdir):
             try:
                 initialization(dp.sl, dp.rp, subdomain=True)
             except Exception:
-                logger.error(f'Error while re-initializing domain {dp.name}')
+                logger.error(f'Error while re-initializing {dp}')
                 raise
 
     if 4 not in rp.RUN and 1 not in rp.RUN and rr:
@@ -684,7 +682,7 @@ def make_compile_logs_dir(rpars):
         rpars.setHaltingLevel(1)
 
 
-def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
+def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain=None):
     """Log a WARNING if slab's atoms do not all belong to the same cell.
 
     It only makes sense to use this function right after `slab` has
@@ -700,15 +698,15 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
         The slab to be checked.
     rpars : Rparams
         The current PARAMETERS object. Used for logging purposes only.
-    domain_name : str, optional
-        The name of the structural domain to which slab belongs.
-        Used only for logging purposes. Default is an empty string.
+    domain : DomainParameters, optional
+        The structural domain to which `slab` belongs. Used only for
+        logging purposes. Default is None.
 
     Returns
     -------
     None.
     """
-    _msg = 'POSCAR file ' + f'of domain {domain_name} ' if domain_name else ''
+    _msg = 'POSCAR file ' + f'of {domain} ' if domain else ''
     _msg += ('has some atoms outside the base unit cell along the third unit '
              'vector (i.e., they have fractional c coordinates smaller/larger '
              'than 0/1). These atoms will be back-folded into the base unit '
@@ -811,7 +809,7 @@ def _read_inputs_for_domain(domain, main_rpars):
     # in the current Domain directory (it is overwritten
     # when fetching files in init_domains).
     domain.rp = rpars = parameters.read()
-    
+
     # Inherit some values from the main PARAMETERS
     inherited = (
         'paths',
@@ -819,12 +817,12 @@ def _read_inputs_for_domain(domain, main_rpars):
         'ZIP_COMPRESSION_LEVEL',
         )
     rpars.inherit_from(main_rpars, *inherited)
-    
+
     # Store input files for each domain, BEFORE any edit
     preserve_original_inputs(rpars)
 
     domain.sl = slab = poscar.read()
-    warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain.name)
+    warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain)
 
     silent = rpars.LOG_LEVEL > logging.DEBUG
     parameters.interpret(rpars, slab=slab, silent=silent)
@@ -843,7 +841,7 @@ def _read_inputs_for_domain(domain, main_rpars):
     except FileNotFoundError:
         pass
     except Exception:
-        logger.error(f'Error while reading IVBEAMS for domain {domain.name}')
+        logger.error(f'Error while reading IVBEAMS for {domain}')
     else:
         rpars.ivbeams_sorted = False
         rpars.fileLoaded['IVBEAMS'] = True
@@ -864,18 +862,18 @@ def _run_initialization_for_domain(domain, main_rpars):
     Exception
         If reading input files or executing the initialization fail.
     """
-    logger.info(f'Reading input files for domain {domain.name}')
+    logger.info(f'Reading input files for {domain}')
     try:
         _read_inputs_for_domain(domain, main_rpars)
     except Exception:
-        logger.error(f'Error loading input files for domain {domain.name}')
+        logger.error(f'Error loading input files for {domain}')
         raise
 
-    logger.info(f'Running initialization for domain {domain.name}')
+    logger.info(f'Running initialization for {domain}')
     try:
         initialization(domain.sl, domain.rp, subdomain=True)
     except Exception:
-        logger.error(f'Error running initialization for domain {domain.name}')
+        logger.error(f'Error running initialization for {domain}')
         raise
 
     main_rpars.domainParams.append(domain)
