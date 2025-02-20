@@ -7,8 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-02-20'
 __license__ = 'GPLv3+'
 
-from pathlib import Path
-import shutil
 from zipfile import BadZipFile
 from zipfile import ZipFile
 
@@ -70,8 +68,7 @@ class TestGetTensors:
     @parametrize(exc=(OSError, BadZipFile))
     def test_unzip_fails(self, exc, base_dir, target_dir, mocker):
         """Check complaints if unpacking a Tensor fails."""
-        mock_unpack = mocker.patch(f'{_MODULE}.unpack_tensor_file',
-                                   side_effect=exc)
+        mocker.patch(f'{_MODULE}.unpack_tensor_file', side_effect=exc)
         tensor_zip = base_dir / DEFAULT_TENSORS / 'Tensors_001.zip'
         tensor_zip.parent.mkdir(parents=True)
         tensor_zip.touch()
@@ -98,8 +95,8 @@ class TestGetTensors:
 
     def test_copy_folder_fails(self, base_dir, target_dir, mocker):
         """Check complaints if copying a tensor folder fails."""
-        mock_copy = mocker.patch(f'{_MODULE}.copytree_exists_ok',
-                                 side_effect=OSError('Copy failed'))
+        mocker.patch(f'{_MODULE}.copytree_exists_ok',
+                     side_effect=OSError('Copy failed'))
         tensor_folder = base_dir / DEFAULT_TENSORS / 'Tensors_001'
         tensor_folder.mkdir(parents=True)
         with pytest.raises(OSError, match='Copy failed'):

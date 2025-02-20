@@ -32,7 +32,6 @@ from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import iotensors
 from viperleed.calc.files import parameters
@@ -49,8 +48,6 @@ from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
-from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
-from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
