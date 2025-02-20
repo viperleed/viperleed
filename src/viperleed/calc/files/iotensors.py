@@ -28,7 +28,7 @@ from viperleed.calc.lib.base import copytree_exists_ok
 logger = logging.getLogger(__name__)
 
 
-def getTensors(index, base_dir='', target_dir=''):
+def fetch_unpacked_tensor(index, base_dir='', target_dir=''):
     """Fetch Tensors with a given `index` from a folder or an archive.
 
     Parameters

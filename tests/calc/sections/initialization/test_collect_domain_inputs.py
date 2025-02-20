@@ -136,7 +136,9 @@ class TestCollectFromDirectory:
             mocks = {
                 'index': mocker.patch(f'{_MODULE}.leedbase.getMaxTensorIndex',
                                       return_value=max_index),
-                'get_tensor': mocker.patch(f'{_MODULE}.iotensors.getTensors'),
+                'get_tensor': mocker.patch(
+                    f'{_MODULE}.iotensors.fetch_unpacked_tensor'
+                    ),
                 }
             if mock_copy or copy_raises:
                 mocks['copy'] = mocker.patch('shutil.copy2',

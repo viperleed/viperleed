@@ -15,7 +15,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.files.iotensors import getTensors
+from viperleed.calc.files.iotensors import fetch_unpacked_tensor
 from viperleed.calc.files.iotensors import unpack_tensor_file
 from viperleed.calc.lib.context import execute_in_dir
 
@@ -31,8 +31,8 @@ def fixture_patch_zip(mocker):
     return mock_zip, fake_instance
 
 
-class TestGetTensors:
-    """Tests for the getTensors function."""
+class TestFetchUnpackedTensor:
+    """Tests for the fetch_unpacked_tensor function."""
 
     @fixture(name='base_dir')
     def fixture_base_dir(self, tmp_path):
@@ -53,7 +53,7 @@ class TestGetTensors:
         _raises = pytest.raises(FileNotFoundError,
                                 match='No Tensors folder/zip file')
         with _raises:
-            getTensors(1, base_dir=base_dir)
+            fetch_unpacked_tensor(1, base_dir=base_dir)
 
     def test_unzip_success(self, base_dir, target_dir, mocker):
         """Check successful unzipping of a Tensor file."""
@@ -62,7 +62,7 @@ class TestGetTensors:
         unpack_path = target_dir / DEFAULT_TENSORS / 'Tensors_001'
         tensor_zip.parent.mkdir(parents=True)
         tensor_zip.touch()
-        getTensors(1, base_dir=base_dir, target_dir=target_dir)
+        fetch_unpacked_tensor(1, base_dir=base_dir, target_dir=target_dir)
         mock_unpack.assert_called_once_with(tensor_zip, unpack_path)
 
     @parametrize(exc=(OSError, BadZipFile))
@@ -73,7 +73,7 @@ class TestGetTensors:
         tensor_zip.parent.mkdir(parents=True)
         tensor_zip.touch()
         with pytest.raises(exc):
-            getTensors(1, base_dir=base_dir, target_dir=target_dir)
+            fetch_unpacked_tensor(1, base_dir=base_dir, target_dir=target_dir)
 
     def test_copy_folder_successful(self, base_dir, target_dir, mocker):
         """Test successful copying of a tensor folder."""
@@ -81,7 +81,7 @@ class TestGetTensors:
         tensor_folder = base_dir / DEFAULT_TENSORS / 'Tensors_001'
         unpack_path = target_dir / DEFAULT_TENSORS / 'Tensors_001'
         tensor_folder.mkdir(parents=True)
-        getTensors(1, base_dir=base_dir, target_dir=target_dir)
+        fetch_unpacked_tensor(1, base_dir=base_dir, target_dir=target_dir)
         mock_copy.assert_called_once_with(tensor_folder, unpack_path)
 
     def test_no_need_to_copy_folder(self, tmp_path, mocker):
@@ -90,7 +90,7 @@ class TestGetTensors:
         tensor_folder = tmp_path / DEFAULT_TENSORS / 'Tensors_001'
         tensor_folder.mkdir(parents=True)
         with execute_in_dir(tmp_path):
-            getTensors(1)
+            fetch_unpacked_tensor(1)
         mock_copy.assert_not_called()
 
     def test_copy_folder_fails(self, base_dir, target_dir, mocker):
@@ -100,7 +100,7 @@ class TestGetTensors:
         tensor_folder = base_dir / DEFAULT_TENSORS / 'Tensors_001'
         tensor_folder.mkdir(parents=True)
         with pytest.raises(OSError, match='Copy failed'):
-            getTensors(1, base_dir=base_dir, target_dir=target_dir)
+            fetch_unpacked_tensor(1, base_dir=base_dir, target_dir=target_dir)
 
     def test_basedir_is_tensors(self, base_dir, target_dir, mocker):
         """Check correct behavior when base_dir is the Tensors folder."""
@@ -109,7 +109,7 @@ class TestGetTensors:
         tensor_folder = base_tensors / 'Tensors_001'
         tensor_folder.mkdir(parents=True)
         unpack_path = target_dir / DEFAULT_TENSORS / 'Tensors_001'
-        getTensors(1, base_dir=base_tensors, target_dir=target_dir)
+        fetch_unpacked_tensor(1, base_dir=base_tensors, target_dir=target_dir)
         mock_copy.assert_called_once_with(tensor_folder, unpack_path)
 
 

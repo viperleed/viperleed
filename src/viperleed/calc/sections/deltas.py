@@ -307,7 +307,7 @@ def deltas(sl, rp, subdomain=False):
     if not Path(DEFAULT_TENSORS).is_dir():
         logger.error(f'No {DEFAULT_TENSORS} directory found.')
         raise RuntimeError(f'{DEFAULT_TENSORS} not found')                      # TODO: FileNotFoundError?
-    iotensors.getTensors(rp.TENSOR_INDEX)
+    iotensors.fetch_unpacked_tensor(rp.TENSOR_INDEX)
     if 1 not in rp.runHistory:
         load_from = Path(DEFAULT_TENSORS)
         load_from /= f'{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}'

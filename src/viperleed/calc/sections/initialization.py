@@ -765,8 +765,8 @@ def _collect_inputs_for_domain_from_most_recent_tensor(domain, src):
         raise FileNotFoundError(f'No {DEFAULT_TENSORS} at {src}')
     # Unpack the most recent tensor at domain.workdir
     try:
-        iotensors.getTensors(tensor_index, base_dir=src,
-                             target_dir=domain.workdir)
+        iotensors.fetch_unpacked_tensor(tensor_index, base_dir=src,
+                                        target_dir=domain.workdir)
     except (OSError, BadZipFile) as exc:
         logger.warning(f'Error fetching {DEFAULT_TENSORS}: {exc}')
         raise
