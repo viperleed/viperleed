@@ -190,9 +190,12 @@ def organize_workdir(rpars,
     delete_unzipped : bool, optional
         Whether the original Delta- and Tensor-files should be
         deleted after making the archives. The default is False.
-    tensors, deltas : bool, optional
-        Whether the Tensor/Delta files contain new information
-        and should be saved. The default is True.
+    tensors : bool, optional
+        Whether the Tensor files contain new information and
+        should be saved. The default is True.
+    deltas : bool, optional
+        Whether the Delta files contain new information and
+        should be saved. The default is True.
 
     Returns
     -------
