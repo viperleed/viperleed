@@ -48,6 +48,8 @@ def getTensors(index, base_dir='', target_dir=''):
     ------
     FileNotFoundError
         When no Tensor file is found for `index`.
+    BadZipFile
+        If a tensor archive to be unzipped is an invalid ZIP file.
     OSError
         If any copying/extraction fails.
     """

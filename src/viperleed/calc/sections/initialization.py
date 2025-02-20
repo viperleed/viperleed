@@ -17,7 +17,7 @@ import logging
 import os
 from pathlib import Path
 import shutil
-from zipfile import ZipFile
+from zipfile import BadZipFile
 
 import numpy as np
 
@@ -55,10 +55,10 @@ from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
 _DOMAIN_INPUT_FILES = (
-    "PARAMETERS",
-    "PHASESHIFTS",
-    "POSCAR",
-    "VIBROCC",
+    'PARAMETERS',
+    'PHASESHIFTS',
+    'POSCAR',
+    'VIBROCC',
     )
 
 
@@ -717,86 +717,105 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
 def _collect_inputs_for_domain(domain, src):
     """Fetch input files for a domain from the source given by the user."""
     logger.info(f'Fetching input files for {domain}')
-    if src.is_dir():
-        _collect_inputs_for_domain_from_directory(domain, src)
-    elif src.is_file():
-        _collect_inputs_for_domain_from_tensor_file(domain, src)
+    if not src.is_dir() and not src.is_file():
+        return
+    _collect = (_collect_inputs_for_domain_from_directory if src.is_dir()
+                else _collect_inputs_for_domain_from_tensor_file)
+    try:
+        _collect(domain, src)
+    except (OSError, BadZipFile) as exc:
+        raise RuntimeError('Error getting domain input files') from exc
 
 
 def _collect_inputs_for_domain_from_directory(domain, src):
     """Fetch input files for a domain from a user-given source directory."""
-    # check the path for Tensors
-    tensorIndex = leedbase.getMaxTensorIndex(src)
-    if tensorIndex != 0:
+    # Try first to pull the inputs from the most recent tensor file
+    try:
+        tensor_dir = _collect_inputs_for_domain_from_most_recent_tensor(domain,
+                                                                        src)
+    except OSError:
+        pass
+    else:
+        domain.tensorDir = tensor_dir
+        return
+
+    # No usable tensors in src; fetch inputs from src directly
+    domain.refcalcRequired = True
+    logger.info(f'No previous {DEFAULT_TENSORS} found, '
+                'reference calculation is required.')
+    may_auto_generate = {'PHASESHIFTS'}
+    for file in _DOMAIN_INPUT_FILES:
         try:
-            iotensors.getTensors(tensorIndex, base_dir=src,
-                                 target_dir=domain.workdir)
-        except Exception as exc:
-            tensorIndex = 0
-            logger.warning(f'Error fetching {DEFAULT_TENSORS}: {exc}')
-    if tensorIndex != 0:
-        tensorDir = (
-            domain.workdir
-            / f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensorIndex:03d}'
-            )
-        for file in (_DOMAIN_INPUT_FILES + ('IVBEAMS',)):
-            if (tensorDir / file).is_file():
-                shutil.copy2(tensorDir / file, domain.workdir)
-            else:
-                logger.warning(f'Input file {file} is missing in '
-                               f'{DEFAULT_TENSORS} directory. A new '
-                               'reference calculation is required.')
-                tensorIndex = 0
-                break
-    if tensorIndex != 0:
-        domain.tensorDir = tensorDir
-    else:       # no usable tensors in that dir; get input
-        domain.refcalcRequired = True
-        logger.info(f'No previous {DEFAULT_TENSORS} found, '
-                    'reference calculation is required.')
-        for file in _DOMAIN_INPUT_FILES:
-            if (src / file).is_file():
-                try:
-                    shutil.copy2(src / file, domain.workdir)
-                except Exception:
-                    if file != 'PHASESHIFTS':
-                        logger.error(f'Error copying required file {file} for '
-                                     f'{domain} from origin folder {src}')
-                        raise RuntimeError('Error getting domain input files')
-            elif file != 'PHASESHIFTS':
-                logger.error(f'Required file {file} for {domain} '
-                             f'not found in origin folder {src}')
-                raise RuntimeError('Error getting domain input files')
+            shutil.copy2(src / file, domain.workdir)
+        except FileNotFoundError:
+            if file in may_auto_generate:
+                continue
+            logger.error(f'Required file {file} for {domain} '
+                         f'not found in origin folder {src}')
+            raise
+        except OSError:
+            if file in may_auto_generate:
+                continue
+            logger.error(f'Error copying required file {file} for '
+                         f'{domain} from origin folder {src}')
+            raise
 
 
-# TODO: should it use iotensors.getTensors? Perhaps
-# parts can be refactored there to simplify this
+def _collect_inputs_for_domain_from_most_recent_tensor(domain, src):
+    """Fetch the most recent tensor at src and copy its input files."""
+    tensor_index = leedbase.getMaxTensorIndex(src)
+    if not tensor_index:
+        raise FileNotFoundError(f'No {DEFAULT_TENSORS} at {src}')
+    # Unpack the most recent tensor at domain.workdir
+    try:
+        iotensors.getTensors(tensor_index, base_dir=src,
+                             target_dir=domain.workdir)
+    except (OSError, BadZipFile) as exc:
+        logger.warning(f'Error fetching {DEFAULT_TENSORS}: {exc}')
+        raise
+    # Finally, pull the input files there into the domain root
+    tensor_dir = (
+        domain.workdir
+        / f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensor_index:03d}'
+        )
+    try:
+        _collect_inputs_for_domain_from_tensor_folder(domain, tensor_dir)
+    except FileNotFoundError as exc:
+        file = Path(exc.filename).name
+        logger.warning(f'Input file {file} is missing in '
+                       f'{DEFAULT_TENSORS} directory. A new '
+                       'reference calculation is required.')
+        raise
+    return tensor_dir
+
+
 def _collect_inputs_for_domain_from_tensor_file(domain, src_zip):
     """Fetch input files for a domain from a user-given Tensor file."""
-    try:
-        tensorIndex = leedbase.getMaxTensorIndex(domain.workdir)
-    except Exception:
-        tensorIndex = 0
-    tensorDir = (
+    tensor_index = leedbase.getMaxTensorIndex(domain.workdir)
+    tensor_dir = (
         domain.workdir
-        / f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensorIndex + 1:03d}'
+        / f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensor_index + 1:03d}'
         )
-    tensorDir.mkdir(parents=True, exist_ok=True)
     try:
-        with ZipFile(src_zip, 'r') as archive:
-            archive.extractall(tensorDir)                                       # TODO: maybe it would be nicer to read directly from the zip file
-    except Exception:
+        iotensors.unpack_tensor_file(src_zip, tensor_dir)
+    except (OSError, BadZipFile):
         logger.error(f'Failed to unpack {DEFAULT_TENSORS} '
-                     f'for {domain} from file {src_zip}', exc_info=True)
-        raise RuntimeError('Error getting domain input files')
+                     f'for {domain} from file {src_zip}')
+        raise
+    try:
+        _collect_inputs_for_domain_from_tensor_folder(domain, tensor_dir)
+    except FileNotFoundError as exc:
+        file = Path(exc.filename).name
+        logger.error(f'Required file {file} for {domain} not found '
+                     f'in {DEFAULT_TENSORS} directory {tensor_dir}')
+        raise
+    domain.tensorDir = tensor_dir
+
+
+def _collect_inputs_for_domain_from_tensor_folder(domain, tensor_dir):
+    """Fetch input files for domain from an unpacked tensor_dir."""
     for file in (_DOMAIN_INPUT_FILES + ('IVBEAMS',)):
-        if (tensorDir / file).is_file():
-            shutil.copy2(tensorDir / file, domain.workdir)
-        else:
-            logger.error(f'Required file {file} for {domain} not '
-                         f'found in {DEFAULT_TENSORS} directory {tensorDir}')
-            raise RuntimeError('Error getting domain input files')
-    domain.tensorDir = tensorDir
+        shutil.copy2(tensor_dir / file, domain.workdir)
 
 
 def _read_inputs_for_domain(domain, main_rpars):
