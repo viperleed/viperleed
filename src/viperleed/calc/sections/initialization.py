@@ -696,14 +696,15 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
 
 
 def _make_domain_workdir(name):
-    """Create a work directory for a domain with a given name."""
-    target = Path(f'Domain_{name}')
+    """Create a work directory (as a subfolder of CWD) for a domain."""
+    workdir_name = f'Domain_{name}'
+    workdir = Path(workdir_name)
     try:
-        target.mkdir()
+        workdir.mkdir()
     except FileExistsError:
-        logger.warning(f'Folder {target} already exists. '
+        logger.warning(f'Folder {workdir} already exists. '
                        'Contents may get overwritten.')
-    return target.resolve()
+    return workdir.resolve()
 
 
 def _read_inputs_for_domain(domain, main_rpars):
