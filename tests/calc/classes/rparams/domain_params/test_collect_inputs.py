@@ -15,25 +15,18 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.classes.rparams.domain_params import DomainParameters
-from viperleed.calc.sections.initialization import (
-    _DOMAIN_INPUT_FILES,
-    _collect_inputs_for_domain,
-    _collect_inputs_for_domain_from_directory,
-    _collect_inputs_for_domain_from_tensor_file,
-    )
+from viperleed.calc.classes.rparams.domain_params import _DOMAIN_INPUT_FILES
 
-from ....helpers import filesystem_from_dict
-from ....helpers import filesystem_to_dict
+from .....helpers import filesystem_from_dict
+from .....helpers import filesystem_to_dict
 
-_MODULE = 'viperleed.calc.sections.initialization'
+_MODULE = 'viperleed.calc.classes.rparams.domain_params'
 
 
 @fixture(name='domain')
-def fixture_domain(tmp_path):
+def fixture_domain(make_domain, tmp_path):
     """Return an initialized DomainParameters."""
-    return DomainParameters(workdir=tmp_path/'fake_workdir',
-                            name='fake_domain')
+    return make_domain(tmp_path/'fake_workdir', 'fake_domain')
 
 
 @fixture(name='src_dir')
@@ -53,34 +46,32 @@ def fixture_src_tensor(tmp_path):
 
 
 class TestCollectInputsForDomain:
-    """Tests for the _collect_inputs_for_domain function."""
+    """Tests for the collect_input_files method."""
 
     @fixture(name='mock_implementation')
-    def fixture_mock_implementation(self, mocker):
-        """Replace implementation details of _collect_inputs_for_domain."""
+    def fixture_mock_implementation(self, domain, mocker):
+        """Replace implementation details of collect_input_files."""
         def _mock(is_tensor=False, is_dir=False,
                   dir_raises=None, tensor_raises=None):
             mocker.patch('pathlib.Path.is_file', return_value=is_tensor)
             mocker.patch('pathlib.Path.is_dir', return_value=is_dir)
             return {
-            'dir': mocker.patch(
-                f'{_MODULE}._collect_inputs_for_domain_from_directory',
-                side_effect=dir_raises,
-                ),
-            'tensor' : mocker.patch(
-                f'{_MODULE}._collect_inputs_for_domain_from_tensor_file',
-                side_effect=tensor_raises,
-                ),
+            'dir': mocker.patch.object(domain, 
+                                       '_collect_inputs_from_directory',
+                                       side_effect=dir_raises),
+            'tensor' : mocker.patch.object(domain,
+                                           '_collect_inputs_from_tensor_file',
+                                           side_effect=tensor_raises),
             }
         return _mock
 
     @fixture(name='collect')
     def fixture_collect(self, domain, mock_implementation, caplog):
-        """Call _collect_inputs_for_domain at a given path."""
+        """Call collect_input_files at a given path."""
         def _call(src, **kwargs):
             caplog.set_level(logging.INFO)
             mocks = mock_implementation(**kwargs)
-            _collect_inputs_for_domain(domain, src)
+            domain.collect_input_files(src)
             return mocks
         return _call
 
@@ -90,10 +81,10 @@ class TestCollectInputsForDomain:
         expect_log = 'Fetching input files for domain fake_domain'
         assert expect_log in caplog.text
 
-    def test_fetch_folder(self, collect, domain, src_dir, caplog):
-        """Check dispatch to _collect_inputs_for_domain_from_directory."""
+    def test_fetch_folder(self, collect, src_dir, caplog):
+        """Check dispatch to _collect_inputs_from_directory."""
         mocks = collect(src_dir, is_dir=True)
-        mocks['dir'].assert_called_once_with(domain, src_dir)
+        mocks['dir'].assert_called_once_with(src_dir)
         mocks['tensor'].assert_not_called()
         self.check_log_written(caplog)
 
@@ -104,10 +95,10 @@ class TestCollectInputsForDomain:
         with _raises:
             collect(src_dir, is_dir=True, dir_raises=OSError)
 
-    def test_fetch_tensor(self, collect, domain, src_tensor, caplog):
-        """Check dispatch to _collect_inputs_for_domain_from_tensor_file."""
+    def test_fetch_tensor(self, collect, src_tensor, caplog):
+        """Check dispatch to _collect_inputs_from_tensor_file."""
         mocks = collect(src_tensor, is_tensor=True)
-        mocks['tensor'].assert_called_once_with(domain, src_tensor)
+        mocks['tensor'].assert_called_once_with(src_tensor)
         mocks['dir'].assert_not_called()
         self.check_log_written(caplog)
 
@@ -127,7 +118,7 @@ class TestCollectInputsForDomain:
 
 
 class TestCollectFromDirectory:
-    """Tests for the _collect_inputs_for_domain_from_directory function."""
+    """Tests for the _collect_inputs_from_directory method."""
 
     @fixture(name='mock_implementation')
     def fixture_mock_implementation(self, mocker):
@@ -148,10 +139,11 @@ class TestCollectFromDirectory:
 
     @fixture(name='collect')
     def fixture_collect(self, domain, src_dir, mock_implementation):
-        """Call _collect_inputs_for_domain_from_directory."""
+        """Call _collect_inputs_from_directory."""
         def _call(mock=True, **kwargs):
             mocks = mock_implementation(**kwargs) if mock or kwargs else {}
-            _collect_inputs_for_domain_from_directory(domain, src_dir)
+            # pylint: disable-next=protected-access       # OK in tests
+            domain._collect_inputs_from_directory(src_dir)
             return mocks
         return _call
 
@@ -227,7 +219,7 @@ class TestCollectFromDirectory:
 
 
 class TestCollectFromZip:
-    """Tests for the _collect_inputs_for_domain_from_tensor_file function."""
+    """Tests for the _collect_inputs_from_tensor_file method."""
 
     @fixture(name='mock_implementation')
     def fixture_mock_implementation(self, mocker):
@@ -245,10 +237,11 @@ class TestCollectFromZip:
 
     @fixture(name='collect')
     def fixture_collect(self, mock_implementation, domain, src_tensor):
-        """Call _collect_inputs_for_domain_from_tensor_file."""
+        """Call _collect_inputs_from_tensor_file."""
         def _call(mock=True, **kwargs):
             mocks = mock_implementation(**kwargs) if mock else {}
-            _collect_inputs_for_domain_from_tensor_file(domain, src_tensor)
+            # pylint: disable-next=protected-access       # OK in tests
+            domain._collect_inputs_from_tensor_file(src_tensor)
             return mocks
         return _call
 

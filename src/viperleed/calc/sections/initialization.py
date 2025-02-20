@@ -16,8 +16,6 @@ import copy
 import logging
 import os
 from pathlib import Path
-import shutil
-from zipfile import BadZipFile
 
 import numpy as np
 
@@ -31,16 +29,13 @@ from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
 from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import beams as iobeams
-from viperleed.calc.files import iotensors
 from viperleed.calc.files import parameters
 from viperleed.calc.files import patterninfo
 from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
-from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
@@ -51,12 +46,6 @@ from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
-_DOMAIN_INPUT_FILES = (
-    'PARAMETERS',
-    'PHASESHIFTS',
-    'POSCAR',
-    'VIBROCC',
-    )
 
 
 def initialization(sl, rp, subdomain=False):
@@ -411,7 +400,7 @@ def init_domains(rp):
                            "Contents may get overwritten.")
         else:
             target.mkdir()
-        _collect_inputs_for_domain(dp, path)
+        dp.collect_input_files(path)
         with execute_in_dir(target):
             try:  # Initialize for that domain
                 _run_initialization_for_domain(dp, rp)
@@ -709,110 +698,6 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
     if not slab.layers:
         # May have been cleared by shifting slab away from c==0
         slab.create_layers(rpars)
-
-
-def _collect_inputs_for_domain(domain, src):
-    """Fetch input files for a domain from the source given by the user."""
-    logger.info(f'Fetching input files for {domain}')
-    if not src.is_dir() and not src.is_file():
-        return
-    _collect = (_collect_inputs_for_domain_from_directory if src.is_dir()
-                else _collect_inputs_for_domain_from_tensor_file)
-    try:
-        _collect(domain, src)
-    except (OSError, BadZipFile) as exc:
-        raise RuntimeError('Error getting domain input files') from exc
-
-
-def _collect_inputs_for_domain_from_directory(domain, src):
-    """Fetch input files for a domain from a user-given source directory."""
-    # Try first to pull the inputs from the most recent tensor file
-    try:
-        tensor_dir = _collect_inputs_for_domain_from_most_recent_tensor(domain,
-                                                                        src)
-    except OSError:
-        pass
-    else:
-        domain.tensorDir = tensor_dir
-        return
-
-    # No usable tensors in src; fetch inputs from src directly
-    domain.refcalcRequired = True
-    logger.info(f'No previous {DEFAULT_TENSORS} found, '
-                'reference calculation is required.')
-    may_auto_generate = {'PHASESHIFTS'}
-    for file in _DOMAIN_INPUT_FILES:
-        try:
-            shutil.copy2(src / file, domain.workdir)
-        except FileNotFoundError:
-            if file in may_auto_generate:
-                continue
-            logger.error(f'Required file {file} for {domain} '
-                         f'not found in origin folder {src}')
-            raise
-        except OSError:
-            if file in may_auto_generate:
-                continue
-            logger.error(f'Error copying required file {file} for '
-                         f'{domain} from origin folder {src}')
-            raise
-
-
-def _collect_inputs_for_domain_from_most_recent_tensor(domain, src):
-    """Fetch the most recent tensor at src and copy its input files."""
-    tensor_index = leedbase.getMaxTensorIndex(src)
-    if not tensor_index:
-        raise FileNotFoundError(f'No {DEFAULT_TENSORS} at {src}')
-    # Unpack the most recent tensor at domain.workdir
-    try:
-        iotensors.fetch_unpacked_tensor(tensor_index, base_dir=src,
-                                        target_dir=domain.workdir)
-    except (OSError, BadZipFile) as exc:
-        logger.warning(f'Error fetching {DEFAULT_TENSORS}: {exc}')
-        raise
-    # Finally, pull the input files there into the domain root
-    tensor_dir = (
-        domain.workdir
-        / f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensor_index:03d}'
-        )
-    try:
-        _collect_inputs_for_domain_from_tensor_folder(domain, tensor_dir)
-    except FileNotFoundError as exc:
-        file = Path(exc.filename).name
-        logger.warning(f'Input file {file} is missing in '
-                       f'{DEFAULT_TENSORS} directory. A new '
-                       'reference calculation is required.')
-        raise
-    return tensor_dir
-
-
-def _collect_inputs_for_domain_from_tensor_file(domain, src_zip):
-    """Fetch input files for a domain from a user-given Tensor file."""
-    tensor_index = leedbase.getMaxTensorIndex(domain.workdir)
-    tensor_dir = (
-        domain.workdir
-        / f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{tensor_index + 1:03d}'
-        )
-    try:
-        iotensors.unpack_tensor_file(src_zip, tensor_dir)
-    except (OSError, BadZipFile):
-        logger.error(f'Failed to unpack {DEFAULT_TENSORS} '
-                     f'for {domain} from file {src_zip}')
-        raise
-    try:
-        _collect_inputs_for_domain_from_tensor_folder(domain, tensor_dir)
-    except FileNotFoundError as exc:
-        file = Path(exc.filename).name
-        logger.error(f'Required file {file} for {domain} not found '
-                     f'in {DEFAULT_TENSORS} directory {tensor_dir}')
-        raise
-    domain.tensorDir = tensor_dir
-
-
-def _collect_inputs_for_domain_from_tensor_folder(domain, tensor_dir):
-    """Fetch input files for domain from an unpacked tensor_dir."""
-    for file in (_DOMAIN_INPUT_FILES + ('IVBEAMS',)):
-        shutil.copy2(tensor_dir / file, domain.workdir)
 
 
 def _read_inputs_for_domain(domain, main_rpars):

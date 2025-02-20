@@ -9,21 +9,11 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 
-from pytest_cases import fixture
 from pytest_cases import parametrize
-
-from viperleed.calc.classes.rparams.domain_params import DomainParameters
 
 
 class TestDomainParameters:
     """Tests for the DomainParameters class."""
-
-    @fixture(name='make_domain')
-    def factory_domain(self):
-        """Return an initialized DomainParameters."""
-        def _make(*args):
-            return DomainParameters(*args)
-        return _make
 
     def test_init(self, make_domain):
         """Test initialization of DomainParameters."""
