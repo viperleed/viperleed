@@ -167,3 +167,8 @@ class SelectNewMeasurementDialog(qtw.QDialog):
 
         self.measurement_selected.emit(cls, config)
         super().accept()
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Show self."""
+        self._find_appropriate_settings()
+        super().showEvent(event)
