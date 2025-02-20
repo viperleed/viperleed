@@ -698,11 +698,11 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
 def _make_domain_workdir(name):
     """Create a work directory for a domain with a given name."""
     target = Path(f'Domain_{name}')
-    if target.is_dir():
+    try:
+        target.mkdir()
+    except FileExistsError:
         logger.warning(f'Folder {target} already exists. '
                        'Contents may get overwritten.')
-    else:
-        target.mkdir()
     return target.resolve()
 
 
