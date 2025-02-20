@@ -417,7 +417,7 @@ def move_oldruns(rpars, prerun=False):
 def _collect_worhistory_contents(rpars, prerun, to_path):
     """Copy or move files/directories to a workhistory subfolder."""
     files, directories = _find_next_workistory_contents(rpars, prerun)
-    _copy = shutil.copy2 if not prerun else shutil.move
+    _copy = shutil.move if prerun else shutil.copy2
     for file in files:
         _copyfile = shutil.copy2 if file in _IOFILES else _copy
         try:
@@ -425,7 +425,7 @@ def _collect_worhistory_contents(rpars, prerun, to_path):
         except OSError:
             logger.warning(f'Error copying {file} to {to_path}. '
                            'File may get overwritten.')
-    _copy = shutil.copytree if not prerun else shutil.move
+    _copy = shutil.move if prerun else shutil.copytree
     for directory in directories:
         try:
             _copy(directory, to_path / directory)
