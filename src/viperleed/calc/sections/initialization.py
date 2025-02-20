@@ -393,7 +393,7 @@ def init_domains(rp):
         return
     for name, path in rp.DOMAINS.items():
         # determine the target path
-        target = _make_domain_workdir(name)
+        target = _make_domain_workdir(name, path, rp.paths.home)
         dp = DomainParameters(target, name)
         dp.collect_input_files(path)
         with execute_in_dir(target):
@@ -695,10 +695,35 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
         slab.create_layers(rpars)
 
 
-def _make_domain_workdir(name):
-    """Create a work directory (as a subfolder of CWD) for a domain."""
-    workdir_name = f'Domain_{name}'
-    workdir = Path(workdir_name)
+def _make_domain_workdir(name, src, calc_started_at):
+    """Create a work directory (as a subfolder of CWD) for a domain.
+
+    The work directory is named 'Domain_<name>', unless the inputs
+    for this domain come from a direct subfolder of the path at
+    which viperleed.calc was originally started.
+
+    Parameters
+    ----------
+    name : str
+        The user-given name of the domain for which the work folder
+        should be created. Typically the left-side flag in a DOMAIN
+        assignment.
+    src : Path
+        The path from where the domain input files should be collected.
+    calc_started_at : Path or None
+        The path in which viperleed.calc was started.
+
+    Returns
+    -------
+    workdir : Path
+        Absolute path to the work directory that was created.
+    """
+    should_use_src = (
+       calc_started_at is not None
+       and src.is_dir()
+       and src.parent == calc_started_at
+       )
+    workdir = Path(src.name if should_use_src else f'Domain_{name}')
     try:
         workdir.mkdir()
     except FileExistsError:
