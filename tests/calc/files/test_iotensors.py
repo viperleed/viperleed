@@ -48,31 +48,23 @@ class TestFetchUnpackedTensor:
         target_dir.mkdir()
         return target_dir
 
-    def test_no_folder_or_zip(self, base_dir):
-        """Check complaints when no Tensor is ound at base_dir."""
-        _raises = pytest.raises(FileNotFoundError,
-                                match='No Tensors folder/zip file')
-        with _raises:
-            fetch_unpacked_tensor(1, base_dir=base_dir)
-
-    def test_unzip_success(self, base_dir, target_dir, mocker):
-        """Check successful unzipping of a Tensor file."""
-        mock_unpack = mocker.patch(f'{_MODULE}.unpack_tensor_file')
-        tensor_zip = base_dir / DEFAULT_TENSORS / 'Tensors_001.zip'
+    def test_basedir_is_tensors(self, base_dir, target_dir, mocker):
+        """Check correct behavior when base_dir is the Tensors folder."""
+        mock_copy = mocker.patch(f'{_MODULE}.copytree_exists_ok')
+        base_tensors = base_dir / DEFAULT_TENSORS
+        tensor_folder = base_tensors / 'Tensors_001'
+        tensor_folder.mkdir(parents=True)
         unpack_path = target_dir / DEFAULT_TENSORS / 'Tensors_001'
-        tensor_zip.parent.mkdir(parents=True)
-        tensor_zip.touch()
-        fetch_unpacked_tensor(1, base_dir=base_dir, target_dir=target_dir)
-        mock_unpack.assert_called_once_with(tensor_zip, unpack_path)
+        fetch_unpacked_tensor(1, base_dir=base_tensors, target_dir=target_dir)
+        mock_copy.assert_called_once_with(tensor_folder, unpack_path)
 
-    @parametrize(exc=(OSError, BadZipFile))
-    def test_unzip_fails(self, exc, base_dir, target_dir, mocker):
-        """Check complaints if unpacking a Tensor fails."""
-        mocker.patch(f'{_MODULE}.unpack_tensor_file', side_effect=exc)
-        tensor_zip = base_dir / DEFAULT_TENSORS / 'Tensors_001.zip'
-        tensor_zip.parent.mkdir(parents=True)
-        tensor_zip.touch()
-        with pytest.raises(exc):
+    def test_copy_folder_fails(self, base_dir, target_dir, mocker):
+        """Check complaints if copying a tensor folder fails."""
+        mocker.patch(f'{_MODULE}.copytree_exists_ok',
+                     side_effect=OSError('Copy failed'))
+        tensor_folder = base_dir / DEFAULT_TENSORS / 'Tensors_001'
+        tensor_folder.mkdir(parents=True)
+        with pytest.raises(OSError, match='Copy failed'):
             fetch_unpacked_tensor(1, base_dir=base_dir, target_dir=target_dir)
 
     def test_copy_folder_successful(self, base_dir, target_dir, mocker):
@@ -93,24 +85,32 @@ class TestFetchUnpackedTensor:
             fetch_unpacked_tensor(1)
         mock_copy.assert_not_called()
 
-    def test_copy_folder_fails(self, base_dir, target_dir, mocker):
-        """Check complaints if copying a tensor folder fails."""
-        mocker.patch(f'{_MODULE}.copytree_exists_ok',
-                     side_effect=OSError('Copy failed'))
-        tensor_folder = base_dir / DEFAULT_TENSORS / 'Tensors_001'
-        tensor_folder.mkdir(parents=True)
-        with pytest.raises(OSError, match='Copy failed'):
+    def test_no_folder_or_zip(self, base_dir):
+        """Check complaints when no Tensor is ound at base_dir."""
+        _raises = pytest.raises(FileNotFoundError,
+                                match='No Tensors folder/zip file')
+        with _raises:
+            fetch_unpacked_tensor(1, base_dir=base_dir)
+
+    @parametrize(exc=(OSError, BadZipFile))
+    def test_unzip_fails(self, exc, base_dir, target_dir, mocker):
+        """Check complaints if unpacking a Tensor fails."""
+        mocker.patch(f'{_MODULE}.unpack_tensor_file', side_effect=exc)
+        tensor_zip = base_dir / DEFAULT_TENSORS / 'Tensors_001.zip'
+        tensor_zip.parent.mkdir(parents=True)
+        tensor_zip.touch()
+        with pytest.raises(exc):
             fetch_unpacked_tensor(1, base_dir=base_dir, target_dir=target_dir)
 
-    def test_basedir_is_tensors(self, base_dir, target_dir, mocker):
-        """Check correct behavior when base_dir is the Tensors folder."""
-        mock_copy = mocker.patch(f'{_MODULE}.copytree_exists_ok')
-        base_tensors = base_dir / DEFAULT_TENSORS
-        tensor_folder = base_tensors / 'Tensors_001'
-        tensor_folder.mkdir(parents=True)
+    def test_unzip_success(self, base_dir, target_dir, mocker):
+        """Check successful unzipping of a Tensor file."""
+        mock_unpack = mocker.patch(f'{_MODULE}.unpack_tensor_file')
+        tensor_zip = base_dir / DEFAULT_TENSORS / 'Tensors_001.zip'
         unpack_path = target_dir / DEFAULT_TENSORS / 'Tensors_001'
-        fetch_unpacked_tensor(1, base_dir=base_tensors, target_dir=target_dir)
-        mock_copy.assert_called_once_with(tensor_folder, unpack_path)
+        tensor_zip.parent.mkdir(parents=True)
+        tensor_zip.touch()
+        fetch_unpacked_tensor(1, base_dir=base_dir, target_dir=target_dir)
+        mock_unpack.assert_called_once_with(tensor_zip, unpack_path)
 
 
 class TestUnpackTensorFile:
