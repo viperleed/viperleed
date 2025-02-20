@@ -393,13 +393,8 @@ def init_domains(rp):
         return
     for name, path in rp.DOMAINS.items():
         # determine the target path
-        target = Path(f"Domain_{name}").resolve()
+        target = _make_domain_workdir(name)
         dp = DomainParameters(target, name)
-        if target.is_dir():
-            logger.warning(f"Folder {target} already exists. "
-                           "Contents may get overwritten.")
-        else:
-            target.mkdir()
         dp.collect_input_files(path)
         with execute_in_dir(target):
             try:  # Initialize for that domain
@@ -698,6 +693,17 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
     if not slab.layers:
         # May have been cleared by shifting slab away from c==0
         slab.create_layers(rpars)
+
+
+def _make_domain_workdir(name):
+    """Create a work directory for a domain with a given name."""
+    target = Path(f'Domain_{name}')
+    if target.is_dir():
+        logger.warning(f'Folder {target} already exists. '
+                       'Contents may get overwritten.')
+    else:
+        target.mkdir()
+    return target.resolve()
 
 
 def _read_inputs_for_domain(domain, main_rpars):
