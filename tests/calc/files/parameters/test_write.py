@@ -309,6 +309,16 @@ class TestCommentOutAndModifyFunctions:
         check_file_modified(fpath, 'LMAX = 3-16')
         check_marked_as_edited(rpars)
 
+    def test_add_new_param(self, read_one_param_file):
+        """Check correct addition of a new PARAMETER."""
+        fpath, rpars = read_one_param_file
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'N_BULK_LAYERS')
+            rpars_again = parameters.read()
+        check_file_modified(fpath, 'N_BULK_LAYERS = 1')
+        check_marked_as_edited(rpars)
+        assert rpars.readParams == rpars_again.readParams
+
     def test_modify_param_twice(self, read_one_param_file):
         """Check effective modification of one parameter."""
         fpath, rpars = read_one_param_file

@@ -398,14 +398,11 @@ class ParametersFileEditor(AbstractContextManager):
 
     def _update_read_params(self, modified):
         """Edit readParams to reflect the changes in `modified`."""
-        # Use .get instead of __getitem__ to avoid adding the key
-        read_ = self._rpars.readParams.get(modified.param, None)
-        if not read_ or modified.already_written:
-            return
+        read_ = self._rpars.readParams[modified.param]
         try:
             read_.remove(modified.original)
         except ValueError:
-            return
+            pass
         if not modified.only_comment_out:
             read_.append(modified.to_assignment())
         if not read_:
@@ -443,4 +440,6 @@ class ParametersFileEditor(AbstractContextManager):
             return
         if not self._has_header:
             self._write_param_file.write(self._header)
+        for modified in to_be_written:
+            self._update_read_params(modified)
         self._write_param_file.writelines(p.line for p in to_be_written)
