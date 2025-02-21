@@ -152,6 +152,14 @@ class TestParametersEditor:
         assert modified.comment == comment
         assert modified.fmt_value == '0.2300'
 
+    def test_modify_multi_valued_raises(self, read_one_param_file):
+        """Test successful execution of modify_param method."""
+        rpars = Rparams()
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            with pytest.raises(TypeError):  # original not given
+                editor.modify_param('SITE_DEF')
+
     def test_modify_twice(self):
         """Test correct subsequent modification of the same parameter."""
         rpars = Rparams()

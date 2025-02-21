@@ -27,6 +27,7 @@ from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
+from .known_parameters import _ACCEPTS_MULTIPLE_ASSIGNMENTS
 from .reader import RawLineParametersReader
 from .utils import Assignment
 
@@ -395,7 +396,13 @@ class ParametersFileEditor(AbstractContextManager):
         # create a non-existing item. This may later screw up
         # with checks like "param in readParams".
         assignments = tuple(self._rpars.readParams.get(param, ()))
-        return assignments or (None,)
+        if param not in _ACCEPTS_MULTIPLE_ASSIGNMENTS:
+            return assignments or (None,)
+        if len(assignments) > 1 and not original:
+            raise TypeError(f'Cannot edit {param}: found multiple assignment '
+                            'lines. Specify which line needs editing by '
+                            'passing the \'original\' argument.')
+        return (original,)
 
     def _is_unchanged(self, modified, raw_line):
         """Return whether `modified` is already present in `raw_line`."""
