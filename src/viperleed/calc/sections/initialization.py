@@ -391,9 +391,14 @@ def init_domains(rp):
                      "are defined. Execution will stop.")
         rp.setHaltingLevel(3)
         return
+    # Make sure we always have unique work folders for all domains
+    must_use_auto_name = len(set(rp.DOMAINS.values())) != len(rp.DOMAINS)
     for name, path in rp.DOMAINS.items():
         # determine the target path
-        target = _make_domain_workdir(name, path, rp.paths.home)
+        target = _make_domain_workdir(name,
+                                      path,
+                                      rp.paths.home,
+                                      must_use_auto_name)
         dp = DomainParameters(target, name)
         dp.collect_input_files(path)
         with execute_in_dir(target):
@@ -695,11 +700,12 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
         slab.create_layers(rpars)
 
 
-def _make_domain_workdir(name, src, calc_started_at):
+def _make_domain_workdir(name, src, calc_started_at, must_use_auto_name):
     """Create a work directory (as a subfolder of CWD) for a domain.
 
-    The work directory is named 'Domain_<name>', unless the inputs
-    for this domain come from a direct subfolder of the path at
+    The work directory is named 'Domain_<name>', unless
+    `must_use_auto_name` is True and the inputs for this
+    domain come from a direct subfolder of the path at
     which viperleed.calc was originally started.
 
     Parameters
@@ -712,6 +718,10 @@ def _make_domain_workdir(name, src, calc_started_at):
         The path from where the domain input files should be collected.
     calc_started_at : Path or None
         The path in which viperleed.calc was started.
+    must_use_auto_name : bool
+        Whether 'Domain_<name>' should be used irrespective of the
+        value of `src`. This is used to ensure that there always
+        is one unique path for each domain.
 
     Returns
     -------
@@ -719,7 +729,8 @@ def _make_domain_workdir(name, src, calc_started_at):
         Absolute path to the work directory that was created.
     """
     should_use_src = (
-       calc_started_at is not None
+       not must_use_auto_name
+       and calc_started_at is not None
        and src.is_dir()
        and src.parent == calc_started_at
        )

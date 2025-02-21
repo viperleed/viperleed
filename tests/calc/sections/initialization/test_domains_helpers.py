@@ -25,6 +25,7 @@ class TestMakeDomainWork:
         def _make(**kwargs):
             kwargs.setdefault('src', None)
             kwargs.setdefault('calc_started_at', None)
+            kwargs.setdefault('must_use_auto_name', False)
             with execute_in_dir(main_work):
                 return _make_domain_workdir(**kwargs)
         return _make
@@ -54,13 +55,25 @@ class TestMakeDomainWork:
         assert work.name == f'Domain_{name}'
 
     def test_read_from_calc_subfolder(self, make_work, tmp_path):
-        """Check outcome when the domain source is not a subfolder of calc."""
+        """Check outcome when the domain source is a subfolder of calc."""
         domain_src = tmp_path/'domain_source'
         domain_src.mkdir()
         name = 'some_domain'
         work = make_work(name=name, src=domain_src, calc_started_at=tmp_path)
         assert work.is_dir()
         assert work.name == domain_src.name
+
+    def test_read_from_calc_subfolder_but_cant_use(self, make_work, tmp_path):
+        """Check usage of auto-generated name if explicitly requested."""
+        domain_src = tmp_path/'domain_source'
+        domain_src.mkdir()
+        name = 'some_domain'
+        work = make_work(name=name,
+                         src=domain_src,
+                         calc_started_at=tmp_path,
+                         must_use_auto_name=True)
+        assert work.is_dir()
+        assert work.name == f'Domain_{name}'
 
     def test_read_from_somewhere_else(self, make_work, tmp_path):
         """Check outcome when the domain source is not a subfolder of calc."""
