@@ -176,6 +176,14 @@ class TestParametersEditor:
         assert modified.comment == twice['comment']
         assert modified.fmt_value == f'{twice["new_value"]:.4f}'
 
+    def test_write_commented_param(self, read_one_param_file):
+        """check correct commenting-out of one parameter."""
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            editor.comment_out_parameter('BULK_LIKE_BELOW')  # 4 times!
+        assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
+        check_marked_as_edited(rpars)
+
     def test_write_comment_out_then_edit(self, read_one_param_file):
         """Check successive commenting and editing of a parameter."""
         fpath, rpars = read_one_param_file
@@ -204,18 +212,6 @@ class TestParametersEditor:
                 pass
             else:
                 pytest.fail(reason=f'Unexpectedly wrote {not_present!r}')
-
-    def test_write_modified_nothing(self, read_one_param_file):
-        """Check that file is unchanged with no edits."""
-        fpath, rpars = read_one_param_file
-        rpars.files_to_out.clear()  # In case STOP was commented out
-        editor = ParametersFileEditor(rpars, path=fpath.parent)
-        editor.write_modified_parameters()
-        ori_path = next(fpath.parent.glob(f'PARAMETERS*{rpars.timestamp}'))
-        with fpath.open('r', encoding='utf-8') as mod_file:
-            with ori_path.open('r', encoding='utf-8') as ori_file:
-                assert mod_file.read() == ori_file.read()
-        assert not rpars.files_to_out
 
     @staticmethod
     def _modify_one_param(editor, rpars, new_value=0.9876):
@@ -250,6 +246,18 @@ class TestParametersEditor:
         check_file_modified(fpath, value, comment)
         check_marked_as_edited(rpars)
 
+    def test_write_modified_nothing(self, read_one_param_file):
+        """Check that file is unchanged with no edits."""
+        fpath, rpars = read_one_param_file
+        rpars.files_to_out.clear()  # In case STOP was commented out
+        editor = ParametersFileEditor(rpars, path=fpath.parent)
+        editor.write_modified_parameters()
+        ori_path = next(fpath.parent.glob(f'PARAMETERS*{rpars.timestamp}'))
+        with fpath.open('r', encoding='utf-8') as mod_file:
+            with ori_path.open('r', encoding='utf-8') as ori_file:
+                assert mod_file.read() == ori_file.read()
+        assert not rpars.files_to_out
+
     def test_write_modified_twice(self, read_one_param_file):
         """Check editing behaviour when used as a context manager."""
         fpath, rpars = read_one_param_file
@@ -263,14 +271,6 @@ class TestParametersEditor:
         else:
             pytest.fail(reason='Only the last modification should be written')
         check_file_modified(fpath, value_2, comment_2)
-        check_marked_as_edited(rpars)
-
-    def test_write_commented_param(self, read_one_param_file):
-        """check correct commenting-out of one parameter."""
-        fpath, rpars = read_one_param_file
-        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
-            editor.comment_out_parameter('BULK_LIKE_BELOW')  # 4 times!
-        assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
         check_marked_as_edited(rpars)
 
 
@@ -299,6 +299,16 @@ def check_marked_as_edited(rpars):
 class TestCommentOutAndModifyFunctions:
     """Collection of tests for the public functions of .write."""
 
+    def test_add_new_param(self, read_one_param_file):
+        """Check correct addition of a new PARAMETER."""
+        fpath, rpars = read_one_param_file
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'N_BULK_LAYERS')
+            rpars_again = parameters.read()
+        check_file_modified(fpath, 'N_BULK_LAYERS = 1')
+        check_marked_as_edited(rpars)
+        assert rpars.readParams == rpars_again.readParams
+
     def test_comment_out_param(self, read_one_param_file):
         """Check effective commenting-out of one parameter."""
         fpath, rpars = read_one_param_file
@@ -313,6 +323,20 @@ class TestCommentOutAndModifyFunctions:
         with execute_in_dir(fpath.parent):
             modify(rpars, 'LMAX')
         check_file_modified(fpath, 'LMAX = 3-16')
+        check_marked_as_edited(rpars)
+
+    def test_modify_param_twice(self, read_one_param_file):
+        """Check effective modification of one parameter."""
+        fpath, rpars = read_one_param_file
+        once, twice = LMax(3, 16), LMax(9, 11)
+        with execute_in_dir(fpath.parent):
+            for new_value in (once, twice):
+                rpars.LMAX = new_value
+                modify(rpars, 'LMAX')
+        check_file_modified(fpath, 'LMAX = 9-11')
+        check_file_modified(fpath,
+                            '! LMAX = 3-16',
+                            comment='! line automatically changed to:')
         check_marked_as_edited(rpars)
 
     def test_modify_replicated_param(self, read_one_param_file):
@@ -330,29 +354,13 @@ class TestCommentOutAndModifyFunctions:
         check_file_modified(fpath, 'BULK_LIKE_BELOW = 12345.0000')
         check_marked_as_edited(rpars)
 
-    def test_add_new_param(self, read_one_param_file):
-        """Check correct addition of a new PARAMETER."""
+    def test_read_params_updated_when_commented(self, read_one_param_file):
+        """Check that rpars.readParams is updated upon modification."""
         fpath, rpars = read_one_param_file
         with execute_in_dir(fpath.parent):
-            modify(rpars, 'N_BULK_LAYERS')
+            comment_out(rpars, 'BULK_LIKE_BELOW')  # 4 of them!
             rpars_again = parameters.read()
-        check_file_modified(fpath, 'N_BULK_LAYERS = 1')
-        check_marked_as_edited(rpars)
         assert rpars.readParams == rpars_again.readParams
-
-    def test_modify_param_twice(self, read_one_param_file):
-        """Check effective modification of one parameter."""
-        fpath, rpars = read_one_param_file
-        once, twice = LMax(3, 16), LMax(9, 11)
-        with execute_in_dir(fpath.parent):
-            for new_value in (once, twice):
-                rpars.LMAX = new_value
-                modify(rpars, 'LMAX')
-        check_file_modified(fpath, 'LMAX = 9-11')
-        check_file_modified(fpath,
-                            '! LMAX = 3-16',
-                            comment='! line automatically changed to:')
-        check_marked_as_edited(rpars)
 
     def test_read_params_updated_when_modified(self, read_one_param_file):
         """Check that rpars.readParams is updated upon modification."""
@@ -360,13 +368,5 @@ class TestCommentOutAndModifyFunctions:
         rpars.LMAX = LMax(3, 16)
         with execute_in_dir(fpath.parent):
             modify(rpars, 'LMAX')
-            rpars_again = parameters.read()
-        assert rpars.readParams == rpars_again.readParams
-
-    def test_read_params_updated_when_commented(self, read_one_param_file):
-        """Check that rpars.readParams is updated upon modification."""
-        fpath, rpars = read_one_param_file
-        with execute_in_dir(fpath.parent):
-            comment_out(rpars, 'BULK_LIKE_BELOW')  # 4 of them!
             rpars_again = parameters.read()
         assert rpars.readParams == rpars_again.readParams
