@@ -35,13 +35,13 @@ from .utils import Assignment
 _LOGGER = logging.getLogger(parent_name(__name__))
 
 
-def comment_out(rpars, modpar, comment='', path=''):
+def comment_out(rpars, modpar, comment=''):
     """Comment out modpar in the PARAMETERS file."""
-    with ParametersFileEditor(rpars, path=path) as editor:
+    with ParametersFileEditor(rpars) as editor:
         editor.comment_out_parameter(modpar, comment=comment)
 
 
-def modify(rpars, modpar, new=None, comment='', path=''):
+def modify(rpars, modpar, new=None, comment=''):
     """Change the value for `modpar` in the PARAMETERS file.
 
     The lines that contains `modpar` are commented out, and
@@ -60,9 +60,6 @@ def modify(rpars, modpar, new=None, comment='', path=''):
         is None.
     comment : str, optional
         A comment to be added in the new line in PARAMETERS.
-    path : str or Path, optional
-        Where to find the PARAMETERS file that should be modified.
-        Default is an empty string, i.e., the current directory.
 
     Returns
     -------
@@ -70,7 +67,7 @@ def modify(rpars, modpar, new=None, comment='', path=''):
         String value of the parameter as inserted in the
         PARAMETERS file.
     """
-    with ParametersFileEditor(rpars, path=path) as editor:
+    with ParametersFileEditor(rpars) as editor:
         new_param = editor.modify_param(modpar, new_value=new, comment=comment)
     return new_param.fmt_value
 

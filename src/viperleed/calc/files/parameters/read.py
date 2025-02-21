@@ -21,6 +21,7 @@ import logging
 from pathlib import Path
 
 from viperleed.calc.classes import rparams
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import parent_name
 
 from .errors import MissingEqualsError
@@ -84,8 +85,8 @@ def read(filename='PARAMETERS'):
             'program. Modifying PARAMETERS to disable STOP; '
             're-insert it if you actually want to stop.'
             )
-        comment_out(rpars, 'STOP', comment='Disabled at program start',
-                    path=filename.parent)
+        with execute_in_dir(filename.parent):
+            comment_out(rpars, 'STOP', comment='Disabled at program start')
     return rpars
 
 

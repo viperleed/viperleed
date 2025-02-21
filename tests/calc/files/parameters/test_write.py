@@ -312,7 +312,8 @@ class TestCommentOutAndModifyFunctions:
     def test_comment_out_param(self, read_one_param_file):
         """Check effective commenting-out of one parameter."""
         fpath, rpars = read_one_param_file
-        comment_out(rpars, 'BULK_LIKE_BELOW', path=fpath.parent)
+        with execute_in_dir(fpath.parent):
+            comment_out(rpars, 'BULK_LIKE_BELOW')
         assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
         check_marked_as_edited(rpars)
 

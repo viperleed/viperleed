@@ -466,8 +466,8 @@ def init_domains(rp):
                     dp.rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
-                    parameters.modify(dp.rp, "SYMMETRY_CELL_TRANSFORM",
-                                      path=dp.workdir)
+                    with execute_in_dir(dp.workdir):
+                        parameters.modify(dp.rp, 'SYMMETRY_CELL_TRANSFORM')
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
