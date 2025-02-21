@@ -70,7 +70,7 @@ class ParametersReader(InputFileReader):
         # We treat STOP differently, as its presence, even without
         # an equal sign, is interpreted as 'please, stop right now'
         if self._stop_requested(line):
-            return 'STOP', Assignment('True', 'STOP')
+            return 'STOP', Assignment('True', 'STOP', line)
 
         if '=' not in line:
             self._complain_about_missing_equals(line)
@@ -97,6 +97,7 @@ class ParametersReader(InputFileReader):
             raise ParameterHasNoValueError(parameter=param)
         assignment = Assignment(values_str=values_str,
                                 parameter=param,
+                                raw_line=line,
                                 flags_str=flags)
         return param, assignment
 

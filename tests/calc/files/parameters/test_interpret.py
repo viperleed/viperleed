@@ -116,6 +116,7 @@ class _TestInterpretBase:
 
     def assignment(self, value_str, **kwargs):
         """Return an Assignment object for self.param."""
+        kwargs.setdefault('raw_line', '')
         return Assignment(value_str, self.param, **kwargs)
 
     def interpret(self, interpreter, value_str, **kwargs):
@@ -197,26 +198,27 @@ class TestSimpleParamsExamples:
 
     def test_interpret_n_bulk_layers_valid(self, interpreter):
         """Check assignment of valid N_BULK_LAYERS."""
-        assignment = Assignment('1', 'N_BULK_LAYERS')
+        assignment = Assignment('1', 'N_BULK_LAYERS', 'N_BULK_LAYERS = 1')
         interpreter.interpret_n_bulk_layers(assignment)
         assert interpreter.rpars.N_BULK_LAYERS == 1
 
     def test_interpret_n_bulk_layers_invalid(self, interpreter):
         """Check exceptions are raised for invalid N_BULK_LAYERS."""
         # N_BULK_LAYERS must be 1 or 2
-        assignment = Assignment('3', 'N_BULK_LAYERS')
+        assignment = Assignment('3', 'N_BULK_LAYERS', 'N_BULK_LAYERS = 3')
         with pytest.raises(err.ParameterRangeError):
             interpreter.interpret_n_bulk_layers(assignment)
 
     def test_interpret_t_debye(self, interpreter):
         """Check assignment of valid T_DEBYE."""
-        assignment = Assignment('300.0', 'T_DEBYE')
+        assignment = Assignment('300.0', 'T_DEBYE', '')
         interpreter.interpret_t_debye(assignment)
         assert interpreter.rpars.T_DEBYE == pytest.approx(300.0)
 
     def test_interpret_layer_stack_vertical(self, interpreter):
         """Check assignment of valid LAYER_STACK_VERTICAL."""
-        assignment = Assignment('c', 'LAYER_STACK_VERTICAL')
+        assignment = Assignment('c', 'LAYER_STACK_VERTICAL',
+                                'LAYER_STACK_VERTICAL = c')
         interpreter.interpret_layer_stack_vertical(assignment)
         assert not interpreter.rpars.LAYER_STACK_VERTICAL
 

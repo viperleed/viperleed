@@ -184,12 +184,15 @@ class Assignment:
         The right-hand side of the parameter assignment. Can also be
         passed as a tuple of strings upon instantiation. In this case
         elements will be joined.
+    parameter : str
+        The PARAMETER this assignment corresponds to.
+    raw_line : str
+        The full line, as read from the PARAMETERS file, possibly
+        excluding comments.
     flags_str : str
         The left-hand side of the parameter assignment, excluding the
         parameter itself. Can also be passed as a tuple of strings upon
         instantiation. In this case elements will be joined.
-    parameter : str
-        The PARAMETER this assignment corresponds to.
     flags : tuple
         The flags of the parameter as a tuple of strings.
         This is automatically generated from the string
@@ -201,6 +204,7 @@ class Assignment:
     """
     values_str: str
     parameter: str
+    raw_line: str
     flags_str: str = ''
     flags: tuple = non_init_field()
     values: tuple = non_init_field()

@@ -170,10 +170,13 @@ class TestAssignment:
 
     def test_creation(self):
         """Check attributes of a successfully created Assignment."""
-        assignment = Assignment(values_str='value1 value2', parameter='PARAM')
+        assignment = Assignment(values_str='value1 value2',
+                                parameter='PARAM',
+                                raw_line='PARAM = value1 value2')
         assert assignment.parameter == 'PARAM'
         assert assignment.value == 'value1'
         assert assignment.values == ('value1', 'value2')
+        assert assignment.raw_line == 'PARAM = value1 value2'
 
     _empty_values = {
         'string values': {'values_str': '', 'parameter': 'P'},
@@ -184,26 +187,34 @@ class TestAssignment:
     @parametrize(empty_kwargs=_empty_values.values(), ids=_empty_values)
     def test_creation_empty_is_valid(self, empty_kwargs):
         """Check that passing some empty inputs is acceptable."""
+        empty_kwargs.setdefault('raw_line', '')
         with not_raises(Exception):
             assignment = Assignment(**empty_kwargs)
         assert not assignment.values
 
     def test_flag(self):
         """Check correct interpretation of the first flag."""
-        assignment = Assignment(values_str='value', parameter='PARAM',
+        assignment = Assignment(values_str='value',
+                                parameter='PARAM',
+                                raw_line='PARAM --flag1 --flag2 = value',
                                 flags_str='--flag1 --flag2')
         assert assignment.flag == '--flag1'
 
     def test_other_flags(self):
         """Check correct interpretation of flags beyond the first one."""
-        assignment = Assignment(values_str='value', parameter='PARAM',
-                                flags_str=('--flag1', '--flag2', '--flag3'))
+        assignment = Assignment(
+            values_str='value',
+            parameter='PARAM',
+            raw_line='PARAM --flag1 --flag2 --flag3 = value',
+            flags_str=('--flag1', '--flag2', '--flag3'),
+            )
         assert assignment.other_flags == ('--flag2', '--flag3')
 
     def test_other_values(self):
         """Check correct interpretation of values beyond the first one."""
         assignment = Assignment(values_str=('value1', 'value2', 'value3'),
-                                parameter='PARAM')
+                                parameter='PARAM',
+                                raw_line='PARAM = value1 value2 value3')
         assert assignment.other_values == ('value2', 'value3')
 
     _values_to_unpack = {
@@ -225,7 +236,9 @@ class TestAssignmentRaises:
     def test_creation_no_parameter(self):
         """Check complaints when initializing with one empty argument."""
         with pytest.raises(ValueError):
-            Assignment(values_str='value1 value2', parameter='')
+            Assignment(values_str='value1 value2',
+                       parameter='',
+                       raw_line='value1 value2')
 
     _wrong_type = {
         'values': {'values_str': 123, 'parameter': 'P'},
@@ -236,6 +249,7 @@ class TestAssignmentRaises:
     @parametrize(kwargs=_wrong_type.values(), ids=_wrong_type)
     def test_assignment_creation_non_string_values(self, kwargs):
         """Check complaints when initializing with one wrong type."""
+        kwargs.setdefault('raw_line', '')
         with pytest.raises(TypeError):
             Assignment(**kwargs)
 
