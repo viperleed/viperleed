@@ -86,7 +86,7 @@ def initialization(sl, rp, subdomain=False):
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info(f"Found SYMMETRY_CELL_TRANSFORM {ws}")
             sl.symbaseslab = ssl
-            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM")                    #TODO: there should probably a comment in the PARAMETERS file?
+            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM")                    # TODO: there should probably a comment in the PARAMETERS file?
         else:
             logger.warning(
                 f"POSCAR unit cell is not minimal (supercell {ws}). "
