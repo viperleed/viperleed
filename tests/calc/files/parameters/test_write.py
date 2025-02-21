@@ -170,6 +170,35 @@ class TestParametersEditor:
         assert modified[0].comment == twice['comment']
         assert modified[0].fmt_value == f'{twice["new_value"]:.4f}'
 
+    def test_write_comment_out_then_edit(self, read_one_param_file):
+        """Check successive commenting and editing of a parameter."""
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            editor.comment_out_parameter('LMAX')
+            rpars.LMAX = LMax(3, 16)
+            editor.modify_param('LMAX')
+        old_value = '! LMAX = 8-14'
+        comment = '! line automatically changed to:'
+        check_file_modified(fpath, old_value, comment)
+
+    def test_write_edit_then_comment_out(self, read_one_param_file):
+        """Check successive editing and commenting of a parameter."""
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            rpars.LMAX = LMax(3, 16)
+            editor.modify_param('LMAX')
+            editor.comment_out_parameter('LMAX')
+        old_value = '! LMAX = 8-14'
+        comment = '! line commented out automatically'
+        check_file_modified(fpath, old_value, comment)
+        for not_present in ('LMAX = 3-16', '! LMAX = 3-16'):
+            try:
+                check_file_modified(fpath, not_present)
+            except AssertionError:
+                pass
+            else:
+                pytest.fail(reason=f'Unexpectedly wrote {not_present!r}')
+
     def test_write_modified_nothing(self, read_one_param_file):
         """Check that file is unchanged with no edits."""
         fpath, rpars = read_one_param_file
