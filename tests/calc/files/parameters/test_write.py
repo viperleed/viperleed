@@ -147,11 +147,10 @@ class TestParametersEditor:
         editor = ParametersFileEditor(rpars)
         modpar, new_value, comment = 'BULK_LIKE_BELOW', 0.23, 'Test Comment'
         modified = editor.modify_param(modpar, new_value, comment=comment)
-        assert len(modified) == 1
-        assert not modified[0].only_comment_out
-        assert modified[0].param == modpar
-        assert modified[0].comment == comment
-        assert modified[0].fmt_value == '0.2300'
+        assert not modified.only_comment_out
+        assert modified.param == modpar
+        assert modified.comment == comment
+        assert modified.fmt_value == '0.2300'
 
     def test_modify_twice(self):
         """Test correct subsequent modification of the same parameter."""
@@ -164,11 +163,10 @@ class TestParametersEditor:
                  'comment': 'Second edit'}
         editor.modify_param(modpar, **once)
         modified = editor.modify_param(modpar, **twice)
-        assert len(modified) == 1
-        assert not modified[0].only_comment_out
-        assert modified[0].param == modpar
-        assert modified[0].comment == twice['comment']
-        assert modified[0].fmt_value == f'{twice["new_value"]:.4f}'
+        assert not modified.only_comment_out
+        assert modified.param == modpar
+        assert modified.comment == twice['comment']
+        assert modified.fmt_value == f'{twice["new_value"]:.4f}'
 
     def test_write_comment_out_then_edit(self, read_one_param_file):
         """Check successive commenting and editing of a parameter."""
@@ -307,6 +305,21 @@ class TestCommentOutAndModifyFunctions:
         with execute_in_dir(fpath.parent):
             modify(rpars, 'LMAX')
         check_file_modified(fpath, 'LMAX = 3-16')
+        check_marked_as_edited(rpars)
+
+    def test_modify_replicated_param(self, read_one_param_file):
+        """Check edit of one parameter that the user gave multiple times."""
+        fpath, rpars = read_one_param_file
+        rpars.BULK_LIKE_BELOW = 12345
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'BULK_LIKE_BELOW')
+        _duplicate = '! Duplicate values given. This was ignored.'
+        _auto = '! line automatically changed to:'
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.32', _duplicate)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.33', _duplicate)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.34', _duplicate)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.35', _auto)
+        check_file_modified(fpath, 'BULK_LIKE_BELOW = 12345.0000')
         check_marked_as_edited(rpars)
 
     def test_add_new_param(self, read_one_param_file):

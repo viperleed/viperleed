@@ -70,8 +70,8 @@ def modify(rpars, modpar, new=None, comment='', path=''):
         PARAMETERS file.
     """
     with ParametersFileEditor(rpars, path=path) as editor:
-        new_params = editor.modify_param(modpar, new_value=new, comment=comment)
-    return new_params[0].fmt_value
+        new_param = editor.modify_param(modpar, new_value=new, comment=comment)
+    return new_param.fmt_value
 
 
 # This is almost a dataclass (but not quite), all the
@@ -309,25 +309,26 @@ class ParametersFileEditor(AbstractContextManager):
 
     def comment_out_parameter(self, param, comment='', original=None):
         """Mark param as to be completely commented out."""
-        kwargs = {
-            'param': param,
-            'rpars_or_value': self._rpars,
-            'comment': comment,
-            'original': original,
-            'only_comment_out': True,
-            }
-        return self._mark_parameter_edits(**kwargs)
+        assignments = self._infer_original_assignments(param, original)
+        return self._comment_out_multiple_assignments(param,
+                                                      assignments,
+                                                      comment)
 
-    def modify_param(self, param, new_value=None, comment='', original=None):
+    def modify_param(self, param, new_value=None, comment='', original=None):   # Here we should probably comment out repeated single-assignment parameters except for the last one
         """Mark param as to be modified from the current value in rpars."""
-        kwargs = {
-            'param': param,
-            'rpars_or_value': (self._rpars if new_value is None
-                               else new_value),
-            'comment': comment,
-            'original': original,
-            }
-        return self._mark_parameter_edits(**kwargs)
+        *to_comment, to_edit = self._infer_original_assignments(param, original)
+        # Comment out any parameter that the user may have given
+        # more than once (and for which we consider only the last
+        # value).
+        _duplicates = 'Duplicate values given. This was ignored.'
+        self._comment_out_multiple_assignments(param, to_comment, _duplicates)
+
+        # Finally, actually edit the one that needs to be edited
+        if new_value is None:
+            new_value = self._rpars
+        modified = ModifiedParameterValue(param, new_value, to_edit, comment)
+        self._to_modify[(param, to_edit)] = modified
+        return modified
 
     def write_modified_parameters(self):
         """Write a new PARAMETERS, modifying all the requested lines."""
@@ -363,25 +364,29 @@ class ParametersFileEditor(AbstractContextManager):
             _LOGGER.error(f'Error reading {self._filename} file.')
             raise
 
+    def _comment_out_multiple_assignments(self, param, assignments, comment):
+        """Mark multiple assignments for param as to be commented."""
+        kwargs = {
+            'param': param,
+            'rpars_or_value': self._rpars,  # Not used anyway
+            'comment': comment,
+            'only_comment_out': True,
+            }
+        commented = []
+        for original_assignment in assignments:
+            comment_kwargs = kwargs.copy()
+            comment_kwargs['original'] = original_assignment
+            _edited = ModifiedParameterValue(**comment_kwargs)
+            self._to_modify[(param, original_assignment)] = _edited
+            commented.append(_edited)
+        return commented
+
     def _get_comment_line_for(self, modified, raw_line):
         """Return a commented version of `raw_line`."""
         if modified.only_comment_out:
             comment = modified.comment or 'line commented out automatically'
             return f'! {raw_line.rstrip():<33} ! {comment}\n'
         return f'! {raw_line.rstrip():<33} ! line automatically changed to:\n'
-
-    def _mark_parameter_edits(self, **kwargs):
-        """Remember that param's value is to be changed. Return the changes."""
-        param, original = kwargs['param'], kwargs['original']
-        assignments = self._infer_original_assignments(param, original)
-        modified = []
-        for original_assignment in assignments:
-            mod_value_kwargs = kwargs.copy()
-            mod_value_kwargs['original'] = original_assignment
-            _edited = ModifiedParameterValue(**mod_value_kwargs)
-            self._to_modify[(param, original_assignment)] = _edited
-            modified.append(_edited)
-        return modified
 
     def _infer_original_assignments(self, param, original):
         """Find the relevant original assignments for param."""
