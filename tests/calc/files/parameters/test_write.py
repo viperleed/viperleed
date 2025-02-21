@@ -191,8 +191,8 @@ class TestParametersEditor:
         """check correct commenting-out of one parameter."""
         fpath, rpars = read_one_param_file
         with ParametersFileEditor(rpars, path=fpath.parent) as editor:
-            editor.comment_out_parameter('SITE_DEF')  # Two of them!
-        assert all_commented_out(fpath, 'SITE_DEF')
+            editor.comment_out_parameter('BULK_LIKE_BELOW')  # 4 times!
+        assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
         check_marked_as_edited(rpars)
 
 
