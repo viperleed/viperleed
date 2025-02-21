@@ -155,12 +155,12 @@ class TestParametersEditor:
         assert not rpars.files_to_out
 
     @staticmethod
-    def _modify_one_param(editor, rpars):
+    def _modify_one_param(editor, rpars, new_value=0.9876):
         """Edit one parameter, return a comment."""
-        rpars.BULK_LIKE_BELOW = 0.9876
-        comment = 'Decreasing digits'
+        rpars.BULK_LIKE_BELOW = new_value
+        comment = f'Value changed to {new_value}'
         editor.modify_param('BULK_LIKE_BELOW', comment=comment)
-        return comment, 'BULK_LIKE_BELOW = 0.9876'
+        return comment, f'BULK_LIKE_BELOW = {new_value:.4f}'
 
     def test_write_modified_called(self, read_one_param_file):
         """Check editing for explicit call to write_modified_parameters."""
@@ -185,6 +185,21 @@ class TestParametersEditor:
             else:
                 pytest.fail(reason='File was modified too early')
         check_file_modified(fpath, value, comment)
+        check_marked_as_edited(rpars)
+
+    def test_write_modified_twice(self, read_one_param_file):
+        """Check editing behaviour when used as a context manager."""
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            comment_1, value_1 = self._modify_one_param(editor, rpars, 0.1234)
+            comment_2, value_2 = self._modify_one_param(editor, rpars, 0.7865)
+        try:
+            check_file_modified(fpath, value_1, comment_1)
+        except AssertionError:
+            pass
+        else:
+            pytest.fail(reason='Only the last modification should be written')
+        check_file_modified(fpath, value_2, comment_2)
         check_marked_as_edited(rpars)
 
     def test_write_commented_param(self, read_one_param_file):
@@ -235,4 +250,18 @@ class TestCommentOutAndModifyFunctions:
         with execute_in_dir(fpath.parent):
             modify(rpars, 'LMAX')
         check_file_modified(fpath, 'LMAX = 3-16')
+        check_marked_as_edited(rpars)
+
+    def test_modify_param_twice(self, read_one_param_file):
+        """Check effective modification of one parameter."""
+        fpath, rpars = read_one_param_file
+        once, twice = LMax(3, 16), LMax(9, 11)
+        with execute_in_dir(fpath.parent):
+            for new_value in (once, twice):
+                rpars.LMAX = new_value
+                modify(rpars, 'LMAX')
+        check_file_modified(fpath, 'LMAX = 9-11')
+        check_file_modified(fpath,
+                            '! LMAX = 3-16',
+                            comment='! line automatically changed to:')
         check_marked_as_edited(rpars)
