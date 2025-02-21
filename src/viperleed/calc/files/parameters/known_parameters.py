@@ -99,7 +99,7 @@ KNOWN_PARAMS = (
 
 _DEPRECATED = {  # alias: (since version, till version), both inclusive
     'parabolafit': ('0.11.0', None),
-}
+    }
 
 
 def _make_alias(param):

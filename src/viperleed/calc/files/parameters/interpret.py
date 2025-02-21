@@ -76,6 +76,7 @@ _LOGGER = logging.getLogger(parent_name(__name__))
 # key is parameter name, value is tuple of keyword arguments that should be
 # passed to interpret_bool_parameter, in order.
 _SIMPLE_BOOL_PARAMS = {
+    'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'},),
     'LOG_SEARCH' : (),
     'PHASESHIFTS_CALC_OLD' : (),
     'PHASESHIFTS_OUT_OLD' : (),
@@ -85,7 +86,6 @@ _SIMPLE_BOOL_PARAMS = {
     'SYMMETRIZE_INPUT' : (),
     'SYMMETRY_FIND_ORI' : (),
     'TL_IGNORE_CHECKSUM' : (),
-    'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'},),
     }
 
 

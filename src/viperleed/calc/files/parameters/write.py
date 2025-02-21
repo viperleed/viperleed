@@ -20,7 +20,6 @@ from collections.abc import Sequence
 from contextlib import AbstractContextManager
 import logging
 from pathlib import Path
-import shutil
 
 import numpy as np
 

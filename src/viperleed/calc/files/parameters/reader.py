@@ -31,6 +31,9 @@ from .known_parameters import from_alias
 from .utils import Assignment
 
 
+# To me this pylint complaint does not make much sense
+# here. The public methods come from the parent.
+# pylint: disable-next=too-few-public-methods
 class ParametersReader(InputFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
 
@@ -121,9 +124,6 @@ class ParametersReader(InputFileReader):
         return param, flags, values_str
 
 
-# To me this pylint complaint does not make much sense
-# here. The public methods come from the parent.
-# pylint: disable-next=too-few-public-methods
 class RawLineParametersReader(ParametersReader):
     """A ParametersReader that also returns lines exactly as they were read.
 
