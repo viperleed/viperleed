@@ -137,9 +137,28 @@ class RawLineParametersReader(ParametersReader):
         return self._read_one_line(next(self._file_obj))
 
     def _read_one_line(self, line):
-        """Return a parameter, and the whole raw line it was in."""
+        """Read one raw line of a PARAMETERS file.
+
+        Parameters
+        ----------
+        line : str
+            The whole raw line, exactly as read from file.
+            It may includes comments.
+
+        Returns
+        -------
+        param : str
+            The parameter name that this line corresponds to. May
+            be an empty string if `line` does not correspond to a
+            parameter assignment.
+        assignment : Assignment or None
+            The interpreted assignment of `param`. None if `line`
+            assigns no `param`.
+        line : str
+            The whole raw line, exactly as read from file.
+        """
         try:
-            param, *_ = super()._read_one_line(line)
+            param, assignment = super()._read_one_line(line)
         except ShouldSkipLineError:
-            param = ''
-        return param, line
+            param, assignment = '', None
+        return param, assignment, line

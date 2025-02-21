@@ -185,11 +185,18 @@ class TestReader:
     def test_raw_reader(self, path_to_params):
         """Check the lines returned by a RawLineParametersReader."""
         expected_lines = (
-            ('', '! ####### GLOBAL PARAMETERS #######\n'),
-            ('', '\n'),
-            ('RUN', 'RUN = 1-3\n'),
-            ('THEO_ENERGIES', 'THEO_ENERGIES =   50 700 3\n'),
+            ('', None, '! ####### GLOBAL PARAMETERS #######\n'),
+            ('', None, '\n'),
+            ('RUN', Assignment('1-3', 'RUN', 'RUN = 1-3'), 'RUN = 1-3\n'),
             )
+        expected_lines += ((
+            'THEO_ENERGIES',
+            Assignment('50 700 3',
+                       'THEO_ENERGIES',
+                       'THEO_ENERGIES =   50 700 3'),
+            'THEO_ENERGIES =   50 700 3\n'
+            ),)
+
         with RawLineParametersReader(path_to_params) as reader:
             # pylint: disable=protected-access
             for i, (expected, _read) in enumerate(zip(expected_lines, reader)):

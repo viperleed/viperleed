@@ -309,7 +309,7 @@ class ParametersFileEditor(AbstractContextManager):
         self._has_header = False
         _head_mark = '! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #'
         with self._file.open('w', encoding='utf-8') as self._write_param_file:
-            for param, raw_line in lines:
+            for param, _, raw_line in lines:
                 if _head_mark in raw_line:
                     self._has_header = True
                 self._write_one_line(param, raw_line)
