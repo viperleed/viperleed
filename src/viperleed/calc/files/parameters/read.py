@@ -76,8 +76,7 @@ def read(filename='PARAMETERS'):
                 continue
             if param == 'STOP':
                 comment_out_stop = True
-            else:
-                rpars.readParams[param].append(assignment)
+            rpars.readParams[param].append(assignment)
 
     if comment_out_stop:
         _LOGGER.warning(

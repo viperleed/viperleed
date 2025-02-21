@@ -28,6 +28,7 @@ from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
 from .reader import RawLineParametersReader
+from .utils import Assignment
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
@@ -69,8 +70,8 @@ def modify(rpars, modpar, new=None, comment='', path=''):
         PARAMETERS file.
     """
     with ParametersFileEditor(rpars, path=path) as editor:
-        new_param = editor.modify_param(modpar, new_value=new, comment=comment)
-    return new_param.fmt_value
+        new_params = editor.modify_param(modpar, new_value=new, comment=comment)
+    return new_params[0].fmt_value
 
 
 # This is almost a dataclass (but not quite), all the
@@ -119,7 +120,7 @@ class ModifiedParameterValue:
         }
     _wood_or_matrix = {'SYMMETRY_CELL_TRANSFORM', 'SUPERLATTICE'}
 
-    def __init__(self, param, rpars_or_value,
+    def __init__(self, param, rpars_or_value, original,
                  comment='', only_comment_out=False):
         """Initialize instance.
 
@@ -132,6 +133,10 @@ class ModifiedParameterValue:
             the current value of the corresponding attribute,
             otherwise, it is treated as the raw version of the
             new value.
+        original : Assignment or None
+            The original value of the parameter that is to
+            be modified. May be None if the parameter had
+            no assignment (i.e., it has to be written anew).
         comment : str, optional
             Extra comments to add to the line that should be
             written.
@@ -146,12 +151,30 @@ class ModifiedParameterValue:
         self.only_comment_out = only_comment_out
         self.already_written = False
         self.param = param
+        self.original = original
         self.comment = comment
         self._raw_value = None
         self.fmt_value = ''
         self.line = ''
         if not self.only_comment_out:
             self._update(rpars_or_value)
+
+    def to_assignment(self):
+        """Return an Assignment for this modified parameter.
+
+        Returns
+        -------
+        assignment : Assignment or None
+            An assignment for the edited value of this parameter.
+            None if the parameter was only commented out.
+        """
+        if self.only_comment_out:
+            return None
+        flags = self.original.flags_str if self.original else ''
+        return Assignment(self.fmt_value,
+                          self.param,
+                          raw_line=strip_comments(self.line),
+                          flags_str=flags)
 
     def _update(self, rpars_or_value):
         """Gather the value, its formatted version and a line."""
@@ -190,7 +213,10 @@ class ModifiedParameterValue:
     def _format_line(self):
         """Return a formatted version of the new line for a PARAMETER."""
         value = self.fmt_value
-        line = value if '=' in value else f'{self.param} = {value}'
+        flags = ('' if not self.original or not self.original.flags_str
+                 else f' {self.original.flags_str}')
+        line = (value if '=' in value
+                else f'{self.param}{flags} = {value}')
         if self.comment:
             line = f'{line.rstrip():<35} ! {self.comment}'
         return line + '\n'
@@ -281,21 +307,27 @@ class ParametersFileEditor(AbstractContextManager):
         self.write_modified_parameters()
         return super().__exit__(exc_type, exc_value, traceback)
 
-    def comment_out_parameter(self, param, comment=''):
+    def comment_out_parameter(self, param, comment='', original=None):
         """Mark param as to be completely commented out."""
-        commented = ModifiedParameterValue(param, self._rpars,
-                                           comment=comment,
-                                           only_comment_out=True)
-        self._to_modify[param] = commented
-        return commented
+        kwargs = {
+            'param': param,
+            'rpars_or_value': self._rpars,
+            'comment': comment,
+            'original': original,
+            'only_comment_out': True,
+            }
+        return self._mark_parameter_edits(**kwargs)
 
-    def modify_param(self, param, new_value=None, comment=''):
+    def modify_param(self, param, new_value=None, comment='', original=None):
         """Mark param as to be modified from the current value in rpars."""
-        if new_value is None:
-            new_value = self._rpars
-        mod_param = ModifiedParameterValue(param, new_value, comment=comment)
-        self._to_modify[param] = mod_param
-        return mod_param
+        kwargs = {
+            'param': param,
+            'rpars_or_value': (self._rpars if new_value is None
+                               else new_value),
+            'comment': comment,
+            'original': original,
+            }
+        return self._mark_parameter_edits(**kwargs)
 
     def write_modified_parameters(self):
         """Write a new PARAMETERS, modifying all the requested lines."""
@@ -308,10 +340,10 @@ class ParametersFileEditor(AbstractContextManager):
         self._has_header = False
         _head_mark = '! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #'
         with self._file.open('w', encoding='utf-8') as self._write_param_file:
-            for param, _, raw_line in lines:
+            for param, assignment, raw_line in lines:
                 if _head_mark in raw_line:
                     self._has_header = True
-                self._write_one_line(param, raw_line)
+                self._write_one_line(param, assignment, raw_line)
             self._write_missing_parameters()
         self._to_modify.clear()
 
@@ -338,17 +370,54 @@ class ParametersFileEditor(AbstractContextManager):
             return f'! {raw_line.rstrip():<33} ! {comment}\n'
         return f'! {raw_line.rstrip():<33} ! line automatically changed to:\n'
 
+    def _mark_parameter_edits(self, **kwargs):
+        """Remember that param's value is to be changed. Return the changes."""
+        param, original = kwargs['param'], kwargs['original']
+        assignments = self._infer_original_assignments(param, original)
+        modified = []
+        for original_assignment in assignments:
+            mod_value_kwargs = kwargs.copy()
+            mod_value_kwargs['original'] = original_assignment
+            _edited = ModifiedParameterValue(**mod_value_kwargs)
+            self._to_modify[(param, original_assignment)] = _edited
+            modified.append(_edited)
+        return modified
+
+    def _infer_original_assignments(self, param, original):
+        """Find the relevant original assignments for param."""
+        # Notice the use of .get instead of __getitem__: since
+        # readParams is a defaultdict, using __getitem__ would
+        # create a non-existing item. This may later screw up
+        # with checks like "param in readParams".
+        assignments = tuple(self._rpars.readParams.get(param, ()))
+        return assignments or (None,)
+
     def _is_unchanged(self, modified, raw_line):
         """Return whether `modified` is already present in `raw_line`."""
         return strip_comments(modified.line) == strip_comments(raw_line)
 
-    def _write_one_line(self, param, raw_line):
+    def _update_read_params(self, modified):
+        """Edit readParams to reflect the changes in `modified`."""
+        # Use .get instead of __getitem__ to avoid adding the key
+        read_ = self._rpars.readParams.get(modified.param, None)
+        if not read_ or modified.already_written:
+            return
+        try:
+            read_.remove(modified.original)
+        except ValueError:
+            return
+        if not modified.only_comment_out:
+            read_.append(modified.to_assignment())
+        if not read_:
+            del self._rpars.readParams[modified.param]
+
+    def _write_one_line(self, param, assignment, raw_line):
         """Write one `raw_line` containing param."""
         if not param:  # Empty, comment, or invalid line
             self._write_param_file.write(raw_line)
             return
 
-        modified = self._to_modify.get(param, None)
+        modified = self._to_modify.get((param, assignment), None)
         if modified is None or self._is_unchanged(modified, raw_line):
             # No modification needed
             self._write_param_file.write(raw_line)
@@ -356,6 +425,7 @@ class ParametersFileEditor(AbstractContextManager):
 
         commented_line = self._get_comment_line_for(modified, raw_line)
         self._write_param_file.write(commented_line)
+        self._update_read_params(modified)
         self._write_new_parameter_line(modified)
 
     def _write_new_parameter_line(self, modified):

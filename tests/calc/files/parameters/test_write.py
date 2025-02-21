@@ -14,9 +14,12 @@ from pytest_cases import parametrize
 from viperleed.calc.classes.rparams import LMax
 from viperleed.calc.classes.rparams import LayerCuts
 from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.files import parameters
+from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.write import ModifiedParameterValue
 from viperleed.calc.files.parameters.write import ParametersFileEditor
-from viperleed.calc.files.parameters.write import comment_out, modify
+from viperleed.calc.files.parameters.write import comment_out
+from viperleed.calc.files.parameters.write import modify
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import strip_comments
 
@@ -27,14 +30,18 @@ class TestModifiedParameterValue:
     def test_comment_out_only(self):
         """Check attributes when parameter is to be commented out."""
         mod_param = ModifiedParameterValue('param1', 'value1',
+                                           original=None,
                                            only_comment_out=True)
         assert mod_param.only_comment_out
         assert mod_param.param == 'param1'
         assert not strip_comments(mod_param.line)
+        assert not mod_param.original
+        assert mod_param.to_assignment() is None
 
     def test_param_comment(self):
         """Check attributes when a comment is requested for a parameter."""
         mod_param = ModifiedParameterValue('N_BULK_LAYERS', 'value1',
+                                           original=None,
                                            comment='Test Comment')
         assert not mod_param.only_comment_out
         assert mod_param.param == 'N_BULK_LAYERS'
@@ -42,6 +49,8 @@ class TestModifiedParameterValue:
         assign, _comment = (s.strip() for s in mod_param.line.split('!'))
         assert _comment == 'Test Comment'
         assert assign == 'N_BULK_LAYERS = value1'
+        new_assignment = mod_param.to_assignment()
+        assert new_assignment == Assignment('value1', 'N_BULK_LAYERS', assign)
 
     _fmt_values = {
         'string': ('N_BULK_LAYERS', 3, '3'),
@@ -63,7 +72,7 @@ class TestModifiedParameterValue:
         """Check the expected formatting of example values."""
         rpars = Rparams()
         setattr(rpars, attr, value)
-        mod_param = ModifiedParameterValue(attr, rpars)
+        mod_param = ModifiedParameterValue(attr, rpars, original=None)
         assert mod_param.fmt_value == expected
 
     _fmt_layer_cuts = {
@@ -77,7 +86,7 @@ class TestModifiedParameterValue:
         attr = 'LAYER_CUTS'
         rpars = Rparams()
         setattr(rpars, attr, LayerCuts.as_layer_cuts(val))
-        mod_param = ModifiedParameterValue(attr, rpars)
+        mod_param = ModifiedParameterValue(attr, rpars, original=None)
         assert mod_param.fmt_value == expected
 
     _fmt_special_values = {
@@ -92,7 +101,7 @@ class TestModifiedParameterValue:
         rpars = Rparams()
         for attr, value in rpars_settings.items():
             setattr(rpars, attr, value)
-        mod_param = ModifiedParameterValue(param, rpars)
+        mod_param = ModifiedParameterValue(param, rpars, original=None)
         assert mod_param.fmt_value == expected
 
     _invalid = {
@@ -110,12 +119,12 @@ class TestModifiedParameterValue:
         except AttributeError:
             pass
         with pytest.raises(ValueError):
-            ModifiedParameterValue(attr, rpars)
+            ModifiedParameterValue(attr, rpars, original=None)
 
     def test_raises_no_formatter(self):
         """Check complaints when asking for a parameter without a formatter."""
         with pytest.raises(ValueError):
-            ModifiedParameterValue('PARAM_WITHOUT_FORMATTER', 1)
+            ModifiedParameterValue('PARAM_WITHOUT_FORMATTER', 1, original=None)
 
 
 class TestParametersEditor:
@@ -127,9 +136,10 @@ class TestParametersEditor:
         editor = ParametersFileEditor(rpars)
         modpar, comment = 'PARAM1', 'Test Comment'
         modified = editor.comment_out_parameter(modpar, comment=comment)
-        assert modified.only_comment_out
-        assert modified.param == modpar
-        assert modified.comment == comment
+        assert len(modified) == 1
+        assert modified[0].only_comment_out
+        assert modified[0].param == modpar
+        assert modified[0].comment == comment
 
     def test_modify_parameter_explicit_value(self):
         """Test successful execution of modify_param method."""
@@ -137,10 +147,28 @@ class TestParametersEditor:
         editor = ParametersFileEditor(rpars)
         modpar, new_value, comment = 'BULK_LIKE_BELOW', 0.23, 'Test Comment'
         modified = editor.modify_param(modpar, new_value, comment=comment)
-        assert not modified.only_comment_out
-        assert modified.param == modpar
-        assert modified.comment == comment
-        assert modified.fmt_value == '0.2300'
+        assert len(modified) == 1
+        assert not modified[0].only_comment_out
+        assert modified[0].param == modpar
+        assert modified[0].comment == comment
+        assert modified[0].fmt_value == '0.2300'
+
+    def test_modify_twice(self):
+        """Test correct subsequent modification of the same parameter."""
+        rpars = Rparams()
+        editor = ParametersFileEditor(rpars)
+        modpar = 'BULK_LIKE_BELOW'
+        once = {'new_value': 0.23,
+                'comment': 'First edit'}
+        twice = {'new_value': 0.99,
+                 'comment': 'Second edit'}
+        editor.modify_param(modpar, **once)
+        modified = editor.modify_param(modpar, **twice)
+        assert len(modified) == 1
+        assert not modified[0].only_comment_out
+        assert modified[0].param == modpar
+        assert modified[0].comment == twice['comment']
+        assert modified[0].fmt_value == f'{twice["new_value"]:.4f}'
 
     def test_write_modified_nothing(self, read_one_param_file):
         """Check that file is unchanged with no edits."""
@@ -265,3 +293,20 @@ class TestCommentOutAndModifyFunctions:
                             '! LMAX = 3-16',
                             comment='! line automatically changed to:')
         check_marked_as_edited(rpars)
+
+    def test_read_params_updated_when_modified(self, read_one_param_file):
+        """Check that rpars.readParams is updated upon modification."""
+        fpath, rpars = read_one_param_file
+        rpars.LMAX = LMax(3, 16)
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'LMAX')
+            rpars_again = parameters.read()
+        assert rpars.readParams == rpars_again.readParams
+
+    def test_read_params_updated_when_commented(self, read_one_param_file):
+        """Check that rpars.readParams is updated upon modification."""
+        fpath, rpars = read_one_param_file
+        with execute_in_dir(fpath.parent):
+            comment_out(rpars, 'BULK_LIKE_BELOW')  # 4 of them!
+            rpars_again = parameters.read()
+        assert rpars.readParams == rpars_again.readParams
