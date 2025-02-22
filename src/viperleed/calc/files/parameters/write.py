@@ -35,13 +35,13 @@ from .utils import Assignment
 _LOGGER = logging.getLogger(parent_name(__name__))
 
 
-def comment_out(rpars, modpar, comment=''):
+def comment_out(rpars, modpar, comment='', original=None):
     """Comment out modpar in the PARAMETERS file."""
     with ParametersFileEditor(rpars) as editor:
-        editor.comment_out_parameter(modpar, comment=comment)
+        editor.comment_out_parameter(modpar, comment, original)
 
 
-def modify(rpars, modpar, new=None, comment=''):
+def modify(rpars, modpar, new=None, comment='', original=None):
     """Change the value for `modpar` in the PARAMETERS file.
 
     The lines that contains `modpar` are commented out, and
@@ -60,16 +60,23 @@ def modify(rpars, modpar, new=None, comment=''):
         is None.
     comment : str, optional
         A comment to be added in the new line in PARAMETERS.
+    original : Assignment, optional
+        The user-given assignment for `modpar`, before modification.
+        This argument is only used if `modpar` is a parameter for which
+        all the user-given definitions are interpreted, rather than
+        only the last one. Used to discern which of the assignments
+        should be modified. It is a mandatory argument if `modpar`
+        was given multiple times by the user.
 
     Returns
     -------
-    new_value : str
-        String value of the parameter as inserted in the
-        PARAMETERS file.
+    new_value : ModifiedParameterValue
+        Information about the new value of the parameter as inserted
+        in the PARAMETERS file.
     """
     with ParametersFileEditor(rpars) as editor:
-        new_param = editor.modify_param(modpar, new_value=new, comment=comment)
-    return new_param.fmt_value
+        new_param = editor.modify_param(modpar, new, comment, original)
+    return new_param
 
 
 # This is almost a dataclass (but not quite), all the
@@ -395,10 +402,18 @@ class ParametersFileEditor(AbstractContextManager):
         assignments = tuple(self._rpars.readParams.get(param, ()))
         if param not in _ACCEPTS_MULTIPLE_ASSIGNMENTS:
             return assignments or (None,)
-        if len(assignments) > 1 and not original:
+        if len(assignments) == 1:
+            return assignments
+        if not original:
             raise TypeError(f'Cannot edit {param}: found multiple assignment '
                             'lines. Specify which line needs editing by '
                             'passing the \'original\' argument.')
+        try:
+            assignments.index(original)
+        except ValueError:
+            raise ValueError(f'Original {original} not found '
+                             f'for {param} among the user-given '
+                             f'ones: {assignments}') from None
         return (original,)
 
     def _is_unchanged(self, modified, raw_line):

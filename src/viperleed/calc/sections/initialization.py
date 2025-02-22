@@ -148,13 +148,14 @@ def initialization(sl, rp, subdomain=False):
             # to file below). The slab will have .layers and the
             # freshly detected .bulkslab.
             sl.detect_bulk(rp)
-            vec_str = parameters.modify(
+            bulk_repeat = parameters.modify(
                 rp, 'BULK_REPEAT',
-                comment='Automatically detected repeat vector'
+                comment='Automatically detected repeat vector',
                 )
             parameters.modify(rp, 'LAYER_CUTS')
             parameters.modify(rp, 'N_BULK_LAYERS')
-            logger.info(f'Detected bulk repeat vector: {vec_str}')
+            logger.info('Detected bulk repeat vector: %s',
+                        bulk_repeat.fmt_value)
         parameters.comment_out(rp, 'BULK_LIKE_BELOW')
 
     # create bulk slab:
@@ -170,11 +171,12 @@ def initialization(sl, rp, subdomain=False):
         except NoBulkRepeatError:
             pass
         else:
-            vec_str = parameters.modify(
+            bulk_repeat = parameters.modify(
                 rp, 'BULK_REPEAT',
                 comment='Automatically detected repeat vector'
                 )
-            logger.info(f'Detected bulk repeat vector: {vec_str}')
+            logger.info('Detected bulk repeat vector: %s',
+                        bulk_repeat.fmt_value)
             # update bulk slab vector
             sl.bulkslab.update_cartesian_from_fractional()
             sl.bulkslab.c_vector[:] = rp.BULK_REPEAT
