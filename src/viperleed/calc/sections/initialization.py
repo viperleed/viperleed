@@ -397,13 +397,13 @@ def init_domains(rp):
     must_use_auto_name = len(set(rp.DOMAINS.values())) != len(rp.DOMAINS)
     for name, path in rp.DOMAINS.items():
         # determine the target path
-        target = _make_domain_workdir(name,
-                                      path,
-                                      rp.paths.home,
-                                      must_use_auto_name)
-        dp = DomainParameters(target, name)
+        workdir = _make_domain_workdir(name,
+                                       path,
+                                       rp.paths.home,
+                                       must_use_auto_name)
+        dp = DomainParameters(workdir, name)
         dp.collect_input_files(path)
-        with execute_in_dir(target):
+        with execute_in_dir(dp.workdir):
             try:  # Initialize for that domain
                 _run_initialization_for_domain(dp, rp)
             except Exception:
@@ -713,9 +713,9 @@ def _make_domain_workdir(name, src, calc_started_at, must_use_auto_name):
     Parameters
     ----------
     name : str
-        The user-given name of the domain for which the work folder
-        should be created. Typically the left-side flag in a DOMAIN
-        assignment.
+        The user-given (or auto-generated) name of the domain for which
+        the work folder should be created. Typically the left-side flag
+        in a DOMAIN assignment.
     src : Path
         The path from where the domain input files should be collected.
     calc_started_at : Path or None
