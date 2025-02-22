@@ -23,6 +23,8 @@ from viperleed.calc.files.parameters.write import modify
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import strip_comments
 
+_MODULE = 'viperleed.calc.files.parameters.write'
+
 
 class TestModifiedParameterValue:
     """collection of tests for the (internal) ModifiedParameterValue class."""
@@ -140,6 +142,18 @@ class TestParametersEditor:
         assert modified[0].only_comment_out
         assert modified[0].param == modpar
         assert modified[0].comment == comment
+
+    def test_fails_to_read_parameters(self, read_one_param_file, mocker):
+        """Check complaint when reading PARAMETERS fails."""
+        fpath, rpars = read_one_param_file
+        mock_reader = mocker.MagicMock()
+        mocker.patch(f'{_MODULE}.RawLineParametersReader',
+                     return_value=mock_reader)
+        mock_reader.__enter__.side_effect = Exception('read failed')
+        with pytest.raises(Exception, match='read failed'):
+            with execute_in_dir(fpath.parent):
+                with ParametersFileEditor(rpars) as editor:
+                    editor.comment_out_parameter('PARAM1')
 
     def test_modify_parameter_explicit_value(self):
         """Test successful execution of modify_param method."""
