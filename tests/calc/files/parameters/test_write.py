@@ -7,6 +7,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-18'
 __license__ = 'GPLv3+'
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 from pytest_cases import parametrize
@@ -330,6 +332,47 @@ class TestCommentOutAndModifyFunctions:
             comment_out(rpars, 'BULK_LIKE_BELOW')
         assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
         check_marked_as_edited(rpars)
+
+    def test_modify_multi_value_one_given(self, read_domains_file):
+        """Check correct modification of one multi-valued parameter."""
+        fpath, rpars = read_domains_file
+        orig = next(a for a in rpars.readParams['DOMAIN']
+                    if a.flags_str == 'Bi')
+        with execute_in_dir(fpath.parent):
+            # Comment out one of the two
+            comment_out(rpars, 'DOMAIN', original=orig)
+            # And modify the other one, without giving the original
+            modify(rpars, 'DOMAIN', new=Path('other_path'))
+        check_file_modified(fpath, '! DOMAIN Bi = bismuth')
+        check_file_modified(fpath, '! DOMAIN = silver')
+        check_file_modified(fpath, 'DOMAIN = other_path')
+
+    def test_modify_multi_value_no_flag(self, read_domains_file):
+        """Check correct modification of one multi-valued parameter."""
+        fpath, rpars = read_domains_file
+        orig = next(a for a in rpars.readParams['DOMAIN']
+                    if a.values_str == 'silver')
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=orig)
+        check_file_modified(fpath, '! DOMAIN = silver')
+        check_file_modified(fpath, 'DOMAIN = other_path')
+
+    def test_modify_multi_value_with_flag(self, read_domains_file):
+        """Check correct modification of one multi-valued parameter."""
+        fpath, rpars = read_domains_file
+        orig = next(a for a in rpars.readParams['DOMAIN']
+                    if a.flags_str == 'Bi')
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=orig)
+        check_file_modified(fpath, '! DOMAIN Bi = bismuth')
+        check_file_modified(fpath, 'DOMAIN Bi = other_path')
+
+    def test_modify_multi_value_wrong_ori(self, read_domains_file):
+        """Check complaints when trying edit of a non-user assignment."""
+        fpath, rpars = read_domains_file
+        with execute_in_dir(fpath.parent):
+            with pytest.raises(ValueError, match='not found'):
+                modify(rpars, 'DOMAIN', new=Path('other_path'), original='abc')
 
     def test_modify_param(self, read_one_param_file):
         """Check effective modification of one parameter."""

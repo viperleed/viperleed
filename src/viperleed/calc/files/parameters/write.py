@@ -117,6 +117,7 @@ class ModifiedParameterValue:
         }
     _string_params = {   # Those for which str is enough
         'LMAX',
+        'DOMAIN',
         'N_BULK_LAYERS',
         'SYMMETRY_FIX',  # For now
         }

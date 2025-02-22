@@ -34,3 +34,10 @@ def read_one_param_file(data_path, read_parameters):
     """Read one example PARAMETERS file."""
     args = CasesParametersFile().case_stop(data_path)
     return read_parameters(args)
+
+
+@fixture
+def read_domains_file(data_path, read_parameters):
+    """Read one example PARAMETERS file."""
+    args = CasesParametersFile().case_domains(data_path)
+    return read_parameters(args)
