@@ -401,13 +401,13 @@ def init_domains(rp):
                                        path,
                                        rp.paths.home,
                                        must_use_auto_name)
-        dp = DomainParameters(workdir, name)
-        dp.collect_input_files(path)
-        with execute_in_dir(dp.workdir):
+        domain = DomainParameters(workdir, name)
+        domain.collect_input_files(path)
+        with execute_in_dir(domain.workdir):
             try:  # Initialize for that domain
-                _run_initialization_for_domain(dp, rp)
+                _run_initialization_for_domain(domain, rp)
             except Exception:
-                logger.error(f'Error while initializing {dp}')
+                logger.error(f'Error while initializing {domain}')
                 raise
     if len(rp.domainParams) < len(rp.DOMAINS):
         raise RuntimeError("Failed to read domain parameters")
