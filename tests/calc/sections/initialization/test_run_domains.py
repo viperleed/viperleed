@@ -7,9 +7,13 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-02-07'
 __license__ = 'GPLv3+'
 
+from pathlib import Path
+
 import pytest
 
 from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.files import parameters
 
@@ -30,27 +34,69 @@ class TestInitializationDomains:
                 self.check_path_contains(path_tree[name], contents)
 
     def collect_domain_info(self, init_domains):
-        """Collect information about the domains in he calculation."""
-        rpars = parameters.read(init_domains.test_path/'PARAMETERS')
+        """Collect information about the domains in the calculation."""
+        test_src = next(p for p in init_domains.input_files_paths
+                        # pylint: disable-next=magic-value-comparison
+                        if p.name == 'initialization')
+        rpars = parameters.read(test_src/'PARAMETERS')
         domains = rpars.readParams['DOMAIN']
-        src_path_to_folder_created = {
-            domain.values_str: f'Domain_{domain.flags_str}'
+        src_to_folders_created = {
+            domain.values_str: {f'Domain_{domain.flags_str}',
+                                f'{Path(domain.values_str).name}'}
             for domain in domains
             }
-        return src_path_to_folder_created
+        work_domains = {
+            src: init_domains.work_path/n
+            for src, paths in src_to_folders_created.items() for n in paths
+            if (init_domains.work_path/n).is_dir()
+            }
+        return src_to_folders_created, work_domains
 
     @pytest.mark.xfail(reason='Issue #301')
-    def test_domain_directories_copied(self, init_domains):                     # TODO: check also contents
+    def test_domain_directories_copied(self, init_domains):
         """Check that all Domain_xxx work directories are copied to root."""
-        work_domains = tuple(init_domains.work_path.glob('Domain_*'))
-        root_domains = tuple(init_domains.test_path.glob('Domain_*'))
-        assert len(root_domains) == len(work_domains)
+        _, work_domains = self.collect_domain_info(init_domains)
+        assert all((init_domains.test_path/p.name).is_dir()
+                   for p in work_domains.values())
+        for work_path in work_domains.values():
+            work_tree = filesystem_to_dict(work_path)
+            root_tree = filesystem_to_dict(
+                init_domains.test_path/work_path.name
+                )
+            assert root_tree[DEFAULT_SUPP] == work_tree[DEFAULT_SUPP]
+            assert root_tree[DEFAULT_OUT] == work_tree[DEFAULT_OUT]
 
     def test_domain_directories_created(self, init_domains):
         """Check that work contains the right Domain_xxx directories."""
-        domains = self.collect_domain_info(init_domains)
-        work_domains = tuple(init_domains.work_path.glob('Domain_*'))
-        assert len(work_domains) == len(domains)
+        src_domains, work_domains = self.collect_domain_info(init_domains)
+        assert len(work_domains) == len(src_domains)
+
+    @pytest.mark.xfail(reason='Issue #301')
+    def test_dommain_output_copied(self, init_domains):
+        """Check that the results of the main calculation are copied back."""
+        # NB: Not actually copied back, since we only run_calc
+        manifest = init_domains.read_manifest()
+        _, domains = self.collect_domain_info(init_domains)
+        for domain_path in domains.values():
+            assert f'{domain_path.name}/{DEFAULT_SUPP}' in manifest
+            assert f'{domain_path.name}/{DEFAULT_OUT}' in manifest
+
+    def test_domain_paths_edited(self, init_domains):
+        """Check that the PARAMETERS file was updated with the new paths."""
+        out_path = init_domains.work_path/DEFAULT_OUT
+        edited_assignments = parameters.read(out_path/'PARAMETERS').readParams['DOMAIN']
+        edited = {a.values_str for a in edited_assignments}
+        _, work_domains = self.collect_domain_info(init_domains)
+        work_paths = (f'./{p.name}' for p in work_domains.values())
+        assert all(new_path in edited for new_path in work_paths)
+
+    def test_main_output_copied(self, init_domains, re_match):
+        """Check that the results of the main calculation are copied back."""
+        # NB: Not actually copied back, since we only run_calc
+        manifest = init_domains.read_manifest()
+        assert any(re_match(rf'{LOG_PREFIX}', line) for line in manifest)
+        assert DEFAULT_SUPP in manifest
+        assert DEFAULT_OUT in manifest
 
     def test_successful_run(self, init_domains):
         """Check that initialization exits without errors."""
@@ -62,7 +108,7 @@ class TestInitializationDomains:
         test_src = next(p for p in init_domains.input_files_paths
                         # pylint: disable-next=magic-value-comparison
                         if p.name == 'initialization')
-        domains = self.collect_domain_info(init_domains)
+        _, domains = self.collect_domain_info(init_domains)
         original_inputs = filesystem_to_dict(test_src)
         expect_original_inputs = {
             # The ones in root
@@ -74,7 +120,7 @@ class TestInitializationDomains:
             }
         # And the ones in each domain folder
         for src_path, domain_folder in domains.items():
-            expect_original_inputs[domain_folder] = {
+            expect_original_inputs[domain_folder.name] = {
                 DEFAULT_SUPP: {
                     ORIGINAL_INPUTS_DIR_NAME: original_inputs[src_path],
                     },

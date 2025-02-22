@@ -648,7 +648,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                              'interpreted as either a path or a .zip file')
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(param, message=error_message)
-        self.rpars.DOMAINS[name] = full_path
+        self.rpars.DOMAINS[name] = (full_path, assignment)
 
     def interpret_domain_step(self, assignment):
         """Assign parameter DOMAIN_STEP."""

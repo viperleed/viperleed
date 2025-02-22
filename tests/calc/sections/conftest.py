@@ -156,6 +156,10 @@ class BaseCalcFilesSetup:
         with ZipFile(deltas_path, 'r') as archive:
             archive.extractall(self.work_path)
 
+    def read_manifest(self):
+        """Collect the contents of the main manifest file."""
+        return (self.work_path/'manifest').read_text().splitlines()
+
 
 @fixture(scope='session')
 @parametrize(surface=INIT_SURFACES, ids=INIT_SURFACES)

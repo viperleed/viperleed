@@ -106,8 +106,8 @@ class Rparams:
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
         self.BULK_REPEAT = None
-        self.DOMAINS = {}         # {name: path_to_tensors_zip_or_dir}
-        self.DOMAIN_STEP = 1      # area step in percent for domain search
+        self.DOMAINS = {}      # {name: (source_path, user_assignment)}
+        self.DOMAIN_STEP = 1   # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
         self.FILAMENT_WF = DEFAULTS['FILAMENT_WF']['lab6']   # work function of emitting cathode

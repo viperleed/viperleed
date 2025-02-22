@@ -394,15 +394,19 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     # Make sure we always have unique work folders for all domains
-    must_use_auto_name = len(set(rp.DOMAINS.values())) != len(rp.DOMAINS)
-    for name, path in rp.DOMAINS.items():
-        # determine the target path
+    nr_unique_paths = len(set(p for p, _ in rp.DOMAINS.values()))
+    must_use_auto_name = nr_unique_paths < len(rp.DOMAINS)
+    for name, (path, user_given) in rp.DOMAINS.items():
         workdir = _make_domain_workdir(name,
                                        path,
                                        rp.paths.home,
                                        must_use_auto_name)
         domain = DomainParameters(workdir, name)
         domain.collect_input_files(path)
+        mod_path = Path(domain.workdir.name)
+        mod_value = parameters.modify(rp, 'DOMAIN', f'./{mod_path}',
+                                      original=user_given)
+        rp.DOMAINS[name] = (mod_path, mod_value.to_assignment())
         with execute_in_dir(domain.workdir):
             try:  # Initialize for that domain
                 _run_initialization_for_domain(domain, rp)
