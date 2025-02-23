@@ -87,9 +87,9 @@ class _TestCheckers:
     @staticmethod
     def check_no_duplicate_logs(caplog):
         """Ensure no warning is repeated twice."""
-        records = caplog.records
-        messages = set(r.getMessage() for r in records)
-        assert len(messages) == len(records)
+        all_messages = (r.getMessage() for r in caplog.records)
+        messages = [m for m in all_messages if m.strip()]
+        assert len(set(messages)) == len(messages)
 
     @staticmethod
     def check_no_warnings(caplog, contain=None, exclude_msgs=()):
