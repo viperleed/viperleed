@@ -320,9 +320,10 @@ class ParametersFileEditor(AbstractContextManager):
                                                       assignments,
                                                       comment)
 
-    def modify_param(self, param, new_value=None, comment='', original=None):   # Here we should probably comment out repeated single-assignment parameters except for the last one
+    def modify_param(self, param, new_value=None, comment='', original=None):
         """Mark param as to be modified from the current value in rpars."""
-        *to_comment, to_edit = self._infer_original_assignments(param, original)
+        *to_comment, to_edit = self._infer_original_assignments(param,
+                                                                original)
         # Comment out any parameter that the user may have given
         # more than once (and for which we consider only the last
         # value).
@@ -409,12 +410,10 @@ class ParametersFileEditor(AbstractContextManager):
             raise TypeError(f'Cannot edit {param}: found multiple assignment '
                             'lines. Specify which line needs editing by '
                             'passing the \'original\' argument.')
-        try:
-            assignments.index(original)
-        except ValueError:
-            raise ValueError(f'Original {original} not found '
-                             f'for {param} among the user-given '
-                             f'ones: {assignments}') from None
+        # NB: here we purposely do not check whether original existed
+        # in assignments: we assume users want to ADD A NEW ONE, much
+        # like modifying other parameters that the user did not give
+        # explicitly.
         return (original,)
 
     def _is_unchanged(self, modified, raw_line):

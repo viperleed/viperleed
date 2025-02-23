@@ -333,6 +333,17 @@ class TestCommentOutAndModifyFunctions:
         assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
         check_marked_as_edited(rpars)
 
+    def test_modify_multi_value_add_new(self, read_domains_file):
+        """Check complaints when trying edit of a non-user assignment."""
+        fpath, rpars = read_domains_file
+        with execute_in_dir(fpath.parent):
+            new = Assignment('dummy old value',
+                             'DOMAIN',
+                             'DOMAIN added = this line did not exist',
+                             flags_str='added')
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=new)
+        check_file_modified(fpath, 'DOMAIN added = other_path')
+
     def test_modify_multi_value_one_given(self, read_domains_file):
         """Check correct modification of one multi-valued parameter."""
         fpath, rpars = read_domains_file
@@ -366,13 +377,6 @@ class TestCommentOutAndModifyFunctions:
             modify(rpars, 'DOMAIN', new=Path('other_path'), original=orig)
         check_file_modified(fpath, '! DOMAIN Bi = bismuth')
         check_file_modified(fpath, 'DOMAIN Bi = other_path')
-
-    def test_modify_multi_value_wrong_ori(self, read_domains_file):
-        """Check complaints when trying edit of a non-user assignment."""
-        fpath, rpars = read_domains_file
-        with execute_in_dir(fpath.parent):
-            with pytest.raises(ValueError, match='not found'):
-                modify(rpars, 'DOMAIN', new=Path('other_path'), original='abc')
 
     def test_modify_param(self, read_one_param_file):
         """Check effective modification of one parameter."""
