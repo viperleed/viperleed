@@ -344,6 +344,27 @@ class TestCommentOutAndModifyFunctions:
             modify(rpars, 'DOMAIN', new=Path('other_path'), original=new)
         check_file_modified(fpath, 'DOMAIN added = other_path')
 
+    def test_modify_multi_value_add_new_one_given(self, read_domains_file):
+        """Check complaints when trying edit of a non-user assignment."""
+        fpath, rpars = read_domains_file
+        orig = next(a for a in rpars.readParams['DOMAIN']
+                    if a.flags_str == 'Bi')
+        with execute_in_dir(fpath.parent):
+            # Comment out one of the two
+            comment_out(rpars, 'DOMAIN', original=orig)
+            new = Assignment('dummy old value',
+                             'DOMAIN',
+                             'DOMAIN added = this line did not exist',
+                             flags_str='added')
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=new)
+        try:
+            check_file_modified(fpath, '! DOMAIN = silver')
+        except AssertionError:
+            pass
+        else:
+            pytest.fails(reason='Unexpectedly commented out DOMAIN silver')
+        check_file_modified(fpath, 'DOMAIN added = other_path')
+
     def test_modify_multi_value_one_given(self, read_domains_file):
         """Check correct modification of one multi-valued parameter."""
         fpath, rpars = read_domains_file

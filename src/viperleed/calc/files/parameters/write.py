@@ -404,16 +404,17 @@ class ParametersFileEditor(AbstractContextManager):
         assignments = tuple(self._rpars.readParams.get(param, ()))
         if param not in _ACCEPTS_MULTIPLE_ASSIGNMENTS:
             return assignments or (None,)
-        if len(assignments) == 1:
+        if len(assignments) == 1 and not original:
             return assignments
-        if not original:
+        if len(assignments) > 1 and not original:
             raise TypeError(f'Cannot edit {param}: found multiple assignment '
                             'lines. Specify which line needs editing by '
                             'passing the \'original\' argument.')
         # NB: here we purposely do not check whether original existed
-        # in assignments: we assume users want to ADD A NEW ONE, much
-        # like modifying other parameters that the user did not give
-        # explicitly.
+        # in assignments. If that's the case, we will assume users want
+        # to ADD A NEW ONE, much like "modifying" a parameter that does
+        # not _ACCEPTS_MULTIPLE_ASSIGNMENTS and for which no explicit
+        # value was given by the user.
         return (original,)
 
     def _is_unchanged(self, modified, raw_line):
