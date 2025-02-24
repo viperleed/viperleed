@@ -445,7 +445,7 @@ class TestZipSubfolders:
                     archive=True,
                     compression_level=2)
         expect = self.packed_all
-        # The non-matching folder should sty where it is
+        # The non-matching folder should stay where it is
         expect[self.folder].update(tree[self.folder])
         assert clean == expect
         assert not caplog.text
