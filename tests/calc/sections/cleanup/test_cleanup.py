@@ -16,6 +16,7 @@ from pytest_cases import parametrize
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import _organize_all_work_directories
@@ -47,7 +48,7 @@ class TestCleanup:
     @fixture(name='manifest')
     def mock_manifest(self):
         """Return the contents of a sample manifest file."""
-        return {'file1.txt', 'file2.txt', 'dir1'}
+        return ManifestFile('file1.txt', 'file2.txt', 'dir1')
 
     def test_no_rpars(self, manifest, mock_implementation, mocker):
         """Check calls when no Rparams is passed."""
@@ -270,29 +271,34 @@ class TestWriteManifest:
 
     def test_fails(self, tmp_path, mocker, caplog):
         """Test logging when opening manifest fails."""
-        mocker.patch('pathlib.Path.write_text', side_effect=OSError)
         with execute_in_dir(tmp_path):
-            _write_manifest_file(('should not write',))
+            manifest = ManifestFile()
+            mocker.patch.object(manifest, 'write', side_effect=OSError)
+            _write_manifest_file(manifest)
         expect_log = 'Failed to write manifest file.'
         assert not (tmp_path/'manifest').is_file()
         assert expect_log in caplog.text
 
     def test_raises(self):
         """Check that only OSError is caught cleanly."""
-        with raises_test_exception('pathlib.Path.write_text'):
-            _write_manifest_file(('should not write',))
+        manifest = ManifestFile()
+        with raises_test_exception(manifest, 'write'):
+            _write_manifest_file(manifest)
 
     @parametrize(contents=_success.values(), ids=_success)
     def test_success(self, contents, tmp_path, caplog):
         """Check successful writing to the manifest file."""
         caplog.set_level(0)  # All messages
         with execute_in_dir(tmp_path):
-            _write_manifest_file(contents)
+            manifest = ManifestFile(*contents)
+            _write_manifest_file(manifest)
         manifest = tmp_path/'manifest'
         assert manifest.is_file()
 
         # Check contents
-        written = sorted(manifest.read_text().splitlines())
+        written = sorted(line
+                         for line in manifest.read_text().splitlines()
+                         if line)
         assert written == sorted(set(contents))
 
         # Check logging

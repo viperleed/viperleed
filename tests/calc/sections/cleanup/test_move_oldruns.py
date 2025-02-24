@@ -154,9 +154,8 @@ class TestFindNextWorkistoryContents:
             }
         all_files = skipped_files | collected_files
         all_dirs = skipped_dirs | collected_dirs
-        rpars.manifest |= collected_files
-        rpars.manifest |= all_dirs
-        rpars.manifest.add(calc_log)
+        for item in (*collected_files, *all_dirs, calc_log):
+            rpars.manifest.add(item)
         contents = tuple(Path(f) for f in (*all_files, *all_dirs))
         mocker.patch('pathlib.Path.iterdir', return_value=contents)
         mocker.patch('pathlib.Path.is_file', lambda f: f.name in all_files)
