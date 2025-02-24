@@ -20,6 +20,14 @@ _HEADER_LINE_RE = re.compile(r'\[(?P<label>.*)at (?P<path>.*)\]')
 _MANIFEST_NAME = 'manifest'
 
 
+class ManifestFileError(Exception):
+    """Base exception for manifest-related errors."""
+
+
+class InconsistenPathsError(ManifestFileError):
+    """The path of a content does not match the one of its header."""
+
+
 class ManifestFile:
     """A helper to handle calc-generated files/folders.
 
@@ -110,15 +118,16 @@ class ManifestFile:
         if not manifest.is_file():
             return
         section = self.path
+        rel_path = None
         with manifest.open('r', encoding='utf-8') as file:
             for line in file:
                 line = line.strip()
                 if not line:
                     continue
                 try:
-                    section = self._read_header_line(line)
+                    section, rel_path = self._read_header_line(line)
                 except ValueError:  # It's some contents
-                    self._sections[section].add(line)
+                    self._read_contents_line(line, section, rel_path)
 
     def write(self):
         """Write the contents of this ManifestFile to file."""
@@ -140,16 +149,28 @@ class ManifestFile:
                 file.write(f'[{label}at {relative_path.as_posix()}]\n')
                 self._write_contents(relative_path, contents, file)
 
+    def _read_contents_line(self, line, section, rel_path):
+        """Store the contents of line into a section."""
+        if not rel_path:  # Skip check for root files
+            content = line
+        elif not line.startswith(rel_path):
+            raise InconsistenPathsError(f'{line} should begin with '
+                                        f'{rel_path}') from None
+        else:
+            *_, content = line.split(rel_path + '/', maxsplit=1)
+        self._sections[section].add(str(content))
+
     def _read_header_line(self, line):
-        """Return the path of a subsection."""
+        """Return the path of a subsection and its relative version as str."""
         line = line.strip()
         match_ = _HEADER_LINE_RE.fullmatch(line)
         if not match_:
             raise ValueError(f'Not a header line: {line!r}')
-        path = Path(match_['path'].strip()).resolve()
+        path_str = match_['path'].strip()
+        path = Path(path_str).resolve()
         self._labels[path] = match_['label'].strip()
         self._sections[path] = set()
-        return path
+        return path, str(Path(path_str).as_posix())
 
     @staticmethod
     def _write_contents(path, contents, file):

@@ -14,6 +14,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.files.manifest import ManifestFile
+from viperleed.calc.files.manifest import InconsistenPathsError
 from viperleed.calc.lib.context import execute_in_dir
 
 
@@ -173,13 +174,34 @@ class TestManifestFile:
         for item in _SAMPLE_CONTENTS:
             assert item in sections[manifest.path]
 
+    def test_read_contents_line_raises(self, manifest):
+        """Check complaints for an invalid content path."""
+        wrong = 'wrong_path/contents'
+        with pytest.raises(InconsistenPathsError):
+            manifest._read_contents_line(wrong, None, 'right_path')
+
+    _read_line = {  # line, relative_path, expect
+        'root content': ('content', '', 'content'),
+        'relative content': ('path/to/content', 'path', 'to/content'),
+        'abs content': ('/abs/content', '/abs', 'content'),
+        }
+
+    @parametrize('line,rel_path,expect', _read_line.values(), ids=_read_line)
+    def test_read_contents_line_success(self, line, rel_path, expect):
+        """Check complaints for an invalid content path."""
+        manifest = ManifestFile()
+        # pylint: disable=protected-access                # OK in tests
+        manifest._sections['SECTION'] = set()
+        manifest._read_contents_line(line, 'SECTION', rel_path)
+        assert manifest._sections['SECTION'] == {expect}
+
     def test_read_header_line_trims_label(self):
         """Ensure _read_header_line() trims spaces in labels."""
         manifest = ManifestFile()
         label, path = 'My Label', '/test/path'
         line = f'[  {label}  at  {path}  ]'
         # pylint: disable-next=protected-access           # OK in tests
-        read_path = manifest._read_header_line(line)
+        read_path, _ = manifest._read_header_line(line)
         # pylint: disable-next=protected-access           # OK in tests
         assert manifest._labels[read_path] == label
         assert read_path == Path(path).resolve()
@@ -196,11 +218,11 @@ class TestManifestFile:
         mock_data = (
             'cwd_file.txt\n',
             '[some root folder at /test]\n',
-            'file1.txt\n',
-            'file2.log\n',
+            '/test/file1.txt\n',
+            '/test/file2.log\n',
             '\n',
             '[domain ABC at ./folder]\n',
-            'domain_file\n',
+            'folder/domain_file\n',
             '[at other]\n',
             )
         mock_open(*mock_data)
@@ -279,6 +301,22 @@ class TestManifestFile:
             '[at /external]': {'/external/external.txt', ''},
             }
         self.check_written_contents(manifest, expect)
+
+    def test_write_then_read(self, manifest):
+        """Check that reading back a written manifest changes nothing."""
+        with execute_in_dir(manifest.path):
+            Path('path_to_empty').mkdir()
+            Path('path_to_other').mkdir()
+            empty_manifest = ManifestFile(path='path_to_empty')
+            other_manifest = ManifestFile('content', path='path_to_other')
+            manifest.add_manifest(empty_manifest, label='empty')
+            manifest.add_manifest(other_manifest, label='other')
+            manifest.write()
+            read_back = ManifestFile()
+            read_back.read()
+        written = dict(manifest.iter_sections())
+        read = dict(read_back.iter_sections())
+        assert written == read
 
 
 class TestManifestFileRaises:
