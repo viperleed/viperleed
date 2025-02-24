@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+import os
 
 import pytest
 from pytest_cases import fixture, parametrize
@@ -55,13 +56,23 @@ class TestCopyFilesFromManifest:
     @fixture(name='manifest')
     def fixture_manifest(self, tmp_path):
         """Create a manifest file and its contents at tmp_path."""
+        manifest = 'file1.txt \nfile2  \n  \n\n  folder\n'
+        manifest += '''
+[folder at one]
+one/subfile.txt
+
+[Domain 3 at two]
+two/domain_file
+'''
         copied = {
             'file1.txt': 'Test file 1',
             'file2': 'Test file 2',
             'folder': {},
+            'one': {'subfile.txt': 'Subfile contents'},
+            'two': {'domain_file': 'domain file contents'},
             }
         stay = {
-            'manifest': 'file1.txt \nfile2  \n  \n\n  folder\n',
+            'manifest': manifest,
             'file_not_in_manifest': None,
             'folder_not_in_manifest': {}
             }
@@ -93,8 +104,8 @@ class TestCopyFilesFromManifest:
         """Check complaints are printed if copying resources fails."""
         manifest_file = tmp_path/'manifest'
         with manifest_file.open('a', encoding='utf-8') as file:
-            file.write('this_does_not_exist\n')
+            file.write('two/this_does_not_exist\n')
         self.test_copy_successful(manifest, tmp_path)
-        expect_print = 'Error copying this_does_not_exist'
+        expect_print = f'Error copying two{os.sep}this_does_not_exist'
         stdout = capsys.readouterr().out
         assert expect_print in stdout
