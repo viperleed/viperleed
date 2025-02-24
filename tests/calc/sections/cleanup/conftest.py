@@ -17,7 +17,7 @@ __license__ = 'GPLv3+'
 
 from pytest_cases import fixture
 
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 
 _MODULE = 'viperleed.calc.sections.cleanup'
 

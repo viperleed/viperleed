@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from viperleed.calc import symmetry
-from viperleed.calc.classes.rparams import DomainParameters
+from viperleed.calc.classes.rparams.domain_params import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import NoBulkRepeatError

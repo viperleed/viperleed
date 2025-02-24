@@ -12,7 +12,7 @@ from copy import deepcopy
 import numpy as np
 from pytest_cases import case, parametrize
 
-from viperleed.calc.classes.rparams import LMax
+from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.files import parameters
 
 from ...poscar_slabs import CasePOSCARSlabs

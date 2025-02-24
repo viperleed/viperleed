@@ -10,7 +10,8 @@ __license__ = 'GPLv3+'
 import pytest
 from pytest_cases import fixture
 
-from viperleed.calc.classes.rparams import Rparams, TheoEnergies
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.files import beams
 from viperleed.calc.files import iorfactor
 

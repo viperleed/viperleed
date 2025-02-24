@@ -13,9 +13,9 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.classes.rparams import LMax
-from viperleed.calc.classes.rparams import LayerCuts
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
+from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.files import parameters
 from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.write import ModifiedParameterValue

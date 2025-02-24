@@ -28,11 +28,13 @@ import re
 import numpy as np
 
 from viperleed import __version__
-from viperleed.calc.classes.rparams import EnergyRange
-from viperleed.calc.classes.rparams import IVShiftRange
-from viperleed.calc.classes.rparams import LayerCuts
-from viperleed.calc.classes.rparams import SymmetryEps
-from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
+from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
+from viperleed.calc.classes.rparams.special.l_max import LMax
+from viperleed.calc.classes.rparams.special.search_cull import SearchCull
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
@@ -887,7 +889,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
         try:
-            self.rpars.LMAX = self.rpars.LMAX.from_value(values)
+            self.rpars.LMAX = LMax.from_value(values)
         except ValueError as exc:  # out-of-range
             raise ParameterRangeError(param, message=str(exc)) from None
 
@@ -1344,7 +1346,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
         try:
-            cull = rpars.SEARCH_CULL.from_value(assignment.values)
+            cull = SearchCull.from_value(assignment.values)
         except TypeError as exc:   # Numeric value is not a number
             rpars.setHaltingLevel(1)
             raise ParameterFloatConversionError(param,

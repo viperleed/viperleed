@@ -20,7 +20,7 @@ import shutil
 
 from viperleed import __version__
 from viperleed.calc import LOGGER as logger
-from viperleed.calc.classes import rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import LOG_PREFIX
@@ -118,7 +118,7 @@ def run_calc(
                          "passed. Execution will stop.")
             cleanup(tmp_manifest)
             return 2, None
-        rp = rparams.Rparams()
+        rp = Rparams()
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmp_manifest)

@@ -20,7 +20,7 @@ __license__ = 'GPLv3+'
 import logging
 from pathlib import Path
 
-from viperleed.calc.classes import rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import parent_name
 
@@ -63,7 +63,7 @@ def read(filename='PARAMETERS'):
         _LOGGER.error('PARAMETERS file not found.')
         raise FileNotFoundError(filename)
 
-    rpars = rparams.Rparams()
+    rpars = Rparams()
     comment_out_stop = False
     with ParametersReader(filename, noisy=True) as param_file:
         while True:

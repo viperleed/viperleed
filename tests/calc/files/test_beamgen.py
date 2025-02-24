@@ -14,7 +14,7 @@ import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import symmetry
-from viperleed.calc.classes.rparams import EnergyRange
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.files import beamgen
 from viperleed.calc.lib.version import Version
 

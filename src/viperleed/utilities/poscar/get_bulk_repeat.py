@@ -20,7 +20,7 @@ import copy
 import numpy as np
 
 from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.slab import NoBulkRepeatError
 from viperleed.calc.files import poscar
 from viperleed.calc.lib.woods_notation import writeWoodsNotation

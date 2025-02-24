@@ -15,7 +15,7 @@ import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from viperleed import __version__
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut,

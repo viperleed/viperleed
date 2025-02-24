@@ -12,7 +12,7 @@ import logging
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files.parameters.errors import ParameterHasNoValueError
 from viperleed.calc.files.parameters.errors import ParameterNotRecognizedError
 from viperleed.calc.files.parameters.read import read, update
