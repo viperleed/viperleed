@@ -100,6 +100,7 @@ class TestManifestFile:
         manifest = ManifestFile()
         assert manifest.path == Path.cwd()
         assert len(manifest.paths) == 1
+        assert manifest.name == 'manifest'
 
     def test_init_with_contents(self, manifest):
         """Check correct initialization of a manifest with contents."""
@@ -142,6 +143,11 @@ class TestManifestFile:
         self.check_contents(manifest, other_manifest.path, 'b.log')
         # pylint: disable-next=protected-access           # OK in tests
         assert manifest._labels[other_manifest.path] != label
+
+    def test_contains(self, manifest):
+        """Check the correct outcome of the "in" operation."""
+        assert _SAMPLE_CONTENTS[0] in manifest
+        assert 'not_in_manifest' not in manifest
 
     def test_inplace_add_same_path(self, manifest):
         """Test in-place addition."""

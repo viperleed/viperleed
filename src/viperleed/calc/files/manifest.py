@@ -61,6 +61,11 @@ class ManifestFile:
         return False
 
     @property
+    def name(self):
+        """Return the default name of the manifest file."""
+        return _MANIFEST_NAME
+
+    @property
     def path(self):
         """Return the path to the folder containing this ManifestFile."""
         return self._path
@@ -69,6 +74,10 @@ class ManifestFile:
     def paths(self):
         """Return a tuple of all the paths in this ManifestFile."""
         return tuple(self._sections)
+
+    def __contains__(self, item):
+        """Return whether item is contained in this ManifestFile."""
+        return item in self._sections[self.path]
 
     def __iadd__(self, other):
         """Add the contents of another manifest file to this one."""
