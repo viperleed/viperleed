@@ -24,7 +24,8 @@ from viperleed.calc.classes import rparams
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import LOG_PREFIX
-from viperleed.calc.files import parameters, poscar
+from viperleed.calc.files import parameters
+from viperleed.calc.files import poscar
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.log_utils import prepare_calc_logger
@@ -47,7 +48,7 @@ def run_calc(
     source=None,
     home=None,
     ):
-    """Run a ViPErLEED calculation.
+    """Run a ViPErLEED calculation in the current directory.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
     replaced by passing the `slab` and/or `present_params` kwargs.
