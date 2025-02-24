@@ -212,7 +212,7 @@ def run_calc(
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
         logger.info("Halting execution...")
-        cleanup(rp.manifest, rp)
+        cleanup(rp)
         return 0, None
 
     rp.updateDerivedParams()

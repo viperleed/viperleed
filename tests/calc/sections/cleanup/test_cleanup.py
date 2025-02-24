@@ -54,7 +54,7 @@ class TestCleanup:
         """Check calls when no Rparams is passed."""
         # Create a "singleton" that we can use to check that
         # cleanup creates an empty Rparams in this case
-        fake_rpars = mocker.MagicMock()
+        fake_rpars = mocker.MagicMock(spec=Rparams)
         mocker.patch(f'{_MODULE}.Rparams', return_value=fake_rpars)
 
         cleanup(manifest)
@@ -74,20 +74,20 @@ class TestCleanup:
                 mock.assert_called_once_with(arg)
 
     @parametrize(mock_name=mocked)
-    def test_raises(self, mock_name, rpars, manifest, mock_implementation):
+    def test_raises(self, mock_name, rpars, mock_implementation):
         """Check complaints when the implementation raises exceptions."""
         mock = mock_implementation[mock_name]
         mock.side_effect = CustomTestException
         with pytest.raises(CustomTestException):
-            cleanup(manifest, rpars)
+            cleanup(rpars)
 
-    def test_success(self, rpars, manifest, mock_implementation):
+    def test_success(self, rpars, mock_implementation):
         """Check a successful execution of cleanup."""
-        cleanup(manifest, rpars)
+        cleanup(rpars)
         calls = {
             'logger.info': '\nStarting cleanup...',
             '_organize_all_work_directories': rpars,
-            '_write_manifest_file': manifest,
+            '_write_manifest_file': rpars.manifest,
             '_write_final_log_messages': rpars,
             'close_all_handlers': None,
             'logging.shutdown': None,

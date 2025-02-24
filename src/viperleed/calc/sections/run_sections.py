@@ -333,12 +333,12 @@ def section_loop(rp, sl):
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")
-            cleanup(rp.manifest, rp)
+            cleanup(rp)
             return 1, state_recorder
         except Exception:
             logger.error("Exception during viperleed.calc execution: ",
                          exc_info=True)
-            cleanup(rp.manifest, rp)
+            cleanup(rp)
             return 3, state_recorder
         if rp.halt >= rp.HALTING:
             if not initHalt:
@@ -356,5 +356,5 @@ def section_loop(rp, sl):
     logger.debug("End of section loop.")
     disp_ranges_str = '\n\t'.join(str(at.disp_ranges) for at in sl)
     logger.debug(f'Total ranges of all displacements:\n{disp_ranges_str}')
-    cleanup(rp.manifest, rp)
+    cleanup(rp)
     return 0, state_recorder

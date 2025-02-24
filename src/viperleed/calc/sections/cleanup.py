@@ -530,7 +530,7 @@ def _make_new_workhistory_subfolder(rpars, prerun):
     return subfolder
 
 
-def cleanup(manifest, rpars=None):
+def cleanup(rpars_or_manifest):
     """Finalize a viperleed.calc execution.
 
     After a call to this function:
@@ -550,11 +550,10 @@ def cleanup(manifest, rpars=None):
 
     Parameters
     ----------
-    manifest : set of str
-        The files and directories that should be preserved from
-        the work folder.
-    rpars : Rparams, optional
-        The run parameters. If None, it is assumed that the run
+    rpars_or_manifest : Rparams or ManifestFile
+        The run parameters, or information about the files and
+        directories that should be preserved from the work folder.
+        If a ManifestFile, it is assumed that the run
         crashed before an Rparams object existed.
 
     Returns
@@ -562,13 +561,25 @@ def cleanup(manifest, rpars=None):
     None.
     """
     logger.info('\nStarting cleanup...')
-    if rpars is None:  # Make a dummy, essentially empty one
+    try:
+        rpars_or_manifest.add_manifest
+    except AttributeError:      # Not a ManifestFile
+        try:
+            rpars_or_manifest.BULK_REPEAT
+        except AttributeError:  # Also not an Rparams
+            raise TypeError(
+                'Expected Rparams or ManifestFile, got '
+                f'{type(rpars_or_manifest).__name__!r} instead.'
+                ) from None
+        rpars = rpars_or_manifest
+    else:
+        # Make a dummy, essentially empty Rparams
         rpars = Rparams()
-        rpars.manifest = manifest
+        rpars.manifest = rpars_or_manifest
         rpars.timer = None  # To print the correct final message
 
     _organize_all_work_directories(rpars)
-    _write_manifest_file(manifest)
+    _write_manifest_file(rpars.manifest)
     _write_final_log_messages(rpars)
 
     # Shut down logger
