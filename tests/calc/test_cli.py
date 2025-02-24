@@ -12,6 +12,11 @@ import pytest
 from pytest_cases import fixture, parametrize
 
 from viperleed.calc.cli import ViPErLEEDCalcCLI
+from viperleed.calc.cli import _copy_files_from_manifest
+from viperleed.calc.lib.context import execute_in_dir
+
+from ..helpers import filesystem_from_dict
+from ..helpers import filesystem_to_dict
 
 
 @fixture(name='calc_parser')
@@ -42,3 +47,54 @@ class TestCalcParser:
     def test_parse_very_verbose(self, calc_parser, v_flag):
         """Check interpretation of -vv flag."""
         assert calc_parser.parse_args([v_flag,]).very_verbose
+
+
+class TestCopyFilesFromManifest:
+    """Tests for the _copy_files_from_manifest helper function."""
+
+    @fixture(name='manifest')
+    def fixture_manifest(self, tmp_path):
+        """Create a manifest file and its contents at tmp_path."""
+        copied = {
+            'file1.txt': 'Test file 1',
+            'file2': 'Test file 2',
+            'folder': {},
+            }
+        stay = {
+            'manifest': 'file1.txt \nfile2  \n  \n\n  folder\n',
+            'file_not_in_manifest': None,
+            'folder_not_in_manifest': {}
+            }
+        tree = {**copied, **stay}
+        filesystem_from_dict(tree, tmp_path)
+        return copied, stay
+
+    def test_no_manifest_file(self, tmp_path):
+        """Check the successful copy of files/folders."""
+        dest = tmp_path/'dest'
+        dest.mkdir()
+        with execute_in_dir(tmp_path):
+            _copy_files_from_manifest(dest)
+        copied = filesystem_to_dict(dest)
+        assert not copied
+
+    def test_copy_successful(self, manifest, tmp_path):
+        """Check the successful copy of files/folders."""
+        dest = tmp_path/'dest'
+        dest.mkdir()
+        with execute_in_dir(tmp_path):
+            _copy_files_from_manifest(dest)
+        expect_copy, expect_stay = manifest
+        copied = filesystem_to_dict(dest)
+        assert copied == expect_copy
+        assert not any(s in copied for s in expect_stay)
+
+    def test_copy_fails(self, manifest, tmp_path, capsys):
+        """Check complaints are printed if copying resources fails."""
+        manifest_file = tmp_path/'manifest'
+        with manifest_file.open('a', encoding='utf-8') as file:
+            file.write('this_does_not_exist\n')
+        self.test_copy_successful(manifest, tmp_path)
+        expect_print = 'Error copying this_does_not_exist'
+        stdout = capsys.readouterr().out
+        assert expect_print in stdout
