@@ -14,6 +14,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.files.manifest import ManifestFile
+from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.files.manifest import InconsistenPathsError
 from viperleed.calc.lib.context import execute_in_dir
 
@@ -173,6 +174,19 @@ class TestManifestFile:
         assert manifest.path in sections
         for item in _SAMPLE_CONTENTS:
             assert item in sections[manifest.path]
+
+    def test_iter_sections_relative(self, manifest):
+        """Test iter_sections() method."""
+        sections = dict(manifest.iter_sections(relative=True))
+        assert Path() in sections
+        for item in _SAMPLE_CONTENTS:
+            assert item in sections[Path()]
+
+    def test_iter_sections_relative_raises(self, manifest):
+        """Test iter_sections() method."""
+        manifest.add_manifest(ManifestFile(path='/some/other/path'))
+        with pytest.raises(ManifestFileError):
+            dict(manifest.iter_sections(relative=True))
 
     def test_read_contents_line_raises(self, manifest):
         """Check complaints for an invalid content path."""

@@ -108,9 +108,29 @@ class ManifestFile:
         if other.path != self.path:  # Don't override root
             self._labels[other.path] = label
 
-    def iter_sections(self):
-        """Yield sections and their contents."""
-        yield from self._sections.items()
+    def iter_sections(self, relative=False):
+        """Yield sections and their contents.
+
+        Parameters
+        ----------
+        relative : bool, optional
+            Whether paths to the sections should be relative to
+            self.path.
+
+        Yields
+        ------
+        path : Path
+            Path to each (sub)section of this ManifestFile.
+        contents : set of str
+            Names of files/folders at path.
+        """
+        contents = self._sections.items()
+        if relative and self.has_absolute_paths:
+            raise ManifestFileError('relative paths are supported only if all '
+                                    'paths are subfolders of the root one')
+        if relative:
+            contents = ((p.relative_to(self.path), c) for p, c in contents)
+        yield from contents
 
     def read(self):
         """Read the contents of a manifest file in the current directory."""
