@@ -756,14 +756,11 @@ def _write_final_log_messages(rpars):
     logger.info('')
 
 
-def _write_manifest_file(manifest_contents):
-    """Write items in manifest_contents to file 'manifest'."""
-    manifest_contents = set(manifest_contents)
-    manifest = Path('manifest')
+def _write_manifest_file(manifest):
+    """Write manifest to file 'manifest'."""
     try:
-        manifest.write_text('\n'.join(manifest_contents) + '\n',
-                            encoding='utf-8')
+        manifest.write()
     except OSError:
-        logger.error(f'Failed to write {manifest} file.')
+        logger.error(f'Failed to write {manifest.name} file.')
     else:
-        logger.info(f'Wrote {manifest} file successfully.')
+        logger.info(f'Wrote {manifest.name} file successfully.')

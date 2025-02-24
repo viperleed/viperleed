@@ -32,6 +32,7 @@ from viperleed.calc.constants import COMPILE_LOGS_DIRNAME
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
+from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.lib import fortran_utils
@@ -197,7 +198,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = {DEFAULT_SUPP, DEFAULT_OUT}
+        self.manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT)
         self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
