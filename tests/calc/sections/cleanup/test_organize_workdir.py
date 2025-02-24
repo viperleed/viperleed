@@ -11,7 +11,6 @@ import logging
 import shutil
 from zipfile import ZipFile
 
-import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
@@ -369,7 +368,7 @@ class TestZipSubfolders:
     folder = 'test_zipping'
     contents = {
         'test_zipping_001': {'file_1': 'file_1 contents'},
-        'test_zipping_999': {'file_999': 'file_999 contents'},
+        'test_zipping_9991': {'file_9991': 'file_9991 contents'},
         'not-a-directory': 'some stray file in test_zipping',
         }
     tree = {folder: contents}
@@ -436,11 +435,6 @@ class TestZipSubfolders:
         assert unchanged == self.tree
         assert not caplog.text
 
-    @pytest.mark.xfail(
-        reason=('This supposedly invalid folder name is collected anyway. It '
-                'was meant to fail the match.end check but it is not really '
-                'clear what that check guards')
-        )
     def test_invalid_name_format(self, run, workdir, caplog):
         """Check that a folder with invalid format is not processed."""
         # Increase log level: There are INFO for the valid folders
@@ -451,6 +445,7 @@ class TestZipSubfolders:
                     archive=True,
                     compression_level=2)
         expect = self.packed_all
+        # The non-matching folder should stay where it is
         expect[self.folder].update(tree[self.folder])
         assert clean == expect
         assert not caplog.text
