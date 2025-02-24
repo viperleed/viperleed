@@ -123,7 +123,10 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             The path to the new cloned settings.
         """
         current_time = strftime("_%Y-%m-%d_%H-%M-%S", localtime())
-        name = cls.__name__
+        for meas_name, meas_cls in ALL_MEASUREMENTS.items():
+            if cls == meas_cls:
+                name = meas_name
+                break
         settings_path = self.cfg_dir / (name + current_time + '.ini')
         shutil.copy2(source_path, settings_path)
         return settings_path
