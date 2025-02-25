@@ -84,7 +84,8 @@ class TestInitializationDomains:
     def test_domain_paths_edited(self, init_domains):
         """Check that the PARAMETERS file was updated with the new paths."""
         out_path = init_domains.work_path/DEFAULT_OUT
-        edited_assignments = parameters.read(out_path/'PARAMETERS').readParams['DOMAIN']
+        param_out = out_path/'PARAMETERS'
+        edited_assignments = parameters.read(param_out).readParams['DOMAIN']
         edited = {a.values_str for a in edited_assignments}
         _, work_domains = self.collect_domain_info(init_domains)
         work_paths = (f'./{p.name}' for p in work_domains.values())
@@ -97,10 +98,6 @@ class TestInitializationDomains:
         assert any(re_match(rf'{LOG_PREFIX}', line) for line in manifest)
         assert DEFAULT_SUPP in manifest
         assert DEFAULT_OUT in manifest
-
-    def test_successful_run(self, init_domains):
-        """Check that initialization exits without errors."""
-        _TestBasic.test_successful_run(self, init_domains)
 
     def test_original_inputs_copied(self, init_domains):
         """Check that all original_inputs were copied correctly."""
@@ -159,3 +156,7 @@ class TestInitializationDomains:
             )
         for folder, expect in expected_ps.items():
             assert work_ps[folder] == pytest.approx(expect)
+
+    def test_successful_run(self, init_domains):
+        """Check that initialization exits without errors."""
+        _TestBasic.test_successful_run(self, init_domains)
