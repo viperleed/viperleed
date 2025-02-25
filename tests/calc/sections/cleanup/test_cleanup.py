@@ -33,7 +33,7 @@ class TestCleanup:
     """Tests for the cleanup function."""
 
     mocked = (  # All the stuff that is called inside cleanup
-        'logger.info',
+        '_LOGGER.info',
         '_organize_all_work_directories',
         '_write_manifest_file',
         '_write_final_log_messages',
@@ -60,7 +60,7 @@ class TestCleanup:
 
         cleanup(manifest)
         calls = {
-            'logger.info': '\nStarting cleanup...',
+            '_LOGGER.info': '\nStarting cleanup...',
             '_organize_all_work_directories': fake_rpars,
             '_write_manifest_file': fake_rpars,
             '_write_final_log_messages': fake_rpars,
@@ -86,7 +86,7 @@ class TestCleanup:
         """Check a successful execution of cleanup."""
         cleanup(rpars)
         calls = {
-            'logger.info': '\nStarting cleanup...',
+            '_LOGGER.info': '\nStarting cleanup...',
             '_organize_all_work_directories': rpars,
             '_write_manifest_file': rpars,
             '_write_final_log_messages': rpars,

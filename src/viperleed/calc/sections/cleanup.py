@@ -122,7 +122,7 @@ _IOFILES = (
     'superpos-spec.out',
     )
 
-logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 def _propagate_to_domains(func):
@@ -189,9 +189,9 @@ def prerun_clean(rpars, logname=''):
         try:
             move_oldruns(rpars, prerun=True)
         except OSError:
-            logger.warning('Exception while trying to clean up from previous '
-                           'run. Program will proceed, but old files may be '
-                           'lost.', exc_info=True)
+            _LOGGER.warning('Exception while trying to clean up from previous '
+                            'run. Program will proceed, but old files may be '
+                            'lost.', exc_info=True)
         finally:
             rpars.domainParams = domains_bak
 
@@ -294,7 +294,7 @@ def _copy_files_and_directories(files, directories, target):
     except FileExistsError:
         pass
     except OSError:
-        logger.error(f'Error creating {target.name} folder: ', exc_info=True)
+        _LOGGER.error(f'Error creating {target.name} folder: ', exc_info=True)
         return
 
     for item in (*files, *directories):
@@ -305,8 +305,8 @@ def _copy_files_and_directories(files, directories, target):
             pass
         except OSError:
             which = 'file' if item.is_file() else 'directory'
-            logger.error(f'Error moving {target.name} {which} {item.name}: ',
-                         exc_info=True)
+            _LOGGER.error(f'Error moving {target.name} {which} {item.name}: ',
+                          exc_info=True)
 
 
 def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
@@ -349,7 +349,7 @@ def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
             try:
                 shutil.rmtree(subfolder)
             except OSError:
-                logger.warning(
+                _LOGGER.warning(
                     f'Error deleting unzipped {root_name} directory '
                     f'{subfolder}. This will increase the size of the '
                     'work folder, but not cause any problems.'
@@ -376,7 +376,7 @@ def _zip_folder(folder, compression_level):
     """
     kwargs = {'compression': ZIP_DEFLATED, 'compresslevel': compression_level}
     arch_name = folder.with_suffix('.zip')
-    logger.info(f'Packing {arch_name}...')
+    _LOGGER.info(f'Packing {arch_name}...')
     # Don't pack the archive into itself
     to_pack = (f for f in folder.glob('*') if f != arch_name)
     try:  # pylint: disable=too-many-try-statements
@@ -384,7 +384,7 @@ def _zip_folder(folder, compression_level):
             for item in to_pack:
                 archive.write(item, item.relative_to(folder))
     except OSError:
-        logger.error(f'Error packing {arch_name} file: ', exc_info=True)
+        _LOGGER.error(f'Error packing {arch_name} file: ', exc_info=True)
         raise
 
 
@@ -410,8 +410,8 @@ def _collect_delta_files(tensor_index):
     except FileExistsError:
         pass
     except OSError:
-        logger.error(f'Failed to create {destination} folder: ',
-                     exc_info=True)
+        _LOGGER.error(f'Failed to create {destination} folder: ',
+                      exc_info=True)
         return
     errors = []
     for delta_file in deltas:
@@ -420,7 +420,7 @@ def _collect_delta_files(tensor_index):
         except OSError as exc:
             errors.append(exc)
     if errors:
-        logger.error(f'Error moving Delta files: {errors}')
+        _LOGGER.error(f'Error moving Delta files: {errors}')
 
 
 @_propagate_to_domains
@@ -465,15 +465,15 @@ def _collect_worhistory_contents(rpars, prerun, to_path):
         try:
             _copyfile(file, to_path)
         except OSError:
-            logger.warning(f'Error copying {file} to {to_path}. '
-                           'File may get overwritten.')
+            _LOGGER.warning(f'Error copying {file} to {to_path}. '
+                            'File may get overwritten.')
     _copy = shutil.move if prerun else shutil.copytree
     for directory in directories:
         try:
             _copy(directory, to_path / directory)
         except OSError:
-            logger.warning(f'Error copying {directory} to {to_path}. '
-                           'Files in directory may get overwritten.')
+            _LOGGER.warning(f'Error copying {directory} to {to_path}. '
+                            'Files in directory may get overwritten.')
 
 
 def _find_next_workistory_contents(rpars, prerun):
@@ -560,7 +560,7 @@ def _make_new_workhistory_subfolder(rpars, prerun):
     try:
         workhistory.mkdir(exist_ok=True)
     except OSError:
-        logger.error(f'Error creating {workhistory} folder: ', exc_info=True)
+        _LOGGER.error(f'Error creating {workhistory} folder: ', exc_info=True)
         raise
 
     dirname = _find_next_workistory_dir_name(rpars, prerun)
@@ -568,7 +568,7 @@ def _make_new_workhistory_subfolder(rpars, prerun):
     try:
         subfolder.mkdir()
     except OSError:
-        logger.error(f'Error creating {subfolder}: ', exc_info=True)
+        _LOGGER.error(f'Error creating {subfolder}: ', exc_info=True)
         raise
     return subfolder
 
@@ -603,7 +603,7 @@ def cleanup(rpars_or_manifest):
     -------
     None.
     """
-    logger.info('\nStarting cleanup...')
+    _LOGGER.info('\nStarting cleanup...')
     try:
         rpars_or_manifest.add_manifest
     except AttributeError:      # Not a ManifestFile
@@ -626,7 +626,7 @@ def cleanup(rpars_or_manifest):
     _write_final_log_messages(rpars)
 
     # Shut down logger
-    close_all_handlers(logger)
+    close_all_handlers(_LOGGER)
     logging.shutdown()
 
 
@@ -671,15 +671,15 @@ def preserve_original_inputs(rpars):
         if not file.is_file() and filename in OPTIONAL_INPUT_FILES:
             continue
         if not file.is_file():
-            logger.warning(f'Could not find file {file}. It will not '
-                           f'be stored in {ORIGINAL_INPUTS_DIR_NAME}.')
+            _LOGGER.warning(f'Could not find file {file}. It will not '
+                            f'be stored in {ORIGINAL_INPUTS_DIR_NAME}.')
             rpars.setHaltingLevel(1)
             continue
         try:
             shutil.copy2(file, orig_inputs)
         except OSError:
-            logger.warning(f'Could not copy file {file} to '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
+            _LOGGER.warning(f'Could not copy file {file} to '
+                            f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rpars.setHaltingLevel(1)
 
 
@@ -699,7 +699,7 @@ def _delete_old_executables():
             try:
                 file.unlink()
             except OSError:
-                logger.debug(f'Failed to delete file {file}')
+                _LOGGER.debug(f'Failed to delete file {file}')
 
 
 def _delete_old_root_directories():
@@ -715,7 +715,7 @@ def _delete_old_root_directories():
         except FileNotFoundError:
             pass
         except OSError:
-            logger.warning(f'Failed to clear {directory} folder.')
+            _LOGGER.warning(f'Failed to clear {directory} folder.')
 
 
 def _delete_out_suffixed_files():
@@ -724,7 +724,7 @@ def _delete_out_suffixed_files():
         try:
             file.unlink()
         except OSError:
-            logger.warning(f'Failed to delete previous {file} file.')
+            _LOGGER.warning(f'Failed to delete previous {file} file.')
 
 
 def _organize_all_work_directories(rpars):
@@ -773,13 +773,15 @@ def _write_final_log_messages(rpars):
     """Emit the last logging messages concerning the calculation."""
     elapsed = ('unknown' if not rpars.timer
                else rpars.timer.how_long(as_string=True))
-    logger.info(f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
-                f'\nTotal elapsed time: {elapsed}\n')
+    _LOGGER.info(
+        f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
+        f'\nTotal elapsed time: {elapsed}\n'
+        )
 
     # Write information about executed sections
     if rpars.runHistory:
         segments = ' '.join(str(s) for s in rpars.runHistory)
-        logger.info(f'Executed segments: {segments}')
+        _LOGGER.info(f'Executed segments: {segments}')
 
     # Write the final R factors, if any, including integer/fractional
     for section, r_factors in rpars.stored_R.items():
@@ -789,11 +791,11 @@ def _write_final_log_messages(rpars):
         msg = f'Final R ({section}): {overall:.4f}'
         if integer > 0 and fractional > 0:
             msg += f' ({integer:.4f} / {fractional:.4f})'
-        logger.info(msg)
+        _LOGGER.info(msg)
 
     # Warn about manually running bookkeeper for domain calculations
     if rpars.domainParams:
-        logger.info(
+        _LOGGER.info(
             'Domain calculations have been run. Note that the bookkeeper will '
             'only run automatically in the top level calculation directory. '
             'To preserve optimizations for individual domains, please run '
@@ -802,12 +804,12 @@ def _write_final_log_messages(rpars):
             )
 
     if rpars.checklist:
-        logger.info('')
-        logger.info('# The following issues should be '
-                    'checked before starting again:')
+        _LOGGER.info('')
+        _LOGGER.info('# The following issues should be '
+                     'checked before starting again:')
         for item in rpars.checklist:
-            logger.info(f'- {item}')
-    logger.info('')
+            _LOGGER.info(f'- {item}')
+    _LOGGER.info('')
 
 
 def _write_manifest_file(rpars):
@@ -818,6 +820,6 @@ def _write_manifest_file(rpars):
     try:
         manifest.write()
     except OSError:
-        logger.error(f'Failed to write {manifest.name} file.')
+        _LOGGER.error(f'Failed to write {manifest.name} file.')
     else:
-        logger.info(f'Wrote {manifest.name} file successfully.')
+        _LOGGER.info(f'Wrote {manifest.name} file successfully.')
