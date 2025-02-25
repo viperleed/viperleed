@@ -21,6 +21,7 @@ from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.calc.sections.cleanup import move_oldruns
@@ -493,21 +494,28 @@ class TestMakeNewWorkhistorySubfolder:
 class TestMoveOldruns:
     """Tests for the move_oldruns function."""
 
+    # Arguments to organize_workdir for all domains
+    organize_common = {
+        'delete_unzipped': False,
+        'tensors': False,
+        'deltas': False,
+        'path': '',
+        }
+
     @fixture(name='mock_implementation')
-    def fixture_mock_implementation(self, tmp_path, mocker):
+    def fixture_mock_implementation(self, mocker):
         """Replace implementation details of move_oldruns with mocks."""
-        subfolder = tmp_path/'tst_workhistory_dir'
         def _mock():
             return {
                 'make_subfolder': mocker.patch(
                     f'{_MODULE}._make_new_workhistory_subfolder',
-                    return_value=subfolder,
+                    return_value=mocker.MagicMock(spec=Path),
                     ),
                 'contents': mocker.patch(
                     f'{_MODULE}._collect_worhistory_contents',
                     ),
                 'organize_workdir': mocker.patch(
-                    f'{_MODULE}.organize_workdir'
+                    f'{_MODULE}.organize_workdir',
                     ),
                 }
         return _mock
@@ -522,6 +530,13 @@ class TestMoveOldruns:
                 return mocked
         return _run
 
+    @staticmethod
+    def check_manifest_updated(rpars, prerun):
+        """Check that workhistory is in manifest, if needed."""
+        should_contain_workhistory = not prerun
+        contains_workhistory = DEFAULT_WORK_HISTORY in rpars.manifest
+        assert contains_workhistory == should_contain_workhistory
+
     @all_prerun
     def test_implementation_called(self, prerun, run, rpars, mocker):
         """Check that helper methods are called as expected."""
@@ -534,42 +549,61 @@ class TestMoveOldruns:
                 mocks['make_subfolder'].return_value,
                 ),
             }
+        if not prerun:
+            expect_calls['organize_workdir'] = mocker.call(
+                rpars,
+                **self.organize_common,
+                )
         for called_func, call in expect_calls.items():
             mock = mocks[called_func]
             mock.assert_called_once()
             mock.assert_has_calls((call,))
 
+    def test_implementation_called_domains(self, rpars, run, mocker):
+        """Check expected calls to the implementation with domains."""
+        # Prepare some fake domains
+        domain_rp = Rparams()
+        domain_wrk = mocker.MagicMock(spec=Path)
+        rpars.domainParams = [
+            mocker.MagicMock(rp=domain_rp, workdir=domain_wrk),
+            ]
+
+        def _propagate_calls(*args, **kwargs):
+            """Return one main call and one call per domain."""
+            return (mocker.call(rpars, *args, **kwargs),
+                    mocker.call(domain_rp, *args, **kwargs))
+
+        prerun = False
+        mocks = run(prerun=prerun)
+
+        # Prepare the expected calls
+        expect_calls = {
+            # Each method should be called once for the
+            # main work folder, and once per each domain.
+            'make_subfolder': _propagate_calls(prerun),
+            'organize_workdir': _propagate_calls(**self.organize_common),
+            'contents': _propagate_calls(prerun,
+                                         mocks['make_subfolder'].return_value),
+            }
+        for mock_name, mock in mocks.items():
+            calls = expect_calls[mock_name]
+            assert mock.call_count == len(calls)
+            mock.assert_has_calls(calls)
+
+        # Check workhistory is in all manifest files
+        self.check_manifest_updated(rpars, prerun)
+        self.check_manifest_updated(domain_rp, prerun)
+
     @all_prerun
     def test_manifest_updated(self, rpars, prerun, run):
         """Check that rpars.manifest is updated as expected."""
         run(prerun)
-        should_contain_workhistory = not prerun
-        contains_workhistory = DEFAULT_WORK_HISTORY in rpars.manifest
-        assert contains_workhistory == should_contain_workhistory
+        self.check_manifest_updated(rpars, prerun)
 
-    def test_organize_workdir_calls(self, rpars, run, mocker):
-        """Check expected calls to organize_workdir."""
-        common_args = {'delete_unzipped': False,
-                       'tensors': False,
-                       'deltas': False}
-        domain_rp = mocker.MagicMock()
-        domain_wrk = mocker.MagicMock()
-        rpars.domainParams = [
-            mocker.MagicMock(rp=domain_rp, workdir=domain_wrk),
-            ]
-        expect_calls = [
-            # One for the main
-            mocker.call(rpars, path='', **common_args),
-            # and one for each domain
-            mocker.call(domain_rp, path=domain_wrk, **common_args),
-            ]
-        mocks = run(prerun=False)
-        organize_workdir = mocks['organize_workdir']
-        assert organize_workdir.call_count == len(expect_calls)
-        organize_workdir.has_calls(expect_calls)
-
-    def test_prerun_does_not_touch_workdir(self, run):
+    def test_prerun_does_not_touch_workdir(self, rpars, run):
         """Check that organize_workdir is called only when running."""
-        mocks = run(prerun=True)
+        prerun = True
+        mocks = run(prerun=prerun)
         organize_workdir = mocks['organize_workdir']
         organize_workdir.assert_not_called()
+        self.check_manifest_updated(rpars, prerun)  # No workhistory

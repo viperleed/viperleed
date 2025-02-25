@@ -13,6 +13,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
+from functools import wraps
 import logging
 from pathlib import Path
 import re
@@ -124,6 +125,37 @@ _IOFILES = (
 logger = logging.getLogger(__name__)
 
 
+def _propagate_to_domains(func):
+    """Decorate `func` to call it on all nested domains.
+
+    Parameters
+    ----------
+    func : callable
+        The function to be decorated. Its first argument should
+        be an Rparams object. It is used to determine whether
+        recursive calls for each subdomain are needed.
+
+    Returns
+    -------
+    callable
+        A new version of `func` that recursively propagates the
+        original `func` to all domains.
+    """
+    def _propagate(rpars, *args, **kwargs):
+        for domain in rpars.domainParams:
+            with execute_in_dir(domain.workdir):
+                func(domain.rp, *args, **kwargs)
+            if domain.rp.domainParams:
+                _propagate(domain.rp, *args, **kwargs)
+
+    @wraps(func)
+    def _wrapper(*args, **kwargs):
+        func(*args, **kwargs)
+        _propagate(*args, **kwargs)
+    return _wrapper
+
+
+@_propagate_to_domains
 def prerun_clean(rpars, logname=''):
     """Clean up the current directory before viperleed.calc starts.
 
@@ -149,12 +181,19 @@ def prerun_clean(rpars, logname=''):
     old_logs = (f for f in Path().glob('*.log')
                 if f.is_file() and f.name != logname)
     if any(old_logs):
+        # Only handle the root directory here: decoration with
+        # _propagate_to_domains takes care of each domain subfolder.
+        # In order to force move_oldruns not to execute in domain
+        # subfolders, temporarily clear the domainParams.
+        domains_bak, rpars.domainParams = rpars.domainParams, []
         try:
             move_oldruns(rpars, prerun=True)
         except OSError:
             logger.warning('Exception while trying to clean up from previous '
                            'run. Program will proceed, but old files may be '
                            'lost.', exc_info=True)
+        finally:
+            rpars.domainParams = domains_bak
 
     # Get rid of other files that may be modified in place
     other_logs = (
@@ -384,6 +423,7 @@ def _collect_delta_files(tensor_index):
         logger.error(f'Error moving Delta files: {errors}')
 
 
+@_propagate_to_domains
 def move_oldruns(rpars, prerun=False):
     """Copy relevant files to a new 'workhistory' subfolder.
 
@@ -410,10 +450,9 @@ def move_oldruns(rpars, prerun=False):
         rpars.manifest.add(DEFAULT_WORK_HISTORY)
         kwargs = {'delete_unzipped': False,
                   'tensors': False,
-                  'deltas': False}
-        organize_workdir(rpars, path='', **kwargs)
-        for domain in rpars.domainParams:
-            organize_workdir(domain.rp, path=domain.workdir, **kwargs)
+                  'deltas': False,
+                  'path': ''}
+        organize_workdir(rpars, **kwargs)
     _collect_worhistory_contents(rpars, prerun, worhistory_subfolder)
 
 
@@ -485,6 +524,10 @@ def _find_next_workistory_dir_name(rpars, prerun):
         return f'{dirname_prefix}_{PREVIOUS_LABEL}_{old_timestamp}'
 
     sectionabbrv = {1: 'R', 2: 'D', 3: 'S'}
+    # NB: when executed in a domain subfolder, rpars.runHistory is
+    # actually the main history of segments, as domain.rp.runHistory
+    # is the same object as main_rp.runHistory. This is set up in
+    # run_sections.
     new_segments = rpars.runHistory[len(rpars.lastOldruns):]
     abbreviations = ''.join(sectionabbrv.get(index, '')
                             for index in new_segments)
