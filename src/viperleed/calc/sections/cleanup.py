@@ -579,7 +579,7 @@ def cleanup(rpars_or_manifest):
         rpars.timer = None  # To print the correct final message
 
     _organize_all_work_directories(rpars)
-    _write_manifest_file(rpars.manifest)
+    _write_manifest_file(rpars)
     _write_final_log_messages(rpars)
 
     # Shut down logger
@@ -767,8 +767,11 @@ def _write_final_log_messages(rpars):
     logger.info('')
 
 
-def _write_manifest_file(manifest):
-    """Write manifest to file 'manifest'."""
+def _write_manifest_file(rpars):
+    """Write manifest to file 'manifest', collecting also domain files."""
+    manifest = rpars.manifest
+    for domain in rpars.domainParams:
+        manifest.add_manifest(domain.rp.manifest, label=str(domain))
     try:
         manifest.write()
     except OSError:

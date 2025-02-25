@@ -52,27 +52,12 @@ class TestInitializationDomains:
             }
         return src_to_folders_created, work_domains
 
-    @pytest.mark.xfail(reason='Issue #301')
-    def test_domain_directories_copied(self, init_domains):
-        """Check that all Domain_xxx work directories are copied to root."""
-        _, work_domains = self.collect_domain_info(init_domains)
-        assert all((init_domains.test_path/p.name).is_dir()
-                   for p in work_domains.values())
-        for work_path in work_domains.values():
-            work_tree = filesystem_to_dict(work_path)
-            root_tree = filesystem_to_dict(
-                init_domains.test_path/work_path.name
-                )
-            assert root_tree[DEFAULT_SUPP] == work_tree[DEFAULT_SUPP]
-            assert root_tree[DEFAULT_OUT] == work_tree[DEFAULT_OUT]
-
     def test_domain_directories_created(self, init_domains):
         """Check that work contains the right Domain_xxx directories."""
         src_domains, work_domains = self.collect_domain_info(init_domains)
         assert len(work_domains) == len(src_domains)
 
-    @pytest.mark.xfail(reason='Issue #301')
-    def test_dommain_output_copied(self, init_domains):
+    def test_domain_output_copied(self, init_domains):
         """Check that the results of the main calculation are copied back."""
         # NB: Not actually copied back, since we only run_calc
         manifest = init_domains.read_manifest()

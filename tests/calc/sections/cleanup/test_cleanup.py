@@ -13,6 +13,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.classes.rparams.domain_params import DomainParameters
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_TENSORS
@@ -61,7 +62,7 @@ class TestCleanup:
         calls = {
             'logger.info': '\nStarting cleanup...',
             '_organize_all_work_directories': fake_rpars,
-            '_write_manifest_file': fake_rpars.manifest,
+            '_write_manifest_file': fake_rpars,
             '_write_final_log_messages': fake_rpars,
             'close_all_handlers': None,
             'logging.shutdown': None,
@@ -87,7 +88,7 @@ class TestCleanup:
         calls = {
             'logger.info': '\nStarting cleanup...',
             '_organize_all_work_directories': rpars,
-            '_write_manifest_file': rpars.manifest,
+            '_write_manifest_file': rpars,
             '_write_final_log_messages': rpars,
             'close_all_handlers': None,
             'logging.shutdown': None,
@@ -98,6 +99,12 @@ class TestCleanup:
                 mock.assert_called_once()
             else:
                 mock.assert_called_once_with(arg)
+
+    @parametrize(arg=(None, 'str', set(), {}, tuple()))
+    def test_typeerror(self, arg):
+        """Check complaints for an invalid argument type."""
+        with pytest.raises(TypeError):
+            cleanup(arg)
 
 
 class TestOrganizeAllWorkDirectories:
@@ -264,34 +271,60 @@ class TestWriteFinalLogMessages:
 class TestWriteManifest:
     """Tests for the _write_manifest_file function."""
 
+    def test_fails(self, rpars, tmp_path, mocker, caplog):
+        """Test logging when opening manifest fails."""
+        with execute_in_dir(tmp_path):
+            rpars.manifest = manifest = ManifestFile()
+            mocker.patch.object(manifest, 'write', side_effect=OSError)
+            _write_manifest_file(rpars)
+        expect_log = 'Failed to write manifest file.'
+        assert not (tmp_path/'manifest').is_file()
+        assert expect_log in caplog.text
+
+    def test_collects_domains(self, rpars, tmp_path):
+        """Check that contents of domains are collected."""
+        rpars.manifest = manifest = ManifestFile(path=tmp_path)
+        for i in range(5):
+            d_path = tmp_path/f'dd_{i}'
+            d_rpars = Rparams()
+            d_rpars.manifest = ManifestFile(path=d_path)
+            domain = DomainParameters(d_path, f'name {i}')
+            domain.rp = d_rpars
+            rpars.domainParams.append(domain)
+        with execute_in_dir(tmp_path):
+            _write_manifest_file(rpars)
+        # Check that now all sub-manifests are present
+        subpaths = set(manifest.paths)
+        expect_paths = (
+            tmp_path,
+            *(d.rp.manifest.path for d in rpars.domainParams),
+            )
+        assert all(p in subpaths for p in expect_paths)
+
+        # And verify that contents have been written correctly
+        contents = (manifest.path/'manifest').read_text().splitlines()
+        headers = [line for line in contents if line.startswith('[')]
+        expect_headers = [f'[domain name {i} at dd_{i}]' for i in range(5)]
+        assert headers == expect_headers
+
+    def test_raises(self, rpars):
+        """Check that only OSError is caught cleanly."""
+        rpars.manifest = manifest = ManifestFile()
+        with raises_test_exception(manifest, 'write'):
+            _write_manifest_file(rpars)
+
     _success = {
         'unique': ('file1.txt', 'file2.txt', 'file3.txt'),
         'duplicates': ('file1.txt', 'file2.txt', 'file1.txt'),
         }
 
-    def test_fails(self, tmp_path, mocker, caplog):
-        """Test logging when opening manifest fails."""
-        with execute_in_dir(tmp_path):
-            manifest = ManifestFile()
-            mocker.patch.object(manifest, 'write', side_effect=OSError)
-            _write_manifest_file(manifest)
-        expect_log = 'Failed to write manifest file.'
-        assert not (tmp_path/'manifest').is_file()
-        assert expect_log in caplog.text
-
-    def test_raises(self):
-        """Check that only OSError is caught cleanly."""
-        manifest = ManifestFile()
-        with raises_test_exception(manifest, 'write'):
-            _write_manifest_file(manifest)
-
     @parametrize(contents=_success.values(), ids=_success)
-    def test_success(self, contents, tmp_path, caplog):
+    def test_success(self, rpars, contents, tmp_path, caplog):
         """Check successful writing to the manifest file."""
         caplog.set_level(0)  # All messages
         with execute_in_dir(tmp_path):
-            manifest = ManifestFile(*contents)
-            _write_manifest_file(manifest)
+            rpars.manifest = manifest = ManifestFile(*contents)
+            _write_manifest_file(rpars)
         manifest = tmp_path/'manifest'
         assert manifest.is_file()
 
