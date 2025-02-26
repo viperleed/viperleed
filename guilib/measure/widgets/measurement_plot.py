@@ -343,7 +343,7 @@ class MeasurementPlot(qtw.QWidget):
                 colors = self.__ctrl_color[ctrl](
                     np.linspace(0.2, 0.8, self.data_points.nr_steps_total)
                     )
-                color_idx = (len(ctrl_data) - 1) // len(colors)
+                color_idx = (len(ctrl_data) - 1) % len(colors)
                 style = _marker_style(*marker, colors[color_idx])
                 # Enough to plot the last step for each
                 axes.plot(ctrl_times[-1], ctrl_data[-1], **style)
