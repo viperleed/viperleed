@@ -15,7 +15,7 @@ from pytest_cases import parametrize
 
 from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.manifest import ManifestFileError
-from viperleed.calc.files.manifest import InconsistenPathsError
+from viperleed.calc.files.manifest import InconsistentPathsError
 from viperleed.calc.lib.context import execute_in_dir
 
 
@@ -191,7 +191,7 @@ class TestManifestFile:
     def test_read_contents_line_raises(self, manifest):
         """Check complaints for an invalid content path."""
         wrong = 'wrong_path/contents'
-        with pytest.raises(InconsistenPathsError):
+        with pytest.raises(InconsistentPathsError):
             manifest._read_contents_line(wrong, None, 'right_path')
 
     _read_line = {  # line, relative_path, expect

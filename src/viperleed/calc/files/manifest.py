@@ -24,7 +24,7 @@ class ManifestFileError(Exception):
     """Base exception for manifest-related errors."""
 
 
-class InconsistenPathsError(ManifestFileError):
+class InconsistentPathsError(ManifestFileError):
     """The path of a content does not match the one of its header."""
 
 
@@ -174,8 +174,8 @@ class ManifestFile:
         if not rel_path:  # Skip check for root files
             content = line
         elif not line.startswith(rel_path):
-            raise InconsistenPathsError(f'{line} should begin with '
-                                        f'{rel_path}') from None
+            raise InconsistentPathsError(f'{line} should begin with '
+                                         f'{rel_path}') from None
         else:
             *_, content = line.split(rel_path + '/', maxsplit=1)
         self._sections[section].add(str(content))
