@@ -109,9 +109,6 @@ class TestInitializationDomains:
                 }
         work_tree = filesystem_to_dict(init_domains.work_path)
         self.check_path_contains(work_tree, expect_original_inputs)
-        # TODO: Uncomment the following after #301 is fixed!
-        # root_tree = filesystem_to_dict(init_domains.test_path)
-        # self.check_path_contains(root_tree, expect_original_inputs)
 
     def test_phaseshifts_generated(self, init_domains):
         """Check that PHASESHIFTS files were generated in the right places."""
