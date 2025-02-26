@@ -42,71 +42,27 @@ def fixure_mock_open(mocker):
     return _mock
 
 
+def check_contents(manifest, path, *items):
+    """Ensure manifest has items at path."""
+    # pylint: disable-next=protected-access           # OK in tests
+    section = manifest._sections[path]
+    assert all(item in section for item in items)
+
+
 class TestManifestFile:
     """Tests for the ManifestFile class."""
-
-    @staticmethod
-    def check_contents(manifest, path, *items):
-        """Ensure manifest has items at path."""
-        # pylint: disable-next=protected-access           # OK in tests
-        section = manifest._sections[path]
-        assert all(item in section for item in items)
-
-    @staticmethod
-    def _translate_abs_paths(root, headers_and_lines):
-        """Edit absolute paths in headers and contents depending on OS."""
-        for header in headers_and_lines.copy():
-            if not header:
-                continue
-            path_str = header.split('at ')[1].replace(']', '')
-            path = Path(path_str)
-            try:
-                path.relative_to(root)
-            except ValueError:
-                pass  # Handled below
-            else:     # Nothing to do, it's relative
-                continue
-            abs_path_str = str(path.resolve().as_posix())
-            lines = headers_and_lines.pop(header)
-            header = header.replace(path_str, abs_path_str)
-            headers_and_lines[header] = {
-                line.replace(path_str, abs_path_str, 1)
-                for line in lines
-                }
-
-    def check_written_contents(self, manifest, expect):
-        """Check that the manifest file at path has expected contents."""
-        # Do OS-dependent path changes:
-        self._translate_abs_paths(manifest.path, expect)
-        written = (manifest.path/'manifest').read_text().splitlines()
-        try:
-            indices = [written.index(h) for h in expect if h]
-        except ValueError as exc:
-            raise AssertionError(f'Header not found in {written}') from exc
-        ranges = zip((None, *indices), (*indices, None))
-        for (start, stop), (header, contents) in zip(ranges, expect.items()):
-            written_section = written[start:stop]
-            if header:
-                written_contents = written_section[1:]
-                assert written_section[0] == header
-            else:
-                written_contents = written_section
-            assert len(set(written_contents)) == len(written_contents)
-            assert set(written_contents) == contents
-            # Either nothing was written, or there
-            # should be an empty line at the end
-            assert not written_section or not written_section[-1]
 
     def test_init_no_contents(self):
         """Test ManifestFile initialization."""
         manifest = ManifestFile()
         assert manifest.path == Path.cwd()
         assert len(manifest.paths) == 1
+        # pylint: disable-next=magic-value-comparison
         assert manifest.name == 'manifest'
 
     def test_init_with_contents(self, manifest):
         """Check correct initialization of a manifest with contents."""
-        self.check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
+        check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
 
     def test_init_with_path(self):
         """Test initialization with a specific path."""
@@ -119,21 +75,21 @@ class TestManifestFile:
         other_contents = 'a.txt', 'other_folder'
         other_manifest = ManifestFile(*other_contents)
         manifest = ManifestFile(other_manifest)
-        self.check_contents(manifest, other_manifest.path, *other_contents)
+        check_contents(manifest, other_manifest.path, *other_contents)
         # The two manifests have the same path
-        self.check_contents(manifest, manifest.path, *other_contents)
+        check_contents(manifest, manifest.path, *other_contents)
 
     def test_add_root_item(self, manifest):
         """Test adding an item to the root of a manifest."""
         manifest.add('newfile.cfg')
-        self.check_contents(manifest, manifest.path, 'newfile.cfg')
+        check_contents(manifest, manifest.path, 'newfile.cfg')
 
     def test_add_manifest_other_path(self, manifest):
         """Test adding another ManifestFile."""
         label = 'extra'
         other_manifest = ManifestFile('b.log', path='other')
         manifest.add_manifest(other_manifest, label=label)
-        self.check_contents(manifest, other_manifest.path, 'b.log')
+        check_contents(manifest, other_manifest.path, 'b.log')
         # pylint: disable-next=protected-access           # OK in tests
         assert manifest._labels[other_manifest.path] == label
 
@@ -142,31 +98,32 @@ class TestManifestFile:
         label = 'extra'
         other_manifest = ManifestFile('b.log', path=tmp_path)
         manifest.add_manifest(other_manifest, label=label)
-        self.check_contents(manifest, other_manifest.path, 'b.log')
+        check_contents(manifest, other_manifest.path, 'b.log')
         # pylint: disable-next=protected-access           # OK in tests
         assert manifest._labels[other_manifest.path] != label
 
     def test_contains(self, manifest):
         """Check the correct outcome of the "in" operation."""
         assert _SAMPLE_CONTENTS[0] in manifest
+        # pylint: disable-next=magic-value-comparison
         assert 'not_in_manifest' not in manifest
 
     def test_inplace_add_same_path(self, manifest):
         """Test in-place addition."""
         other = ManifestFile('b.log', path=manifest.path)
         manifest += other
-        self.check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
-        self.check_contents(manifest, manifest.path, 'b.log')
+        check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
+        check_contents(manifest, manifest.path, 'b.log')
 
     def test_inplace_other_path(self, manifest):
         """Test in-place addition of a sub-manifest."""
         other = ManifestFile('b.log', path=manifest.path/'subpath')
         manifest += other
-        self.check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
-        self.check_contents(manifest, other.path, 'b.log')
+        check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
+        check_contents(manifest, other.path, 'b.log')
         # Ensure the contents of the other have been added identically
         other.add('some_new_file')
-        self.check_contents(manifest, other.path, 'some_new_file')
+        check_contents(manifest, other.path, 'some_new_file')
 
     def test_iter_sections(self, manifest):
         """Test iter_sections() method."""
@@ -188,10 +145,65 @@ class TestManifestFile:
         with pytest.raises(ManifestFileError):
             dict(manifest.iter_sections(relative=True))
 
+
+class TestManifestFileReadWrite:
+    """Tests for reading/writing a manifest file."""
+
+    def check_written_contents(self, manifest, expect):
+        """Check that the manifest file at path has expected contents."""
+        # Do OS-dependent path changes:
+        self._translate_abs_paths(manifest.path, expect)
+        written = (manifest.path/'manifest').read_text().splitlines()
+        try:
+            indices = [written.index(h) for h in expect if h]
+        except ValueError as exc:
+            raise AssertionError(
+                f'Header not found in {written}: {exc}'
+                ) from exc
+        ranges = zip((None, *indices), (*indices, None))
+        for (start, stop), (header, contents) in zip(ranges, expect.items()):
+            written_section = written[start:stop]
+            if header:
+                written_contents = written_section[1:]
+                assert written_section[0] == header
+            else:
+                written_contents = written_section
+            assert len(set(written_contents)) == len(written_contents)
+            assert set(written_contents) == contents
+            # Either nothing was written, or there
+            # should be an empty line at the end
+            assert not written_section or not written_section[-1]
+
+    @staticmethod
+    def _translate_abs_paths(root, headers_and_lines):
+        """Edit absolute paths in headers and contents depending on OS."""
+        for header in headers_and_lines.copy():
+            if not header:
+                continue
+            path_str = header.split('at ')[1].replace(']', '')
+            # pylint: disable-next=magic-value-comparison
+            if '/' not in path_str:
+                continue
+            path = Path(path_str)
+            try:
+                path.relative_to(root)
+            except ValueError:
+                pass  # Handled below
+            else:     # Nothing to do, it's relative
+                continue
+            abs_path_str = str(path.resolve().as_posix())
+            lines = headers_and_lines.pop(header)
+            header = header.replace(path_str, abs_path_str)
+            headers_and_lines[header] = {
+                line.replace(path_str, abs_path_str, 1)
+                for line in lines
+                }
+
     def test_read_contents_line_raises(self, manifest):
         """Check complaints for an invalid content path."""
         wrong = 'wrong_path/contents'
         with pytest.raises(InconsistentPathsError):
+            # pylint: disable-next=protected-access       # OK in tests
             manifest._read_contents_line(wrong, None, 'right_path')
 
     _read_line = {  # line, relative_path, expect
@@ -256,7 +268,7 @@ class TestManifestFile:
             }
         assert manifest.paths == tuple(expect_contents)
         for path, contents in expect_contents.items():
-            self.check_contents(manifest, path, *contents)
+            check_contents(manifest, path, *contents)
         # pylint: disable-next=protected-access           # OK in tests
         assert manifest._labels == expect_labels
 
