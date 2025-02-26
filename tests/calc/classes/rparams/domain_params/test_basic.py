@@ -24,7 +24,7 @@ class TestDomainParameters:
         assert domain.name == name
         assert domain.sl is None
         assert domain.rp is None
-        assert domain.refcalcRequired is False
+        assert domain.refcalc_required is False
 
     def test_invalid_path(self, make_domain):
         """Test with a non-existent path to ensure it still resolves."""

@@ -51,7 +51,7 @@ class DomainParameters:
         self.name = name
         self.sl = None
         self.rp = None
-        self.refcalcRequired = False
+        self.refcalc_required = False
 
     def __str__(self):
         """Return a string representation for this domain."""
@@ -80,7 +80,7 @@ class DomainParameters:
             return
 
         # No usable tensors in src; fetch inputs from src directly
-        self.refcalcRequired = True
+        self.refcalc_required = True
         _LOGGER.info(f'No previous {DEFAULT_TENSORS} found, '
                      'reference calculation is required.')
         may_auto_generate = {'PHASESHIFTS'}

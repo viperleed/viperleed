@@ -458,7 +458,7 @@ def init_domains(rp):
         for dp in [p for p in rp.domainParams if p != largestDomain]:
             uc = dp.sl.ab_cell.T
             if not np.all(abs(uc-uc0) < 1e-4):
-                dp.refcalcRequired = True
+                dp.refcalc_required = True
                 trans = np.dot(uc0, np.linalg.inv(uc))
                 if np.any(abs(trans - np.round(trans)) > 1e-4):
                     logger.error(
@@ -520,35 +520,35 @@ def init_domains(rp):
     if not rp.LMAX.has_max:
         rp.LMAX.max = max(dp.rp.LMAX.max for dp in rp.domainParams)
     for dp in rp.domainParams:
-        if dp.refcalcRequired:
+        if dp.refcalc_required:
             continue
         cmessage = f'Reference calculation required for {dp}: '
         # check energies
         if not dp.rp.THEO_ENERGIES.contains(rp.THEO_ENERGIES):
             logger.info("%sEnergy range is mismatched.", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
             continue
         # check LMAX - should be obsolete since TensErLEED version 1.6
         if rp.TL_VERSION <= Version('1.6.0') and rp.LMAX.max != dp.rp.LMAX.max:
             logger.info("%sLMAX is mismatched.", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
         # check beam incidence
         if rp.THETA != dp.rp.THETA or rp.PHI != dp.rp.PHI:
             logger.info("%sBEAM_INCIDENCE is mismatched.", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
         # check IVBEAMS
         if not dp.rp.fileLoaded["IVBEAMS"]:
             logger.info("%sNo IVBEAMS file loaded", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
             continue
         if (len(rp.ivbeams) != len(dp.rp.ivbeams)
                 or not all(dp.rp.ivbeams[i].isEqual(rp.ivbeams[i])
                            for i in range(len(rp.ivbeams)))):
             logger.info("%sIVBEAMS file mismatched with supercell.", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
             continue
 
-    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     if rr:
         logger.info("The following domains require new reference "
                     f"calculations: {', '.join(d.name for d in rr)}")

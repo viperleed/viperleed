@@ -828,7 +828,7 @@ def run_refcalc_for_one_domain(domain):
 
 def refcalc_domains(rp):
     """Runs reference calculations for the domains that require them."""
-    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     if not rr:
         logger.info("Found no domain which requires a reference calculation.")
         return
@@ -842,7 +842,7 @@ def refcalc_domains(rp):
     for dp in rp.domainParams:
         dp.rp.FORTRAN_COMP = rp.FORTRAN_COMP
     rp.updateCores()  # if number of cores is not defined, try to find it
-    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     logger.info("Running reference calculations in subfolders for domains: "
                 + ", ".join([d.name for d in rr]))
 

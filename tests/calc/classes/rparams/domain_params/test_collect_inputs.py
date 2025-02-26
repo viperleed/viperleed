@@ -161,14 +161,14 @@ class TestCollectFromDirectory:
             if src.name == 'PHASESHIFTS':
                 raise exc
         mocks = collect(max_index=0, copy_raises=_copy_raises)
-        assert domain.refcalcRequired  # No exception
+        assert domain.refcalc_required  # No exception
         assert mocks['copy'].call_count == len(_DOMAIN_INPUT_FILES)
 
     def test_refcalc_required(self, domain, collect):
         """Check successful fetching of inputs when no Tensor is found."""
         mocks = collect(max_index=0)
         mocks['get_tensor'].assert_not_called()
-        assert domain.refcalcRequired
+        assert domain.refcalc_required
         assert mocks['copy'].call_count == len(_DOMAIN_INPUT_FILES)
 
     def test_tensor_found(self, domain, collect):
@@ -180,7 +180,7 @@ class TestCollectFromDirectory:
             }}}
         filesystem_from_dict(unzipped_tensor, domain.workdir)
         mocks = collect()
-        assert not domain.refcalcRequired
+        assert not domain.refcalc_required
         for mock in mocks.values():
             mock.assert_called()
         assert mocks['copy'].call_count == len(tensor_input_files)
@@ -195,7 +195,7 @@ class TestCollectFromDirectory:
         mocks = mock_implementation()
         mocks['get_tensor'].side_effect = exc
         collect(mock=False)
-        assert domain.refcalcRequired
+        assert domain.refcalc_required
         for mock in mocks.values():
             mock.assert_called()
         assert mocks['copy'].call_count == len(_DOMAIN_INPUT_FILES)
@@ -209,7 +209,7 @@ class TestCollectFromDirectory:
         src_inputs = dict.fromkeys(_DOMAIN_INPUT_FILES, '')
         filesystem_from_dict(src_inputs, src_dir)
         mocks = collect(mock_copy=False)
-        assert domain.refcalcRequired
+        assert domain.refcalc_required
         for mock in mocks.values():
             mock.assert_called()
         work_tree = filesystem_to_dict(domain.workdir)
