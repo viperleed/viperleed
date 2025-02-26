@@ -52,7 +52,7 @@ class DomainParameters:
         self.sl = None
         self.rp = None
         self.refcalcRequired = False
-        self.tensorDir = None
+        self.tensorDir = None                                                   # TODO: this seems unused. @fkraushofer: should we remove it?
 
     def __str__(self):
         """Return a string representation for this domain."""
