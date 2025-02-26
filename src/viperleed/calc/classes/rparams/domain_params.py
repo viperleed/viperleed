@@ -75,7 +75,7 @@ class DomainParameters:
         # Try first to pull the inputs from the most recent tensor file
         try:
             tensor_dir = self._collect_inputs_from_most_recent_tensor(src)
-        except OSError:
+        except (OSError, BadZipFile):
             pass
         else:
             self.tensorDir = tensor_dir

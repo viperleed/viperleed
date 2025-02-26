@@ -187,13 +187,15 @@ class TestCollectFromDirectory:
             mock.assert_called()
         assert mocks['copy'].call_count == len(tensor_input_files)
 
+    @parametrize(exc=(OSError, BadZipFile))
     def test_tensor_found_but_fetch_fails(self,
+                                          exc,
                                           domain,
                                           mock_implementation,
                                           collect):
         """Check fallback to source when failing to fetch a Tensor file."""
         mocks = mock_implementation()
-        mocks['get_tensor'].side_effect = OSError
+        mocks['get_tensor'].side_effect = exc
         collect(mock=False)
         assert not domain.tensorDir
         assert domain.refcalcRequired
