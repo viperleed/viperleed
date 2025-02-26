@@ -35,7 +35,8 @@ class TestMakeDomainWork:
         name = 'some_domain'
         expect_work = tmp_path / f'main_work/Domain_{name}'
         expect_work.mkdir()
-        work = make_work(name=name)
+        make_work(name=name)
+        # pylint: disable-next=magic-value-comparison
         assert 'already exists' in caplog.text
 
     def test_mkdir_fails(self, make_work, mocker):
