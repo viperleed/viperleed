@@ -36,9 +36,8 @@ MARKERSIZE = 4
 
 
 _MARKERS = (
-    ('o', 'full'), ('o', 'none'),
-    ('v', 'full'), ('v', 'none'),
-    ('*', 'full'), ('*', 'none'),
+    ('o', 'full'), ('v', 'full'), ('*', 'full'),
+    ('o', 'none'), ('v', 'none'), ('*', 'none'),
     )
 
 _COLORS = (colormaps['Greys'], colormaps['Blues'],
@@ -62,8 +61,7 @@ class MeasurementPlot(qtw.QWidget):
         self._ctrls = {'quantities': PlotComboBox(),
                        'no_data': qtw.QLabel("NO DATA")}
         self._glob = {'plot_lines': defaultdict(dict),}
-        self.__markers = _MARKERS
-        self.__ctrl_color = {}
+        self._ctrl_markers = {}
         self.__data_points = None
         self.__canvas = Canvas()
 
@@ -187,19 +185,15 @@ class MeasurementPlot(qtw.QWidget):
         """Create the legend for the displayed plot."""
         controllers = []
         legend_elements = []
-        for ctrl, color in self.__ctrl_color.items():
+        for ctrl, marker in self._ctrl_markers.items():
             try:
                 ctrl_name = ctrl.name
             except AttributeError:
                 ctrl_name = ctrl
             controllers.append(ctrl_name)
+            style = _marker_style(*marker, 'black')
             legend_elements.append(
-                # Line2D([], [], linestyle='None', label=ctrl_name,
-                       # marker='o',
-                       # markerfacecolor=color(COLOR_FRACTION),
-                       # markersize=MARKERSIZE)
-                Line2D([], [], label=ctrl_name, color=color(COLOR_FRACTION),
-                       linewidth=4)
+                Line2D([], [], label=ctrl_name, **style)
                 )
         if len(self.plotted_quantities) == 1:
             return legend_elements
@@ -209,10 +203,10 @@ class MeasurementPlot(qtw.QWidget):
             Line2D([], [], linestyle='', label="")
             )
 
-        for marker, quantity in zip(self.__markers, self.plotted_quantities):
-            style = _marker_style(*marker, 'black')
+        for color, quantity in zip(_COLORS, self.plotted_quantities):
             legend_elements.append(
-                Line2D([], [], label=quantity.label, **style)
+                Line2D([], [], label=quantity.label,
+                       color=color(COLOR_FRACTION),linewidth=4)
                 )
         return legend_elements
 
@@ -226,9 +220,9 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = dict(zip(data, _COLORS))
+        self._ctrl_markers = dict(zip(data, _MARKERS))
 
-        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+        for color, quantity in zip(_COLORS, self.plotted_quantities):
             for ctrl, measurements in data.items():
                 if quantity not in measurements:
                     continue
@@ -238,8 +232,9 @@ class MeasurementPlot(qtw.QWidget):
                 else:
                     energies = nominal_energies[:-1]
 
-                color = self.__ctrl_color[ctrl](COLOR_FRACTION)
-                style = _marker_style(*marker, color)
+                plot_color = color(COLOR_FRACTION)
+                marker = self._ctrl_markers[ctrl]
+                style = _marker_style(*marker, plot_color)
                 self.lines[quantity][ctrl], = axes.plot(energies, ctrl_data,
                                                         **style)
 
@@ -254,31 +249,32 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = dict(zip(data, _COLORS))
+        self._ctrl_markers = dict(zip(data, _MARKERS))
 
-        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+        for color, quantity in zip(_COLORS, self.plotted_quantities):
             for ctrl, measurements in data.items():
                 if quantity not in measurements:
                     continue
                 ctrl_data = measurements[quantity]
                 ctrl_times = measurements[QuantityInfo.TIMES]
+                marker = self._ctrl_markers[ctrl]
 
                 if not SEPARATE_STEPS:
-                    color = self.__ctrl_color[ctrl](COLOR_FRACTION)
-                    style = _marker_style(*marker, color)
+                    plot_color = color(COLOR_FRACTION)
+                    style = _marker_style(*marker, plot_color)
                     self.lines[quantity][ctrl], = axes.plot(ctrl_times,
                                                             ctrl_data, **style)
                     continue
 
                 # SEPARATE_STEPS
-                colors = self.__ctrl_color[ctrl](
-                    np.linspace(0.2, 0.8, len(ctrl_data))
+                colors = color(
+                    np.linspace(0.2, 0.8, self.data_points.nr_steps_total)
                     )
                 # Cannot construct a big array of arrays and plot in
-                # parallel bacause each step may (and usually will)
+                # parallel because each step may (and usually will)
                 # have a variable number of data.
-                for color, times, values in zip(colors, ctrl_times, ctrl_data):
-                    style = _marker_style(*marker, color)
+                for clr, times, values in zip(colors, ctrl_times, ctrl_data):
+                    style = _marker_style(*marker, clr)
                     axes.plot(times, values, **style)
 
     def __plot_new_energy_resolved_data(self):
@@ -291,15 +287,16 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = dict(zip(data, _COLORS))                      # TODO: do we need this?
+        self._ctrl_markers = dict(zip(data, _MARKERS))
 
-        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+        for color, quantity in zip(_COLORS, self.plotted_quantities):
             for ctrl, measurements in data.items():
                 if quantity not in measurements:
                     continue
                 ctrl_data = measurements[quantity]
-                color = self.__ctrl_color[ctrl](COLOR_FRACTION)
-                style = _marker_style(*marker, color)
+                plot_color = color(COLOR_FRACTION)
+                marker = self._ctrl_markers[ctrl]
+                style = _marker_style(*marker, plot_color)
                 lines = self.lines[quantity]
                 if ctrl not in lines:
                     lines[ctrl], = axes.plot(nominal_energies[-1],
@@ -320,17 +317,19 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = dict(zip(data, _COLORS))                      # TODO: do we need this?
+        self._ctrl_markers = dict(zip(data, _MARKERS))
 
-        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+        for color, quantity in zip(_COLORS, self.plotted_quantities):
             for ctrl, measurements in data.items():
                 if quantity not in measurements:
                     continue
                 ctrl_data = measurements[quantity]
                 ctrl_times = measurements[QuantityInfo.TIMES]
+                marker = self._ctrl_markers[ctrl]
+
                 if not SEPARATE_STEPS:
-                    color = self.__ctrl_color[ctrl](COLOR_FRACTION)
-                    style = _marker_style(*marker, color)
+                    plot_color = color(COLOR_FRACTION)
+                    style = _marker_style(*marker, plot_color)
                     lines = self.lines[quantity]
                     if ctrl not in lines:
                         lines[ctrl], = axes.plot(ctrl_times, ctrl_data,
@@ -340,7 +339,7 @@ class MeasurementPlot(qtw.QWidget):
                     continue
 
                 # SEPARATE_STEPS
-                colors = self.__ctrl_color[ctrl](
+                colors = color(
                     np.linspace(0.2, 0.8, self.data_points.nr_steps_total)
                     )
                 color_idx = (len(ctrl_data) - 1) % len(colors)
