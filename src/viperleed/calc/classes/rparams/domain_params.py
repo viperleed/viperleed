@@ -49,8 +49,8 @@ class DomainParameters:
         """
         self.workdir = Path(workdir).resolve()
         self.name = name
-        self.sl = None
-        self.rp = None
+        self.slab = None
+        self.rpars = None
         self.refcalc_required = False
 
     def __str__(self):

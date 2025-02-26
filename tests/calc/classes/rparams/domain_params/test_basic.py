@@ -22,8 +22,8 @@ class TestDomainParameters:
 
         assert domain.workdir == Path(work).resolve()
         assert domain.name == name
-        assert domain.sl is None
-        assert domain.rp is None
+        assert domain.slab is None
+        assert domain.rpars is None
         assert domain.refcalc_required is False
 
     def test_invalid_path(self, make_domain):

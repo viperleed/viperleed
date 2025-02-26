@@ -1203,21 +1203,21 @@ class Rparams:
         for dp in self.domainParams:
             with execute_in_dir(dp.workdir):
                 try:
-                    dp.rp.generateSearchPars(dp.sl, subdomain=True)
+                    dp.rpars.generateSearchPars(dp.slab, subdomain=True)
                 except Exception:
                     _LOGGER.error(f'Error while creating delta input for {dp}')
                     raise
-            for sp in dp.rp.searchpars:
+            for sp in dp.rpars.searchpars:
                 if not isinstance(sp.restrictTo, int):
                     continue
                 sp.restrictTo += len(self.searchpars)
-            self.searchpars.extend(dp.rp.searchpars)
-            self.indyPars += dp.rp.indyPars
+            self.searchpars.extend(dp.rpars.searchpars)
+            self.indyPars += dp.rpars.indyPars
         for dp in self.domainParams:
             self.searchpars.append(SearchPar(None, 'dom', '', ''))
             self.searchpars[-1].steps = int(100 / self.DOMAIN_STEP) + 1
-        self.search_maxfiles = max(dp.rp.search_maxfiles
+        self.search_maxfiles = max(dp.rpars.search_maxfiles
                                    for dp in self.domainParams)
-        self.search_maxconc = max(dp.rp.search_maxconc
+        self.search_maxconc = max(dp.rpars.search_maxconc
                                   for dp in self.domainParams)
-        self.mncstep = max(dp.rp.mncstep for dp in self.domainParams)
+        self.mncstep = max(dp.rpars.mncstep for dp in self.domainParams)

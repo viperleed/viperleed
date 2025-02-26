@@ -619,7 +619,7 @@ def deltas_domains(rp):
         logger.info(f'Getting input for delta calculations: {dp}')
         with execute_in_dir(dp.workdir):
             try:
-                r = deltas(dp.sl, dp.rp, subdomain=True)
+                r = deltas(dp.slab, dp.rpars, subdomain=True)
             except Exception:
                 logger.error(f'Error while creating delta input for {dp}')
                 raise

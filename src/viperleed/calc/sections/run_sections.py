@@ -96,7 +96,7 @@ def run_section(index, sl, rp):
     since_section_started = ExecutionTimer()
     rp.runHistory.append(index)
     for dp in rp.domainParams:
-        dp.rp.runHistory = rp.runHistory
+        dp.rpars.runHistory = rp.runHistory
     i = 0
     while i < len(checkfiles):
         filename = checkfiles[i]
@@ -269,10 +269,10 @@ def section_loop(rp, sl):
                         exc_info=True
                         )
             run_section(sec, sl, rp)
-            if rp.domainParams and sl is None:                                  # is there any point in allowing sl to be None?
+            if rp.domainParams and sl is None:
                 sl = rp.pseudoSlab
             if rp.domainParams:
-                rp.setHaltingLevel(max(dp.rp.halt for dp in rp.domainParams))
+                rp.setHaltingLevel(max(d.rpars.halt for d in rp.domainParams))
 
             # record state to the state recorder
             state_recorder.record(sl, rp, sec)
@@ -320,14 +320,14 @@ def section_loop(rp, sl):
                 else:
                     rp.search_index += 1
                 for dp in rp.domainParams:
-                    dp.rp.search_index = rp.search_index
+                    dp.rpars.search_index = rp.search_index
                 if len(rp.disp_blocks) > rp.search_index:
                     if not rp.domainParams:
                         sl.restoreOriState()
                     rp.resetSearchConv()
                     for dp in rp.domainParams:
-                        dp.sl.restoreOriState()
-                        dp.rp.resetSearchConv()
+                        dp.slab.restoreOriState()
+                        dp.rpars.resetSearchConv()
                     if rp.RUN[:2] != [2, 3]:
                         rp.RUN = [2, 3] + rp.RUN
         except KeyboardInterrupt:

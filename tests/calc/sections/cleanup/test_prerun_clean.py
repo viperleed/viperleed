@@ -225,17 +225,17 @@ class TestPropagateToDomains:
                 continue
             workdir = root_path/domain
             domain = DomainParameters(workdir, domain)
-            domain.rp = Rparams()
-            domain.rp.TENSOR_INDEX = 1
+            domain.rpars = Rparams()
+            domain.rpars.TENSOR_INDEX = 1
             rpars.domainParams.append(domain)
             has_subdomains = any(isinstance(s, dict)
                                  for s in subdomains.values())
-            call = mocker.call(domain.rp,
+            call = mocker.call(domain.rpars,
                                logname='',
                                )#recurse_domains=has_subdomains)
             calls[str(workdir)] = call
             if has_subdomains:
-                subcalls = self.make_domains(domain.rp,
+                subcalls = self.make_domains(domain.rpars,
                                              subdomains,
                                              workdir,
                                              mocker)

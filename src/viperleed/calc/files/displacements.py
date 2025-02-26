@@ -164,7 +164,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
         return
     # in case of domains, now split blocks to domains
     for dp in rp.domainParams:
-        dp.rp.disp_blocks = []
+        dp.rpars.disp_blocks = []
     for (lines, blockname) in rp.disp_blocks:
         d = ""
         dlines = {}
@@ -209,7 +209,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
                 else:
                     dlines[d].append(line)
         for dp in rp.domainParams:
-            dp.rp.disp_blocks.append((dlines[dp.name], blockname))
+            dp.rpars.disp_blocks.append((dlines[dp.name], blockname))
     return
 
 

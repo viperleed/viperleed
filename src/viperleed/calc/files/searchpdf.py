@@ -234,7 +234,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     offsets = []
     rpToDo = [rp]
     if rp.domainParams:
-        rpToDo.extend([dp.rp for dp in rp.domainParams])
+        rpToDo.extend([dp.rpars for dp in rp.domainParams])
     for (k, crp) in enumerate(rpToDo):
         sps = [sp for sp in crp.searchpars if sp.el != "vac" and sp.steps > 1]
         if not rp.domainParams:

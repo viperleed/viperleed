@@ -144,9 +144,9 @@ def _propagate_to_domains(func):
     def _propagate(rpars, *args, **kwargs):
         for domain in rpars.domainParams:
             with execute_in_dir(domain.workdir):
-                func(domain.rp, *args, **kwargs)
-            if domain.rp.domainParams:
-                _propagate(domain.rp, *args, **kwargs)
+                func(domain.rpars, *args, **kwargs)
+            if domain.rpars.domainParams:
+                _propagate(domain.rpars, *args, **kwargs)
 
     @wraps(func)
     def _wrapper(*args, **kwargs):
@@ -525,8 +525,8 @@ def _find_next_workistory_dir_name(rpars, prerun):
 
     sectionabbrv = {1: 'R', 2: 'D', 3: 'S'}
     # NB: when executed in a domain subfolder, rpars.runHistory is
-    # actually the main history of segments, as domain.rp.runHistory
-    # is the same object as main_rp.runHistory. This is set up in
+    # actually the main history of segments, as domain.rpars.runHistory
+    # is the same object as main_rpars.runHistory. This is set up in
     # run_sections.
     new_segments = rpars.runHistory[len(rpars.lastOldruns):]
     abbreviations = ''.join(sectionabbrv.get(index, '')
@@ -749,11 +749,11 @@ def _organize_all_work_directories(rpars):
                 'rpars': rpars,
                 'path': ''}]
     to_sort.extend(
-        {'tensors': DEFAULT_TENSORS in dp.rp.manifest,
-         'deltas': DEFAULT_DELTAS in dp.rp.manifest,
-         'rpars': dp.rp,
-         'path': dp.workdir}
-        for dp in rpars.domainParams
+        {'tensors': DEFAULT_TENSORS in domain.rpars.manifest,
+         'deltas': DEFAULT_DELTAS in domain.rpars.manifest,
+         'rpars': domain.rpars,
+         'path': domain.workdir}
+        for domain in rpars.domainParams
         )
     for kwargs in to_sort:
         organize_workdir(delete_unzipped=True, **kwargs)
@@ -816,7 +816,7 @@ def _write_manifest_file(rpars):
     """Write manifest to file 'manifest', collecting also domain files."""
     manifest = rpars.manifest
     for domain in rpars.domainParams:
-        manifest.add_manifest(domain.rp.manifest, label=str(domain))
+        manifest.add_manifest(domain.rpars.manifest, label=str(domain))
     try:
         manifest.write()
     except OSError:

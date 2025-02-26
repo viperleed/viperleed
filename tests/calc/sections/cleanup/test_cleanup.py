@@ -124,25 +124,25 @@ class TestOrganizeAllWorkDirectories:
                                 tensors=False,
                                 deltas=False)
         # Add some fake domains
-        domain_1 = mocker.MagicMock()
-        domain_1.workdir = mocker.MagicMock()
-        domain_1.rp = Rparams()  # No Tensors/Deltas in manifest
-        call_1 = mocker.call(rpars=domain_1.rp,
-                             path=domain_1.workdir,
-                             delete_unzipped=True,
-                             tensors=False,
-                             deltas=False)
-        domain_2 = mocker.MagicMock()
-        domain_2.workdir = mocker.MagicMock()
-        domain_2.rp = Rparams()
-        domain_2.rp.manifest = {DEFAULT_TENSORS, DEFAULT_DELTAS}
-        call_2 = mocker.call(rpars=domain_2.rp,
-                             path=domain_2.workdir,
-                             delete_unzipped=True,
-                             tensors=True,
-                             deltas=True)
-        rpars.domainParams = domain_1, domain_2
-        calls = main_call, call_1, call_2
+        domain_one = mocker.MagicMock()
+        domain_one.workdir = mocker.MagicMock()
+        domain_one.rpars = Rparams()  # No Tensors/Deltas in manifest
+        call_one = mocker.call(rpars=domain_one.rpars,
+                               path=domain_one.workdir,
+                               delete_unzipped=True,
+                               tensors=False,
+                               deltas=False)
+        domain_two = mocker.MagicMock()
+        domain_two.workdir = mocker.MagicMock()
+        domain_two.rpars = Rparams()
+        domain_two.rpars.manifest = {DEFAULT_TENSORS, DEFAULT_DELTAS}
+        call_two = mocker.call(rpars=domain_two.rpars,
+                               path=domain_two.workdir,
+                               delete_unzipped=True,
+                               tensors=True,
+                               deltas=True)
+        rpars.domainParams = domain_one, domain_2
+        calls = main_call, call_one, call_two
 
         _organize_all_work_directories(rpars)
         rpars.closePdfReportFigs.assert_called_once()
@@ -289,7 +289,7 @@ class TestWriteManifest:
             d_rpars = Rparams()
             d_rpars.manifest = ManifestFile(path=d_path)
             domain = DomainParameters(d_path, f'name {i}')
-            domain.rp = d_rpars
+            domain.rpars = d_rpars
             rpars.domainParams.append(domain)
         with execute_in_dir(tmp_path):
             _write_manifest_file(rpars)
@@ -297,7 +297,7 @@ class TestWriteManifest:
         subpaths = set(manifest.paths)
         expect_paths = (
             tmp_path,
-            *(d.rp.manifest.path for d in rpars.domainParams),
+            *(d.rpars.manifest.path for d in rpars.domainParams),
             )
         assert all(p in subpaths for p in expect_paths)
 

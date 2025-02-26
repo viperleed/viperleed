@@ -210,7 +210,7 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     # domain_parameters) for each domain under variation
     best_doms = configs[0]
     if rp.domainParams:
-        doms_info = ((dp.sl, dp.rp, dp.workdir, dp.name)
+        doms_info = ((dp.slab, dp.rpars, dp.workdir, dp.name)
                      for dp in rp.domainParams)
     else:
         doms_info = ((sl, rp, Path.cwd(), ""),)
@@ -504,13 +504,15 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
         indep_pars = reshaped[:, :, 0].astype(int)  # contains the percentages
         # then the 'real' parameters:
         for (j, dp) in enumerate(rp.domainParams):
-            new_sps = [sp for sp in dp.rp.searchpars if
+            new_sps = [sp for sp in dp.rpars.searchpars if
                        sp.el != "vac" and sp.steps*localizeFactor >= 3 and
                        sp.linkedTo is None and sp.restrictTo is None and
                        sp.mode != "dom"]
             new_ip = np.array([*reshaped[:, j, 1]])
-            new_ip = np.delete(new_ip, [i for i in range(len(dp.rp.searchpars))
-                               if dp.rp.searchpars[i] not in new_sps], 1)
+            new_ip = np.delete(new_ip,
+                               [i for i in range(len(dp.rpars.searchpars))
+                                if dp.rpars.searchpars[i] not in new_sps],
+                                1)
             sps.extend(new_sps)
             indep_pars = np.append(indep_pars, new_ip, axis=1)
     indep_pars = indep_pars.astype(float)
@@ -709,7 +711,7 @@ def search(sl, rp):
 
     rp.searchResultConfig = None
     if rp.domainParams:
-        initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
+        initToDo = [(dp.rpars, dp.slab, dp.workdir) for dp in rp.domainParams]
     else:
         initToDo = [(rp, sl, Path.cwd())]
     for (rpt, slt, path) in initToDo:
@@ -917,8 +919,8 @@ def search(sl, rp):
         )
     if rp.domainParams:
         config_size += sum(
-            sys.getsizeof((0,) * len(dp.rp.searchpars))
-            + sys.getsizeof(1) * len(dp.rp.searchpars)
+            sys.getsizeof((0,) * len(dp.rpars.searchpars))
+            + sys.getsizeof(1) * len(dp.rpars.searchpars)
             for dp in rp.domainParams
             )
     else:

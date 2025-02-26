@@ -478,7 +478,7 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     if not domains:
         d = [leedbase.getLEEDdict(sl, rp)]
     else:
-        d = [leedbase.getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+        d = [leedbase.getLEEDdict(dp.slab, dp.rpars) for dp in rp.domainParams]
     if any([v is None for v in d]):
         logger.error("Failed to write IVBEAMS")
         return []

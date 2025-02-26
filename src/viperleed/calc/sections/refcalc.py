@@ -819,7 +819,7 @@ def run_refcalc_for_one_domain(domain):
     """
     with execute_in_dir(domain.workdir):
         try:
-            refcalc(domain.sl, domain.rp, subdomain=True)
+            refcalc(domain.slab, domain.rpars, subdomain=True)
         except Exception:
             logger.error('Exception during reference calculation '
                          f'for {domain}: ', exc_info=True)
@@ -840,7 +840,7 @@ def refcalc_domains(rp):
             logger.error("No fortran compiler found, cancelling...")
             raise
     for dp in rp.domainParams:
-        dp.rp.FORTRAN_COMP = rp.FORTRAN_COMP
+        dp.rpars.FORTRAN_COMP = rp.FORTRAN_COMP
     rp.updateCores()  # if number of cores is not defined, try to find it
     rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     logger.info("Running reference calculations in subfolders for domains: "
@@ -867,8 +867,9 @@ def refcalc_domains(rp):
             "Reference calculations were done for all domains, but no "
             "area weights for the different domains are available yet. "
             "Getting unweighted average over domain beams...")
-    rp.theobeams["refcalc"] = beams.averageBeams([
-        dp.rp.theobeams["refcalc"] for dp in rp.domainParams], weights=weights)
+    rp.theobeams["refcalc"] = beams.averageBeams([dp.rpars.theobeams["refcalc"]
+                                                  for dp in rp.domainParams],
+                                                 weights=weights)
     try:
         beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
         theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])

@@ -22,7 +22,7 @@ def factory_domain(tmp_path):
     """Return a DomainParameters instance."""
     def _make(name):
         domain = DomainParameters(tmp_path/name, name)
-        domain.rp = Rparams()
+        domain.rpars = Rparams()
         domain.workdir.mkdir()
         return domain
     return _make
@@ -34,7 +34,8 @@ def factory_nested_domains(make_domain):
     def _make(root, nested_domains):
         for name, subdomains in nested_domains.items():
             domain = make_domain(name)
-            _make(domain.rp, {f'{name}/{d}': s for d, s in subdomains.items()})
+            _make(domain.rpars,
+                  {f'{name}/{d}': s for d, s in subdomains.items()})
             root.domainParams.append(domain)
     return _make
 
@@ -67,10 +68,10 @@ def test_args_kwargs(rpars, make_nested_domains, mocker):
 
     decorated_func(rpars, 'test_arg', key='test_value')
     one = rpars.domainParams[0]
-    two = one.rp.domainParams[0]
-    three = two.rp.domainParams[0]
+    two = one.rpars.domainParams[0]
+    three = two.rpars.domainParams[0]
 
-    for rpars_arg in (rpars, one.rp, two.rp, three.rp):
+    for rpars_arg in (rpars, one.rpars, two.rpars, three.rpars):
         func_mock.assert_any_call(rpars_arg, 'test_arg', 'test_value')
 
 
@@ -80,12 +81,12 @@ def test_nested_domains(rpars, track_cwd, make_nested_domains):
     make_nested_domains(rpars, nested)
     workdirs = track_cwd(rpars)
     one = rpars.domainParams[0]
-    two = one.rp.domainParams[0]
-    three = two.rp.domainParams[0]
+    two = one.rpars.domainParams[0]
+    three = two.rpars.domainParams[0]
     expect_workdirs = {rpars: '.',
-                       one.rp: 'one',
-                       two.rp: 'one/two',
-                       three.rp: 'one/two/three'}
+                       one.rpars: 'one',
+                       two.rpars: 'one/two',
+                       three.rpars: 'one/two/three'}
     assert workdirs == expect_workdirs
 
 
@@ -102,6 +103,6 @@ def test_simple_domains(rpars, track_cwd, make_nested_domains):
     domains = rpars.domainParams
     workdirs = track_cwd(rpars)
     expect_workdirs = {rpars: '.',
-                       domains[0].rp: 'one',
-                       domains[1].rp: 'two'}
+                       domains[0].rpars: 'one',
+                       domains[1].rpars: 'two'}
     assert workdirs == expect_workdirs
