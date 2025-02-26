@@ -137,7 +137,7 @@ def getTensorOriStates(sl, path):
         site.oriState = copy.deepcopy(tsitel[0])
 
 
-def unpack_tensor_file(tensor_file, unpack_path):                               # TODO: maybe it would be nicer to read directly from the zip file
+def unpack_tensor_file(tensor_file, unpack_path):                               # TODO: maybe it would be nicer to read directly from the zip file. See also https://github.com/viperleed/viperleed/pull/305#discussion_r1971601291
     """Extract the contents of tensor_file into unpack_path."""
     unpack_path.mkdir(parents=True, exist_ok=True)
     with ZipFile(tensor_file, 'r') as archive:
