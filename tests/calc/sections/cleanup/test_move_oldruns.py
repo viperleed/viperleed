@@ -565,7 +565,7 @@ class TestMoveOldruns:
         domain_rp = Rparams()
         domain_wrk = mocker.MagicMock(spec=Path)
         rpars.domainParams = [
-            mocker.MagicMock(rp=domain_rp, workdir=domain_wrk),
+            mocker.MagicMock(rpars=domain_rp, workdir=domain_wrk),
             ]
 
         def _propagate_calls(*args, **kwargs):

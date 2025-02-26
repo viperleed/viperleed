@@ -141,7 +141,7 @@ class TestOrganizeAllWorkDirectories:
                                delete_unzipped=True,
                                tensors=True,
                                deltas=True)
-        rpars.domainParams = domain_one, domain_2
+        rpars.domainParams = domain_one, domain_two
         calls = main_call, call_one, call_two
 
         _organize_all_work_directories(rpars)
