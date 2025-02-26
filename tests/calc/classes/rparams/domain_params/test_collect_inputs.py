@@ -56,7 +56,7 @@ class TestCollectInputsForDomain:
             mocker.patch('pathlib.Path.is_file', return_value=is_tensor)
             mocker.patch('pathlib.Path.is_dir', return_value=is_dir)
             return {
-            'dir': mocker.patch.object(domain, 
+            'dir': mocker.patch.object(domain,
                                        '_collect_inputs_from_directory',
                                        side_effect=dir_raises),
             'tensor' : mocker.patch.object(domain,
@@ -168,7 +168,6 @@ class TestCollectFromDirectory:
         """Check successful fetching of inputs when no Tensor is found."""
         mocks = collect(max_index=0)
         mocks['get_tensor'].assert_not_called()
-        assert not domain.tensorDir
         assert domain.refcalcRequired
         assert mocks['copy'].call_count == len(_DOMAIN_INPUT_FILES)
 
@@ -181,7 +180,6 @@ class TestCollectFromDirectory:
             }}}
         filesystem_from_dict(unzipped_tensor, domain.workdir)
         mocks = collect()
-        assert domain.tensorDir == domain.workdir/'Tensors'/'Tensors_001'
         assert not domain.refcalcRequired
         for mock in mocks.values():
             mock.assert_called()
@@ -197,7 +195,6 @@ class TestCollectFromDirectory:
         mocks = mock_implementation()
         mocks['get_tensor'].side_effect = exc
         collect(mock=False)
-        assert not domain.tensorDir
         assert domain.refcalcRequired
         for mock in mocks.values():
             mock.assert_called()
@@ -212,7 +209,6 @@ class TestCollectFromDirectory:
         src_inputs = dict.fromkeys(_DOMAIN_INPUT_FILES, '')
         filesystem_from_dict(src_inputs, src_dir)
         mocks = collect(mock_copy=False)
-        assert not domain.tensorDir
         assert domain.refcalcRequired
         for mock in mocks.values():
             mock.assert_called()
@@ -256,22 +252,19 @@ class TestCollectFromZip:
             }}}
         filesystem_from_dict(unzipped_tensor, domain.workdir)
         mocks = collect()
-        assert domain.tensorDir == domain.workdir/'Tensors/Tensors_002'
         for mock in mocks.values():
             mock.assert_called()
         assert mocks['copy'].call_count == len(tensor_input_files)
 
     def test_inputs_missing(self, collect, domain):
-        """Check the successful collection of inputs from a Tensor file."""
+        """Check complaints when no Tensors exist."""
         with pytest.raises(FileNotFoundError):
             collect(mock_copy=False)
-        assert not domain.tensorDir
 
     @parametrize(exc=(OSError, BadZipFile))
     def test_unzip_fails(self, exc, mock_implementation, collect, domain):
-        """Check the successful collection of inputs from a Tensor file."""
+        """Check complaints if unzipping Tensors fails."""
         mocks = mock_implementation()
         mocks['zip'].side_effect = exc
         with pytest.raises(exc):
             collect(mock=False)
-        assert not domain.tensorDir

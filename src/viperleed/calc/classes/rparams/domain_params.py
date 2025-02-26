@@ -52,7 +52,6 @@ class DomainParameters:
         self.sl = None
         self.rp = None
         self.refcalcRequired = False
-        self.tensorDir = None                                                   # TODO: this seems unused. @fkraushofer: should we remove it?
 
     def __str__(self):
         """Return a string representation for this domain."""
@@ -74,11 +73,10 @@ class DomainParameters:
         """Fetch input files from a user-given source directory."""
         # Try first to pull the inputs from the most recent tensor file
         try:
-            tensor_dir = self._collect_inputs_from_most_recent_tensor(src)
+            self._collect_inputs_from_most_recent_tensor(src)
         except (OSError, BadZipFile):
             pass
         else:
-            self.tensorDir = tensor_dir
             return
 
         # No usable tensors in src; fetch inputs from src directly
@@ -127,7 +125,6 @@ class DomainParameters:
                             f'{DEFAULT_TENSORS} directory. A new '
                             'reference calculation is required.')
             raise
-        return tensor_dir
 
     def _collect_inputs_from_tensor_file(self, src_zip):
         """Fetch input files from a user-given Tensor file."""
@@ -149,7 +146,6 @@ class DomainParameters:
             _LOGGER.error(f'Required file {file} for {self} not found '
                           f'in {DEFAULT_TENSORS} directory {tensor_dir}')
             raise
-        self.tensorDir = tensor_dir
 
     def _collect_inputs_from_tensor_folder(self, tensor_dir):
         """Fetch input files from an unpacked tensor_dir."""
