@@ -256,13 +256,13 @@ class TestCollectFromZip:
             mock.assert_called()
         assert mocks['copy'].call_count == len(tensor_input_files)
 
-    def test_inputs_missing(self, collect, domain):
+    def test_inputs_missing(self, collect):
         """Check complaints when no Tensors exist."""
         with pytest.raises(FileNotFoundError):
             collect(mock_copy=False)
 
     @parametrize(exc=(OSError, BadZipFile))
-    def test_unzip_fails(self, exc, mock_implementation, collect, domain):
+    def test_unzip_fails(self, exc, mock_implementation, collect):
         """Check complaints if unzipping Tensors fails."""
         mocks = mock_implementation()
         mocks['zip'].side_effect = exc
