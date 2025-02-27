@@ -625,7 +625,7 @@ def getSymEqBeams(sl, rp):
     if not rp.domainParams:
         d = [getLEEDdict(sl, rp)]
     else:
-        d = [getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+        d = [getLEEDdict(dp.slab, dp.rpars) for dp in rp.domainParams]
     if any([v is None for v in d]):
         logger.error("Failed to get beam equivalence list")
         return []

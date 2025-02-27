@@ -28,11 +28,13 @@ import re
 import numpy as np
 
 from viperleed import __version__
-from viperleed.calc.classes.rparams import EnergyRange
-from viperleed.calc.classes.rparams import IVShiftRange
-from viperleed.calc.classes.rparams import LayerCuts
-from viperleed.calc.classes.rparams import SymmetryEps
-from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
+from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
+from viperleed.calc.classes.rparams.special.l_max import LMax
+from viperleed.calc.classes.rparams.special.search_cull import SearchCull
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
@@ -76,6 +78,7 @@ _LOGGER = logging.getLogger(parent_name(__name__))
 # key is parameter name, value is tuple of keyword arguments that should be
 # passed to interpret_bool_parameter, in order.
 _SIMPLE_BOOL_PARAMS = {
+    'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'},),
     'LOG_SEARCH' : (),
     'PHASESHIFTS_CALC_OLD' : (),
     'PHASESHIFTS_OUT_OLD' : (),
@@ -85,7 +88,6 @@ _SIMPLE_BOOL_PARAMS = {
     'SYMMETRIZE_INPUT' : (),
     'SYMMETRY_FIND_ORI' : (),
     'TL_IGNORE_CHECKSUM' : (),
-    'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'},),
     }
 
 
@@ -623,13 +625,17 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 i += 1
             name = str(i)
 
-        # Check path: prioritize absolute paths and those relative
-        # to the current working directory. Then look for paths
-        # relative to the directory where calc was started from
+        # Check path: prioritize absolute paths and those relative to
+        # the directory where calc was started from, then check the
+        # ones relative to the current working directory.
         right_side = Path(assignment.values_str.strip())
         candidates = right_side, right_side.with_suffix('.zip')
         if self.rpars.paths.home is not None:
-            candidates += tuple(self.rpars.paths.home / p for p in candidates)
+            candidates = (
+                # NB: if p is absolute, home/p == p
+                tuple(self.rpars.paths.home / p for p in candidates)
+                + candidates
+                )
         full_path = next((p.resolve() for p in candidates if p.exists()),
                          None)
 
@@ -644,7 +650,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                              'interpreted as either a path or a .zip file')
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(param, message=error_message)
-        self.rpars.DOMAINS[name] = full_path
+        self.rpars.DOMAINS[name] = (full_path, assignment)
 
     def interpret_domain_step(self, assignment):
         """Assign parameter DOMAIN_STEP."""
@@ -883,7 +889,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
         try:
-            self.rpars.LMAX = self.rpars.LMAX.from_value(values)
+            self.rpars.LMAX = LMax.from_value(values)
         except ValueError as exc:  # out-of-range
             raise ParameterRangeError(param, message=str(exc)) from None
 
@@ -1340,7 +1346,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
         try:
-            cull = rpars.SEARCH_CULL.from_value(assignment.values)
+            cull = SearchCull.from_value(assignment.values)
         except TypeError as exc:   # Numeric value is not a number
             rpars.setHaltingLevel(1)
             raise ParameterFloatConversionError(param,
@@ -1619,7 +1625,9 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.SYMMETRY_EPS = SymmetryEps(eps_value)
             return
 
-        z_assignment = Assignment(assignment.other_values, param)
+        z_assignment = Assignment(assignment.other_values,
+                                  param,
+                                  assignment.raw_line)
         eps_z_value = self.interpret_numerical_parameter(z_assignment,
                                                          bounds=bounds,
                                                          return_only=True)
@@ -1903,10 +1911,10 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                     message=f'Found {len(values)} values for angle {name}'
                     )
             angles[name] = self.interpret_numerical_parameter(
-                Assignment(values[0], param),
+                Assignment(values[0], param, raw_line=assignment.raw_line),
                 param=f'{param} {name}',
                 bounds=bounds[name],
-                return_only=True
+                return_only=True,
                 )
 
         # Check for negative theta and adjust phi

@@ -20,7 +20,7 @@ import re
 import fortranformat as ff
 import numpy as np
 
-from viperleed.calc.classes.rparams import EnergyRange
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase

@@ -307,7 +307,7 @@ def deltas(sl, rp, subdomain=False):
     if not Path(DEFAULT_TENSORS).is_dir():
         logger.error(f'No {DEFAULT_TENSORS} directory found.')
         raise RuntimeError(f'{DEFAULT_TENSORS} not found')                      # TODO: FileNotFoundError?
-    iotensors.getTensors(rp.TENSOR_INDEX)
+    iotensors.fetch_unpacked_tensor(rp.TENSOR_INDEX)
     if 1 not in rp.runHistory:
         load_from = Path(DEFAULT_TENSORS)
         load_from /= f'{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}'
@@ -616,20 +616,19 @@ def deltas_domains(rp):
     deltaRunTasks = []
     # get input for all domains
     for dp in rp.domainParams:
-        logger.info(f'Getting input for delta calculations: domain {dp.name}')
+        logger.info(f'Getting input for delta calculations: {dp}')
         with execute_in_dir(dp.workdir):
             try:
-                r = deltas(dp.sl, dp.rp, subdomain=True)
+                r = deltas(dp.slab, dp.rpars, subdomain=True)
             except Exception:
-                logger.error('Error while creating delta '
-                             f'input for domain {dp.name}')
+                logger.error(f'Error while creating delta input for {dp}')
                 raise
         if type(r) == tuple:  # if no deltas need to be calculated returns None
             deltaCompTasks.extend(r[0])
             deltaRunTasks.extend(r[1])
         elif r is not None:
             raise RuntimeError('Unknown error while creating '
-                               f'delta input for domain {dp.name}')
+                               f'delta input for {dp}')
 
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION:

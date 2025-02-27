@@ -17,10 +17,8 @@ __license__ = 'GPLv3+'
 
 import copy
 import logging
-import os
 from pathlib import Path
-import re
-import shutil
+from zipfile import BadZipFile
 from zipfile import ZipFile
 
 from viperleed.calc.constants import DEFAULT_TENSORS
@@ -30,7 +28,7 @@ from viperleed.calc.lib.base import copytree_exists_ok
 logger = logging.getLogger(__name__)
 
 
-def getTensors(index, base_dir='', target_dir=''):
+def fetch_unpacked_tensor(index, base_dir='', target_dir=''):
     """Fetch Tensors with a given `index` from a folder or an archive.
 
     Parameters
@@ -48,8 +46,10 @@ def getTensors(index, base_dir='', target_dir=''):
 
     Raises
     ------
-    RuntimeError
+    FileNotFoundError
         When no Tensor file is found for `index`.
+    BadZipFile
+        If a tensor archive to be unzipped is an invalid ZIP file.
     OSError
         If any copying/extraction fails.
     """
@@ -68,16 +68,14 @@ def getTensors(index, base_dir='', target_dir=''):
 
     if not tensor_folder.is_dir() and not tensor_file.is_file():
         logger.error(f'{DEFAULT_TENSORS} not found')
-        raise RuntimeError(f'No {DEFAULT_TENSORS} folder/zip file '             # TODO: FileNotFoundError?
-                           f'for index {index} in {base_dir}')
+        raise FileNotFoundError(f'No {DEFAULT_TENSORS} folder/zip file '
+                                f'for index {index} in {base_dir}')
 
     if not tensor_folder.is_dir() and tensor_file.is_file():
         logger.info(f'Unpacking {tensor_file.name}...')
-        unpack_path.mkdir(parents=True, exist_ok=True)
         try:
-            with ZipFile(tensor_file, 'r') as archive:
-                archive.extractall(unpack_path)                                 # TODO: maybe it would be nicer to read directly from the zip file
-        except OSError:
+            unpack_tensor_file(tensor_file, unpack_path)
+        except (OSError, BadZipFile):
             logger.error(f'Failed to unpack {tensor_file.name}')
             raise
         return
@@ -137,3 +135,10 @@ def getTensorOriStates(sl, path):
             logger.error(f"Sites from {dn} input differ from current input.")
             raise RuntimeError(f"{DEFAULT_TENSORS} file incompatible")
         site.oriState = copy.deepcopy(tsitel[0])
+
+
+def unpack_tensor_file(tensor_file, unpack_path):                               # TODO: maybe it would be nicer to read directly from the zip file. See also https://github.com/viperleed/viperleed/pull/305#discussion_r1971601291
+    """Extract the contents of tensor_file into unpack_path."""
+    unpack_path.mkdir(parents=True, exist_ok=True)
+    with ZipFile(tensor_file, 'r') as archive:
+        archive.extractall(unpack_path)

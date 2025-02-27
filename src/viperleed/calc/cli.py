@@ -22,6 +22,8 @@ from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.files.manifest import ManifestFile
+from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
@@ -142,21 +144,23 @@ def _copy_input_files_to_work(work_path):
 
 def _copy_files_from_manifest(to_path):
     """Copy all files listed in file 'manifest' back to_path."""
-    manifest_file = Path('manifest')
-    if not manifest_file.is_file():
-        return
+    manifest = ManifestFile()
+    manifest.read()
+    if manifest.has_absolute_paths:
+        raise ManifestFileError('Cannot copy resources from folders that are '
+                                f'not contained in {Path.cwd()}. Destination '
+                                'is not well defined.')
 
-    with manifest_file.open('r', encoding='utf-8') as file:
-        manifest = [line.strip() for line in file.readlines()]
-        manifest = (line for line in manifest if line)
-        manifest = (Path(line) for line in manifest)
-
-    for to_be_copied in manifest:
-        _copy = shutil.copy2 if to_be_copied.is_file() else copytree_exists_ok
-        try:
-            _copy(to_be_copied, to_path / to_be_copied)
-        except OSError as exc:
-            print(f'Error copying {to_be_copied} to home directory: {exc}')     # TODO: Why no logging?
+    for folder, contents in manifest.iter_sections(relative=True):
+        dest_folder = to_path/folder
+        dest_folder.mkdir(exist_ok=True)
+        for item in contents:
+            src = folder/item
+            _copy = shutil.copy2 if src.is_file() else copytree_exists_ok
+            try:
+                _copy(src, dest_folder / item)
+            except OSError as exc:
+                print(f'Error copying {src} to home directory: {exc}')          # TODO: Why no logging?
 
 
 def _copy_tensors_and_deltas_to_work(work_path, all_tensors):

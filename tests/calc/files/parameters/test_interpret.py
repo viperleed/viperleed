@@ -15,7 +15,7 @@ import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
 from viperleed import __version__
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut,
@@ -116,6 +116,7 @@ class _TestInterpretBase:
 
     def assignment(self, value_str, **kwargs):
         """Return an Assignment object for self.param."""
+        kwargs.setdefault('raw_line', '')
         return Assignment(value_str, self.param, **kwargs)
 
     def interpret(self, interpreter, value_str, **kwargs):
@@ -197,26 +198,27 @@ class TestSimpleParamsExamples:
 
     def test_interpret_n_bulk_layers_valid(self, interpreter):
         """Check assignment of valid N_BULK_LAYERS."""
-        assignment = Assignment('1', 'N_BULK_LAYERS')
+        assignment = Assignment('1', 'N_BULK_LAYERS', 'N_BULK_LAYERS = 1')
         interpreter.interpret_n_bulk_layers(assignment)
         assert interpreter.rpars.N_BULK_LAYERS == 1
 
     def test_interpret_n_bulk_layers_invalid(self, interpreter):
         """Check exceptions are raised for invalid N_BULK_LAYERS."""
         # N_BULK_LAYERS must be 1 or 2
-        assignment = Assignment('3', 'N_BULK_LAYERS')
+        assignment = Assignment('3', 'N_BULK_LAYERS', 'N_BULK_LAYERS = 3')
         with pytest.raises(err.ParameterRangeError):
             interpreter.interpret_n_bulk_layers(assignment)
 
     def test_interpret_t_debye(self, interpreter):
         """Check assignment of valid T_DEBYE."""
-        assignment = Assignment('300.0', 'T_DEBYE')
+        assignment = Assignment('300.0', 'T_DEBYE', '')
         interpreter.interpret_t_debye(assignment)
         assert interpreter.rpars.T_DEBYE == pytest.approx(300.0)
 
     def test_interpret_layer_stack_vertical(self, interpreter):
         """Check assignment of valid LAYER_STACK_VERTICAL."""
-        assignment = Assignment('c', 'LAYER_STACK_VERTICAL')
+        assignment = Assignment('c', 'LAYER_STACK_VERTICAL',
+                                'LAYER_STACK_VERTICAL = c')
         interpreter.interpret_layer_stack_vertical(assignment)
         assert not interpreter.rpars.LAYER_STACK_VERTICAL
 
@@ -328,17 +330,37 @@ class TestDomain(_TestInterpretBase):
 
     param = 'DOMAIN'
 
+    @staticmethod
+    def interpreted_paths(interpreter):
+        """Extract only the paths from rpars.DOMAINS."""
+        return {n: p for n, (p, _) in interpreter.rpars.DOMAINS.items()}
+
     def test_interpret_path_with_flag(self, interpreter, tmp_path):
         """Test correct interpretation of a path with a domain name."""
         domain_path = tmp_path / 'domain1'
         domain_path.mkdir()
-        self.interpret(interpreter, str(domain_path), flags_str='domain1')
-        assert interpreter.rpars.DOMAINS == {'domain1': domain_path}
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(domain_path), flags_str='domain1')
+        assert self.interpreted_paths(interpreter) == {'domain1': domain_path}
 
     def test_interpret_path_no_flag(self, interpreter, tmp_path):
         """Test correct interpretation of a path without a domain name."""
-        self.interpret(interpreter, str(tmp_path))
-        assert interpreter.rpars.DOMAINS == {'1': tmp_path}
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(tmp_path))
+        assert self.interpreted_paths(interpreter) == {'1': tmp_path}
+
+    def test_interpret_path_dotted(self, interpreter, tmp_path):
+        """Test correct interpretation of a path relative to cwd."""
+        relative_path = 'domain'
+        calc_path = tmp_path / 'calc_was_started_here'
+        domain_path = calc_path / relative_path
+        domain_path.mkdir(parents=True)
+        # Also make one in cwd to ensure we pick the right one
+        (tmp_path / relative_path).mkdir()
+        interpreter.rpars.paths.home = calc_path
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, f'./{relative_path}')
+        assert self.interpreted_paths(interpreter) == {'1': domain_path}
 
     def test_interpret_path_relative_to_cwd(self, interpreter, tmp_path):
         """Test correct interpretation of a path relative to cwd."""
@@ -347,7 +369,7 @@ class TestDomain(_TestInterpretBase):
         domain_path.mkdir()
         with execute_in_dir(tmp_path):
             self.interpret(interpreter, relative_path)
-        assert interpreter.rpars.DOMAINS == {'1': domain_path}
+        assert self.interpreted_paths(interpreter) == {'1': domain_path}
 
     def test_interpret_path_relative_to_calc(self, interpreter, tmp_path):
         """Test interpretation of a path relative to where calc was started."""
@@ -355,19 +377,37 @@ class TestDomain(_TestInterpretBase):
         calc_path = tmp_path / 'calc_was_started_here'
         domain_path = calc_path / relative_path
         domain_path.mkdir(parents=True)
+        # Also make one in cwd to ensure we pick the right one
+        (tmp_path / relative_path).mkdir()
         interpreter.rpars.paths.home = calc_path
-        self.interpret(interpreter, relative_path)
-        assert interpreter.rpars.DOMAINS == {'1': domain_path}
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, relative_path)
+        assert self.interpreted_paths(interpreter) == {'1': domain_path}
+
+    def test_interpret_path_absolute(self, interpreter, tmp_path):
+        """Test interpretation of an absolute path."""
+        abs_path = tmp_path/'some_folder'/'domain'
+        calc_path = tmp_path / 'calc_was_started_here'
+        abs_path.mkdir(parents=True)
+        # Also make one in cwd to ensure we pick the right one
+        (tmp_path / abs_path.name).mkdir()
+        # and one where calc started
+        (calc_path / abs_path.name).mkdir(parents=True)
+        interpreter.rpars.paths.home = calc_path
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(abs_path))
+        assert self.interpreted_paths(interpreter) == {'1': abs_path}
 
     def test_interpret_zip_file(self, interpreter, tmp_path):
         """Test correct interpretation of a zip file."""
         zip_file = tmp_path / 'domain.zip'
         zip_file.touch()
         self.interpret(interpreter, str(zip_file))
-        assert interpreter.rpars.DOMAINS == {'1': zip_file}
-        self.interpret(interpreter, str(zip_file.with_suffix('')))
-        assert interpreter.rpars.DOMAINS == {'1': zip_file,
-                                             '2': zip_file}
+        assert self.interpreted_paths(interpreter) == {'1': zip_file}
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(zip_file.with_suffix('')))
+        assert self.interpreted_paths(interpreter) == {'1': zip_file,
+                                                       '2': zip_file}
 
     def test_interpret_invalid(self, interpreter):
         """Ensure invalid DOMAIN raises exceptions."""
@@ -375,7 +415,7 @@ class TestDomain(_TestInterpretBase):
 
     def test_duplicate_name(self, interpreter):
         """Ensure that no two domains can have the same name."""
-        interpreter.rpars.DOMAINS['domain'] = 'path_to_domain'
+        interpreter.rpars.DOMAINS['domain'] = ('path_to_domain', None)
         self.check_raises(interpreter, 'path_to_domain',
                           err.ParameterValueError, flags_str='domain')
 

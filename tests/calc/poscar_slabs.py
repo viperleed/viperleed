@@ -18,9 +18,9 @@ from pytest_cases import case
 from pytest_cases import lazy_value
 from pytest_cases import parametrize
 
-from viperleed.calc.classes.rparams import LayerCuts
-from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.classes.rparams import SymmetryEps
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.files import poscar
 
 from ..helpers import POSCAR_PATH, duplicate_all

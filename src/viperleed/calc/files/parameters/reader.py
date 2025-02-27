@@ -31,6 +31,9 @@ from .known_parameters import from_alias
 from .utils import Assignment
 
 
+# To me this pylint complaint does not make much sense
+# here. The public methods come from the parent.
+# pylint: disable-next=too-few-public-methods
 class ParametersReader(InputFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
 
@@ -70,7 +73,7 @@ class ParametersReader(InputFileReader):
         # We treat STOP differently, as its presence, even without
         # an equal sign, is interpreted as 'please, stop right now'
         if self._stop_requested(line):
-            return 'STOP', Assignment('True', 'STOP')
+            return 'STOP', Assignment('True', 'STOP', line)
 
         if '=' not in line:
             self._complain_about_missing_equals(line)
@@ -97,6 +100,7 @@ class ParametersReader(InputFileReader):
             raise ParameterHasNoValueError(parameter=param)
         assignment = Assignment(values_str=values_str,
                                 parameter=param,
+                                raw_line=line,
                                 flags_str=flags)
         return param, assignment
 
@@ -120,9 +124,6 @@ class ParametersReader(InputFileReader):
         return param, flags, values_str
 
 
-# To me this pylint complaint does not make much sense
-# here. The public methods come from the parent.
-# pylint: disable-next=too-few-public-methods
 class RawLineParametersReader(ParametersReader):
     """A ParametersReader that also returns lines exactly as they were read.
 
@@ -136,9 +137,28 @@ class RawLineParametersReader(ParametersReader):
         return self._read_one_line(next(self._file_obj))
 
     def _read_one_line(self, line):
-        """Return a parameter, and the whole raw line it was in."""
+        """Read one raw line of a PARAMETERS file.
+
+        Parameters
+        ----------
+        line : str
+            The whole raw line, exactly as read from file.
+            It may includes comments.
+
+        Returns
+        -------
+        param : str
+            The parameter name that this line corresponds to. May
+            be an empty string if `line` does not correspond to a
+            parameter assignment.
+        assignment : Assignment or None
+            The interpreted assignment of `param`. None if `line`
+            assigns no `param`.
+        line : str
+            The whole raw line, exactly as read from file.
+        """
         try:
-            param, *_ = super()._read_one_line(line)
+            param, assignment = super()._read_one_line(line)
         except ShouldSkipLineError:
-            param = ''
-        return param, line
+            param, assignment = '', None
+        return param, assignment, line

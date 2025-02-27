@@ -22,8 +22,8 @@ from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.classes.rparams import LayerCuts
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import errors as err

@@ -17,7 +17,7 @@ from typing import Dict, List, Mapping, Set, Tuple
 
 import numpy as np
 
-from viperleed.calc.classes.rparams import LayerCuts
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.lib.dataclass_utils import non_init_field
 
 from ..helpers import InfoBase

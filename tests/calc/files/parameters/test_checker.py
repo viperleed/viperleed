@@ -10,7 +10,7 @@ __license__ = 'GPLv3+'
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 

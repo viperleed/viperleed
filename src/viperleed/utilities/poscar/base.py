@@ -19,8 +19,9 @@ import logging
 import pathlib
 import sys
 
-from viperleed.calc.classes.rparams import Rparams, SymmetryEps
 from viperleed.calc.classes.rparams.defaults import DEFAULTS as PARAM_DEFAULTS
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.files import poscar
 from viperleed.calc.lib.log_utils import debug_or_lower
 from viperleed.cli_base import ViPErLEEDCLI, positive_float

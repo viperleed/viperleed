@@ -22,7 +22,7 @@ import numpy as np
 from pytest_cases import fixture
 
 from viperleed.calc.classes.atom import Atom
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.slab import Slab
 
 

@@ -12,7 +12,7 @@ import operator
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.calc.classes.rparams import SymmetryEps
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 
 
 @fixture(name='value_and_z')

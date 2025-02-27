@@ -143,10 +143,10 @@ def _get_emax_for_evanescent_beams(slab, rpars, domains):
         The energy (in electronvolts) that generates also the
         correct evanescent beams.
     """
-    if not domains:
-        d_min = slab.smallest_interlayer_gap
-    else:
-        d_min = min(dp.sl.smallest_interlayer_gap for dp in rpars.domainParams)
+    d_min = (
+        slab.smallest_interlayer_gap if not domains
+        else min(dp.slab.smallest_interlayer_gap for dp in rpars.domainParams)
+        )
     d_min *= 0.7                                                                # TODO: may want to complain if this is small as it will give a huge load of beams (and may mean different LAYER_CUTS should be used).
 
     e_max = rpars.THEO_ENERGIES.max

@@ -12,7 +12,7 @@ import logging
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files.parameters.errors import ParameterHasNoValueError
 from viperleed.calc.files.parameters.errors import ParameterNotRecognizedError
 from viperleed.calc.files.parameters.read import read, update
@@ -176,19 +176,27 @@ class TestReader:
         """Check the lines returned by a ParametersReader."""
         with ParametersReader(path_to_params) as reader:
             # pylint: disable=protected-access
-            assert next(reader)[1] == Assignment('1-3', 'RUN')
+            assert next(reader)[1] == Assignment('1-3', 'RUN', 'RUN = 1-3')
             assert reader._current_line == 3
-            assert next(reader)[1] == Assignment('50 700 3', 'THEO_ENERGIES')
+            assert next(reader)[1] == Assignment('50 700 3', 'THEO_ENERGIES',
+                                                 'THEO_ENERGIES =   50 700 3')
             assert reader._current_line == 4
 
     def test_raw_reader(self, path_to_params):
         """Check the lines returned by a RawLineParametersReader."""
         expected_lines = (
-            ('', '! ####### GLOBAL PARAMETERS #######\n'),
-            ('', '\n'),
-            ('RUN', 'RUN = 1-3\n'),
-            ('THEO_ENERGIES', 'THEO_ENERGIES =   50 700 3\n'),
+            ('', None, '! ####### GLOBAL PARAMETERS #######\n'),
+            ('', None, '\n'),
+            ('RUN', Assignment('1-3', 'RUN', 'RUN = 1-3'), 'RUN = 1-3\n'),
             )
+        expected_lines += ((
+            'THEO_ENERGIES',
+            Assignment('50 700 3',
+                       'THEO_ENERGIES',
+                       'THEO_ENERGIES =   50 700 3'),
+            'THEO_ENERGIES =   50 700 3\n'
+            ),)
+
         with RawLineParametersReader(path_to_params) as reader:
             # pylint: disable=protected-access
             for i, (expected, _read) in enumerate(zip(expected_lines, reader)):

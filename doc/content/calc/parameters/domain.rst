@@ -26,10 +26,10 @@ Syntax
 A unique name should be defined for each domain on the left-hand side. If no
 names are defined, the domains will be numbered instead. The right-hand side
 accepts paths to either directories or to Tensors.zip files.
-Paths can be absolute or relative. When given as a relative path, the temporary
+Paths can be absolute or relative. When given as a relative path, the directory
+in which |calc| was started is considered first. Then, the temporary
 directory in which calculations are executed (see also :ref:`how_to_run` and
-the ``--work`` :ref:`command-line argument<cli_calc>`) is searched first. Then,
-the directory in which |calc| was started is considered.
+the ``--work`` :ref:`command-line argument<cli_calc>`) is searched. 
 Input files from the different domains will then be compared to determine if a
 new reference calculation is needed. If the source is a Tensors.zip file, the
 input files saved in the .zip archive will be compared.

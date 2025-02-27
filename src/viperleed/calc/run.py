@@ -20,11 +20,13 @@ import shutil
 
 from viperleed import __version__
 from viperleed.calc import LOGGER as logger
-from viperleed.calc.classes import rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import LOG_PREFIX
-from viperleed.calc.files import parameters, poscar
+from viperleed.calc.files import parameters
+from viperleed.calc.files import poscar
+from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.log_utils import prepare_calc_logger
@@ -47,7 +49,7 @@ def run_calc(
     source=None,
     home=None,
     ):
-    """Run a ViPErLEED calculation.
+    """Run a ViPErLEED calculation in the current directory.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
     replaced by passing the `slab` and/or `present_params` kwargs.
@@ -107,7 +109,7 @@ def run_calc(
                 + DateTimeFormat.LOG_CONTENTS.now())
     logger.info(f"This is ViPErLEED version {__version__}\n")
 
-    tmp_manifest = {DEFAULT_SUPP, DEFAULT_OUT, log_name}
+    tmp_manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT, log_name)
     try:
         rp = parameters.read()
     except FileNotFoundError:
@@ -116,7 +118,7 @@ def run_calc(
                          "passed. Execution will stop.")
             cleanup(tmp_manifest)
             return 2, None
-        rp = rparams.Rparams()
+        rp = Rparams()
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmp_manifest)
@@ -210,7 +212,7 @@ def run_calc(
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
         logger.info("Halting execution...")
-        cleanup(rp.manifest, rp)
+        cleanup(rp)
         return 0, None
 
     rp.updateDerivedParams()

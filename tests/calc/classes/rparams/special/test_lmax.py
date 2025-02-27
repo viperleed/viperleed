@@ -10,8 +10,8 @@ __license__ = 'GPLv3+'
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.calc.classes.rparams import LMax
 from viperleed.calc.classes.rparams.defaults import NO_VALUE
+from viperleed.calc.classes.rparams.special.l_max import LMax
 
 from .....helpers import not_raises
 

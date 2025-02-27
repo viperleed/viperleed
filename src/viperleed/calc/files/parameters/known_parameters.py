@@ -30,7 +30,11 @@ from .errors import ParameterNotRecognizedError
 _LOGGER = logging.getLogger(parent_name(__name__))
 
 
-# Allowed parameters with their 'standard' names in alphabetic order
+# !!!!!!!!!!!!!!!!!!!!!!!!!!    IMPORTANT    !!!!!!!!!!!!!!!!!!!!!!!!!!
+# !      If new PARAMETERS are added, make sure to also update        !
+# !      _PARAM_ALIAS as well as _ACCEPTS_MULTIPLE_ASSIGNMENTS        !
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Allowed parameters with their 'standard' names in alphabetic order.
 KNOWN_PARAMS = (
     'ATTENUATION_EPS',
     'AVERAGE_BEAMS',
@@ -99,7 +103,7 @@ KNOWN_PARAMS = (
 
 _DEPRECATED = {  # alias: (since version, till version), both inclusive
     'parabolafit': ('0.11.0', None),
-}
+    }
 
 
 def _make_alias(param):
@@ -126,6 +130,20 @@ _PARAM_ALIAS.update({    # Sort keys alphabetically!
     'plotrfactors': 'PLOT_IV',
     'searchkill': 'STOP',
     })
+
+# For most parameter values, when given multiple times in a PARAMETERS
+# file, we only consider the last occurrence as the final assignment.
+# Those listed here make an exception: they are multi-valued.
+_ACCEPTS_MULTIPLE_ASSIGNMENTS = (
+    'DOMAIN',              # Always at least 2
+    'ELEMENT_MIX',         # May be one per POSCAR element
+    'ELEMENT_RENAME',      # May be one per POSCAR element
+    'FORTRAN_COMP',        # flag-less, post, mpi, mpipost
+    # 'OPTIMIZE',          # <-- Not yet
+    'PLOT_IV',             # Several flags
+    'SEARCH_CONVERGENCE',  # gaussian, dgen, etc...
+    'SITE_DEF',            # Arbitrary many
+    )
 
 
 def from_alias(known_param_or_alias):

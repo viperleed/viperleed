@@ -30,7 +30,7 @@ class TestPreserveOriginalInputs:
         """Return a fake shutil.copy2 and a logger."""
         def _mock(**kwargs):
             mock_copy = mocker.patch('shutil.copy2', **kwargs)
-            mock_logger = mocker.patch(f'{_MODULE}.logger')
+            mock_logger = mocker.patch(f'{_MODULE}._LOGGER')
             return mock_copy, mock_logger
         return _mock
 

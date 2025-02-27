@@ -86,7 +86,7 @@ def _fetch_and_check_spectra(rp, index, name):
         path = DEFAULT_OUT / fn
     elif index == 11:
         # try getting from Tensors
-        iotensors.getTensors(rp.TENSOR_INDEX)                                   # TODO: this had required=False, but the argument never did anything.
+        iotensors.fetch_unpacked_tensor(rp.TENSOR_INDEX)
         directory = Path(f"{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}")
         if (DEFAULT_TENSORS / directory / fn).is_file():
             path = DEFAULT_TENSORS / directory / fn
