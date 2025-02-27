@@ -917,6 +917,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         self._glob['last_dir'] = str(fname.parent)
         self._glob['plot'].data_points = data
+        self._glob['plot'].show()
         self._glob['last_cfg'] = config
 
     def _on_set_energy(self):
