@@ -759,7 +759,7 @@ def _read_inputs_for_domain(domain, main_rpars):
     ----------
     domain : DomainParameters
         The parameters for this domain. At the end of this call,
-        domain.rpars and domain.slab` are updated to contain the
+        domain.rpars and domain.slab are updated to contain the
         Rparams and Slab objects read (and updated) from file.
         domain.rpars is also up to date with respect to other
         input files loaded.
