@@ -1069,28 +1069,15 @@ class SettingsDialog(qtw.QDialog):
 
     @qtc.pyqtSlot()
     def accept(self):
-        """Notify if settings changed, then close."""
+        """Notify if settings changed, decide whether to save, then close."""
         self.__on_apply_pressed()
-
         # Ask to save the settings to file.
         if self.settings != self._settings['original']:
-            reply = _MSGBOX.question(
-                self, "Save settings to file?",
-                f"{self.windowTitle()} were edited.\n\n"
-                "Would you like to save changes to file?",
-                _MSGBOX.Save | _MSGBOX.Discard
-                )
-            _saved = reply == _MSGBOX.Save
-            if _saved:
-                try:
-                    self.settings.update_file()
-                except FileNotFoundError:
-                    # The file must have been moved before
-                    # the settings could be saved.                              # TODO: open QMessageBox to ask the user how to proceed from here. Ask whether the user wants to save the settings and if yes, ask where and under which name.
-                    pass
-                finally:
-                    self._settings['original'].read_dict(self.settings)
-            self.settings_saved.emit(_saved)
+            reply = self._ask_to_save()
+            self._process_saving(reply == _MSGBOX.Save)
+            if reply == _MSGBOX.Abort:
+                super().reject
+                return
         super().accept()
 
     @qtc.pyqtSlot()
@@ -1149,6 +1136,22 @@ class SettingsDialog(qtw.QDialog):
                 title = handled_obj.__class__.__name__
             title += " settings"
         self.setWindowTitle(title)
+
+    def _ask_to_save(self):
+        """Ask whether to save or not.
+
+        Returns
+        -------
+        reply : QMessageBox.Constant
+            The action selected by the user.
+        """
+        reply = _MSGBOX.question(
+            self, "Save settings to file?",
+            f"{self.windowTitle()} were edited.\n\n"
+            "Would you like to save changes to file?",
+            _MSGBOX.Save | _MSGBOX.Discard
+            )
+        return reply
 
     def _compose_and_connect(self):
         """Place and update children widgets."""
@@ -1251,6 +1254,29 @@ class SettingsDialog(qtw.QDialog):
                                             and widg.has_tag(Tag.R)))
         self.adjustSize()   # TODO: does not always adjust when going smaller?
 
+    def _process_saving(self, save):
+        """Process saving.
+
+        Parameters
+        ----------
+        save : bool
+            Decides whether the settings should be saved or not.
+
+        Returns
+        -------
+        None.
+        """
+        if save:
+            try:
+                self.settings.update_file()
+            except FileNotFoundError:
+                # The file must have been moved before
+                # the settings could be saved.                                  # TODO: open QMessageBox to ask the user how to proceed from here. Ask whether the user wants to save the settings and if yes, ask where and under which name.
+                pass
+            finally:
+                self._settings['original'].read_dict(self.settings)
+        self.settings_saved.emit(save)
+
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):
         """Update visibility of button and options."""
@@ -1265,6 +1291,25 @@ class SettingsDialog(qtw.QDialog):
 
 class MeasurementSettingsDialog(SettingsDialog):
     """A dialog to display measurement settings."""
+
+    def _ask_to_save(self):
+        """Ask whether to save or not.
+
+        Returns
+        -------
+        reply : QMessageBox.Constant
+            The action selected by the user.
+        """
+        message_box = qtw.QMessageBox(
+            _MSGBOX.Question, "Save settings to file?",
+            (f"{self.windowTitle()} were edited.\n\n"
+            "Would you like to save changes to file?"),
+            parent=self,
+            )
+        message_box.addButton(_MSGBOX.Save)
+        message_box.addButton("Discard settings", _MSGBOX.DestructiveRole)
+        message_box.addButton(_MSGBOX.Abort)
+        return message_box.exec()
 
     def _check_if_settings_ok(self):
         """Check if settings are ok and enable/disable accept button."""
