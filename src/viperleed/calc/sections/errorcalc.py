@@ -151,7 +151,7 @@ def errorcalc(sl, rp):
         else:
             logger.info("Could not estimate var(R) for any error mode.")
 
-    save_path = rp.workdir
+    save_path = rp.paths.work
 
     # Errors_summary.csv and Errors.zip
     (summary_csv_content,

@@ -8,6 +8,7 @@ __created__ = '2023-09-07'
 __license__ = 'GPLv3+'
 
 from copy import deepcopy
+
 import numpy as np
 from pytest_cases import case, parametrize
 

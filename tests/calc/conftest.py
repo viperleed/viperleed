@@ -118,14 +118,14 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
         The PHASESHIFTS that were generated.
     """
     slab, rpars, *_ = args
-    rpars.source_dir = tensorleed_path
-    rpars.workdir = tmp_path_factory.mktemp(basename='phaseshifts',
-                                            numbered=True)
+    rpars.paths.tensorleed = tensorleed_path
+    rpars.paths.work = tmp_path_factory.mktemp(basename='phaseshifts',
+                                               numbered=True)
     rpars.initTheoEnergies()
-    executable = 'EEASiSSS'
+    executable = 'eeasisss'
 
-    # run EEASISSS in the temporary directory
-    with execute_in_dir(rpars.workdir):
+    # run eeasisss in the temporary directory
+    with execute_in_dir(rpars.paths.work):
         results = psgen.runPhaseshiftGen_old(slab, rpars,
                                              psgensource=executable)
         yield (rpars, slab, *results)

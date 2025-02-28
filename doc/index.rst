@@ -61,11 +61,11 @@ project:
       :cite:p:`viperleedMeasure`.
 -  The :ref:`imagej_plugins`
       Software for extracting |IV| curves from the experimental data
-      ("movies") :cite:p:`viperleedSpot`.
+      ("movies") :cite:p:`schmidViPErLEEDPackageII2025`.
 -  The :ref:`viperleed.calc package<viperleed_calc>`
       A Python package for the calculation of |IV| curves, quantitative
       analysis of :term:`LEED` data, and surface-structure optimization
-      :cite:p:`viperleedCalc`.
+      :cite:p:`kraushoferViPErLEEDPackageCalculation2025`.
 
 .. _toc_figure:
 .. figure:: /_static/paper_figures/ViPErLEED-overview_embedded.svg

@@ -26,7 +26,7 @@ publication was performed using an early development version of ViPErLEED
 
    Experimental LEED pattern of |CuTe| at an incident electron energy of
    60 eV. Diffraction spots are labeled by the ViPErLEED spot tracker
-   :cite:p:`viperleedSpot`.
+   :cite:p:`schmidViPErLEEDPackageII2025`.
 
 .. only:: html
 

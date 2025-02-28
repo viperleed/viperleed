@@ -41,7 +41,7 @@ class TestInitialization:                                                       
         """Check that initialization exits without errors."""
         assert not init_files.failed
         assert init_files.records is not None
-        assert init_files.records.get_last_section_state('initialization')
+        assert init_files.records.get_last_state_for_section('initialization')
 
     _expected_files = 'IVBEAMS', 'BEAMLIST', 'VIBROCC', 'PARAMETERS'
 
@@ -65,7 +65,7 @@ class TestInitializationRaises:
     def fixture_ag100_init(self, ag100, make_section_tempdir, tensorleed_path):
         """Yield slab and rpars ready to execute in a temporary directory."""
         slab, rpars, *_ = ag100
-        rpars.source_dir = tensorleed_path
+        rpars.paths.tensorleed = tensorleed_path
         tmp = make_section_tempdir('Ag(100)', 'init')
         with execute_in_dir(tmp):  # Not to spam with files
             yield slab, rpars

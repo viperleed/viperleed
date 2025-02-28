@@ -143,21 +143,21 @@ class TestCalcStateRecorder:
         last_state = calc_state_recorder.last_state
         self._check_state(last_state, *calc_state)
 
-    def test_get_last_section_state(self, calc_state_recorder, calc_state):
+    def test_get_last_state_for_section(self, calc_state_recorder, calc_state):
         """Check that the last state stored for a section is correct."""
         *_, section = calc_state
         calc_recorder = calc_state_recorder
         calc_recorder.record(*calc_state)
-        last_section_state = calc_recorder.get_last_section_state(section)
+        last_section_state = calc_recorder.get_last_state_for_section(section)
         self._check_state(last_section_state, *calc_state)
         assert last_section_state is calc_recorder[-1]
 
-    def test_get_last_section_state_raises(self, calc_state_recorder):
+    def test_get_last_state_for_section_raises(self, calc_state_recorder):
         """Check complaints when accessing state for an unrecorded section."""
         unused_section = CalcSection.REFCALC
         with pytest.raises(ValueError, match='No state recorded for section '
                            f'{unused_section.long_name}.'):
-            calc_state_recorder.get_last_section_state(unused_section)
+            calc_state_recorder.get_last_state_for_section(unused_section)
 
     def test_record(self, calc_state_recorder, calc_state):
         """Check correct recording of a `calc_state`."""

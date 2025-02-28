@@ -6,7 +6,7 @@ ViPErLEED ImageJ plugins
 
 The ViPErLEED ImageJ plugins are a set of tools for processing LEED I(V) movies,
 spot tracking, extraction and processing of I(V) curves.
-For further details, see also the corresponding paper: :cite:t:`viperleedSpot`.
+For further details, see also the corresponding paper: :cite:t:`schmidViPErLEEDPackageII2025`.
 
 .. only:: html
 
