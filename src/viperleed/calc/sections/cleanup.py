@@ -57,21 +57,37 @@ _SUPP_FILES = (
 _SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
 
 # files to go in OUT
-_OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
-             "PatternInfo.tlm", "SD.TL", "refcalc-fd.out", "refcalc-amp.out",
-             "Rfactor_plots_refcalc.pdf", "control.chem",
-             "Search-progress.pdf", "Search-progress.csv",
-             "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
-             "superpos-spec.out", "Rfactor_plots_superpos.pdf",
-             "Rfactor_analysis_refcalc.pdf",
-             "Rfactor_analysis_superpos.pdf",
-             "Errors_summary.csv", "Errors.zip", "Errors.pdf",
-             "FD_Optimization.csv", "FD_Optimization.pdf",
-             "FD_Optimization_beams.pdf", "Complex_amplitudes_imag.csv",
-             "Complex_amplitudes_real.csv")
+_OUTFILES = (
+    "Complex_amplitudes_imag.csv",    # refcalc
+    "Complex_amplitudes_real.csv",    # refcalc
+    "control.chem",                   # search
+    "Errors.pdf",                     # error calc
+    "Errors.zip",                     # error calc
+    "Errors_summary.csv",             # error calc
+    "experiment_symmetry.ini",        # inizialization
+    "FD_Optimization.csv",            # FD optimization
+    "FD_Optimization.pdf",            # FD optimization
+    "FD_Optimization_beams.pdf",      # FD optimization
+    "FITBEAMS.csv",                   # superpos
+    "FITBEAMS_norm.csv",              # superpos
+    "refcalc-amp.out",                # TensErLEED refcalc
+    "refcalc-fd.out",                 # TensErLEED refcalc
+    "Rfactor_analysis_refcalc.pdf",   # R factor after refcalc
+    "Rfactor_analysis_superpos.pdf",  # R factor after superpos
+    "Rfactor_plots_refcalc.pdf",      # R factor after refcalc
+    "Rfactor_plots_superpos.pdf",     # R factor after superpos
+    "SD.TL",                          # TensErLEED search
+    "Search-progress.csv",            # search
+    "Search-progress.pdf",            # search
+    "Search-report.pdf",              # search
+    "superpos-spec.out",              # TensErLEED superpos
+    "THEOBEAMS.csv",                  # refcalc
+    "THEOBEAMS.pdf",                  # refcalc
+    "THEOBEAMS_norm.csv",             # refcalc
+    )
 
-# output files that can be used as input in future runs - keep during prerun
-iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
+# Outputs that can also be input in future runs - keep during prerun
+_IOFILES = ("control.chem", "refcalc-fd.out", "superpos-spec.out")
 
 logger = logging.getLogger(__name__)
 
@@ -372,7 +388,7 @@ def move_oldruns(rp, prerun=False):
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in _OUTFILES or f in _SUPP_FILES)
-                    and f not in rp.manifest and f not in iofiles]
+                    and f not in rp.manifest and f not in _IOFILES]
         dirlist = ["SUPP", "OUT"]
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
@@ -381,7 +397,7 @@ def move_oldruns(rp, prerun=False):
                    d not in ["Tensors", "Deltas", DEFAULT_WORK_HISTORY]]
     for f in filelist:
         try:
-            if not prerun or f in iofiles:
+            if not prerun or f in _IOFILES:
                 shutil.copy2(f, work_hist_path / f)
             else:
                 shutil.move(f, work_hist_path / f)
