@@ -43,7 +43,7 @@ class TestGetMpifortVersion:
 
     @staticmethod
     def mock_run_no_version(cmd, **_):
-        """Fail only on version check."""
+        """Simulate the failed outcome of a version check."""
         return CompletedProcess(args=cmd,
                                 returncode=0,
                                 stdout=b'Unknown output\n')

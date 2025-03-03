@@ -13,9 +13,10 @@ __created__ = '2024-03-27'
 __license__ = 'GPLv3+'
 
 from abc import ABC, abstractmethod
-from argparse import FileType
+from contextlib import contextmanager
 from copy import deepcopy
 import logging
+import pathlib
 import sys
 
 from viperleed.calc.classes.rparams import Rparams, SymmetryEps
@@ -46,7 +47,6 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         slab = self.read_poscar(parsed_args)
         processed_slab = self.process_slab(slab, parsed_args)
         self.write_output(processed_slab, parsed_args)
-        self._close_open_files(parsed_args)
         return 0
 
     def add_infile_argument(self, parser):
@@ -75,9 +75,9 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         help_ = ('Name of the POSCAR input file. Default: read text '
                  'from the standard-input stream (i.e., the terminal)')
         parser.add_argument('--infile', '-i',
-                            type=FileType('r'),
+                            type=pathlib.Path,
                             help=help_,
-                            default=sys.stdin)
+                            default='-')
 
     def add_outfile_argument(self, parser):
         """Add an optional --outfile/-o argument to parser.
@@ -105,9 +105,9 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         help_ = ('Name of the POSCAR output file. Default: write text '
                  'to the standard-output stream (i.e., the terminal)')
         parser.add_argument('--outfile', '-o',
-                            type=FileType('w'),
+                            type=pathlib.Path,
                             help=help_,
-                            default=sys.stdout)
+                            default='-')
 
     def add_parser_arguments(self, parser):
         """Add generic arguments to this CLI.
@@ -142,6 +142,30 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         self.add_infile_argument(parser)
         self.add_outfile_argument(parser)
         self.add_verbose_option(parser)
+
+    @contextmanager
+    def infile_context(self, args):
+        """Return a context manager for the input file."""
+        if str(args.infile) == "-":
+            yield sys.stdin
+        else:
+            resource = args.infile.resolve().open("r", encoding="utf-8")
+            try:
+                yield resource
+            finally:
+                resource.close()
+
+    @contextmanager
+    def outfile_context(self, args):
+        """Return a context manager for the output file."""
+        if str(args.outfile) == "-":
+            yield sys.stdout
+        else:
+            resource = args.outfile.resolve().open("w", encoding="utf-8")
+            try:
+                yield resource
+            finally:
+                resource.close()
 
     @abstractmethod
     def process_slab(self, slab, args):
@@ -198,12 +222,13 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'also overriding read_poscar, make sure to '
                                  'call add_infile_argument in your overridden '
                                  'add_parser_arguments') from None
-        if args.infile.isatty():
-            print('Please input the contents of a POSCAR file:')
-        try:
-            return poscar.read(args.infile)
-        except (ValueError, poscar.POSCARError) as exc:
-            self.parser.error(f'Failed to read POSCAR. Stopping. Info: {exc}')
+
+        with self.infile_context(args) as infile:
+            try:
+                return poscar.read(infile)
+            except (ValueError, poscar.POSCARError) as exc:
+                self.parser.error('Failed to read POSCAR. Stopping.'
+                                  f'Info: {exc}')
         return None  # Unreachable as .error does SystemExit
 
     def write_output(self, processed_slab, args):
@@ -237,23 +262,11 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'also overriding write_output, make sure to '
                                  'call add_outfile_argument in your overridden'
                                  ' add_parser_arguments') from None
-        poscar.write(processed_slab,
-                     filename=args.outfile,
-                     comments='none',
-                     silent=debug_or_lower(self.get_logger()))
-
-    def _close_open_files(self, args):
-        """Close any open file in args."""
-        cli_args = ('infile', 'outfile')
-        for cli_arg in cli_args:
-            try:
-                file = getattr(args, cli_arg)
-            except AttributeError:
-                # Someone has removed the CLI argument. Don't complain
-                pass
-            if file in (sys.stdin, sys.stdout):  # Leave terminal open
-                continue
-            file.close()
+        with self.outfile_context(args) as outfile:
+            poscar.write(processed_slab,
+                        filename=outfile,
+                        comments='none',
+                        silent=debug_or_lower(self.get_logger()))
 
 
 EPS_DEFAULT = PARAM_DEFAULTS['SYMMETRY_EPS']

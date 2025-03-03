@@ -16,7 +16,7 @@ from re import I
 import sys
 
 import fortranformat as ff
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 from numba import njit, prange
 import numpy as np
 from numpy import cos, sin, sqrt

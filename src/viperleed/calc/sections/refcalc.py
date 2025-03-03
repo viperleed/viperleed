@@ -422,7 +422,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                          exc_info=rp.is_debug_mode)
             raise
         comp_tasks.append(RefcalcCompileTask(param, lm, rp.FORTRAN_COMP,
-                                             tl_path, basedir=rp.workdir))
+                                             tl_path, basedir=rp.paths.work))
         collect_param += f"### PARAM file for LMAX = {lm} ###\n\n{param}\n\n"
     try:
         with open("refcalc-PARAM", "w") as wf:
@@ -694,10 +694,11 @@ def _reinitialize_deltas(param, slab):
     slab : Slab
     """
     # delete old delta files in main work folder, if necessary
-    for df in [f for f in os.listdir(param.workdir) if f.startswith("DEL_") and
-               os.path.isfile(param.workdir / f)]:
+    deltas_to_remove = (f for f in param.paths.work.glob('DEL_*')
+                        if f.is_file())
+    for delta_file in deltas_to_remove:
         try:
-            os.remove(df)
+            delta_file.unlink()
         except Exception:
             logger.warning(
                 "Error deleting old Delta file in work directory. This may "

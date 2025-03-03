@@ -351,7 +351,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         Run parameters.
     file_path : pathlike or str
         Pathlike to or name of the output file. If str uses
-        rp.workdir /filename. The default is "rf.info".
+        rp.paths.work/filename. The default is "rf.info".
 
     Returns
     -------
@@ -419,10 +419,8 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
                                    version=rp.TL_VERSION)
     output += auxexpbeams
 
-    if isinstance(file_path, str):
-        _file_path = rp.workdir / file_path
-    else:
-        _file_path = file_path
+    _file_path = (rp.paths.work / file_path if isinstance(file_path, str)
+                  else file_path)
     try:
         with open(_file_path, 'w') as wf:
             wf.write(output)
