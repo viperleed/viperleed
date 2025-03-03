@@ -713,7 +713,7 @@ def search(sl, rp):
     if rp.domainParams:
         initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
     else:
-        initToDo = [(rp, sl, rp.workdir)]
+        initToDo = [(rp, sl, rp.paths.work)]
     for (rpt, slt, path) in initToDo:
         # read DISPLACEMENTS block
         if not rpt.disp_block_read:
@@ -732,7 +732,7 @@ def search(sl, rp):
     rp.updateCores()
     # generate rf.info
     try:
-        rf_info_path = rp.workdir / "rf.info"
+        rf_info_path = rp.paths.work / "rf.info"
         rf_info_content = iosearch.writeRfInfo(sl, rp, file_path=rf_info_path)
     except Exception:
         logger.error("Error generating search input file rf.info")
@@ -889,7 +889,7 @@ def search(sl, rp):
     logger.debug("Compiled fortran files successfully")
     # run
     if rp.LOG_SEARCH:
-        search_log_path = (rp.workdir / searchname).with_suffix(".log")
+        search_log_path = (rp.paths.work / searchname).with_suffix(".log")
         logger.info(f"Search log will be written to file {search_log_path}.")
     else:
         search_log_path = None

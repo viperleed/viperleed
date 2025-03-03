@@ -38,5 +38,5 @@ a structure optimization (see :ref:`sec_search`)
 using the :ref:`tensor-LEED approach<tensor_leed>`.
 
 For computational details, have a look at the relevant ViPErLEED paper
-:cite:p:`viperleedCalc` and at the original work describing TensErLEED
+:cite:p:`kraushoferViPErLEEDPackageCalculation2025` and at the original work describing TensErLEED
 by :cite:t:`blumFastLEEDIntensity2001a`.

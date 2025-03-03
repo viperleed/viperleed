@@ -295,7 +295,8 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     try:
         exit_code, _ = run_calc(
             slab=slab,
-            preset_params=_make_preset_params(rparams, slab)
+            preset_params=_make_preset_params(rparams, slab),
+            home=home,
             )
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
