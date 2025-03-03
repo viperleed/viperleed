@@ -6,22 +6,23 @@
 VIBROCC
 =======
 
-The VIBROCC file lists the starting guesses for vibrational amplitudes
-(in ångstrom) and site occupations. The minimum input is a vibrational
+The VIBROCC file lists the starting guesses for vibration amplitudes
+(in ångstrom) and site occupations. The minimum input is a vibration
 amplitude for each element in the :ref:`POSCAR` file. If the :ref:`ELEMENT_MIX`
 parameter is defined for an element in the :ref:`PARAMETERS` file, explicitly
-assigning vibrational amplitudes and occupations to all sub-elements is
+assigning vibration amplitudes and occupations to all sub-elements is
 recommended. See also :ref:`this page<occdelta>` for instructions on how
 to vary the occupation of a site during structure optimization.
 
 Additionally, the VIBROCC file can contain a block defining offsets in
-vibrational amplitudes, occupation, or position per element for specific
+vibration amplitudes, occupation, or position per element for specific
 sites.
 
-A VIBROCC file containing only some starting guesses for vibrational
+A VIBROCC file containing only some starting guesses for vibration
 amplitudes can be generated automatically using the :ref:`VIBR_AMP_SCALE`,
 :ref:`T_EXPERIMENT` and :ref:`T_DEBYE` parameters in the
 :ref:`PARAMETERS` file. See :ref:`below<vibrocc_auto>` for details.
+
 
 Example
 -------
@@ -38,7 +39,7 @@ Example
 
 ::
 
-   = Vibrational Amplitudes
+   = Vibration Amplitudes
    M_def = Fe 0.1, Ni 0.1
    M_surf = Fe 0.125, Ni 0.12          !some comment
    O_def = 0.19
@@ -52,12 +53,13 @@ Example
    POS 4 = Fe 0.0 0.0 0.01, Ni 0.0 0.0 -0.01     ! PFe_def
    OCC 4 = Fe 0.01, Ni -0.01     ! PFe_def
 
-The two main blocks in the VIBROCC files are 'Vibrational Amplitudes'
+The two main blocks in the VIBROCC files are 'Vibration Amplitudes'
 and 'Occupations'. Lines starting with '=' indicate the start of a
 block.
 
-Vibrational amplitudes and occupations
---------------------------------------
+
+Vibration amplitudes and occupations
+------------------------------------
 
 In each block, properties can be defined for each site type (left-hand side of
 '=').  The site types are labelled as ``El_sitename``, where ``El`` is an
@@ -83,8 +85,8 @@ ones found in the :ref:`POSCAR` file, or the ones defined in :ref:`element_mix`.
 If element names in the POSCAR file and in ELEMENT_MIX overlap, the assignment
 will nevertheless be made only for the chemical element, see
 :ref:`element name collision<ElementNameCollision>`.
-If only one value is given in the ``Vibrational Amplitudes`` block, the
-vibrational amplitudes for all elements in this site will be set to this
+If only one value is given in the ``Vibration Amplitudes`` block, the
+vibration amplitudes for all elements in this site will be set to this
 value. If only one value is given in the ``Occupations`` block, this value
 will be set for the main site element (e.g. O for the O_top site), or for
 all main elements in a site affected by :ref:`element_mix`. The occupations for
@@ -105,25 +107,26 @@ look like this:
 
 ::
 
-   = Vibrational Amplitudes
+   = Vibration Amplitudes
    Fe_def = 0.10
    Fe_surf = 0.18
    O_def = 0.19
    O_surf = 0.18
 
+
 Search offsets
 --------------
 
-Apart from starting values for vibrational amplitudes and occupations, the
+Apart from starting values for vibration amplitudes and occupations, the
 VIBROCC file can contain an additional block called "search offsets". This
-can be used to, *for a specific atom*, define positional, vibrational, or
+can be used to, *for a specific atom*, define positional, vibration, or
 occupational offsets from the site's values. This has two use cases:
 
--  If a parameter, e.g. the vibrational amplitude, is varied independently for
+-  If a parameter, e.g. the vibration amplitude, is varied independently for
    the different atoms sharing a site type, the search result will likely yield
    different values for these atoms. These values will be written to the
-   VIBROCC_OUT file to intialize a potential continuation job with the exact
-   results from the previous search, instead of an average.
+   OUT/VIBROCC file to initialize a potential continuation job with the
+   exact results from the previous search, instead of an average.
 -  If there are multiple elements sharing a site via :ref:`element_mix`, the
    positions of the different chemical species may be different depending on
    the element. This cannot be mapped in the POSCAR file or the reference
@@ -139,32 +142,44 @@ occupational offsets from the site's values. This has two use cases:
    POS 4 = Fe 0.0 0.0 0.01, Ni 0.0 0.0 -0.01   ! for atom number 4, displace iron atoms by 0.01 A away from the bulk and Ni atoms 0.01 A towards the bulk.
    OCC 4 = Fe 0.01, Ni -0.01                   ! for atom number four, there is 1% more iron and 1% less nickel than defined for the site type
 
-The syntax for this block differs somewhat from the vibrational amplitudes and
+The syntax for this block differs somewhat from the vibration amplitudes and
 occupations. On the left-hand side, each line is expected to contain:
 
 -  A flag ``POS`` / ``VIB`` / ``OCC`` defining what type of parameter should
    be modified
 -  An atom number (corresponding to the number in the POSCAR file)
 
-On the right-hand side, the syntax is similar to the vibrational amplitudes
-and displacements blocks. For vibrational amplitudes or occupations, one value
+On the right-hand side, the syntax is similar to the vibration amplitudes
+and displacements blocks. For vibration amplitudes or occupations, one value
 per element is expected, while for position offsets, three values per element
 are expected. The three values for geometry are cartesian x, y and z offsets,
 in ångströms, where positive z means away from the surface.
 
+
 .. _vibrocc_out:
 
-VIBROCC_OUT
+OUT/VIBROCC
 -----------
 
-After executing a search, a VIBROCC_OUT file will be produced in the OUT
-folder. This takes the same format as the original VIBROCC file, and
-the new vibrational amplitudes and occupations are those of the
-best-fit structure found during the search (i.e., the one with the
-lowest |R factor|). If atoms in the same site were allowed to vary
-independently, the vibrations and occupations written for each site
-will be the average, and values for the single atoms will be written as
-search offsets.
+When VIBROCC is :ref:`automatically generated<vibrocc_auto>` during
+:ref:`initialization`, the resulting VIBROCC file is stored in the
+OUT folder.
+
+After executing a search, the VIBROCC file found in the OUT folder
+contains instead the vibration amplitudes and occupations of the
+best-fit structure found during the (last) search (i.e., the one
+with the smallest |R factor|). If atoms in the same site were
+allowed to vary independently, the vibrations and occupations
+written for each site will be the average, and values for the
+single atoms will be written as search offsets.
+
+.. note::
+    A non-halted execution (i.e., one where :ref:`halting` was set to a
+    value larger than the default) that includes a structure optimization
+    will overwrite an auto-generated OUT/VIBROCC file with the one found by
+    the (last) optimization step. In this case, a copy of the auto-generated
+    VIBROCC file can be found in SUPP (named VIBROCC_generated).
+
 
 .. _vibrocc_auto:
 
@@ -172,14 +187,14 @@ Automatic generation of VIBROCC
 -------------------------------
 
 ViPErLEED can automatically generate a VIBROCC file containing starting guesses
-for vibrational amplitudes.
+for vibration amplitudes.
 To do this, the experiment temperature :math:`T` (:ref:`T_EXPERIMENT`) and the
 sample Debye temperature :math:`\Theta_D` (:ref:`T_DEBYE`) must be specified in
 :ref:`PARAMETERS`.
 Additionally, :ref:`VIBR_AMP_SCALE` must be set if you are using non-default
 sites (which is generally recommended).
 
-Given these parameters and the atomic masses :math:`m`, the atomic vibrational
+Given these parameters and the atomic masses :math:`m`, the atomic vibration
 amplitudes can be estimated as
 :cite:p:`tongTheoryLowenergyElectron1975,vanhoveSurfaceCrystallographyLEED1979`
 

@@ -78,7 +78,7 @@ def slab_is_sorted(slab, reversed=False):
     if reversed:
         z_order = np.diff([at.pos[2] for at in slab]) >= 0
     else:
-        z_order = (np.diff([at.pos[2] for at in slab]) <= 0)
+        z_order = np.diff([at.pos[2] for at in slab]) <= 0
 
     not_same_el = np.array(at1.el != at2.el
                       for at1, at2 in zip(slab.atlist[:-1], slab.atlist[1:]))

@@ -109,7 +109,7 @@ PARAMETERS FOR INTERPRETING THE POSCAR
     Using the :ref:`sitedef` parameter, we specify that the topmost iridium
     atoms should be treated separately. These Ir atoms are differently
     coordinated than bulk Ir atoms and thus will presumably have a different
-    vibrational amplitude. For completeness, we also specify the site type
+    vibration amplitude. For completeness, we also specify the site type
     ``O_ads`` for the adsorbed oxygen atom. However, since there is only one
     oxygen atom in the structure, this will not change the behavior and we
     could also skip that line.
@@ -118,7 +118,7 @@ PARAMETERS FOR VIBROCC
     Since we don't have a :ref:`VIBROCC` file yet, we need to specify the
     parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT`, and :ref:`VIBR_AMP_SCALE`.
     Note that we can only give one value for the Debye temperature for both
-    oxygen and iridium. The initial vibrational amplitudes will be calculated
+    oxygen and iridium. The initial vibration amplitudes will be calculated
     as explained in the section on :ref:`T_DEBYE`.
 
 .. tip::
@@ -143,7 +143,7 @@ perpendicular to the surface (i.e., along :math:`z`). This is because the
 |LEED-IV| curves are most sensitive to out-of-plane displacements.
 
 We then follow up with rough optimizations of in-plane positions and
-vibrational amplitudes of surface atoms.\ [1]_
+vibration amplitudes of surface atoms.\ [1]_
 For the in-plane optimization, we use a simplified assignment for all four
 layers, although any movement along the :math:`x` direction (here parallel
 to the |a| unit vector) is forbidden by symmetry for Ir atoms in the second and
@@ -152,10 +152,10 @@ displacements, cf. :numref:`fig_Ir_O_search_progress_2`.
 
 .. note::
    TensErLEED cannot simultaneously optimize displacements in different
-   directions for a given atom. Vibrational amplitudes can be optimized
+   directions for a given atom. Vibration amplitudes can be optimized
    together with one geometric displacement; here we do it separately to
    speed up the calculation. However, it is generally advisable to combine
-   vibrational-amplitude displacements and displacements along the :math:`z`
+   vibration-amplitude displacements and displacements along the :math:`z`
    direction, as the parameters may be coupled.
 
 With the files set up, we can start the ViPErLEED calculation.
@@ -203,7 +203,7 @@ during the structure optimization.
 
 :numref:`fig_Ir_O_search_progress_2` shows that the (:math:`z`) position of
 the  oxygen adsorbate has changed a good amount. Further, we see that the
-vibrational amplitude of the oxygen atom has gone down, while the amplitude
+vibration amplitude of the oxygen atom has gone down, while the amplitude
 for iridium has gone up.
 
 .. important::
@@ -343,7 +343,7 @@ oxygen adsorbate and atoms 2 and 3 are the topmost iridium ones.
    :cite:p:`heinzElectronBasedMethods2013` (see also the section on
    :ref:`Errors<error_calculation>`).
 
-Changes in the vibrational amplitude of the surface atoms
+Changes in the vibration amplitude of the surface atoms
 (\ :numref:`fig_ir_errors_vib`) also strongly affect the |R factor|.
 
 .. _fig_ir_errors_vib:
@@ -352,10 +352,10 @@ Changes in the vibrational amplitude of the surface atoms
    :align: center
 
    Part of ``Errors.pdf`` showing the effects of changes in the
-   vibrational amplitude of the topmost atoms.
+   vibration amplitude of the topmost atoms.
 
-In general, error plots for geometric displacement tend to show a parabolic
-profile close to the minimum. Error plots for vibrational amplitudes tend to
+In general, error plots for geometric displacements tend to show a parabolic
+profile close to the minimum. Error plots for vibration amplitudes tend to
 be more asymmetric, as these amplitudes enter the calculation differently
 (i.e., via the Debye–Waller factor).
 
@@ -363,7 +363,7 @@ be more asymmetric, as these amplitudes enter the calculation differently
    Error curves are also subject to **errors of the tensor-LEED approximation**.
    |R-factor| values obtained for large deviations should be taken with care.
 
-.. [1] It is not recommended to fit any vibrational amplitude of bulk atoms as
+.. [1] It is not recommended to fit any vibration amplitude of bulk atoms as
        long as reliable information about the substrate Debye temperature is
        available.
 .. [2] Actually, no in-plane movement is allowed for these Ir atoms. They

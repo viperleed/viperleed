@@ -28,23 +28,30 @@ __license__ = 'GPLv3+'
 import shutil
 from zipfile import ZipFile
 
-import pytest
-import pytest_cases
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import tenserleed
 from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
 
-from ...helpers import TEST_DATA, execute_in_dir
+from ...helpers import TEST_DATA
 
 
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 
 TENSERLEED_TEST_VERSIONS = (Version('2.0.0'), Version('1.6.1'))
 
-INIT_SURFACES = ('Ag(100)', 'Ag(100)_el_rename')
+INIT_SURFACES = (
+    'Ag(100)',
+    'Ag(100)_el_rename',
+    )
+INIT_DOMAINS = (  # In the domains subfolder of TEST_DATA
+    'silver_and_bismuth',
+    )
 REFCALC_SURFACES = ('Ag(100)',)
 AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
     'DISPLACEMENTS_z': 'Deltas_z.zip',
@@ -52,11 +59,17 @@ AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
     'DISPLACEMENTS_z+vib': 'Deltas_z+vib.zip'
     }
 
+with_tl_versions = parametrize(
+    tl_version=TENSERLEED_TEST_VERSIONS,
+    ids=[str(v) for v in TENSERLEED_TEST_VERSIONS],
+    )
 
-@pytest_cases.fixture(scope='session', name='make_section_tempdir')
+
+@fixture(scope='session', name='make_section_tempdir')
 def fixture_factory_make_section_tempdir(tmp_path_factory):
     """Return a temporary directory for a surface and a calc section."""
     def _make(surface, section, *other_specifiers):
+        surface = surface.replace('/', '_')
         tmp_dir_name = f'{surface}_{section}' + '_'.join(other_specifiers)
         return tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
     return _make
@@ -72,7 +85,7 @@ class BaseCalcFilesSetup:
         Parameters
         ----------
         surface_dir : str
-            Name of the directory in the tests/fixtures tree
+            Name of the directory in the tests/_test_data tree
             from which input files should be collected.
         tmp_test_path : Path
             Path to the (temporary) directory in which
@@ -92,6 +105,9 @@ class BaseCalcFilesSetup:
         self.surface_name = surface_dir
         self.required_files = set(ALWAYS_REQUIRED_FILES)
         self.required_files.update(required_files)
+        # pylint: disable-next=magic-value-comparison
+        if 'domains' in surface_dir:
+            self.required_files.remove('POSCAR')
         self.test_path = tmp_test_path
 
         base_dir = self.inputs_path
@@ -117,8 +133,11 @@ class BaseCalcFilesSetup:
     def run_calc_from_setup(self, source, preset_params):
         """Move to work folder, execute, collect outcome, go back home."""
         with execute_in_dir(self.work_path):
-            self.failed, self.records = run_calc(source=source,
-                                                 preset_params=preset_params)
+            self.failed, self.records = run_calc(
+                source=source,
+                preset_params=preset_params,
+                home=self.test_path,
+                )
         self.work_files_after_run = [f.name for f in self.work_path.glob('*')]
 
     def expected_file_exists(self, expected_file):
@@ -138,17 +157,16 @@ class BaseCalcFilesSetup:
             archive.extractall(self.work_path)
 
 
-@pytest_cases.fixture(scope='session')
-@pytest.mark.parametrize('surface', INIT_SURFACES, ids=INIT_SURFACES)
-@pytest.mark.parametrize('tl_version', TENSERLEED_TEST_VERSIONS,
-                         ids=(str(v) for v in TENSERLEED_TEST_VERSIONS))
+@fixture(scope='session')
+@parametrize(surface=INIT_SURFACES, ids=INIT_SURFACES)
+@with_tl_versions
 def init_files(surface, tl_version, make_section_tempdir, tensorleed_path):
     """Collect files and run an initialization."""
     files = BaseCalcFilesSetup(
         surface_dir=surface,
         tmp_test_path=make_section_tempdir(surface, 'init'),
         required_files=['PHASESHIFTS',],
-        copy_dirs=['initialization']
+        copy_dirs=['initialization'],
         )
     files.run_calc_from_setup(
         source=tensorleed_path,
@@ -158,11 +176,31 @@ def init_files(surface, tl_version, make_section_tempdir, tensorleed_path):
     return files
 
 
+@fixture(scope='session')
+@parametrize(domains=INIT_DOMAINS)
+@with_tl_versions
+def init_domains(domains, tl_version, make_section_tempdir, tensorleed_path):
+    """Collect input files for a DOMAINS calculation and run initialization."""
+    setup = BaseCalcFilesSetup(
+        surface_dir=f'domains/{domains}',
+        tmp_test_path=make_section_tempdir(domains, 'init'),
+        required_files=['PHASESHIFTS',],
+        copy_dirs=['initialization'],
+        )
+    setup.run_calc_from_setup(
+        source=tensorleed_path,
+        preset_params={'RUN': [0,],  # only initialization
+                       'TL_VERSION': tl_version,}
+        )
+    return setup
+
+
+
 _NON_INIT_TL_VERSION = tenserleed.CURRENT_TL_VERSION  # i.e., most recent       # TODO: to prevent regressions like #101, it's probably better to run this stuff also for other versions!
 
 
-@pytest_cases.fixture(scope='session')
-@pytest.mark.parametrize('surface', REFCALC_SURFACES, ids=REFCALC_SURFACES)
+@fixture(scope='session')
+@parametrize(surface=REFCALC_SURFACES, ids=REFCALC_SURFACES)
 def refcalc_files(surface, make_section_tempdir, tensorleed_path):
     """Collect files and execute a reference calculation."""
     files = BaseCalcFilesSetup(
@@ -179,9 +217,8 @@ def refcalc_files(surface, make_section_tempdir, tensorleed_path):
     return files
 
 
-@pytest_cases.fixture(scope='session')
-@pytest.mark.parametrize('displacements', AG_100_DISPLACEMENTS,
-                         ids=AG_100_DISPLACEMENTS)
+@fixture(scope='session')
+@parametrize(displacements=AG_100_DISPLACEMENTS, ids=AG_100_DISPLACEMENTS)
 def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
     """Collect files, and run a delta-amplitude calculation for Ag(100)."""
     surface = 'Ag(100)'
@@ -203,9 +240,10 @@ def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
     return files
 
 
-@pytest_cases.fixture(scope='session')
-@pytest.mark.parametrize('displacements, deltas', AG_100_DISPLACEMENTS.items(),
-                         ids=AG_100_DISPLACEMENTS)
+@fixture(scope='session')
+@parametrize('displacements,deltas',
+             AG_100_DISPLACEMENTS.items(),
+             ids=AG_100_DISPLACEMENTS)
 def search_files_ag100(displacements, deltas,
                        make_section_tempdir,
                        tensorleed_path):

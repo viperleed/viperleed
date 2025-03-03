@@ -350,9 +350,8 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         equivalent beams.
     rp : Rparams
         Run parameters.
-    file_path : pathlike or str
-        Pathlike to or name of the output file. If str uses
-        rp.paths.work/filename. The default is "rf.info".
+    file_path : pathlike
+        Path to the output file. The default is "rf.info".
 
     Returns
     -------
@@ -420,15 +419,13 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
                                    version=rp.TL_VERSION)
     output += auxexpbeams
 
-    _file_path = (rp.paths.work / file_path if isinstance(file_path, str)
-                  else file_path)
     try:
-        with open(_file_path, 'w') as wf:
+        with open(file_path, 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error(f"Failed to write {_file_path}")
+        logger.error(f"Failed to write {file_path}")
         raise
-    logger.debug(f"Wrote to {_file_path} successfully")
+    logger.debug(f"Wrote to {file_path} successfully")
     return output
 
 
@@ -1058,7 +1055,7 @@ def _read_control_chem(control_chem_path,
 def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     """
     Modifies data in sl and rp to reflect the search result given by
-    parinds, then writes POSCAR_OUT and VIBROCC_OUT.
+    parinds, then writes POSCAR and VIBROCC.
 
     Parameters
     ----------
@@ -1074,7 +1071,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     silent : bool, optional
         Suppresses output to log. The default is False.
     suffix : str, optional
-        String to be appended to the POSCAR_OUT and VIBROCC_OUT file names.
+        String to be appended to the POSCAR and VIBROCC file names.
 
     Returns
     -------
@@ -1196,29 +1193,35 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                     at.offset_occ[el] -= offset_occ
                 if el in at.offset_vib:
                     at.offset_vib[el] -= offset_vib
-    poscar_fn = "POSCAR_OUT" + suffix
+    poscar_fn = f'POSCAR{suffix}'
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
         poscar.write(tmpslab, filename=poscar_fn, comments="all", silent=silent)
     except OSError:
-        logger.error("Exception occurred while writing POSCAR_OUT" + suffix,
+        logger.error(f'Exception occurred while writing {poscar_fn}',
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
+    else:
+        rp.files_to_out.add(poscar_fn)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.make_subcell(rp, rp.SYMMETRY_CELL_TRANSFORM)
-        poscar_mincell_fn = "POSCAR_OUT_mincell" + suffix
+        poscar_mincell_fn = f'POSCAR_mincell{suffix}'
         try:
             poscar.write(tmpslab, filename=poscar_mincell_fn, silent=silent)
         except OSError:
             logger.warning(
-                "Exception occurred while writing POSCAR_OUT_mincell" + suffix,
-                exc_info=rp.is_debug_mode)
-    vibrocc_fn = "VIBROCC_OUT" + suffix
+                f'Exception occurred while writing {poscar_mincell_fn}',
+                exc_info=rp.is_debug_mode,
+                )
+        else:
+            rp.files_to_out.add(poscar_mincell_fn)
+    vibrocc_fn = f'VIBROCC{suffix}'
     try:
-        writeVIBROCC(sl, rp, filename=vibrocc_fn, silent=silent)
+        writeVIBROCC(sl, filename=vibrocc_fn, silent=silent)
     except Exception:
-        logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
+        logger.error(f'Exception occured while writing {vibrocc_fn}',
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
-    return
+    else:
+        rp.files_to_out.add(vibrocc_fn)

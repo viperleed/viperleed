@@ -14,7 +14,6 @@ __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
 import multiprocessing
-import os
 from pathlib import Path
 import shutil
 
@@ -24,6 +23,7 @@ from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
@@ -55,21 +55,18 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
         _copy_input_files_to_work(work_path)
 
-        # Go to work directory, execute there
-        cwd = Path.cwd().resolve()
-        os.chdir(work_path)
+        cwd = Path.cwd()
         exit_code = 2
-        try:
-            exit_code, _ = run_calc(
-                system_name=args.name,
-                source=args.tensorleed,
-                preset_params=presets,
-                home=cwd,
-                )
-        finally:
-            # Copy back everything listed in manifest, then go back
-            _copy_files_from_manifest(cwd)
-            os.chdir(cwd)
+        with execute_in_dir(work_path):
+            try:
+                exit_code, _ = run_calc(
+                    system_name=args.name,
+                    source=args.tensorleed,
+                    preset_params=presets,
+                    home=cwd,
+                    )
+            finally:
+                _copy_files_from_manifest(cwd)
 
         # Run bookkeeper in archive mode
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
@@ -138,7 +135,7 @@ def _copy_input_files_to_work(work_path):
     """Copy all the known input files present here into work_path."""
     for file in ALL_INPUT_FILES:
         try:
-            shutil.copy2(file, work_path / file)
+            shutil.copy2(file, work_path)
         except FileNotFoundError:
             pass
 

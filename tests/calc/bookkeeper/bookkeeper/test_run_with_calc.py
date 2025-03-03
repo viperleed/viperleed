@@ -24,6 +24,7 @@ class TestBookkeeperDuringCalc(_TestBookkeeperRunBase):
     def test_run_around_calc(self,
                              mock_tree_before_calc_execution,
                              mock_tree_after_calc_execution,
+                             mocker,
                              caplog):
         """Check reuse of bookkeeper in the default calls around calc."""
         tmp_path = mock_tree_before_calc_execution()
@@ -39,6 +40,7 @@ class TestBookkeeperDuringCalc(_TestBookkeeperRunBase):
         after_calc = (
             bookkeeper,
             bookkeeper.cwd / DEFAULT_HISTORY / f't004.r001_{MOCK_TIMESTAMP}',
+            mocker,
             )
         self.run_archive_after_calc_and_check(after_calc,
                                               caplog,

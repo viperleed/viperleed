@@ -19,7 +19,19 @@ from .log import LOGGER
 
 
 def discard_files(*file_paths):
-    """Delete files at `file_paths`. Log if they can't be deleted."""
+    """Delete files/folders at `file_paths`. Log if they can't be deleted.
+
+    Parameters
+    ----------
+    *file_paths : Path
+        Paths to files/folders to be discarded.
+
+    Returns
+    -------
+    int
+        Number of files/folders successfully discarded.
+    """
+    n_discarded = 0
     for file in file_paths:
         if not file.exists():
             continue
@@ -28,12 +40,25 @@ def discard_files(*file_paths):
                 file.unlink()
             except OSError:
                 LOGGER.error(f'Failed to discard file {file.name}.')
+            else:
+                n_discarded += 1
             continue  # Marked as uncovered by pytest, but it is
         assert file.is_dir()  # Should be a directory
         try:
             shutil.rmtree(file)
         except OSError:
             LOGGER.error(f'Failed to discard directory {file.name}.')
+        else:
+            n_discarded += 1
+    return n_discarded
+
+
+def file_contents_identical(file_one, file_two):
+    """Return whether two files have the same contents."""
+    try:
+        return filecmp.cmp(file_one, file_two, shallow=False)
+    except FileNotFoundError:
+        return False
 
 
 def file_contents_identical(file_one, file_two):

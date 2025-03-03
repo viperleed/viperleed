@@ -287,8 +287,8 @@ Refined structure fit
 
 As usual, we can now perform some final structure fits over a fine-grained
 grid with subpicometre step. In particular, we should also optimize the
-**vibrational amplitudes**, which we have skipped so far. We recommend
-starting with the vibrational amplitudes here, since we have not touched
+**vibration amplitudes**, which we have skipped so far. We recommend
+starting with the vibration amplitudes here, since we have not touched
 them at all in the previous optimization step.
 :numref:`list_cu-te_diplacements_very_fine` shows the DISPLACEMENTS file
 for the refined structure optimization.
@@ -298,7 +298,7 @@ for the refined structure optimization.
    :language: console
    :caption: DISPLACEMENTS (0.5 pm step) for |CuTe|.
 
-You may want to finish up with a last "fine tuning" of the vibrational
+You may want to finish up with a last "fine tuning" of the vibration
 amplitudes and (\ :math:`z`) positions. See, for instance,
 ``DISPLACEMENTS_fine_2`` in the input files, but feel free to play around
 with the setting yourself, to get a feeling for the available options.
@@ -321,7 +321,7 @@ the requested steps.
 
    :numref:`list_cu-te_errors_x` shows an example for displacements along the
    :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
-   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibrational
+   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibration
    amplitudes are provided in the
    :download:`input files</_static/example_systems/Cu(111)-Te/input_files.zip>`.
 
@@ -329,7 +329,7 @@ the requested steps.
 
    :numref:`list_cu-te_errors_x` shows an example for displacements along the
    :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
-   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibrational
+   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibration
    amplitudes are provided in the input files available in the online version
    of the documentation at `viperleed.org <viperleed.org>`__.
 
@@ -350,4 +350,4 @@ structure.
    :align: center
 
    Page 1 of file ``Errors.pdf`` for (left) displacements in :math:`x`
-   direction and (right) changes of vibrational amplitudes.
+   direction and (right) changes of vibration amplitudes.

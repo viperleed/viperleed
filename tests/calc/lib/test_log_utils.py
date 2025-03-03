@@ -295,11 +295,13 @@ class TestGetHandlers:
             handler_type = type(handler_type)
 
         # Only one handler per exact type at setup
+        # pylint: disable-next=unidiomatic-typecheck
         result = next(h for h in handlers if type(h) is handler_type)
         assert isinstance(result, handler_type)
 
         # The rest may be a subclass, but not an exact type
         rest = (h for h in handlers if h is not result)
+        # pylint: disable-next=unidiomatic-typecheck
         assert all(isinstance(h, handler_type) and type(h) != handler_type
                    for h in rest)
 

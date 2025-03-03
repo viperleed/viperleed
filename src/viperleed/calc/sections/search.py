@@ -38,6 +38,7 @@ from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
@@ -215,21 +216,18 @@ def processSearchResults(sl, rp, search_log_path, final=True):
         doms_info = ((sl, rp, Path.cwd(), ""),)
 
     # Finally write out the best structures
-    home = Path.cwd()
     for (*dom_info, work, name), (_, dom_config) in zip(doms_info, best_doms):
-        os.chdir(work)
-        try:
-            _store_and_write_best_structure(rp, *dom_info,
-                                            dom_config, final)
-        except Exception:                                                       # TODO: catch better
-            _err = "Error while writing search output"
-            if name:
-                _err += f" for domain {name}"
-            logger.error(_err, exc_info=rp.is_debug_mode)
-            rp.setHaltingLevel(2)
-            raise
-        finally:
-            os.chdir(home)
+        with execute_in_dir(work):
+            try:
+                _store_and_write_best_structure(rp, *dom_info,
+                                                dom_config, final)
+            except Exception:                                                   # TODO: catch better
+                _err = "Error while writing search output"
+                if name:
+                    _err += f" for domain {name}"
+                logger.error(_err, exc_info=rp.is_debug_mode)
+                rp.setHaltingLevel(2)
+                raise
 
 
 def _write_control_chem(rp, generation, configs):
@@ -317,9 +315,9 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
     """Modify dom_slab to the parameters in best_config. Write it out.
 
     If there is a predicted optimum for the parameters (via parabola
-    fit), POSCAR_OUT and VIBROCC_OUT files are also written for this
-    predicted optimum. However, `dom_slab` will always contain the
-    configuration passed via `best_config` at the end of this call.
+    fit), POSCAR and VIBROCC files are also written for this predicted
+    optimum. However, `dom_slab` will always contain the configuration
+    passed via `best_config` at the end of this call.
 
     Parameters
     ----------
@@ -327,7 +325,7 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
         The PARAMETERS for the whole calculation.
     dom_slab : Slab
         The slab of the domain to be modified, and used to write
-        POSCAR_OUT and VIBROCC_OUT files.
+        POSCAR and VIBROCC files.
     dom_rp : Rparams
         The PARAMETERS for this specific domain to be written out.
     best_config : Sequence
@@ -713,7 +711,7 @@ def search(sl, rp):
     if rp.domainParams:
         initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
     else:
-        initToDo = [(rp, sl, rp.paths.work)]
+        initToDo = [(rp, sl, Path.cwd())]
     for (rpt, slt, path) in initToDo:
         # read DISPLACEMENTS block
         if not rpt.disp_block_read:
@@ -732,7 +730,7 @@ def search(sl, rp):
     rp.updateCores()
     # generate rf.info
     try:
-        rf_info_path = rp.paths.work / "rf.info"
+        rf_info_path = Path('rf.info')
         rf_info_content = iosearch.writeRfInfo(sl, rp, file_path=rf_info_path)
     except Exception:
         logger.error("Error generating search input file rf.info")
@@ -883,13 +881,13 @@ def search(sl, rp):
         leedbase.fortran_compile_batch(ctasks, logname=compile_log)
     except Exception:
         leedbase.copy_compile_log(rp, Path(compile_log),
-                                  log_name="search-compile")
+                                  save_as='search-compile')
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
     # run
     if rp.LOG_SEARCH:
-        search_log_path = (rp.paths.work / searchname).with_suffix(".log")
+        search_log_path = Path(searchname).with_suffix('.log')
         logger.info(f"Search log will be written to file {search_log_path}.")
     else:
         search_log_path = None
@@ -1171,8 +1169,8 @@ def search(sl, rp):
                             processSearchResults(sl, rp, search_log_path,
                                                  final=False)
                         except Exception as exc:                                # TODO: too general
-                            logger.warning("Failed to update POSCAR_OUT "
-                                           f"and VIBROCC_OUT: {exc}")
+                            logger.warning("Failed to update POSCAR "
+                                           f"and VIBROCC: {exc}")
                 if stop:
                     logger.info("Stopping search...")
                     kill_process(proc, default_pgid=pgid)
@@ -1297,7 +1295,7 @@ def search(sl, rp):
         except Exception:
             logger.warning("Error writing Search-report.pdf",
                            exc_info=True)
-    # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
+    # process SD.TL to get POSCAR and VIBROCC for OUT
     try:
         processSearchResults(sl, rp, search_log_path)
     except FileNotFoundError:

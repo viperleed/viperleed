@@ -21,7 +21,7 @@ from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 
 from . import log
-from .constants import STATE_FILES
+from .errors import _FileNotOlderError
 from .history.constants import HISTORY_INFO_NAME
 from .history.entry.entry import HistoryInfoEntry
 from .history.errors import CantDiscardEntryError
@@ -33,7 +33,6 @@ from .log import LOGGER
 from .mode import BookkeeperMode
 from .root_explorer import RootExplorer
 from .utils import make_property
-from .utils import needs_update_for_attr
 
 
 # Input files that may be generated at runtime - don't warn if missing
@@ -42,10 +41,6 @@ RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 # Suffix for files moved from root rather than original_inputs
 _FROM_ROOT = '_from_root'
-
-
-class _FileNotOlderError(Exception):
-    """Exception used internally for file age checks."""
 
 
 class BookkeeperExitCode(IntEnum):
@@ -132,19 +127,27 @@ class Bookkeeper:
         except AttributeError as exc:
             raise NotImplementedError from exc
 
-        LOGGER.info(f'\nRunning bookkeeper in {mode.name} mode in {self.cwd}.')
         self._mode = mode
         self._requires_user_confirmation = requires_user_confirmation
         # Do not bother logging messages when the user asked to
         # --fix: some warnings will be fixed anyway. Others will
         # re-appear at the next run.
         self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
+        LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
         try:
-            return runner()
+            exit_code = runner()
         finally:
             # Clean up all the state attributes so we
             # don't risk giving the wrong information.
             self._clean_state()
+        found_nothing = (
+           exit_code is BookkeeperExitCode.NOTHING_TO_DO
+           and mode not in (BookkeeperMode.ARCHIVE,)  # logs already
+           )
+        if found_nothing:
+            LOGGER.info('Found nothing to do. Exiting...')
+        LOGGER.info('')
+        return exit_code
 
     def update_from_cwd(self, silent=False):
         """Update timestamp, tensor number, log lines, etc. from root.
@@ -243,6 +246,8 @@ class Bookkeeper:
         tensor_nums.add(self.tensor_number)
         # ...and add a history.info entry
         self._add_history_info_entry(tensor_nums)
+        LOGGER.info('Done archiving the current directory '
+                    f'to {self.history.path.name}')
 
     def _check_may_discard_full(self):
         """Log and raise if it is not possible to DISCARD_FULL."""
@@ -370,7 +375,7 @@ class Bookkeeper:
                 continue
             history_folder.copy_file_or_directory(directory)
 
-    def _do_prerun_archiving(self):
+    def _do_prerun_archiving_and_mark_edited(self):
         """If needed, archive files from root to history.
 
         If any archiving is needed, input files in the current
@@ -391,8 +396,8 @@ class Bookkeeper:
                 )
             return False
         if in_archive_mode and not self.files_need_archiving:
-            LOGGER.info('No files to be moved to history. Exiting '
-                        'without doing anything.')
+            LOGGER.info(f'No files to be moved to {self.history.path.name}. '
+                        'Exiting without doing anything.')
             return False
         if not self.archiving_required:
             return False
@@ -400,6 +405,13 @@ class Bookkeeper:
             LOGGER.info(f'History folder {self.history.new_folder.name} '
                         'does not exist yet. Running archive mode first.')
         self._archive_to_history_and_add_info_entry()
+
+        # Notice that it is OK to decide now whether files should
+        # be marked as edited rather than before archiving. In
+        # fact, during archiving we recognize the right files to
+        # pull (in _copy_input_files_from_original_inputs_or_cwd):
+        # always copy from original_inputs if possible, otherwise
+        # copy with a _FROM_ROOT suffix.
         self._root.mark_edited_files()
         return True
 
@@ -456,7 +468,7 @@ class Bookkeeper:
         # Attach file handler for history/bookkeeper.log
         log.add_bookkeeper_logfile(self.history.path)
         LOGGER.info(  # Log only once per instance
-            '\n### Bookeeper running at '
+            '\n### Bookkeeper running at '
             f'{DateTimeFormat.LOG_CONTENTS.now()} ###'
             )
         self._state_info['logger_prepared'] = True
@@ -494,20 +506,31 @@ class Bookkeeper:
         """Execute bookkeeper in ARCHIVE mode."""
         # Copy all the relevant files to history, add
         # a history.info entry, mark edited input files...
-        did_archive = self._do_prerun_archiving()
+        did_archive = self._do_prerun_archiving_and_mark_edited()
         if not did_archive:
             return BookkeeperExitCode.NOTHING_TO_DO
 
-        # ...produce _ori files, and replace the old inputs from OUT
-        self._root.update_state_files_from_out()
+        # ...mark non-edited inputs as _ori, and prepare inputs for
+        # the next execution of calc (from OUT or original_inputs)
+        try:
+            self._root.prepare_for_next_calc_run()
+        except OSError:
+            return BookkeeperExitCode.FAIL
         return BookkeeperExitCode.SUCCESS
 
     def _run_clear_mode(self):
         """Execute bookkeeper in CLEAR mode."""
-        self._do_prerun_archiving()
-        self._root.clear_for_next_calc_run()
-        return BookkeeperExitCode.SUCCESS
+        did_archive = self._do_prerun_archiving_and_mark_edited()
+        did_clear_root = self._root.clear_for_next_calc_run()
+        did_anything = did_archive or did_clear_root
+        return (BookkeeperExitCode.SUCCESS if did_anything
+                else BookkeeperExitCode.NOTHING_TO_DO)
 
+    # TODO: how to handle the TENSOR_INDEX case? Currently we attempt
+    # removal of the MAXIMUM tensor number, not the LAST one that ran.
+    # The latter would be available from .history.last_folder.tensor_num
+    # if we would sort the history folders not by name but by creation
+    # datetime (https://stackoverflow.com/questions/168409).
     def _run_discard_full_mode(self):
         """Execute bookkeeper in DISCARD_FULL mode."""
         try:
@@ -541,7 +564,7 @@ class Bookkeeper:
 
     def _run_discard_mode(self):
         """Execute bookkeeper in DISCARD mode."""
-        did_archive = self._do_prerun_archiving()
+        did_archive = self._do_prerun_archiving_and_mark_edited()
         self._root.revert_to_previous_calc_run()
         if did_archive:
             # We had to archive the contents of the root directory.
@@ -561,8 +584,9 @@ class Bookkeeper:
 
     def _run_fix_mode(self):
         """Fix format inconsistencies found in history and history.info."""
-        self.history.fix()
-        return BookkeeperExitCode.SUCCESS
+        did_fix = self.history.fix()
+        return (BookkeeperExitCode.SUCCESS if did_fix
+                else BookkeeperExitCode.NOTHING_TO_DO)
 
     def _user_confirmed(self):
         """Return whether the user wants to proceed with discarding."""

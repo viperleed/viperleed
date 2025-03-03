@@ -45,12 +45,11 @@ class TestDeleteAbove:
         assert np.allclose(processed.ucell, original_ucell)
 
     @pytest.mark.parametrize('c', INVALID_CUT_FRACTIONS)
-    def test_invalid_c(self, ag100, c):
+    def test_invalid_c(self, c):
         """Test the DeleteAboveCLI class."""
         parser = DeleteAboveCLI().parser
-        slab, *_ = ag100
         with pytest.raises(SystemExit):
-            args = parser.parse_args([str(c)])
+            parser.parse_args([str(c)])
 
 
 class TestDeleteBelow:
@@ -73,12 +72,11 @@ class TestDeleteBelow:
         assert np.allclose(processed.ucell, original_ucell)
 
     @pytest.mark.parametrize('c', INVALID_CUT_FRACTIONS)
-    def test_invalid_c(self, ag100, c):
+    def test_invalid_c(self, c):
         """Test the DeleteBelowCLI class."""
         parser = DeleteBelowCLI().parser
-        slab, *_ = ag100
         with pytest.raises(SystemExit):
-            args = parser.parse_args([str(c)])
+            parser.parse_args([str(c)])
 
 
 class TestDeleteBetween:

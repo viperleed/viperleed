@@ -29,7 +29,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
-import os
 from pathlib import Path
 
 import pytest
@@ -39,9 +38,10 @@ from viperleed.calc import psgen
 from viperleed.calc.files import displacements
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.tenserleed import get_tensorleed_path
+from viperleed.calc.lib.context import execute_in_dir
 
 from ..helpers import POSCAR_PATH
-from ..helpers import exclude_tags, execute_in_dir
+from ..helpers import exclude_tags
 from . import poscar_slabs
 from .tags import CaseTag
 
@@ -120,6 +120,8 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
         The PARAMETERS used during the PHASESHIFTS calculation.
     slab : Slab
         The Slab for which PHASESHIFTS were calculated.
+    tmp_path : Path
+        Path to the directory in which the calculation was executed.
     firstline : str
         The first line of the PHASESHIFTS file, that contains the
         coefficients for the real part of the inner potential.
@@ -128,13 +130,12 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
     """
     slab, rpars, *_ = args
     rpars.paths.tensorleed = tensorleed_path
-    rpars.paths.work = tmp_path_factory.mktemp(basename='phaseshifts',
-                                               numbered=True)
+    tmp_path = tmp_path_factory.mktemp(basename='phaseshifts', numbered=True)
     rpars.initTheoEnergies()
     executable = 'eeasisss'
 
     # run eeasisss in the temporary directory
-    with execute_in_dir(rpars.paths.work):
+    with execute_in_dir(tmp_path):
         results = psgen.runPhaseshiftGen_old(slab, rpars,
                                              psgensource=executable)
-        yield (rpars, slab, *results)
+        yield (rpars, slab, tmp_path, *results)

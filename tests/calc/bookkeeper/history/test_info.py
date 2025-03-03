@@ -110,7 +110,7 @@ class TestHistoryInfoFile:
         entry_str = cases_entry.CasesInfoEntryCorrect().case_no_notes()
         new_entry = HistoryInfoEntry.from_string(entry_str)
         info, _ = history_info_file
-        mocker.patch('builtins.open', side_effect=OSError)
+        mocker.patch('pathlib.Path.open', side_effect=OSError)
         mock_log = mocker.patch(f'{_MODULE}.LOGGER.error')
         with pytest.raises(OSError):
             info.append_entry(new_entry, fix_time_format=False)

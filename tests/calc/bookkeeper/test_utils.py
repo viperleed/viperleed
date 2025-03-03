@@ -88,40 +88,76 @@ class TestDiscardFiles:
         """Test deletion of non-existing files/directories."""
         for mock_ in (mock_file, mock_dir):
             mock_.exists.return_value = False
-        discard_files(mock_file, mock_dir)
+        n_discarded = discard_files(mock_file, mock_dir)
         mock_file.unlink.assert_not_called()
         mock_rmtree.assert_not_called()
+        assert not n_discarded
 
     def test_directory_deletion(self, mock_dir, mock_rmtree):
         """Check successful deletion of a directory."""
-        discard_files(mock_dir)
+        n_discarded = discard_files(mock_dir)
         mock_rmtree.assert_called_once_with(mock_dir)
+        assert n_discarded == 1
 
     def test_file_deletion(self, mock_file):
         """Check successful deletion of a single file."""
-        discard_files(mock_file)
+        n_discarded = discard_files(mock_file)
         mock_file.unlink.assert_called_once()
+        assert n_discarded == 1
 
     def test_file_deletion_fails(self, mock_file, mock_log_error):
         """Test a failing file deletion."""
         # Test failed file deletion with logging
         mock_file.unlink.side_effect = OSError
-        discard_files(mock_file)
+        n_discarded = discard_files(mock_file)
         mock_log_error.assert_called_once()
+        assert not n_discarded
 
     def test_directory_deletion_fails(self, mock_dir,
                                       mock_log_error,
                                       mock_rmtree):
         """Test failure to discard a directory."""
         mock_rmtree.side_effect = OSError
-        discard_files(mock_dir)
+        n_discarded = discard_files(mock_dir)
         mock_log_error.assert_called_once()
+        assert not n_discarded
 
     def test_multiple_deletion(self, mock_file, mock_dir, mock_rmtree):
         """Test deletion of multiple files/directories."""
-        discard_files(mock_file, mock_dir)
+        n_discarded = discard_files(mock_file, mock_dir)
         mock_file.unlink.assert_called_once()
         mock_rmtree.assert_called_once_with(mock_dir)
+        # pylint: disable-next=magic-value-comparison
+        assert n_discarded == 2
+
+
+class TestFileContentsIdentical:
+    """Tests for the file_contents_identical function."""
+
+    @fixture(name='mock_files')
+    def factory_mock_files(self, tmp_path):
+        """Create files with contents in a temporary directory."""
+        def _make(*contents, n_files=2):
+            n_files = max(n_files, len(contents))
+            files = [tmp_path / f'file_{i}' for i in range(n_files)]
+            for file, file_contents in zip(files, contents):
+                file.write_text(file_contents)
+            return files
+        return _make
+
+    _valid = {
+        'same': (('same', 'same'), True),
+        'different': (('contents A', 'contents B'), False),
+        'one missing': (('first file',), False),
+        'both missing': ((), False),
+        }
+
+    @parametrize('contents,expect', _valid.values(), ids=_valid)
+    def test_file_compare(self, contents, expect, mock_files):
+        """Check the expected return of file_contents_identical."""
+        files = mock_files(*contents, n_files=2)
+        result = file_contents_identical(*files)
+        assert result == expect
 
 
 class TestFileContentsIdentical:

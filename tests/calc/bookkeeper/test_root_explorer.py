@@ -11,8 +11,10 @@ from collections import namedtuple
 from contextlib import contextmanager
 from itertools import combinations
 from itertools import permutations
+from itertools import product
 from operator import attrgetter
 from pathlib import Path
+import time
 from unittest.mock import patch
 
 import pytest
@@ -20,6 +22,9 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.constants import STATE_FILES
+from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
+from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
+from viperleed.calc.bookkeeper.errors import FileOperationFailedError
 from viperleed.calc.bookkeeper.root_explorer import LogFiles
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
 from viperleed.calc.bookkeeper.root_explorer import TensorAndDeltaInfo
@@ -27,7 +32,10 @@ from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import LOG_PREFIX
+from viperleed.calc.lib.time_utils import DateTimeFormat
 
+from ...helpers import filesystem_from_dict
 from ...helpers import make_obj_raise
 from ...helpers import not_raises
 from ...helpers import raises_exception
@@ -176,6 +184,29 @@ class TestRootExplorer:
         """Check calling of expected methods."""
         check_methods_called(explorer, method_name, **called)
 
+    _clean_up_root_internals = tuple(product((True, False), repeat=3))
+
+    @parametrize(inner_returns=_clean_up_root_internals)
+    def test_clean_up_root_return_value(self, inner_returns, explorer, mocker):
+        """Check the expected return value of _clean_up_root."""
+        logs_return, supp_out_return, ori_return = inner_returns
+        explorer.collect_info()  # So .logs is available
+        mocker.patch.object(explorer.logs, 'discard', return_value=logs_return)
+        mocker.patch.object(explorer, '_remove_out_and_supp',
+                            return_value=supp_out_return)
+        # pylint: disable-next=protected-access           # OK in tests
+        result = explorer._clean_up_root(lambda: ori_return)
+        assert result == (logs_return or supp_out_return or ori_return)
+
+    @parametrize(method=('revert_to_previous_calc_run',
+                         'clear_for_next_calc_run'))
+    def test_clean_up_root_callers_return(self, method, explorer, mocker):
+        """Check the expected return value of callers of _clean_up_root."""
+        expect = mocker.MagicMock()
+        mocker.patch.object(explorer, '_clean_up_root', return_value=expect)
+        result = getattr(explorer, method)()
+        assert result is expect
+
     def test_collect_info(self, explorer, mock_attributes, mocker):
         """Check calling of expected method when collecting info."""
         mock_logs = mocker.patch(f'{_MODULE}.LogFiles')
@@ -217,20 +248,23 @@ class TestRootExplorer:
 
 
     _remove_files = {
-        '_remove_ori_files': [f'{file}_ori' for file in STATE_FILES],
+        '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
         '_remove_out_and_supp': (DEFAULT_OUT, DEFAULT_SUPP),
         }
 
     @parametrize('method_name,files', _remove_files.items(), ids=_remove_files)
     @patch_discard
+    # pylint: disable-next=too-many-arguments  # 1/6 patch, 2/6 fixture
     def test_files_discarded(self, discard_files,
                              method_name, files,
-                             explorer):
+                             explorer, mocker):
         """Check that files and folders are removed."""
         method = getattr(explorer, method_name)
-        method()
+        discard_files.return_value = expect = mocker.MagicMock()
+        returned = method()
         removed = (explorer.path / f for f in files)
         discard_files.assert_called_once_with(*removed)
+        assert returned is expect
 
     def test_infer_run_info(self, explorer, mocker):
         """Check correct result of inferring info from log files."""
@@ -274,36 +308,190 @@ class TestRootExplorer:
                 # pylint: disable-next=protected-access   # OK in tests
                 explorer._replace_state_files_from_ori()
 
-    @parametrize(out_exists=(True, False))
-    @parametrize(file_exists=(True, False))
-    def test_update_state_files_from_out(self, out_exists, file_exists,
-                                         explorer, mocker):
-        """Test moving of files from OUT."""
-        mock_copy2 = mocker.patch('shutil.copy2')
-        mock_replace = mocker.patch('pathlib.Path.replace')
-        mocker.patch('pathlib.Path.is_dir', return_value=out_exists)
-        mocker.patch('pathlib.Path.is_file', return_value=file_exists)
-        explorer.update_state_files_from_out()
-        moved = out_exists and file_exists
-        for mock_ in (mock_copy2, mock_replace):
-            assert_ok = getattr(mock_, called_or_not(moved))
-            assert_ok()
+    _fake_ori_files = {
+        'no files': (),
+        'one file': ((Path('dst'), Path('src')),)
+        }
 
-    def test_update_state_files_from_out_fails(self, explorer, mocker, caplog):
-        """Check that failure to make _ori files are reported."""
-        mocker.patch('shutil.copy2')
-        mocker.patch('pathlib.Path.is_dir', return_value=True)
-        mocker.patch('pathlib.Path.is_file', return_value=True)
-        mock_replace = mocker.patch('pathlib.Path.replace')
+    @parametrize(files=_fake_ori_files.values(), ids=_fake_ori_files)
+    def test_replace_state_files_from_ori_return(self, files,
+                                                 explorer, mocker):
+        """Check the expected return value of _replace_state_files_from_ori."""
+        mocker.patch.object(explorer, 'list_files_to_replace',
+                            return_value=files)
+        mocker.patch('pathlib.Path.replace')
+        # pylint: disable-next=protected-access           # OK in tests
+        returned = explorer._replace_state_files_from_ori()
+        assert returned == bool(files)
 
-        exc_msg = 'this is a test error'
-        mock_replace.side_effect = OSError(exc_msg)
+
+class TestRootExplorerNextCalc:
+    """Tests for prepare_for_next_calc_run and related methods."""
+
+    # The methods that are called in prepare_for_next_calc_run
+    called = (
+        '_mark_state_files_as_ori',
+        '_copy_state_files_from_out_or_original_inputs',
+        '_complain_about_edited_files',
+        )
+
+    def test_methods_called(self, explorer, mocker):
+        """Check that prepare_for_next_calc_run calls the expected methods."""
+        mock_called = [mocker.patch.object(explorer, m) for m in self.called]
+        explorer.prepare_for_next_calc_run()
+        for method in mock_called:
+            method.assert_called_once()
+
+    # Methods whose exceptions are delayed to
+    # the end of prepare_for_next_calc_run
+    errors_delayed = (
+        '_mark_state_files_as_ori',
+        '_copy_state_files_from_out_or_original_inputs',
+        )
+
+    @parametrize(method=errors_delayed)
+    def test_errors_delayed(self, method, explorer, mocker):
+        """Check failure when one method fails."""
+        exc = FileOperationFailedError({'fail_file': 'fail_reason'})
+        mocker.patch.object(explorer, method, side_effect=exc)
+        # Patch all the other methods too
+        for other in self.called:
+            if other == method:
+                continue
+            mocker.patch.object(explorer, other)
         with pytest.raises(OSError) as exc_info:
-            explorer.update_state_files_from_out()
-        logs = caplog.text
-        for file in MOCK_STATE_FILES:
-            assert exc_info.match(file)
-            assert all(s in logs for s in (file, f'{file}_ori', f'{file}_OUT'))
+            explorer.prepare_for_next_calc_run()
+        assert exc_info.match('fail_file: fail_reason')
+
+    @parametrize(missing=(True,False))
+    def test_mark_state_files_as_ori(self, missing, explorer, mocker):
+        """Check correct suffixing of root inputs as _ori."""
+        mock_replace = mocker.patch(
+            'pathlib.Path.replace',
+            side_effect=FileNotFoundError if missing else None
+            )
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._mark_state_files_as_ori()
+        assert mock_replace.call_count == len(MOCK_STATE_FILES)
+
+    def test_mark_state_files_as_ori_fails(self, explorer, mocker, caplog):
+        """Check no complaints if root files to rename are missing."""
+        exc = OSError('test')
+        mock_replace = mocker.patch('pathlib.Path.replace', side_effect=exc)
+        with pytest.raises(FileOperationFailedError) as exc_info:
+            # pylint: disable-next=protected-access       # OK in tests
+            explorer._mark_state_files_as_ori()
+        assert mock_replace.call_count == len(MOCK_STATE_FILES)
+        assert exc_info.value.failures == dict.fromkeys(MOCK_STATE_FILES, exc)
+        assert all(f in caplog.text for f in MOCK_STATE_FILES)
+
+    class EqualExc(Exception):
+        """An exception with equality."""
+
+        def __eq__(self, other):
+            # We want to really make sure the classes are the same
+            # pylint: disable-next=unidiomatic-typecheck
+            return type(self) == type(other) and self.args == other.args
+
+    _copy_excs = {
+        # Keys are: Exceptions on attempts from OUT/original_inputs
+        # (or None) and the "combined" failures from both
+        'OUT exists': (None, None, None),
+        'original_inputs exists': (
+            FileOperationFailedError({'fake_file': ['not found in OUT']}),
+            None,
+            None,
+            ),
+        'file missing': (
+            FileOperationFailedError({'fake_file': ['not found in OUT']}),
+            FileOperationFailedError({'fake_file': ['not found in orig']}),
+            {'fake_file': ['not found in OUT', 'not found in orig']},
+            ),
+        'exc in OUT': (
+            FileOperationFailedError({'fake_file': EqualExc('failed in OUT')}),
+            FileOperationFailedError({'fake_file': ['not found in orig']}),
+            {'fake_file': EqualExc('failed in OUT')},
+            ),
+        'exc in original_inputs': (
+            FileOperationFailedError({'fake_file': ['not found in OUT']}),
+            FileOperationFailedError({'fake_file': EqualExc('failed in ori')}),
+            {'fake_file': EqualExc('failed in ori')},
+            ),
+        }
+
+    @parametrize('out_exc,ori_exc,fails', _copy_excs.values(), ids=_copy_excs)
+    # pylint: disable-next=too-many-arguments  # 2 fixtures
+    def test_copy_state_files(self, out_exc, ori_exc, fails,
+                              explorer, mocker):
+        """Test failure to copy new inputs from OUT/original_inputs."""
+        def file_missing(src, *_, **__):
+            """Fake a failed copy from src."""
+            if out_exc and src.name == DEFAULT_OUT:
+                raise out_exc
+            if ori_exc:
+                raise ori_exc
+        mock_copy_from = mocker.patch.object(explorer,
+                                             '_copy_state_files_from',
+                                             side_effect=file_missing)
+        # Patch out logging, as it requires paths in the failures
+        mock_log = mocker.patch.object(
+            explorer,
+            '_log_failures_when_copying_input_files'
+            )
+        context = pytest.raises if fails else not_raises
+        with context(FileOperationFailedError) as exc_info:
+            # pylint: disable-next=protected-access       # OK in tests
+            explorer._copy_state_files_from_out_or_original_inputs()
+        expect_calls = [
+            mocker.call(explorer.path / DEFAULT_OUT, '{}', '{}_OUT'),
+            mocker.call(explorer.orig_inputs_dir,
+                        only_files=out_exc.failures if out_exc else {}),
+            ]
+        assert mock_copy_from.mock_calls == expect_calls
+        if fails:
+            assert exc_info.value.failures == fails
+            mock_log.assert_called_once_with(fails)
+
+    _copy_from = {  # missing, copy failures
+        'successful': ((), ()),
+        'not found': (('fake', 'PARAMETERS'), ()),
+        'fail to copy': ((), ('fake',)),
+        }
+
+    @parametrize('missing,fail', _copy_from.values(), ids=_copy_from)
+    @parametrize(only_files=(None, ('fake',)))
+    # pylint: disable-next=too-many-arguments  # 2 fixtures
+    def test_copy_state_files_from(self, missing, fail, only_files,
+                                   explorer, mocker):
+        """Test the _copy_state_files_from method."""
+        def is_file(path):
+            return not path.name.startswith(missing)
+        oserror = OSError()
+        def copy2(_, dst):
+            if dst.name in fail:
+                raise oserror
+
+        mocker.patch('pathlib.Path.is_file', is_file)
+        mocker.patch('shutil.copy2', copy2)
+        src = Path.cwd()/'does_not_exist'
+
+        # Build the expected result of a failure
+        failures = {}
+        for file in (*missing, *fail):
+            if only_files and file not in only_files:
+                continue
+            if not only_files and file not in MOCK_STATE_FILES:
+                continue
+            failures[file] = (oserror if file in fail
+                              else [src/file, src/f'{file}_fmt'])
+
+        context = pytest.raises if failures else not_raises
+        with context(FileOperationFailedError) as exc_info:
+            # pylint: disable-next=protected-access
+            explorer._copy_state_files_from(src, '{}', '{}_fmt',
+                                            only_files=only_files)
+        if failures:
+            assert exc_info.value.failures == failures
 
 
 class TestRootExplorerListFiles:
@@ -350,7 +538,7 @@ class TestRootExplorerListFiles:
     @parametrize(state_files=_ori_files.values(), ids=_ori_files)
     def test_to_replace_ori_files_exist(self, state_files, explorer, mocker):
         """Test list_files_to_replace when '_ori' files are present."""
-        mock_ori = [explorer.path / f'{f}_ori' for f in state_files]
+        mock_ori = [explorer.path / f'{f}{ORI_SUFFIX}' for f in state_files]
         mocker.patch.object(Path, 'exists', new=mock_exists(mock_ori))
         files_to_replace = explorer.list_files_to_replace()
         expected_files_to_replace = {
@@ -358,6 +546,122 @@ class TestRootExplorerListFiles:
             for f, ori_f in zip(state_files, mock_ori)
             }
         assert dict(files_to_replace) == expected_files_to_replace
+
+
+class TestRootExplorerMarkEditedFiles:
+    """Tests for the mark_edited_files method of RootExplorer."""
+
+    @fixture(name='make_calc_inputs')
+    def factory_calc_inputs(self):
+        """Fill explorer.path with calc input files."""
+        def _make(explorer):
+            filesystem_from_dict(dict.fromkeys(MOCK_STATE_FILES), explorer.path)
+        return _make
+
+    @fixture(name='make_calc_log')
+    def factory_calc_log(self):
+        """Add a calc log file to explorer.path."""
+        def _make(explorer):
+            timestamp = DateTimeFormat.FILE_SUFFIX.now()
+            (explorer.path / f'{LOG_PREFIX}-{timestamp}.log').touch()
+        return _make
+
+    @fixture(name='mock_edited_after_calc')
+    def factory_edited_after_calc(self,
+                                  make_calc_log,
+                                  make_calc_inputs,
+                                  explorer):
+        """Prepare a root tree with input files edited after calc started."""
+        make_calc_log(explorer)
+        time.sleep(1)  # NB: need >= 1 s, as timestamp has no micros
+        make_calc_inputs(explorer)
+
+    @fixture(name='explorer')  # NB: replaces the module fixture!
+    def fixture_explorer(self, tmp_path, mocker):
+        """Return a RootExplorer instance for a real temporary path."""
+        return RootExplorer(tmp_path, bookkeeper=mocker.MagicMock())
+
+    @staticmethod
+    def check_has_edited_files(explorer, expected):
+        """Check that the expected _edited files exist in explorer.path."""
+        edited = set(f.name.replace(EDITED_SUFFIX, '')
+                     for f in explorer.path.glob(f'*{EDITED_SUFFIX}*'))
+        assert edited == set(expected)
+
+    @staticmethod
+    def check_warns_edited(log_text, expected):
+        """Check that all expected edited files are named in log_text."""
+        assert all(f+EDITED_SUFFIX in log_text for f in expected)
+
+    def test_no_log_file(self, explorer, make_calc_inputs):
+        """Check that no files are _edited if there's no calc log file."""
+        make_calc_inputs(explorer)
+        explorer.collect_info()
+        explorer.mark_edited_files()
+        self.check_has_edited_files(explorer, ())
+
+    def test_earlier(self, explorer, make_calc_inputs, make_calc_log):
+        """Check that no files are _edited when they predate calc."""
+        # Prepare contents of the root directory
+        make_calc_inputs(explorer)
+        time.sleep(1)  # NB: need >= 1 s, as timestamp has no micros
+        make_calc_log(explorer)
+
+        # Collect info, then ensure no files are _edited due to sleep
+        explorer.collect_info()
+        explorer.mark_edited_files()
+        self.check_has_edited_files(explorer, ())
+
+    @pytest.mark.usefixtures('mock_edited_after_calc')
+    def test_later_no_ori(self, explorer, caplog, mocker):
+        """Check _edited files when they follow calc and there's no ori."""
+        # Patch pathlib.Path.replace to test a replacement failure
+        failed, *expect_edited = MOCK_STATE_FILES
+        old_replace = Path.replace
+        def _mock_replace(path_, other_):
+            """A callable to replace pathlib.Path.replace."""
+            if path_.name != failed:
+                old_replace(path_, other_)
+            raise OSError('failed to replace')
+        mocker.patch('pathlib.Path.replace', _mock_replace)
+
+        # Collect info, then ensure expect_edited files are _edited
+        explorer.collect_info()
+        explorer.mark_edited_files()
+        self.check_has_edited_files(explorer, expect_edited)
+        self.check_warns_edited(caplog.text, MOCK_STATE_FILES)
+        assert f'Failed to rename {failed}' in caplog.text
+
+    @pytest.mark.usefixtures('mock_edited_after_calc')
+    def test_later_with_ori(self, explorer, mocker, caplog):
+        """Check _edited files when they follow calc."""
+        # Add original_inputs files
+        same_contents, *expect_edited = MOCK_STATE_FILES
+
+        def _mock_same_contents(_, ori_file):
+            """A replacement for file_contents_identical."""
+            return ori_file.name == same_contents
+
+        mocker.patch(f'{_MODULE}.file_contents_identical', _mock_same_contents)
+
+        # Ensure only files with different contents are _edited
+        explorer.collect_info()
+        explorer.mark_edited_files()
+        self.check_has_edited_files(explorer, expect_edited)
+        self.check_warns_edited(caplog.text, expect_edited)
+        assert same_contents not in caplog.text  # No warning if same
+
+    @pytest.mark.usefixtures('mock_edited_after_calc')
+    def test_root_file_missing(self, explorer, caplog):
+        """Check no _edited version is created for a missing input file."""
+        # Delete one file
+        missing, *expect_edited = MOCK_STATE_FILES
+        (explorer.path / missing).unlink()
+        explorer.collect_info()
+        explorer.mark_edited_files()
+        self.check_has_edited_files(explorer, expect_edited)
+        self.check_warns_edited(caplog.text, expect_edited)
+        assert missing not in caplog.text  # No warning if missing
 
 
 class TestRootExplorerRaises:

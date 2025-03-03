@@ -15,6 +15,8 @@ cli
     as a standalone utility.
 constants
     Constants used in multiple places in the bookkeeper package.
+errors
+    Bookkeeper-related exceptions.
 log
     Defines the bookkeeper logger instance and its related
     functionality.

@@ -73,7 +73,7 @@ class TestHistoryExplorer:
         history.fix()
         for fixer in called:
             fixer.assert_called_once()
-        assert mock_log.call_count == (2 if backed_up else 1)
+        assert mock_log.call_count == (2 if backed_up else 0)
 
     def test_discard_last(self, history, mocker):
         """Test the discard_most_recent_run method."""

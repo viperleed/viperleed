@@ -150,7 +150,7 @@ def checkDelta(filename, at, el, rp):
             fvib.append(parselist[0])
             if any([f != 0. for f in parselist[1:ngeo]]):
                 logger.warning("File "+filename+": Found unexpected entries "
-                               "in list of vibrational displacements.")
+                               "in list of vibration displacements.")
             parselist = parselist[ngeo:]
         if len(fvib) >= nvib:
             break
@@ -327,7 +327,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         vibamps = [v + atom.site.vibamp[targetel] for v in viblist]
         if any([v <= 0 for v in vibamps]):
             logger.warning(
-                "Vibrational amplitudes for {} contain values <= 0 "
+                "Vibration amplitudes for {} contain values <= 0 "
                 "(smallest: {:.4f}). Shifting displacement list to avoid "
                 "non-positive numbers.".format(atom, min(vibamps)))
             corr = min([v for v in vibamps if v > 0]) - min(vibamps)

@@ -42,6 +42,7 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import rotation_matrix
@@ -50,11 +51,9 @@ from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
+from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
-
-
-OPTIONAL_INPUT_FILES = ('BEAMLIST',)
 
 
 def initialization(sl, rp, subdomain=False):
@@ -62,11 +61,6 @@ def initialization(sl, rp, subdomain=False):
     if not subdomain:
         rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
-
-    # preserve unmodified input files to original_inputs directory
-    if not subdomain:
-        rp.inputs_dir = rp.workdir / ORIGINAL_INPUTS_DIR_NAME
-        _preserve_original_input(rp, origin_dir=Path.cwd().resolve())
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
         init_domains(rp)
@@ -137,10 +131,11 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
-        poscar.write(tmpslab, filename='POSCAR_OUT', comments='all')
+        poscar.write(tmpslab, filename='POSCAR', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
+    rp.files_to_out.add('POSCAR')
     # generate POSCAR_oricell
     tmpslab.revert_unit_cell()
     try:
@@ -350,14 +345,14 @@ def initialization(sl, rp, subdomain=False):
             raise
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
-    rp.manifest.append("PHASESHIFTS")
+    rp.manifest.add("PHASESHIFTS")
     try:
         phaseshifts.plot_phaseshifts(sl, rp)
     except Exception:
         logger.warning("Failed to plot phaseshifts", exc_info=rp.is_debug_mode)
 
     # generate beamlist
-    logger.info("Generating BEAMLIST...")
+    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in init_domains
     calc_and_write_beamlist(sl, rp, beamlist_name="BEAMLIST")
 
     try:
@@ -379,7 +374,7 @@ def initialization(sl, rp, subdomain=False):
                 rp.ivbeams = iobeams.writeIVBEAMS(sl, rp)
                 rp.ivbeams_sorted = False
                 rp.fileLoaded["IVBEAMS"] = True
-                rp.manifest.append("IVBEAMS")
+                rp.manifest.add("IVBEAMS")
             except Exception:
                 logger.error("Error while writing IVBEAMS file based on "
                              "EXPBEAMS data.")
@@ -405,11 +400,10 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    main_work = Path.cwd().resolve()
     for name, path in rp.DOMAINS.items():
         # determine the target path
         target = Path(f"Domain_{name}").resolve()
-        dp = DomainParameters(target, main_work, name)
+        dp = DomainParameters(target, name)
         if target.is_dir():
             logger.warning(f"Folder {target} already exists. "
                            "Contents may get overwritten.")
@@ -484,7 +478,7 @@ def init_domains(rp):
                 raise RuntimeError("Error getting domain input files")
             for file in (checkFiles + ["IVBEAMS"]):
                 if (tensorDir / file).is_file():
-                    shutil.copy2(tensorDir / file, target / file)
+                    shutil.copy2(tensorDir / file, target)
                 else:
                     logger.error(
                         f"Required file {file} for domain {name} not "
@@ -492,67 +486,13 @@ def init_domains(rp):
                         )
                     raise RuntimeError("Error getting domain input files")
             dp.tensorDir = tensorDir
-        try:
-            # initialize for that domain
-            os.chdir(target)
-            logger.info(f"Reading input files for domain {name}")
+        with execute_in_dir(target):
             try:
-                dp.sl = poscar.read()
-                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
-                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
-                dp.rp.paths.work = main_work
-                dp.rp.paths.tensorleed = rp.paths.tensorleed
-                dp.rp.timestamp = rp.timestamp
-
-                # run _preserve_original_input separately for each domain
-                dp.rp.inputs_dir = dp.rp.workdir / ORIGINAL_INPUTS_DIR_NAME / name
-                _preserve_original_input(dp.rp, origin_dir=Path.cwd().resolve())
-
-                dp.sl = poscar.read(dp.rp.inputs_dir / "POSCAR")
-                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
-                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
-                dp.rp.inputs_dir = Path.cwd().resolve()
-
-                parameters.interpret(dp.rp, slab=dp.sl,
-                                     silent=rp.LOG_LEVEL > logging.DEBUG)
-                dp.sl.full_update(dp.rp)
-                dp.rp.fileLoaded["POSCAR"] = True
-                dp.rp.updateDerivedParams()
-                try:
-                    vibrocc.readVIBROCC(dp.rp, dp.sl)
-                    dp.rp.fileLoaded["VIBROCC"] = True
-                except Exception:
-                    logger.error("Error while reading required file VIBROCC")
-                    raise
-                dp.sl.full_update(dp.rp)
-                try:
-                    dp.rp.ivbeams = iobeams.readIVBEAMS()
-                except FileNotFoundError:
-                    pass
-                except Exception:
-                    logger.error(
-                        f"Error while reading IVBEAMS for domain {name}"
-                        )
-                else:
-                    dp.rp.ivbeams_sorted = False
-                    dp.rp.fileLoaded["IVBEAMS"] = True
+                # initialize for that domain
+                _run_initialization_for_domain(dp, rp)
             except Exception:
-                logger.error("Error loading POSCAR and "
-                             f"PARAMETERS for domain {name}")
+                logger.error(f'Error while initializing domain {name}')
                 raise
-            logger.info(f"Running initialization for domain {name}")
-
-            try:
-                initialization(dp.sl, dp.rp, subdomain=True)
-            except Exception:
-                logger.error(f"Error running initialization for domain {name}")
-                raise
-            rp.domainParams.append(dp)
-        except Exception:
-            logger.error(f"Error while initializing domain {name}")
-            raise
-        finally:
-            os.chdir(main_work)
     if len(rp.domainParams) < len(rp.DOMAINS):
         raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
@@ -627,11 +567,11 @@ def init_domains(rp):
     rp.pseudoSlab.bulkslab = BulkSlab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
     # run beamgen for the whole system
-    logger.info("Generating BEAMLIST...")
+    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in the end of initialization
     calc_and_write_beamlist(copy.deepcopy(largestDomain.sl),
-                      rp,
-                      domains=True,
-                      beamlist_name='BEAMLIST')
+                            rp,
+                            domains=True,
+                            beamlist_name='BEAMLIST')
     try:
         rp.beamlist = iobeams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
@@ -647,7 +587,7 @@ def init_domains(rp):
             rp.ivbeams = iobeams.writeIVBEAMS(None, rp, domains=True)
             rp.ivbeams_sorted = False
             rp.fileLoaded["IVBEAMS"] = True
-            rp.manifest.append("IVBEAMS")
+            rp.manifest.add("IVBEAMS")
         except Exception:
             logger.error("Error while writing IVBEAMS file based on "
                          "EXPBEAMS data.")
@@ -692,26 +632,30 @@ def init_domains(rp):
     if rr:
         logger.info("The following domains require new reference "
                     f"calculations: {', '.join(d.name for d in rr)}")
+        inherited = (
+            'THEO_ENERGIES',
+            'THETA',
+            'PHI',
+            'N_CORES',
+            'ivbeams',
+            )
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams"]:
-                setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
+            dp.rp.inherit_from(rp, *inherited, override=True)
             if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
                 dp.rp.LMAX.max = rp.LMAX.max
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
-        logger.info("Re-running initialization with "
-                    f"supercell slab for domain {dp.name}")
-        try:
-            os.chdir(dp.workdir)
-            dp.sl.clear_symmetry_and_ucell_history()
-            dp.rp.SYMMETRY_FIND_ORI = True
-            initialization(dp.sl, dp.rp, subdomain=True)
-        except Exception:
-            logger.error(f"Error while re-initializing domain {dp.name}")
-            raise
-        finally:
-            os.chdir(main_work)
+        logger.info('Re-running initialization with '
+                    f'supercell slab for domain {dp.name}')
+        dp.sl.clear_symmetry_and_ucell_history()
+        dp.rp.SYMMETRY_FIND_ORI = True
+        with execute_in_dir(dp.workdir):
+            try:
+                initialization(dp.sl, dp.rp, subdomain=True)
+            except Exception:
+                logger.error(f'Error while re-initializing domain {dp.name}')
+                raise
 
     if 4 not in rp.RUN and 1 not in rp.RUN and rr:
         logger.error(
@@ -730,51 +674,14 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def _preserve_original_input(rp, origin_dir):
-    """Create the original_inputs directory and copy input files there."""
-    try:
-        rp.inputs_dir.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
-        raise RuntimeError(f'Could not create directory '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}. '
-                           'Check disk permissions.') from exc
-
-    # We will copy all files that have potentially been used as
-    # inputs. Make sure the correct version of EXPBEAMS is stored
-    files_to_preserve = ALL_INPUT_FILES.copy()
-    files_to_preserve.remove('EXPBEAMS')
-    if rp.expbeams_file_name:
-        files_to_preserve.add(rp.expbeams_file_name)
-
-
-    # copy all files to orig_inputs that were used as original input
-    for file in files_to_preserve:
-        # save under name EXPBEAMS.csv
-        file_path = origin_dir / file
-        if not file_path.is_file():
-            if file in OPTIONAL_INPUT_FILES:
-                continue
-            logger.warning(f'Could not find file {file}. '
-                           'It will not be stored in '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
-            rp.setHaltingLevel(1)
-            return
-        try:
-            shutil.copy2(file_path, rp.inputs_dir)
-        except OSError:
-            logger.warning(f'Could not copy file {file} to '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
-            rp.setHaltingLevel(1)
-
-
-def make_compile_logs_dir(rp):
+def make_compile_logs_dir(rpars):
     """Create compile_logs directory where compilation logs are saved."""
-    directory = rp.paths.compile_logs
+    directory = rpars.paths.compile_logs
     try:
         directory.mkdir(exist_ok=True)
     except OSError:
         logger.warning(f'Could not create directory {directory}')
-        rp.setHaltingLevel(1)
+        rpars.setHaltingLevel(1)
 
 
 def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
@@ -878,3 +785,97 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
     if not slab.layers:
         # May have been cleared by shifting slab away from c==0
         slab.create_layers(rpars)
+
+
+def _read_inputs_for_domain(domain, main_rpars):
+    """Read input files for a single domain.
+
+    Parameters
+    ----------
+    domain : DomainParameters
+        The parameters for this domain. At the end of this call,
+        domain.rp and domain.sl are updated to contain the Rparams
+        and Slab objects read (and updated) from file. domain.rp
+        is also up to date with respect to other input files loaded.
+    main_rpars : Rparams
+        The run parameters of the **main** viperleed.calc run.
+
+    Raises
+    ------
+    Exception
+        If reading VIBROCC or an existing IVBEAMS fails.
+    """
+    # NB: if we are running from stored Tensors, then
+    # this PARAMETERS will be a copy of the one stored
+    # in the Tensors, not the one the user may have given
+    # in the current Domain directory (it is overwritten
+    # when fetching files in init_domains).
+    domain.rp = rpars = parameters.read()
+    
+    # Inherit some values from the main PARAMETERS
+    inherited = (
+        'paths',
+        'timestamp',
+        'ZIP_COMPRESSION_LEVEL',
+        )
+    rpars.inherit_from(main_rpars, *inherited)
+    
+    # Store input files for each domain, BEFORE any edit
+    preserve_original_inputs(rpars)
+
+    domain.sl = slab = poscar.read()
+    warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain.name)
+
+    silent = rpars.LOG_LEVEL > logging.DEBUG
+    parameters.interpret(rpars, slab=slab, silent=silent)
+    slab.full_update(rpars)
+    rpars.fileLoaded['POSCAR'] = True
+    rpars.updateDerivedParams()
+    try:
+        vibrocc.readVIBROCC(rpars, slab)
+    except Exception:
+        logger.error('Error while reading required file VIBROCC')
+        raise
+    rpars.fileLoaded['VIBROCC'] = True
+    slab.full_update(rpars)
+    try:
+        rpars.ivbeams = iobeams.readIVBEAMS()
+    except FileNotFoundError:
+        pass
+    except Exception:
+        logger.error(f'Error while reading IVBEAMS for domain {domain.name}')
+    else:
+        rpars.ivbeams_sorted = False
+        rpars.fileLoaded['IVBEAMS'] = True
+
+
+def _run_initialization_for_domain(domain, main_rpars):
+    """Execute initialization for a specific domain.
+
+    Parameters
+    ----------
+    domain : DomainParameters
+        The parameters for the domain to be initialized.
+    main_rpars : Rparams
+        The run parameters of the **main** viperleed.calc run.
+
+    Raises
+    ------
+    Exception
+        If reading input files or executing the initialization fail.
+    """
+    logger.info(f'Reading input files for domain {domain.name}')
+    try:
+        _read_inputs_for_domain(domain, main_rpars)
+    except Exception:
+        logger.error(f'Error loading input files for domain {domain.name}')
+        raise
+
+    logger.info(f'Running initialization for domain {domain.name}')
+    try:
+        initialization(domain.sl, domain.rp, subdomain=True)
+    except Exception:
+        logger.error(f'Error running initialization for domain {domain.name}')
+        raise
+
+    main_rpars.domainParams.append(domain)

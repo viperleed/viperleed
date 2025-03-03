@@ -6,8 +6,8 @@
 DISPLACEMENTS
 =============
 
-The DISPLACEMENTS file defines the variations of geometry, vibrational
-amplitudes and element concentrations that should be considered in the
+The DISPLACEMENTS file defines the variations of geometry, vibration
+amplitudes, and element concentrations that should be considered in the
 search. In other words, the DISPLACEMENTS file defines the parameter
 space for the search.
 
@@ -23,8 +23,8 @@ sign "``=``", as in the following example
    O L(2-4) z = -0.05 0.05 0.01  ! Oxygen atoms in layers 2-4 will be displaced in z direction over the range [-0.05, 0.05] with step 0.01
 
    = VIB_DELTA
-   O 1 = -0.05 0.05 0.02         ! Vibrational amplitude of oxygen atom 1 (and symmetry-equivalent atoms) will be varied over the range [-0.05, 0.05] with step 0.02
-   Ir_top = -0.05 0.05 0.01      ! Vibrational amplitude of Iridium atoms in Ir_top sites will be varied over the range [-0.05, 0.05] with step 0.01
+   O 1 = -0.05 0.05 0.02         ! Vibration amplitude of oxygen atom 1 (and symmetry-equivalent atoms) will be varied over the range [-0.05, 0.05] with step 0.02
+   Ir_top = -0.05 0.05 0.01      ! Vibration amplitude of Iridium atoms in Ir_top sites will be varied over the range [-0.05, 0.05] with step 0.01
 
    = OCC_DELTA
    O 1 = O 0.8 1.0 0.05          ! Concentration of oxygen atom 1 (and symmetry-equivalent atoms) will be varied from 80% to 100% with 5% steps (rest: vacancies)
@@ -46,20 +46,20 @@ all atoms of the given element/site.
 The exact syntax of the three blocks differs slightly, and is explained in
 detail here:
 
--  :ref:`Geometrical displacements<GEODELTA>`
--  :ref:`Vibrational amplitudes<VIBDELTA>`
+-  :ref:`Geometric displacements<GEODELTA>`
+-  :ref:`Vibration amplitudes<VIBDELTA>`
 -  :ref:`Chemical substitution<OCCDELTA>`
 
 .. note::
     Geometric displacements for any atom can only be applied along one
-    :ref:`direction<geodelta_direction>`` (e.g. z, x, y, along arcs etc.) at a
+    :ref:`direction <geodelta_direction>` (e.g. z, x, y, along arcs etc.) at a
     time. To optimize positions in multiple directions, multiple subsequent 
     search blocks are necessary.
 
 
 Generally, any displacement applied to one atom will also be applied to
 all symmetry-equivalent atoms (see Linking in :ref:`POSCAR`), such that
-the symmetry is preserved during the search (eg. in-plane geometrical
+the symmetry is preserved during the search (eg. in-plane geometric
 displacements will be mirrored for atoms linked by a mirror symmetry plane).
 If multiple assignments are made for the same atom, the assignments will be
 ignored if they are consistent, but the user will be warned and the program
@@ -101,8 +101,8 @@ simple symmetry conservation, arbitrary displacements can be linked by using
    Ir_top = -0.05 0.05 0.02     ! see above; for example below
 
    = CONSTRAIN
-   geo O_top, Ir_top = linked   ! keep geometrical displacement index the same for O_top and Ir_top atoms. Requires the displacement ranges to have the same number of steps.
-   vib Ir_def = linked          ! keep vibrational displacement index the same for all Ir_def atoms
+   geo O_top, Ir_top = linked   ! keep geometric displacement index the same for O_top and Ir_top atoms. Requires the displacement ranges to have the same number of steps.
+   vib Ir_def = linked          ! keep vibration displacement index the same for all Ir_def atoms
    vib Ir_top = -0.03           ! although a displacement range is defined for Ir_top, fix its value to -0.03 instead
    vib Ir_top = ind(2)          ! same as the line before: Fix index to 2, i.e. the second entry in the displacement range
 
@@ -116,15 +116,15 @@ Running multiple searches
 -------------------------
 
 If you want to optimize multiple parameters not simultaneously, but end-to-end
-(necessary e.g. for geometrical optimization), you can use multiple blocks in
-the DISPLACEMENTS file to express this. After finishing one set of delta
-calculations and search, the program will then loop back to execute delta
-calculations and search again, starting from the optimized results of the
-previous search.
+(necessary e.g. for optimization of atomic positions), you can use multiple
+blocks in the DISPLACEMENTS file to express this. After finishing one set of
+delta calculations and search, the program will then loop back to execute
+delta calculations and search again, starting from the optimized results of
+the previous search.
 
 For example, the following DISPLACEMENTS file would first optimize z position
-and vibrational amplitudes simultaneously for the given set of atoms,
-then run another search from the optimized z and vibrational amplitudes,
+and vibration amplitudes simultaneously for the given set of atoms,
+then run another search from the optimized z and vibration amplitudes,
 this time optimizing the x coordinate:
 
 ..  code-block:: none

@@ -145,18 +145,26 @@ class HistoryExplorer:
         self._new_calc_run_folder = IncompleteHistoryFolder(new_folder_path)
 
     def fix(self):
-        """Fix folders in history and the history.info file."""
+        """Fix folders in history and the history.info file.
+
+        Returns
+        -------
+        bool
+            Whether any fixing was actually performed.
+        """
         # Create some backup of history.info for now, as we don't want
         # to risk completely messing with the user's file. This may be
         # removed in the future once we're sure we do the right thing.
         backup = self._backup_info_file()
         self.info.fix()
+        fixed_info = False
         if not backup:  # There was no history.info to back up
             pass
         elif backup.read_text(encoding='utf-8') == self.info.raw_contents:
             # We haven't modified anything. No need to keep the backup.
             backup.unlink()
         else:
+            fixed_info = True
             LOGGER.info(
                 f'The original {self.info.path.name} file has been renamed to '
                 f'{backup.name}. You can safely delete it if no unexpected '
@@ -173,8 +181,12 @@ class HistoryExplorer:
             if action.value:
                 LOGGER.info(action.value)
 
-        LOGGER.info(f'Successfully fixed {self.info.path.name} '
-                    f'file and {self.path.name} folder.')
+        fixed_folders = any(folder_fix_actions)
+        fixed_anything = fixed_info or fixed_folders
+        if fixed_anything:
+            LOGGER.info(f'Successfully fixed {self.info.path.name} '
+                        f'file and {self.path.name} folder.')
+        return fixed_anything
 
     def list_paths_to_discard(self):
         """Return a tuple of paths to folders that will be discarded."""

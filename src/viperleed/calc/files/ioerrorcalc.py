@@ -50,29 +50,28 @@ def extract_var_r(errors):
     return var_r_info
 
 
-def write_errors_summary_csv(summary_content, summary_path,
-                             summary_fname="Errors_summary.csv"):
+def write_errors_summary_csv(summary_content,
+                             summary_fname='Errors_summary.csv'):
     try:
-        with open(summary_path/summary_fname, "w", encoding="utf-8") as wf:
-            wf.write(summary_content)
-    except Exception as err:
-        logger.error("Failed to write error calculation summary "
-                     f"{summary_fname}:\n{err}")
+        with open(summary_fname, 'w', encoding='utf-8') as summary:
+            summary.write(summary_content)
+    except OSError as exc:
+        logger.error('Failed to write error calculation summary '
+                     f'{summary_fname}:\n{exc}')
 
 
 def write_errors_archive(individual_files,
-                         archive_path,
                          compression_level=2,
-                         archive_fname="Errors.zip"):
+                         archive_fname='Errors.zip'):
     try:
-        with ZipFile(archive_path/archive_fname, 'w',
+        with ZipFile(archive_fname, 'w',
                      compression=ZIP_DEFLATED,
-                     compresslevel=compression_level) as err_archive:
+                     compresslevel=compression_level) as archive:
             for fname, content in individual_files.items():
-                err_archive.writestr(fname, content)
-    except Exception as err:
-        logger.error("Failed to write error calculation archive "
-                     f"{archive_fname}:\n{err}")
+                archive.writestr(fname, content)
+    except OSError as exc:
+        logger.error('Failed to write error calculation archive '
+                     f'{archive_fname}:\n{exc}')
 
 
 def generate_errors_csv(errors, sep=","):
@@ -129,13 +128,13 @@ def generate_errors_csv(errors, sep=","):
 
 
 def geo_errors_csv_content(error):
-    """Generate columns dict for geometrical errors containing the
+    """Generate columns dict for geometric errors containing the
     contents of a file to be written into Errors.zip.
 
     Parameters
     ----------
     error : R_Error
-        Error object for geometrical errors.
+        Error object for geometric errors.
 
     Returns
     -------
@@ -162,13 +161,13 @@ def geo_errors_csv_content(error):
 
 
 def vib_errors_csv_content(error):
-    """Generate columns dict for vibrational errors containing the
+    """Generate columns dict for vibration errors containing the
     contents of a file to be written into Errors.zip.
 
     Parameters
     ----------
     error : R_Error
-        Error object for vibrational errors.
+        Error object for vibration errors.
 
     Returns
     -------
@@ -317,7 +316,7 @@ def make_errors_figs(errors, formatting=None):
     figs = []
 
     titles = {"geo": "Geometry",
-              "vib": "Vibrational amplitudes",
+              "vib": "Vibration amplitudes",
               "occ": "Site occupation"}
 
     for mode in ("geo", "vib", "occ"):

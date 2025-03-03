@@ -17,9 +17,8 @@ from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.files.parameters.write import ModifiedParameterValue
 from viperleed.calc.files.parameters.write import ParametersFileEditor
 from viperleed.calc.files.parameters.write import comment_out, modify
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import strip_comments
-
-from ....helpers import execute_in_dir
 
 
 class TestModifiedParameterValue:
@@ -146,12 +145,14 @@ class TestParametersEditor:
     def test_write_modified_nothing(self, read_one_param_file):
         """Check that file is unchanged with no edits."""
         fpath, rpars = read_one_param_file
+        rpars.files_to_out.clear()  # In case STOP was commented out
         editor = ParametersFileEditor(rpars, path=fpath.parent)
         editor.write_modified_parameters()
         ori_path = next(fpath.parent.glob(f'PARAMETERS*{rpars.timestamp}'))
         with fpath.open('r', encoding='utf-8') as mod_file:
             with ori_path.open('r', encoding='utf-8') as ori_file:
                 assert mod_file.read() == ori_file.read()
+        assert not rpars.files_to_out
 
     @staticmethod
     def _modify_one_param(editor, rpars):
@@ -170,6 +171,7 @@ class TestParametersEditor:
             comment, value = self._modify_one_param(editor, rpars)
             editor.write_modified_parameters()
             check_file_modified(fpath.name, value, comment)
+        check_marked_as_edited(rpars)
 
     def test_write_modified_context(self, read_one_param_file):
         """Check editing behaviour when used as a context manager."""
@@ -183,6 +185,7 @@ class TestParametersEditor:
             else:
                 pytest.fail(reason='File was modified too early')
         check_file_modified(fpath, value, comment)
+        check_marked_as_edited(rpars)
 
     def test_write_commented_param(self, read_one_param_file):
         """check correct commenting-out of one parameter."""
@@ -190,6 +193,7 @@ class TestParametersEditor:
         with ParametersFileEditor(rpars, path=fpath.parent) as editor:
             editor.comment_out_parameter('SITE_DEF')  # Two of them!
         assert all_commented_out(fpath, 'SITE_DEF')
+        check_marked_as_edited(rpars)
 
 
 def all_commented_out(fpath, param):
@@ -208,6 +212,12 @@ def check_file_modified(fpath, assign_str, comment=''):
             assert line.strip().endswith(comment)
 
 
+def check_marked_as_edited(rpars):
+    """Check that rpars has PARAMETERS among the edited files."""
+    # pylint: disable-next=magic-value-comparison
+    assert 'PARAMETERS' in rpars.files_to_out
+
+
 class TestCommentOutAndModifyFunctions:
     """Collection of tests for the public functions of .write."""
 
@@ -216,6 +226,7 @@ class TestCommentOutAndModifyFunctions:
         fpath, rpars = read_one_param_file
         comment_out(rpars, 'BULK_LIKE_BELOW', path=fpath.parent)
         assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
+        check_marked_as_edited(rpars)
 
     def test_modify_param(self, read_one_param_file):
         """Check effective modification of one parameter."""
@@ -224,3 +235,4 @@ class TestCommentOutAndModifyFunctions:
         with execute_in_dir(fpath.parent):
             modify(rpars, 'LMAX')
         check_file_modified(fpath, 'LMAX = 3-16')
+        check_marked_as_edited(rpars)

@@ -26,7 +26,7 @@ yielding the smallest possible |R factor|.
 The behavior of the structure-optimization algorithm is affected by multiple
 parameters (see :ref:`search behaviour<search_settings>`). See the section
 describing the :ref:`DISPLACEMENTS` file for details on the available options
-for geometric, vibrational, and occupation displacements. There are some
+for geometric, vibration, and occupation displacements. There are some
 caveats to the structure optimization in tensor LEED in general, and to
 the implementation in TensErLEED in particular.
 See :ref:`the section on structure search in tensor LEED<tensor_leed_search>`

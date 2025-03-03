@@ -28,6 +28,7 @@ import shutil
 import numpy as np
 
 from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.constants import COMPILE_LOGS_DIRNAME
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
@@ -38,6 +39,7 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
@@ -53,7 +55,6 @@ from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
 
 
-COMPILE_LOGS_DIRNAME = 'compile_logs'
 _LOGGER = logging.getLogger(parent_name(__name__))
 if CAN_PLOT:
     from matplotlib import pyplot as plt
@@ -73,10 +74,6 @@ class _RunPaths:
     tensorleed : Path
         The directory in which the TensErLEED and EEASiSSS code can
         be found.
-    work : Path
-        The directory in which calculations are executed, before
-        results are copied back to home. For a DOMAINS calculation,
-        this is the **main** one, not the one for the subdomains.
 
     Read-only attributes
     --------------------
@@ -88,18 +85,11 @@ class _RunPaths:
     # !!! Add new attributes in ALPHABETIC ORDER !!!
     home: Path = None
     tensorleed: Path = None
-    work: Path = None                                                           # TODO: see if we can get rid of this
 
     @property
     def compile_logs(self):
         """Return the path where Fortran-compilation log files are saved."""
-        return self.work / COMPILE_LOGS_DIRNAME
-
-    def __post_init__(self):
-        """Update work unless it was given already."""
-        if self.work is None:
-            self.work = Path.cwd()
-
+        return Path(COMPILE_LOGS_DIRNAME).resolve()
 
 
 class Rparams:
@@ -207,7 +197,8 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = [DEFAULT_SUPP, DEFAULT_OUT]
+        self.manifest = {DEFAULT_SUPP, DEFAULT_OUT}
+        self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
             'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,
@@ -351,6 +342,32 @@ class Rparams:
             getattr(self, param_name)  # Raise AttributeError if wrong
             value = self._to_simple_or_special_param(param_name, param_value)
             setattr(self, param_name, value)
+
+    def inherit_from(self, other, *attributes, override=False):
+        """Copy attributes from another Rparams.
+
+        Parameters
+        ----------
+        other : Rparams
+            The instance from which attributes should be copied.
+        *attributes : str
+            Names of attributes to be deep-copied from `other`.
+        override : bool, optional
+            Whether the copy should be unconditional, irrespective
+            of whether the user gave some values for any attribute.
+
+        Raises
+        ------
+        TypeError
+            If `other` is not an Rparams.
+        """
+        if not isinstance(other, Rparams):
+            raise TypeError(f'{type(self).__name__}.inherit_from requires an '
+                            f'Rparams object. Found {type(other).__name__!r}.')
+        for attr in attributes:
+            if attr in self.readParams and not override:
+                continue
+            setattr(self, attr, copy.deepcopy(getattr(other, attr)))
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
@@ -1182,17 +1199,14 @@ class Rparams:
         """Call generateSearchPars for every domain and collate results."""
         self.searchpars = []
         self.indyPars = len(self.domainParams) - 1
-        home = os.getcwd()
         for dp in self.domainParams:
-            try:
-                os.chdir(dp.workdir)
-                dp.rp.generateSearchPars(dp.sl, subdomain=True)
-            except Exception:
-                _LOGGER.error('Error while creating delta '
-                              f'input for domain {dp.name}')
-                raise
-            finally:
-                os.chdir(home)
+            with execute_in_dir(dp.workdir):
+                try:
+                    dp.rp.generateSearchPars(dp.sl, subdomain=True)
+                except Exception:
+                    _LOGGER.error('Error while creating delta '
+                                  f'input for domain {dp.name}')
+                    raise
             for sp in dp.rp.searchpars:
                 if not isinstance(sp.restrictTo, int):
                     continue

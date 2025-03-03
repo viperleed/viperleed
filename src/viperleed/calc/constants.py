@@ -15,6 +15,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-03'
 __license__ = 'GPLv3+'
 
+COMPILE_LOGS_DIRNAME = 'compile_logs'    # Save compilation logs here
 DEFAULT_DELTAS = 'Deltas'    # Where delta-amplitude files are stored
 DEFAULT_HISTORY = 'history'
 DEFAULT_OUT = 'OUT'
