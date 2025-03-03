@@ -850,6 +850,10 @@ class Measure(ViPErLEEDPluginBase):                                             
     @qtc.pyqtSlot()
     def _on_measurement_prepared(self):
         self._timestamps['prepared'] = time.perf_counter()
+        plot_data = self._glob['plot'].data_points
+        # After the measurement is prepared, we can expect
+        # the total number of steps to have been calculated.
+        plot_data.nr_steps_total = self.measurement.data_points.nr_steps_total
 
     @qtc.pyqtSlot()
     def _on_measurement_started(self):
@@ -913,6 +917,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         self._glob['last_dir'] = str(fname.parent)
         self._glob['plot'].data_points = data
+        self._glob['plot'].show()
         self._glob['last_cfg'] = config
 
     def _on_set_energy(self):
