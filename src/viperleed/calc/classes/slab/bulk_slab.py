@@ -253,7 +253,7 @@ class BulkSlab(BaseSlab):
             atom.pos[2] = (atom.pos[2] - midpos + 0.5) % 1.0
         self.update_cartesian_from_fractional(update_origin=update_origin)
 
-    def ensure_minimal_c_vector(self, rpars, z_periodic=False):
+    def ensure_minimal_c_vector(self, rpars, z_periodic=True):
         """Reduce the c vector to its minimum value.
 
         This method not only finds the shortest c vector, but also
@@ -274,9 +274,9 @@ class BulkSlab(BaseSlab):
         z_periodic : bool, optional
             Whether the slab is to be considered periodic along
             the direction perpendicular to the surface while the
-            c vector is minimized. Typically False, unless the
-            current c vector is already a repeat vector for this
-            slab. Default is False.
+            c vector is minimized. Use False, unless the current
+            c vector is already a repeat vector for this slab.
+            Default is True.
 
         Returns
         -------

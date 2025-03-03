@@ -679,7 +679,7 @@ class TestBulkUcell:
         slab, rpars, info = args
         with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
-        bulk_slab.ensure_minimal_c_vector(rpars)
+        bulk_slab.ensure_minimal_c_vector(rpars, z_periodic=False)
         c_vec = bulk_slab.c_vector
         bulk_info = info.bulk_properties
         with subtests.test('bulk unit-cell c'):
@@ -709,7 +709,7 @@ class TestBulkUcell:
         slab, rpars, *_ = args
         with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
-        bulk_slab.ensure_minimal_c_vector(rpars)
+        bulk_slab.ensure_minimal_c_vector(rpars, z_periodic=False)
         with pytest.raises(err.AlreadyMinimalError):
             bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS)
 
