@@ -609,7 +609,7 @@ class FirmwareUploader(ArduinoCLI):
         return base.get_devices('controller')
 
     def _extract_board_data(self, boards):
-        """Extract matching board data from a Arduino CLI board list.
+        """Extract matching board data from an Arduino CLI board list.
 
         Parameters
         ----------
