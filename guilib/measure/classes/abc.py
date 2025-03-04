@@ -142,7 +142,7 @@ class QObjectWithError(qtc.QObject):                                            
 
     @qtc.pyqtSlot(tuple)
     def _store_delayed_error(self, error):
-        """Append error message to delayed errors."""
+        """Remember an error to be delayed."""
         self._delayed_errors.append(error)
 
 
