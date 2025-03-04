@@ -187,10 +187,6 @@ class CameraABC(DeviceABC):
             try:
                 self.set_settings(self._settings_to_load)
             except self.exceptions:
-                # Start a short QTimer to report errors that occurred
-                # here AFTER the whole __init__ is done, i.e., when we
-                # suppose that the error_occurred signal is already
-                # connected externally.
                 pass
 
     def __deepcopy__(self, memo):
@@ -913,15 +909,15 @@ class CameraABC(DeviceABC):
         This method must return a list of SettingsInfo instances. The
         SettingsInfo class is located in the classes.abc module. Each
         camera is represented by a single SettingsInfo instance. The
-        SettingsInfo object must contain a .unique_name, a boolean
-        which is true if the device has a hardware interface present,
-        and a dict holding .more information about the device. If
-        there is no additional information about the camera, then this
-        dict can be empty. The information contained within a
-        SettingsInfo must be enough to determine a suitable settings
-        file for the device from it. Subclasses should raise a
-        DefaultSettingsError if they fail to create instances from the
-        settings in the DEFAULTS_PATH.
+        SettingsInfo object must contain a .unique_name,
+        .has_hardware_interface which is true if the device has a
+        hardware interface present, and a dict holding .more information
+        about the device. If there is no additional information about
+        the camera, then this dict can be empty. The information
+        contained within a SettingsInfo must be enough to determine a
+        suitable settings file for the device from it. Subclasses should
+        raise a DefaultSettingsError if they fail to create instances
+        from the settings in the DEFAULTS_PATH.
 
         Returns
         -------
