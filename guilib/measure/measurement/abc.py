@@ -72,7 +72,7 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
 
 
 class MeasurementIsRunningError(Exception):
-    """Raised through starting more than one measurement on one instance."""
+    """The same MeasurementABC was started again before it finished."""
 
 
 class MeasurementReusedError(Exception):
@@ -501,7 +501,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                                'disconnect them before attempting to set new '
                                'settings. See help(measurement.set_settings).')
 
-        self._aborted = False # Set False in case of abort through settings
+        self._aborted = False  # Set False in case of abort through settings
 
         # Notice that we clear data even if the settings are not accepted.
         # When the primary controller is set in the primary_controller
@@ -630,7 +630,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """Return whether runtime settings are ok.
 
         This method is used to check if the runtime settings that result
-        from the given settings are enough to run a measuremnt. Base
+        from the given settings are enough to run a measurement. The base
         implementation returns False if no primary controller exists.
 
         Returns
