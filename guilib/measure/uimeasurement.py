@@ -220,7 +220,7 @@ from viperleed.guilib.measure.dialogs.new_measurement_dialog import (
     )
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsDialog
 from viperleed.guilib.measure.dialogs.settingsdialog import (
-    MeasurementSettingsDialog
+    MeasurementSettingsDialog,
     )
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.serial.abc import SerialABC
@@ -504,7 +504,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['energy_input'].setEnabled(False)
 
         font = AllGUIFonts().buttonFont
-        for ctrl in ('measure', 'abort', 'set_energy', 'energy_input',):
+        for ctrl in ('measure', 'abort', 'set_energy', 'energy_input'):
             self._ctrls[ctrl].setFont(font)
             self._ctrls[ctrl].ensurePolished()
         self._switch_enabled(True)
@@ -863,7 +863,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         try:
             self._dialogs['measurement_settings'].deleteLater()
         except AttributeError:
-            pass
+            return  # No dialog yet
         qtw.qApp.processEvents()
         self._dialogs['measurement_settings'] = None
 
@@ -878,7 +878,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     @qtc.pyqtSlot()
     def _create_settings_dialog(self):
-        """Create measurement settings dialog."""
+        """Create a new dialog for editing measurement settings."""
         base.safe_disconnect(self.measurement.devices_disconnected,
                              self._create_settings_dialog)
         dialog = MeasurementSettingsDialog(self.measurement, parent=self)
