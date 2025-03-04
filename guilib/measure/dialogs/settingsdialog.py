@@ -1195,8 +1195,8 @@ class SettingsDialog(qtw.QDialog):
         columns[0].addStretch(1)
 
         section_layout = qtw.QHBoxLayout()
-        for layout in columns:
-            section_layout.addLayout(layout)
+        for column in columns:
+            section_layout.addLayout(column)
 
         outer_layout = qtw.QVBoxLayout()
         outer_layout.addLayout(section_layout)
