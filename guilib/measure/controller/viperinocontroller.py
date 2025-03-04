@@ -654,8 +654,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         -------
         device_list : list
             Each element is a SettingsInfo instance containing the
-            .unique_name of a controller, a .hardware_interface bool,
-            and .more information as a dict.
+            .unique_name of a controller, a .has_hardware_interface
+            bool, and .more information as a dict.
             The .more dict contains the following keys:
                 'name' : str
                     The controller name. This name may not be unique!

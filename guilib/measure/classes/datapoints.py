@@ -361,14 +361,17 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         if not resolved:
             self.__continuous = False
 
-    def __deepcopy__(self, _):
+    def __deepcopy__(self, memo):
         """Return a deep copy of self."""
         cls = self.__class__
+        # The primary controller object is passed on because it is used
+        # for indexing and its times are used as a reference for other
+        # controllers in time-resolved measurements.
         kwargs = {'primary_controller' : self.primary_controller,
                   'time_resolved' : self.__time_resolved,
                   'continuous' : self.__continuous,
                   'parent' : self.parent(),}
-        result = cls(*deepcopy(self.__list), **kwargs)
+        result = cls(*deepcopy(self.__list, memo), **kwargs)
         result.nr_steps_done = self.nr_steps_done
         result.nr_steps_total = self.nr_steps_total
         return result

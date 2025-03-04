@@ -684,8 +684,8 @@ class ImagingSourceCamera(abc.CameraABC):
         -------
         devices : list of SettingsInfo
             Information for each of the detected Imaging Source cameras.
-            For each item, only .unique_name and .hardware_interface are
-            set, i.e., there is no .more information.
+            For each item, only .unique_name and .has_hardware_interface
+            are set, i.e., there is no .more information.
         """
         # Use empty dictionaries as there is no
         # additional information to pass along.

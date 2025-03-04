@@ -290,7 +290,7 @@ class CollapsibleDeviceView(CollapsibleView):
 
     def is_dummy_device(self):
         """Returns whether the view is a dummy object or not."""
-        return not self._device_info.hardware_interface
+        return not self._device_info.has_hardware_interface
 
     def _make_handler_for_device(self, device):
         """Make a SettingsHandler for the device.
