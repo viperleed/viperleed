@@ -26,18 +26,19 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes import thermocouple
-from viperleed.guilib.measure.dialogs.settingsdialog import FieldInfo
 from viperleed.guilib.measure.dialogs.settingsdialog import (
-    SettingsDialogSectionBase
+    FieldInfo,
+    SettingsDialogSectionBase,
+    SettingsTag,
     )
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.serial.viperleedserial import (
-    ViPErLEEDHardwareError, ExtraSerialErrors
+    ExtraSerialErrors,
+    ViPErLEEDHardwareError, 
     )
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
-from viperleed.guilib.widgetslib import (change_control_text_color,
-                                         move_to_front)
+from viperleed.guilib.widgetslib import change_control_text_color
+from viperleed.guilib.widgetslib import move_to_front
 
 # pylint: disable=too-many-lines
 # Makes sense to keep all the widgets in a single module
@@ -254,13 +255,12 @@ class SerialNumberEditor(qtw.QWidget):
 
 
 class UpdateRateSelector(qtw.QComboBox):
-    """Class to select ADC update rate values."""
+    """Combo box to select ADC update-rate values."""
 
     def __init__(self, controller, **kwargs):
         """Initialize instance."""
         super().__init__(**kwargs)
-        self._rates = controller.settings.items('adc_update_rate')
-        for key, frequency in self._rates:
+        for key, frequency in controller.settings.items('adc_update_rate'):
             self.addItem(str(round(float(frequency))) + (' Hz'), userData=key)
         self.notify_ = self.currentIndexChanged
 
