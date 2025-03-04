@@ -540,7 +540,8 @@ class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
             is an empty string, no tooltip is shown. Default is an
             empty string.
         tags : SettingsTag, optional
-            Contains additional tags of this option. Possible tags are:
+            Contains additional tags of this option. Possible tags are
+            a bitwise-or of:
                 SettingsTag.REGULAR
                     Present if the option contains regular settings.
                 SettingsTag.ADVANCED
@@ -781,7 +782,8 @@ class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
             The parent widget of this SettingsDialogSection. Default
             is None.
         tags : SettingsTag, optional
-            Contains additional tags of this section. Possible tags are:
+            Contains additional tags of this section. Possible tags are
+            a bitwise-or of:
                 SettingsTag.REGULAR
                     Present if the section contains regular settings.
                 SettingsTag.ADVANCED
@@ -894,7 +896,8 @@ class SettingsDialogSection(SettingsDialogSectionBase):
             when the mouse cursor hovers over the section title. If an
             empty string no tooltip is shown. Default is an empty string.
         tags : SettingsTag, optional
-            Contains additional tags of this section. Possible tags are:
+            Contains additional tags of this section. Possible tags are
+            a bitwise-or of:
                 SettingsTag.REGULAR
                     Present if the section contains regular settings.
                 SettingsTag.ADVANCED
@@ -1331,7 +1334,8 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             is an empty string, no tooltip is shown. Default is an
             empty string.
         tags : SettingsTag, optional
-            Contains additional tags of this option. Possible tags are:
+            Contains additional tags of this option. Possible tags are
+            a bitwise-or of:
                 SettingsTag.REGULAR
                     Present if the option contains regular settings.
                 SettingsTag.ADVANCED
