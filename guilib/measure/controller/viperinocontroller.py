@@ -535,9 +535,9 @@ class ViPErinoController(abc.MeasureControllerABC):
             )
         widget = _settings.UpdateRateSelector(self)
         tooltip = ('<nobr>The frequency at which the </nobr>controller '
-                  'acquires measurements. For regular measurements it is '
-                  'preferable to set the measurement frequency to the '
-                  'line frequency.')
+                  'acquires measurements. To minimize noise during regular '
+                  'measurements, it should be set to the line frequency of '
+                  'your laboratory (i.e., 50 Hz or 60 Hz).')
         handler.add_option(
             'measurement_settings', 'adc_update_rate', handler_widget=widget,
             display_name='Measurement frequency', tooltip=tooltip
