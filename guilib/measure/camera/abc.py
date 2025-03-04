@@ -150,7 +150,7 @@ class CameraABC(DeviceABC):
         """
         super().__init__(settings=settings, parent=parent)
         if not driver:
-            raise RuntimeError('No camera driver given!')
+            raise ValueError(f'{driver} is not a valid camera driver.')
         self.driver = driver
         self.__connected = False
         self.__bad_pixels = None
@@ -802,7 +802,7 @@ class CameraABC(DeviceABC):
 
         # Exposure time in ms
         _widget = CoercingDoubleSpinBox(soft_range=self.get_exposure_limits(),  # TODO: use prefix-adaptive widget
-                                        decimals=2, step=5., suffix=' ms')
+                                        decimals=2, step=5.0, suffix=' ms')
         _widget.setStepType(_widget.AdaptiveDecimalStepType)
         _widget.setAccelerated(True)
         _widget.setMinimum(_widget.soft_minimum)
@@ -1194,7 +1194,7 @@ class CameraABC(DeviceABC):
         min_gain, max_gain : float
             Smallest and largest gain factors in decibel
         """
-        return - np.inf, np.inf
+        return -np.inf, np.inf
 
     @abstractmethod
     def get_mode(self):
