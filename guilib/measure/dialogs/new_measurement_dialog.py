@@ -12,7 +12,8 @@ type and its settings.
 """
 
 from pathlib import Path
-from time import localtime, strftime
+from time import localtime
+from time import strftime
 import shutil
 
 from PyQt5 import QtCore as qtc
@@ -54,9 +55,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
     def cfg_dir(self, new_cfg_dir):
         """Set the default config directory for user settings."""
         self._cfg_dir = Path(new_cfg_dir)
-        had_no_path = True
-        if self._ctrls['settings_folder'].path:
-            had_no_path = False
+        had_no_path = not self._ctrls['settings_folder'].path
         self._ctrls['settings_folder'].path = self._cfg_dir
         if had_no_path:
             self._ctrls['settings_folder'].path_changed.emit(self._cfg_dir)
@@ -108,23 +107,23 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             self._ctrls['settings_file'].addItem(settings.stem, settings)
 
     def _clone_and_return_settings(self, cls, source_path):
-        """Take from source path and clone to a path.
+        """Create a copy of the settings file at `source_path`.
 
         Parameters
         ----------
-        cls : MeasureEnergyCalibration or TimeResolved or IVVideo
+        cls : type
             The measurement class for which settings have been selected.
         source_path : Path
-            The path to the source settings.
+            The path to the settings file to be duplicated.
 
         Returns
         -------
         settings_path : Path
             The path to the new cloned settings.
         """
-        current_time = strftime("_%Y-%m-%d_%H-%M-%S", localtime())
+        current_time = strftime("%Y-%m-%d_%H-%M-%S", localtime())
         name = cls.__name__
-        settings_path = self.cfg_dir / (name + current_time + '.ini')
+        settings_path = self.cfg_dir / f'{name}_{current_time}.ini'
         shutil.copy2(source_path, settings_path)
         return settings_path
 
@@ -139,7 +138,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
     def accept(self):
         """Emit selected measurement class and settings and close.
 
-        Emtis
+        Emits
         -----
         measurement_selected
             If the settings was found and successfuly read.
