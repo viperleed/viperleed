@@ -392,11 +392,11 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             ('endless', 'Endless measurement',
              '<nobr>If selected, the measurement will return to the start'
              '</nobr> energy after reaching the end and go on. This kind '
-             'of measurement has to be aborted for it to end.'),
+             'of measurement has to be manually aborted for it to end.'),
             ('constant_energy', 'Constant energy',
              '<nobr>If selected, the measurement will allways remain at'
              '</nobr> the start energy. This kind of measurement has to '
-             'aborted for it to end.'),
+             'be manually aborted for it to end.'),
             )
         for option_name, display_name, tip in info:
             widget = QCheckBoxInvertedSignal()
