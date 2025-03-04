@@ -261,7 +261,7 @@ class UpdateRateSelector(qtw.QComboBox):
         """Initialize instance."""
         super().__init__(**kwargs)
         for key, frequency in controller.settings.items('adc_update_rate'):
-            self.addItem(str(round(float(frequency))) + (' Hz'), userData=key)
+            self.addItem(f'{round(float(frequency))} Hz', userData=key)
         self.notify_ = self.currentIndexChanged
 
     def get_(self):
@@ -273,7 +273,7 @@ class UpdateRateSelector(qtw.QComboBox):
         for i in range(self.count()):
             if self.itemData(i) == value:
                 self.setCurrentIndex(i)
-                break
+                return
 
 
 class HardwareConfigurationEditor(SettingsDialogSectionBase):
@@ -562,8 +562,11 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
         # We want to see this section if:
         #   (1) we don't have info yet
         #   (2) something is wrong with the current selection
-        if not self.__adcs or any('?' in combo.currentText()
-               for adc in self.__adcs for combo in adc.values()):
+        adcs = self.__adcs or {}
+        selection_faulty = any('?' in combo.currentText()
+                               for adc in adcs
+                               for combo in adc.values())
+        if not adcs or selection_faulty:
             if tag is SettingsTag.ADVANCED:
                 return False
             if tag is SettingsTag.REGULAR:
