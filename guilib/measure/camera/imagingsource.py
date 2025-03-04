@@ -689,7 +689,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """
         # Use empty dictionaries as there is no
         # additional information to pass along.
-        # Since we detect camera presence throgh the driver, we can
+        # Since we detect camera presence through the driver, we can
         # assume the hardware interface is going to be present when
         # we attempt to connect to the device.
         present = True
