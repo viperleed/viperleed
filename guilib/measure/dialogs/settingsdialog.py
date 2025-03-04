@@ -144,6 +144,7 @@ def _get_hook(obj):
 
 class SettingsTag(enum.Flag):
     """Flags that decide the display behaviour of a settings widget."""
+    NONE = 0
     REGULAR = enum.auto()
     R = REGULAR
     ADVANCED = enum.auto()
@@ -193,7 +194,7 @@ class SettingsSectionColumnInfo:
             raise TypeError('Alignment must be an allowed alignment or None.')
 
 
-class SettingsTagHandler():
+class SettingsTagHandler:
     """This class can return whether it has certain tags or not."""
 
     def __init__(self, **kwargs):
@@ -207,10 +208,7 @@ class SettingsTagHandler():
     @tags.setter
     def tags(self, new_tags):
         """Set tags."""
-        if not new_tags:
-            self._tags = Tag(0)
-            return
-        self._tags = new_tags
+        self._tags = new_tags or Tag(0)
 
     def has_tag(self, tag):
         """Return whether the instance has this tag."""

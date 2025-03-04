@@ -410,7 +410,7 @@ def get_devices(package):
 
 
 def make_device(settings_file, device_cls, settings_info, **kwargs):
-    """Instantiate a device.
+    """Return an instance of `device_cls`.
 
     Parameters
     ----------
@@ -421,7 +421,7 @@ def make_device(settings_file, device_cls, settings_info, **kwargs):
     settings_info : SettingsInfo
         The SettingsInfo necessary to determine the settings.
     **kwargs : object
-        Keyword arguments.
+        Keyword arguments passed to `device_cls`.
 
     Returns
     -------
@@ -429,11 +429,8 @@ def make_device(settings_file, device_cls, settings_info, **kwargs):
         An instance of an implemented DeviceABC subclass object.
     """
     if 'address' in settings_info.more:
-        address = settings_info.more['address']
-        device = device_cls(settings=settings_file, address=address, **kwargs)
-    else:
-        device = device_cls(settings=settings_file, **kwargs)
-    return device
+        kwargs['address'] = settings_info.more['address']
+    return device_cls(settings=settings_file, **kwargs)
 
 
 def safe_connect(signal, slot, **kwargs):
