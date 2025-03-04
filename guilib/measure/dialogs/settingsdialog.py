@@ -198,7 +198,7 @@ class SettingsTagHandler:
     """This class can return whether it has certain tags or not."""
 
     def __init__(self, **kwargs):
-        self._tags = kwargs.pop('tags', Tag(0))
+        self._tags = kwargs.pop('tags', Tag.NONE)
 
     @property
     def tags(self):
@@ -208,7 +208,7 @@ class SettingsTagHandler:
     @tags.setter
     def tags(self, new_tags):
         """Set tags."""
-        self._tags = new_tags or Tag(0)
+        self._tags = new_tags or Tag.NONE
 
     def has_tag(self, tag):
         """Return whether the instance has this tag."""
@@ -417,7 +417,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
-        tags = kwargs.pop('tags', Tag(0))
+        tags = kwargs.pop('tags', Tag.NONE)
         if Tag.READ_ONLY not in tags:
             tags = tags | Tag.READ_ONLY # pylint: disable=E1131
         option = StaticSettingsDialogOption(option_name, handler_widget,
@@ -1361,7 +1361,7 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             read_only is not True. Indicates wrong
             use of StaticSettingsDialogOption.
         """
-        tags = kwargs.get('tags', Tag(0))
+        tags = kwargs.get('tags', Tag.NONE)
         if Tag.READ_ONLY not in tags:
             raise ValueError(
                 'A StaticSettingsDialogOption may only be read only. You '
