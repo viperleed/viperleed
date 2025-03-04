@@ -18,9 +18,9 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.dialogs.settingsdialog import (
-    SettingsDialogSectionBase
+    SettingsDialogSectionBase,
+    SettingsTag,
     )
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.widgets.collapsiblelists import CollapsibleCameraList
 from viperleed.guilib.measure.widgets.collapsiblelists import CollapsibleControllerList
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
@@ -105,12 +105,12 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._cameras.settings_ok_changed.connect(self.settings_ok_changed)
         self._controllers.requires_device = True
         meas = self._settings.get('measurement_settings', 'measurement_class')
-        if meas == 'IVVideo':
-            self._cameras.requires_device = True
+        must_have_cameras = ('IVVideo',)
+        self._cameras.requires_device = meas in must_have_cameras 
 
     @qtc.pyqtSlot()
     def _store_device_settings(self):
-        """Get the settings from the list viewers."""
+        """Collect device settings from the list viewers."""
         self._settings.set('devices', 'primary_controller',
                            str(self._controllers.get_primary_settings()))
         self._settings.set('devices', 'secondary_controllers',
@@ -154,7 +154,7 @@ class DeviceEditor(SettingsDialogSectionBase):
 
 
 class StepProfileViewer(ButtonWithLabel):
-    """Viewer of the current step profile type.
+    """Viewer of the current step-profile type.
 
     Shows the current step profile to the user and opens
     the step profile editor with the push of a button.
@@ -202,7 +202,7 @@ class StepProfileViewer(ButtonWithLabel):
         """Set label and load profile into step profile editor."""
         value = literal_eval(value)
         if not value:
-            value = ('abrupt', )
+            value = ('abrupt',)
         if isinstance(value, str):
             value = (value,)
         self.profile_editor.profile = value
@@ -231,7 +231,7 @@ class StepProfileEditor(qtw.QDialog):
             'cancel' : qtw.QPushButton('Cancel'),
             }
         self._populate_profile_options()
-        self.setWindowTitle('Step profile editor')
+        self.setWindowTitle('Edit energy-step profile')
         self.setWindowFlags(self.windowFlags()
                             & ~qtc.Qt.WindowContextHelpButtonHint)
         self._delay = qtc.QTimer()
@@ -356,7 +356,7 @@ class AbruptStep(ProfileStep):
 
 
 class LinearStepEditor(ProfileStep):
-    """Editor for selecting linear profile settings."""
+    """Editor for selecting settings of a linear energy profile."""
 
     def __init__(self):
         """Initialise object."""
@@ -376,10 +376,9 @@ class LinearStepEditor(ProfileStep):
         self.setLayout(layout)
 
     def _compose_step_nr_selection(self):
-        """Return a layout of the step number selection."""
+        """Return a layout of the step-number selection."""
         layout = qtw.QHBoxLayout()
-        step_number_label = qtw.QLabel()
-        step_number_label.setText('Nr. of steps:')
+        step_number_label = qtw.QLabel('Nr. of steps:')
         layout.addWidget(step_number_label)
         size = step_number_label.fontMetrics().boundingRect('a').height()
         info = 'The number of intermediate steps.'
@@ -413,7 +412,7 @@ class LinearStepEditor(ProfileStep):
 
 
 class FractionalStepEditor(ProfileStep):
-    """Editor for selecting fractional profile settings."""
+    """Editor for the settings of an energy profile with custom steps."""
 
     step_count_reduced = qtc.pyqtSignal()
 
