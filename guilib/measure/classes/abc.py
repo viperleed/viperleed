@@ -106,7 +106,6 @@ class QObjectWithError(qtc.QObject):                                            
         """
         super().__init__(*args, **kwargs)
         self._delayed_errors = []
-        self._delay_errors_timer = None
         self._delay_errors_timer = qtc.QTimer(parent=self)
         self._delay_errors_timer.setSingleShot(True)
         self._delay_errors_timer.setInterval(20)
