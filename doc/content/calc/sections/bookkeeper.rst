@@ -19,11 +19,11 @@ Most importantly, the bookkeeper automatically moves and updates the file
 By default these files are overwritten by the output files of the previous calculation, so that a new calculation can
 be started without having to manually copy the output files.
 
-- **Archive**: Stores the results of the previous calculation into the 
-  ``history`` directory, and overwrites the input files 
+- **Archive**: Stores the results of the previous calculation into the
+  ``history`` directory, and overwrites the input files
   :ref:`PARAMETERS<parameters>`, :ref:`POSCAR<poscar>` and
   :ref:`VIBROCC<vibrocc>` with the results of the previous calculation stored
-  in the ``OUT`` directory. The previous input files are renamed to 
+  in the ``OUT`` directory. The previous input files are renamed to
   ``PARAMETERS_ori``, ``POSCAR_ori`` and ``VIBROCC_ori`` for reference
   Runs automatically **at the end of every calculation**.
 
@@ -37,7 +37,7 @@ be started without having to manually copy the output files.
   files to their original state.
   This is useful if the previous run was not successful and you want to start
   over.
-  Input and output files of the previous run will still be stored in the 
+  Input and output files of the previous run will still be stored in the
   ``history`` directory for reference.
   Needs to be run manually with ``viperleed bookkeeper --discard``.
 
@@ -47,8 +47,9 @@ be started without having to manually copy the output files.
   Needs to be run manually with ``viperleed bookkeeper --discard-full``.
 
 
-.. versionchanged:: 0.12.0
-    The bookkeeper behavior was overhauled and the names of the modes were changed.
+.. versionchanged:: 0.13.0
+    The bookkeeper behavior was overhauled and the names of the modes were
+    changed.
 
 
 

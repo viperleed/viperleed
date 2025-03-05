@@ -180,7 +180,7 @@ single atoms will be written as search offsets.
     the (last) optimization step. In this case, a copy of the auto-generated
     VIBROCC file can be found in SUPP (named VIBROCC_generated).
 
-.. versionchanged:: 0.12.3
+.. versionchanged:: 0.13.0
     In earlier versions of |calc|, the automatically created VIBROCC file
     would only appear in the root directory after :ref:`initialization`,
     and only the VIBROCC file resulting from a structural optimization

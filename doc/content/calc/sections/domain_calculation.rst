@@ -175,7 +175,7 @@ beforehand for better control.
     and :file:`VIBROCC`) **will be lost**: the next calculation will **start**
     **from the same inputs as the previous one**.
 
-.. versionchanged:: 0.12.3
+.. versionchanged:: 0.13.0
     In earlier versions of |calc|, the results of the calculations from each
     domain in a domain calculation would **not be copied back from the work**
     **folder**.
@@ -311,6 +311,6 @@ to point to the newly created subfolders of :file:`my_domain_calc`
 (i.e., :file:`Domain_1` and :file:`Domain_another` in
 :numref:`list_domains_outputs_abs`).
 
-.. versionchanged:: 0.12.3
+.. versionchanged:: 0.13.0
     The main PARAMETERS file is updated such that each DOMAIN points to the
     subfolders of the directory in which |calc| was executed.

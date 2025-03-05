@@ -122,7 +122,7 @@ or :ref:`fdoptimization`), the POSCAR file in OUT corresponds to the one
 that realizes the best (i.e., smallest) |R factor|. It has the same format
 as the one after initialization.
 
-.. versionchanged:: 0.12.3
+.. versionchanged:: 0.13.0
     In earlier versions of |calc|, the automatically edited POSCAR file
     would only appear in the root directory after :ref:`initialization`,
     and only the POSCAR file resulting from a structural optimization
