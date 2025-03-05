@@ -55,6 +55,6 @@ compatibility with other sources. If a :ref:`PHASESHIFTS` file is present and
 compatible with the input, it will be used; otherwise, a new PHASESHIFTS file
 will be generated automatically.
 
-.. versionchanged:: 0.12.3
+.. versionchanged:: 0.13.0
     Relative ``DOMAIN`` paths also consider the folder in which |calc| was
     started. In earlier versions, only the work directory was searched.
