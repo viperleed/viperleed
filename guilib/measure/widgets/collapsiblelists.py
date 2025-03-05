@@ -113,7 +113,7 @@ class CollapsibleList(qtw.QScrollArea):
 
 
 class CollapsibleDeviceListABC(CollapsibleList, metaclass=QMetaABC):
-    """A widget composed of an arbitrary number of CollapsibleDeviceViews."""
+    """A widget containing an arbitrary number of CollapsibleDeviceViews."""
 
     _top_labels = ('Device', )
 
@@ -311,7 +311,7 @@ class CollapsibleDeviceListABC(CollapsibleList, metaclass=QMetaABC):
     def add_new_view(self, name, cls_and_info):
         """Add a new view.
 
-        This method must be reimplemented in subclasses. It must create
+        This method must be overridden in subclasses. It must create
         the appropriate CollapsibleDeviceView, call the _add_new_view
         method and return the added view.
 
@@ -432,7 +432,7 @@ class CollapsibleCameraList(CollapsibleDeviceListABC):
 
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
-        """Detect controllers, add them as views and preselect them.
+        """Detect cameras, add them as views and preselect them.
 
         Emits
         -----
@@ -450,7 +450,7 @@ class CollapsibleCameraList(CollapsibleDeviceListABC):
             self._set_single_camera_settings(settings)
 
     def _set_single_camera_settings(self, camera_settings):
-        """Set settings of camera.
+        """Set settings of one camera.
 
         Parameters
         ----------
@@ -488,7 +488,7 @@ class CollapsibleCameraList(CollapsibleDeviceListABC):
                 'camera', settings.get('camera_settings', 'class_name')
                 )
             info = {}
-            present = False # Because there is no hardware interface.
+            present = False  # Because there is no hardware interface.
             settings_info = SettingsInfo(name, present, info)
             correct_view = self.add_new_view(name, (cls, settings_info))
 
@@ -611,7 +611,7 @@ class CollapsibleControllerList(CollapsibleDeviceListABC):
 
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
-        """Detect controllers, add them as views and preselect them.
+        """Detect controllers, add them as views, and preselect them.
 
         Emits
         -----
@@ -627,7 +627,7 @@ class CollapsibleControllerList(CollapsibleDeviceListABC):
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
     def _enable_primary(self, enable):
-        """Enable/disable QRadioButton (sets primary controller).
+        """Mark the controller of the sender as primary.
 
         Parameters
         ----------
@@ -696,10 +696,11 @@ class CollapsibleControllerList(CollapsibleDeviceListABC):
             cls = class_from_name(
                 'controller', settings.get('controller', 'controller_class')
                 )
-            info = {}
-            info['address'] = NO_HARDWARE_INTERFACE
-            info['name'] = device_name
-            present = False # Because there is no hardware interface.
+            info = {
+                'address': NO_HARDWARE_INTERFACE,
+                'name': device_name,
+                }
+            present = False  # Because there is no hardware interface.
             settings_info = SettingsInfo(name, present, info)
             correct_view = self.add_new_view(name, (cls, settings_info))
 
