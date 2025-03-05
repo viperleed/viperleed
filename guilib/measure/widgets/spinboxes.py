@@ -62,7 +62,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
         Parameters
         ----------
         decimals : int, optional
-            The amount of decimals. If not given or None,
+            The number of decimal places. If not given or None,
             use the default decimal places. Default is None.
         soft_range : tuple, optional
             The soft minimum and maximum.
@@ -73,7 +73,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
 
         Returns
         -------
-        None
+        None.
         """
         super().__init__(**kwargs)
         self.setRange(-float('inf'), float('inf'))
@@ -109,7 +109,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
     def soft_maximum(self, new_maximum):
         """Set soft maximum."""
         if new_maximum < self.soft_minimum:
-            raise ValueError('The maximum cannot be lower than the minimum.')
+            raise ValueError('The maximum cannot be smaller than the minimum.')
         self._soft_max = new_maximum
 
     @property
@@ -137,7 +137,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
 
     @qtc.pyqtSlot(int)
     def stepBy(self, steps):    # pylint: disable=invalid-name
-        """Adjust set vaöue through steps according to soft limits."""
+        """Adjust set value through steps according to soft limits."""
         _, value, _ = sorted((self.soft_minimum, self.soft_maximum,
                               self.value() + steps*self.singleStep()))
         self.setValue(value)
