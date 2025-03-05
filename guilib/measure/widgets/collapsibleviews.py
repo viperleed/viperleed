@@ -19,9 +19,9 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.dialogs.settingsdialog import (
-    SettingsDialogSectionBase
+    SettingsDialogSectionBase,
+    SettingsTag,
     )
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.hardwarebase import make_device
 from viperleed.guilib.measure.hardwarebase import safe_connect
 from viperleed.guilib.measure.hardwarebase import safe_disconnect
@@ -121,7 +121,7 @@ class QuantitySelector(qtw.QFrame):
                     button_not_found = False
                     break
             if button_not_found:
-                raise RuntimeError('Passed wrong quantities.')
+                raise ValueError(f'{quantity!r} is not an acceptable quantity.')
 
 
 class CollapsibleDeviceView(CollapsibleView):
@@ -163,7 +163,7 @@ class CollapsibleDeviceView(CollapsibleView):
 
     @original_settings.setter
     def original_settings(self, settings):
-        """Set the original settings."""
+        """Store a path to settings as the original ones."""
         self._original_settings = settings
         self.set_settings_folder(settings.parent)
         self._settings_file_selector.setCurrentText(settings.stem)
@@ -196,8 +196,10 @@ class CollapsibleDeviceView(CollapsibleView):
         """
         new_widget = qtw.QWidget()
         layout = qtw.QVBoxLayout()
-        for widget in self._handler.get_widgets_with_tags(
-                        SettingsTag.MEASUREMENT):
+        measurement_widgets = self._handler.get_widgets_with_tags(
+            SettingsTag.MEASUREMENT
+            )
+        for widget in measurement_widgets:
             if isinstance(widget, SettingsDialogSectionBase):
                 layout.addWidget(widget)
                 for option in widget.options:
@@ -254,13 +256,9 @@ class CollapsibleDeviceView(CollapsibleView):
         can_make_device : bool
             True if making a device is possible.
         """
-        if not self.settings_file:
-            return False
-        if not self._device_cls:
-            return False
-        if not self._device_info:
-            return False
-        return True
+        return bool(self.settings_file
+                    and self._device_cls
+                    and self._device_info)
 
     @qtc.pyqtSlot()
     def _get_device_settings_files(self):
@@ -293,8 +291,10 @@ class CollapsibleDeviceView(CollapsibleView):
         return not self._device_info.has_hardware_interface
 
     def _make_handler_for_device(self, device):
-        """Make a SettingsHandler for the device.
+        """Internally store a SettingsHandler for `device`.
 
+        Parameters
+        ----------
         device : DeviceABC
             A device that can return a SettingsHandler.
 
