@@ -182,8 +182,6 @@ class TestWriteFinalLogMessages:
     def check_has_records(caplog, records):
         """Ensure caplog has only certain records."""
         logged = tuple(r.getMessage() for r in caplog.records)
-        print(logged)
-        print(records)
         assert len(logged) == len(records)
         for log, expect in zip(logged, records):
             if isinstance(expect, str):
