@@ -28,7 +28,9 @@ from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.known_parameters import is_deprecated
 from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.utils import NumericBounds as Bounds
+from viperleed.calc.lib.version import Version
 
+from ....helpers import execute_in_dir
 from ...poscar_slabs import CasePOSCARSlabs
 from .case_parameters import case_parameters_slab
 
@@ -330,26 +332,42 @@ class TestDomain(_TestInterpretBase):
         """Test correct interpretation of a path with a domain name."""
         domain_path = tmp_path / 'domain1'
         domain_path.mkdir()
-        domain_path = str(domain_path)
-        self.interpret(interpreter, domain_path, flags_str='domain1')
+        self.interpret(interpreter, str(domain_path), flags_str='domain1')
         assert interpreter.rpars.DOMAINS == {'domain1': domain_path}
 
     def test_interpret_path_no_flag(self, interpreter, tmp_path):
         """Test correct interpretation of a path without a domain name."""
-        tmp_path = str(tmp_path)
-        self.interpret(interpreter, tmp_path)
+        self.interpret(interpreter, str(tmp_path))
         assert interpreter.rpars.DOMAINS == {'1': tmp_path}
+
+    def test_interpret_path_relative_to_cwd(self, interpreter, tmp_path):
+        """Test correct interpretation of a path relative to cwd."""
+        relative_path = 'domain'
+        domain_path = tmp_path / relative_path
+        domain_path.mkdir()
+        with execute_in_dir(tmp_path):
+            self.interpret(interpreter, relative_path)
+        assert interpreter.rpars.DOMAINS == {'1': domain_path}
+
+    def test_interpret_path_relative_to_calc(self, interpreter, tmp_path):
+        """Test interpretation of a path relative to where calc was started."""
+        relative_path = 'domain'
+        calc_path = tmp_path / 'calc_was_started_here'
+        domain_path = calc_path / relative_path
+        domain_path.mkdir(parents=True)
+        interpreter.rpars.paths.home = calc_path
+        self.interpret(interpreter, relative_path)
+        assert interpreter.rpars.DOMAINS == {'1': domain_path}
 
     def test_interpret_zip_file(self, interpreter, tmp_path):
         """Test correct interpretation of a zip file."""
         zip_file = tmp_path / 'domain.zip'
         zip_file.touch()
-        zip_file_name = str(zip_file)
-        self.interpret(interpreter, zip_file_name)
-        assert interpreter.rpars.DOMAINS == {'1': zip_file_name}
+        self.interpret(interpreter, str(zip_file))
+        assert interpreter.rpars.DOMAINS == {'1': zip_file}
         self.interpret(interpreter, str(zip_file.with_suffix('')))
-        assert interpreter.rpars.DOMAINS == {'1': zip_file_name,
-                                             '2': zip_file_name}
+        assert interpreter.rpars.DOMAINS == {'1': zip_file,
+                                             '2': zip_file}
 
     def test_interpret_invalid(self, interpreter):
         """Ensure invalid DOMAIN raises exceptions."""
@@ -784,11 +802,21 @@ class TestOptimize(_TestInterpretBase):
         rpars.RUN.append(6)
         self.check_raises(interpreter, val, exc, flags_str=flag)
 
-    def test_interpret_superfluous(self, interpreter):
+    _dont_interpret = {id_: (value, flag)  # No exception info
+                       for id_, (value, flag, _) in invalid.items()}
+    _dont_interpret['flag_and_value'] = valid['flag_and_value'][:2]
+
+    @parametrize('value,flag', _dont_interpret.values(), ids=_dont_interpret)
+    def test_interpret_superfluous(self, value, flag,
+                                   interpreter, caplog, subtests):
         """Ensure that defining OPTIMIZE without RUN=6 complains."""
-        val, flag, *_ = self.valid['flag_and_value']
-        self.check_raises(interpreter, val, err.SuperfluousParameterError,
-                           flags_str=flag)
+        self.interpret(interpreter, value, flags_str=flag)
+        rpars = interpreter.rpars
+        interpreted = self.rpars_value(interpreter)
+        with subtests.test('value unchanged'):
+            assert interpreted == rpars.get_default(self.param)
+        with subtests.test('log warning'):
+            assert 'RUN does not include' in caplog.text
 
 
 class TestParabolaFit(_TestInterpretBase):
@@ -1329,6 +1357,29 @@ class TestTheoEnergies(_TestInterpretBase):
     @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid THEO_ENERGIES raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestTLVersion(_TestInterpretBase):
+    """Test for interpreting TL_VERSION"""
+    param = 'TL_VERSION'
+    valid = {
+        '2.0.0': ('v2.0.0', Version(2, 0, 0)),
+        'old format': ('1.76', Version(1, 7, 6)),
+        'with v': ('v2.0.0', Version(2, 0, 0)),
+    }
+    invalid = {
+        'non version string': ('abc', err.ParameterConversionError)
+    }
+
+    @parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid TL_VERSION."""
+        self.check_assigned(interpreter, val, expect)
+
+    @parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid TL_VERSION raises exceptions."""
         self.check_raises(interpreter, val, exc)
 
 

@@ -32,7 +32,9 @@ import pytest
 import pytest_cases
 
 from viperleed.calc import DEFAULT_WORK
+from viperleed.calc.files import tenserleed
 from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
 
 from ...helpers import TEST_DATA, execute_in_dir
@@ -40,7 +42,7 @@ from ...helpers import TEST_DATA, execute_in_dir
 
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 
-TENSERLEED_TEST_VERSIONS = (1.61, 0.0)  # (0 == Newest)
+TENSERLEED_TEST_VERSIONS = (Version('2.0.0'), Version('1.6.1'))
 
 INIT_SURFACES = ('Ag(100)', 'Ag(100)_el_rename')
 REFCALC_SURFACES = ('Ag(100)',)
@@ -99,6 +101,7 @@ class BaseCalcFilesSetup:
             copytree_exists_ok(input_dir, self.work_path)
 
         self.failed = -1
+        self.records = None
         self.work_files_after_run = []
 
     @property
@@ -114,8 +117,8 @@ class BaseCalcFilesSetup:
     def run_calc_from_setup(self, source, preset_params):
         """Move to work folder, execute, collect outcome, go back home."""
         with execute_in_dir(self.work_path):
-            self.failed = run_calc(source=source,
-                                   preset_params=preset_params)
+            self.failed, self.records = run_calc(source=source,
+                                                 preset_params=preset_params)
         self.work_files_after_run = [f.name for f in self.work_path.glob('*')]
 
     def expected_file_exists(self, expected_file):
@@ -155,7 +158,7 @@ def init_files(surface, tl_version, make_section_tempdir, tensorleed_path):
     return files
 
 
-_NON_INIT_TL_VERSION = 0.0  # i.e., most recent                                 # TODO: to prevent regressions like #101, it's probably better to run this stuff also for other versions!
+_NON_INIT_TL_VERSION = tenserleed.CURRENT_TL_VERSION  # i.e., most recent       # TODO: to prevent regressions like #101, it's probably better to run this stuff also for other versions!
 
 
 @pytest_cases.fixture(scope='session')

@@ -9,7 +9,11 @@ __license__ = 'GPLv3+'
 
 from dataclasses import dataclass
 
-import ase.build
+try:
+    import ase.build
+except ModuleNotFoundError:
+    # All tests relying on this should check that ASE is available
+    pass
 
 from ..helpers import InfoBase
 

@@ -9,6 +9,7 @@ Sections
     :toctree: sections
     :recursive:
 
+    symmetry
     bookkeeper
     sections.cleanup
     sections.deltas

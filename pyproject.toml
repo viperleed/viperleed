@@ -1,4 +1,7 @@
 [build-system]
+# Note for pip install -e .: requires pip >=21.3 that introduced
+# editable-install capabilities from a pyproject.toml file instead
+# of setup.py or setup.conf
 requires = ['setuptools']
 build-backend = 'setuptools.build_meta'
 # TODO: check version of setuptools
@@ -7,17 +10,21 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'viperleed'
+description = 'Tools for quantitative low-energy electron diffraction'
 requires-python = '>=3.7'
 dynamic = ['version']
+license = {file = 'LICENSE.md'}
 readme = 'README.md'
 dependencies = [
     'fortranformat',
-    'matplotlib',
+    'importlib_resources; python_version<"3.10"',  # Patch matplotlib
+    'matplotlib>=3.5',  # Maybe even lower, but had problems installing
     'numpy',
     'psutil',
     'quicktions',
     'scipy',
     'scikit-learn',
+    'typing-extensions; python_version<"3.12"',
     'wrapt',
     ]
 keywords = [
@@ -30,124 +37,170 @@ keywords = [
     'science',
     'physics',
     ]
+authors = [
+    {name = 'Michele Riva'},          # , email='riva@iap.tuwien.ac.at'
+    {name = 'Florian Kraushofer'},    # , email='florian.kraushofer@tum.de'
+    {name = 'Alexander M. Imre'},     # , email='imre@iap.tuwien.ac.at'
+    {name = 'Florian Dörr'},          # , email='doerr@iap.tuwien.ac.at'
+    ]
+maintainers = [
+    {name = 'ViPErLEED Developers'},  # , email='riva@iap.tuwien.ac.at'
+    ]
+classifiers = [
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+    'Natural Language :: English',
+    'Operating System :: MacOS',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: OS Independent',
+    'Operating System :: POSIX',
+    'Operating System :: POSIX :: Linux',
+    'Operating System :: Unix',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
+    'Topic :: Scientific/Engineering :: Physics',
+    ]
 
-[project.urls]
-Homepage = 'https://viperleed.org'
+    [project.urls]
+    Homepage = 'https://viperleed.org'
+    Documentation = 'https://viperleed.org'
+    Download = 'https://github.com/viperleed/viperleed/releases'
+    Source = 'https://github.com/viperleed/viperleed'
+    Issues = 'https://github.com/viperleed/viperleed/issues'
 
+    [project.scripts]
+    viperleed = 'viperleed.cli:ViPErLEEDMain.run_as_script'
+
+    # TODO: add [project.gui_scripts]
+
+    [project.optional-dependencies]
+    GUI = [
+        'PyQt5',
+        'mplcairo; python_version<"3.11"',  # See mplcairo #51
+        ]
+    hardware = [
+        'requests',
+        ]
+
+
+
+
+
+# TODO: Check out https://setuptools.pypa.io/en/latest/userguide/datafiles.html#accessing-data-files-at-runtime
+# which seems to be relevant as we use data files!
 [tool.setuptools]
-py-modules = ["viperleed"]
+# Let setuptools discover packages by itself. This works well as
+# long as the old structure of the repository is not around anymore
 
-[tool.setuptools.dynamic]
-version = {attr = "viperleed.__version__"}
+    [tool.setuptools.dynamic]
+    version = {attr = 'viperleed.__version__'}
 
-[project.scripts]
-viperleed = "viperleed.cli:ViPErLEEDMain.run_as_script"
+    [tool.setuptools.package-data]
+    # Here all the non-python files that we use
+    viperleed = ['*.mplstyle']
+    'viperleed.calc.lib' = ['*.dat']
+    'viperleed.extensions' = ['**/*.f*', 'Make*', 'make*']
+    'viperleed.guilib.icons' = ['*.png', '*.svg']
+    'viperleed.guilib.fonts' = [
+        'DejaVuSans.ttf',
+        'cmunrm.otf',
+        'LICENSE*',
+        'FontLog*',
+        ]
 
-[project.optional-dependencies]
-GUI = [
-    'PyQt5',
-    'mplcairo',
-    ]
-hardware = [
-    'requests',
-    ]
-dev = [
-    'build',
-    'line_profiler',
-    'pytest-cases',
-    'pytest-subtests',
-    'pytest<8',  # Till Issue #337 of pytest-cases is fixed
-    'pytest',
-    'twine',
-    ]
-doc = [
-    'myst-nb',
-    'sphinx-rtd-theme',
-    'sphinx',
-    'sphinxcontrib-bibtex',
-    'sphinxcontrib-qthelp',
-    'sphinxcontrib-spelling',
-    'sphinxcontrib-svg2pdfconverter',
-    ]
+
+
 
 [tool.pytest.ini_options]
 addopts = [
     '--import-mode=importlib',
     ]
-pythonpath = [
-    '.', '..'
-    ]
+pythonpath = ['.', '..']
 # Turn all warnings into errors. See also "How to capture warnings"
-filterwarnings = ["error",]
+filterwarnings = ['error',]
 required_plugins = [
     'pytest-cases>=3.8.1',  # 3.8.1 fixes some ScopeMismatch
-    'pytest-subtests'
+    'pytest-mock>=3',
+    'pytest-subtests',
     ]
 xfail_strict = true
 
 
-[tool.pylint.master]
-extension-pkg-whitelist = ['PyQt5', 'quicktions']
-extension-pkg-allow-list = ['PyQt5', 'quicktions']
-load-plugins = [
-    'pylint.extensions.bad_builtin',
-    'pylint.extensions.broad_try_clause',
-    'pylint.extensions.check_elif',
-    'pylint.extensions.code_style',
-    'pylint.extensions.comparison_placement',
-    'pylint.extensions.confusing_elif',
-    'pylint.extensions.consider_refactoring_into_while_condition',
-    'pylint.extensions.consider_ternary_expression',
-    'pylint.extensions.dict_init_mutate',
-    'pylint.extensions.docparams',
-    'pylint.extensions.docstyle',
-    'pylint.extensions.dunder',
-    'pylint.extensions.empty_comment',
-    'pylint.extensions.for_any_all',
-    'pylint.extensions.magic_value',
-    'pylint.extensions.mccabe',
-    'pylint.extensions.overlapping_exceptions',
-    'pylint.extensions.private_import',
-    'pylint.extensions.redefined_variable_type',
-    'pylint.extensions.set_membership',
-    ]
-# It would be nice to have this set, but there are many language
-# features (e.g., equals in f-strings) that are simply not checked
-# even if this is set.
-# py-version = '3.7'
 
-[tool.pylint.basic]
-no-docstring-rgx = '^(?!__init__$)_'
-# The regexes below undo the changes in pylint 3.0 concerning
-# two-letter-long names. The regexes are the only ones that
-# were changed in github.com/pylint-dev/pylint/pull/8813. Note
-# that DEFAULT_NAME_RGX is the one used for function, method,
-# attr, argument, and variable. The long regexs are all the
-# same, and match lower_camel_case.
-# See github.com/pylint-dev/pylint/releases/tag/v3.0.0
-class-rgx = '[^\W\da-z][^\W_]+$'
-class-attribute-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-function-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-method-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-attr-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-argument-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-variable-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
 
-[tool.pylint.main]
-check-quote-consistency = 'yes'
+[tool.pylint]
 
-[tool.pylint.format]
-max-line-length = 80
+    [tool.pylint.master]
+    extension-pkg-whitelist = ['PyQt5', 'quicktions']
+    extension-pkg-allow-list = ['PyQt5', 'quicktions']
+    load-plugins = [
+        'pylint.extensions.bad_builtin',
+        'pylint.extensions.broad_try_clause',
+        'pylint.extensions.check_elif',
+        'pylint.extensions.code_style',
+        'pylint.extensions.comparison_placement',
+        'pylint.extensions.confusing_elif',
+        'pylint.extensions.consider_refactoring_into_while_condition',
+        'pylint.extensions.consider_ternary_expression',
+        'pylint.extensions.dict_init_mutate',
+        'pylint.extensions.docparams',
+        'pylint.extensions.docstyle',
+        'pylint.extensions.dunder',
+        'pylint.extensions.empty_comment',
+        'pylint.extensions.for_any_all',
+        'pylint.extensions.magic_value',
+        'pylint.extensions.mccabe',
+        'pylint.extensions.overlapping_exceptions',
+        'pylint.extensions.private_import',
+        'pylint.extensions.redefined_variable_type',
+        'pylint.extensions.set_membership',
+        ]
+    # It would be nice to have this set, but there are many language
+    # features (e.g., equals in f-strings) that are simply not checked
+    # even if this is set.
+    # py-version = '3.7'
 
-[tool.pylint.messages_control]
-enable = ['useless-suppression',
-          'use-implicit-booleaness-not-comparison-to-zero',
-          'use-implicit-booleaness-not-comparison-to-string']
-disable = [
-	'logging-fstring-interpolation',
-	'consider-using-assignment-expr',  # We want to support 3.7 too
-	]
+    [tool.pylint.basic]
+    no-docstring-rgx = '^(?!__init__$)_'
+    # The regexes below undo the changes in pylint 3.0 concerning
+    # two-letter-long names. The regexes are the only ones that
+    # were changed in github.com/pylint-dev/pylint/pull/8813. Note
+    # that DEFAULT_NAME_RGX is the one used for function, method,
+    # attr, argument, and variable. The long regexs are all the
+    # same, and match lower_camel_case.
+    # See github.com/pylint-dev/pylint/releases/tag/v3.0.0
+    class-rgx = '[^\W\da-z][^\W_]+$'
+    class-attribute-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    function-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    method-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    attr-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    argument-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    variable-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
 
-[tool.pylint.reports]
-output-format = 'colorized'
-msg-template = '"{module} - L{line:4d}: {msg_id:5s}: {msg} ({symbol})"'
+    [tool.pylint.main]
+    check-quote-consistency = 'yes'
+
+    [tool.pylint.format]
+    max-line-length = 80
+
+    [tool.pylint.messages_control]
+    enable = [
+        'useless-suppression',
+        'use-implicit-booleaness-not-comparison-to-zero',
+        'use-implicit-booleaness-not-comparison-to-string',
+        ]
+    disable = [
+        'logging-fstring-interpolation',
+        'consider-using-assignment-expr',  # We want to support 3.7 too
+        ]
+
+    [tool.pylint.reports]
+    output-format = 'colorized'
+    msg-template = '"{module} - L{line:4d}: {msg_id:5s}: {msg} ({symbol})"'

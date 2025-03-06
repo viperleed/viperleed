@@ -129,6 +129,8 @@ _PRESETS = {
               'superlattice_defined': True},
     }
 
+# IMPORTANT: when adding a POSCAR file to this tuple, also add:
+# - corresponding BEAMLIST files in the 'BEAMLISTs' directory
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
@@ -137,6 +139,7 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
                      {'Ni': 402, 'Al': 134+132+188, 'O': 188+213},
                      'p3'),
     _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
+    _get_poscar_info('POSCAR_SiC_H', 17, 'p3m1',),
     )
 
 
@@ -398,6 +401,16 @@ class CasePOSCARSlabs:
         info.poscar.n_cells = 2
         return self.case_poscar(info)
 
+    def case_poscar_ru0001_rt3_te(self):
+        """Return a Ru(0001)-(rt3xrt3)R30-Te slab."""
+        info = _get_poscar_info('POSCAR_Ru(0001)-rt3Te', 1+24, 'p31m')
+        info.param_presets = {
+            'BULK_REPEAT': np.array([0, 0, 4.27804]),
+            'N_BULK_LAYERS': 2,
+            'SUPERLATTICE': np.array([[ 2,  1], [-1,  1]]),  # rt3
+            }
+        return self.case_poscar(info)
+
     @case(tags=(Tag.NON_MINIMAL_CELL, Tag.VACUUM_GAP_SMALL))
     def case_poscar_sb_si_111(self):
         """Return a non-minimal, rectangular slab of Sb/Si(111)."""
@@ -470,6 +483,24 @@ class CaseBulkSlabs:
         info.bulk.screw_orders = {4}  # {2, 4} would make more sense!
         info.bulk.n_glide_planes = 2
         info.bulk.periods = [3]
+        return slab, param, info
+
+    @case(tags=Tag.BULK)
+    def case_ru_bulk(self):
+        """Return a bulk Ru(0001) slab."""
+        *surf, _ = CasePOSCARSlabs().case_poscar_ru0001_rt3_te()
+        slab, param = self._make_bulk(*surf)
+        info = TestInfo()
+        # Note on the group: running symmetry finding on the bulk
+        # of the full Ru(0001)-rt3 would normally give p31m because
+        # of the 30deg rotation: the group is expressed with respect
+        # to the coordinate system of the "surface slab". However,
+        # her we make a "fresh" slab, using a SUPERLATTICE that
+        # undoes the rotation. Hence, the group is p3m1.
+        info.symmetry.hermann = 'p3m1'
+        info.bulk.screw_orders = {2}
+        info.bulk.n_glide_planes = 3
+        info.bulk.periods = [1]
         return slab, param, info
 
 
