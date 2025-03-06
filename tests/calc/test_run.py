@@ -56,7 +56,7 @@ class TestRunCalc:
         mocks = {
             'umask': mocker.patch('os.umask'),
             'now': mock_now,
-            'logger': mocker.patch(f'{_MODULE}.logger'),
+            'logger': mocker.patch(f'{_MODULE}.LOGGER'),
             'prepare_log': mocker.patch(f'{_MODULE}.prepare_calc_logger'),
             'manifest': mocker.patch(f'{_MODULE}.ManifestFile',
                                      return_value=mock_manifest),
@@ -210,7 +210,7 @@ class TestFinalizeOnEarlyExit:
     def fixture_mock_implementation(self, mocker):
         """Replace implementation details with mocks."""
         return {
-            'logger': mocker.patch(f'{_MODULE}.logger'),
+            'logger': mocker.patch(f'{_MODULE}.LOGGER'),
             'cleanup': mocker.patch(f'{_MODULE}.cleanup'),
             'handlers': mocker.patch(f'{_MODULE}.close_all_handlers'),
             }
@@ -522,7 +522,7 @@ class TestSetLogLevel:
         """Replace implementation details with mocks."""
         rpars = Rparams()
         rpars.LOG_LEVEL = 37
-        mock_logger = mocker.patch(f'{_MODULE}.logger')
+        mock_logger = mocker.patch(f'{_MODULE}.LOGGER')
         return rpars, mock_logger
 
     def test_preset(self, mocks):

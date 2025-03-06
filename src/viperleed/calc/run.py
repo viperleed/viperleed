@@ -19,7 +19,7 @@ from pathlib import Path
 import shutil
 
 from viperleed import __version__
-from viperleed.calc import LOGGER as logger
+from viperleed.calc import LOGGER
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -101,12 +101,12 @@ def run_calc(
     # Start logger, write to file:
     timestamp = DateTimeFormat.FILE_SUFFIX.now()
     log_name = f'{LOG_PREFIX}-{timestamp}.log'
-    prepare_calc_logger(logger,
+    prepare_calc_logger(LOGGER,
                         file_name=log_name,
                         with_console=console_output)
-    logger.info(f'Starting new log: {log_name}\nTime of execution: '
+    LOGGER.info(f'Starting new log: {log_name}\nTime of execution: '
                 + DateTimeFormat.LOG_CONTENTS.now())
-    logger.info(f'This is ViPErLEED version {__version__}\n')
+    LOGGER.info(f'This is ViPErLEED version {__version__}\n')
 
     manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT, log_name)
     try:
@@ -124,12 +124,12 @@ def run_calc(
 
     # Check if halting condition is already in effect
     if rpars.halt >= rpars.HALTING:
-        logger.info('Halting execution...')
+        LOGGER.info('Halting execution...')
         _finalize_on_early_exit(rpars)
         return 0, None
 
     rpars.updateDerivedParams()
-    logger.info(f'ViPErLEED is using TensErLEED version {rpars.TL_VERSION}.')
+    LOGGER.info(f'ViPErLEED is using TensErLEED version {rpars.TL_VERSION}.')
 
     prerun_clean(rpars, log_name)
     preserve_original_inputs(rpars)  # Store inputs BEFORE any edit!
@@ -151,7 +151,7 @@ def _finalize_on_early_exit(rpars_or_manifest):
 def _get_parent_directory_name():
     """Return the name of the directory above the current one."""
     _system_name = Path.cwd().resolve().parent.name
-    logger.info('No system name specified. Using name of parent '
+    LOGGER.info('No system name specified. Using name of parent '
                 f'directory: {_system_name}')
     return _system_name
 
@@ -237,21 +237,21 @@ def _interpret_parameters(rpars, slab, preset_params):
     except (parameters.errors.ParameterNeedsSlabError,
             parameters.errors.SuperfluousParameterError):
         # Domains calculation is the only case in which slab is None
-        logger.error('Main PARAMETERS file contains an invalid parameter '
+        LOGGER.error('Main PARAMETERS file contains an invalid parameter '
                      'for a multi-domain calculation', exc_info=True)
         raise
     except parameters.errors.ParameterError:
-        logger.error('Exception while reading PARAMETERS file', exc_info=True)
+        LOGGER.error('Exception while reading PARAMETERS file', exc_info=True)
         raise
 
     # Load parameter presets, overriding those in PARAMETERS
     try:
         rpars.update(preset_params)
     except (ValueError, TypeError):
-        logger.warning('Error applying preset parameters: ', exc_info=True)
+        LOGGER.warning('Error applying preset parameters: ', exc_info=True)
 
     _set_log_level(rpars, preset_params)
-    logger.debug('PARAMETERS file was read successfully')
+    LOGGER.debug('PARAMETERS file was read successfully')
 
 
 def _read_parameters_file(preset_params):
@@ -261,11 +261,11 @@ def _read_parameters_file(preset_params):
     except FileNotFoundError:
         if preset_params:
             return Rparams()
-        logger.error('No PARAMETERS file found, and no preset parameters '
+        LOGGER.error('No PARAMETERS file found, and no preset parameters '
                      'passed. Execution will stop.')
         raise
     except Exception:
-        logger.error('Exception while reading PARAMETERS file', exc_info=True)
+        LOGGER.error('Exception while reading PARAMETERS file', exc_info=True)
         raise
 
 
@@ -297,23 +297,23 @@ def _read_poscar_file(manifest):
         If reading POSCAR fails.
     """
     poscar_file = Path('POSCAR')
-    logger.info('Reading structure from file POSCAR')
+    LOGGER.info('Reading structure from file POSCAR')
     try:
         slab = poscar.read(filename=poscar_file)
     except FileNotFoundError:
-        logger.error('POSCAR not found. Stopping execution...')
+        LOGGER.error('POSCAR not found. Stopping execution...')
         raise
     except Exception:
-        logger.error('Exception while reading POSCAR', exc_info=True)
+        LOGGER.error('Exception while reading POSCAR', exc_info=True)
         raise
 
     if not slab.preprocessed:
-        logger.info('The POSCAR file will be processed and overwritten. '
+        LOGGER.info('The POSCAR file will be processed and overwritten. '
                     'Copying the original POSCAR to POSCAR_user...')
         try:
             shutil.copy2(poscar_file, 'POSCAR_user')
         except OSError:
-            logger.error('Failed to copy POSCAR to POSCAR_user. Stopping '
+            LOGGER.error('Failed to copy POSCAR to POSCAR_user. Stopping '
                          'execution...')
             raise
         manifest.add('POSCAR_user')
@@ -324,8 +324,8 @@ def _set_log_level(rpars, preset_params):
     """Assign a (user-defined) log level to the current logger."""
     # pylint: disable-next=magic-value-comparison
     if 'LOG_LEVEL' in preset_params:
-        logger.info(f'Overriding log level to {rpars.LOG_LEVEL}.')
-    logger.setLevel(rpars.LOG_LEVEL)
+        LOGGER.info(f'Overriding log level to {rpars.LOG_LEVEL}.')
+    LOGGER.setLevel(rpars.LOG_LEVEL)
 
 
 def _set_tensorleed_source(rpars, source):
@@ -333,7 +333,7 @@ def _set_tensorleed_source(rpars, source):
     try:
         tensorleed = get_tensorleed_path(source).resolve()
     except (ValueError, FileNotFoundError) as exc:
-        logger.warning(f'{exc} This may cause errors.')
+        LOGGER.warning(f'{exc} This may cause errors.')
         tensorleed = Path(source or '').resolve()
     rpars.paths.tensorleed = tensorleed
 
