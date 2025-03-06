@@ -95,11 +95,13 @@ class TestPreserveOriginalInputs:
 
     def test_required_missing(self, run_preserve):
         """Check that a missing mandatory input file causes warnings."""
-        missing_required = ('PARAMETERS',)
-        copy, logger, rpars = run_preserve(missing_required)
-
-        logger.warning.assert_called()
-        assert copy.call_count == 1
+        missing_required = ('EXPBEAMS',)
+        copy, logger, rpars = run_preserve(missing_required,
+                                           side_effect=FileNotFoundError)
+        nr_failed_copies = len(ALL_INPUT_FILES) - 1
+        nr_warnings = nr_failed_copies - len(OPTIONAL_INPUT_FILES)
+        assert copy.call_count == nr_failed_copies
+        assert logger.warning.call_count == nr_warnings
         assert rpars.halt == 1
 
     cwd_inputs = {
@@ -111,7 +113,7 @@ class TestPreserveOriginalInputs:
     def test_success(self, input_files, run_preserve):
         """Check execution of a successful storage."""
         # There's one less because we have two acceptable EXPBEAMS
-        nr_files_copied = len(input_files) - 1
+        nr_files_copied = len(ALL_INPUT_FILES) - 1
         copy, logger, *_ = run_preserve(input_files)
 
         assert copy.call_count == nr_files_copied
