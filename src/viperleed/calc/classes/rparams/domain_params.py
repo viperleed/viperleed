@@ -19,6 +19,7 @@ import shutil
 from zipfile import BadZipFile
 
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import iotensors
 from viperleed.calc.lib import leedbase
 
@@ -26,9 +27,8 @@ from viperleed.calc.lib import leedbase
 _LOGGER = logging.getLogger(__name__)
 _DOMAIN_INPUT_FILES = (
     'PARAMETERS',
-    'PHASESHIFTS',
-    'POSCAR',
-    'VIBROCC',
+    # Plus all those that should not be in the main directory
+    *SKIP_IN_DOMAIN_MAIN,
     )
 
 

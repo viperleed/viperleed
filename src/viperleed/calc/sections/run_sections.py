@@ -18,6 +18,7 @@ import os
 import shutil
 
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
+from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files.displacements import readDISPLACEMENTS
@@ -87,7 +88,7 @@ def run_section(index, sl, rp):
         o += " "+rp.disp_blocks[rp.search_index][1]  # displacement block name
     if rp.domainParams or rp.DOMAINS:
         o += " (DOMAINS)"
-        for fn in ["POSCAR", "VIBROCC", "PHASESHIFTS"]:
+        for fn in SKIP_IN_DOMAIN_MAIN:
             try:
                 checkfiles.remove(fn)
             except Exception:

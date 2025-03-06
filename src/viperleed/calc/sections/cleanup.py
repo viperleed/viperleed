@@ -29,6 +29,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import DateTimeFormat
@@ -658,21 +659,31 @@ def preserve_original_inputs(rpars):
     except StopIteration:  # No EXPBEAMS
         pass
 
-    for filename in files_to_preserve:
-        file = Path(filename)
-        if not file.is_file() and filename in OPTIONAL_INPUT_FILES:
-            continue
-        if not file.is_file():
-            _LOGGER.warning(f'Could not find file {file}. It will not '
-                            f'be stored in {ORIGINAL_INPUTS_DIR_NAME}.')
-            rpars.setHaltingLevel(1)
-            continue
+    # Remember which missing files we should not complain about
+    dont_complain = set(OPTIONAL_INPUT_FILES)
+    if 'DOMAIN' in rpars.readParams:
+        dont_complain.update(SKIP_IN_DOMAIN_MAIN)
+
+    for file in files_to_preserve:
         try:
-            shutil.copy2(file, orig_inputs)
+            _preserve_one_file(file, orig_inputs, dont_complain)
         except OSError:
-            _LOGGER.warning(f'Could not copy file {file} to '
-                            f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rpars.setHaltingLevel(1)
+
+
+def _preserve_one_file(file, to_path, dont_complain):
+    """Copy `file` `to_path`."""
+    try:
+        shutil.copy2(file, to_path)
+    except FileNotFoundError:
+        if file in dont_complain:
+            return
+        _LOGGER.warning(f'Could not find file {file}. It will not '
+                        f'be stored in {to_path.name}.')
+        raise
+    except OSError:
+        _LOGGER.warning(f'Could not copy file {file} to {to_path.name}.')
+        raise
 
 
 def _delete_old_executables():
