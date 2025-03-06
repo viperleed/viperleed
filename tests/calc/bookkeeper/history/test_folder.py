@@ -34,13 +34,9 @@ class MockMetaFile:
     def __init__(self, path):
         """Initialize from a path."""
         self.path = path
+        self.file = path / 'fake_file'
         self.hash_ = _FAKE_HASH
         self.parent = None
-
-    @property
-    def file(self):
-        """Return the path to this fake BookkeeperMetaFile."""
-        return self.path / 'fake_file'
 
     def read(self):
         """Don't read anything."""
@@ -157,9 +153,11 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
         super().test_init(mock_path, history_folder)
 
     @parametrize(is_file=(True, False))
-    def test_has_metadata(self, mock_path, is_file, history_folder, mocker):
+    def test_has_metadata(self, is_file, history_folder, mocker):
         """Test has_metadata property of HistoryFolder."""
-        mocker.patch.object(mock_path, 'is_file', return_value=is_file)
+        mocker.patch.object(history_folder.metadata.file,
+                            'is_file',
+                            return_value=is_file)
         assert history_folder.has_metadata == is_file
 
     def test_analyze_path_not_directory(self, mock_path):
@@ -185,7 +183,7 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
         """Check that .fix()ing a folder writes a metafile."""
         # Fake the absence of the metadata file
         meta = history_folder.metadata
-        mocker.patch.object(meta.path,
+        mocker.patch.object(meta.file,
                             'is_file',
                             return_value=not meta_missing)
         mocker.patch.object(meta, 'write')
