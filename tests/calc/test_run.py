@@ -573,7 +573,7 @@ class TestSetTensorleedSource:
         assert not caplog.text
 
     _fails = {
-        None: Path.cwd(),
+        None: Path(),
         'some/source/path': Path('some/source/path'),
         }
 
@@ -586,7 +586,7 @@ class TestSetTensorleedSource:
         rpars = mocks['rpars']
         mocks['get'].side_effect = exc
         _set_tensorleed_source(rpars, src)
-        assert rpars.paths.tensorleed == expect
+        assert rpars.paths.tensorleed == expect.resolve()
         assert caplog.text
 
 

@@ -119,7 +119,7 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
     def __call__(self, args=None):
         """Call the bookkeeper with command-line args."""
         parsed_args = self.parse_cli_args(args)
-        bookkeeper = Bookkeeper(cwd=Path.cwd().resolve())
+        bookkeeper = Bookkeeper()
         mode = getattr(parsed_args, 'mode', BookkeeperMode.ARCHIVE)
         kwargs = {
             'requires_user_confirmation': not parsed_args.skip_confirmation,

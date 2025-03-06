@@ -151,7 +151,7 @@ def _finalize_on_early_exit(rpars_or_manifest):
 
 def _get_parent_directory_name():
     """Return the name of the directory above the current one."""
-    _system_name = Path.cwd().resolve().parent.name
+    _system_name = Path.cwd().parent.name
     LOGGER.info('No system name specified. Using name of parent '
                 f'directory: {_system_name}')
     return _system_name
