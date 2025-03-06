@@ -552,7 +552,7 @@ def deltas(sl, rp, subdomain=False):
         return
 
     # make sure there's a compiler ready:
-    if rp.FORTRAN_COMP[0] == "" and not subdomain:
+    if rp.FORTRAN_COMP[0] == "" and not subdomain:                              # TODO: this may mask problems of PARAMETERS settings when running a delta without a refcalc if the specified compiler does not exist.
         try:
             rp.getFortranComp()
         except Exception:
