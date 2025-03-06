@@ -25,3 +25,11 @@ DEFAULT_WORK = 'work'
 DEFAULT_WORK_HISTORY = 'workhistory'
 LOG_PREFIX = 'viperleed-calc'
 ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
+SKIP_IN_DOMAIN_MAIN = (
+    # Input files that should not be present in the
+    # main work directory in a multi-domain calculation.
+    # They are all those that are dependent on the structure.
+    'PHASESHIFTS',
+    'POSCAR',
+    'VIBROCC',
+    )
