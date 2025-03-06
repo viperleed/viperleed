@@ -107,7 +107,7 @@ class HistoryFolder(IncompleteHistoryFolder):
     def has_metadata(self):
         """Return whether this folder contains a metadata file."""
         # pylint: disable-next=no-member    # It's a BookkeeperMetaFile
-        return self.metadata.path.is_file()
+        return self.metadata.file.is_file()
 
     def check_consistent_with_entry(self, entry):
         """Raise unless this folder is consistent with a history.info entry."""

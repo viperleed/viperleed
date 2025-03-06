@@ -39,6 +39,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ....helpers import filesystem_from_dict
@@ -134,6 +135,12 @@ class TestBookkeeperOthers:
                 assert record == expect
             else:
                 assert expect.fullmatch(record)
+
+    def test_expected_cwd(self, tmp_path):
+        """Check that Bookkeeper correctly identifies its cwd."""
+        with execute_in_dir(tmp_path):
+            bookkeeper = Bookkeeper()
+        assert bookkeeper.cwd == tmp_path
 
     # Note about the disable: It is more convenient to modify the key
     # for the glob-all-logs pattern later, as we can then simply edit

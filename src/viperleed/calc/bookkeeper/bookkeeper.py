@@ -53,9 +53,10 @@ class BookkeeperExitCode(IntEnum):
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
 
-    def __init__(self, cwd=Path.cwd()):
+    def __init__(self, cwd=None):
         """Initialize the bookkeeper using `cwd` as the root folder."""
-        self._root = RootExplorer(path=cwd, bookkeeper=self)
+        self._root = RootExplorer(path=cwd or Path.cwd(),
+                                  bookkeeper=self)
         self._mode = None                        # Set in run
         self._requires_user_confirmation = None  # Set in run
         self._state_info = {
