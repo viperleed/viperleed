@@ -485,7 +485,7 @@ def __check_consistency_element_order(rp, sl, phaseshifts,
     return may_have_wrong_phaseshifts
 
 
-def writePHASESHIFTS(firstline, phaseshifts, file_path=Path()/'PHASESHIFTS'):
+def writePHASESHIFTS(firstline, phaseshifts, file_path='PHASESHIFTS'):
     """Takes phaseshift data and writes it to a PHASESHIFTS file."""
     _file_path = Path(file_path)
     output = firstline

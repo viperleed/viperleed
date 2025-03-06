@@ -53,8 +53,9 @@ class TestBookkeeperDuringCalc(_TestBookkeeperRunBase):
         """Check results when calc fails because of missing inputs."""
         cli = ViPErLEEDCalcCLI()
         with execute_in_dir(tmp_path):
-            calc_error = cli([])
+            calc_error = cli(['--delete-workdir'])
             assert calc_error
             bookkeeper = Bookkeeper()
             exit_code = bookkeeper.run('fix')
             assert exit_code is BookkeeperExitCode.NOTHING_TO_DO
+        assert not (tmp_path/'work').exists()

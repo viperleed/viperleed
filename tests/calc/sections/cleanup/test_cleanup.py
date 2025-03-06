@@ -37,14 +37,16 @@ class TestCleanup:
         '_organize_all_work_directories',
         '_write_manifest_file',
         '_write_final_log_messages',
-        'close_all_handlers',
+        )
+    not_called = (
         'logging.shutdown',
         )
 
     @fixture(name='mock_implementation')
     def fixture_mock_implementation(self, mocker):
         """Replace implementation details of cleanup with mocks."""
-        return {f: mocker.patch(f'{_MODULE}.{f}') for f in self.mocked}
+        return {f: mocker.patch(f'{_MODULE}.{f}')
+                for f in (*self.mocked, *self.not_called)}
 
     @fixture(name='manifest')
     def mock_manifest(self):
@@ -64,15 +66,13 @@ class TestCleanup:
             '_organize_all_work_directories': fake_rpars,
             '_write_manifest_file': fake_rpars,
             '_write_final_log_messages': fake_rpars,
-            'close_all_handlers': None,
-            'logging.shutdown': None,
             }
         for func, arg in calls.items():
             mock = mock_implementation[func]
-            if arg is None:
-                mock.assert_called_once()
-            else:
-                mock.assert_called_once_with(arg)
+            mock.assert_called_once_with(arg)
+        for mock_name in self.not_called:
+            mock = mock_implementation[mock_name]
+            mock.assert_not_called()
 
     @parametrize(mock_name=mocked)
     def test_raises(self, mock_name, rpars, mock_implementation):
@@ -90,15 +90,13 @@ class TestCleanup:
             '_organize_all_work_directories': rpars,
             '_write_manifest_file': rpars,
             '_write_final_log_messages': rpars,
-            'close_all_handlers': None,
-            'logging.shutdown': None,
             }
         for func, arg in calls.items():
             mock = mock_implementation[func]
-            if arg is None:
-                mock.assert_called_once()
-            else:
-                mock.assert_called_once_with(arg)
+            mock.assert_called_once_with(arg)
+        for mock_name in self.not_called:
+            mock = mock_implementation[mock_name]
+            mock.assert_not_called()
 
     @parametrize(arg=(None, 'str', set(), {}, tuple()))
     def test_typeerror(self, arg):
@@ -184,8 +182,6 @@ class TestWriteFinalLogMessages:
     def check_has_records(caplog, records):
         """Ensure caplog has only certain records."""
         logged = tuple(r.getMessage() for r in caplog.records)
-        print(logged)
-        print(records)
         assert len(logged) == len(records)
         for log, expect in zip(logged, records):
             if isinstance(expect, str):

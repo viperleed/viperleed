@@ -82,5 +82,4 @@ def slab_is_sorted(slab, reversed=False):
 
     not_same_el = np.array(at1.el != at2.el
                       for at1, at2 in zip(slab.atlist[:-1], slab.atlist[1:]))
-    print(z_order, not_same_el)
     return np.all(np.logical_or(z_order, not_same_el))
