@@ -31,7 +31,6 @@ from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.context import execute_in_dir
-from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
@@ -588,9 +587,6 @@ def cleanup(rpars_or_manifest):
       the bookkeeper and a checklist of items for user are also
       logged.
 
-    The logging module is fully shut down after this function
-    is executed, and should not be used any longer.
-
     Parameters
     ----------
     rpars_or_manifest : Rparams or ManifestFile
@@ -624,10 +620,6 @@ def cleanup(rpars_or_manifest):
     _organize_all_work_directories(rpars)
     _write_manifest_file(rpars)
     _write_final_log_messages(rpars)
-
-    # Shut down logger
-    close_all_handlers(_LOGGER)
-    logging.shutdown()
 
 
 def preserve_original_inputs(rpars):

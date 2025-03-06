@@ -112,9 +112,11 @@ class TestRunCalc:
             'preserve': mocker.call(rpars),
             'section': mocker.call(rpars, slab),
             'handlers': mocker.call(mocks['logger']),
-            'shutdown': mocker.call(),
             }
-        not_called = ('finalize',)  # Only in error cases
+        not_called = (
+            'finalize',  # Only in error cases
+            'shutdown',
+            )
 
         result = run_calc(**kwargs)
         assert result == mocks['section'].return_value

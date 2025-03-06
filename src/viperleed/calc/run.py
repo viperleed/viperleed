@@ -135,17 +135,18 @@ def run_calc(
     preserve_original_inputs(rpars)  # Store inputs BEFORE any edit!
     exit_code, state_recorder = section_loop(rpars, slab)
 
-    # Finalize logging - if not done, will break unit testing
-    close_all_handlers(logger)
-    logging.shutdown()
-
+    # Prevent other sub-loggers from producing more
+    # messages for the main log file of viperleed calc.
+    close_all_handlers(LOGGER)
     return exit_code, state_recorder
 
 
 def _finalize_on_early_exit(rpars_or_manifest):
     """Finish a calc execution before entering the `section_loop`."""
     cleanup(rpars_or_manifest)
-    close_all_handlers(logger)
+    # Prevent other sub-loggers from producing more
+    # messages for the main log file of viperleed calc.
+    close_all_handlers(LOGGER)
 
 
 def _get_parent_directory_name():
