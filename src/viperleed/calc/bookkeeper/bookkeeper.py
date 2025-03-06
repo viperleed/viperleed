@@ -524,6 +524,9 @@ class Bookkeeper:
         did_archive = self._do_prerun_archiving_and_mark_edited()
         did_clear_root = self._root.clear_for_next_calc_run()
         did_anything = did_archive or did_clear_root
+        if did_clear_root:
+            LOGGER.info('Successfully prepared current directory for '
+                        'the next run of viperleed.calc.')
         return (BookkeeperExitCode.SUCCESS if did_anything
                 else BookkeeperExitCode.NOTHING_TO_DO)
 
@@ -561,6 +564,8 @@ class Bookkeeper:
 
         # And the history entry from history.info
         self.history.info.remove_last_entry()
+        LOGGER.info('Successfully deleted the results of '
+                    'the last viperleed.calc execution.')
         return BookkeeperExitCode.SUCCESS
 
     def _run_discard_mode(self):
@@ -576,11 +581,13 @@ class Bookkeeper:
             self.history.info.discard_last_entry()
         except (NoHistoryEntryError, CantDiscardEntryError) as exc:
             no_entry = isinstance(exc, NoHistoryEntryError)
-            emit_log = LOGGER.error if no_entry else LOGGER.warning
-            emit_log('Failed to mark last entry as discarded '
-                     f'in {HISTORY_INFO_NAME}: {exc}')
+            emit_log = LOGGER.warning if no_entry else LOGGER.error
+            emit_log('Failed to mark as discarded the last '
+                     f'entry in {HISTORY_INFO_NAME}: {exc}')
             return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
                     else BookkeeperExitCode.FAIL)
+        LOGGER.info('Successfully marked as discarded the '
+                    f'last entry in {HISTORY_INFO_NAME}.')
         return BookkeeperExitCode.SUCCESS
 
     def _run_fix_mode(self):

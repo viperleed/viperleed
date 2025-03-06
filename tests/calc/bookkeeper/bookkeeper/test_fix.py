@@ -29,8 +29,9 @@ class TestBookkeeperFix(_TestBookkeeperRunBase):
 
     mode = BookkeeperMode.FIX
 
-    def test_fix_missing_metadata(self, after_archive):
+    def test_fix_missing_metadata(self, after_archive, caplog):
         """Check correct fixing of missing metadata files in history."""
+        caplog.set_level(5)  # < DEBUG
         bookkeeper, *_ = after_archive
         has_out_suffixed = self.has_out_suffixed(bookkeeper)
 
@@ -39,8 +40,9 @@ class TestBookkeeperFix(_TestBookkeeperRunBase):
             return all(f.has_metadata for f in bookkeeper.history._subfolders)
         assert not _metadata_everywhere()
 
-        bookkeeper.run(self.mode)
+        exit_code = bookkeeper.run(self.mode)
         assert _metadata_everywhere()
+        self.check_last_log_message(caplog, self.mode, exit_code)
 
         # There was nothing to fix in history.info.
         # Make sure we don't clutter with backups.

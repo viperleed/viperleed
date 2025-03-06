@@ -57,7 +57,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         self.check_no_warnings(
             caplog,
             exclude_msgs=(
-                'Failed to mark last entry as discarded',
+                'Failed to mark as discarded the last entry',
                 'user-edited',
                 ),
             )

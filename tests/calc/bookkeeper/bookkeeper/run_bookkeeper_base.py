@@ -14,6 +14,7 @@ __created__ = '2024-11-15'
 __license__ = 'GPLv3+'
 
 import logging
+import re
 
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
@@ -21,7 +22,7 @@ from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
-from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -60,6 +61,28 @@ class _TestCheckers:
     def check_metadata_exists(history_folder):
         """Test that the metadata file is present in `history_folder`."""
         assert (history_folder / _METADATA_NAME).is_file()
+
+    @staticmethod
+    def check_last_log_message(caplog, mode, exit_code):
+        """Check that bookkeeper emits one meaningful last log message."""
+        records = ((r, r.getMessage()) for r in reversed(caplog.records))
+        last_record, msg = next((r, m) for r, m in records
+                                if m and EDITED_SUFFIX not in m)
+        expect_level = {
+            BookkeeperExitCode.FAIL: logging.ERROR,
+            BookkeeperExitCode.NOTHING_TO_DO: logging.INFO,
+            BookkeeperExitCode.SUCCESS: logging.INFO,
+            }
+        expect_msg = {
+            BookkeeperExitCode.FAIL: 'Fail.*',
+            BookkeeperExitCode.NOTHING_TO_DO: (
+                '.*Exiting without doing anything.' if mode is Mode.ARCHIVE
+                else 'Found nothing to do. Exiting...'
+                ),
+            BookkeeperExitCode.SUCCESS: '(Successfully|Done).*',
+            }
+        assert last_record.levelno == expect_level[exit_code]
+        assert re.fullmatch(expect_msg[exit_code], msg)
 
     def check_input_files_in_history(self, *run):
         """Make sure that input files were stored in history."""
@@ -238,7 +261,7 @@ class _TestBookkeeperRunBase(_TestCheckers):
         self.check_out_files_in_history(*after_archive,
                                         out_suffixed=has_out_suffixed)
         self.check_input_files_in_history(*after_archive)
-        if kwargs['mode'] is BookkeeperMode.ARCHIVE:
+        if kwargs['mode'] is Mode.ARCHIVE:
             self.check_root_after_archive(*after_archive,
                                           out_suffixed=has_out_suffixed)
         else:
@@ -355,10 +378,12 @@ class _TestBookkeeperRunBase(_TestCheckers):
 
     def _run_bookkeeper(self, bookkeeper, kwargs, caplog):
         """Execute a bookkeeper run and return its exit code."""
+        caplog.set_level(5)  # < DEBUG
         kwargs.setdefault('mode', self.mode)
         exit_code = bookkeeper.run(**kwargs)
         # NOTICE: we do not update_from_cwd on purpose. This way,
         # the bookkeeper is left in the exact same state it has
-        # after a execution as part of the viperleed.calc CLI.
+        # after an execution as part of the viperleed.calc CLI.
         self.check_no_duplicate_logs(caplog)
+        self.check_last_log_message(caplog, kwargs['mode'], exit_code)
         return exit_code
