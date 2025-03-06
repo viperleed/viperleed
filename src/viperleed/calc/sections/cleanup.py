@@ -29,6 +29,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.log_utils import close_all_handlers
@@ -666,9 +667,14 @@ def preserve_original_inputs(rpars):
     except StopIteration:  # No EXPBEAMS
         pass
 
+    # Remember which missing files we should not complain about
+    dont_complain = set(OPTIONAL_INPUT_FILES)
+    if 'DOMAIN' in rpars.readParams:
+        dont_complain.update(SKIP_IN_DOMAIN_MAIN)
+
     for file in files_to_preserve:
         try:
-            _preserve_one_file(file, orig_inputs, OPTIONAL_INPUT_FILES)
+            _preserve_one_file(file, orig_inputs, dont_complain)
         except OSError:
             rpars.setHaltingLevel(1)
 

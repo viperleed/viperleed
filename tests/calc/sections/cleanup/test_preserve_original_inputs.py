@@ -14,6 +14,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import OPTIONAL_INPUT_FILES
@@ -56,19 +57,23 @@ class TestPreserveOriginalInputs:
         return _run
 
     _skip_expbeams = {  # skip: keep
-        'EXPBEAMS': 'EXPBEAMS.csv',
-        'EXPBEAMS.csv': 'EXPBEAMS',
+        ('EXPBEAMS',): 'EXPBEAMS.csv',
+        ('EXPBEAMS.csv',): 'EXPBEAMS',
+        ('EXPBEAMS', 'EXPBEAMS.csv'): None,
         }
 
     @parametrize('skip,expect', _skip_expbeams.items())
     def test_expbeams_selection(self, skip, expect, run_preserve, tmp_path):
         """Test that the first existing EXPBEAMS file is selected."""
-        input_files = ALL_INPUT_FILES - {skip}
+        input_files = ALL_INPUT_FILES - set(skip)
         nr_files_copied = len(input_files)
         copy, logger, *_ = run_preserve(input_files)
 
         assert copy.call_count == nr_files_copied
         logger.warning.assert_not_called()
+        if not expect:
+            assert not any(tmp_path.glob('EXPBEAMS*'))
+            return
         assert (tmp_path/expect).is_file()
 
         # Check that we copied the expected one to original_inputs
@@ -85,6 +90,18 @@ class TestPreserveOriginalInputs:
         _, logger, rpars = run_preserve(ALL_INPUT_FILES, side_effect=OSError)
         assert logger.warning.call_count == len(ALL_INPUT_FILES) - 1
         assert rpars.halt == 1
+
+    def test_domain_main(self, rpars, run_preserve):
+        """Check behavior for the main directory of a DOMAINs calculation."""
+        def _missing_unexpected_input(src, _):
+            if src in SKIP_IN_DOMAIN_MAIN:
+                raise FileNotFoundError
+
+        rpars.readParams['DOMAIN'].append('some domain')
+        _, logger, _ = run_preserve(ALL_INPUT_FILES,
+                                    side_effect=_missing_unexpected_input)
+        logger.warning.assert_not_called()
+        assert rpars.halt < 1
 
     def test_mkdir_fails(self, rpars, tmp_path, mocker):
         """Check complaints when failing to create original_inputs."""
