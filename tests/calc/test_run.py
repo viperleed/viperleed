@@ -16,6 +16,7 @@ from pytest_cases import parametrize
 
 from viperleed.calc.files import parameters
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.run import _finalize_on_early_exit
 from viperleed.calc.run import _get_parent_directory_name
 from viperleed.calc.run import _make_rpars_and_slab
 from viperleed.calc.run import _interpret_parameters
@@ -61,7 +62,7 @@ class TestRunCalc:
                                      return_value=mock_manifest),
             'make_rp_sl': mocker.patch(f'{_MODULE}._make_rpars_and_slab',
                                        return_value=(rpars, slab)),
-            'cleanup': mocker.patch(f'{_MODULE}.cleanup'),
+            'finalize': mocker.patch(f'{_MODULE}._finalize_on_early_exit'),
             'set_src': mocker.patch(f'{_MODULE}._set_tensorleed_source'),
             'set_name': mocker.patch(f'{_MODULE}._set_system_name'),
             'find_tl_version': mocker.patch.object(rpars,
@@ -113,7 +114,7 @@ class TestRunCalc:
             'handlers': mocker.call(mocks['logger']),
             'shutdown': mocker.call(),
             }
-        not_called = ('cleanup',)  # Only in error cases
+        not_called = ('finalize',)  # Only in error cases
 
         result = run_calc(**kwargs)
         assert result == mocks['section'].return_value
@@ -150,7 +151,7 @@ class TestRunCalc:
                                       None,   # preset_params
                                       None,   # slab
                                       None),  # home
-            'cleanup': mocker.call(mocks['manifest'].return_value),
+            'finalize': mocker.call(mocks['manifest'].return_value),
             }
         not_called = (
             'set_src',
@@ -189,7 +190,7 @@ class TestRunCalc:
                                       None),  # home
             'set_src': mocker.call(rpars, None),
             'set_name': mocker.call(rpars, None),
-            'cleanup': mocker.call(rpars),
+            'finalize': mocker.call(rpars),
             }
         not_called = (
             'find_tl_version',
@@ -200,6 +201,30 @@ class TestRunCalc:
             'shutdown',
             )
         self.check_calls(mocks, expect_calls, not_called, n_log_msgs=3)
+
+
+class TestFinalizeOnEarlyExit:
+    """Tests for the _finalize_on_early_exit helper."""
+
+    @fixture(name='mocks')
+    def fixture_mock_implementation(self, mocker):
+        """Replace implementation details with mocks."""
+        return {
+            'logger': mocker.patch(f'{_MODULE}.logger'),
+            'cleanup': mocker.patch(f'{_MODULE}.cleanup'),
+            'handlers': mocker.patch(f'{_MODULE}.close_all_handlers'),
+            }
+
+    def test_success(self, mocks, mocker):
+        """Check the outcome of a successful execution."""
+        arg = mocker.MagicMock()
+        expect_calls = {
+            'cleanup': mocker.call(arg),
+            'handlers': mocker.call(mocks['logger']),
+            }
+        _finalize_on_early_exit(arg)
+        for mock_name, call in expect_calls.items():
+            mocks[mock_name].mock_calls = [call]
 
 
 def test_get_parent_directory_name(mocker, caplog):

@@ -113,7 +113,7 @@ def run_calc(
         # Read input files and load user arguments
         rpars, slab = _make_rpars_and_slab(manifest, preset_params, slab, home)
     except Exception:
-        cleanup(manifest)
+        _finalize_on_early_exit(manifest)
         return 2, None
 
     # Load runtime information in rpars
@@ -125,7 +125,7 @@ def run_calc(
     # Check if halting condition is already in effect
     if rpars.halt >= rpars.HALTING:
         logger.info('Halting execution...')
-        cleanup(rpars)
+        _finalize_on_early_exit(rpars)
         return 0, None
 
     rpars.updateDerivedParams()
@@ -140,6 +140,12 @@ def run_calc(
     logging.shutdown()
 
     return exit_code, state_recorder
+
+
+def _finalize_on_early_exit(rpars_or_manifest):
+    """Finish a calc execution before entering the `section_loop`."""
+    cleanup(rpars_or_manifest)
+    close_all_handlers(logger)
 
 
 def _get_parent_directory_name():
