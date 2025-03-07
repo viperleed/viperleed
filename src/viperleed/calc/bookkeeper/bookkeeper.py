@@ -572,20 +572,19 @@ class Bookkeeper:
         """Execute bookkeeper in DISCARD mode."""
         did_archive = self._do_prerun_archiving_and_mark_edited()
         self._root.revert_to_previous_calc_run()
-        if did_archive:
-            # We had to archive the contents of the root directory.
-            # This means that we have already marked the entry as
-            # discarded and we don't have to bother.
-            return BookkeeperExitCode.SUCCESS
-        try:
-            self.history.info.discard_last_entry()
-        except (NoHistoryEntryError, CantDiscardEntryError) as exc:
-            no_entry = isinstance(exc, NoHistoryEntryError)
-            emit_log = LOGGER.warning if no_entry else LOGGER.error
-            emit_log('Failed to mark as discarded the last '
-                     f'entry in {HISTORY_INFO_NAME}: {exc}')
-            return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
-                    else BookkeeperExitCode.FAIL)
+        if not did_archive:
+            # If we had to archive the contents of the root directory,
+            # we have already marked the entry as discarded and we
+            # don't have to bother.
+            try:
+                self.history.info.discard_last_entry()
+            except (NoHistoryEntryError, CantDiscardEntryError) as exc:
+                no_entry = isinstance(exc, NoHistoryEntryError)
+                emit_log = LOGGER.warning if no_entry else LOGGER.error
+                emit_log('Failed to mark as discarded the last '
+                         f'entry in {HISTORY_INFO_NAME}: {exc}')
+                return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
+                        else BookkeeperExitCode.FAIL)
         LOGGER.info('Successfully marked as discarded the '
                     f'last entry in {HISTORY_INFO_NAME}.')
         return BookkeeperExitCode.SUCCESS
