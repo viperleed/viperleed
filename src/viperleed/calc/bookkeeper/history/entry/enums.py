@@ -14,6 +14,15 @@ from enum import Enum
 from enum import auto
 
 
+class DuplicateType(Enum):
+    """Types of possible duplicates. Values are message prefixes."""
+
+    DIFFERENT = 'Problematic lines'
+    IDENTICAL = 'Problematic lines with identical contents'
+    NONE = ''
+    NOTES = 'Duplicate notes'
+
+
 class FaultyLabel(Enum):
     """An enumeration of labels used to mark faulty entries/fields."""
 
@@ -73,15 +82,6 @@ _FAULTY_MARK_SPACING = len(_FAULTY_MARK_SEP) + max(
     len(f.value) for f in FaultyLabel
     )
 _HISTORY_INFO_SPACING = 12  # For FieldTag, i.e., the leftmost bit
-
-
-class DuplicateType(Enum):
-    """Types of possible duplicates. Values are message prefixes."""
-
-    DIFFERENT = 'Problematic lines'
-    IDENTICAL = 'Problematic lines with identical contents'
-    NONE = ''
-    NOTES = 'Duplicate notes'
 
 
 class FieldTag(Enum):
