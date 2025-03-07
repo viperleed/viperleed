@@ -99,14 +99,14 @@ class FolderField(StringField, tag=FieldTag.FOLDER, mandatory=True):
         # About the disable: pylint can't infer that self.value is
         # a string by now, as we don't call this if it is not.
         # pylint: disable-next=no-member
-        match = _FOLDER_NAME_RE.fullmatch(self.value.strip())
-        if not match:
+        match_ = _FOLDER_NAME_RE.fullmatch(self.value.strip())
+        if not match_:
             raise EntrySyntaxError(
                 'Does not have format '
                 'tTTT.rRRR_[moved-]yymmdd-HHMMSS[_job_name]'
                 )
-        set_frozen_attr(self, 'value', match.group())  # r-stripped
-        set_frozen_attr(self, 'job_name', match['job_name'])
+        set_frozen_attr(self, 'value', match_.group())  # Stripped
+        set_frozen_attr(self, 'job_name', match_['job_name'])
 
 
 @frozen
