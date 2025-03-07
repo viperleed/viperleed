@@ -34,10 +34,10 @@ class TimestampFormat(Enum):
 
     # Underscore names are used only for conversion purposes
     # while parsing strings, and never for formatting.
-    GERMAN = '%d.%m.%y %H:%M:%S'              # < v1.0.0
-    ISO = DateTimeFormat.ISO.value            # >= v1.0.0
+    GERMAN = '%d.%m.%y %H:%M:%S'              # < v0.13.0
+    ISO = DateTimeFormat.ISO.value            # >= v0.13.0
     _CALC = DateTimeFormat.FILE_SUFFIX.value  # Format of log names
-    DEFAULT = ISO  # Just an alias of one of the above!
+    DEFAULT = ISO  # Just an alias of one of the above
 
     @property
     def writable(self):
