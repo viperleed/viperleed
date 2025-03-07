@@ -124,7 +124,7 @@ class FieldBase:
         if isinstance(self.value, FieldBase):
             self._update_from_field(self.value)
             return
-        if self.value is MissingField:  # Errors will pop up later
+        if self.is_missing:  # Errors will pop up later
             return
         try:
             check_types(self, init_only=True)
