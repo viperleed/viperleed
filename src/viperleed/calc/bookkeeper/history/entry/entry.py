@@ -450,7 +450,7 @@ class HistoryInfoEntry:
         # First of all, check the values of the raw fields,
         # skipping the ones already stored in self, as we
         # have checked them already in __post_init__.
-        checked_already = set(self._iter_values())
+        checked_already = set(self)
         for field in self._raw_fields:  # pylint: disable=E1133   #7437
             if field in checked_already:
                 continue
@@ -549,7 +549,7 @@ class HistoryInfoEntry:
         if not duplicates:
             return
         # Keep all the duplicates that we're storing as field values
-        self_values = IdentitySet(self._iter_values())
+        self_values = IdentitySet(self)
         duplicates = (d for d in duplicates if d not in self_values)
         # pylint: disable-next=no-member             # See pylint #7437
         self._raw_fields.remove_fields(*duplicates)
