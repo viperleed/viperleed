@@ -119,13 +119,11 @@ class ListOfIntsField(FieldBase, ABC):
 
     def _clean_and_validate_string_loose(self, separator):
         """Raise if a string value does not match self.rgx_loose."""
-        regex = self.rgx_loose
-        if regex is None:
+        if self.rgx_loose is None:
             raise NotImplementedError('Needs a rgx_loose class attribute!')
         # pylint: disable-next=no-member  # It's a string by now
         value_str = self.value.strip()
-        matches = re.fullmatch(regex, value_str)
-        if not matches:
+        if not re.fullmatch(self.rgx_loose, value_str):
             raise EntrySyntaxError(f'Not a {separator}-separated '
                                    'list of integers')
         return value_str
