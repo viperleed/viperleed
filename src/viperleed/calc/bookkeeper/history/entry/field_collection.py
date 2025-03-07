@@ -194,7 +194,7 @@ class FieldList(MutableSequence):
             self.insert(index, value)
 
     def remove_fields(self, *fields):
-        """Remove one of more fields from this FieldList."""
+        """Remove one or more fields from this FieldList."""
         # Store some backup values in case any fields are invalid
         backup_seq = self._seq.copy()
         backup_maps = deepcopy(self._maps)
