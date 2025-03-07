@@ -248,7 +248,7 @@ class Bookkeeper:
         # ...and add a history.info entry
         self._add_history_info_entry(tensor_nums)
         LOGGER.info('Done archiving the current directory '
-                    f'to {self.history.path.name}')
+                    f'to {self.history.path.name}.')
 
     def _check_may_discard_full(self):
         """Log and raise if it is not possible to DISCARD_FULL."""
@@ -438,7 +438,7 @@ class Bookkeeper:
             raise
         LOGGER.info(f'Created history folder {self.history.new_folder.name} '
                     'for storing results of the most-recent viperleed.calc '
-                    'execution')
+                    'execution.')
         self._copy_out_and_supp()
         self._copy_input_files_from_original_inputs_or_cwd()
         self._copy_log_files()
@@ -476,7 +476,7 @@ class Bookkeeper:
 
     def _print_discard_info(self):
         """Emit logging messages with files/folders/entry to be deleted."""
-        LOGGER.info(f'About to delete files/folders from {self.cwd}')
+        LOGGER.info(f'About to delete files/folders from {self.cwd}.')
         # First, files and folders that are simply deleted
         paths_to_discard = (
             *self._workhistory.list_paths_to_discard(),
@@ -525,8 +525,8 @@ class Bookkeeper:
         did_clear_root = self._root.clear_for_next_calc_run()
         did_anything = did_archive or did_clear_root
         if did_clear_root:
-            LOGGER.info('Successfully prepared current directory for '
-                        'the next run of viperleed.calc.')
+            LOGGER.info('Successfully prepared the current directory '
+                        'for the next run of viperleed.calc.')
         return (BookkeeperExitCode.SUCCESS if did_anything
                 else BookkeeperExitCode.NOTHING_TO_DO)
 
