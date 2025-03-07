@@ -226,6 +226,8 @@ class _TestCheckers:
         bookkeeper : Bookkeeper
             A bookkeeper instance. Its .cwd/OUT folder is checked
             for _OUT files.
+        *_ : object
+            Other unused position arguments.
 
         Returns
         -------

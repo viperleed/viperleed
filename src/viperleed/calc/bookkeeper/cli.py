@@ -14,7 +14,6 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from argparse import Action
-from pathlib import Path
 
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_HISTORY
