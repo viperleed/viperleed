@@ -82,7 +82,7 @@ class FieldBase:
     _value_str: str = non_init_field()
     _comment: str = non_init_field(default='')
     _needs_fix: FixedFieldValue = non_init_field()
-    _not_understood: str = non_init_field()
+    _not_understood: str = non_init_field()  # The reason why it wasn't
 
     # Class attributes set in __init_subclass__
     is_mandatory: ClassVar[bool] = False
@@ -288,7 +288,7 @@ class FieldBase:
         return without_comments, comments
 
     def _check_not_missing(self):
-        """Complain if no value was provided at all for `attr`."""
+        """Complain if no value was provided at all."""
         if self.is_missing:
             raise EntrySyntaxError(DefaultMessage.MISSING)
 
@@ -318,7 +318,7 @@ class FieldBase:
 
         The base-class implementation complains if a field is empty
         or if a mandatory field is missing. The value of mandatory
-        or non-missing fields is then checked according to its type,
+        or non-missing field is then checked according to its type,
         as long as a suitable checker method is found. Subclasses
         may extend this method to perform more checks.
 
@@ -423,7 +423,7 @@ class MultiLineField(CommentLessField):
         if isinstance(self.value, str):
             raise TypeError(f'{type(self).__name__}: Found unprocessed '
                             'string value. Call check_value() or '
-                            '_cleanup_str_value() before')
+                            '_cleanup_str_value() before.')
         if not isinstance(self.value, tuple):
             raise EntrySyntaxError(
                 f'{type(self).__name__} only accepts \'str\' or \'tuple\'. '
