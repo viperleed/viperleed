@@ -6,7 +6,7 @@ Collects constants used in various submodules of bookkeeper.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-10'
 __license__ = 'GPLv3+'
 

@@ -6,7 +6,7 @@ Defines the base BookkeeperError exception and its subclasses.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-11-29'
 __license__ = 'GPLv3+'
 
