@@ -219,7 +219,7 @@ class Bookkeeper:
                 notes=self._root.read_and_clear_notes_file(),
                 discarded_=self._mode is BookkeeperMode.DISCARD,
                 # Optional ones
-                **self._root.infer_run_info()
+                **self._root.infer_run_info(),
                 )
         self.history.info.append_entry(new_info_entry, fix_time_format=True)
 
