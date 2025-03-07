@@ -70,7 +70,7 @@ class TimestampField(FieldBase, tag=FieldTag.TIMESTAMP, mandatory=True):
             raise error
 
     def with_format(self, fmt):
-        """Return a version of this format with another date-time format."""
+        """Return a version of this field with another date-time format."""
         if self.is_missing:
             raise EntrySyntaxError(DefaultMessage.MISSING)
         if not self.was_understood:
