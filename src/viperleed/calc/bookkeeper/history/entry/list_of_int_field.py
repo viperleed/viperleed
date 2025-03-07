@@ -76,7 +76,7 @@ class ListOfIntsField(FieldBase, ABC):
         """Extend the check for an empty field."""
         super()._check_not_empty()
         # Notice that this condition is looser than the one
-        # of NoneIsEmptyFields that only checks for 'is None'.
+        # of NoneIsEmptyField that only checks for 'is None'.
         # This is the reason why we don't inherit that here.
         if not self.value:
             set_frozen_attr(self, 'value', EmptyField)
@@ -159,8 +159,8 @@ class ListOfIntsField(FieldBase, ABC):
 
     def _store_cleaned_up_string(self):
         """Store a value_str into self._value_str after cleaning up."""
-        # Use list since, compared to tuple, as it does
-        # not add trailing comma for single elements
+        # Use list since, compared to tuple, it does
+        # not add a trailing comma for single elements
         value_str = str(list(self.value))[1:-1]
         set_frozen_attr(self, '_value_str', value_str)
 
@@ -203,7 +203,7 @@ class SpaceSeparatedIntsField(ListOfIntsField):
     rgx_loose: ClassVar[str] = CommonRegex.COMMA_OR_SPACE_SEPARATED_INTS.value
 
     def _clean_up_string(self):
-        """Raise if self.value is not a comma-separated list of integers."""
+        """Raise if self.value is not a space-separated list of integers."""
         value_str = self._clean_and_validate_string_loose('space')
 
         space_separated = re.fullmatch(CommonRegex.SPACE_SEPARATED_INTS.value,
