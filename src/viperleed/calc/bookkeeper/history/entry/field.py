@@ -411,8 +411,12 @@ class MultiLineField(CommentLessField):
         single_string = super().format_faulty(with_label=with_label)
         lines = single_string.splitlines(True)  # Keeps \n
         indent = str(FaultyLabel.OK)
-        indented_lines = [lines[0]]
-        indented_lines.extend(indent + line for line in lines[1:])
+        indented_lines = (
+            # The first line is already indented by super()...
+            lines[0],
+            # ...the others need to be indented accordingly
+            *(indent + line for line in lines[1:]),
+            )
         return ''.join(indented_lines)
 
     def _check_tuple_value(self):
