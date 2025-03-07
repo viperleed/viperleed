@@ -133,7 +133,8 @@ class HistoryInfoEntry:
         retained, but will cause the field to be marked as 'not
         understood'. This field is optional and may be missing.
     folder_name : FolderField
-        The name of the history folder that corresponding to this run.
+        The name of the **main** history folder that corresponds
+        to this run (i.e., not one of the workhistory folders).
     notes : NotesField
         The notes that users have added for this run. It excludes the
         DISCARDED tag. May span multiple lines. The default is an empty
@@ -814,7 +815,7 @@ class SyntaxErrorLogger(AbstractContextManager):
         return msg + ' '
 
     def _get_unfixable_log_msg(self):
-        """Return a message of the logger for an unfixable problem."""
+        """Return a message for the logger for an unfixable problem."""
         if not self.field:
             return 'entry'
         value_msg = ('' if self.field.is_missing or self.field.is_empty
