@@ -827,7 +827,7 @@ class SyntaxErrorLogger(AbstractContextManager):
         self._add_fixable_todo(exc.action)
         LOGGER.warning(
             f'{HISTORY_INFO_NAME}: {self._get_fixable_log_msg(exc.reason)}'
-            f'Consider running bookkeeper {Mode.FIX.long_flag}.'
+            f'Consider running \'bookkeeper {Mode.FIX.long_flag}\'.'
             )
 
     def _handle_unfixable(self, exc):
