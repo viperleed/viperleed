@@ -143,7 +143,7 @@ class RawLineParametersReader(ParametersReader):
         ----------
         line : str
             The whole raw line, exactly as read from file.
-            It may includes comments.
+            It may include comments.
 
         Returns
         -------
