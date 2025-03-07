@@ -251,8 +251,15 @@ class ViPErLEEDCLI:
         try:
             command = args.func
         except AttributeError:  # Called without arguments
+            command = None
+        # About disable: we really want to compare command
+        # with the callable object, NOT with the result.
+        # pylint: disable-next=comparison-with-callable
+        if command == self.__call__:  # Avoid infinite recursion
+            command = None
+        if not command:
             self.parser.parse_args(['--help'])
-            return 0  # Unreachable, as help does sys.exit
+            return 0  # pragma: no cover  # Help does sys.exit
         return command(args)
 
     @property
