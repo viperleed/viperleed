@@ -89,15 +89,12 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                     "_PHASESHIFTS. Renaming _PHASESHIFTS to PHASESHIFTS.")
         os.rename('_PHASESHIFTS', 'PHASESHIFTS')
 
+    readfile = Path(readfile)
     try:
-        rf = open(readfile, 'r')
+        filelines = readfile.read_text().splitlines()
     except FileNotFoundError:
         logger.error("PHASESHIFTS file not found.")
         raise
-    else:
-        filelines = rf.readlines()
-    finally:
-        rf.close()
 
     try:
         nel = ri3.read(filelines[0])[0]
