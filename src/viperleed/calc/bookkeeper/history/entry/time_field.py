@@ -20,7 +20,6 @@ from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import replace_values
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.time_utils import DateTimeFormat
-from viperleed.calc.lib.time_utils import now_
 
 from ..errors import EntrySyntaxError
 from ..errors import FixableSyntaxError
@@ -44,10 +43,6 @@ class TimestampFormat(Enum):
     def writable(self):
         """Return whether self is suitable for writing to history.info."""
         return not self.name.startswith('_')
-
-    def now(self):
-        """Return the local time formatted according to this format."""
-        return now_(self.value, use_gmt=False)
 
 
 @frozen

@@ -191,12 +191,6 @@ cases_without_fmt = parametrize_with_cases(
 class TestTimestampFormat:
     """Tests for the TimestampFormat enumeration."""
 
-    @parametrize(fmt=iter(TimestampFormat))
-    def test_now(self, fmt):
-        """Test that now method returns a correctly formatted string."""
-        result = fmt.now()
-        assert datetime.strptime(result, fmt.value)
-
     def test_invalid(self):
         """Check complaints when accessing an invalid TimestampFormat."""
         invalid = 'INVALID_FORMAT'
