@@ -109,8 +109,8 @@ class FieldBase:
         if tag is not None:
             cls._subclasses[tag] = cls
         # At this point, the class is not frozen yet.
-        setattr(cls, 'tag', tag)
-        setattr(cls, 'is_mandatory', bool(mandatory))
+        cls.tag = tag
+        cls.is_mandatory = bool(mandatory)
 
     # pylint: disable-next=unused-argument   # pylint bug #9843
     def __new__(cls, *args, **kwargs):
