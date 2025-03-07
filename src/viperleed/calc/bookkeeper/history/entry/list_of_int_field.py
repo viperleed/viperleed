@@ -114,8 +114,8 @@ class ListOfIntsField(FieldBase, ABC):
         """Try converting a string value to a tuple of integers."""
         super()._check_str_value()
         set_frozen_attr(self, 'value', self._clean_up_string())
-        self._store_cleaned_up_string()
         self._check_item_values()
+        self._store_cleaned_up_string()
 
     def _clean_and_validate_string_loose(self, separator):
         """Raise if a string value does not match self.rgx_loose."""
