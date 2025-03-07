@@ -75,15 +75,15 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
         what_next = parser.add_mutually_exclusive_group()
         what_next.add_argument(
             *BookkeeperMode.ARCHIVE.flags,
-            help=('Store last run in history. Overwrite PARAMETERS, POSCAR &'
-                  f'VIBROCC from {DEFAULT_OUT}. Runs after viperleed.calc by '
-                  'default.'),
+            help=('Store the last run in history. Overwrite PARAMETERS, '
+                  f'POSCAR, and VIBROCC from {DEFAULT_OUT}. Runs after '
+                  'viperleed.calc by default.'),
             action=StoreBookkeeperMode,
             )
         what_next.add_argument(
             *BookkeeperMode.CLEAR.flags,
-            help=('Clear the input directory and add last run '
-                  'to history if not already there. Runs before '
+            help=('Add the last run to history if not already there, then '
+                  'remove its outputs from the current directory. Runs before '
                   'viperleed.calc by default.'),
             action=StoreBookkeeperMode,
             )
