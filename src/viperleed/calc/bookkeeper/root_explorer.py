@@ -298,8 +298,8 @@ class RootExplorer:
         inputs = ','.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
         LOGGER.warning(f'Found user-edited files {edited}. Make sure to port '
                        'any desired changes to the corresponding input files '
-                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX}'
-                       ' files.')
+                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
+                       'files.')
 
     def _copy_state_files_from(self, source, *name_fmts, only_files=None):
         """Copy input files from `source` to the root directory.
@@ -350,9 +350,9 @@ class RootExplorer:
         # Try OUT first
         failed_out = {}
         try:
-            self._copy_state_files_from(self.path / DEFAULT_OUT,
-                                        '{}',  # First without suffix
-                                        '{}_OUT')
+            # Prefer those without an _OUT suffix, but fall back onto
+            # _OUT-suffixed ones to ensure backward compatibility.
+            self._copy_state_files_from(self.path/DEFAULT_OUT, '{}', '{}_OUT')
         except FileOperationFailedError as exc:
             failed_out.update(exc.failures)
 
