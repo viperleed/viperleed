@@ -25,9 +25,8 @@ class BookkeeperMode(Enum):
         VIBROCC from OUT. Runs after run_calc by default.
     CLEAR
         Clear the input directory of the last run, archiving files
-        beforehand if they haven't been archived already. During
-        archiving, it takes the '_ori'-suffixed files, if present,
-        to create the history folder. Runs before run_calc by default.
+        beforehand if they haven't been archived already. Runs
+        before run_calc by default.
     DISCARD
         Re-start from the same input as the previous run. The
         discarded run is kept in history and marked as such (the
