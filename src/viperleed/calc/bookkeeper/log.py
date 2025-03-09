@@ -1,11 +1,6 @@
-"""Module constants of viperleed.calc.bookkeeper.
-
-Collects the definitions of a few constants used
-in multiple modules of the bookkeeper package.
-"""
+"""Module log of viperleed.calc.bookkeeper."""
 
 __authors__ = (
-    'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
