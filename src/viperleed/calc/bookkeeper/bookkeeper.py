@@ -223,6 +223,72 @@ class Bookkeeper:
                 )
         self.history.info.append_entry(new_info_entry, fix_time_format=True)
 
+    def _archive_input_files_from_original_inputs_or_cwd(self):
+        """Copy input files to the history subfolder.
+
+        The files are preferentially collected from the original_inputs
+        subfolder of SUPP. Only if they are not found there, they are
+        taken from the root directory (unless they are auto-generated
+        ones). If the root directory contains a newer version of the
+        file than in original_inputs, warn the user (but still copy
+        the one from original_inputs).
+
+        Returns
+        -------
+        None.
+        """
+        history_folder = self.history.new_folder
+        for file in ALL_INPUT_FILES:
+            original_file = self.orig_inputs_dir / file
+            cwd_file = self.cwd / file
+            copy_file, with_name = None, file
+            if original_file.is_file() and cwd_file.is_file():
+                # Copy original, but warn if cwd is newer
+                copy_file = original_file
+                try:
+                    _check_newer(older=cwd_file, newer=original_file)
+                except _FileNotOlderError:
+                    LOGGER.warning(
+                        f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
+                        'copied to history, but the file in the input '
+                        'directory is newer.'
+                        )
+            elif original_file.is_file():  # Just copy original
+                copy_file = original_file
+            elif file in RUNTIME_GENERATED_INPUT_FILES:
+                # Ignore optional inputs in root. If the user gave
+                # these explicitly, they have already been copied
+                # by calc to original_inputs, and they should be
+                # already handled by "elif original_file.is_file()".
+                continue
+            elif cwd_file.is_file():  # Copy cwd and warn
+                copy_file, with_name = cwd_file, f'{cwd_file.name}{_FROM_ROOT}'
+                LOGGER.warning(
+                    f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
+                    'Using file from root directory instead and renaming to '
+                    f'{with_name}.'
+                    )
+            if copy_file:
+                history_folder.copy_file_or_directory(copy_file,
+                                                      with_name=with_name)
+
+    def _archive_log_files(self):
+        """Copy all the log files in root to history."""
+        for file in self._root.logs.files:
+            self.history.new_folder.copy_file_or_directory(file)
+
+    def _archive_out_and_supp(self):
+        """Copy OUT and SUPP directories to history."""
+        history_folder = self.history.new_folder
+        for name in (DEFAULT_SUPP, DEFAULT_OUT):
+            directory = self.cwd / name
+            if not directory.is_dir():
+                LOGGER.warning(f'Could not find {name} directory in '
+                               f'{self.cwd}. It will not be copied '
+                               'to history.')
+                continue
+            history_folder.copy_file_or_directory(directory)
+
     def _archive_to_history_and_add_info_entry(self):
         """Store all relevant files in root to history, add a new entry.
 
@@ -310,72 +376,6 @@ class Bookkeeper:
         self.__init__(cwd=self.cwd)
         self._state_info['logger_prepared'] = logger_prepared
 
-    def _copy_input_files_from_original_inputs_or_cwd(self):
-        """Copy input files to the history subfolder.
-
-        The files are preferentially collected from the original_inputs
-        subfolder of SUPP. Only if they are not found there, they are
-        taken from the root directory (unless they are auto-generated
-        ones). If the root directory contains a newer version of the
-        file than in original_inputs, warn the user (but still copy
-        the one from original_inputs).
-
-        Returns
-        -------
-        None.
-        """
-        history_folder = self.history.new_folder
-        for file in ALL_INPUT_FILES:
-            original_file = self.orig_inputs_dir / file
-            cwd_file = self.cwd / file
-            copy_file, with_name = None, file
-            if original_file.is_file() and cwd_file.is_file():
-                # Copy original, but warn if cwd is newer
-                copy_file = original_file
-                try:
-                    _check_newer(older=cwd_file, newer=original_file)
-                except _FileNotOlderError:
-                    LOGGER.warning(
-                        f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
-                        'copied to history, but the file in the input '
-                        'directory is newer.'
-                        )
-            elif original_file.is_file():  # Just copy original
-                copy_file = original_file
-            elif file in RUNTIME_GENERATED_INPUT_FILES:
-                # Ignore optional inputs in root. If the user gave
-                # these explicitly, they have already been copied
-                # by calc to original_inputs, and they should be
-                # already handled by "elif original_file.is_file()".
-                continue
-            elif cwd_file.is_file():  # Copy cwd and warn
-                copy_file, with_name = cwd_file, f'{cwd_file.name}{_FROM_ROOT}'
-                LOGGER.warning(
-                    f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
-                    'Using file from root directory instead and renaming to '
-                    f'{with_name}.'
-                    )
-            if copy_file:
-                history_folder.copy_file_or_directory(copy_file,
-                                                      with_name=with_name)
-
-    def _copy_log_files(self):
-        """Copy all the log files in root to history."""
-        for file in self._root.logs.files:
-            self.history.new_folder.copy_file_or_directory(file)
-
-    def _copy_out_and_supp(self):
-        """Copy OUT and SUPP directories to history."""
-        history_folder = self.history.new_folder
-        for name in (DEFAULT_SUPP, DEFAULT_OUT):
-            directory = self.cwd / name
-            if not directory.is_dir():
-                LOGGER.warning(f'Could not find {name} directory in '
-                               f'{self.cwd}. It will not be copied '
-                               'to history.')
-                continue
-            history_folder.copy_file_or_directory(directory)
-
     def _do_prerun_archiving_and_mark_edited(self):
         """If needed, archive files from root to history.
 
@@ -439,9 +439,9 @@ class Bookkeeper:
         LOGGER.info(f'Created history folder {self.history.new_folder.name} '
                     'for storing results of the most-recent viperleed.calc '
                     'execution.')
-        self._copy_out_and_supp()
-        self._copy_input_files_from_original_inputs_or_cwd()
-        self._copy_log_files()
+        self._archive_out_and_supp()
+        self._archive_input_files_from_original_inputs_or_cwd()
+        self._archive_log_files()
 
         # Now that all files are in place, add the metadata file
         meta = BookkeeperMetaFile(self.history.new_folder.path)
