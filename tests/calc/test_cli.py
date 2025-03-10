@@ -10,7 +10,8 @@ __license__ = 'GPLv3+'
 import os
 
 import pytest
-from pytest_cases import fixture, parametrize
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.cli import ViPErLEEDCalcCLI
 from viperleed.calc.cli import _copy_files_from_manifest
@@ -55,7 +56,7 @@ class TestCopyFilesFromManifest:
 
     @fixture(name='manifest')
     def fixture_manifest(self, tmp_path):
-        """Create a manifest file and its contents at tmp_path."""
+        """Create a manifest file and its contents at `tmp_path`."""
         manifest = 'file1.txt \nfile2  \n  \n\n  folder\n'
         manifest += '''
 [folder at one]
@@ -81,7 +82,7 @@ two/domain_file
         return copied, stay
 
     def test_no_manifest_file(self, tmp_path):
-        """Check the successful copy of files/folders."""
+        """Check that no resources are copied if manifest does not exist."""
         dest = tmp_path/'dest'
         dest.mkdir()
         with execute_in_dir(tmp_path):
