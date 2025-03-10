@@ -148,6 +148,6 @@ class DomainParameters:
             raise
 
     def _collect_inputs_from_tensor_folder(self, tensor_dir):
-        """Fetch input files from an unpacked tensor_dir."""
+        """Fetch input files from an unpacked `tensor_dir`."""
         for file in (_DOMAIN_INPUT_FILES + ('IVBEAMS',)):
             shutil.copy2(tensor_dir / file, self.workdir)
