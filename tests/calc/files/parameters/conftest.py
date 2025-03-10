@@ -38,6 +38,6 @@ def read_one_param_file(data_path, read_parameters):
 
 @fixture
 def read_domains_file(data_path, read_parameters):
-    """Read one example PARAMETERS file."""
+    """Read an example main PARAMETERS file for a multi-domain calculation."""
     args = CasesParametersFile().case_domains(data_path)
     return read_parameters(args)
