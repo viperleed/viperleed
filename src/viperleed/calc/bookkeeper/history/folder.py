@@ -1,7 +1,7 @@
 """Module folder of viperleed.calc.bookkeeper.history.
 
-Defines the HistoryFolder class, a collection of information
-concerning a single folder in the history directory.
+Defines classes containing information about a single folder in the
+history directory.
 """
 
 __authors__ = (
@@ -124,26 +124,24 @@ class HistoryFolder(IncompleteHistoryFolder):
         if self.tensor_num not in entry_tensors:
             raise CantRemoveEntryError(
                 f'Tensor number from folder name ({self.tensor_num}) is not '
-                f'among the ones in the history.info entry {entry_tensors}'
+                f'among the ones in the history.info entry ({entry_tensors}).'
                 )
         # And the same for the job ids
         if self.job_num not in entry.job_nums.value:
             raise CantRemoveEntryError(
                 f'Job number from folder name ({self.job_num}) is not among '
-                f'the ones in the history.info entry {entry.job_nums.value}'
+                f'the ones in the history.info entry ({entry.job_nums.value}).'
                 )
 
     def check_metadata(self):
         """Raise a MetadataMismatchError if the metadata file is outdated."""
         new_meta = BookkeeperMetaFile(self.path)
         new_meta.compute_hash()
-        # pylint: disable-next=no-member    # It's a BookkeeperMetaFile
-        self_hash = self.metadata.hash_
-        if new_meta.hash_ != self_hash:
+        if new_meta.hash_ != self.hash_:
             raise MetadataMismatchError(
                 f'The metadata file in {self.path.name} has a different id'
-                f'({self_hash}) than the one calculated from the contents '
-                f'({new_meta.hash_}. This means that either the folder name '
+                f'({self.hash_}) than the one calculated from the contents '
+                f'({new_meta.hash_}). This means that either the folder name '
                 'or its contents were modified.'
                 )
 
@@ -169,7 +167,7 @@ class HistoryFolder(IncompleteHistoryFolder):
             folder_name = f'{self.path.parent.name}/{self.path.name}'
             LOGGER.warning(
                 f'No metadata file found in {folder_name}. '
-                f'Consider running bookkeeper {Mode.FIX.long_flag}.'
+                f'Consider running \'bookkeeper {Mode.FIX.long_flag}\'.'
                 )
             # pylint: disable-next=no-member  # It's BookkeeperMetaFile
             self.metadata.compute_hash()   # Don't write to file though
