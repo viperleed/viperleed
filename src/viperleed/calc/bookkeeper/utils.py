@@ -78,11 +78,11 @@ def needs_update_for_attr(attr, attr_name=None, updater='update_from_cwd'):
     Parameters
     ----------
     attr : str
-        The attribute of self to be looked up. If the value is None,
-        the decorated function raises AttributeError suggesting to
-        call update_from_cwd beforehand. `attr` may also have the form
-        'dict_name[dict_item]'. In this case, self.dict_name[dict_item]
-        is looked up instead.
+        The name of the attribute of the object to be looked up. If the
+        value of the attribute is None, the decorated function raises
+        AttributeError suggesting to call `updater` beforehand. `attr`
+        may also have the form 'dict_name[dict_item]'. In this case,
+        obj.dict_name[dict_item] is looked up instead.
     attr_name : str, optional
         The name of the decorated function. Automatically fetched from
         the decorated function if not given. Default is None.
@@ -121,24 +121,22 @@ def _get_attr_or_dict_item(attr):
     Parameters
     ----------
     attr : str
-        The attribute of self to be looked up. If the value is None,
-        the decorated function raises AttributeError suggesting to
-        call update_from_cwd beforehand. `attr` may also have the form
-        'dict_name[dict_item]'. In this case, self.dict_name[dict_item]
-        is looked up instead.
+        The name of the attribute to be looked up. It may also have the
+        form 'dict_name[dict_item]'. In this case, the getter returned
+        looks up obj.dict_name[dict_item] when called on obj.
 
     Returns
     -------
     getter : callable
-        A function that returns `attr` from its first argument.
+        A function that returns `attr` from its only argument.
     cleaned_attr : str
         'attr_name' or 'item_name', depending on the form of `attr`.
     """
     if '[' in attr:  # pylint: disable=magic-value-comparison
         dict_, attr = attr.split('[')
         attr = attr.replace(']', '')
-        def _getattr(self):
-            container = attrgetter(dict_)(self)
+        def _getattr(obj):
+            container = attrgetter(dict_)(obj)
             return container[attr]
     else:
         _getattr = attrgetter(attr)
