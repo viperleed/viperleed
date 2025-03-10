@@ -137,7 +137,7 @@ class CasesParametersFile:
         return info, data_path/info.parameters.param_path
 
     def case_domains(self, data_path):
-        """Return one PARAMETERS file with a line without an '=' sign."""
+        """Return the main PARAMETERS file of a multi-domain calculation."""
         info = _fill_test_info('domains')
         return self.case_parameters_file(info, data_path)
 
