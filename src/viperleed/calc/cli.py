@@ -133,7 +133,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
 
 
 def _copy_input_files_to_work(work_path):
-    """Copy all the known input files present here into work_path."""
+    """Copy all the known input files present here into `work_path`."""
     for file in ALL_INPUT_FILES:
         try:
             shutil.copy2(file, work_path)
@@ -142,7 +142,7 @@ def _copy_input_files_to_work(work_path):
 
 
 def _copy_files_from_manifest(to_path):
-    """Copy all files listed in file 'manifest' back to_path."""
+    """Copy all files listed in file 'manifest' back `to_path`."""
     manifest = ManifestFile()
     manifest.read()
     if manifest.has_absolute_paths:
@@ -163,7 +163,7 @@ def _copy_files_from_manifest(to_path):
 
 
 def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
-    """Move appropriate files from 'Tensors' and 'Deltas' to work_path."""
+    """Move appropriate files from 'Tensors' and 'Deltas' to `work_path`."""
     if all_tensors:  # Copy all of them
         for directory in (DEFAULT_TENSORS, DEFAULT_DELTAS):
             try:
@@ -187,14 +187,14 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
 
 
 def _make_work_directory(cli_args):
-    """Return a suitable 'work' directory from cli_args."""
+    """Return a suitable 'work' directory from `cli_args`."""
     work_path = Path(cli_args.work or DEFAULT_WORK).resolve()
     work_path.mkdir(parents=True, exist_ok=True)
     return work_path
 
 
 def _verbosity_to_log_level(cli_args, presets):
-    """Add a LOG_LEVEL to presets if cli_args have verbosity specified."""
+    """Add a LOG_LEVEL to `presets` if `cli_args` have verbosity specified."""
     if cli_args.very_verbose:
         presets['LOG_LEVEL'] = LOG_VERY_VERBOSE
     elif cli_args.verbose:
