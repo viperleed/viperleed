@@ -1,7 +1,8 @@
 """Tests for the viperleed bookkeeper command-line interface."""
 
 import pytest
-from pytest_cases import fixture, parametrize
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.cli import BookkeeperCLI
