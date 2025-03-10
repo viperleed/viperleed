@@ -99,7 +99,7 @@ class TestBookkeeperComplaints:
         # pylint: disable-next=protected-access  # OK in tests
         bookkeeper._mode = Mode.ARCHIVE
         # pylint: disable-next=protected-access  # OK in tests
-        bookkeeper._copy_input_files_from_original_inputs_or_cwd()
+        bookkeeper._archive_input_files_from_original_inputs_or_cwd()
         # pylint: disable-next=magic-value-comparison
         assert 'is newer' in caplog.text
 
@@ -442,7 +442,7 @@ class TestBookkeeperRaises:
     logs = object()
     skips = object()
     _os_error = {
-        '_copy_out_and_supp': ('shutil.copytree', logs),
+        '_archive_out_and_supp': ('shutil.copytree', logs),
         '_make_and_copy_to_history': ('pathlib.Path.mkdir', raises),
         '_root.read_and_clear_notes_file-read': ('pathlib.Path.read_text',
                                                  logs),
@@ -511,9 +511,9 @@ class TestBookkeeperRaises:
         )
     _method_needs_update = (
         '_archive_to_history_and_add_info_entry',
-        '_copy_input_files_from_original_inputs_or_cwd',
-        '_copy_log_files',
-        '_copy_out_and_supp',
+        '_archive_input_files_from_original_inputs_or_cwd',
+        '_archive_log_files',
+        '_archive_out_and_supp',
         '_make_and_copy_to_history',
         'history._find_name_for_new_history_subfolder(None, None)',
         'history.find_new_history_directory(None, None)',
