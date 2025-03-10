@@ -22,7 +22,7 @@ def execute_in_dir(path, mkdir=False):
     Parameters
     ----------
     path : str or Path
-        The path on which the block of code should be executed
+        The path in which the block of code should be executed
         before returning to the current directory.
     mkdir : bool, optional
         Whether `path` (and its parents) should be created if
