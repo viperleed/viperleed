@@ -101,7 +101,7 @@ class DomainParameters:
                 raise
 
     def _collect_inputs_from_most_recent_tensor(self, src):
-        """Fetch the most recent tensor at src and copy its input files."""
+        """Fetch the most recent tensor at `src` and copy its input files."""
         tensor_index = leedbase.getMaxTensorIndex(src)
         if not tensor_index:
             raise FileNotFoundError(f'No {DEFAULT_TENSORS} at {src}')
@@ -127,7 +127,7 @@ class DomainParameters:
             raise
 
     def _collect_inputs_from_tensor_file(self, src_zip):
-        """Fetch input files from a user-given Tensor file."""
+        """Fetch input files from a user-given tensor archive."""
         tensor_index = leedbase.getMaxTensorIndex(self.workdir)
         tensor_dir = (
             self.workdir
