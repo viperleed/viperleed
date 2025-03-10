@@ -1,4 +1,8 @@
-"""Tests for the collection of domain inputs in section initialization."""
+"""Tests for the domain_params module of viperleed.calc.classes.rparams.
+
+This module contains tests for the methods responsible of collecting
+input files for a single domain.
+"""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',

@@ -1,4 +1,8 @@
-"""Tests for the domain_params module of viperleed.calc.classes.rparams."""
+"""Tests for the domain_params module of viperleed.calc.classes.rparams.
+
+This module contains tests for the basic implementation details of the
+DomainParameters class, especially magic methods. 
+"""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
