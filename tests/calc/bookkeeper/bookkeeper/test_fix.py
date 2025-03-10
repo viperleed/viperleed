@@ -19,7 +19,7 @@ from .run_bookkeeper_base import _TestBookkeeperRunBase
 
 
 @fixture(name='after_fix')
-def fixture_after_discard(after_archive, after_bookkeper_run):
+def fixture_after_fix(after_archive, after_bookkeper_run):
     """Prepare a directory like the one after FIX was executed."""
     return after_bookkeper_run(after_archive, BookkeeperMode.FIX)
 
