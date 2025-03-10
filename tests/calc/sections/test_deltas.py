@@ -59,7 +59,7 @@ class TestRunDelta:
 
     @fixture(name='runtask')
     def factory_runtask(self, mocker):
-        """Return a fake RefcalcRunTask."""
+        """Return a fake DeltaRunTask."""
         comptask = mocker.MagicMock(
             exename='test_exe',
             foldername='test_folder',
@@ -183,7 +183,7 @@ class TestRunDelta:
         assert expect_log in caplog.text
 
     def test_fails_to_copy_output_file(self, run, caplog):
-        """Check complaints when failing to copy a refcalc output file."""
+        """Check complaints when failing to copy a delta output file."""
         file = 'DELWV'
         def _copy_file_fails(src, _):
             if Path(src).name == file:
