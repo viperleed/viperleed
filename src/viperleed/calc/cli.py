@@ -96,40 +96,39 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         verbosity.add_argument(
             '-v', '--verbose',
             help='increase output verbosity and print debug messages',
-            action='store_true'
+            action='store_true',
             )
         verbosity.add_argument(
             '-vv', '--very-verbose',
             help='increase output verbosity and print more debug messages',
-            action='store_true'
+            action='store_true',
             )
 
         # PATHS
         parser.add_argument(
             '-w', '--work',
             help='specify execution work directory',
-            type=str
+            type=str,
             )
         parser.add_argument(
             '--tensorleed', '-t',
             help=('specify the path to the folder containing '
                   'the TensErLEED and EEASISSS source codes'),
-            type=str
+            type=str,
             )
 
         # CREATING/DELETING DIRECTORIES
         parser.add_argument(
             '--all-tensors',
-            help=(
-                f'copy all {DEFAULT_TENSORS} to the work directory. Required '
-                'if using the TENSORS parameter to calculate from old tensors'
-                ),
-            action='store_true'
+            help=(f'copy all {DEFAULT_TENSORS} to the work directory. '
+                  'Required if using the TENSOR_INDEX parameter to calculate '
+                  'from old tensors'),
+            action='store_true',
             )
         parser.add_argument(
             '--delete-workdir',
             help='delete work directory after execution',
-            action='store_true'
+            action='store_true',
             )
 
 
