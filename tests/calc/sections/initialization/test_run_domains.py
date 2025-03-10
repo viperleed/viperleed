@@ -25,7 +25,7 @@ class TestInitializationDomains:
     """Collection of tests for running the initialization for DOMAINS."""
 
     def check_path_contains(self, path_tree, expect_contents):
-        """Check that all expect_contents are in path_tree."""
+        """Check that all `expect_contents` are in `path_tree`."""
         for name, contents in expect_contents.items():
             assert name in path_tree
             if isinstance(contents, str):
@@ -42,18 +42,19 @@ class TestInitializationDomains:
         domains = rpars.readParams['DOMAIN']
         src_to_folders_created = {
             domain.values_str: {f'Domain_{domain.flags_str}',
-                                f'{Path(domain.values_str).name}'}
+                                Path(domain.values_str).name}
             for domain in domains
             }
         work_domains = {
             src: init_domains.work_path/n
-            for src, paths in src_to_folders_created.items() for n in paths
+            for src, paths in src_to_folders_created.items()
+            for n in paths
             if (init_domains.work_path/n).is_dir()
             }
         return src_to_folders_created, work_domains
 
     def test_domain_directories_created(self, init_domains):
-        """Check that work contains the right Domain_xxx directories."""
+        """Check that work contains the right domain directories."""
         src_domains, work_domains = self.collect_domain_info(init_domains)
         assert len(work_domains) == len(src_domains)
 
