@@ -25,7 +25,7 @@ from .test_field import _TestFieldUtils
 @fixture(name='rfactor_field')
 @parametrize(field_cls=(RFactorField, RRefField, RSuperField))
 def factory_rfactor_field(field_cls, make_concrete_field_instance):
-    """Return an instance of an RRefField (sub)class with a value."""
+    """Return an instance of an RFactorField (sub)class with a value."""
     return make_concrete_field_instance(field_cls)
 
 
@@ -136,8 +136,8 @@ class TestRFactorField(_TestFieldUtils):
             {'value': 2.000011, 'was_understood': False},
             ),
         'above two, components': (
-            '1.234 (2.000011, 2.0)',
-            {'value': '1.234 (2.000011, 2.0)', 'was_understood': False},
+            '1.234 (2.000011 / 2.0)',
+            {'value': '1.234 (2.000011 / 2.0)', 'was_understood': False},
             ),
         }
 
