@@ -402,9 +402,9 @@ class TestDomain(_TestInterpretBase):
         """Test correct interpretation of a zip file."""
         zip_file = tmp_path / 'domain.zip'
         zip_file.touch()
-        self.interpret(interpreter, str(zip_file))
-        assert self.interpreted_paths(interpreter) == {'1': zip_file}
         with execute_in_dir(tmp_path):
+            self.interpret(interpreter, str(zip_file))
+            assert self.interpreted_paths(interpreter) == {'1': zip_file}
             self.interpret(interpreter, str(zip_file.with_suffix('')))
         assert self.interpreted_paths(interpreter) == {'1': zip_file,
                                                        '2': zip_file}
