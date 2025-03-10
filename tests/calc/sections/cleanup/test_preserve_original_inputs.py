@@ -1,4 +1,4 @@
-"""Tests for module cleanup of viperleed.calc.section."""
+"""Tests for cleanup.preserve_original_inputs of viperleed.calc.section."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
