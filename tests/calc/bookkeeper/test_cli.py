@@ -51,7 +51,7 @@ class TestBookkeeperParser:
         assert parsed.mode is BookkeeperMode.DISCARD_FULL
 
     def test_fix(self, bookkeeper_parser):
-        """Check interpretation of --discard-full mode."""
+        """Check interpretation of --fix mode."""
         parsed = bookkeeper_parser.parse_args(['--fix',])
         assert parsed.fix
         assert parsed.mode is BookkeeperMode.FIX
