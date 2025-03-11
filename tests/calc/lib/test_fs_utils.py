@@ -9,7 +9,6 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 import shutil
-import sys
 
 import pytest
 
@@ -98,7 +97,7 @@ class TestMove:
         after = filesystem_to_dict(tmp_path)
         assert after == expect
 
-    def test_file(self, mocker, tmp_path):
+    def test_file(self, tmp_path):
         """Test successfully moving a file."""
         before = {'file.txt': 'content'}
         expect = {'moved.txt': before['file.txt']}
