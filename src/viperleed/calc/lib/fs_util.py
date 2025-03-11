@@ -76,8 +76,8 @@ def move(src, dst, copy_function=shutil.copy2):
         the source is moved inside the directory. The destination path
         must not already exist.
     copy_function : callable, optional
-        A callable used to copy the source directory, if it cannot be
-        simply renamed. Default is shutil.copy2.
+        A callable used to copy the source path if it cannot be simply
+        renamed. Default is shutil.copy2.
 
     Raises
     ------
