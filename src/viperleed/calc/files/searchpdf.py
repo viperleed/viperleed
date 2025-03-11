@@ -8,6 +8,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
+import csv
 import logging
 
 import numpy as np
@@ -460,7 +461,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
 
 
 @skip_without_matplotlib
-def writeSearchReportPdf(rp, outname="Search-report.pdf"):
+def writeSearchReportPdf(rp, outname="Search-report.pdf",
+                         csv_name="Search-report.csv"):
     """
     Writes a pdf file with reports on R-factor convergence and parameter
     scatter, collated over the entire run (i.e. potentially multiple searches).
@@ -471,6 +473,9 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
         The run parameters
     outname : str, optional
         The file name to write to. The default is "Search-report.pdf".
+    csv_name : str, optional
+        The file name of the csv file to write to. The default is
+        "Search-report.csv".
 
     Returns
     -------
@@ -586,3 +591,21 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
         except Exception:
             pass
     close_figures(plt, fig)
+
+    if csv_name is None:
+        # No CSV output requested
+        return
+
+    # CSV output
+    csv_data = {
+        'Generation': allgens,
+        'R_min': allmin,
+        'R_max': allmax,
+        'R_mean': allmean,
+    }
+
+    with open(csv_name, "w") as wf:
+        writer = csv.DictWriter(wf, fieldnames=csv_data.keys())
+        writer.writeheader()
+        for i in range(len(allgens)):
+            writer.writerow({k: csv_data[k][i] for k in csv_data})
