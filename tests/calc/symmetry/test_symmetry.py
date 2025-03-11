@@ -407,10 +407,11 @@ class TestSlabSymmetrization:
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
         'poscar_mgo': 'Sometimes reduced to cmm from p4m',
+        'poscar-ru': 'Sometimes reduced to cm from p3m1',
+        'poscar_sb_si_111': 'Sometimes symmetry increased to rcm from pm',
+        'poscar-SiC_H': 'Often reduced to cm from p3m1',
         'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
         'poscar_tio2_small': 'Sometimes reduced to pm from pmm',
-        'poscar-SiC_H': 'Often reduced to cm from p3m1',
-        'poscar_sb_si_111': 'Sometimes symmetry increased to rcm from pm',
         'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
         'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
         'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
@@ -429,14 +430,16 @@ class TestSlabSymmetrization:
         'infoless_poscar-In2O3_(111)': 'Sometimes reduced to p1 from p3',
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
         'infoless_poscar-MgO_cod_9006456': 'Sometimes reduced to cmm from p4m',
-        'infoless_poscar-TiO2_supercell': 'Sometimes reduced to pm from pmm',
-        'infoless_poscar-TiO2_small': 'Sometimes reduced to pm/p1 from pmm',
-        'infoless_poscar-SiC_H': 'Often reduced to cm from p3m1',
+        'infoless_poscar-Ru(0001)-rt3Te': 'Sometimes reduced to cm from p3m1',
         'infoless_poscar-Sb_Si(111)_rect': (
             'Sometimes symmetry increased to rcm from pm'
             ),
+        'infoless_poscar-SiC_H': 'Often reduced to cm from p3m1',
+        'infoless_poscar-TiO2_supercell': 'Sometimes reduced to pm from pmm',
+        'infoless_poscar-TiO2_small': 'Sometimes reduced to pm/p1 from pmm',
         'bulk_repeat_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
         'double_bulk-fe3o4': 'Often reduced to pm/p1 (from pmm)',
+        'double_bulk-ru': 'Sometimes reduced to cm from p3m1',
         'fe3o4_bulk': 'Known invalid group pm. May be correct pmm here.',
         }
 
