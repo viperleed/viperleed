@@ -8,7 +8,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
-import csv
 import logging
 
 import numpy as np
@@ -596,16 +595,7 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
         # No CSV output requested
         return
 
-    # CSV output
-    csv_data = {
-        'Generation': allgens,
-        'R_min': allmin,
-        'R_max': allmax,
-        'R_mean': allmean,
-    }
-
-    with open(csv_name, "w") as wf:
-        writer = csv.DictWriter(wf, fieldnames=csv_data.keys())
-        writer.writeheader()
-        for i in range(len(allgens)):
-            writer.writerow({k: csv_data[k][i] for k in csv_data})
+    np.savetxt(csv_name, np.array([allgens, allmin, allmax, allmean]).T,
+                delimiter=',', header='Generation,R_min,R_max,R_mean',
+                comments='')
+    logger.info(f"Written to {csv_name}.")
