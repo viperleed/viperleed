@@ -1,4 +1,4 @@
-"""Module workhistory.py of viperleed.calc.bookkeeper.history.
+"""Module workhistory of viperleed.calc.bookkeeper.history.
 
 Defines the WorkhistoryHandler class that takes care of cleaning up
 folders found in the workhistory folder, i.e., those that calc has
@@ -35,7 +35,7 @@ class WorkhistoryHandler:
     """A class that takes care of the workhistory folder."""
 
     def __init__(self, root, bookkeeper):
-        """Initialize an instance to handle `work_history_path`.
+        """Initialize instance.
 
         Parameters
         ----------
@@ -107,13 +107,13 @@ class WorkhistoryHandler:
         return (self.path, *subfolders)
 
     def move_current_and_cleanup(self, main_metadata):
-        """Move files from the current work-history folder, then clean up.
+        """Move files from the current workhistory folder, then clean up.
 
         Any subfolder of workhistory that is labeled as "previous"
         (i.e., corresponding to an earlier run of viperleed.calc) is
-        always removes. If the current work-history folder is empty
+        always removed. If the current workhistory folder is empty
         (after removal of the "previous" folders and moving the new
-        ones) it is deleted.
+        ones), it is deleted.
 
         Parameters
         ----------
@@ -126,7 +126,7 @@ class WorkhistoryHandler:
         Returns
         -------
         tensor_nums : set of int
-            Indices of tensors found in the current work-history folder
+            Indices of tensors found in the current workhistory folder
             that have been moved to history as new history entries.
         """
         tensor_nums = set()
@@ -142,7 +142,7 @@ class WorkhistoryHandler:
         return tensor_nums
 
     def _discard_previous(self):
-        """Remove 'previous'-labelled directories in work history."""
+        """Remove 'previous'-labeled directories in workhistory."""
         previous = self._find_directories(contains=PREVIOUS_LABEL)
         for directory in previous:
             try:
@@ -157,7 +157,7 @@ class WorkhistoryHandler:
         Parameters
         ----------
         contains : str, optional
-            Select only those subdirectories whose name contains this
+            Select only those subfolders whose name contains this
             string. Default is an empty string, corresponding to no
             filtering other than the one described in Returns.
 
@@ -165,9 +165,9 @@ class WorkhistoryHandler:
         -------
         subfolders : generator
             When iterated over, it yields paths to the immediate
-            subdirectories of the current work-history folder whose
+            subfolders of the current workhistory folder whose
             name matches the HISTORY_FOLDER_RE regular expression,
-            and whose name include `contains`.
+            and whose name includes `contains`.
         """
         globbed = (self.path.glob(f'*{contains}*') if contains
                    else self.path.iterdir())
@@ -188,27 +188,27 @@ class WorkhistoryHandler:
         Returns
         -------
         tensor_nums : set
-            The tensor numbers of the relevant work-history folders.
+            The tensor numbers of the relevant workhistory folders.
 
         Raises
         ------
         FileExistsError
-            If moving one of the work-history directories fails because
+            If moving one of the workhistory directories fails because
             there already is a history directory with the same name.
         """
         tensor_nums = set()
         max_job_for_tensor = self.bookkeeper.max_job_for_tensor
         directories = self.find_current_directories(contains=self.timestamp)
-        # Work-history directories have the following naming convention
-        # [see cleanup.move_oldruns(rp, prerun=False)]:
+        # Workhistory directories have the following naming convention
+        # [see cleanup.move_oldruns(rpars, prerun=False)]:
         #    tTTT.rSSS[_<short_labels_of_sections>]_<log_timestamp>
         # Here we 'shift' the SSS part further down the line, to make
         # folders of the form
         #    tTTT.rRRR.SSS[_<short_labels_of_sections>]_<log_timestamp>
         for directory in directories:
-            match = HISTORY_FOLDER_RE.match(directory.name)
-            tensor_num = int(match['tensor_num'])
-            search_num = int(match['job_num'])  # Misuse the job_num
+            match_ = HISTORY_FOLDER_RE.match(directory.name)
+            tensor_num = int(match_['tensor_num'])
+            search_num = int(match_['job_num'])  # Misuse the job_num
             # Workhistory is always processed after the primary
             # history folder, so it should have the same job number.
             # The only exception is when there is no "main" folder,
@@ -216,7 +216,7 @@ class WorkhistoryHandler:
             job_num = max(max_job_for_tensor[tensor_num], 1)
             newname = (
                 f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
-                + match['rest']
+                + match_['rest']
                 )
             target = self.history / newname
             try:
