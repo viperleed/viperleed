@@ -30,7 +30,7 @@ from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
-from viperleed.calc.lib import fs_util
+from viperleed.calc.lib import fs_utils
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
@@ -298,7 +298,7 @@ def _copy_files_and_directories(files, directories, target):
         return
 
     for item in (*files, *directories):
-        _copy = shutil.copy2 if item.is_file() else fs_util.copytree_exists_ok
+        _copy = shutil.copy2 if item.is_file() else fs_utils.copytree_exists_ok
         try:
             _copy(item, target/item.name)
         except FileNotFoundError:
@@ -459,7 +459,7 @@ def move_oldruns(rpars, prerun=False):
 def _collect_worhistory_contents(rpars, prerun, to_path):
     """Copy or move files/directories to a workhistory subfolder."""
     files, directories = _find_next_workistory_contents(rpars, prerun)
-    _copy = fs_util.move if prerun else shutil.copy2
+    _copy = fs_utils.move if prerun else shutil.copy2
     for file in files:
         _copyfile = shutil.copy2 if file in _IOFILES else _copy
         try:
@@ -467,7 +467,7 @@ def _collect_worhistory_contents(rpars, prerun, to_path):
         except OSError:
             _LOGGER.warning(f'Error copying {file} to {to_path}. '
                             'File may get overwritten.')
-    _copy = fs_util.move if prerun else shutil.copytree
+    _copy = fs_utils.move if prerun else shutil.copytree
     for directory in directories:
         try:
             _copy(directory, to_path / directory)
@@ -485,7 +485,7 @@ def _find_next_workistory_contents(rpars, prerun):
         # well as SUPP and OUT directories. Also take root files that
         # may have already been copied to SUPP/OUT: the sole purpose
         # is **removing them** from the root directory (via
-        # fs_util.move in _collect_worhistory_contents).
+        # fs_utils.move in _collect_worhistory_contents).
         files = [
             f for f in all_files
             if f not in rpars.manifest

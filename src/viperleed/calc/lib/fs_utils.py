@@ -1,4 +1,4 @@
-"""Module fs_util of viperleed.calc.lib.
+"""Module fs_utils of viperleed.calc.lib.
 
 Defines backward-compatible file-system-related functionality. Mostly
 functions available in the shutil standard-library module.
@@ -42,7 +42,6 @@ def copytree_exists_ok(source, destination):
     if sys.version_info >= PY38:
         # dirs_exist_ok was introduced in python 3.8:
         # https://docs.python.org/3/library/shutil.html#shutil.copytree
-        # pylint: disable-next=unexpected-keyword-arg
         shutil.copytree(source, destination, dirs_exist_ok=True)
         return
     # For earlier python versions, we need to do things manually. We
@@ -80,20 +79,24 @@ def move(src, dst, copy_function=shutil.copy2):
         the source is moved inside the directory. The destination path
         must not already exist.
     copy_function : callable, optional
-        A callable used to copy the source directory, if it cannot be
-        simply renamed. Default is shutil.copy2.
+        A callable used to copy the source path if it cannot be simply
+        renamed. Default is shutil.copy2.
 
     Raises
     ------
     FileExistsError
-        If `dst` exists.
+        If moving fails because `dst` exists.
+    OSError
+        If moving fails for other reasons.
     """
-    if Path(dst).exists():
-        raise FileExistsError(f'Cannot move {src} to {dst}. Destination '
-                              'already exists.')
     if sys.version_info < PY39:
         # os.PathLike is supported since python 3.9:
         # https://docs.python.org/3/library/shutil.html#shutil.move
         src = os.fspath(src)
         dst = os.fspath(dst)
-    shutil.move(src, dst, copy_function=copy_function)
+    try:
+        shutil.move(src, dst, copy_function=copy_function)
+    except OSError as exc:
+        if Path(dst).exists():
+            raise FileExistsError(str(exc)) from None
+        raise
