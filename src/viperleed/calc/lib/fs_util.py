@@ -11,10 +11,13 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-03-11'
 __license__ = 'GPLv3+'
 
+import os
+from pathlib import Path
 import shutil
 import sys
 
 PY38 = 3, 8
+PY39 = 3, 9
 
 
 def copytree_exists_ok(source, destination):
@@ -55,3 +58,37 @@ def copytree_exists_ok(source, destination):
         else:  # file
             shutil.copy2(srcentry, dstentry)
     shutil.copystat(source, destination)
+
+
+def move(src, dst, copy_function=shutil.copy2):
+    """Recursively move a file or directory to another location.
+
+    This function is a wrapper around shutil.move that accepts
+    a generic os.PathLike for its arguments rather than mere
+    strings.
+
+    Parameters
+    ----------
+    src : os.PathLike
+        Path to the original file or directory.
+    dst : os.PathLike
+        If the destination is a directory or a symlink to a directory,
+        the source is moved inside the directory. The destination path
+        must not already exist.
+    copy_function : callable, optional
+        A callable used to copy the source directory, if it cannot be
+        simply renamed. Default is shutil.copy2.
+
+    Raises
+    ------
+    FileExistsError
+        If `dst` exists.
+    """
+    if Path(dst).exists():
+        raise FileExistsError(f'Cannot move {src} to {dst}. Destination '
+                              'already exists.')
+    if sys.version_info < PY39:
+        # os.PathLike is supported since Python 3.9
+        src = os.fspath(src)
+        dst = os.fspath(dst)
+    shutil.move(src, dst, copy_function=copy_function)
