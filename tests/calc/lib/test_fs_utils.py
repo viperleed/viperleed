@@ -1,4 +1,4 @@
-"""Tests for module fs_util of viperleed.calc.lib."""
+"""Tests for module fs_utils of viperleed.calc.lib."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -13,7 +13,8 @@ import sys
 
 import pytest
 
-from viperleed.calc.lib.fs_util import copytree_exists_ok, move
+from viperleed.calc.lib.fs_utils import copytree_exists_ok
+from viperleed.calc.lib.fs_utils import move
 
 from ...helpers import filesystem_from_dict
 from ...helpers import filesystem_to_dict

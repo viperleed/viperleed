@@ -66,13 +66,13 @@ class TestCollectWorhistoryContents:
         return _run
 
     _directories = {  # (dirname, prerun) : called
-        ('some_dir', True): f'{_MODULE}.fs_util.move',
+        ('some_dir', True): f'{_MODULE}.fs_utils.move',
         ('some_dir', False): 'shutil.copytree',
-        (DEFAULT_SUPP, True): f'{_MODULE}.fs_util.move',
+        (DEFAULT_SUPP, True): f'{_MODULE}.fs_utils.move',
         (DEFAULT_SUPP, False): 'shutil.copytree',
         }
     _files = {  # (file, prerun): called
-        ('some_file', True): f'{_MODULE}.fs_util.move',
+        ('some_file', True): f'{_MODULE}.fs_utils.move',
         ('some_file', False): 'shutil.copy2',
         ('control.chem', True): 'shutil.copy2',
         ('control.chem', False): 'shutil.copy2',
@@ -105,7 +105,9 @@ class TestCollectWorhistoryContents:
         """Check that a file is moved or copied depending on prerun."""
         directory, prerun = args
         mocks = {
-            f'{_MODULE}.fs_util.move': mocker.patch(f'{_MODULE}.fs_util.move'),
+            f'{_MODULE}.fs_utils.move': mocker.patch(
+                f'{_MODULE}.fs_utils.move',
+                ),
             'shutil.copytree': mocker.patch('shutil.copytree'),
             }
         called = mocks.pop(expect)
@@ -119,7 +121,9 @@ class TestCollectWorhistoryContents:
         """Check that a file is moved or copied depending on prerun."""
         file, prerun = args
         mocks = {
-            f'{_MODULE}.fs_util.move': mocker.patch(f'{_MODULE}.fs_util.move'),
+            f'{_MODULE}.fs_utils.move': mocker.patch(
+                f'{_MODULE}.fs_utils.move',
+                ),
             'shutil.copy2': mocker.patch('shutil.copy2'),
             }
         called = mocks.pop(expect)

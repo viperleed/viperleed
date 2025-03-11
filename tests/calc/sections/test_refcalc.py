@@ -288,7 +288,7 @@ class TestRunRefcalc:
         """Check failure when moving Tensor files fails."""
         # Make sure there are some Tensor files
         filesystem_from_dict({runtask.foldername: {'T_1': None}}, tmp_path)
-        mocker.patch(f'{_MODULE}.fs_util.move', side_effect=OSError)
+        mocker.patch(f'{_MODULE}.fs_utils.move', side_effect=OSError)
 
         result = run(fails=True, mock=True)
         expect_error = 'Failed to copy Tensor file out'
