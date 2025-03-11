@@ -23,7 +23,7 @@ from zipfile import ZipFile
 
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import parameters, poscar, vibrocc
-from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.fs_util import copytree_exists_ok
 
 logger = logging.getLogger(__name__)
 
