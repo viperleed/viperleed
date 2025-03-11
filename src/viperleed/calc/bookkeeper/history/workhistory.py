@@ -220,19 +220,20 @@ class WorkhistoryHandler:
                 )
             target = self.history / newname
             try:
+                # NB: using fs_util.move would not help to discern
+                # the FileExistsError case below. If target exists,
+                # directory would be moved inside target instead of
+                # replacing it.
                 directory.replace(target)
-            except FileExistsError:
-                LOGGER.error(
-                    f'Error: Failed to move {directory.relative_to(self.root)}'
-                    f' to {target.relative_to(self.root)}: Target path already'
-                    ' exists. Stopping...'
-                    )
-                raise
-            except OSError:
-                LOGGER.error('Error: Failed to move '
-                             f'{directory.relative_to(self.root)} '
-                             f'to {target.relative_to(self.root)}',
-                             exc_info=True)
+            except OSError as exc:
+                err_msg = ('Error: Failed to move '
+                           f'{directory.relative_to(self.root)} '
+                           f'to {target.relative_to(self.root)}')
+                if target.is_dir():
+                    err_msg += ': Target path already exists. Stopping...'
+                    LOGGER.error(err_msg)
+                    raise FileExistsError(str(exc)) from exc
+                LOGGER.error(err_msg, exc_info=True)
                 continue
             tensor_nums.add(tensor_num)
 

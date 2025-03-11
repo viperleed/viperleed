@@ -12,6 +12,7 @@ import logging
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
@@ -20,7 +21,6 @@ from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.calc.bookkeeper.history.workhistory import WorkhistoryHandler
 
 from ....helpers import make_obj_raise
-from ....helpers import raises_exception
 
 
 _MODULE = 'viperleed.calc.bookkeeper.history.workhistory'
@@ -238,8 +238,11 @@ class TestWorkhistoryHandlerRaises:
                             'find_current_directories',
                             return_value=(directory,))
         mocker.patch.object(type(workhistory), 'history')
-        raises_ = raises_exception(directory, FileExistsError, 'replace')
-        with patch_rmtree, raises_:
+        # NB: Path.replace does not raise FileExistsError, but
+        # a generic OSError. We turn it into a FileExistsError.
+        mocker.patch.object(directory, 'replace', side_effect=OSError)
+        mocker.patch('pathlib.Path.is_dir', return_value=True)
+        with patch_rmtree, pytest.raises(FileExistsError):
             # pylint: disable-next=protected-access       # OK in tests
             workhistory._move_folders_to_history(None)
         self.check_has_error(caplog)
