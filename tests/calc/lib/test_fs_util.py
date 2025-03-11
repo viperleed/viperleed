@@ -110,7 +110,7 @@ class TestMove:
     def test_dst_exists(self, tmp_path):
         """Test moving a file when the destination already exists."""
         tree = {'src': {'file': 'contents', 'dir': {'file': 'contents'}},
-                'already_there': {}}
+                'dst': {'src': {'already_there.txt': ''}}}
         filesystem_from_dict(tree, tmp_path)
         args = (tmp_path/f for f in tree)
         with pytest.raises(FileExistsError):
