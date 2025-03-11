@@ -23,6 +23,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import beams
 from viperleed.calc.files import iorefcalc
 from viperleed.calc.files.ivplot import plot_iv
+from viperleed.calc.lib import fs_util
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
 from viperleed.calc.lib.checksums import validate_multiple_files
@@ -329,7 +330,7 @@ def run_refcalc(runtask):
         tensorfiles = (f for f in Path().glob('T_*') if f.is_file())
         for tensor in tensorfiles:
             try:   # move instead of copy to not duplicate the large files
-                shutil.move(tensor, targetpath/f'{tensor.name}{energy}')
+                fs_util.move(tensor, targetpath/f'{tensor.name}{energy}')
             except OSError:
                 logger.error('Failed to copy refcalc output file '
                              f'{tensor} to main folder.', exc_info=True)
