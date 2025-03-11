@@ -42,7 +42,6 @@ def copytree_exists_ok(source, destination):
     if sys.version_info >= PY38:
         # dirs_exist_ok was introduced in python 3.8:
         # https://docs.python.org/3/library/shutil.html#shutil.copytree
-        # pylint: disable-next=unexpected-keyword-arg
         shutil.copytree(source, destination, dirs_exist_ok=True)
         return
     # For earlier python versions, we need to do things manually. We
@@ -83,6 +82,8 @@ def move(src, dst, copy_function=shutil.copy2):
     ------
     FileExistsError
         If moving fails because `dst` exists.
+    OSError
+        If moving fails for other reasons.
     """
     if sys.version_info < PY39:
         # os.PathLike is supported since python 3.9:
