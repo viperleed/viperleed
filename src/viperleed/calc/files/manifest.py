@@ -43,7 +43,7 @@ class ManifestFile:
         ...
 
     If folder_X is a subfolder of the main file's path, folder_X_path
-    are relative paths. Notice that, header lines for (sub)folders are
+    is a relative path. Notice that header lines for (sub)folders are
     always present, irrespective of whether they have any contents.
     """
 
@@ -60,7 +60,7 @@ class ManifestFile:
 
     @property
     def has_absolute_paths(self):
-        """Return whether any of the sub-manifest is not a subfolder."""
+        """Return whether any of the sub-manifests is not a subfolder."""
         for path in self.paths[1:]:
             try:
                 path.relative_to(self.path)
@@ -84,7 +84,7 @@ class ManifestFile:
         return tuple(self._sections)
 
     def __contains__(self, item):
-        """Return whether item is contained in this ManifestFile."""
+        """Return whether `item` is contained in this ManifestFile."""
         return item in self._sections[self.path]
 
     def __iadd__(self, other):
@@ -99,7 +99,7 @@ class ManifestFile:
         return self
 
     def add(self, item):
-        """Add an item to the top-level path."""
+        """Add an `item` to the top-level path."""
         self._sections[self.path].add(item)
 
     def add_manifest(self, other, label='folder'):
@@ -134,7 +134,7 @@ class ManifestFile:
 
     def read(self):
         """Read the contents of a manifest file in the current directory."""
-        manifest = self.path / _MANIFEST_NAME
+        manifest = self.path / self.name
         if not manifest.is_file():
             return
         section = self.path
@@ -151,7 +151,7 @@ class ManifestFile:
 
     def write(self):
         """Write the contents of this ManifestFile to file."""
-        manifest = self.path/_MANIFEST_NAME
+        manifest = self.path / self.name
         with manifest.open('w', encoding='utf-8') as file:
             root_contents = self._sections[self.path]
             if root_contents:
@@ -170,7 +170,7 @@ class ManifestFile:
                 self._write_contents(relative_path, contents, file)
 
     def _read_contents_line(self, line, section, rel_path):
-        """Store the contents of line into a section."""
+        """Store the contents of `line` into a `section`."""
         if not rel_path:  # Skip check for root files
             content = line
         elif not line.startswith(rel_path):
@@ -194,7 +194,7 @@ class ManifestFile:
 
     @staticmethod
     def _write_contents(path, contents, file):
-        """Write the contents of a section to file."""
+        """Write the `contents` of a section to `file`."""
         if path:
             contents = ((path/item).as_posix() for item in contents)
         lines = (f'{item}\n' for item in contents)
