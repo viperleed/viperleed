@@ -92,7 +92,8 @@ def move(src, dst, copy_function=shutil.copy2):
         raise FileExistsError(f'Cannot move {src} to {dst}. Destination '
                               'already exists.')
     if sys.version_info < PY39:
-        # os.PathLike is supported since Python 3.9
+        # os.PathLike is supported since python 3.9:
+        # https://docs.python.org/3/library/shutil.html#shutil.move
         src = os.fspath(src)
         dst = os.fspath(dst)
     shutil.move(src, dst, copy_function=copy_function)
