@@ -18,7 +18,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
-from viperleed.calc.lib.fs_util import copytree_exists_ok
+from viperleed.calc.lib import fs_util
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
@@ -215,7 +215,7 @@ def _organize_supp_out(path, outfiles):
             if not _dir.is_dir():
                 continue
             try:
-                copytree_exists_ok(_dir, out_path / _dir.name)
+                fs_util.copytree_exists_ok(_dir, out_path / _dir.name)
             except OSError:
                 logger.error(f"Error moving {folder} directory {_dir.name}: ",
                              exc_info=True)
@@ -279,7 +279,7 @@ def _collect_deltas(tensor_index, path):
             errors = []
             for delta_file in deltalist:
                 try:
-                    shutil.move(delta_file, destination / delta_file.name)
+                    fs_util.move(delta_file, destination / delta_file.name)
                 except OSError as err:
                     errors.append(err)
             if errors:
@@ -384,7 +384,7 @@ def move_oldruns(rp, prerun=False):
             if not prerun or f in iofiles:
                 shutil.copy2(f, work_hist_path / f)
             else:
-                shutil.move(f, work_hist_path / f)
+                fs_util.move(f, work_hist_path / f)
         except Exception:
             logger.warning(f"Error copying {f} to {work_hist_path / f}."
                            " File may get overwritten.")
@@ -393,7 +393,7 @@ def move_oldruns(rp, prerun=False):
             if not prerun:
                 shutil.copytree(d, work_hist_path / d)
             else:
-                shutil.move(d, work_hist_path / d)
+                fs_util.move(d, work_hist_path / d)
         except Exception:
             logger.warning(f"Error copying {d} to {work_hist_path / d}."
                            " Files in directory may get overwritten.")
