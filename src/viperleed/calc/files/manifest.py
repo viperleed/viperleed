@@ -127,7 +127,7 @@ class ManifestFile:
         contents = self._sections.items()
         if relative and self.has_absolute_paths:
             raise ManifestFileError('relative paths are supported only if all '
-                                    'paths are subfolders of the root one')
+                                    'paths are subfolders of the root one.')
         if relative:
             contents = ((p.relative_to(self.path), c) for p, c in contents)
         yield from contents
@@ -175,7 +175,7 @@ class ManifestFile:
             content = line
         elif not line.startswith(rel_path):
             raise InconsistentPathsError(f'{line} should begin with '
-                                         f'{rel_path}') from None
+                                         f'{rel_path}.') from None
         else:
             *_, content = line.split(rel_path + '/', maxsplit=1)
         self._sections[section].add(str(content))
@@ -185,7 +185,7 @@ class ManifestFile:
         line = line.strip()
         match_ = _HEADER_LINE_RE.fullmatch(line)
         if not match_:
-            raise ValueError(f'Not a header line: {line!r}')
+            raise ValueError(f'Not a header line: {line!r}.')
         path_str = match_['path'].strip()
         path = Path(path_str).resolve()
         self._labels[path] = match_['label'].strip()
