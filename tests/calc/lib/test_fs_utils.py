@@ -36,7 +36,7 @@ class TestCopytreeExistsOk:
         self.test_existing_directory(tmp_path)
 
     def test_existing_directory(self, tmp_path):
-        """Test copying a directory when destination already exists."""
+        """Test copying a directory when the destination already exists."""
         before = {'source': {'file.txt': 'content',
                              'subfolder': {'subfile': ''}},
                   'destination': {}}
@@ -57,7 +57,7 @@ class TestCopytreeExistsOk:
             copytree_exists_ok(src, dst)
 
     def test_new_directory(self, tmp_path):
-        """Test copying a directory when destination does not exist."""
+        """Test copying a directory when the destination does not exist."""
         before = {'source': {'file.txt': 'content',
                              'subfolder': {'subfile': ''}},
                  }
