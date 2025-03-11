@@ -23,7 +23,7 @@ from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc.bookkeeper import BookkeeperMode
 from viperleed.calc.bookkeeper import bookkeeper
-from viperleed.calc.lib.fs_util import copytree_exists_ok
+from viperleed.calc.lib.fs_utils import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES

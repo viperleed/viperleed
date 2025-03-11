@@ -1,4 +1,4 @@
-"""Module fs_util of viperleed.calc.lib.
+"""Module fs_utils of viperleed.calc.lib.
 
 Defines backward-compatible file-system-related functionality. Mostly
 functions available in the shutil standard-library module.
