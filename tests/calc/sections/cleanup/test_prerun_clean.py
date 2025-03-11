@@ -292,7 +292,8 @@ class TestPropagateToDomains:
         """Check that prerun_clean is correctly propagated to all domains."""
         move_calls = register_calls(move_oldruns)
         _, nested_domains, root = domains
-        prerun_clean(rpars)
+        with execute_in_dir(root):
+            prerun_clean(rpars)
 
         # Check that move_oldruns was called correctly
         n_domains = (1     # simple_domain
