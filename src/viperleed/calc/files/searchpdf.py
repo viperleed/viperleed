@@ -545,9 +545,9 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
 
     labelled = False
     scattermax = 0
-    for (allgens, psmean, psmax) in parScatterLines:
-        meanline, = msp.plot(allgens, psmean, '-', color="tab:blue")
-        maxline, = msp.plot(allgens, psmax, '-', color="black")
+    for (_generations, psmean, psmax) in parScatterLines:
+        (meanline,) = msp.plot(_generations, psmean, "-", color="tab:blue")
+        (maxline,) = msp.plot(_generations, psmax, "-", color="black")
         scattermax = max(scattermax, max(psmax))
         if not labelled:
             meanline.set_label('Mean parameter \u03C3')    # sigma
