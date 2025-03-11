@@ -18,7 +18,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
-from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.fs_util import copytree_exists_ok
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 

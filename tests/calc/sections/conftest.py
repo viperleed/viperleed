@@ -33,7 +33,7 @@ import pytest_cases
 
 from viperleed.calc import DEFAULT_WORK
 from viperleed.calc.files import tenserleed
-from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.lib.fs_util import copytree_exists_ok
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
 
