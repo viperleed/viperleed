@@ -82,7 +82,7 @@ def move(src, dst, copy_function=shutil.copy2):
     Raises
     ------
     FileExistsError
-        If `dst` exists.
+        If moving fails because `dst` exists.
     """
     if sys.version_info < PY39:
         # os.PathLike is supported since python 3.9:
