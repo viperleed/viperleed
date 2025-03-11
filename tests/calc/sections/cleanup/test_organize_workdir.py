@@ -202,7 +202,7 @@ class TestCopyFilesAndDirectories:
     def test_copy_fails(self, run, workdir, caplog, mocker):
         """Check logging messages when copying fails."""
         copy_file = mocker.patch('shutil.copy2', side_effect=OSError)
-        copy_dir = mocker.patch(f'{_MODULE}.copytree_exists_ok',
+        copy_dir = mocker.patch(f'{_MODULE}.fs_util.copytree_exists_ok',
                                 side_effect=OSError)
         expect = self.tree.copy()
         target = workdir / 'test_target'

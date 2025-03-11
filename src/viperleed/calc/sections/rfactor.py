@@ -23,6 +23,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iorfactor
 from viperleed.calc.files import iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
+from viperleed.calc.lib import fs_util
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 
@@ -491,7 +492,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
 
     # move log file to supp
     try:
-        shutil.move(compile_log, "compile_logs" / compile_log)
+        fs_util.move(compile_log, "compile_logs" / compile_log)
     except OSError:
         logger.warning(f"Could not move {compile_log} to {DEFAULT_SUPP}")
     # run

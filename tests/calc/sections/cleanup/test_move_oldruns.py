@@ -66,13 +66,13 @@ class TestCollectWorhistoryContents:
         return _run
 
     _directories = {  # (dirname, prerun) : called
-        ('some_dir', True): 'shutil.move',
+        ('some_dir', True): f'{_MODULE}.fs_util.move',
         ('some_dir', False): 'shutil.copytree',
-        (DEFAULT_SUPP, True): 'shutil.move',
+        (DEFAULT_SUPP, True): f'{_MODULE}.fs_util.move',
         (DEFAULT_SUPP, False): 'shutil.copytree',
         }
     _files = {  # (file, prerun): called
-        ('some_file', True): 'shutil.move',
+        ('some_file', True): f'{_MODULE}.fs_util.move',
         ('some_file', False): 'shutil.copy2',
         ('control.chem', True): 'shutil.copy2',
         ('control.chem', False): 'shutil.copy2',
@@ -104,8 +104,10 @@ class TestCollectWorhistoryContents:
     def test_copy_or_move_directory(self, args, expect, run, mocker):
         """Check that a file is moved or copied depending on prerun."""
         directory, prerun = args
-        mocks = {'shutil.move': mocker.patch('shutil.move'),
-                 'shutil.copytree': mocker.patch('shutil.copytree')}
+        mocks = {
+            f'{_MODULE}.fs_util.move': mocker.patch(f'{_MODULE}.fs_util.move'),
+            'shutil.copytree': mocker.patch('shutil.copytree'),
+            }
         called = mocks.pop(expect)
         run(prerun, files_and_dirs=((), (directory,)))
         called.assert_called_once()
@@ -116,8 +118,10 @@ class TestCollectWorhistoryContents:
     def test_copy_or_move_file(self, args, expect, run, mocker):
         """Check that a file is moved or copied depending on prerun."""
         file, prerun = args
-        mocks = {'shutil.move': mocker.patch('shutil.move'),
-                 'shutil.copy2': mocker.patch('shutil.copy2')}
+        mocks = {
+            f'{_MODULE}.fs_util.move': mocker.patch(f'{_MODULE}.fs_util.move'),
+            'shutil.copy2': mocker.patch('shutil.copy2'),
+            }
         called = mocks.pop(expect)
         run(prerun, files_and_dirs=((file,), ()))
         called.assert_called_once()
