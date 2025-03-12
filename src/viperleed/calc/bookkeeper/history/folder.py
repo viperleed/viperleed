@@ -90,7 +90,7 @@ class IncompleteHistoryFolder:
         if not match_:
             raise ValueError(
                 f'Invalid {DEFAULT_HISTORY} folder {path.name} at '
-                f'{path.parent}. Does not match {HISTORY_FOLDER_RE.pattern}'
+                f'{path.parent}. Does not match {HISTORY_FOLDER_RE.pattern}.'
                 )
         set_frozen_attr(self, 'tensor_num', int(match_['tensor_num']))
         set_frozen_attr(self, 'job_num', int(match_['job_num']))
@@ -162,7 +162,7 @@ class HistoryFolder(IncompleteHistoryFolder):
     def _analyze_path(self):
         """Collect information from the history folder at self.path."""
         if not self.path.is_dir():
-            raise ValueError(f'{self.path} is not a directory')
+            raise ValueError(f'{self.path} is not a directory.')
         super()._analyze_path()
         set_frozen_attr(self, 'metadata', BookkeeperMetaFile(self.path))
         try:
