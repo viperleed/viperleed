@@ -603,16 +603,18 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
 
     report_csv_data = [allgens, allmin, allmax, allmean]
     headers = "Generation,R_min,R_max,R_mean"
+    formatting = ['%i', '%.4f', '%.4f', '%.4f']
     # optionally add timestamps if available
     if timestamps is not None:
-        headers += ",Timestamp"
+        headers += ',Timestamp'
         report_csv_data.append(timestamps)
+        formatting += '%s'
 
     np.savetxt(
         csv_name,
         np.array(report_csv_data).T,
-        delimiter=",",
+        delimiter='',
         header=headers,
-        comments="",
+        fmt=formatting,
     )
-    logger.info(f"Written to {csv_name}.")
+    logger.info(f'Written to {csv_name}.')

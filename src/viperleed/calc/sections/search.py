@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 
 from collections import Counter
 import copy
+import datetime
 import logging
 import os
 from pathlib import Path
@@ -1079,7 +1080,7 @@ def search(sl, rp):
                                 )
                     for gen, rfacs, configs in newData:
                         gens.append(gen + genOffset)
-                        timestamps.append(time.time())
+                        timestamps.append(datetime.datetime.now().isoformat())
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
                         dgen = {}
