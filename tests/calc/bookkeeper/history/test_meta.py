@@ -48,18 +48,23 @@ class CasesHistoryTree:
 
     def case_empty_tree(self, tmp_path):
         """Return a tree without any contents."""
-        return tmp_path, None
+        not_a_folder = tmp_path/'does_not_exist'
+        return not_a_folder, None
 
     def case_only_metadata_file(self, tmp_path):
         """Return a tree containing only the metadata file."""
-        filesystem_from_dict({_METADATA_NAME: ''}, tmp_path)
-        return tmp_path, None
+        subfolder = 'only_meta'
+        tree = {subfolder: {_METADATA_NAME: 'contents of metadata file'}}
+        filesystem_from_dict(tree, tmp_path)
+        # MD5 of the 'only_meta' string
+        return tmp_path/subfolder, '5e0c5250cd1180ac2e9fab7c16e1511d'
 
     def case_sample_tree(self, tmp_path):
-        """Return the root of a fake history folder and its hash."""
+        """Return the root of a fake history subfolder and its hash."""
         # Create a bunch of files and folders
         sample_file_contents = 'These are the test contents of a file'
-        tree = {
+        folder = 'some_history_subfolder'
+        tree = {folder: {
             _METADATA_NAME : sample_file_contents,  # Not used for hash
             'file_1': sample_file_contents,
             'file_2': sample_file_contents,
@@ -68,9 +73,19 @@ class CasesHistoryTree:
                 'empty subfolder1': {},
                 'subfolder2': {'subfile1.1': sample_file_contents},
                 },
-            }
+            }}
         filesystem_from_dict(tree, tmp_path)
-        return tmp_path, '9d46c0aae42777a813780a6ba49befec'
+        return tmp_path/folder, '08fbfdadf65f84930c7b345639836406'
+
+    def case_empty_folder(self, tmp_path):
+        """Return the root of a fake history subfolder and its hash."""
+        # Create a bunch of files and folders
+        sample_file_contents = 'These are the test contents of a file'
+        empty = 'empty_history_subfolder'
+        tree = {empty: {}}
+        filesystem_from_dict(tree, tmp_path)
+        # MD5 of the 'empty_history_subfolder' string
+        return tmp_path/empty, '12e56f234015252fddd5b23751b085bf'
 
 
 @fixture(name='meta')

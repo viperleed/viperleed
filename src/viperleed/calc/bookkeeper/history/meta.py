@@ -101,6 +101,8 @@ class BookkeeperMetaFile:
 
     def compute_hash(self):
         """Compute and store a hash from all the files in path."""
+        if not self.path.exists():
+            return
         self._hash = hashlib.md5(self.path.name.encode())
         self._update_hash_from_folder(self.path)
         self._parser['archived']['hash'] = self.hash_
