@@ -15,6 +15,7 @@ from enum import Enum
 from pathlib import Path
 import shutil
 
+from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
@@ -23,6 +24,7 @@ from ..constants import HISTORY_FOLDER_RE
 from ..log import LOGGER
 from ..mode import BookkeeperMode as Mode
 from ..utils import make_property
+from .constants import HISTORY_INFO_NAME
 from .errors import CantRemoveEntryError
 from .errors import MetadataMismatchError
 from .meta import BookkeeperMetaFile
@@ -78,7 +80,7 @@ class IncompleteHistoryFolder:
             err_msg = f'Failed to copy {file_path.name}'
             if with_name:
                 err_msg += f' as {dest_name}'
-            err_msg += ' to history.'
+            err_msg += f' to {DEFAULT_HISTORY}.'
             LOGGER.error(err_msg)
 
     def _analyze_path(self):
@@ -87,8 +89,8 @@ class IncompleteHistoryFolder:
         match_ = HISTORY_FOLDER_RE.fullmatch(path.name)
         if not match_:
             raise ValueError(
-                f'Invalid history folder {path.name} at {path.parent}. '
-                f'Does not match {HISTORY_FOLDER_RE.pattern}'
+                f'Invalid {DEFAULT_HISTORY} folder {path.name} at '
+                f'{path.parent}. Does not match {HISTORY_FOLDER_RE.pattern}'
                 )
         set_frozen_attr(self, 'tensor_num', int(match_['tensor_num']))
         set_frozen_attr(self, 'job_num', int(match_['job_num']))
@@ -116,21 +118,23 @@ class HistoryFolder(IncompleteHistoryFolder):
         if self.name != entry_folder_name:
             raise CantRemoveEntryError(
                 f'Folder names differ: directory name is {self.name!r}, '
-                f'history.info entry has {entry_folder_name!r} instead.'
+                f'{HISTORY_INFO_NAME} entry has {entry_folder_name!r} instead.'
                 )
         # Tensor numbers too
         entry_tensors = ((0,) if entry.tensor_nums.no_tensors
                          else entry.tensor_nums.value)
         if self.tensor_num not in entry_tensors:
             raise CantRemoveEntryError(
-                f'Tensor number from folder name ({self.tensor_num}) is not '
-                f'among the ones in the history.info entry ({entry_tensors}).'
+                f'Tensor number from folder name ({self.tensor_num}) is '
+                f'not among the ones in the {HISTORY_INFO_NAME} entry '
+                f'({entry_tensors}).'
                 )
         # And the same for the job ids
         if self.job_num not in entry.job_nums.value:
             raise CantRemoveEntryError(
-                f'Job number from folder name ({self.job_num}) is not among '
-                f'the ones in the history.info entry ({entry.job_nums.value}).'
+                f'Job number from folder name ({self.job_num}) is not '
+                f'among the ones in the {HISTORY_INFO_NAME} entry '
+                f'({entry.job_nums.value}).'
                 )
 
     def check_metadata(self):
