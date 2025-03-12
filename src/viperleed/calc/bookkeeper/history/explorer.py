@@ -38,7 +38,7 @@ class HistoryExplorer:
         # sense to keep it in the same object that handles the
         # history directory since they are so much interrelated.
         self._info = None
-        self._subfolders = []
+        self._subfolders = []  # Always sorted by name
         self._maps = {
             'main_hash_to_folders': None,  # {parent_hash: {folders}}
             'hash_to_parent': None,   # {folder.hash_: parent_folder}
@@ -200,11 +200,32 @@ class HistoryExplorer:
     @needs_update_for_attr('_maps[main_hash_to_folders]', updater=_updater)
     def register_folder(self, path_to_folder):
         """Register a new folder as part of the history tree."""
-        self._append_existing_folder(path_to_folder, insert_sorted=True)
+        appended = self._append_existing_folder(path_to_folder,
+                                                insert_sorted=True)
         self._update_maps()
+        return appended
 
     def _append_existing_folder(self, path_to_folder, insert_sorted=True):
-        """Register a new folder, without updating the parent mapping."""
+        """Register a new folder, without updating the parent mapping.
+
+        Parameters
+        ----------
+        path_to_folder : Path
+            Path to the folder to be added.
+        insert_sorted : bool, optional
+            Whether `path_to_folder` should be added in a sorted
+            manner, based on its .name. May be used to speed up
+            insertion. IMPORTANT NOTE FOR DEVELOPERS: it is critical
+            not to pass False here, unless you are sure that you
+            call _append_existing_folder already in a sorted manner.
+            Otherwise, the .last_folder property will NOT be the
+            most-recent "main" calc run. Default is True.
+
+        Returns
+        -------
+        appended_folder : HistoryFolder
+            The history folder that was added from `path_to_folder`.
+        """
         if path_to_folder.parent != self.path:
             raise ValueError(f'Not a subfolder of {self.path}.')
         folder = HistoryFolder(path_to_folder)
@@ -216,6 +237,7 @@ class HistoryExplorer:
         # pylint: disable=unsubscriptable-object  # Called in decorated
         self._maps['main_hash_to_folders'][parent_hash].append(folder)
         self._maps['jobs_for_tensor'][folder.tensor_num].add(folder.job_num)
+        return folder
 
     def _backup_info_file(self):
         """Create a numbered duplicate of history.info as a backup."""
