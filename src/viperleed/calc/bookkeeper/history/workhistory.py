@@ -106,7 +106,7 @@ class WorkhistoryHandler:
         subfolders = sorted(self.path.iterdir(), key=attrgetter('name'))
         return (self.path, *subfolders)
 
-    def move_current_and_cleanup(self, main_metadata):
+    def move_current_and_cleanup(self, main_history_subfolder):
         """Move files from the current workhistory folder, then clean up.
 
         Any subfolder of workhistory that is labeled as "previous"
@@ -117,11 +117,11 @@ class WorkhistoryHandler:
 
         Parameters
         ----------
-        main_metadata : BookkeeperMetaFile
-            The metadata file of the primary history folder created
-            by bookkeeper. Used to label the workhistory folders
-            moved to history as being created 'together' with the
-            primary folder.
+        main_history_subfolder : HistoryFolder
+            The primary history subfolder created by bookkeeper. Used
+            to determine the appropriate name for the the workhistory
+            folders moved to history as well as marking them as being
+            created 'together' with the `main_history_subfolder`.
 
         Returns
         -------
@@ -135,7 +135,7 @@ class WorkhistoryHandler:
 
         # Always remove any 'previous'-labeled folders
         self._discard_previous()
-        tensor_nums = self._move_folders_to_history(main_metadata)
+        tensor_nums = self._move_folders_to_history(main_history_subfolder)
         is_empty = not any(self.path.iterdir())
         if is_empty:
             self.discard_workhistory_root()
@@ -174,16 +174,16 @@ class WorkhistoryHandler:
         return (d for d in globbed
                 if d.is_dir() and HISTORY_FOLDER_RE.match(d.name))
 
-    def _move_folders_to_history(self, main_metadata):
+    def _move_folders_to_history(self, main_history_subfolder):
         """Move relevant folders from the current workhistory to history.
 
         Parameters
         ----------
-        main_metadata : BookkeeperMetaFile
-            The metadata file of the primary history folder created
-            by bookkeeper. Used to label the workhistory folders
-            moved to history as being created 'together' with the
-            primary folder.
+        main_history_subfolder : HistoryFolder
+            The primary history subfolder created by bookkeeper. Used
+            to determine the appropriate name for the the workhistory
+            folders moved to history as well as marking them as being
+            created 'together' with the `main_history_subfolder`.
 
         Returns
         -------
@@ -197,6 +197,9 @@ class WorkhistoryHandler:
             there already is a history directory with the same name.
         """
         tensor_nums = set()
+        # NB: it is important to create the tensor-to-job map before
+        # we start adding more history folders: all of those added
+        # at the same time must have the same job_num.
         max_job_for_tensor = self.bookkeeper.max_job_for_tensor
         directories = self.find_current_directories(contains=self.timestamp)
         # Workhistory directories have the following naming convention
@@ -209,11 +212,13 @@ class WorkhistoryHandler:
             match_ = HISTORY_FOLDER_RE.match(directory.name)
             tensor_num = int(match_['tensor_num'])
             search_num = int(match_['job_num'])  # Misuse the job_num
-            # Workhistory is always processed after the primary
-            # history folder, so it should have the same job number.
-            # The only exception is when there is no "main" folder,
-            # e.g., for RUN = 1-3 1.
-            job_num = max(max_job_for_tensor[tensor_num], 1)
+            job_num = max_job_for_tensor[tensor_num]
+            if tensor_num != main_history_subfolder.tensor_num:
+                # Workhistory is always processed after the primary
+                # history folder, so if tensor_num is the same as for
+                # the main folder, also job_num should be, i.e., we
+                # should not increase job_num by one.
+                job_num += 1
             newname = (
                 f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
                 + match_['rest']
@@ -240,7 +245,7 @@ class WorkhistoryHandler:
             # Add metadata file to the folder we have just moved.
             meta = BookkeeperMetaFile(target)
             meta.compute_hash()
-            meta.collect_from(main_metadata)
+            meta.collect_from(main_history_subfolder.metadata)
             meta.write()
 
             # And register the folder in history. Notice that we need

@@ -70,8 +70,13 @@ MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
 MOCK_TIMESTAMP = '680203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
 MOCK_WORKHISTORY = {  # name in workhistory: name in history
+    # One run involving an already existing, previous tensor
+    f't002.r009_DS_{MOCK_TIMESTAMP}': f't002.r003.009_DS_{MOCK_TIMESTAMP}',
+    # One run involving a tensor that is not yet in history
     f't003.r005_DS_{MOCK_TIMESTAMP}': f't003.r001.005_DS_{MOCK_TIMESTAMP}',
-    f't003.r000_{PREVIOUS_LABEL}_xxx': None,  # deleted
+    # A previous one, that should be deleted
+    f't003.r000_{PREVIOUS_LABEL}_xxx': None,
+    # And a couple runs from the current tensor
     f't004.r001_RDS_{MOCK_TIMESTAMP}': f't004.r001.001_RDS_{MOCK_TIMESTAMP}',
     f't004.r002_RDS_{MOCK_TIMESTAMP}': f't004.r001.002_RDS_{MOCK_TIMESTAMP}',
     }

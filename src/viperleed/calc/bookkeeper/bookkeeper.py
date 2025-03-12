@@ -307,9 +307,11 @@ class Bookkeeper:
         None.
         """
         # Create the new 'primary' history directory...
-        metadata = self._make_and_copy_to_history()
+        main_history_subfolder = self._make_and_copy_to_history()
         # ...move workhistory folders...
-        tensor_nums = self._workhistory.move_current_and_cleanup(metadata)
+        tensor_nums = self._workhistory.move_current_and_cleanup(
+            main_history_subfolder,
+            )
         tensor_nums.add(self.tensor_number)
         # ...and add a history.info entry
         self._add_history_info_entry(tensor_nums)
@@ -421,9 +423,8 @@ class Bookkeeper:
 
         Returns
         -------
-        meta : BookkeeperMetaFile
-            The handler to the metadata file created with the
-            new history subfolder.
+        main_history_folder : HistoryFolder
+            The new folder added to history.
 
         Raises
         ------
@@ -449,8 +450,7 @@ class Bookkeeper:
         meta.write()
 
         # Finally, register the new folder in history
-        self.history.register_folder(self.history.new_folder.path)
-        return meta
+        return self.history.register_folder(self.history.new_folder.path)
 
     def _make_history_and_prepare_logger(self):
         """Make history folder and add handlers to the bookkeeper logger."""

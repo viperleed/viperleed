@@ -150,8 +150,10 @@ class TestWorkhistoryHandler:
                             return_value=(directory,))
         mock_meta_cls = mocker.patch(f'{_MODULE}.BookkeeperMetaFile')
         main_meta = mocker.MagicMock()
+        mock_history_folder = mocker.MagicMock(metadata=main_meta,
+                                               tensor_num=15)
         # pylint: disable-next=protected-access           # OK in tests
-        tensor_nums = workhistory._move_folders_to_history(main_meta)
+        tensor_nums = workhistory._move_folders_to_history(mock_history_folder)
         fake_replace.assert_called_once()
         assert tensor_nums == {987}
         mock_meta_cls.assert_called_once()  # Created metadata file
@@ -242,9 +244,10 @@ class TestWorkhistoryHandlerRaises:
         # a generic OSError. We turn it into a FileExistsError.
         mocker.patch.object(directory, 'replace', side_effect=OSError)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
+        mock_folder = mocker.MagicMock(tensor_num=1)
         with patch_rmtree, pytest.raises(FileExistsError):
             # pylint: disable-next=protected-access       # OK in tests
-            workhistory._move_folders_to_history(None)
+            workhistory._move_folders_to_history(mock_folder)
         self.check_has_error(caplog)
 
     def test_move_folders_os_error(self, workhistory, caplog,
@@ -255,10 +258,11 @@ class TestWorkhistoryHandlerRaises:
         mocker.patch.object(workhistory,
                             'find_current_directories',
                             return_value=(directory,))
+        mock_folder = mocker.MagicMock(tensor_num=1)
         raises_ = make_obj_raise(directory, OSError, 'replace')
         with raises_, monkeypatch.context() as patch_:
             patch_.setattr('pathlib.Path.relative_to', mocker.MagicMock())
             # pylint: disable-next=protected-access       # OK in tests
-            tensor_nums = workhistory._move_folders_to_history(None)
+            tensor_nums = workhistory._move_folders_to_history(mock_folder)
             assert not any(tensor_nums)
         self.check_has_error(caplog)
