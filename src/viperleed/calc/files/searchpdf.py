@@ -33,7 +33,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                            outname="Search-progress.pdf",
                            csvname="Search-progress.csv",
                            markers=None,
-                           rfac_predict=None):
+                           rfac_predict=None,
+                           timestamps=None):
     """
     Writes a pdf file with reports on R-factor convergence and current
     parameter scatter. Also writes a csv file containing the most basic
@@ -61,6 +62,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     rfac_predict : list of float, optional
         List of r-factor values determined from the parabola fit, by
         generation. The default is [].
+    timestamps : list of float, optional
+        List of timestamps for each generation. The default is None.
 
     Returns
     -------
@@ -77,7 +80,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     rfacsMin = np.array([min(rfa) for rfa in rfacs])
     rfacsMax = np.array([max(rfa) for rfa in rfacs])
     rfacsMean = np.array([np.mean(rfa) for rfa in rfacs])
-    rp.searchplots[-1] = (searchname, gens, rfacsMin, rfacsMax, rfacsMean)
+    rp.searchplots[-1] = (searchname, gens, rfacsMin, rfacsMax, rfacsMean,
+                          timestamps)
     # rfacsStd = np.array([np.std(rfa, ddof = 1) for rfa in rfacs])
     rlastunique = [rfacs[-1][0]]
     lastpops = [1]
@@ -485,16 +489,18 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
     allmax = []
     allmean = []
     allgens = []
+    all_timestamps = []
     markers = []
     parScatterLines = []  # list of lists [gens, mean, max] per search
     gencount = 0
     for i in range(0, len(rp.searchplots)):
-        (name, gens, rmin, rmax, rmean) = rp.searchplots[i]
+        (name, gens, rmin, rmax, rmean, timestamps) = rp.searchplots[i]
         markers.append((gencount, "Search "+name))
         allgens.extend([v + gencount for v in gens])
         allmin.extend(rmin)
         allmax.extend(rmax)
         allmean.extend(rmean)
+        all_timestamps.extend(timestamps)
         if rp.parScatter[i]:
             parScatterLines.append(list(zip(*rp.parScatter[i])))
             parScatterLines[-1][0] = [v + gencount for v in
@@ -595,7 +601,18 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
         # No CSV output requested
         return
 
-    np.savetxt(csv_name, np.array([allgens, allmin, allmax, allmean]).T,
-                delimiter=',', header='Generation,R_min,R_max,R_mean',
-                comments='')
+    report_csv_data = [allgens, allmin, allmax, allmean]
+    headers = "Generation,R_min,R_max,R_mean"
+    # optionally add timestamps if available
+    if timestamps is not None:
+        headers += ",Timestamp"
+        report_csv_data.append(timestamps)
+
+    np.savetxt(
+        csv_name,
+        np.array(report_csv_data).T,
+        delimiter=",",
+        header=headers,
+        comments="",
+    )
     logger.info(f"Written to {csv_name}.")

@@ -258,7 +258,7 @@ class Rparams:
         self.rfacscatter = []       # same, but thinned out along gens
         self.parScatter = [[]]
         # tuples (gen, mean scatter, max scatter) per search
-        self.searchplots = [('', [], [], [], [])]
+        self.searchplots = [('', [], [], [], [], [])]
         # (name, gens, min, max, mean) for each search
         self.lastParScatterFigs = {}
         # complete figures for each search, with search names as keys
@@ -577,7 +577,7 @@ class Rparams:
         self.controlChemBackup = None
         self.disp_block_read = False
         self.rfacscatter_all = []
-        self.searchplots.append(('', [], [], [], []))
+        self.searchplots.append(('', [], [], [], [], []))
         self.parScatter.append([])
         self.SEARCH_MAX_GEN = self.searchMaxGenInit
         if self.searchConvInit['gaussian'] is not None:
