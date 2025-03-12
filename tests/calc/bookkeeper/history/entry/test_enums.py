@@ -18,7 +18,6 @@ from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.enums import FixAction
 
 
-
 class MockFieldOK:  # pylint: disable=too-few-public-methods
     """A fake field that was understood."""
 
@@ -101,7 +100,6 @@ class TestFaultyLabel(_TestEnumBase):
         'EXTRA': 'extra',
         'SORTING': 'scrambled',
         }
-
     _str = {
         'EDITED': '  edited? -> ',
         'OK': ' ' * 13,
