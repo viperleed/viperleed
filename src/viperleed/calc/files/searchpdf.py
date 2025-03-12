@@ -608,7 +608,7 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
     if timestamps is not None:
         headers += ',Timestamp'
         report_csv_data.append(timestamps)
-        formatting += '%s'
+        formatting.append('%s')
 
     np.savetxt(
         csv_name,
