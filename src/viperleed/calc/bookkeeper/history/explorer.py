@@ -206,7 +206,7 @@ class HistoryExplorer:
     def _append_existing_folder(self, path_to_folder, insert_sorted=True):
         """Register a new folder, without updating the parent mapping."""
         if path_to_folder.parent != self.path:
-            raise ValueError(f'Not a subfolder of {self.path}')
+            raise ValueError(f'Not a subfolder of {self.path}.')
         folder = HistoryFolder(path_to_folder)
         parent_hash = folder.parent or folder.hash_
         self._subfolders.append(folder)

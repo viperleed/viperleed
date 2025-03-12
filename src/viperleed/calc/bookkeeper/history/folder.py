@@ -162,7 +162,8 @@ class HistoryFolder(IncompleteHistoryFolder):
         super()._analyze_path()
         set_frozen_attr(self, 'metadata', BookkeeperMetaFile(self.path))
         try:
-            self.metadata.read()  # pylint: disable=no-member  # Inference
+            # pylint: disable-next=no-member  # Inference
+            self.metadata.read()
         except FileNotFoundError:
             folder_name = f'{self.path.parent.name}/{self.path.name}'
             LOGGER.warning(
