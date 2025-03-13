@@ -265,13 +265,12 @@ class TestParametersEditor:
     def test_write_modified_nothing(self, read_one_param_file):
         """Check that file is unchanged with no edits."""
         fpath, rpars = read_one_param_file
+        ori_contents = fpath.read_text(encoding='utf-8')
         rpars.files_to_out.clear()  # In case STOP was commented out
         editor = ParametersFileEditor(rpars, path=fpath.parent)
         editor.write_modified_parameters()
-        ori_path = next(fpath.parent.glob(f'PARAMETERS*{rpars.timestamp}'))
-        with fpath.open('r', encoding='utf-8') as mod_file:
-            with ori_path.open('r', encoding='utf-8') as ori_file:
-                assert mod_file.read() == ori_file.read()
+        edited_contents = fpath.read_text(encoding='utf-8')
+        assert edited_contents == ori_contents
         assert not rpars.files_to_out
 
     def test_write_modified_twice(self, read_one_param_file):
