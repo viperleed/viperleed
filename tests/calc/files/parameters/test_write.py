@@ -153,9 +153,8 @@ class TestParametersEditor:
                      return_value=mock_reader)
         mock_reader.__enter__.side_effect = Exception('read failed')
         with pytest.raises(Exception, match='read failed'):
-            with execute_in_dir(fpath.parent):
-                with ParametersFileEditor(rpars) as editor:
-                    editor.comment_out_parameter('PARAM1')
+            with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+                editor.comment_out_parameter('PARAM1')
 
     def test_modify_parameter_explicit_value(self):
         """Test successful execution of the modify_param method."""
