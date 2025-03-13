@@ -17,7 +17,6 @@ from pytest_cases import parametrize
 from viperleed.calc.files import parameters
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.run import _finalize_on_early_exit
-from viperleed.calc.run import _get_parent_directory_name
 from viperleed.calc.run import _make_rpars_and_slab
 from viperleed.calc.run import _interpret_parameters
 from viperleed.calc.run import _read_parameters_file
@@ -227,16 +226,6 @@ class TestFinalizeOnEarlyExit:
         _finalize_on_early_exit(arg)
         for mock_name, call in expect_calls.items():
             mocks[mock_name].mock_calls = [call]
-
-
-def test_get_parent_directory_name(mocker, caplog):
-    """Test correct result of the _get_parent_directory_name helper."""
-    caplog.set_level(5)
-    fake_cwd = Path('/home/user/project')
-    mocker.patch('pathlib.Path.cwd', return_value=fake_cwd)
-    expect_name = 'user'
-    assert _get_parent_directory_name() == expect_name
-    assert expect_name in caplog.text
 
 
 class TestMakeRparsAndSlab:
@@ -599,11 +588,13 @@ class TestSetSystemName:
         _set_system_name(rpars, explicit)
         assert rpars.systemName is explicit
 
-    def test_from_parent_directory(self, mocker):
+    def test_from_parent_directory(self, mocker, caplog):
         """Test setting system name from the parent directory."""
-        rpars, parent = (mocker.MagicMock() for _ in range(2))
-        mock_get_parent = mocker.patch(f'{_MODULE}._get_parent_directory_name',
-                                       return_value=parent)
+        caplog.set_level(5)
+        rpars = mocker.MagicMock()
+        expect_name = 'user'
+        fake_cwd = Path(f'/home/{expect_name}/cwd')
+        mocker.patch('pathlib.Path.cwd', return_value=fake_cwd)
         _set_system_name(rpars, None)
-        assert rpars.systemName is parent
-        mock_get_parent.assert_called_once()
+        assert expect_name in caplog.text
+        assert rpars.systemName == expect_name

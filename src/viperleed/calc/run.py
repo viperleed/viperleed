@@ -149,14 +149,6 @@ def _finalize_on_early_exit(rpars_or_manifest):
     close_all_handlers(LOGGER)
 
 
-def _get_parent_directory_name():
-    """Return the name of the directory above the current one."""
-    _system_name = Path.cwd().parent.name
-    LOGGER.info('No system name specified. Using name of parent '
-                f'directory: {_system_name}')
-    return _system_name
-
-
 def _make_rpars_and_slab(manifest, preset_params, slab, home):
     """Return an Rparams and a slab for the calculation.
 
@@ -342,5 +334,7 @@ def _set_tensorleed_source(rpars, source):
 def _set_system_name(rpars, system_name):
     """Assign a system name to `rpars` from `system_name` or the CWD."""
     if system_name is None:
-        system_name = _get_parent_directory_name()
+        system_name = Path.cwd().parent.name
+        LOGGER.info('No system name specified. Using name of'
+                    f'the parent directory: {system_name}.')
     rpars.systemName = system_name
