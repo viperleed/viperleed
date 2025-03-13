@@ -1,4 +1,4 @@
-"""Tests for the domain_params module of viperleed.calc.classes.rparams.
+"""Tests module domain_params of viperleed.calc.classes.rparams.
 
 This module contains tests for the basic implementation details of the
 DomainParameters class, especially magic methods. 

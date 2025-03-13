@@ -1,4 +1,4 @@
-"""Tests for the domain_params module of viperleed.calc.classes.rparams.
+"""Tests module domain_params of viperleed.calc.classes.rparams.
 
 This module contains tests for the methods responsible of collecting
 input files for a single domain.
@@ -43,7 +43,7 @@ def fixture_src_dir(tmp_path):
 
 @fixture(name='src_tensor')
 def fixture_src_tensor(tmp_path):
-    """Return the path to a temporary Tensor file as domain source."""
+    """Return the path to a temporary tensor file as domain source."""
     src = tmp_path / 'source_tensor.zip'
     src.touch()
     return src
@@ -57,16 +57,17 @@ class TestCollectInputsForDomain:
         """Replace implementation details of collect_input_files."""
         def _mock(is_tensor=False, is_dir=False,
                   dir_raises=None, tensor_raises=None):
-            mocker.patch('pathlib.Path.is_file', return_value=is_tensor)
-            mocker.patch('pathlib.Path.is_dir', return_value=is_dir)
+            patch = mocker.patch
+            patch('pathlib.Path.is_file', return_value=is_tensor)
+            patch('pathlib.Path.is_dir', return_value=is_dir)
             return {
-            'dir': mocker.patch.object(domain,
-                                       '_collect_inputs_from_directory',
-                                       side_effect=dir_raises),
-            'tensor' : mocker.patch.object(domain,
-                                           '_collect_inputs_from_tensor_file',
-                                           side_effect=tensor_raises),
-            }
+                'dir': patch.object(domain,
+                                    '_collect_inputs_from_directory',
+                                    side_effect=dir_raises),
+                'tensor' : patch.object(domain,
+                                        '_collect_inputs_from_tensor_file',
+                                        side_effect=tensor_raises),
+                }
         return _mock
 
     @fixture(name='collect')
@@ -165,18 +166,18 @@ class TestCollectFromDirectory:
             if src.name == 'PHASESHIFTS':
                 raise exc
         mocks = collect(max_index=0, copy_raises=_copy_raises)
-        assert domain.refcalc_required  # No exception
+        assert domain.refcalc_required  # Because index==0
         assert mocks['copy'].call_count == len(_DOMAIN_INPUT_FILES)
 
     def test_refcalc_required(self, domain, collect):
-        """Check successful fetching of inputs when no Tensor is found."""
+        """Check successful fetching of inputs when no tensor is found."""
         mocks = collect(max_index=0)
         mocks['get_tensor'].assert_not_called()
         assert domain.refcalc_required
         assert mocks['copy'].call_count == len(_DOMAIN_INPUT_FILES)
 
     def test_tensor_found(self, domain, collect):
-        """Check successful collection when a Tensor file is found."""
+        """Check successful collection when a tensor file is found."""
         # Mock the result of iotensors.fetch_unpacked_tensor
         tensor_input_files = _DOMAIN_INPUT_FILES + ('IVBEAMS',)
         unzipped_tensor = {'Tensors': {'Tensors_001': {
@@ -248,7 +249,7 @@ class TestCollectFromZip:
         return _call
 
     def test_success(self, collect, domain):
-        """Check the successful collection of inputs from a Tensor file."""
+        """Check the successful collection of inputs from a tensor file."""
         # Fake the result of the patched unpack_tensor_file
         tensor_input_files = _DOMAIN_INPUT_FILES + ('IVBEAMS',)
         unzipped_tensor = {'Tensors': {'Tensors_002': {
@@ -261,13 +262,13 @@ class TestCollectFromZip:
         assert mocks['copy'].call_count == len(tensor_input_files)
 
     def test_inputs_missing(self, collect):
-        """Check complaints when no Tensors exist."""
+        """Check complaints when no tensors exist."""
         with pytest.raises(FileNotFoundError):
             collect(mock_copy=False)
 
     @parametrize(exc=(OSError, BadZipFile))
     def test_unzip_fails(self, exc, mock_implementation, collect):
-        """Check complaints if unzipping Tensors fails."""
+        """Check complaints if unzipping tensors fails."""
         mocks = mock_implementation()
         mocks['zip'].side_effect = exc
         with pytest.raises(exc):
