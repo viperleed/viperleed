@@ -180,7 +180,7 @@ class TestWriteFinalLogMessages:
 
     @staticmethod
     def check_has_records(caplog, records):
-        """Ensure caplog has only certain records."""
+        """Ensure `caplog` has only certain `records`."""
         logged = tuple(r.getMessage() for r in caplog.records)
         assert len(logged) == len(records)
         for log, expect in zip(logged, records):
@@ -319,7 +319,7 @@ class TestWriteManifest:
         """Check successful writing to the manifest file."""
         caplog.set_level(0)  # All messages
         with execute_in_dir(tmp_path):
-            rpars.manifest = manifest = ManifestFile(*contents)
+            rpars.manifest = ManifestFile(*contents)
             _write_manifest_file(rpars)
         manifest = tmp_path/'manifest'
         assert manifest.is_file()
