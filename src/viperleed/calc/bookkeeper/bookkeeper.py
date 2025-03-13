@@ -77,7 +77,7 @@ class Bookkeeper:
     @property
     def archiving_required(self):
         """Check if archiving is required."""
-        return self.files_need_archiving and not self.history.new_folder.exists
+        return self.files_need_archiving and not self._has_archived_folder
 
     @property
     def orig_inputs_dir(self):
@@ -187,6 +187,17 @@ class Bookkeeper:
             # history.info handler (may create history.info file)
             self.history.prepare_info_file()
             self.history.info.read()
+
+    @property
+    def _has_archived_folder(self):
+        """Return whether a history folder already exists for this calc run."""
+        # NB: it's enough to check for the tensor number and the log
+        # timestamp. We don't need to explicitly check also a job
+        # number, as those are always "fresh" since we FIRST create
+        # the contents of the main folder, and only LATER move the
+        # workhistory ones (in _archive_to_history_and_add_info_entry).
+        archived_name = rf't{self.tensor_number:03d}.*_{self.timestamp}'
+        return self.history.has_subfolder(archived_name)
 
     def _add_history_info_entry(self, tensor_nums):
         """Add a new entry to the history.info file.
@@ -392,7 +403,7 @@ class Bookkeeper:
             Whether anything was archived at all.
         """
         in_archive_mode = self._mode is BookkeeperMode.ARCHIVE
-        if in_archive_mode and self.history.new_folder.exists:
+        if in_archive_mode and self._has_archived_folder:
             LOGGER.info(
                 f'History directory for run {self.history.new_folder.name} '
                 'exists. Exiting without doing anything.'

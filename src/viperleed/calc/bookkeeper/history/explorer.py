@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 from collections import defaultdict
 from operator import attrgetter
 from pathlib import Path
+import re
 import shutil
 
 from viperleed.calc.constants import DEFAULT_HISTORY
@@ -112,7 +113,7 @@ class HistoryExplorer:
         self._maps['main_hash_to_folders'] = defaultdict(list)
         self._maps['hash_to_parent'] = {}
         if not self.path.is_dir():
-            LOGGER.warning(f'No {DEFAULT_HISTORY!r} folder in {self.root}')
+            LOGGER.warning(f'No {DEFAULT_HISTORY!r} folder in {self.root}.')
             return
         # pathlib.Path.iterdir has no guarantees on the sorting order
         # with which the directories are returned. We use alphabetical
@@ -122,7 +123,7 @@ class HistoryExplorer:
         for directory in contents:
             try:
                 self._append_existing_folder(directory, insert_sorted=False)
-            except ValueError: # Not a directory or not a valid name
+            except ValueError:  # Not a directory or not a valid name
                 pass
         self._update_maps()
 
@@ -188,6 +189,10 @@ class HistoryExplorer:
                         f'file and {self.path.name} folder.')
         return fixed_anything
 
+    def has_subfolder(self, name_rgx):
+        """Return whether a a subfolder matching `name_rgx` is present."""
+        return any(re.fullmatch(name_rgx, f.name) for f in self._subfolders)
+
     def list_paths_to_discard(self):
         """Return a tuple of paths to folders that will be discarded."""
         paths = (f.path for f in self.last_folder_and_siblings)
@@ -214,10 +219,10 @@ class HistoryExplorer:
             Path to the folder to be added.
         insert_sorted : bool, optional
             Whether `path_to_folder` should be added in a sorted
-            manner, based on its .name. May be used to speed up
+            manner, based on its .name. Passing False speeds up
             insertion. IMPORTANT NOTE FOR DEVELOPERS: it is critical
-            not to pass False here, unless you are sure that you
-            call _append_existing_folder already in a sorted manner.
+            not to pass False here unless you are sure that you call
+            _append_existing_folder already in a sorted manner.
             Otherwise, the .last_folder property will NOT be the
             most-recent "main" calc run. Default is True.
 
@@ -225,6 +230,13 @@ class HistoryExplorer:
         -------
         appended_folder : HistoryFolder
             The history folder that was added from `path_to_folder`.
+
+        Raises
+        ------
+        ValueError
+            If `path_to_folder` is not a subfolder of history.
+        ValueError
+            If `path_to_folder` is not an existing directory.
         """
         if path_to_folder.parent != self.path:
             raise ValueError(f'Not a subfolder of {self.path}.')
@@ -267,17 +279,10 @@ class HistoryExplorer:
         jobs = self._maps['jobs_for_tensor']
         try:
             # pylint: disable-next=unsubscriptable-object   # Inference
-            job_number = max(jobs[tensor_number])
+            job_number = max(jobs[tensor_number]) + 1
         except ValueError:  # No jobs for this tensor yet
-            job_number = 0
-        dir_name_fmt = f't{tensor_number:03d}.r{{job:03d}}_{suffix}'
-        # If there is already a folder with the same name and correct
-        # suffix, we take that, otherwise, we increase the job number:
-        # it's a new run.
-        base_name = dir_name_fmt.format(job=job_number)
-        if not (self.path / base_name).is_dir():
-            base_name = dir_name_fmt.format(job=job_number + 1)
-        return base_name
+            job_number = 1
+        return f't{tensor_number:03d}.r{job_number:03d}_{suffix}'
 
     def _update_maps(self):
         """Update inner mappings for fast access."""

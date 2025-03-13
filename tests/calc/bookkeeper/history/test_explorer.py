@@ -263,21 +263,14 @@ class TestHistoryExplorerCollection:
         history.collect_subfolders()
         self._check_collected_nothing(history)
 
-    @parametrize(job_exists=(True, False))
-    def test_find_name_for_new_history_subfolder(self, job_exists,
-                                                 history, mocker):
+    def test_find_name_for_new_history_subfolder(self, history, mocker):
         """Test _find_name_for_new_history_subfolder."""
         # pylint: disable-next=protected-access           # OK in tests
-        history._maps['jobs_for_tensor'] = {1: {1} if job_exists else {}}
-        mock_concat = mocker.MagicMock(
-            return_value=mocker.MagicMock(spec=Path)
-            )
-        mock_concat.return_value.is_dir.return_value = job_exists
-        history.path.__truediv__ = mock_concat
+        history._maps['jobs_for_tensor'] = {1: {1}}
         args = 1, 'test'
         # pylint: disable-next=protected-access           # OK in tests
         result = history._find_name_for_new_history_subfolder(*args)
-        assert result == f't00{args[0]}.r001_{args[1]}'
+        assert result == f't00{args[0]}.r002_{args[1]}'
 
     def test_find_new_history_directory(self, history, mocker):
         """Test find_new_history_directory creates a new folder."""
@@ -289,6 +282,23 @@ class TestHistoryExplorerCollection:
         history.find_new_history_directory(1, 'test')
         mock_folder.assert_called_once()
         assert history.new_folder
+
+    _has_subfolders = {
+        r't001\.r002.*_timestamp': True,
+        r't001\.r002.*_other_timestamp': False,
+        }
+
+    @parametrize('name,expect', _has_subfolders.items())
+    def test_has_subfolder(self, name, expect, history, mocker):
+        """Check the expected result of the has_subfolder method."""
+        subfolder = mocker.MagicMock()
+        # We cant pass 'name' as a kwarg to MagicMock, as it
+        # is a special initialization argument for MagicMock.
+        subfolder.name = 't001.r002.more-text_timestamp'
+        # pylint: disable-next=protected-access           # OK in tests
+        history._subfolders = [subfolder]
+        result = history.has_subfolder(name)
+        assert result == expect
 
     def test_last_folder_no_subfolders(self, history):
         """Test last_folder when there are no subfolders."""
