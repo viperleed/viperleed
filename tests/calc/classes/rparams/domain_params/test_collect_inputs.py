@@ -114,12 +114,13 @@ class TestCollectInputsForDomain:
             mock.assert_not_called()
         self.check_log_written(caplog)
 
-    def test_fetch_tensor_fails(self, collect, src_tensor):
+    @parametrize(exc=(OSError, BadZipFile))
+    def test_fetch_tensor_fails(self, exc, collect, src_tensor):
         """Check complaints when collection fails."""
         _raises = pytest.raises(RuntimeError,
                                 match='Error getting domain input files')
         with _raises:
-            collect(src_tensor, is_tensor=True, tensor_raises=OSError)
+            collect(src_tensor, is_tensor=True, tensor_raises=exc)
 
 
 class TestCollectFromDirectory:
