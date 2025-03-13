@@ -158,7 +158,7 @@ def _get_parent_directory_name():
 
 
 def _make_rpars_and_slab(manifest, preset_params, slab, home):
-    """Return an Rparams and a SurfaceSlab.
+    """Return an Rparams and a slab for the calculation.
 
     Parameters
     ----------
@@ -167,8 +167,8 @@ def _make_rpars_and_slab(manifest, preset_params, slab, home):
     preset_params : dict or None
         Values of PARAMETERS to replace those read from file.
     slab : SurfaceSlab or None
-        A user-given slab. If given, no POSCAR file is read from the
-        current directory.
+        A user-given slab. If not None, no POSCAR file is read
+        from the current directory.
     home : pathlike or None
         Path to the folder in which viperleed.calc was originally
         executed, i.e., before moving to the work directory. If
@@ -180,10 +180,10 @@ def _make_rpars_and_slab(manifest, preset_params, slab, home):
         The run parameters for this calculation, loaded with
         `preset_params` and ready to be used.
     slab : SurfaceSlab or None
-        The slab for this calculation. Read from POSCAR and
-        updated with the contents of `rpars`, unless this
-        is a multi-domain calculation. None in the latter
-        case.
+        The slab for this calculation. None for a multi-domain
+        calculation, otherwise a SurfaceSlab read from POSCAR
+        (if None was given as the `slab` argument), updated
+        with the contents of `rpars`.
 
     Raises
     ------
@@ -194,7 +194,7 @@ def _make_rpars_and_slab(manifest, preset_params, slab, home):
         If PARAMETERS is not found in the current directory.
     FileNotFoundError
         If POSCAR is not found in the current directory for a
-        single-domain calculation
+        single-domain calculation.
     OSError
         If duplicating POSCAR to POSCAR_user fails.
     ParameterError
@@ -211,7 +211,7 @@ def _make_rpars_and_slab(manifest, preset_params, slab, home):
     elif domains and slab is not None:
         # no POSCAR in main folder for domain searches
         raise TypeError('Cannot give slab argument '
-                        'for a multi-domain calculation')
+                        'for a multi-domain calculation.')
 
     # Store the directory in which the calculation originally started.
     # Must be done before interpreting PARAMETERS, as it is needed
@@ -239,10 +239,10 @@ def _interpret_parameters(rpars, slab, preset_params):
             parameters.errors.SuperfluousParameterError):
         # Domains calculation is the only case in which slab is None
         LOGGER.error('Main PARAMETERS file contains an invalid parameter '
-                     'for a multi-domain calculation', exc_info=True)
+                     'for a multi-domain calculation.', exc_info=True)
         raise
     except parameters.errors.ParameterError:
-        LOGGER.error('Exception while reading PARAMETERS file', exc_info=True)
+        LOGGER.error('Exception while reading PARAMETERS file.', exc_info=True)
         raise
 
     # Load parameter presets, overriding those in PARAMETERS
@@ -252,7 +252,7 @@ def _interpret_parameters(rpars, slab, preset_params):
         LOGGER.warning('Error applying preset parameters: ', exc_info=True)
 
     _set_log_level(rpars, preset_params)
-    LOGGER.debug('PARAMETERS file was read successfully')
+    LOGGER.debug('PARAMETERS file was read successfully.')
 
 
 def _read_parameters_file(preset_params):
@@ -305,7 +305,7 @@ def _read_poscar_file(manifest):
         LOGGER.error('POSCAR not found. Stopping execution...')
         raise
     except Exception:
-        LOGGER.error('Exception while reading POSCAR', exc_info=True)
+        LOGGER.error('Exception while reading POSCAR.', exc_info=True)
         raise
 
     if not slab.preprocessed:
@@ -340,7 +340,7 @@ def _set_tensorleed_source(rpars, source):
 
 
 def _set_system_name(rpars, system_name):
-    """Assign a system name to rpars from `system_name` or the CWD."""
+    """Assign a system name to `rpars` from `system_name` or the CWD."""
     if system_name is None:
         system_name = _get_parent_directory_name()
     rpars.systemName = system_name
