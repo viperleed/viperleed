@@ -14,6 +14,10 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import FieldBase
+from viperleed.calc.bookkeeper.history.entry.field import DefaultMessage
+from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.bookkeeper.history.entry.list_of_int_field import (
     CommaSeparatedIntsField,
     JobIdsField,
@@ -24,10 +28,6 @@ from viperleed.calc.bookkeeper.history.entry.list_of_int_field import (
     TensorNumsField,
     )
 from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
-from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
-from viperleed.calc.bookkeeper.history.entry.field import FieldBase
-from viperleed.calc.bookkeeper.history.entry.field import DefaultMessage
-from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.sections.calc_section import CalcSection
 
 from .test_field import _TestFieldUtils
@@ -145,6 +145,10 @@ class TestCommaSeparatedIntsField(_TestAbstractBase):
     _clean = {
         '1, 2, 3': {'value': (1, 2, 3), 'needs_fixing': False,
                     'was_understood': True},
+        '1': {'value': (1,), '_value_str': '1', 'needs_fixing': False,
+              'was_understood': True},
+        12: {'value': (12,), '_value_str': '12', 'needs_fixing': False,
+             'was_understood': True},
         # The next ones are invalid
         '1 2 3': {'value': '1 2 3', 'needs_fixing': True,
                   'was_understood': True},
@@ -152,10 +156,6 @@ class TestCommaSeparatedIntsField(_TestAbstractBase):
                    'was_understood': True},
         '1, two, 3': {'value': '1, two, 3', 'needs_fixing': False,
                       'was_understood': False},
-        '1': {'value': (1,), '_value_str': '1', 'needs_fixing': False,
-              'was_understood': True},
-        12: {'value': (12,), '_value_str': '12', 'needs_fixing': False,
-             'was_understood': True},
         }
 
     @parametrize('value,attrs', _clean.items(), ids=_clean)
@@ -210,8 +210,8 @@ class TestSpaceSeparatedIntsField(_TestAbstractBase):
             ),
         'one value': (
             159,
-            {'value': (159,), '_value_str': '159', 'needs_fixing': False,
-             'was_understood': True},
+            {'value': (159,), '_value_str': '159', 'was_understood': True,
+             'needs_fixing': False},
             ),
         'valid string': (
             '1 2 3',
