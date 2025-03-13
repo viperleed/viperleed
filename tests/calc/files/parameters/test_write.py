@@ -414,10 +414,13 @@ class TestCommentOutAndModifyFunctions:
             for new_value in (once, twice):
                 rpars.LMAX = new_value
                 modify(rpars, 'LMAX')
-        check_file_modified(fpath, 'LMAX = 9-11')
-        check_file_modified(fpath,
+        check_file_modified(fpath,  # The original line
+                            '! LMAX = 8-14',
+                            comment='! line automatically changed to:')
+        check_file_modified(fpath,  # First edit
                             '! LMAX = 3-16',
                             comment='! line automatically changed to:')
+        check_file_modified(fpath, 'LMAX = 9-11')  # Last edit
         check_marked_as_edited(rpars)
 
     def test_modify_replicated_param(self, read_one_param_file):
