@@ -129,9 +129,8 @@ class WorkhistoryHandler:
             Indices of tensors found in the current workhistory folder
             that have been moved to history as new history entries.
         """
-        tensor_nums = set()
         if not self.path.is_dir():
-            return tensor_nums
+            return set()
 
         # Always remove any 'previous'-labeled folders
         self._discard_previous()
