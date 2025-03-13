@@ -1,4 +1,4 @@
-"""Tests module domain_params of viperleed.calc.classes.rparams.
+"""Tests for module domain_params of viperleed.calc.classes.rparams.
 
 This module contains tests for the methods responsible of collecting
 input files for a single domain.
