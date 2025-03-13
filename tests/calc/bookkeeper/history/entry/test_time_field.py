@@ -17,6 +17,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.bookkeeper.history.entry.time_field import TimestampField
 from viperleed.calc.bookkeeper.history.entry.time_field import TimestampFormat
@@ -102,7 +103,7 @@ class CasesTimestampField:
 
     @case(tags=(Tag.NO_FMT, Tag.INVALID))
     def case_now_no_fmt(self, make_time):
-        """Return a format-less TimestampField with value fo now."""
+        """Return a format-less TimestampField with value of now."""
         return self.case_now(make_time, None)
 
     _string_valid = {  # With recognizable format
@@ -214,6 +215,11 @@ class TestTimestampFormat:
 
 class TestTimestampField:
     """Tests for the TimestampField class."""
+
+    def test_class_attrs(self):
+        """Check the expected class-level attributes of JobNameField."""
+        assert TimestampField.is_mandatory
+        assert TimestampField.tag is FieldTag.TIMESTAMP
 
     @parametrize_with_cases('field', CasesTimestampField.case_empty)
     def test_init_empty(self, field):
