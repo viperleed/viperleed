@@ -32,8 +32,8 @@ from .errors import NoHistoryEntryError
 class CantRemoveReason(Enum):
     """Error messages explaining why an entry can't be removed."""
 
-    FIXABLE = ('Contains fields with non-standard format (run bookkeeper '
-               f'{Mode.FIX.long_flag} to automatically fix this).')
+    FIXABLE = ('Contains fields with non-standard format (run \'bookkeeper '
+               f'{Mode.FIX.long_flag}\' to automatically fix this).')
     HAS_COMMENTS = 'Contains fields with user comments.'
     IS_COMMENT = 'Is a comment-only entry.'
     IS_EMPTY = 'Has no contents.'
@@ -87,13 +87,13 @@ class HistoryInfoFile:
         root_path : str or Path
             The path to the folder containing the history.info file.
         create_new : bool, optional
-            Whether a empty file should be created
-            in case `file_path` does not exist.
+            Whether a empty file should be created in case no
+            history.info file exists at `root_path`. Default
+            is False.
 
-        Raises
-        ------
-        FileNotFoundError
-            If `file_path` does not exist and `create_new` is False.
+        Returns
+        -------
+        None.
         """
         self.path = Path(root_path).resolve() / HISTORY_INFO_NAME
         self._create_new = create_new
@@ -120,6 +120,9 @@ class HistoryInfoFile:
         """Write `entry` to the history.info file."""
         if fix_time_format:
             entry = entry.with_time_format(self._time_format or 'default')
+            # NB: there's no need to differentiate whether we already
+            # had a _time_format here: if we didn't, this is the first
+            # entry, if we did, entry.time_format is self._time_format.
             self._time_format = entry.time_format
         new_text = self._new_separator
         entry_text = str(entry)
@@ -247,12 +250,12 @@ class HistoryInfoFile:
 
     @_create_or_raise
     def _do_remove_last_entry(self):
-        """Actually remove the last entry assuming its possible."""
+        """Actually remove the last entry assuming it is possible."""
         self._entries.pop()
         if self._entries:
             content_without_last, *_ = self.raw_contents.rsplit(
                 HISTORY_INFO_SEPARATOR,
-                maxsplit=1
+                maxsplit=1,
                 )
         else:  # Nothing left
             content_without_last = ''
