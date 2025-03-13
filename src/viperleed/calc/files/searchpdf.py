@@ -80,8 +80,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     rfacsMin = np.array([min(rfa) for rfa in rfacs])
     rfacsMax = np.array([max(rfa) for rfa in rfacs])
     rfacsMean = np.array([np.mean(rfa) for rfa in rfacs])
-    rp.searchplots[-1] = (searchname, gens, rfacsMin, rfacsMax, rfacsMean,
-                          timestamps)
+    rp.searchplots[-1] = (searchname, gens, rfacsMin, rfacsMax, rfacsMean)
     # rfacsStd = np.array([np.std(rfa, ddof = 1) for rfa in rfacs])
     rlastunique = [rfacs[-1][0]]
     lastpops = [1]
@@ -489,18 +488,16 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
     allmax = []
     allmean = []
     allgens = []
-    all_timestamps = []
     markers = []
     parScatterLines = []  # list of lists [gens, mean, max] per search
     gencount = 0
     for i in range(0, len(rp.searchplots)):
-        (name, gens, rmin, rmax, rmean, timestamps) = rp.searchplots[i]
+        (name, gens, rmin, rmax, rmean) = rp.searchplots[i]
         markers.append((gencount, "Search "+name))
         allgens.extend([v + gencount for v in gens])
         allmin.extend(rmin)
         allmax.extend(rmax)
         allmean.extend(rmean)
-        all_timestamps.extend(timestamps)
         if rp.parScatter[i]:
             parScatterLines.append(list(zip(*rp.parScatter[i])))
             parScatterLines[-1][0] = [v + gencount for v in
@@ -604,15 +601,11 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
     report_csv_data = [allgens, allmin, allmax, allmean]
     headers = "Generation,R_min,R_max,R_mean"
     # optionally add timestamps if available
-    if timestamps is not None:
-        headers += ',Timestamp'
-        report_csv_data.append(timestamps)
 
     np.savetxt(
         csv_name,
-        np.array(report_csv_data, dtype=np.str_).T,
+        np.array(report_csv_data).T,
         delimiter=',',
         header=headers,
-        fmt='%s',
     )
     logger.info(f'Written to {csv_name}.')

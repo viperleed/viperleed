@@ -11,7 +11,6 @@ __license__ = 'GPLv3+'
 
 from collections import Counter
 import copy
-import datetime
 import logging
 import os
 from pathlib import Path
@@ -932,7 +931,6 @@ def search(sl, rp):
     repeat = True
     genOffset = 0
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
-    timestamps = []  # timestamps of generations
     markers = []
     rfaclist = []
     parab_x0 = None    # starting guess for parabola                            # TODO: would be nicer to incorporate it into a ParabolaFit class
@@ -1080,7 +1078,6 @@ def search(sl, rp):
                                 )
                     for gen, rfacs, configs in newData:
                         gens.append(gen + genOffset)
-                        timestamps.append(datetime.datetime.now().isoformat())
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
                         dgen = {}
@@ -1158,7 +1155,6 @@ def search(sl, rp):
                             searchpdf.writeSearchProgressPdf(
                                 rp, gens, rfaclist, lastconfig,
                                 markers=markers, rfac_predict=rfac_predict,
-                                timestamps=timestamps
                                 )
                         except Exception:
                             logger.warning("Error writing Search-progress.pdf",
@@ -1291,8 +1287,7 @@ def search(sl, rp):
         try:
             searchpdf.writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
                                              markers=markers,
-                                             rfac_predict=rfac_predict,
-                                             timestamps=timestamps)
+                                             rfac_predict=rfac_predict)
         except Exception:
             logger.warning("Error writing Search-progress.pdf",
                            exc_info=True)
