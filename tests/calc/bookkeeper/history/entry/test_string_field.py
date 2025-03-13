@@ -11,6 +11,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.field import EmptyField
 from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.bookkeeper.history.entry.string_field import FolderField
@@ -23,7 +24,7 @@ from .test_field import _TestFieldUtils
 
 
 class TestFolderField(_TestFieldUtils):
-    """Tests for the FolderField class."""
+    """Tests for the tag-bearing FolderField class."""
 
     test_cls = FolderField
 
@@ -31,6 +32,12 @@ class TestFolderField(_TestFieldUtils):
     def fixture_folder_field(self, make_field_factory):
         """Return a factory of FolderField instances."""
         return make_field_factory(self.test_cls)
+
+    def test_class_attrs(self):
+        """Check the expected class-level attributes of FolderField."""
+        field = self.test_cls
+        assert field.is_mandatory
+        assert field.tag is FieldTag.FOLDER
 
     _init = {
         'empty': (
@@ -213,7 +220,7 @@ class TestFolderField(_TestFieldUtils):
 
 
 class TestJobNameField(_TestFieldUtils):
-    """Tests for the JobNameField class."""
+    """Tests for the tag-bearing JobNameField class."""
 
     test_cls = JobNameField
 
@@ -221,6 +228,12 @@ class TestJobNameField(_TestFieldUtils):
     def fixture_job_field(self, make_field_factory):
         """Return a factory of JobNameField instances."""
         return make_field_factory(self.test_cls)
+
+    def test_class_attrs(self):
+        """Check the expected class-level attributes of JobNameField."""
+        field = self.test_cls
+        assert not field.is_mandatory
+        assert field.tag is FieldTag.JOB_NAME
 
     _init = {
         'empty': (
@@ -263,7 +276,7 @@ class TestJobNameField(_TestFieldUtils):
 
 
 class TestStringField(_TestFieldUtils):
-    """Tests for the StringField class."""
+    """Tests for the tag-less StringField class."""
 
     test_cls = StringField
 
