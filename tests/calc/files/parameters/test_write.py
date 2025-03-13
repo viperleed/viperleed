@@ -146,7 +146,7 @@ class TestParametersEditor:
         assert modified[0].comment == comment
 
     def test_fails_to_read_parameters(self, read_one_param_file, mocker):
-        """Check complaint when reading PARAMETERS fails."""
+        """Check complaints when reading PARAMETERS fails."""
         fpath, rpars = read_one_param_file
         mock_reader = mocker.MagicMock()
         mocker.patch(f'{_MODULE}.RawLineParametersReader',
@@ -158,7 +158,7 @@ class TestParametersEditor:
                     editor.comment_out_parameter('PARAM1')
 
     def test_modify_parameter_explicit_value(self):
-        """Test successful execution of modify_param method."""
+        """Test successful execution of the modify_param method."""
         rpars = Rparams()
         editor = ParametersFileEditor(rpars)
         modpar, new_value, comment = 'BULK_LIKE_BELOW', 0.23, 'Test Comment'
@@ -169,7 +169,7 @@ class TestParametersEditor:
         assert modified.fmt_value == '0.2300'
 
     def test_modify_multi_valued_raises(self, read_one_param_file):
-        """Test successful execution of modify_param method."""
+        """Test complaints when modifying a multi-valued parameter."""
         rpars = Rparams()
         fpath, rpars = read_one_param_file
         with ParametersFileEditor(rpars, path=fpath.parent) as editor:
@@ -306,7 +306,7 @@ def check_file_modified(fpath, assign_str, comment=''):
 
 
 def check_marked_as_edited(rpars):
-    """Check that rpars has PARAMETERS among the edited files."""
+    """Check that `rpars` has PARAMETERS among the edited files."""
     # pylint: disable-next=magic-value-comparison
     assert 'PARAMETERS' in rpars.files_to_out
 
@@ -333,10 +333,10 @@ class TestCommentOutAndModifyFunctions:
         check_marked_as_edited(rpars)
 
     def test_modify_multi_value_add_new(self, read_domains_file):
-        """Check complaints when trying edit of a non-user assignment."""
+        """Check correct addition of a new multi-valued line."""
         fpath, rpars = read_domains_file
         with execute_in_dir(fpath.parent):
-            new = Assignment('dummy old value',
+            new = Assignment('this line did not exist',
                              'DOMAIN',
                              'DOMAIN added = this line did not exist',
                              flags_str='added')
@@ -344,14 +344,14 @@ class TestCommentOutAndModifyFunctions:
         check_file_modified(fpath, 'DOMAIN added = other_path')
 
     def test_modify_multi_value_add_new_one_given(self, read_domains_file):
-        """Check complaints when trying edit of a non-user assignment."""
+        """Check addition of a new multi-valued line when only one existed."""
         fpath, rpars = read_domains_file
         orig = next(a for a in rpars.readParams['DOMAIN']
                     if a.flags_str == 'Bi')
         with execute_in_dir(fpath.parent):
             # Comment out one of the two
             comment_out(rpars, 'DOMAIN', original=orig)
-            new = Assignment('dummy old value',
+            new = Assignment('this line did not exist',
                              'DOMAIN',
                              'DOMAIN added = this line did not exist',
                              flags_str='added')
@@ -408,7 +408,7 @@ class TestCommentOutAndModifyFunctions:
         check_marked_as_edited(rpars)
 
     def test_modify_param_twice(self, read_one_param_file):
-        """Check effective modification of one parameter."""
+        """Check successive modifications of one parameter."""
         fpath, rpars = read_one_param_file
         once, twice = LMax(3, 16), LMax(9, 11)
         with execute_in_dir(fpath.parent):
