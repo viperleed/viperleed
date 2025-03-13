@@ -32,7 +32,7 @@ class HistoryExplorer:
     _updater = 'collect_subfolders'
 
     def __init__(self, root):
-        """Initialize a history explorer at a root path."""
+        """Initialize a history explorer at a `root` path."""
         self._path = root / DEFAULT_HISTORY
         # While the history.info file is technically in the root
         # directory and not in the history directory, it makes
@@ -277,11 +277,8 @@ class HistoryExplorer:
         str
         """
         jobs = self._maps['jobs_for_tensor']
-        try:
-            # pylint: disable-next=unsubscriptable-object   # Inference
-            job_number = max(jobs[tensor_number]) + 1
-        except ValueError:  # No jobs for this tensor yet
-            job_number = 1
+        # pylint: disable-next=unsubscriptable-object   # Inference
+        job_number = max(jobs[tensor_number], default=0) + 1
         return f't{tensor_number:03d}.r{job_number:03d}_{suffix}'
 
     def _update_maps(self):
