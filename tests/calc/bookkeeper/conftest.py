@@ -93,88 +93,76 @@ def factory_after_bookkeeper_run():
     return _make
 
 
+@fixture(name='_make_root_tree')
+def factory_make_root_tree(tmp_path):
+    """Populate a temporary directory with files."""
+    default_root_contents = {
+        DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
+        DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
+
+        # Input files
+        **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
+
+        # OUT files
+        DEFAULT_OUT : {f: MOCK_OUT_CONTENT for f in MOCK_STATE_FILES},
+
+        # Original inputs in SUPP
+        f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
+            f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
+            },
+
+        # Pre-existing (empty) history directories
+        f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
+        f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
+
+        # workhistory subfolders, with dummy files
+        **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
+           for f in MOCK_WORKHISTORY},
+        }
+
+    def _make(**kwargs):
+        def _populate_root():
+            root_contents = {**default_root_contents, **kwargs}
+            filesystem_from_dict(root_contents, tmp_path)
+            return tmp_path
+        return _populate_root
+
+    return _make
+
+
 @fixture(name='mock_tree_after_calc_execution')
 @parametrize(log_file_name=MOCK_LOG_FILES)
-@parametrize(with_notes=(True,False))
+@parametrize(with_notes=(True, False))
 @parametrize_with_cases('history_info_contents',
                         cases=(cases_entry, cases_history),
                         has_tag=Tag.BOOKKEEPER)
-def factory_mock_tree_after_calc_execution(log_file_name, with_notes,
-                                           history_info_contents, tmp_path):
+def factory_mock_tree_after_calc_execution(log_file_name,
+                                           with_notes,
+                                           history_info_contents,
+                                           _make_root_tree):
     """Return a temporary directory with contents like after a calc run."""
-    def _make():
-        root_contents = {
-            DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
-            DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
-            log_file_name: None,
-
-            # Input files
-            **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
-
-            # OUT files
-            DEFAULT_OUT : {f: MOCK_OUT_CONTENT for f in MOCK_STATE_FILES},
-
-            # Original inputs in SUPP
-            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
-                f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
-                },
-
-            # Pre-existing (empty) history directories
-            f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
-            f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
-
-            # workhistory subfolders, with dummy files
-            **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
-               for f in MOCK_WORKHISTORY},
-            }
-        # Files/folders that depend on the arguments
-        if with_notes:
-            root_contents['notes.txt'] = NOTES_TEST_CONTENT
-        if history_info_contents is not None:  # history.info
-            root_contents[HISTORY_INFO_NAME] = history_info_contents
-
-        # Actually create files and folders
-        filesystem_from_dict(root_contents, tmp_path)
-
-        return tmp_path
-    return _make
+    kwargs = {
+        log_file_name: None,
+        }
+    # Files/folders that depend on the arguments
+    if with_notes:
+        kwargs['notes.txt'] = NOTES_TEST_CONTENT
+    if history_info_contents is not None:  # history.info
+        kwargs[HISTORY_INFO_NAME] = history_info_contents
+    return _make_root_tree(**kwargs)
 
 
 @fixture(name='mock_tree_after_calc_execution_with_out_suffix')
-def factory_mock_tree_after_calc_execution_out_suffix(tmp_path):
+def factory_mock_tree_after_calc_execution_out_suffix(_make_root_tree):
     """Create files like those after calc HAD run before we dropped _OUT."""
-    def _make():
-        root_contents = {
-            DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
-            DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
-            f'{LOG_PREFIX}_{MOCK_TIMESTAMP}.log': None,
+    kwargs = {
+        f'{LOG_PREFIX}_{MOCK_TIMESTAMP}.log': None,
 
-            # Input files
-            **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
-
-            # OUT files, with an old-style _OUT suffix
-            DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_SUFFIXED_CONTENT
-                           for f in MOCK_STATE_FILES},
-
-            # Original inputs in SUPP
-            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
-                f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
-                },
-
-            # Pre-existing (empty) history directories
-            f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
-            f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
-
-            # workhistory subfolders, with dummy files
-            **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
-               for f in MOCK_WORKHISTORY},
-            }
-
-        # Actually create files and folders
-        filesystem_from_dict(root_contents, tmp_path)
-
-        return tmp_path
-    return _make
+        # OUT files, with an old-style _OUT suffix
+        DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_SUFFIXED_CONTENT
+                       for f in MOCK_STATE_FILES},
+        }
+    return _make_root_tree(**kwargs)
 
 
 @fixture(name='mock_tree_before_calc_execution')
