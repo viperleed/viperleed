@@ -191,7 +191,7 @@ class TestHistoryExplorer:
                  _too_early_call.items(),
                  ids=_too_early_call)
     def test_too_early_method_call(self, method_name, updater, history):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check complaints when `methods_name` is called too early."""
         # pylint: disable-next=magic-value-comparison
         if '(' not in method_name:
             args = tuple()
@@ -219,6 +219,18 @@ class TestHistoryExplorerCollection:
         assert all(not m for m in maps)
         assert all(m is not None for m in maps)
 
+    def test_collect_subfolders_append_fails(self, history, mocker):
+        """Test collect_subfolders when appending folders fails."""
+        directories = [mocker.MagicMock(spec=Path) for _ in range(2)]
+        for i, directory in enumerate(directories):
+            directory.name = f't00{i}.r001_rest'
+        mocker.patch.object(history.path, 'iterdir', return_value=directories)
+        mocker.patch.object(history,
+                            '_append_existing_folder',
+                            side_effect=ValueError)
+        history.collect_subfolders()
+        self._check_collected_nothing(history)
+
     def test_collect_subfolders_empty(self, history, patched_folder):
         """Test collect_subfolders when there are no subfolders."""
         history.path.iterdir.return_value = []
@@ -229,7 +241,7 @@ class TestHistoryExplorerCollection:
     def test_collect_subfolders_no_history(self, history,
                                            patched_folder,
                                            mocker):
-        """Test collect_subfolders when there are no subfolders."""
+        """Test collect_subfolders when history does not exist."""
         mocker.patch.object(history.path, 'is_dir', return_value=False)
         mock_warn = mocker.patch(f'{_MODULE}.LOGGER.warning')
         history.collect_subfolders()
@@ -250,18 +262,6 @@ class TestHistoryExplorerCollection:
         history.collect_subfolders()
         # pylint: disable-next=protected-access           # OK in tests
         assert len(history._subfolders) == len(directories)
-
-    def test_collect_subfolders_funny(self, history, mocker):
-        """Test collect_subfolders with valid folders."""
-        directories = [mocker.MagicMock(spec=Path) for _ in range(2)]
-        for i, directory in enumerate(directories):
-            directory.name = f't00{i}.r001_rest'
-        mocker.patch.object(history.path, 'iterdir', return_value=directories)
-        mocker.patch.object(history,
-                            '_append_existing_folder',
-                            side_effect=ValueError)
-        history.collect_subfolders()
-        self._check_collected_nothing(history)
 
     def test_find_name_for_new_history_subfolder(self, history):
         """Test _find_name_for_new_history_subfolder."""
