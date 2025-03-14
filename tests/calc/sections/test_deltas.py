@@ -70,9 +70,9 @@ class TestRunDelta:
             tensorname='test_tensor',
             deltalogname='test_delta.log',
             din='test input',
-            name='test_name',
             foldername='calculating_test_delta',
             )
+        runtask.name = 'test_name'
         return runtask
 
     @fixture(name='mock_implementation')
