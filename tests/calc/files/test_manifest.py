@@ -24,7 +24,7 @@ _SAMPLE_CONTENTS = 'file1.txt', 'file2.log', 'some_root_folder'
 
 @fixture(name='manifest')
 def fixture_manifest(tmp_path):
-    """Return a ManifestFile at tmp_path."""
+    """Return a ManifestFile at `tmp_path`."""
     with execute_in_dir(tmp_path):
         return ManifestFile(*_SAMPLE_CONTENTS)
 
@@ -93,12 +93,12 @@ class TestManifestFile:
         # pylint: disable-next=protected-access           # OK in tests
         assert manifest._labels[other_manifest.path] == label
 
-    def test_add_manifest_same_path(self, manifest, tmp_path):
+    def test_add_manifest_same_path(self, manifest):
         """Test adding another ManifestFile."""
         label = 'extra'
-        other_manifest = ManifestFile('b.log', path=tmp_path)
+        other_manifest = ManifestFile('b.log', path=manifest.path)
         manifest.add_manifest(other_manifest, label=label)
-        check_contents(manifest, other_manifest.path, 'b.log')
+        check_contents(manifest, manifest.path, 'b.log')
         # pylint: disable-next=protected-access           # OK in tests
         assert manifest._labels[other_manifest.path] != label
 
@@ -214,7 +214,7 @@ class TestManifestFileReadWrite:
 
     @parametrize('line,rel_path,expect', _read_line.values(), ids=_read_line)
     def test_read_contents_line_success(self, line, rel_path, expect):
-        """Check complaints for an invalid content path."""
+        """Check successful reading of a single manifest line."""
         manifest = ManifestFile()
         # pylint: disable=protected-access                # OK in tests
         manifest._sections['SECTION'] = set()
@@ -273,7 +273,7 @@ class TestManifestFileReadWrite:
         assert manifest._labels == expect_labels
 
     def test_write_children(self, manifest):
-        """Check expected results of writing a manifest without children."""
+        """Check expected results of writing a manifest with children."""
         with execute_in_dir(manifest.path):
             Path('path_to_empty').mkdir()
             Path('path_to_other').mkdir()
@@ -291,7 +291,7 @@ class TestManifestFileReadWrite:
         self.check_written_contents(manifest, expect)
 
     def test_write_children_root_empty(self, tmp_path):
-        """Check expected results of writing a manifest without children."""
+        """Check expected results of writing a manifest with only children."""
         with execute_in_dir(tmp_path):
             manifest = ManifestFile()
             empty_manifest = ManifestFile(path='path_to_empty')
