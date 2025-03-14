@@ -140,7 +140,7 @@ class TestHistoryInfoFile:
         assert bool(history_info.last_entry) == bool(contents)
 
     def test_has_notes(self, history_info_file):
-        """Check that the history.info file is read correctly."""
+        """Check that notes in history.info file entries are read correctly."""
         history_info, contents = history_info_file
         has_notes = NOTES_TEST_CONTENT in contents
         last_entry = history_info.last_entry
@@ -153,13 +153,13 @@ class TestHistoryInfoFile:
                                 notes, re.M)
 
     def test_discarded(self, history_info_file):
-        """Check that the history.info file is read correctly."""
+        """Check the last_entry_was_discarded property."""
         history_info, contents = history_info_file
         discarded_in_entry = _DISCARDED in contents
         assert history_info.last_entry_was_discarded == discarded_in_entry
 
     def test_discard_last_entry(self, history_info_file, caplog):
-        """Check we can discard the last history.info entry."""
+        """Check discarding of the last history.info entry."""
         info, *_ = history_info_file
         was_discarded = info.last_entry_was_discarded
         last_entry = info.last_entry
@@ -225,7 +225,7 @@ class TestHistoryInfoFile:
             info.read()
 
     def test_regenerate_from_entries(self, history_info_file):
-        """Check that an history.info file can be regenerated after parsing."""
+        """Check that a history.info file can be regenerated after parsing."""
         history_info, contents = history_info_file
         assert contents == history_info.raw_contents
         last_entry = history_info.last_entry
@@ -253,7 +253,7 @@ class TestHistoryInfoFile:
         return n_entries
 
     def test_remove_last_entry(self, history_info_file):
-        """Check we can remove the last history.info entry."""
+        """Check removal of the last history.info entry, where possible."""
         history_info, *_ = history_info_file
         # check number of entries before and run checks accordingly
         n_entries = self._count_entries(history_info.path)
@@ -354,7 +354,6 @@ class TestHistoryInfoRaises:
     """Tests for HistoryInfoFile conditions that raise exceptions."""
 
     _raise_filenotfound = (
-        # 'append_entry(None)',
         'fix',
         'read',
         '_do_remove_last_entry',
@@ -373,7 +372,7 @@ class TestHistoryInfoRaises:
                             cases=all_history_cases,
                             has_tag=Tag.RAISES)
     def test_file_with_invalid_entry(self, contents, exc, make_history_file):
-        """Check complaints when reading a info file with invalid entries."""
+        """Check complaints when reading an info file with invalid entries."""
         info, *_ = make_history_file(contents)
         with raises_exception(HistoryInfoEntry, exc, 'from_string'):
             info.read()

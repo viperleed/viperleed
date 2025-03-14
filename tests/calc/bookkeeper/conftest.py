@@ -199,6 +199,8 @@ def fixture_after_archive(after_calc_execution, after_bookkeper_run):
     history_run_path : Path
         Path to the main history subfolder created by `bookkeeper`
         as a result of the archiving.
+    mocker : fixture
+        The pytest-mock fixture.
     """
     return after_bookkeper_run(after_calc_execution, BookkeeperMode.ARCHIVE)
 
