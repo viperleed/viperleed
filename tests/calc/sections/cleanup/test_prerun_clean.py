@@ -85,8 +85,7 @@ class TestPrerunClean:
             if nothing_to_move:
                 mock_move_oldruns.assert_not_called()
             else:
-                kwargs = {'prerun': True, }#'recurse_domains': False}
-                mock_move_oldruns.assert_called_once_with(rpars, **kwargs)
+                mock_move_oldruns.assert_called_once_with(rpars, prerun=True)
             return expect, clean
         return _run
 
@@ -134,7 +133,7 @@ class TestPrerunClean:
 
     @parametrize(file=silent_fail)
     def test_fails_to_remove_log(self, file, run, caplog, mocker):
-        """Check there no complaints when failing to remove some log files."""
+        """Check no complaints when failing to remove some log files."""
         caplog.set_level(0)  # Collect all messages
         self.check_fails_to_remove_file(file, run, mocker)
         assert not caplog.text
@@ -148,7 +147,7 @@ class TestPrerunClean:
 
     @parametrize(folder=(DEFAULT_WORK_HISTORY, DEFAULT_OUT, DEFAULT_SUPP))
     def test_fails_to_rmdir(self, folder, run, caplog, mocker):
-        """Check complaints when deleting a folder fails."""
+        """Check complaints when deleting a `folder` fails."""
         _rmtree = shutil.rmtree
         def _rmtree_raises(path):
             if Path(path).name == folder:
@@ -189,7 +188,7 @@ class TestPrerunClean:
     # pylint: disable-next=too-many-arguments  # 4/6 are fixtures
     def test_skips_missing_folder(self, folder, work_tree,
                                   tmp_path, run, caplog):
-        """Check no complaints when folder is not found."""
+        """Check no complaints when `folder` is not found."""
         expect, *_ = work_tree
         shutil.rmtree(tmp_path/folder)
         _, clean = run()
@@ -199,7 +198,7 @@ class TestPrerunClean:
     @parametrize(file=silent_fail)
     # pylint: disable-next=too-many-arguments  # 4/6 are fixtures
     def test_skips_missing_log(self, file, work_tree, tmp_path, run, caplog):
-        """Check no complaints when folder is not found."""
+        """Check no complaints when a log file is not found."""
         expect, *_ = work_tree
         (tmp_path/file).unlink()
         _, clean = run()
@@ -217,8 +216,7 @@ class TestPropagateToDomains:
     """Tests for prerun_clean propagation to nested domains."""
 
     def make_domains(self, rpars, top_level_domains, root_path, mocker):
-        """Create nested domains at root_path, return calls."""
-        filesystem_from_dict(top_level_domains, root_path)
+        """Create nested domains at `root_path`, return calls."""
         calls = {}
         for domain, subdomains in top_level_domains.items():
             if isinstance(subdomains, str):  # A file
@@ -230,10 +228,7 @@ class TestPropagateToDomains:
             rpars.domainParams.append(domain)
             has_subdomains = any(isinstance(s, dict)
                                  for s in subdomains.values())
-            call = mocker.call(domain.rpars,
-                               logname='',
-                               )#recurse_domains=has_subdomains)
-            calls[str(workdir)] = call
+            calls[str(workdir)] = mocker.call(domain.rpars, logname='')
             if has_subdomains:
                 subcalls = self.make_domains(domain.rpars,
                                              subdomains,
@@ -244,7 +239,7 @@ class TestPropagateToDomains:
 
     @fixture(name='domains')
     def fixture_domains(self, rpars, tmp_path, mocker):
-        """Create sample nested domains at tmp_path."""
+        """Create sample nested domains at `tmp_path`."""
         domain_contents = {'log.log': ''}  # To check workhistory
         nested_domains = {
             'simple_domain': domain_contents,
@@ -252,6 +247,7 @@ class TestPropagateToDomains:
                               'subdomain_2': domain_contents,
                               **domain_contents},
             }
+        filesystem_from_dict(nested_domains, tmp_path)
         nested_calls = self.make_domains(rpars,
                                          nested_domains,
                                          tmp_path,
