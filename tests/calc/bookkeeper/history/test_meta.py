@@ -79,8 +79,6 @@ class CasesHistoryTree:
 
     def case_empty_folder(self, tmp_path):
         """Return the root of a fake history subfolder and its hash."""
-        # Create a bunch of files and folders
-        sample_file_contents = 'These are the test contents of a file'
         empty = 'empty_history_subfolder'
         tree = {empty: {}}
         filesystem_from_dict(tree, tmp_path)

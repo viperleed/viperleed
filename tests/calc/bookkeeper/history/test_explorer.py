@@ -263,7 +263,7 @@ class TestHistoryExplorerCollection:
         history.collect_subfolders()
         self._check_collected_nothing(history)
 
-    def test_find_name_for_new_history_subfolder(self, history, mocker):
+    def test_find_name_for_new_history_subfolder(self, history):
         """Test _find_name_for_new_history_subfolder."""
         # pylint: disable-next=protected-access           # OK in tests
         history._maps['jobs_for_tensor'] = {1: {1}}
