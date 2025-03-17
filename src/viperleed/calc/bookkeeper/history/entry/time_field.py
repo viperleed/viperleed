@@ -98,7 +98,15 @@ class TimestampField(FieldBase, tag=FieldTag.TIMESTAMP, mandatory=True):
             raise EntrySyntaxError('Missing time-stamp format')
 
     def _check_format_consistent(self):
-        """Raise if a time_format was given for an invalid value."""
+        """Raise if time_format is invalid.
+
+        Raises
+        ------
+        FixableSyntaxError
+            If time_format is out of date for a valid value.
+        EntrySyntaxError
+            If time_format was given for an invalid value.
+        """
         if not self.time_format:
             return
         if self.is_empty:
