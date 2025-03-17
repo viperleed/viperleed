@@ -217,35 +217,25 @@ class TestBookkeeperOthers:
 
     _basic_logs = {
         Mode.ARCHIVE: (
-            re.compile(r'\n### Bookkeeper running at.*###'),
-            re.compile(r'Running bookkeeper in ARCHIVE mode in .*\.'),
             re.compile(r'No files to be moved.*'
                        r'Exiting without doing anything.'),
             '',
             ),
         Mode.CLEAR: (
-            re.compile(r'\n### Bookkeeper running at.*###'),
-            re.compile(r'Running bookkeeper in CLEAR mode in .*\.'),
             'Found nothing to do. Exiting...',
             '',
             ),
         Mode.DISCARD: (
-            re.compile(r'\n### Bookkeeper running at.*###'),
-            re.compile(r'Running bookkeeper in DISCARD mode in .*\.'),
             re.compile('.*No entries to discard.'),
             'Found nothing to do. Exiting...',
             '',
             ),
         Mode.DISCARD_FULL: (
-            re.compile(r'\n### Bookkeeper running at.*###'),
-            re.compile(r'Running bookkeeper in DISCARD_FULL mode in .*\.'),
             re.compile('.*No entries to remove.'),
             'Found nothing to do. Exiting...',
             '',
             ),
         Mode.FIX: (
-            # No header message, as we silence the logger. Not great.
-            re.compile(r'Running bookkeeper in FIX mode in .*\.'),
             'Found nothing to do. Exiting...',
             '',
             ),
@@ -254,10 +244,14 @@ class TestBookkeeperOthers:
     @parametrize('mode,expect_records', _basic_logs.items())
     def test_run_logs(self, mode, expect_records, tmp_path, caplog):
         """Check the emission of basic log messages upon .run()."""
+        header_records = (
+            re.compile(r'\n### Bookkeeper running at.*###'),
+            re.compile(rf'Running bookkeeper in {mode.name} mode in .*\.'),
+            )
         bookkeeper = Bookkeeper(tmp_path)
         caplog.set_level(logging.INFO)
         bookkeeper.run(mode)
-        self.check_has_logs(caplog, expect_records)
+        self.check_has_logs(caplog, header_records+expect_records)
 
     @fixture(name='funky_files')
     def fixture_funky_files(self, tmp_path):

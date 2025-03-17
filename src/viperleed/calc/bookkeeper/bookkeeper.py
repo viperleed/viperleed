@@ -1,4 +1,4 @@
-"""Module bookkeeper of viperleed.calc."""
+"""Module bookkeeper of viperleed.calc.bookkeeper."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
@@ -159,16 +159,17 @@ class Bookkeeper:
         ----------
         silent : bool, optional
             Whether logging messages should be silenced or not.
-            The default is False.
+            The default is False. One basic log message is always
+            emitted, irrespective of the value of `silent`, if a
+            this instance accesses the log file for the first time.
 
         Returns
         -------
         None.
         """
+        self._make_history_and_prepare_logger()
         context = logging_silent if silent else nullcontext
         with context():
-            self._make_history_and_prepare_logger()
-
             # Collect information from the root directory:
             # log files, SUPP, OUT, workhistory, and Tensors, as well
             # as information from the history folder (especially the
