@@ -26,7 +26,10 @@ from ..errors import FixableSyntaxError
 from .enums import FieldTag
 from .field import DefaultMessage
 from .field import FieldBase
+from .field import FixedFieldValue
 from .field import MissingField
+
+_OUTDATED = 'outdated format'
 
 
 class TimestampFormat(Enum):
@@ -82,8 +85,11 @@ class TimestampField(FieldBase, tag=FieldTag.TIMESTAMP, mandatory=True):
 
         # Skip _value_str to recompute it the first time it is needed.
         instance = replace_values(self, time_format=fmt, skip='_value_str')
-        if fmt is TimestampFormat.DEFAULT:
-            set_frozen_attr(instance, '_needs_fix', None)
+        fix_reason = (
+            None if fmt is TimestampFormat.DEFAULT
+            else FixedFieldValue(_OUTDATED, None)
+            )
+        set_frozen_attr(instance, '_needs_fix', fix_reason)
         return instance
 
     def _check_datetime_value(self):
@@ -148,8 +154,7 @@ class TimestampField(FieldBase, tag=FieldTag.TIMESTAMP, mandatory=True):
         set_frozen_attr(self, 'value', parsed)
         set_frozen_attr(self, 'time_format', fmt)
         if fmt is not TimestampFormat.DEFAULT:
-            reason = 'outdated format'
-            raise FixableSyntaxError(reason=reason, fixed_value=None)
+            raise FixableSyntaxError(reason=_OUTDATED, fixed_value=None)
         return True
 
     @staticmethod
