@@ -55,7 +55,7 @@ class TestCollectWorhistoryContents:
 
     @fixture(name='run')
     def fixture_run(self, rpars, mock_implementation, tmp_path):
-        """Call _collect_worhistory_contents in tmp_path."""
+        """Call _collect_worhistory_contents in `tmp_path`."""
         subfolder = tmp_path/'subfolder'
         def _run(prerun, **kwargs):
             subfolder.mkdir()
@@ -86,7 +86,7 @@ class TestCollectWorhistoryContents:
         mocker.patch(raises, side_effect=OSError)
         run(prerun, files_and_dirs=((), (directory,)))
         expect_log = re.compile(rf'.*Error copying {directory} to .*'
-                                r'Files in directory may .*overwritten.\n')
+                                r'Files in directory may .*overwritten\.\n')
         assert expect_log.fullmatch(caplog.text)
 
     @parametrize('args,raises', _files.items())
@@ -97,7 +97,7 @@ class TestCollectWorhistoryContents:
         mocker.patch(raises, side_effect=OSError)
         run(prerun, files_and_dirs=((file,), ()))
         expect_log = re.compile(rf'.*Error copying {file} to .*'
-                                r'File may .*overwritten.\n')
+                                r'File may .*overwritten\.\n')
         assert expect_log.fullmatch(caplog.text)
 
     @parametrize('args,expect', _directories.items())
@@ -233,8 +233,9 @@ class TestFindNextWorkistoryDirName:
 
     @fake_run
     def test_logs_no_prerun(self, mock_rpars, mocker):
-        """Check the expected result when there are log files."""
-        mock_glob = mocker.patch('pathlib.Path.glob', return_value=())
+        """Check the expected result during a non-prerun call."""
+        # The result does not depend on whether there are logs or not
+        mock_glob = mocker.patch('pathlib.Path.glob')
         dirname = _find_next_workistory_dir_name(mock_rpars, prerun=False)
         expected = f't001.r1234_{mock_rpars.timestamp}'
         assert dirname == expected
@@ -281,14 +282,6 @@ class TestFindNextWorkistoryDirName:
         assert mock_rpars.lastOldruns == history
 
     @fake_run
-    def test_no_logs_no_prerun(self, mock_rpars, mocker):
-        """Check the expected result when there are no log files."""
-        mocker.patch('pathlib.Path.glob', return_value=())
-        dirname = _find_next_workistory_dir_name(mock_rpars, prerun=False)
-        expected = f't001.r1234_{mock_rpars.timestamp}'
-        assert dirname == expected
-
-    @fake_run
     def test_no_logs_prerun(self, mock_rpars, mocker):
         """Check the expected result when there are no log files."""
         mocker.patch('pathlib.Path.glob', return_value=())
@@ -328,13 +321,13 @@ class TestFindNextWorkistoryRunNumber:
         existing = (
             Path('t234.r001_'),
             Path('t234.r002_'),
-            Path('t234.r099_more_text_with.r578'),
-            Path('t999.r999_'),
+            Path('t234.r099_more_text_with.r578'),  # Last one
+            Path('t999.r999_'),       # Different TENSOR_INDEX
             )
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
-        number =_find_next_workistory_run_number(rpars, prerun)
-        expect = 100  # There's one folder for a different TENSOR_INDEX
+        number = _find_next_workistory_run_number(rpars, prerun)
+        expect = 100
         assert number == expect
 
     @all_prerun
@@ -345,7 +338,7 @@ class TestFindNextWorkistoryRunNumber:
         existing = tuple(Path(p) for p in existing)
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
-        number =_find_next_workistory_run_number(rpars, prerun)
+        number = _find_next_workistory_run_number(rpars, prerun)
         expect = 1002
         assert number == expect
 
@@ -361,7 +354,7 @@ class TestFindNextWorkistoryRunNumber:
         existing = tuple(Path(p) for p in existing)
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', _mock_isdir)
-        number =_find_next_workistory_run_number(rpars, prerun)
+        number = _find_next_workistory_run_number(rpars, prerun)
         expect = 2
         assert number == expect
 
@@ -389,7 +382,7 @@ class TestFindNextWorkistoryRunNumber:
         existing = tuple(Path(p) for p in existing)
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
-        number =_find_next_workistory_run_number(rpars, prerun)
+        number = _find_next_workistory_run_number(rpars, prerun)
         expect = 9
         assert number == expect
 
@@ -406,7 +399,7 @@ class TestFindNextWorkistoryRunNumber:
             )
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
-        number =_find_next_workistory_run_number(rpars, prerun)
+        number = _find_next_workistory_run_number(rpars, prerun)
         expect = 6
         assert number == expect
 
@@ -452,7 +445,7 @@ class TestMakeNewWorkhistorySubfolder:
 
     @all_prerun
     def test_fails_to_create_subfolder(self, prerun, run, caplog, mocker):
-        """Check complaints when creating workhistory fails."""
+        """Check complaints when creating a workhistory subfolder fails."""
         _mkdir = Path.mkdir
         dirname = 'test_subfolder'
         def _mkdir_fails(path, **kwargs):
@@ -491,7 +484,7 @@ class TestMakeNewWorkhistorySubfolder:
 
     @all_prerun
     def test_workhistory_exists(self, prerun, run, tmp_path):
-        """Check that workhistory exists after execution."""
+        """Check workhistory subfolders are created if the parent exists."""
         workhistory = tmp_path/DEFAULT_WORK_HISTORY
         workhistory.mkdir()
         workhistory_subfolder = workhistory/'test'
@@ -530,7 +523,7 @@ class TestMoveOldruns:
 
     @fixture(name='run')
     def fixture_run(self, rpars, mock_implementation, tmp_path):
-        """Call move_oldruns at tmp_path, optionally with mocks."""
+        """Call move_oldruns at `tmp_path` after mocking implementation."""
         def _run(prerun):
             with execute_in_dir(tmp_path):
                 mocked = mock_implementation()
