@@ -165,11 +165,20 @@ class _TestCheckers:
                              else MOCK_OUT_CONTENT)
         out_path = path / DEFAULT_OUT
         for file in MOCK_STATE_FILES:
-            other_file = file if out_suffixed else f'{file}_OUT'
-            file = f'{file}_OUT' if out_suffixed else file
-            self._check_file_contents(out_path/file, expected_contents)
+            try:
+                out_suffixed_file = next(out_path.glob(f'{file}_OUT_*'))
+            except StopIteration:
+                if out_suffixed and file == 'PARAMETERS':
+                    # There was no PARAMETERS in OUT for < v0.13.0
+                    continue
+                if out_suffixed:
+                    raise
+                out_suffixed_file = out_path/f'{file}_OUT'  # A dummy
+            expect_file = out_suffixed_file if out_suffixed else out_path/file
+            other_file = out_path/file if out_suffixed else out_suffixed_file
+            self._check_file_contents(expect_file, expected_contents)
             # Only one between _OUT-suffixed and non-suffixed
-            assert not (out_path/other_file).is_file()
+            assert not other_file.is_file()
 
     def check_out_files_untouched(self, bookkeeper, *_, out_suffixed=False):
         """Ensure all expected files are found in OUT."""
@@ -202,6 +211,8 @@ class _TestCheckers:
             self._check_file_contents(cwd/file,
                                       out_contents,
                                       MOCK_ORIG_CONTENT)
+            if any((cwd/DEFAULT_OUT).glob(f'{file}*')):
+                self._check_file_contents(cwd/file, out_contents)
 
     def check_root_inputs_untouched(self, bookkeeper, *_):
         """Check the the original state files have not been moved."""

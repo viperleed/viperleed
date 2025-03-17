@@ -443,7 +443,7 @@ class TestRootExplorerNextCalc:
             # pylint: disable-next=protected-access       # OK in tests
             explorer._copy_state_files_from_out_or_original_inputs()
         expect_calls = [
-            mocker.call(explorer.path / DEFAULT_OUT, '{}', '{}_OUT'),
+            mocker.call(explorer.path / DEFAULT_OUT, '{}', '{}_OUT_[0-9]*'),
             mocker.call(explorer.orig_inputs_dir,
                         only_files=out_exc.failures if out_exc else {}),
             ]
@@ -470,8 +470,13 @@ class TestRootExplorerNextCalc:
         def copy2(_, dst):
             if dst.name in fail:
                 raise oserror
+        def _glob(path, pattern):
+            globbed = next(f for f in only_files or MOCK_STATE_FILES
+                           if pattern.startswith(f))
+            return (path/globbed,)
 
         mocker.patch('pathlib.Path.is_file', is_file)
+        mocker.patch('pathlib.Path.glob', _glob)
         mocker.patch('shutil.copy2', copy2)
         src = Path.cwd()/'does_not_exist'
 

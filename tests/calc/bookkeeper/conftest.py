@@ -155,12 +155,17 @@ def factory_mock_tree_after_calc_execution(log_file_name,
 @fixture(name='mock_tree_after_calc_execution_with_out_suffix')
 def factory_mock_tree_after_calc_execution_out_suffix(_make_root_tree):
     """Create files like those after calc HAD run before we dropped _OUT."""
+    old_style_out = {
+        f'{f}_OUT_010203-040506': MOCK_OUT_SUFFIXED_CONTENT
+        for f in ('POSCAR', 'VIBROCC')
+        }
+    # In < v0.13.0, there was no PARAMETERS in OUT. It was in root.
+    # old_style_out['PARAMETERS'] = MOCK_OUT_CONTENT
     kwargs = {
         f'{LOG_PREFIX}_{MOCK_TIMESTAMP}.log': None,
 
         # OUT files, with an old-style _OUT suffix
-        DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_SUFFIXED_CONTENT
-                       for f in MOCK_STATE_FILES},
+        DEFAULT_OUT : old_style_out,
         }
     return _make_root_tree(**kwargs)
 

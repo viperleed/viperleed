@@ -315,7 +315,8 @@ class RootExplorer:
             from `source`. The order of `name_fmts` corresponds
             to the priority in which files are searched. If no
             format is given, files are assumed to be named
-            identically to their destination name.
+            identically to their destination name. `source`
+            is glob()-bed with each of the `name_fmts`.
         only_files : iterable or None
             Only consider these file names when copying. If
             None or not given, all the "state" input files are
@@ -332,11 +333,12 @@ class RootExplorer:
             only_files = STATE_FILES
         for file in only_files:
             cwd_file = self.path / file
-            new_inputs = [source / fmt.format(file) for fmt in name_fmts]
+            patterns = [fmt.format(file) for fmt in name_fmts]
+            new_inputs = (f for p in patterns for f in source.glob(p))
             try:
                 new_input = next(f for f in new_inputs if f.is_file())
             except StopIteration:
-                failed[file] = new_inputs
+                failed[file] = [source/p for p in patterns]
                 continue
             try:
                 shutil.copy2(new_input, cwd_file)
@@ -351,8 +353,13 @@ class RootExplorer:
         failed_out = {}
         try:
             # Prefer those without an _OUT suffix, but fall back onto
-            # _OUT-suffixed ones to ensure backward compatibility.
-            self._copy_state_files_from(self.path/DEFAULT_OUT, '{}', '{}_OUT')
+            # _OUT-suffixed ones to ensure backward compatibility. NB:
+            # The old-style _OUT-suffixed files used to also have a
+            # timestamp following '_OUT_'. Be explicit about the
+            # presence of a digit not fetch POSCAR_OUT_mincell.
+            self._copy_state_files_from(self.path/DEFAULT_OUT,
+                                        '{}',
+                                        '{}_OUT_[0-9]*')
         except FileOperationFailedError as exc:
             failed_out.update(exc.failures)
 
