@@ -65,7 +65,7 @@ class RootExplorer:
     def __init__(self, path, bookkeeper):
         """Initialize this explorer at `path` for a `bookkeeper`."""
         self._path = Path(path).resolve()
-        self._logs = None              # LogFiles, set in collect
+        self._logs = None              # LogFiles, set in collect_info
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
         self.history = HistoryExplorer(self.path)
@@ -145,7 +145,7 @@ class RootExplorer:
             self.path / DEFAULT_OUT,
             self.path / DEFAULT_SUPP,
             *self.logs.files,
-            *self.tensors.list_paths_to_discard(self.history)
+            *self.tensors.list_paths_to_discard(self.history),
             )
         return tuple(p for p in to_discard if p.exists())
 
@@ -184,7 +184,7 @@ class RootExplorer:
                              f'file in {DEFAULT_OUT}.')
 
     def prepare_for_next_calc_run(self):
-        """Rename inputs to '_ori', pull new ones from OUT/original_inputs."""
+        """Rename inputs to _ori, pull new ones from OUT or original_inputs."""
         errors = []
         try:
             self._mark_state_files_as_ori()
@@ -277,7 +277,7 @@ class RootExplorer:
     def _collect_files_to_archive(self):
         """Return a tuple of files/folders to be archived in history."""
         to_archive = (
-             # OUT and SUPP, if present
+            # OUT and SUPP, if present
             self.path / DEFAULT_OUT,
             self.path / DEFAULT_SUPP,
             # Any calc logs
@@ -294,8 +294,8 @@ class RootExplorer:
                              for f in self.path.glob(f'*{EDITED_SUFFIX}*'))
         if not edited_files:
             return
-        edited = ','.join(edited_files)
-        inputs = ','.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
+        edited = ', '.join(edited_files)
+        inputs = ', '.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
         LOGGER.warning(f'Found user-edited files {edited}. Make sure to port '
                        'any desired changes to the corresponding input files '
                        f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
