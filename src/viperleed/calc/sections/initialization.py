@@ -713,7 +713,7 @@ def _make_domain_workdir(name, src, calc_started_at, must_use_auto_name):
     """Create a work directory (as a subfolder of CWD) for a domain.
 
     The work directory is named 'Domain_<name>', unless
-    `must_use_auto_name` is True and the inputs for this
+    `must_use_auto_name` is False and the inputs for this
     domain come from a direct subfolder of the path at
     which viperleed.calc was originally started.
 
