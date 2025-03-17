@@ -140,7 +140,7 @@ class RootExplorer:
         return tuple(ori_files.items())
 
     def list_paths_to_discard(self):
-        """Return a list of files and folders that will be discarded."""
+        """Return a tuple of files and folders that will be discarded."""
         to_discard = (
             self.path / DEFAULT_OUT,
             self.path / DEFAULT_SUPP,
