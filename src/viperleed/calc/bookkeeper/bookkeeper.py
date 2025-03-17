@@ -424,7 +424,7 @@ class Bookkeeper:
         # Notice that it is OK to decide now whether files should
         # be marked as edited rather than before archiving. In
         # fact, during archiving we recognize the right files to
-        # pull (in _copy_input_files_from_original_inputs_or_cwd):
+        # pull (in _archive_input_files_from_original_inputs_or_cwd):
         # always copy from original_inputs if possible, otherwise
         # copy with a _FROM_ROOT suffix.
         self._root.mark_edited_files()
@@ -450,7 +450,7 @@ class Bookkeeper:
                          f'{self.history.new_folder.name}\n Stopping...')
             raise
         LOGGER.info(f'Created history folder {self.history.new_folder.name} '
-                    'for storing results of the most-recent viperleed.calc '
+                    'for storing results of the most recent viperleed.calc '
                     'execution.')
         self._archive_out_and_supp()
         self._archive_input_files_from_original_inputs_or_cwd()
@@ -469,13 +469,13 @@ class Bookkeeper:
         if self._state_info['logger_prepared']:
             return
 
-        # Attach a stream handler to logger if not already present
+        # Attach a stream handler to the logger if not already present
         log.ensure_has_stream_handler()
 
-        try:  # Make top level history folder if not there yet
+        try:  # Make the top-level 'history' folder if not there yet
             self.history.path.mkdir(exist_ok=True)
         except OSError:
-            LOGGER.error('Error creating history folder.')
+            LOGGER.error(f'Error creating {self.history.path.name} folder.')
             raise
 
         # Attach file handler for history/bookkeeper.log
@@ -571,7 +571,7 @@ class Bookkeeper:
         self._workhistory.discard_workhistory_root()
         self._root.revert_to_previous_calc_run()
 
-        # Tensors and Deltas, if created during the last run
+        # Tensors and deltas, if created during the last run
         self._root.remove_tensors_and_deltas()
 
         # And the history entry from history.info
@@ -586,8 +586,8 @@ class Bookkeeper:
         self._root.revert_to_previous_calc_run()
         if not did_archive:
             # If we had to archive the contents of the root directory,
-            # we have already marked the entry as discarded and we
-            # don't have to bother.
+            # we'd have already marked the entry as discarded and we
+            # wouldn't have to bother. Here we do it explicitly.
             try:
                 self.history.info.discard_last_entry()
             except (NoHistoryEntryError, CantDiscardEntryError) as exc:
