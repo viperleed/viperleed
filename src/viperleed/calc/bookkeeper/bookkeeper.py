@@ -15,7 +15,6 @@ from pathlib import Path
 
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
@@ -82,7 +81,7 @@ class Bookkeeper:
     @property
     def orig_inputs_dir(self):
         """Return the path to the folder containing untouched input files."""
-        return self.cwd / DEFAULT_SUPP / ORIGINAL_INPUTS_DIR_NAME
+        return self._root.orig_inputs_dir
 
     @property
     def tensor_number(self):
@@ -249,8 +248,9 @@ class Bookkeeper:
         None.
         """
         history_folder = self.history.new_folder
+        orig_inputs_dir = self.orig_inputs_dir
         for file in ALL_INPUT_FILES:
-            original_file = self.orig_inputs_dir / file
+            original_file = orig_inputs_dir / file
             cwd_file = self.cwd / file
             copy_file, with_name = None, file
             if original_file.is_file() and cwd_file.is_file():
@@ -260,7 +260,7 @@ class Bookkeeper:
                     _check_newer(older=cwd_file, newer=original_file)
                 except _FileNotOlderError:
                     LOGGER.warning(
-                        f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
+                        f'File {file} from {orig_inputs_dir.name} was '
                         'copied to history, but the file in the input '
                         'directory is newer.'
                         )
@@ -275,7 +275,7 @@ class Bookkeeper:
             elif cwd_file.is_file():  # Copy cwd and warn
                 copy_file, with_name = cwd_file, f'{cwd_file.name}{_FROM_ROOT}'
                 LOGGER.warning(
-                    f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
+                    f'File {file} not found in {orig_inputs_dir.name}. '
                     'Using file from root directory instead and renaming to '
                     f'{with_name}.'
                     )
