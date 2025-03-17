@@ -57,7 +57,7 @@ cant_fix = parametrize_with_cases(
                         Tag.MULTI_ENTRY,
                         Tag.NEEDS_NO_FIX,
                         Tag.RAISES,
-                        Tag.EMPTY)
+                        Tag.EMPTY),
     )
 need_no_fix = parametrize_with_cases('entry_str',
                                      cases=cases_entry,
@@ -119,7 +119,7 @@ class TestHistoryEntry:
     @parametrize_with_cases('entry_str',
                             cases=cases_entry.CasesInfoEntryCommented)
     def test_has_comments(self, entry_str, make_entry):
-        """Check an entry that has no extra comments."""
+        """Check an entry that has extra comments."""
         entry = make_entry(entry_str)
         assert entry.has_comments
 
@@ -242,7 +242,7 @@ class TestHistoryEntry:
 
     @_preserved
     def test_from_to_string(self, entry_str, make_entry):                       # TODO: This test is somewhat slow!
-        """Ensure that making a entry from str(entry) gives stable results."""
+        """Ensure that making an entry from str(entry) gives stable results."""
         entry = make_entry(entry_str)
         for _ in range(5):
             as_string = str(entry)
@@ -261,9 +261,9 @@ class TestHistoryEntry:
         entry_edited = entry.with_time_format(fmt)
         assert entry.timestamp.value == entry_edited.timestamp.value
         if fmt is not TimestampFormat.DEFAULT:
-            pytest.xfail(reason=('Not sure yet if we should really mark '       # TODO
-                                 'those as such. We currently do not'))
             assert entry_edited.needs_fixing
+        else:
+            assert not entry_edited.needs_fixing
 
     def test_multiple_notes_no_extras(self, make_entry):
         """Check that an entry with repeated notes has no UnknownField."""

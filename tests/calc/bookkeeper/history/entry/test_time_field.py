@@ -290,6 +290,10 @@ class TestTimestampField:
         assert new_field.time_format is expect_fmt
         # pylint: disable-next=protected-access           # OK in tests
         assert new_field._value_str is None
+        if new_field.time_format is TimestampFormat.DEFAULT:
+            assert not new_field.needs_fixing
+        else:
+            assert new_field.needs_fixing
 
     _invalid_fmt = {
         None: TypeError,

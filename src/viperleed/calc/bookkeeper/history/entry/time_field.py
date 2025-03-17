@@ -26,7 +26,10 @@ from ..errors import FixableSyntaxError
 from .enums import FieldTag
 from .field import DefaultMessage
 from .field import FieldBase
+from .field import FixedFieldValue
 from .field import MissingField
+
+_OUTDATED = 'outdated format'
 
 
 class TimestampFormat(Enum):
@@ -82,8 +85,11 @@ class TimestampField(FieldBase, tag=FieldTag.TIMESTAMP, mandatory=True):
 
         # Skip _value_str to recompute it the first time it is needed.
         instance = replace_values(self, time_format=fmt, skip='_value_str')
-        if fmt is TimestampFormat.DEFAULT:
-            set_frozen_attr(instance, '_needs_fix', None)
+        fix_reason = (
+            None if fmt is TimestampFormat.DEFAULT
+            else FixedFieldValue(_OUTDATED, None)
+            )
+        set_frozen_attr(instance, '_needs_fix', fix_reason)
         return instance
 
     def _check_datetime_value(self):
@@ -93,17 +99,25 @@ class TimestampField(FieldBase, tag=FieldTag.TIMESTAMP, mandatory=True):
 
     def _check_format_consistent(self):
         """Raise if a time_format was given for an invalid value."""
-        if self.was_understood or not self.time_format:
+        if not self.time_format:
             return
         if self.is_empty:
             reason = DefaultMessage.EMPTY.value
         elif self.is_missing:
             reason = DefaultMessage.MISSING.value
+        elif self.was_understood:
+            self._check_format_is_default()
+            return
         else:
             reason = 'Field has an invalid value'
         set_frozen_attr(self, 'time_format', None)
         set_frozen_attr(self, '_needs_fix', None)  # Can't fix this
         raise EntrySyntaxError(f'Cannot have a time_format defined: {reason}')
+
+    def _check_format_is_default(self):
+        """Raise FixableSyntaxError unless this field's format is DEFAULT."""
+        if self.time_format is not TimestampFormat.DEFAULT:
+            raise FixableSyntaxError(reason=_OUTDATED, fixed_value=None)
 
     def _check_str_value(self):
         """Raise if self.value is not a valid timestamp."""
@@ -147,9 +161,7 @@ class TimestampField(FieldBase, tag=FieldTag.TIMESTAMP, mandatory=True):
         # Conversion successful. Remember value and format.
         set_frozen_attr(self, 'value', parsed)
         set_frozen_attr(self, 'time_format', fmt)
-        if fmt is not TimestampFormat.DEFAULT:
-            reason = 'outdated format'
-            raise FixableSyntaxError(reason=reason, fixed_value=None)
+        self._check_format_is_default()
         return True
 
     @staticmethod
