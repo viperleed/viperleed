@@ -138,13 +138,13 @@ class TestCollectSuppOut:
 
     @fixture(name='work_tree')
     def fixture_work_tree(self, workdir):
-        """Create files to be moved to SUPP/OUT at workdir."""
+        """Create files to be moved to SUPP/OUT at `workdir`."""
         filesystem_from_dict(self.tree, workdir)
         return workdir
 
     @fixture(name='run')
     def fixture_run(self, rpars, work_tree):
-        """Execute _organize_supp_out."""
+        """Execute _collect_out/_supp_contents."""
         rpars.files_to_out.update(self.generated)
         def _run(*which):
             expect = {**self.tree,
@@ -180,7 +180,7 @@ class TestCopyFilesAndDirectories:
 
     @fixture(name='run')
     def fixture_run(self, workdir):
-        """Run _copy_files_and_directories in workdir."""
+        """Run _copy_files_and_directories in `workdir`."""
         def _run(*args, make_tree=True):
             if make_tree:
                 filesystem_from_dict(self.tree, workdir)
@@ -266,13 +266,13 @@ class TestOrganizeWorkdir:
 
     @fixture(name='run')
     def fixture_run(self, rpars, workdir):
-        """Execute organize_workdir with rpars and path=workdir."""
+        """Execute organize_workdir with `rpars` at `workdir`."""
         def _run(**kwargs):
             organize_workdir(rpars, workdir, **kwargs)
         return _run
 
     def test_archive_and_delete(self, rpars, run, mock_implementation, mocker):
-        """Check that the implementation is executed as expected."""
+        """Check zipping and subsequent deletion of deltas/tensors."""
         rpars.TENSOR_INDEX = mocker.MagicMock()
         rpars.ZIP_COMPRESSION_LEVEL = level = mocker.MagicMock()
         run(delete_unzipped=False, tensors=True, deltas=True)
@@ -289,7 +289,7 @@ class TestOrganizeWorkdir:
             mock.assert_has_calls(calls[helper])
 
     def test_archive_deltas(self, run, rpars, mock_implementation, mocker):
-        """Check that the implementation is executed as expected."""
+        """Check zipping of deltas without deletion."""
         run(delete_unzipped=False, tensors=False, deltas=True)
         calls = {
             '_collect_delta_files': (
@@ -305,7 +305,7 @@ class TestOrganizeWorkdir:
             mock.assert_has_calls(calls[helper])
 
     def test_archive_tensors(self, run, rpars, mock_implementation, mocker):
-        """Check that the implementation is executed as expected."""
+        """Check zipping of tensors without deletion."""
         run(delete_unzipped=False, tensors=True, deltas=False)
         calls = {
             '_collect_delta_files': (
@@ -321,7 +321,7 @@ class TestOrganizeWorkdir:
             mock.assert_has_calls(calls[helper])
 
     def test_delete_only(self, run, rpars, mock_implementation, mocker):
-        """Check that the implementation is executed as expected."""
+        """Check deletion of deltas/tensors without zipping."""
         run(delete_unzipped=True, tensors=False, deltas=False)
         calls = {
             '_collect_delta_files': (
@@ -384,13 +384,13 @@ class TestZipSubfolders:
 
     @fixture(name='work_tree')
     def fixture_work_tree(self, workdir):
-        """Create a temporary tree at workdir."""
+        """Create a temporary tree at `workdir`."""
         filesystem_from_dict(self.tree, workdir)
         return workdir
 
     @fixture(name='run')
     def fixture_run(self, work_tree):
-        """Execute _zip_subfolders in workdir."""
+        """Execute _zip_subfolders in `work_tree`."""
         def _run(**kwargs):
             with execute_in_dir(work_tree):
                 _zip_subfolders(at_path=self.folder, **kwargs)
@@ -410,7 +410,7 @@ class TestZipSubfolders:
         assert expect_log in caplog.text
 
     def test_delete_only(self, run, caplog):
-        """Check no deletion of unzipped directories."""
+        """Check deletion of unzipped directories without zipping."""
         clean = run(delete_unzipped=True,
                     archive=False,
                     compression_level=2)
@@ -465,7 +465,7 @@ class TestZipSubfolders:
         assert not caplog.text
 
     def test_pack_and_delete(self, run, workdir, caplog):
-        """Check packing and deleting of both Tensors and Deltas."""
+        """Check packing and deleting of both tensors and deltas."""
         # Increase log level: There are INFO messages about packing
         caplog.set_level(logging.WARNING)
         clean = run(delete_unzipped=True,
