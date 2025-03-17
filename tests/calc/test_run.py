@@ -22,8 +22,8 @@ from viperleed.calc.run import _interpret_parameters
 from viperleed.calc.run import _read_parameters_file
 from viperleed.calc.run import _read_poscar_file
 from viperleed.calc.run import _set_log_level
-from viperleed.calc.run import _set_tensorleed_source
 from viperleed.calc.run import _set_system_name
+from viperleed.calc.run import _set_tensorleed_source
 from viperleed.calc.run import run_calc
 
 _MODULE = 'viperleed.calc.run'
@@ -273,7 +273,7 @@ class TestMakeRparsAndSlab:
         mocks['slab'].full_update.assert_not_called()
 
     def test_domains_raises(self, mocks):
-        """Check correct outcome for a multi-domain case."""
+        """Check complaints when a slab is given for a multi-domain call."""
         manifest = set()
         presets = None
         mocks['rpars'].readParams['DOMAIN'] = 'some domain'
@@ -404,21 +404,12 @@ class TestReadParametersFile:
     """Tests for the _read_parameters_file helper."""
 
     @fixture(name='mocks')
-    def fixture_mock(self, mocker):
+    def fixture_mock_implementation(self, mocker):
         """Replace implementation details with mocks."""
         mock_rpars = Rparams()
         mock_read = mocker.patch(f'{_MODULE}.parameters.read',
                                  return_value=mock_rpars)
         return mock_rpars, mock_read
-
-    def test_reads_existing_parameters(self, mocks, caplog):
-        """Check correct result when PARAMETERS is found."""
-        caplog.set_level(5)  # < DEBUG
-        rpars, mock_read = mocks
-        result = _read_parameters_file('some unused preset')
-        mock_read.assert_called_once()
-        assert result is rpars
-        assert not caplog.text
 
     def test_not_found_no_presets(self, mocks, caplog):
         """Check complaints with neither PARAMETERS nor presets."""
@@ -445,6 +436,15 @@ class TestReadParametersFile:
             _read_parameters_file(None)
         assert caplog.text
 
+    def test_reads_existing_parameters(self, mocks, caplog):
+        """Check correct result when PARAMETERS is found."""
+        caplog.set_level(5)  # < DEBUG
+        rpars, mock_read = mocks
+        result = _read_parameters_file('some unused preset')
+        mock_read.assert_called_once()
+        assert result is rpars
+        assert not caplog.text
+
 
 class TestReadPoscarFile:
     """Tests for the _read_poscar_file helper."""
@@ -459,20 +459,6 @@ class TestReadPoscarFile:
                                  return_value=mock_slab),
             'copy': mocker.patch('shutil.copy2'),
             }
-
-    def test_success(self, mocks, caplog):
-        """Test successful reading of a POSCAR file."""
-        caplog.set_level(logging.INFO)
-        manifest = set()
-        mocks['slab'].preprocessed = True
-        slab = _read_poscar_file(manifest)
-        expect_log = 'Reading structure'
-
-        assert slab is mocks['slab']
-        mocks['read'].assert_called_once_with(filename=Path('POSCAR'))
-        mocks['copy'].assert_not_called()
-        assert not manifest
-        assert expect_log in caplog.text
 
     def test_poscar_user(self, mocks, caplog):
         """Test successful reading of a "fresh" POSCAR file."""
@@ -503,6 +489,20 @@ class TestReadPoscarFile:
         with pytest.raises(exc, match='test exc'):
             _read_poscar_file(None)
         assert caplog.text
+
+    def test_success(self, mocks, caplog):
+        """Test successful reading of a POSCAR file."""
+        caplog.set_level(logging.INFO)
+        manifest = set()
+        mocks['slab'].preprocessed = True
+        slab = _read_poscar_file(manifest)
+        expect_log = 'Reading structure'
+
+        assert slab is mocks['slab']
+        mocks['read'].assert_called_once_with(filename=Path('POSCAR'))
+        mocks['copy'].assert_not_called()
+        assert not manifest
+        assert expect_log in caplog.text
 
 
 class TestSetLogLevel:
