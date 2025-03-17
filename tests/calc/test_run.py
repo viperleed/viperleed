@@ -551,16 +551,6 @@ class TestSetTensorleedSource:
             'get': mock_get,
             }
 
-    def test_success(self, mocks, caplog):
-        """Check the successful setting of a source path."""
-        caplog.set_level(5)  # < DEBUG
-        rpars = mocks['rpars']
-        src = 'some/source/path'
-        _set_tensorleed_source(rpars, src)
-        mocks['get'].assert_called_once_with(src)
-        assert rpars.paths.tensorleed == mocks['src']
-        assert not caplog.text
-
     _fails = {
         None: Path(),
         'some/source/path': Path('some/source/path'),
@@ -577,6 +567,16 @@ class TestSetTensorleedSource:
         _set_tensorleed_source(rpars, src)
         assert rpars.paths.tensorleed == expect.resolve()
         assert caplog.text
+
+    def test_success(self, mocks, caplog):
+        """Check the successful setting of a source path."""
+        caplog.set_level(5)  # < DEBUG
+        rpars = mocks['rpars']
+        src = 'some/source/path'
+        _set_tensorleed_source(rpars, src)
+        mocks['get'].assert_called_once_with(src)
+        assert rpars.paths.tensorleed == mocks['src']
+        assert not caplog.text
 
 
 class TestSetSystemName:
