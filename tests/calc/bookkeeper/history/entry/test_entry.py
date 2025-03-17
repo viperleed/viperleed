@@ -306,14 +306,14 @@ class TestHistoryEntryFormatProblematicFields:
 
     @auto_fix
     def test_auto_fix(self, entry_str, make_entry):
-        """Check that no problematic fields are marked."""
+        """Check that fixable fields are marked as such."""
         entry = make_entry(entry_str)
         formatted = entry.format_problematic_fields()
         assert FaultyLabel.FIXABLE.value in formatted
 
     @cant_fix
     def test_cant_fix(self, entry_str, make_entry, subtests):
-        """Check that no problematic fields are marked."""
+        """Check marking of unfixable fields."""
         entry = make_entry(entry_str)
         problems = entry.format_problematic_fields()
         with subtests.test('edited or missing'):
@@ -345,7 +345,7 @@ class TestHistoryEntryFormatProblematicFields:
 
     @_scrambled
     def test_scrambled(self, entry_str, make_entry):
-        """Check that scrambled fields are labeled as such."""
+        """Check that unsorted fields are labeled as such."""
         entry = make_entry(entry_str)
         problems = entry.format_problematic_fields().splitlines()
         assert problems
@@ -370,7 +370,7 @@ class TestHistoryEntryFix:
         )
 
     @cant_fix
-    def test_fix_cannot_be_fixed(self, entry_str, make_entry):
+    def test_cannot_be_fixed(self, entry_str, make_entry):
         """Check complaints when trying to fix a non-fixable entry."""
         entry = make_entry(entry_str)
         assert not entry.was_understood
@@ -385,7 +385,7 @@ class TestHistoryEntryFix:
             assert fixed is entry
 
     @auto_fix_whole_entry
-    def test_fix_entry_as_a_whole(self, entry_str, make_entry):
+    def test_entry_as_a_whole(self, entry_str, make_entry):
         """Check appropriate fixing of an entry with entry-level issues."""
         entry = make_entry(entry_str)
         assert entry.needs_fixing
@@ -398,8 +398,7 @@ class TestHistoryEntryFix:
         assert str(fixed) != str(entry)
 
     @auto_fix
-    def test_fix_entry_whole_raises_unfixed_fields(self, entry_str,
-                                                   make_entry):
+    def test_entry_whole_raises_unfixed_fields(self, entry_str, make_entry):
         """Check complaints when fixing entry issues before field issues."""
         entry = make_entry(entry_str)
         assert entry.needs_fixing
@@ -407,7 +406,7 @@ class TestHistoryEntryFix:
             entry.fix_entry_issues()
 
     @auto_fix_whole_entry
-    def test_fix_failed(self, entry_str, make_entry, monkeypatch):
+    def test_failed(self, entry_str, make_entry, monkeypatch):
         """Check complaints when fixing an entry fails."""
         def _do_not_fix(*_):
             pass
@@ -422,7 +421,7 @@ class TestHistoryEntryFix:
             entry.as_fixed()
 
     @auto_fix_field_only
-    def test_fix_fields_only(self, entry_str, make_entry):
+    def test_fields_only(self, entry_str, make_entry):
         """Check appropriate fixing of an entry with funny fields."""
         entry = make_entry(entry_str)
         assert entry.needs_fixing
@@ -436,7 +435,7 @@ class TestHistoryEntryFix:
         assert str(fixed) != str(entry)
 
     @need_no_fix
-    def test_fix_not_needed(self, entry_str, make_entry):
+    def test_no_fix_needed(self, entry_str, make_entry):
         """Check that correct entries need no fixing."""
         entry = make_entry(entry_str)
         assert not entry.needs_fixing
