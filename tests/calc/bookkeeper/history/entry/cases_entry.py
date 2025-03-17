@@ -42,9 +42,10 @@ class CasesHistoryInfoFunny:
 # JOB ID    24, 37, 99
 # RUN       1 2 3
 # TIME      {MOCK_TIME_ISO}
-# FOLDER    t003.r001_010203-040506'''
+# FOLDER    t003.r001_010203-040506
+'''
         notes = f'Notes: {NOTES_TEST_CONTENT}'
-        return base + '\n' + '\n'.join(notes for _ in range(5))
+        return base + '\n'.join(notes for _ in range(5))
 
     @case(tags=Tag.AUTO_FIX_ENTRY)
     def case_extra_lines(self):
@@ -62,6 +63,7 @@ Notes:'''
     @case(tags=(Tag.HISTORY, Tag.AUTO_FIX, Tag.AUTO_FIX_ENTRY))
     def case_field_and_entry_fix(self):
         """Return an entry with issues in both a field and the whole entry."""
+        # JOB ID has mixed separators, and Notes is at the wrong line
         return f'''\
 # JOB ID    4 5, 6
 # TENSORS   1, 2, 3
@@ -145,7 +147,7 @@ This is a comment line without a hash. TENSORS is missing
 
     @case(tags=(Tag.HISTORY, Tag.AUTO_FIX_ENTRY))
     def case_multiple_notes_fields(self):
-        """Return entry contents with duplicate identical fields."""
+        """Return entry contents with duplicate, different notes."""
         return f'''\
 # TENSORS   1, 2, 3
 # JOB ID    4, 5, 6
@@ -192,7 +194,7 @@ Notes:'''
 
     @case(tags=(Tag.HISTORY, Tag.AUTO_FIX_ENTRY))
     def case_sorting_messed_up(self):
-        """Return entry contents with duplicate fields and different values."""
+        """Return entry contents with fields sorted incorrectly."""
         return f'''\
 # JOB ID    4, 5, 6
 # TENSORS   1, 2, 3
@@ -225,7 +227,7 @@ class CasesInfoEntryAutoFixFields:
 
     @case(tags=Tag.OLD)
     def case_german_datetime(self):
-        """Return one full history.info entry without notes."""
+        """Return a full history.info entry with timestamp in German style."""
         return f'''\
 # TENSORS   1, 2, 29
 # JOB ID    24, 37, 99
@@ -258,10 +260,10 @@ Notes:'''
 
 @with_case_tags(Tag.NO_ISSUES, Tag.HISTORY)
 class CasesInfoEntryCommented:
-    """Collection of history.info contents with some empty fields."""
+    """Collection of history.info contents with comments next to fields."""
 
     def case_comment_folder(self):
-        """Return entry contents where FOLDER has been edited."""
+        """Return entry contents where FOLDER has user comments."""
         return f'''\
 # TENSORS   1, 2, 29
 # JOB ID    24, 37, 99
@@ -271,7 +273,7 @@ class CasesInfoEntryCommented:
 Notes:'''
 
     def case_comment_r_factor(self):
-        """Return entry contents where R REF was has user comments."""
+        """Return entry contents where R REF has user comments."""
         return f'''\
 # TENSORS   1, 2, 3
 # JOB ID    4, 5, 6
@@ -291,7 +293,7 @@ Notes:'''
 Notes:'''
 
     def case_comment_timestamp(self):
-        """Return entry contents with comments next to TENSORS."""
+        """Return entry contents with comments next to TIME."""
         return f'''\
 # TENSORS   1, 2, 29
 # JOB ID    2, 4, 12
@@ -413,7 +415,7 @@ Notes:'''
 
     @case(tags=Tag.NOT_PRESERVED)  # We can't handle trailing spaces
     def case_empty_folder_trailing_spaces(self):
-        """Return entry contents where FOLDER has no contents."""
+        """Return entry contents where FOLDER has only white spaces."""
         return f'''\
 # TENSORS   1, 2, 29
 # JOB ID    24, 37, 99
@@ -433,7 +435,7 @@ Notes:'''
 Notes:'''
 
     def case_empty_r_factor(self):
-        """Return a full entry with REFCALC R-factor info."""
+        """Return a full entry with empty REFCALC R-factor info."""
         return f'''\
 # TENSORS   1, 2, 3
 # JOB ID    4, 5, 6
@@ -443,7 +445,7 @@ Notes:'''
 Notes:'''
 
     def case_empty_run(self):
-        """Return a full entry with RUN information."""
+        """Return a full entry with empty RUN information."""
         return f'''\
 # TENSORS   1, 2, 3
 # JOB ID    4, 5, 6
@@ -453,7 +455,7 @@ Notes:'''
 Notes:'''
 
     def case_empty_timestamp(self):
-        """Return a full entry with RUN information."""
+        """Return a full entry with empty TIME information."""
         return '''\
 # TENSORS   1, 2, 3
 # JOB ID    4, 5, 6
@@ -501,7 +503,7 @@ class CasesInfoEntryPureComment:
 
     @case(tags=Tag.MULTI_ENTRY)
     def case_multi_pure_comments(self):
-        """An entry with more comments."""
+        """Multiple pure-comment entries with separators."""
         one_entry = self.case_pure_comment_entry()
         return HISTORY_INFO_SEPARATOR.join(one_entry for _ in range(2))
 
