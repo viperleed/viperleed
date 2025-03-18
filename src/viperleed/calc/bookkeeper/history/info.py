@@ -17,16 +17,15 @@ import logging
 from pathlib import Path
 import re
 
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_SEPARATOR
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
-
-from ..mode import BookkeeperMode as Mode
-from .constants import HISTORY_INFO_NAME
-from .constants import HISTORY_INFO_SEPARATOR
-from .errors import CantDiscardEntryError
-from .errors import CantRemoveEntryError
-from .errors import FixFailedError
-from .errors import NoHistoryEntryError
+from viperleed.calc.bookkeeper.history.errors import CantDiscardEntryError
+from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import FixFailedError
+from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
+from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 
 
 LOGGER = logging.getLogger(__name__)

@@ -21,36 +21,37 @@ import logging
 from typing import ClassVar
 from typing import Dict
 
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_SEPARATOR
+from viperleed.calc.bookkeeper.history.entry.enums import DuplicateType
+from viperleed.calc.bookkeeper.history.entry.enums import FaultyLabel
+from viperleed.calc.bookkeeper.history.entry.field import FieldBase
+from viperleed.calc.bookkeeper.history.entry.enums import FixAction
+from viperleed.calc.bookkeeper.history.entry.field import UnknownField
+from viperleed.calc.bookkeeper.history.entry.field_collection import FieldList
+from viperleed.calc.bookkeeper.history.entry.list_of_int_field import (
+    JobIdsField,
+    RunInfoField,
+    TensorNumsField,
+    )
+from viperleed.calc.bookkeeper.history.entry.notes_field import NotesField
+from viperleed.calc.bookkeeper.history.entry.rfactor_field import RRefField
+from viperleed.calc.bookkeeper.history.entry.rfactor_field import RSuperField
+from viperleed.calc.bookkeeper.history.entry.string_field import FolderField
+from viperleed.calc.bookkeeper.history.entry.string_field import JobNameField
+from viperleed.calc.bookkeeper.history.entry.time_field import TimestampField
+from viperleed.calc.bookkeeper.history.entry.time_field import TimestampFormat
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FieldsScrambledError
+from viperleed.calc.bookkeeper.history.errors import FixFailedError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
+from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.lib.collections_utils import IdentitySet
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import replace_values
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.log_utils import logging_silent
-
-from ...mode import BookkeeperMode as Mode
-from ..constants import HISTORY_INFO_NAME
-from ..constants import HISTORY_INFO_SEPARATOR
-from ..errors import EntrySyntaxError
-from ..errors import FieldsScrambledError
-from ..errors import FixableSyntaxError
-from ..errors import FixFailedError
-from .enums import DuplicateType
-from .enums import FaultyLabel
-from .enums import FixAction
-from .field import FieldBase
-from .field import UnknownField
-from .field_collection import FieldList
-from .list_of_int_field import JobIdsField
-from .list_of_int_field import RunInfoField
-from .list_of_int_field import TensorNumsField
-from .notes_field import NotesField
-from .rfactor_field import RRefField
-from .rfactor_field import RSuperField
-from .string_field import FolderField
-from .string_field import JobNameField
-from .time_field import TimestampField
-from .time_field import TimestampFormat
 
 
 LOGGER = logging.getLogger(__name__)

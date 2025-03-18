@@ -13,15 +13,14 @@ __license__ = 'GPLv3+'
 
 import re
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import MissingField
+from viperleed.calc.bookkeeper.history.entry.field import NoneIsEmptyField
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
-
-from ..errors import EntrySyntaxError
-from ..errors import FixableSyntaxError
-from .enums import FieldTag
-from .field import NoneIsEmptyField
-from .field import MissingField
 
 
 @frozen

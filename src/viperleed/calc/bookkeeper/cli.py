@@ -19,9 +19,9 @@ from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.cli_base import ViPErLEEDCLI
 
-from .bookkeeper import Bookkeeper
-from .history.constants import HISTORY_INFO_NAME
-from .mode import BookkeeperMode
+from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
 
 # All the pylint disables below are needed as Action subclasses

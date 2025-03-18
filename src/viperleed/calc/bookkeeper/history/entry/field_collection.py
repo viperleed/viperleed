@@ -15,14 +15,13 @@ from collections.abc import MutableSequence
 from copy import deepcopy
 from typing import Generator
 
+from viperleed.calc.bookkeeper.history.entry.enums import DuplicateType
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import FieldBase
+from viperleed.calc.bookkeeper.history.entry.field import UnknownField
+from viperleed.calc.bookkeeper.history.entry.notes_field import NotesField
+from viperleed.calc.bookkeeper.history.errors import FieldsScrambledError
 from viperleed.calc.lib.sequence_utils import conditional_sort
-
-from ..errors import FieldsScrambledError
-from .enums import DuplicateType
-from .enums import FieldTag
-from .field import FieldBase
-from .field import UnknownField
-from .notes_field import NotesField
 
 
 class FieldList(MutableSequence):

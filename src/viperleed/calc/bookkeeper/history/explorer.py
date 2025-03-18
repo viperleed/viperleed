@@ -17,13 +17,12 @@ from pathlib import Path
 import re
 import shutil
 
+from viperleed.calc.bookkeeper.history.folder import HistoryFolder
+from viperleed.calc.bookkeeper.history.folder import IncompleteHistoryFolder
+from viperleed.calc.bookkeeper.history.info import HistoryInfoFile
+from viperleed.calc.bookkeeper.utils import make_property
+from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.constants import DEFAULT_HISTORY
-
-from ..utils import make_property
-from ..utils import needs_update_for_attr
-from .folder import HistoryFolder
-from .folder import IncompleteHistoryFolder
-from .info import HistoryInfoFile
 
 
 LOGGER = logging.getLogger(__name__)

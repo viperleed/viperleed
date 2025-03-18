@@ -21,6 +21,11 @@ from typing import Dict
 from typing import Tuple
 from typing import Union
 
+from viperleed.calc.bookkeeper.history.entry.enums import FaultyLabel
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
+from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
 from viperleed.calc.lib.dataclass_utils import check_types
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
@@ -28,12 +33,6 @@ from viperleed.calc.lib.dataclass_utils import replace_values
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.string_utils import to_snake_case
 from viperleed.calc.lib.string_utils import strip_comments
-
-from ..errors import EntrySyntaxError
-from ..errors import FixableSyntaxError
-from ..errors import HistoryInfoError
-from .enums import FaultyLabel
-from .enums import FieldTag
 
 
 class CommonRegex(Enum):

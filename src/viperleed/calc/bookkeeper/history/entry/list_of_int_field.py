@@ -23,18 +23,17 @@ from typing import List
 from typing import Tuple
 from typing import Union
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import CommonRegex
+from viperleed.calc.bookkeeper.history.entry.field import DefaultMessage
+from viperleed.calc.bookkeeper.history.entry.field import EmptyField
+from viperleed.calc.bookkeeper.history.entry.field import FieldBase
+from viperleed.calc.bookkeeper.history.entry.field import MissingField
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.sections.calc_section import CalcSection
-
-from ..errors import EntrySyntaxError
-from ..errors import FixableSyntaxError
-from .enums import FieldTag
-from .field import CommonRegex
-from .field import DefaultMessage
-from .field import EmptyField
-from .field import FieldBase
-from .field import MissingField
 
 
 _INVALID_SECTION_ERR = 'Contains unknown section identifiers'

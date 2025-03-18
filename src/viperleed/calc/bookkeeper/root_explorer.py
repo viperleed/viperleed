@@ -21,6 +21,17 @@ from pathlib import Path
 import shutil
 import re
 
+from viperleed.calc.bookkeeper.constants import CALC_LOG_PREFIXES
+from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
+from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
+from viperleed.calc.bookkeeper.constants import STATE_FILES
+from viperleed.calc.bookkeeper.errors import FileOperationFailedError
+from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
+from viperleed.calc.bookkeeper.history.workhistory import WorkhistoryHandler
+from viperleed.calc.bookkeeper.utils import discard_files
+from viperleed.calc.bookkeeper.utils import file_contents_identical
+from viperleed.calc.bookkeeper.utils import make_property
+from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -30,17 +41,6 @@ from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
-from .constants import CALC_LOG_PREFIXES
-from .constants import EDITED_SUFFIX
-from .constants import ORI_SUFFIX
-from .constants import STATE_FILES
-from .errors import FileOperationFailedError
-from .history.explorer import HistoryExplorer
-from .history.workhistory import WorkhistoryHandler
-from .utils import discard_files
-from .utils import file_contents_identical
-from .utils import make_property
-from .utils import needs_update_for_attr
 
 
 LOGGER = logging.getLogger(__name__)

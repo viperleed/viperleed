@@ -12,7 +12,7 @@ __license__ = 'GPLv3+'
 
 from enum import Enum
 
-from ..errors import BookkeeperError
+from viperleed.calc.bookkeeper.errors import BookkeeperError
 
 
 class HistoryInfoError(BookkeeperError):

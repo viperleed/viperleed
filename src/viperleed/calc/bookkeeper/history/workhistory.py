@@ -23,12 +23,11 @@ import logging
 from operator import attrgetter
 import shutil
 
+from viperleed.calc.bookkeeper.constants import HISTORY_FOLDER_RE
+from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
+from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
-
-from ..constants import HISTORY_FOLDER_RE
-from ..utils import make_property
-from .meta import BookkeeperMetaFile
 
 
 LOGGER = logging.getLogger(__name__)
