@@ -87,7 +87,7 @@ class ManifestFile:
 
     @property
     def sections(self):
-        """Return a tuple of all the paths in this ManifestFile."""
+        """Return a tuple of all the top-level paths in this ManifestFile."""
         return tuple(self._sections)
 
     def __contains__(self, item):
