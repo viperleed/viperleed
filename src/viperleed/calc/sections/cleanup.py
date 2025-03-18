@@ -333,7 +333,7 @@ def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
         return
     root_name = at_path.name
     rgx = re.compile(rf'{root_name}_[0-9]{{3,}}')
-    subfolders = (p for p in at_path.glob('*') if p.is_dir())
+    subfolders = (p for p in at_path.iterdir() if p.is_dir())
     for subfolder in subfolders:
         if not rgx.fullmatch(subfolder.name):
             continue
@@ -376,7 +376,7 @@ def _zip_folder(folder, compression_level):
     arch_name = folder.with_suffix('.zip')
     _LOGGER.info(f'Packing {arch_name}...')
     # Don't pack the archive into itself
-    to_pack = (f for f in folder.glob('*') if f != arch_name)
+    to_pack = (f for f in folder.iterdir() if f != arch_name)
     try:  # pylint: disable=too-many-try-statements
         with ZipFile(arch_name, 'a', **kwargs) as archive:
             for item in to_pack:
