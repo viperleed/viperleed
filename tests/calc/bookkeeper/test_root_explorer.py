@@ -359,8 +359,8 @@ class TestRootExplorerNextCalc:
             explorer.prepare_for_next_calc_run()
         assert exc_info.match('fail_file: fail_reason')
         # All methods called even if there was an exception
-        for method in mock_called:
-            method.assert_called()
+        for called_method in mock_called:
+            called_method.assert_called()
 
     @parametrize(missing=(True,False))
     def test_mark_state_files_as_ori(self, missing, explorer, mocker):
@@ -388,8 +388,6 @@ class TestRootExplorerNextCalc:
         """An exception with equality."""
 
         def __eq__(self, other):
-            # We want to really make sure the classes are the same
-            # pylint: disable-next=unidiomatic-typecheck
             return type(self) is type(other) and self.args == other.args
 
     _copy_excs = {

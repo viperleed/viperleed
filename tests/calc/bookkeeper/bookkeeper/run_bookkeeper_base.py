@@ -168,6 +168,7 @@ class _TestCheckers:
             try:
                 out_suffixed_file = next(out_path.glob(f'{file}_OUT_*'))
             except StopIteration:
+                # pylint: disable-next=magic-value-comparison
                 if out_suffixed and file == 'PARAMETERS':
                     # There was no PARAMETERS in OUT for < v0.13.0
                     continue
