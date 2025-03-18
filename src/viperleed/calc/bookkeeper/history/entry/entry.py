@@ -17,6 +17,7 @@ from contextlib import AbstractContextManager
 from contextlib import nullcontext
 from dataclasses import InitVar
 from dataclasses import fields as data_fields
+import logging
 from typing import ClassVar
 from typing import Dict
 
@@ -27,7 +28,6 @@ from viperleed.calc.lib.dataclass_utils import replace_values
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.log_utils import logging_silent
 
-from ...log import LOGGER
 from ...mode import BookkeeperMode as Mode
 from ..constants import HISTORY_INFO_NAME
 from ..constants import HISTORY_INFO_SEPARATOR
@@ -51,6 +51,9 @@ from .string_field import FolderField
 from .string_field import JobNameField
 from .time_field import TimestampField
 from .time_field import TimestampFormat
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 # Format string for FixableSyntaxError raised because issues

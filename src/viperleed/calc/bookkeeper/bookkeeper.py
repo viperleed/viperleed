@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 
 from contextlib import nullcontext
 from enum import IntEnum
+import logging
 from pathlib import Path
 
 from viperleed.calc.constants import DEFAULT_OUT
@@ -28,10 +29,12 @@ from .history.errors import CantRemoveEntryError
 from .history.errors import MetadataMismatchError
 from .history.errors import NoHistoryEntryError
 from .history.meta import BookkeeperMetaFile
-from .log import LOGGER
 from .mode import BookkeeperMode
 from .root_explorer import RootExplorer
 from .utils import make_property
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 # Input files that may be generated at runtime - don't warn if missing

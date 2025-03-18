@@ -19,6 +19,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
+import logging
 from operator import attrgetter
 import shutil
 
@@ -26,9 +27,11 @@ from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ..constants import HISTORY_FOLDER_RE
-from ..log import LOGGER
 from ..utils import make_property
 from .meta import BookkeeperMetaFile
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class WorkhistoryHandler:

@@ -11,6 +11,7 @@ __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
 from collections import defaultdict
+import logging
 from operator import attrgetter
 from pathlib import Path
 import re
@@ -18,12 +19,14 @@ import shutil
 
 from viperleed.calc.constants import DEFAULT_HISTORY
 
-from ..log import LOGGER
 from ..utils import make_property
 from ..utils import needs_update_for_attr
 from .folder import HistoryFolder
 from .folder import IncompleteHistoryFolder
 from .info import HistoryInfoFile
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class HistoryExplorer:

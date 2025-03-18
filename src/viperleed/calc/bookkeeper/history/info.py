@@ -13,13 +13,13 @@ __license__ = 'GPLv3+'
 
 from enum import Enum
 from functools import wraps
+import logging
 from pathlib import Path
 import re
 
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.entry.entry import PureCommentEntry
 
-from ..log import LOGGER
 from ..mode import BookkeeperMode as Mode
 from .constants import HISTORY_INFO_NAME
 from .constants import HISTORY_INFO_SEPARATOR
@@ -27,6 +27,9 @@ from .errors import CantDiscardEntryError
 from .errors import CantRemoveEntryError
 from .errors import FixFailedError
 from .errors import NoHistoryEntryError
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class CantRemoveReason(Enum):

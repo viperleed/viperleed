@@ -12,6 +12,7 @@ __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
 from enum import Enum
+import logging
 from pathlib import Path
 import shutil
 
@@ -21,13 +22,15 @@ from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from ..constants import HISTORY_FOLDER_RE
-from ..log import LOGGER
 from ..mode import BookkeeperMode as Mode
 from ..utils import make_property
 from .constants import HISTORY_INFO_NAME
 from .errors import CantRemoveEntryError
 from .errors import MetadataMismatchError
 from .meta import BookkeeperMetaFile
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class FolderFixAction(Enum):

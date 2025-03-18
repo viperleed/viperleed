@@ -12,10 +12,11 @@ __license__ = 'GPLv3+'
 
 import filecmp
 from functools import wraps
+import logging
 from operator import attrgetter
 import shutil
 
-from .log import LOGGER
+LOGGER = logging.getLogger(__name__)
 
 
 def discard_files(*file_paths):

@@ -15,6 +15,7 @@ from collections import namedtuple
 from contextlib import nullcontext
 from datetime import datetime
 from functools import partial
+import logging
 from operator import attrgetter
 from pathlib import Path
 import shutil
@@ -36,11 +37,13 @@ from .constants import STATE_FILES
 from .errors import FileOperationFailedError
 from .history.explorer import HistoryExplorer
 from .history.workhistory import WorkhistoryHandler
-from .log import LOGGER
 from .utils import discard_files
 from .utils import file_contents_identical
 from .utils import make_property
 from .utils import needs_update_for_attr
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 # Regular expressions for parsing the log file
