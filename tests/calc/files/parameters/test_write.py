@@ -26,6 +26,9 @@ from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import strip_comments
 
 _MODULE = 'viperleed.calc.files.parameters.write'
+_AUTO_COMMENT = '! line commented out automatically'
+_AUTO_DUPE = '! Duplicate values given. This was ignored.'
+_AUTO_EDIT = '! line automatically changed to:'
 
 
 class TestModifiedParameterValue:
@@ -207,8 +210,7 @@ class TestParametersEditor:
             rpars.LMAX = LMax(3, 16)
             editor.modify_param('LMAX')
         old_value = '! LMAX = 8-14'
-        comment = '! line automatically changed to:'
-        check_file_modified(fpath, old_value, comment)
+        check_file_modified(fpath, old_value, _AUTO_EDIT)
 
     def test_write_edit_then_comment_out(self, read_one_param_file):
         """Check successive editing and commenting of a parameter."""
@@ -218,8 +220,7 @@ class TestParametersEditor:
             editor.modify_param('LMAX')
             editor.comment_out_parameter('LMAX')
         old_value = '! LMAX = 8-14'
-        comment = '! line commented out automatically'
-        check_file_modified(fpath, old_value, comment)
+        check_file_modified(fpath, old_value, _AUTO_COMMENT)
         for not_present in ('LMAX = 3-16', '! LMAX = 3-16'):
             try:
                 check_file_modified(fpath, not_present)
@@ -416,10 +417,10 @@ class TestCommentOutAndModifyFunctions:
                 modify(rpars, 'LMAX')
         check_file_modified(fpath,  # The original line
                             '! LMAX = 8-14',
-                            comment='! line automatically changed to:')
+                            _AUTO_EDIT)
         check_file_modified(fpath,  # First edit
                             '! LMAX = 3-16',
-                            comment='! line automatically changed to:')
+                            _AUTO_EDIT)
         check_file_modified(fpath, 'LMAX = 9-11')  # Last edit
         check_marked_as_edited(rpars)
 
@@ -429,12 +430,10 @@ class TestCommentOutAndModifyFunctions:
         rpars.BULK_LIKE_BELOW = 12345
         with execute_in_dir(fpath.parent):
             modify(rpars, 'BULK_LIKE_BELOW')
-        _duplicate = '! Duplicate values given. This was ignored.'
-        _auto = '! line automatically changed to:'
-        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.32', _duplicate)
-        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.33', _duplicate)
-        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.34', _duplicate)
-        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.35', _auto)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.32', _AUTO_DUPE)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.33', _AUTO_DUPE)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.34', _AUTO_DUPE)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.35', _AUTO_EDIT)
         check_file_modified(fpath, 'BULK_LIKE_BELOW = 12345.0000')
         check_marked_as_edited(rpars)
 
