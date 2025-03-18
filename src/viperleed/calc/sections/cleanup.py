@@ -574,14 +574,14 @@ def cleanup(rpars_or_manifest):
 
     After a call to this function:
     - Files in the current directory and all domain work directories
-      are organized into SUPP, OUT, Tensors, and Deltas folders
+      are organized into SUPP, OUT, Tensors, and Deltas folders.
     - The manifest file is written in the current directory. It
       contains information about which files should be moved back
       to the original folder where calc was started.
     - Final messages are written to the log, including information
       about duration of the overall calculation, the segments that
       were executed, and the final R factors. Warnings concerning
-      the bookkeeper and a checklist of items for user are also
+      the bookkeeper and a checklist of items for users are also
       logged.
 
     Parameters
@@ -698,7 +698,7 @@ def _delete_old_executables():
             try:
                 file.unlink()
             except OSError:
-                _LOGGER.debug(f'Failed to delete file {file}')
+                _LOGGER.debug(f'Failed to delete file {file}.')
 
 
 def _delete_old_root_directories():
@@ -759,7 +759,7 @@ def _organize_all_work_directories(rpars):
 
 
 def _silently_remove_files(*files):
-    """Delete files from this directory without complaining for errors."""
+    """Delete `files` from this directory without complaining for errors."""
     for file in files:
         file = Path(file)
         try:
@@ -796,7 +796,7 @@ def _write_final_log_messages(rpars):
     if rpars.domainParams:
         _LOGGER.info(
             'Domain calculations have been run. Note that the bookkeeper will '
-            'only run automatically in the top level calculation directory. '
+            'only run automatically in the top-level calculation directory. '
             'To preserve optimizations for individual domains, please run '
             'bookkeeper manually in the respective domain directories. '
             'The command is: viperleed bookkeeper --archive.\n'
