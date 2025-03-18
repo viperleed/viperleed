@@ -42,7 +42,6 @@ from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
 
-
 LOGGER = logging.getLogger(__name__)
 
 

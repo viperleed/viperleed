@@ -28,7 +28,6 @@ from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 
-
 _DISCARDED = 'DISCARDED'    # For entries marked via --discard
 _DiscardedInfo = namedtuple('_DiscardedInfo', ('pos', 'line'))
 _DISCARDED_RE = re.compile(rf'(\s*{_DISCARDED}\s*)')
