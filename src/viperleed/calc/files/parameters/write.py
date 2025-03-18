@@ -177,10 +177,7 @@ class ModifiedParameterValue:
         if self.only_comment_out:
             return None
         flags = self.original.flags_str if self.original else ''
-        return Assignment(self.fmt_value,
-                          self.param,
-                          raw_line=strip_comments(self.line),
-                          flags_str=flags)
+        return Assignment(self.fmt_value, self.param, flags_str=flags)
 
     def _update(self, rpars_or_value):
         """Gather the value, its formatted version and a line."""

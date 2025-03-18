@@ -1625,9 +1625,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.SYMMETRY_EPS = SymmetryEps(eps_value)
             return
 
-        z_assignment = Assignment(assignment.other_values,
-                                  param,
-                                  assignment.raw_line)
+        z_assignment = Assignment(assignment.other_values, param)
         eps_z_value = self.interpret_numerical_parameter(z_assignment,
                                                          bounds=bounds,
                                                          return_only=True)
@@ -1911,7 +1909,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                     message=f'Found {len(values)} values for angle {name}'
                     )
             angles[name] = self.interpret_numerical_parameter(
-                Assignment(values[0], param, raw_line=assignment.raw_line),
+                Assignment(values[0], param),
                 param=f'{param} {name}',
                 bounds=bounds[name],
                 return_only=True,

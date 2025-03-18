@@ -57,7 +57,7 @@ class TestModifiedParameterValue:
         assert _comment == 'Test Comment'
         assert assign == 'N_BULK_LAYERS = value1'
         new_assignment = mod_param.to_assignment()
-        assert new_assignment == Assignment('value1', 'N_BULK_LAYERS', assign)
+        assert new_assignment == Assignment('value1', 'N_BULK_LAYERS')
 
     _fmt_values = {
         'string': ('N_BULK_LAYERS', 3, '3'),
@@ -338,7 +338,6 @@ class TestCommentOutAndModifyFunctions:
         with execute_in_dir(fpath.parent):
             new = Assignment('this line did not exist',
                              'DOMAIN',
-                             'DOMAIN added = this line did not exist',
                              flags_str='added')
             modify(rpars, 'DOMAIN', new=Path('other_path'), original=new)
         check_file_modified(fpath, 'DOMAIN added = other_path')
@@ -353,7 +352,6 @@ class TestCommentOutAndModifyFunctions:
             comment_out(rpars, 'DOMAIN', original=orig)
             new = Assignment('this line did not exist',
                              'DOMAIN',
-                             'DOMAIN added = this line did not exist',
                              flags_str='added')
             modify(rpars, 'DOMAIN', new=Path('other_path'), original=new)
         try:
