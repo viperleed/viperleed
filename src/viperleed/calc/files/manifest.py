@@ -47,11 +47,11 @@ class ManifestFile:
     always present, irrespective of whether they have any contents.
     """
 
-    def __init__(self, *contents, path=None):
+    def __init__(self, *contents, root_path=None):
         """Initialize an instance with some contents."""
-        self._path = Path(path or '').resolve()
-        self._sections = {self._path: set()}  # {path: {str_contents}}
-        self._labels = {self._path: 'root'}
+        self._root = Path(root_path or '').resolve()
+        self._sections = {self._root: set()}  # {path: {str_contents}}
+        self._labels = {self._root: 'root'}
         for content in contents:
             if isinstance(content, ManifestFile):
                 self += content
@@ -61,9 +61,9 @@ class ManifestFile:
     @property
     def has_absolute_paths(self):
         """Return whether any of the sub-manifests is not a subfolder."""
-        for path in self.paths[1:]:
+        for path in self.sections[1:]:
             try:
-                path.relative_to(self.path)
+                path.relative_to(self.root)
             except ValueError:
                 return True
         return False
@@ -75,17 +75,24 @@ class ManifestFile:
 
     @property
     def path(self):
-        """Return the path to the folder containing this ManifestFile."""
-        return self._path
+        """Return the path to this manifest file."""
+        return self.root / self.name
+
+    file = path
 
     @property
-    def paths(self):
+    def root(self):
+        """Return the path to the folder containing this ManifestFile."""
+        return self._root
+
+    @property
+    def sections(self):
         """Return a tuple of all the paths in this ManifestFile."""
         return tuple(self._sections)
 
     def __contains__(self, item):
         """Return whether `item` is contained in this ManifestFile."""
-        return item in self._sections[self.path]
+        return item in self._sections[self.root]
 
     def __iadd__(self, other):
         """Add the contents of another manifest file to this one."""
@@ -100,13 +107,13 @@ class ManifestFile:
 
     def add(self, item):
         """Add an `item` to the top-level path."""
-        self._sections[self.path].add(item)
+        self._sections[self.root].add(item)
 
     def add_manifest(self, other, label='folder'):
         """Add another manifest file with an optional label."""
         self += other
-        if other.path != self.path:  # Don't override root
-            self._labels[other.path] = label
+        if other.root != self.root:  # Don't override root
+            self._labels[other.root] = label
 
     def iter_sections(self, relative=False):
         """Yield sections and their contents.
@@ -115,7 +122,7 @@ class ManifestFile:
         ----------
         relative : bool, optional
             Whether paths to the sections should be relative to
-            self.path.
+            self.root.
 
         Yields
         ------
@@ -129,17 +136,16 @@ class ManifestFile:
             raise ManifestFileError('relative paths are supported only if all '
                                     'paths are subfolders of the root one.')
         if relative:
-            contents = ((p.relative_to(self.path), c) for p, c in contents)
+            contents = ((p.relative_to(self.root), c) for p, c in contents)
         yield from contents
 
     def read(self):
         """Read the contents of a manifest file in the current directory."""
-        manifest = self.path / self.name
-        if not manifest.is_file():
+        if not self.file.is_file():
             return
-        section = self.path
+        section = self.root
         rel_path = None
-        with manifest.open('r', encoding='utf-8') as file:
+        with self.file.open('r', encoding='utf-8') as file:
             for line in file:
                 line = line.strip()
                 if not line:
@@ -151,16 +157,15 @@ class ManifestFile:
 
     def write(self):
         """Write the contents of this ManifestFile to file."""
-        manifest = self.path / self.name
-        with manifest.open('w', encoding='utf-8') as file:
-            root_contents = self._sections[self.path]
+        with self.file.open('w', encoding='utf-8') as file:
+            root_contents = self._sections[self.root]
             if root_contents:
                 self._write_contents('', root_contents, file)
             for path, contents in self.iter_sections():
-                if path is self.path:
+                if path is self.root:
                     continue
                 try:
-                    relative_path = path.relative_to(self.path)
+                    relative_path = path.relative_to(self.root)
                 except ValueError:  # Not a subfolder, write it in full
                     relative_path = path
                 label = self._labels.get(path, '')

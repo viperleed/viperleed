@@ -33,7 +33,7 @@ class MockMetaFile:
 
     def __init__(self, path):
         """Initialize from a path."""
-        self.path = path
+        self.folder = path
         self.file = path / 'fake_file'
         self.hash_ = _FAKE_HASH
         self.parent = None

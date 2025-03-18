@@ -279,26 +279,26 @@ class TestWriteManifest:
 
     def test_collects_domains(self, rpars, tmp_path):
         """Check that contents of domains are collected."""
-        rpars.manifest = manifest = ManifestFile(path=tmp_path)
+        rpars.manifest = manifest = ManifestFile(root_path=tmp_path)
         for i in range(5):
             d_path = tmp_path/f'dd_{i}'
             d_rpars = Rparams()
-            d_rpars.manifest = ManifestFile(path=d_path)
+            d_rpars.manifest = ManifestFile(root_path=d_path)
             domain = DomainParameters(d_path, f'name {i}')
             domain.rpars = d_rpars
             rpars.domainParams.append(domain)
         with execute_in_dir(tmp_path):
             _write_manifest_file(rpars)
         # Check that now all sub-manifests are present
-        subpaths = set(manifest.paths)
+        subpaths = set(manifest.sections)
         expect_paths = (
             tmp_path,
-            *(d.rpars.manifest.path for d in rpars.domainParams),
+            *(d.rpars.manifest.root for d in rpars.domainParams),
             )
         assert all(p in subpaths for p in expect_paths)
 
         # And verify that contents have been written correctly
-        contents = (manifest.path/'manifest').read_text().splitlines()
+        contents = manifest.file.read_text().splitlines()
         headers = [line for line in contents if line.startswith('[')]
         expect_headers = [f'[domain name {i} at dd_{i}]' for i in range(5)]
         assert headers == expect_headers

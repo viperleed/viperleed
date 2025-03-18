@@ -55,52 +55,54 @@ class TestManifestFile:
     def test_init_no_contents(self):
         """Test ManifestFile initialization."""
         manifest = ManifestFile()
-        assert manifest.path == Path.cwd()
-        assert len(manifest.paths) == 1
+        assert manifest.root == Path.cwd()
+        assert len(manifest.sections) == 1
         # pylint: disable-next=magic-value-comparison
         assert manifest.name == 'manifest'
+        assert manifest.path == manifest.root / manifest.name
+        assert manifest.file == manifest.path
 
     def test_init_with_contents(self, manifest):
         """Check correct initialization of a manifest with contents."""
-        check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
+        check_contents(manifest, manifest.root, *_SAMPLE_CONTENTS)
 
     def test_init_with_path(self):
         """Test initialization with a specific path."""
         path_name = '/some/test/path'
-        manifest = ManifestFile(path=path_name)
-        assert manifest.path == Path(path_name).resolve()
+        manifest = ManifestFile(root_path=path_name)
+        assert manifest.root == Path(path_name).resolve()
 
     def test_init_with_other_manifest(self, manifest):
         """Check correct initialization of a manifest with contents."""
         other_contents = 'a.txt', 'other_folder'
         other_manifest = ManifestFile(*other_contents)
         manifest = ManifestFile(other_manifest)
-        check_contents(manifest, other_manifest.path, *other_contents)
-        # The two manifests have the same path
-        check_contents(manifest, manifest.path, *other_contents)
+        check_contents(manifest, other_manifest.root, *other_contents)
+        # The two manifests have the same root path
+        check_contents(manifest, manifest.root, *other_contents)
 
     def test_add_root_item(self, manifest):
         """Test adding an item to the root of a manifest."""
         manifest.add('newfile.cfg')
-        check_contents(manifest, manifest.path, 'newfile.cfg')
+        check_contents(manifest, manifest.root, 'newfile.cfg')
 
     def test_add_manifest_other_path(self, manifest):
         """Test adding another ManifestFile."""
         label = 'extra'
-        other_manifest = ManifestFile('b.log', path='other')
+        other_manifest = ManifestFile('b.log', root_path='other')
         manifest.add_manifest(other_manifest, label=label)
-        check_contents(manifest, other_manifest.path, 'b.log')
+        check_contents(manifest, other_manifest.root, 'b.log')
         # pylint: disable-next=protected-access           # OK in tests
-        assert manifest._labels[other_manifest.path] == label
+        assert manifest._labels[other_manifest.root] == label
 
     def test_add_manifest_same_path(self, manifest):
         """Test adding another ManifestFile."""
         label = 'extra'
-        other_manifest = ManifestFile('b.log', path=manifest.path)
+        other_manifest = ManifestFile('b.log', root_path=manifest.root)
         manifest.add_manifest(other_manifest, label=label)
-        check_contents(manifest, manifest.path, 'b.log')
+        check_contents(manifest, manifest.root, 'b.log')
         # pylint: disable-next=protected-access           # OK in tests
-        assert manifest._labels[other_manifest.path] != label
+        assert manifest._labels[other_manifest.root] != label
 
     def test_contains(self, manifest):
         """Check the correct outcome of the "in" operation."""
@@ -110,27 +112,27 @@ class TestManifestFile:
 
     def test_inplace_add_same_path(self, manifest):
         """Test in-place addition."""
-        other = ManifestFile('b.log', path=manifest.path)
+        other = ManifestFile('b.log', root_path=manifest.root)
         manifest += other
-        check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
-        check_contents(manifest, manifest.path, 'b.log')
+        check_contents(manifest, manifest.root, *_SAMPLE_CONTENTS)
+        check_contents(manifest, manifest.root, 'b.log')
 
     def test_inplace_other_path(self, manifest):
         """Test in-place addition of a sub-manifest."""
-        other = ManifestFile('b.log', path=manifest.path/'subpath')
+        other = ManifestFile('b.log', root_path=manifest.root/'subpath')
         manifest += other
-        check_contents(manifest, manifest.path, *_SAMPLE_CONTENTS)
-        check_contents(manifest, other.path, 'b.log')
+        check_contents(manifest, manifest.root, *_SAMPLE_CONTENTS)
+        check_contents(manifest, other.root, 'b.log')
         # Ensure the contents of the other have been added identically
         other.add('some_new_file')
-        check_contents(manifest, other.path, 'some_new_file')
+        check_contents(manifest, other.root, 'some_new_file')
 
     def test_iter_sections(self, manifest):
         """Test iter_sections() method."""
         sections = dict(manifest.iter_sections())
-        assert manifest.path in sections
+        assert manifest.root in sections
         for item in _SAMPLE_CONTENTS:
-            assert item in sections[manifest.path]
+            assert item in sections[manifest.root]
 
     def test_iter_sections_relative(self, manifest):
         """Test iter_sections() method."""
@@ -141,7 +143,7 @@ class TestManifestFile:
 
     def test_iter_sections_relative_raises(self, manifest):
         """Test iter_sections() method."""
-        manifest.add_manifest(ManifestFile(path='/some/other/path'))
+        manifest.add_manifest(ManifestFile(root_path='/some/other/path'))
         with pytest.raises(ManifestFileError):
             dict(manifest.iter_sections(relative=True))
 
@@ -152,8 +154,8 @@ class TestManifestFileReadWrite:
     def check_written_contents(self, manifest, expect):
         """Check that the manifest file at path has expected contents."""
         # Do OS-dependent path changes:
-        self._translate_abs_paths(manifest.path, expect)
-        written = (manifest.path/'manifest').read_text().splitlines()
+        self._translate_abs_paths(manifest.root, expect)
+        written = manifest.file.read_text().splitlines()
         try:
             indices = [written.index(h) for h in expect if h]
         except ValueError as exc:
@@ -266,7 +268,7 @@ class TestManifestFileReadWrite:
             Path('./folder').resolve(): 'domain ABC',
             Path('other').resolve(): '',
             }
-        assert manifest.paths == tuple(expect_contents)
+        assert manifest.sections == tuple(expect_contents)
         for path, contents in expect_contents.items():
             check_contents(manifest, path, *contents)
         # pylint: disable-next=protected-access           # OK in tests
@@ -274,11 +276,11 @@ class TestManifestFileReadWrite:
 
     def test_write_children(self, manifest):
         """Check expected results of writing a manifest with children."""
-        with execute_in_dir(manifest.path):
+        with execute_in_dir(manifest.root):
             Path('path_to_empty').mkdir()
             Path('path_to_other').mkdir()
-            empty_manifest = ManifestFile(path='path_to_empty')
-            other_manifest = ManifestFile('content', path='path_to_other')
+            empty_manifest = ManifestFile(root_path='path_to_empty')
+            other_manifest = ManifestFile('content', root_path='path_to_other')
             manifest.add_manifest(empty_manifest, label='empty')
             manifest.add_manifest(other_manifest, label='other')
             manifest.write()
@@ -294,8 +296,8 @@ class TestManifestFileReadWrite:
         """Check expected results of writing a manifest with only children."""
         with execute_in_dir(tmp_path):
             manifest = ManifestFile()
-            empty_manifest = ManifestFile(path='path_to_empty')
-            other_manifest = ManifestFile('content', path='path_to_other')
+            empty_manifest = ManifestFile(root_path='path_to_empty')
+            other_manifest = ManifestFile('content', root_path='path_to_other')
             manifest.add_manifest(empty_manifest, label='empty')
             manifest.add_manifest(other_manifest, label='other')
             manifest.write()
@@ -308,10 +310,10 @@ class TestManifestFileReadWrite:
 
     def test_write_no_children(self, manifest):
         """Check expected results of writing a manifest without children."""
-        with execute_in_dir(manifest.path):
+        with execute_in_dir(manifest.root):
             manifest.write()
         assert not manifest.has_absolute_paths
-        written = (manifest.path/'manifest').read_text().splitlines()
+        written = manifest.file.read_text().splitlines()
         assert len(set(written)) == len(written)  # No lines missed
         expect = {*_SAMPLE_CONTENTS, ''}
         assert set(written) == expect
@@ -319,7 +321,7 @@ class TestManifestFileReadWrite:
     def test_write_absolute_paths(self, manifest, tmp_path):
         """Test writing when subfolder paths are absolute."""
         with execute_in_dir(tmp_path):
-            manifest += ManifestFile('external.txt', path='/external')
+            manifest += ManifestFile('external.txt', root_path='/external')
             manifest.write()
         assert manifest.has_absolute_paths
         expect = {
@@ -330,11 +332,11 @@ class TestManifestFileReadWrite:
 
     def test_write_then_read(self, manifest):
         """Check that reading back a written manifest changes nothing."""
-        with execute_in_dir(manifest.path):
+        with execute_in_dir(manifest.root):
             Path('path_to_empty').mkdir()
             Path('path_to_other').mkdir()
-            empty_manifest = ManifestFile(path='path_to_empty')
-            other_manifest = ManifestFile('content', path='path_to_other')
+            empty_manifest = ManifestFile(root_path='path_to_empty')
+            other_manifest = ManifestFile('content', root_path='path_to_other')
             manifest.add_manifest(empty_manifest, label='empty')
             manifest.add_manifest(other_manifest, label='other')
             manifest.write()

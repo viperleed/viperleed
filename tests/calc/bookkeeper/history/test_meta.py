@@ -105,7 +105,8 @@ class TestBookkeeperMetaFile:
 
     def test_init(self, meta, mock_path):
         """Test initialization of BookkeeperMetaFile."""
-        assert meta.path == Path(mock_path)
+        assert meta.folder == Path(mock_path)
+        assert meta.file == meta.path
         # pylint: disable-next=protected-access           # OK in tests
         parser = meta._parser
         assert parser is not None
@@ -138,7 +139,7 @@ class TestBookkeeperMetaFile:
             f'{_MODULE}.BookkeeperMetaFile._update_hash_from_folder'
             )
         meta.compute_hash()
-        mock_update_folder.assert_called_once_with(meta.path)
+        mock_update_folder.assert_called_once_with(meta.folder)
         assert meta.hash_ == _MOCK_OTHER_HASH
         # pylint: disable-next=protected-access           # OK in tests
         assert meta._parser['archived']['hash'] == _MOCK_OTHER_HASH
@@ -183,7 +184,7 @@ class TestBookkeeperMetaFileRaises:
         """Test read method when the metadata file is missing."""
         # NB: Path instances have immutable .is_file. Setting it
         # onto the class rather than the instance circumvents this.
-        mocker.patch.object(type(meta.path), 'is_file', return_value=False)
+        mocker.patch.object(type(meta.folder), 'is_file', return_value=False)
         with pytest.raises(FileNotFoundError):
             meta.read()
 
