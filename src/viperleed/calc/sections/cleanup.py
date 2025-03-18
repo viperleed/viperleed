@@ -290,9 +290,7 @@ def _collect_out_contents(rpars):
 def _copy_files_and_directories(files, directories, target):
     """Copy files and directories to target, creating it if not existing."""
     try:
-        target.mkdir(parents=True)
-    except FileExistsError:
-        pass
+        target.mkdir(parents=True, exist_ok=True)
     except OSError:
         _LOGGER.error(f'Error creating {target.name} folder: ', exc_info=True)
         return
@@ -406,9 +404,7 @@ def _collect_delta_files(tensor_index):
         return
     destination = Path(f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{tensor_index:03d}')
     try:
-        destination.mkdir(parents=True)
-    except FileExistsError:
-        pass
+        destination.mkdir(parents=True, exist_ok=True)
     except OSError:
         _LOGGER.error(f'Failed to create {destination} folder: ',
                       exc_info=True)
