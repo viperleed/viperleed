@@ -440,8 +440,12 @@ class ParametersFileEditor(AbstractContextManager):
             return
 
         modified = self._to_modify.get((param, assignment), None)
-        if modified is None or self._is_unchanged(modified, raw_line):
-            # No modification needed
+        should_write_old_line = (
+            modified is None
+            or self._is_unchanged(modified, raw_line)
+            or modified.already_written
+            )
+        if should_write_old_line:
             self._write_param_file.write(raw_line)
             return
 

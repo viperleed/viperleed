@@ -65,6 +65,7 @@ _READ = {
     'domains': {'RUN': [4], 'LOG_LEVEL': 10, 'THEO_ENERGIES': [50, 152, 3],
                 'V0_IMAG': 5.0, 'LMAX': LMax(8, 12),
                 'DOMAIN': [('', 'silver'), ('Bi', 'bismuth')]},
+    'domains_identical': {},
     'empty': {}, 'stop': {}, 'no_stop': {}, 'missing_equals': {},
     'left empty': {},
     }
@@ -72,6 +73,8 @@ for key in ('stop', 'no_stop', 'left empty'):
     _READ[key].update(**_READ['Ir'])  # Copies of the Ir file
 _READ['missing_equals'].update(**_READ['Ag'])
 del _READ['missing_equals']['SUPERLATTICE']
+_READ['domains_identical'].update(**_READ['domains'])
+_READ['domains_identical']['DOMAIN'] = [('', 'silver'), ('', 'silver')]
 
 # FORTRAN_COMP added on a copy of the Ag(100) file
 _READ['fortran comp'] = deepcopy(_READ['Ag'])
@@ -82,6 +85,7 @@ _PATHS = {
     'Ag': 'Ag(100)/initialization/PARAMETERS',
     'Ir': 'parameters/PARAMETERS_Ir(100)-(2x1)-O',
     'domains': 'parameters/PARAMETERS_domains',
+    'domains_identical': 'parameters/PARAMETERS_domains_identical',
     'empty': 'parameters/PARAMETERS_empty',
     'fortran comp': 'parameters/PARAMETERS_fortran_comp',
     'stop': 'parameters/PARAMETERS_stop',
@@ -139,6 +143,11 @@ class CasesParametersFile:
     def case_domains(self, data_path):
         """Return the main PARAMETERS file of a multi-domain calculation."""
         info = _fill_test_info('domains')
+        return self.case_parameters_file(info, data_path)
+
+    def case_domains_identical(self, data_path):
+        """Return the main PARAMETERS file of a two-same-domain calculation."""
+        info = _fill_test_info('domains_identical')
         return self.case_parameters_file(info, data_path)
 
     def case_stop(self, data_path):

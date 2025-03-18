@@ -41,3 +41,10 @@ def read_domains_file(data_path, read_parameters):
     """Read an example main PARAMETERS file for a multi-domain calculation."""
     args = CasesParametersFile().case_domains(data_path)
     return read_parameters(args)
+
+
+@fixture
+def read_identical_domains(data_path, read_parameters):
+    """Read the main PARAMETERS file for a two-same-domain calculation."""
+    args = CasesParametersFile().case_domains_identical(data_path)
+    return read_parameters(args)

@@ -364,6 +364,19 @@ class TestCommentOutAndModifyFunctions:
             pytest.fail(reason='Unexpectedly commented out DOMAIN silver')
         check_file_modified(fpath, 'DOMAIN added = other_path')
 
+    def test_modify_multi_value_duplicate(self, read_identical_domains):
+        """Check correct editing of a multi-valued line given twice."""
+        fpath, rpars = read_identical_domains
+        first = next(iter(rpars.readParams['DOMAIN']))
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=first)
+        lines = fpath.read_text().splitlines()
+        commented = '! DOMAIN = silver'
+        n_commented = sum(1 for line in lines if line.startswith(commented))
+        assert n_commented == 1
+        check_file_modified(fpath, commented, _AUTO_EDIT)
+        check_file_modified(fpath, 'DOMAIN = other_path')
+
     def test_modify_multi_value_one_given(self, read_domains_file):
         """Check correct modification of one multi-valued parameter."""
         fpath, rpars = read_domains_file
