@@ -149,7 +149,7 @@ def run_section(index, sl, rp):
             if changeVIBROCC:
                 if os.path.isfile("VIBROCC"):
                     os.rename("VIBROCC", "VIBROCC_user")
-                    rp.manifest.append("VIBROCC_user")
+                    rp.manifest.add("VIBROCC_user")
                     logger.info(
                         "VIBROCC file was modified with automatically "
                         "generated vibration amplitudes."
