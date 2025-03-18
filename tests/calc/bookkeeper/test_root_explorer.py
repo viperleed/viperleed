@@ -64,7 +64,7 @@ def fixture_logfiles():
 
 @fixture(name='tensors')
 def fixture_tensor_and_delta_info():
-    """Fixture to initialize TensorAndDeltaInfo with a mock root path."""
+    """Return a TensorAndDeltaInfo with a mock root path."""
     return TensorAndDeltaInfo(Path('/fake/root'))
 
 
@@ -97,7 +97,7 @@ def fixture_mock_readlines(mocker, monkeypatch):
 
 @fixture(name='patched_path')
 def fixture_patched_path(explorer, mocker):
-    """Return a version of pathlib.Path with fake read/write_text."""
+    """Return a version of pathlib.Path with fake methods."""
     MockedPath = namedtuple('MockedPath', ('read', 'write', 'glob'))
     notes_file = explorer.path / 'notes.txt'
     mock_glob = mocker.patch('pathlib.Path.glob',
@@ -110,7 +110,7 @@ def fixture_patched_path(explorer, mocker):
 
 @fixture(name='mock_attributes')
 def fixture_mock_attributes(mocker):
-    """Replace attributes of obj with MagicMock(s)."""
+    """Replace attributes of `obj` with MagicMock(s)."""
     def _patch(obj, *attrs):
         for attr_name in attrs:
             mocker.patch.object(obj, attr_name)
@@ -118,13 +118,13 @@ def fixture_mock_attributes(mocker):
 
 
 def called_or_not(condition):
-    """Return the name of an assertion method depending on condition."""
+    """Return the name of an assertion method depending on `condition`."""
     return 'assert_called' if condition else 'assert_not_called'
 
 
 @fixture(name='check_methods_called')
 def fixture_check_methods_called(mock_attributes):
-    """Check that calling method_name also calls other methods."""
+    """Check that calling `method_name` also calls other methods."""
     def check_methods_called(obj, method_name, **called):
         mock_attributes(obj, *called)
         method = attrgetter(method_name)(obj)
@@ -294,7 +294,7 @@ class TestRootExplorer:
         patched_path.write.assert_called_once_with('', encoding='utf-8')
 
     def test_read_and_clear_notes_file_no_notes(self, explorer, patched_path):
-        """Test successful reading and clearing of a notes file."""
+        """Test result of reading notes whn no file exists."""
         patched_path.glob.return_value = iter(())
         notes = explorer.read_and_clear_notes_file()
         assert not notes
@@ -352,16 +352,15 @@ class TestRootExplorerNextCalc:
     @parametrize(method=errors_delayed)
     def test_errors_delayed(self, method, explorer, mocker):
         """Check failure when one method fails."""
+        mock_called = [mocker.patch.object(explorer, m) for m in self.called]
         exc = FileOperationFailedError({'fail_file': 'fail_reason'})
-        mocker.patch.object(explorer, method, side_effect=exc)
-        # Patch all the other methods too
-        for other in self.called:
-            if other == method:
-                continue
-            mocker.patch.object(explorer, other)
+        getattr(explorer, method).side_effect = exc
         with pytest.raises(OSError) as exc_info:
             explorer.prepare_for_next_calc_run()
         assert exc_info.match('fail_file: fail_reason')
+        # All methods called even if there was an exception
+        for method in mock_called:
+            method.assert_called()
 
     @parametrize(missing=(True,False))
     def test_mark_state_files_as_ori(self, missing, explorer, mocker):
@@ -391,7 +390,7 @@ class TestRootExplorerNextCalc:
         def __eq__(self, other):
             # We want to really make sure the classes are the same
             # pylint: disable-next=unidiomatic-typecheck
-            return type(self) == type(other) and self.args == other.args
+            return type(self) is type(other) and self.args == other.args
 
     _copy_excs = {
         # Keys are: Exceptions on attempts from OUT/original_inputs
@@ -517,8 +516,7 @@ class TestRootExplorerListFiles:
             explorer.path / DEFAULT_TENSORS / f'{DEFAULT_TENSORS}_001.zip',
             )
         mock_paths = (
-            explorer.path / DEFAULT_OUT,
-            # explorer.path / DEFAULT_SUPP,  # No SUPP
+            explorer.path / DEFAULT_OUT,  # No SUPP
             *mock_files
             )
         explorer.collect_info()
@@ -716,14 +714,14 @@ class TestRootExplorerRaises:
 
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, explorer, attr):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that accessing attributes before collection fails."""
         with pytest.raises(AttributeError,
                            match=r'.*collect_(info|subfolders).*'):
             attrgetter(attr)(explorer)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, explorer, method_name):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that calling methods before collection fails."""
         method = attrgetter(method_name)(explorer)
         with pytest.raises(AttributeError,
                            match=r'.*collect_(info|subfolders).*'):
@@ -731,7 +729,7 @@ class TestRootExplorerRaises:
 
 
 def _combine_log_info(**log_info):
-    """Return all combinations of lines and expected values for log_info."""
+    """Return all combinations of lines and expected values for `log_info`."""
     _info_keys = tuple(log_info)
     for _repeat in range(2, len(_info_keys)+1):
         for keys in permutations(_info_keys, _repeat):
@@ -771,7 +769,7 @@ class TestLogFiles:
             assert getattr(logs, attr) == expect
 
     def test_collect_logs_no_logs(self, logs, mocker):
-        """Test that _collect_logs finds files in the root directory."""
+        """Test that _collect_logs finds no existing files."""
         files = {
             '_calc': ('viperleed-calc_1.log', 'tleedm_1.log', 'tleedm_2.log'),
             '_others': ('other_stuff.log',)
@@ -881,13 +879,13 @@ class TestLogFiles:
 
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, logs, attr):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that accessing attributes before collection fails."""
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             attrgetter(attr)(logs)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, logs, method_name):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that calling methods before collection fails."""
         method = attrgetter(method_name)(logs)
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             method()
@@ -896,7 +894,7 @@ class TestLogFiles:
 class TestTensorsAndDeltasInfo:
     """Tests for the TensorsAndDeltasInfo class."""
 
-    tensor_index = 5  # Example index to use for Tensor/Delta files
+    tensor_index = 5  # Example index to use for tensor/delta files
 
     @fixture(name='mock_get_tensors', autouse=True)
     def patch_get_tensors(self, mocker):
@@ -910,7 +908,7 @@ class TestTensorsAndDeltasInfo:
         return mock_history({self.tensor_index: 1})
 
     def test_collect(self, tensors, mock_get_tensors):
-        """Test that collect sets the correct Tensor index."""
+        """Test that collect sets the correct tensor index."""
         tensors.collect()
         # pylint: disable-next=protected-access       # OK in tests
         mock_get_tensors.assert_called_once_with(home=tensors._root,
@@ -918,7 +916,7 @@ class TestTensorsAndDeltasInfo:
         assert tensors.most_recent == self.tensor_index
 
     def test_to_discard(self, tensors, simple_history, mocker):
-        """Test list_paths_to_discard when Tensor and Delta files exist."""
+        """Test list_paths_to_discard when tensor and delta files exist."""
         history = simple_history
         history.last_folder_and_siblings.extend(
             # Simulate some siblings too
@@ -933,11 +931,11 @@ class TestTensorsAndDeltasInfo:
         expected = tuple(tensors._root / f for f in expected)
         tensors.collect()
         mocker.patch.object(Path, 'is_file', new=mock_exists(expected))
-        discard_paths = tensors.list_paths_to_discard(simple_history)
+        discard_paths = tensors.list_paths_to_discard(history)
         assert discard_paths == expected
 
     def test_to_discard_none(self, tensors, simple_history, mocker):
-        """Test list_paths_to_discard when no Tensor/Delta files exist."""
+        """Test list_paths_to_discard when no tensor/delta files exist."""
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=False)
         assert not any(tensors.list_paths_to_discard(simple_history))
@@ -959,7 +957,7 @@ class TestTensorsAndDeltasInfo:
     @patch_discard
     def test_discard(self, mock_discard_files,
                      tensors, simple_history, mocker):
-        """Test removal of Tensors and Deltas."""
+        """Test removal of tensors and deltas."""
         removed = (
             f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
             f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_index:03d}.zip',
@@ -980,13 +978,13 @@ class TestTensorsAndDeltasInfo:
 
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, tensors, attr):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that accessing attributes before collection fails."""
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             attrgetter(attr)(tensors)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, tensors, method_name):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that calling methods before collection fails."""
         method = attrgetter(method_name)(tensors)
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             method()
