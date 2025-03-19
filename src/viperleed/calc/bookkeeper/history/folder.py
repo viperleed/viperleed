@@ -166,6 +166,10 @@ class HistoryFolder(IncompleteHistoryFolder):
         if not self.path.is_dir():
             raise ValueError(f'{self.path} is not a directory.')
         super()._analyze_path()
+        self._collect_metadata()
+
+    def _collect_metadata(self):
+        """Collect information from the metadata file."""
         set_frozen_attr(self, 'metadata', BookkeeperMetaFile(self.path))
         try:
             # pylint: disable-next=no-member  # Inference
