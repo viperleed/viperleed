@@ -21,6 +21,7 @@ from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
+from viperleed.calc.bookkeeper.log import LogFiles
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.constants import DEFAULT_HISTORY
@@ -102,7 +103,9 @@ class IncompleteHistoryFolder:
 class HistoryFolder(IncompleteHistoryFolder):
     """A collection of information concerning a folder in history."""
 
-    metadata: BookkeeperMetaFile = non_init_field()  # At __post_init__
+    # Attributes computed during __post_init__
+    logs: LogFiles = non_init_field()
+    metadata: BookkeeperMetaFile = non_init_field()
 
     parent = make_property('metadata.parent')
     hash_ = make_property('metadata.hash_')
@@ -166,7 +169,14 @@ class HistoryFolder(IncompleteHistoryFolder):
         if not self.path.is_dir():
             raise ValueError(f'{self.path} is not a directory.')
         super()._analyze_path()
+        self._collect_logs()
         self._collect_metadata()
+
+    def _collect_logs(self):
+        """Collect information about log files in the root folder."""
+        set_frozen_attr(self, 'logs', LogFiles(self.path))
+        # pylint: disable-next=no-member  # It's a LogFiles
+        self.logs.collect()
 
     def _collect_metadata(self):
         """Collect information from the metadata file."""

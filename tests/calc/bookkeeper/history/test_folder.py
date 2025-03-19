@@ -65,8 +65,15 @@ def mock_incomplete_folder(mock_path):
     return IncompleteHistoryFolder(mock_path)
 
 
+@fixture(name='logs')
+def mock_logs(mocker):
+    """Replace LogFiles with a mock."""
+    return mocker.patch(f'{_MODULE}.LogFiles')
+
+
 @fixture(name='history_folder')
-def mock_history_folder(incomplete_folder, patch_metafile):
+# pylint: disable-next=unused-argument  # logs. Can't mark.usefixtures
+def mock_history_folder(incomplete_folder, patch_metafile, logs):
     """Return a mocked HistoryFolder."""
     patch_metafile()
     folder = HistoryFolder(incomplete_folder.path)
@@ -140,6 +147,7 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
         """Test HistoryFolder __post_init__."""
         assert history_folder.hash_ == _FAKE_HASH
         assert not history_folder.parent
+        history_folder.logs.collect.assert_called_once()
         super().test_init(mock_path, history_folder)
 
     @parametrize(is_file=(True, False))
