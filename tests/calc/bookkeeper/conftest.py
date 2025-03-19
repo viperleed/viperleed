@@ -247,33 +247,6 @@ def fixture_after_calc_execution(make_calc_tree, mocker):
     return bookkeeper, history_run_path, mocker
 
 
-@fixture(name='before_calc_execution')
-def fixture_before_calc_execution(mock_tree_before_calc_execution):
-    """Return a bookkeeper ready to run in a directory with calc inputs.
-
-    This represents a new calculation, i.e., before any viperleed.calc
-    or bookkeeper run. However, the bookkeeper is up to date about the
-    contents of its root directory.
-
-    Parameters
-    ----------
-    mock_tree_before_calc_execution : fixture
-        Factory that produces a temporary directory containing
-        calc input files when called.
-
-    Returns
-    ------
-    bookkeeper : Bookkeeper
-        A bookkeeper instance ready for running in the
-        temporary directory.
-    """
-    # Create mock input files
-    tmp_path = mock_tree_before_calc_execution()
-    bookkeeper = Bookkeeper(cwd=tmp_path)
-    bookkeeper.update_from_cwd(silent=True)
-    return bookkeeper
-
-
 @fixture(name='after_calc_with_edited_file')
 def fixture_after_calc_with_edited(tmp_path):
     """Prepare a directory like the one after calc executes.
@@ -345,3 +318,31 @@ def fixture_after_calc_with_edited(tmp_path):
     bookkeeper = Bookkeeper(cwd=tmp_path)
     bookkeeper.update_from_cwd(silent=True)
     return bookkeeper, before, archived
+
+
+@fixture(name='before_calc_execution')
+def fixture_before_calc_execution(mock_tree_before_calc_execution):
+    """Return a bookkeeper ready to run in a directory with calc inputs.
+
+    This represents a new calculation, i.e., before any viperleed.calc
+    or bookkeeper run. However, the bookkeeper is up to date about the
+    contents of its root directory.
+
+    Parameters
+    ----------
+    mock_tree_before_calc_execution : fixture
+        Factory that produces a temporary directory containing
+        calc input files when called.
+
+    Returns
+    ------
+    bookkeeper : Bookkeeper
+        A bookkeeper instance ready for running in the
+        temporary directory.
+    """
+    # Create mock input files
+    tmp_path = mock_tree_before_calc_execution()
+    bookkeeper = Bookkeeper(cwd=tmp_path)
+    bookkeeper.update_from_cwd(silent=True)
+    return bookkeeper
+
