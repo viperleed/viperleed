@@ -746,6 +746,7 @@ class TestLogFiles:
         called = {
             '_collect_logs': None,
             '_read_most_recent': None,
+            '_infer_calc_version': None,
             }
         check_methods_called(logs, 'collect', **called)
 
@@ -802,6 +803,28 @@ class TestLogFiles:
                       for f in ('calc1.log', 'calc2.log', 'other.log'))
         logs._calc, logs._others = files[:2], files[2:]
         assert logs.files == files
+
+    _calc_version = {
+        'no lines': ((), None),
+        'one line': (('This is ViPErLEED version 1.2.3',), '1.2.3'),
+        'more lines': (
+            ('First line',
+             '',
+             'This is ViPErLEED version <but this is not a version>',
+             'This is ViPErLEED version 0.1.0',
+             'Another line',
+             'This is ViPErLEED version 5.12.103'),  # Not used
+            '0.1.0'),
+        }
+
+    @parametrize('lines,expect', _calc_version.values(), ids=_calc_version)
+    def test_infer_calc_version(self, lines, expect, logs, mocker):
+        """Test the result of the _infer_calc_version method."""
+        mocker.patch.object(logs, '_calc')
+        logs.most_recent = mocker.MagicMock(lines=lines)
+        # pylint: disable-next=protected-access           # OK in tests
+        logs._infer_calc_version()
+        assert logs.version == expect
 
     _log_info = _combine_log_info(
         run=(('Executed segments: 123   ',), {'run_info': '123   '}),

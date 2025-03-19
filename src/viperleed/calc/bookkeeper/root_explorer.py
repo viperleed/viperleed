@@ -40,12 +40,14 @@ from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
+from viperleed.calc.lib.version import Version
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 # Regular expressions for parsing the log file
+_CALC_VERSION_RE = re.compile(r'This is ViPErLEED version (?P<version>[\d.]+)')
 _RFAC_RE = r'[\d.( )/]+'
 _LOG_FILE_RE = {
     'run_info': re.compile(r'Executed segments:\s*(?P<run_info>[\d ]+)\s*'),
@@ -463,9 +465,11 @@ class LogFiles:
         self._path = path
         self._calc = None    # Log files for viperleed.calc
         self._others = None  # Other log files found at path
+        self._calc_version = None  # Set in _infer_calc_version
         self.most_recent = None    # LogInfo from most recent calc log
 
     calc = make_property('_calc', needs_update=True)
+    version = make_property('_calc_version')
 
     @property
     @_needs_collect('_calc')
@@ -479,6 +483,7 @@ class LogFiles:
         """Collect and store internally information about log files."""
         self._collect_logs()
         self._read_most_recent()
+        self._infer_calc_version()
 
     def discard(self):
         """Delete all log files at self._path.
@@ -522,6 +527,21 @@ class LogFiles:
             container.append(file)
         self._calc = tuple(calc_logs)
         self._others = tuple(other_logs)
+
+    @_needs_collect('_calc')
+    def _infer_calc_version(self):
+        """Find out the version with which the calc log was created."""
+        if not self.most_recent:
+            return
+        for line in self.most_recent.lines:
+            match_ = _CALC_VERSION_RE.match(line)
+            if not match_:
+                continue
+            try:
+                self._calc_version = Version(match_['version'])
+            except ValueError:  # Malformed version
+                continue
+            return
 
     @_needs_collect('_calc')
     def _read_most_recent(self):
