@@ -197,7 +197,8 @@ class TestHistoryFolderConsistency:
 
     def test_check_metadata_ok(self, history_folder):
         """Test check_metadata method without mismatch."""
-        history_folder.check_metadata()
+        with not_raises(MetadataMismatchError):
+            history_folder.check_metadata()
 
     def test_check_metadata_raises(self, history_folder, patch_metafile):
         """Test check_metadata raises MetadataMismatchError on mismatch."""
