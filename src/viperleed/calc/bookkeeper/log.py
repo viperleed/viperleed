@@ -62,12 +62,12 @@ def ensure_has_stream_handler():
 
 
 class LogFiles:
-    """Container to manage log files found in the bookkeeper's root."""
+    """Container to manage log files found in a folder."""
 
     _needs_collect = partial(needs_update_for_attr, updater='collect')
 
     def __init__(self, path):
-        """Initialize an instance at path."""
+        """Initialize an instance with a folder's `path`."""
         self._path = path
         self._calc = None    # Log files for viperleed.calc
         self._others = None  # Other log files found at path
