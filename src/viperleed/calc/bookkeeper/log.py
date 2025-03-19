@@ -109,6 +109,7 @@ class LogFiles:
         try:
             log_lines = self.most_recent.lines
         except AttributeError:  # No log in root
+            assert self.most_recent is None
             log_lines = ()
         matched = {k: False for k in _LOG_FILE_RE}
         for line in reversed(log_lines):  # Info is at the end
