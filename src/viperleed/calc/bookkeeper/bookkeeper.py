@@ -14,6 +14,7 @@ from enum import IntEnum
 import logging
 from pathlib import Path
 
+from viperleed import __version__
 from viperleed.calc.bookkeeper import log
 from viperleed.calc.bookkeeper.errors import _FileNotOlderError
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
@@ -42,6 +43,17 @@ RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 # Suffix for files moved from root rather than original_inputs
 _FROM_ROOT = '_from_root'
+
+
+# Log message emitted when we detect that we're running
+# in the tree created by a pre-0.13.0 calc version.
+_MIN_CALC_WARN = '0.13.0'
+_WARN_OLD_CALC = f'''\
+Bookkeeper v{__version__} is running in a folder created by an older version of
+viperleed (v%s). Please double check that the correct files have been
+processed, as bookkeeper is not entirely backward compatible. See the
+documentation at https://viperleed.org/content/calc/sections/bookkeeper.html
+for details on the changes introduced in bookkeeper since v{_MIN_CALC_WARN}.'''
 
 
 class BookkeeperExitCode(IntEnum):
@@ -136,6 +148,7 @@ class Bookkeeper:
         # re-appear at the next run.
         self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
         LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
+        self._warn_about_old_calc()
         try:
             exit_code = runner()
         finally:
@@ -620,6 +633,20 @@ class Bookkeeper:
                 return False
             if reply.startswith('y'):
                 return True
+
+    def _warn_about_old_calc(self):
+        """Emit warnings when this tree was created by an early calc."""
+        if self._mode is BookkeeperMode.FIX:
+            # FIX already emits log messages if it finds funky stuff.
+            return
+        version = self._root.logs.version
+        # See if the last history folder was created with an old calc
+        # version. All modes (except --fix) may be affected, as the
+        # handling of files has changed since v0.13.0.
+        if not version and self.history.last_folder:
+            version = self.history.last_folder.logs.version
+        if version and version < _MIN_CALC_WARN:
+            LOGGER.warning(_WARN_OLD_CALC, version)
 
 
 def _check_newer(older, newer):
