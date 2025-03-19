@@ -81,8 +81,6 @@ class LogFiles:
     @_needs_collect('_calc')
     def files(self):
         """Return paths to all the log files in the root directory."""
-        # tuple() is the start value. It would be nicer to specify
-        # it as a keyword, but this was only introduced in py38.
         return self._calc + self._others
 
     def collect(self):
