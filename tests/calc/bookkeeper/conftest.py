@@ -11,6 +11,11 @@ after_calc_execution
     Prepare a directory like the one after calc executes.
 before_calc_execution
     Return a bookkeeper ready to run in a directory with calc inputs.
+check_methods_called
+    Patch selected methods of an object, and ensure that calling
+    another method also calls the patched ones.
+mock_attributes
+    Replace multiple attributes of an object with MagicMock()s.
 mock_tree_after_calc_execution
     Factory that produces and returns a temporary directory with
     contents like after a calc run.
@@ -28,6 +33,7 @@ __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
 from copy import deepcopy
+from operator import attrgetter
 
 from pytest_cases import fixture
 from pytest_cases import fixture_ref
@@ -346,3 +352,25 @@ def fixture_before_calc_execution(mock_tree_before_calc_execution):
     bookkeeper.update_from_cwd(silent=True)
     return bookkeeper
 
+
+@fixture(name='check_methods_called')
+def fixture_check_methods_called(mock_attributes):
+    """Check that calling `method_name` also calls other methods."""
+    def check_methods_called(obj, method_name, **called):
+        mock_attributes(obj, *called)
+        method = attrgetter(method_name)(obj)
+        method()
+
+        for mocked_attr, called_attr in called.items():
+            method = attrgetter(called_attr or mocked_attr)(obj)
+            method.assert_called_once()
+    return check_methods_called
+
+
+@fixture(name='mock_attributes')
+def fixture_mock_attributes(mocker):
+    """Replace attributes of `obj` with MagicMock(s)."""
+    def _patch(obj, *attrs):
+        return {attr_name: mocker.patch.object(obj, attr_name)
+                for attr_name in attrs}
+    return _patch

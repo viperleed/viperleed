@@ -108,32 +108,9 @@ def fixture_patched_path(explorer, mocker):
     yield MockedPath(mock_read, mock_write, mock_glob)
 
 
-@fixture(name='mock_attributes')
-def fixture_mock_attributes(mocker):
-    """Replace attributes of `obj` with MagicMock(s)."""
-    def _patch(obj, *attrs):
-        for attr_name in attrs:
-            mocker.patch.object(obj, attr_name)
-    return _patch
-
-
 def called_or_not(condition):
     """Return the name of an assertion method depending on `condition`."""
     return 'assert_called' if condition else 'assert_not_called'
-
-
-@fixture(name='check_methods_called')
-def fixture_check_methods_called(mock_attributes):
-    """Check that calling `method_name` also calls other methods."""
-    def check_methods_called(obj, method_name, **called):
-        mock_attributes(obj, *called)
-        method = attrgetter(method_name)(obj)
-        method()
-
-        for mocked_attr, called_attr in called.items():
-            method = attrgetter(called_attr or mocked_attr)(obj)
-            method.assert_called_once()
-    return check_methods_called
 
 
 def mock_exists(collection):
