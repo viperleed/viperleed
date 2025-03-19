@@ -8,9 +8,7 @@ __created__ = '2024-10-16'
 __license__ = 'GPLv3+'
 
 from collections import namedtuple
-from contextlib import contextmanager
 from itertools import combinations
-from itertools import permutations
 from itertools import product
 from operator import attrgetter
 from pathlib import Path
@@ -25,7 +23,6 @@ from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.errors import FileOperationFailedError
-from viperleed.calc.bookkeeper.root_explorer import LogFiles
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
 from viperleed.calc.bookkeeper.root_explorer import TensorAndDeltaInfo
 from viperleed.calc.constants import DEFAULT_DELTAS
@@ -56,12 +53,6 @@ def fixture_explorer(mocker):
     return RootExplorer(root_path, mock_bookkeeper)
 
 
-@fixture(name='logs')
-def fixture_logfiles():
-    """Return a LogFiles instance."""
-    return LogFiles(Path(_MOCK_ROOT))
-
-
 @fixture(name='tensors')
 def fixture_tensor_and_delta_info():
     """Return a TensorAndDeltaInfo with a mock root path."""
@@ -78,21 +69,6 @@ def fixture_mock_history(mocker):
                                       for t in max_run_per_tensor],
             )
     return _mock
-
-
-@fixture(name='mock_path_readlines')
-def fixture_mock_readlines(mocker, monkeypatch):
-    """Temporarily replace open and readlines for pathlib.Path."""
-    @contextmanager
-    def _patch():
-        mock_readlines = mocker.MagicMock(return_value=(_TEST_STRING,))
-        mock_open_file = mocker.MagicMock(readlines=mock_readlines)
-        mock_open = mocker.MagicMock()
-        mock_open.return_value.__enter__.return_value = mock_open_file
-        with monkeypatch.context() as patch_:
-            patch_.setattr('pathlib.Path.open', mock_open)
-            yield mock_open_file
-    return _patch
 
 
 @fixture(name='patched_path')
@@ -700,192 +676,6 @@ class TestRootExplorerRaises:
         method = attrgetter(method_name)(explorer)
         with pytest.raises(AttributeError,
                            match=r'.*collect_(info|subfolders).*'):
-            method()
-
-
-def _combine_log_info(**log_info):
-    """Return all combinations of lines and expected values for `log_info`."""
-    _info_keys = tuple(log_info)
-    for _repeat in range(2, len(_info_keys)+1):
-        for keys in permutations(_info_keys, _repeat):
-            all_lines, all_expect = zip(*(log_info[k] for k in keys))
-            lines = sum(all_lines, tuple())
-            expect = {k: v for dict_ in all_expect for k, v in dict_.items()}
-            log_info['+'.join(keys)] = (lines, expect)
-    return log_info
-
-
-class TestLogFiles:
-    """Tests for the LogFiles class."""
-
-    def test_collect_calls(self, logs, check_methods_called):
-        """Check that calling .collect calls other methods."""
-        called = {
-            '_collect_logs': None,
-            '_read_most_recent': None,
-            '_infer_calc_version': None,
-            }
-        check_methods_called(logs, 'collect', **called)
-
-    def test_collect_logs(self, logs, mocker):
-        """Test that _collect_logs finds files in the root directory."""
-        files = {
-            '_calc': ('viperleed-calc_1.log', 'tleedm_1.log', 'tleedm_2.log'),
-            '_others': ('other_stuff.log',)
-            }
-        for attr, file_list in files.items():
-            # pylint: disable-next=protected-access       # OK in tests
-            files[attr] = tuple(logs._path / f for f in file_list)
-        mocker.patch('pathlib.Path.glob',
-                     return_value=sum(files.values(), tuple()))
-        mocker.patch('pathlib.Path.is_file', return_value=True)
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._collect_logs()
-        for attr, expect in files.items():
-            assert getattr(logs, attr) == expect
-
-    def test_collect_logs_no_logs(self, logs, mocker):
-        """Test that _collect_logs finds no existing files."""
-        files = {
-            '_calc': ('viperleed-calc_1.log', 'tleedm_1.log', 'tleedm_2.log'),
-            '_others': ('other_stuff.log',)
-            }
-        for attr, file_list in files.items():
-            # pylint: disable-next=protected-access       # OK in tests
-            files[attr] = tuple(logs._path / f for f in file_list)
-        mocker.patch('pathlib.Path.glob',
-                     return_value=sum(files.values(), tuple()))
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._collect_logs()
-        for attr in files:
-            collected = getattr(logs, attr)
-            assert collected is not None
-            # None of the files above are actual files.
-            assert not any(collected)
-
-    @patch_discard
-    def test_discard(self, discard_files, logs, check_methods_called):
-        """Check deletion of all log files in root."""
-        # pylint: disable-next=protected-access           # OK in tests
-        files = [logs._path / f'file{i}.log' for i in range(5)]
-        logs._calc, logs._others = files[:2], files[2:]
-
-        check_methods_called(logs, 'discard', collect=None)
-        discard_files.assert_called_once_with(*files)
-
-    def test_files_property(self, logs):
-        """Test the files property of LogFiles."""
-        # pylint: disable-next=protected-access           # OK in tests
-        files = tuple(logs._path / f
-                      for f in ('calc1.log', 'calc2.log', 'other.log'))
-        logs._calc, logs._others = files[:2], files[2:]
-        assert logs.files == files
-
-    _calc_version = {
-        'no lines': ((), None),
-        'one line': (('This is ViPErLEED version 1.2.3',), '1.2.3'),
-        'more lines': (
-            ('First line',
-             '',
-             'This is ViPErLEED version <but this is not a version>',
-             'This is ViPErLEED version 0.1.0',
-             'Another line',
-             'This is ViPErLEED version 5.12.103'),  # Not used
-            '0.1.0'),
-        }
-
-    @parametrize('lines,expect', _calc_version.values(), ids=_calc_version)
-    def test_infer_calc_version(self, lines, expect, logs, mocker):
-        """Test the result of the _infer_calc_version method."""
-        mocker.patch.object(logs, '_calc')
-        logs.most_recent = mocker.MagicMock(lines=lines)
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._infer_calc_version()
-        assert logs.version == expect
-
-    _log_info = _combine_log_info(
-        run=(('Executed segments: 123   ',), {'run_info': '123   '}),
-        r_ref=(('Final R (refcalc)   : 0.01 ',), {'r_ref': '0.01 '}),
-        r_super=(('Final R (superpos)   : 0.02  ',), {'r_super': '0.02  '}),
-        )
-
-    @parametrize('lines,expect', _log_info.values(), ids=_log_info)
-    def test_infer_run_info(self, logs, lines, expect, mocker):
-        """Check correct inference of information from log files."""
-        mocker.patch.object(logs, '_calc')
-        logs.most_recent = mocker.MagicMock(lines=lines)
-        assert logs.infer_run_info() == expect
-
-    def test_infer_run_info_no_log(self, logs, mocker):
-        """Check correct result when no log is found in root."""
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._calc = mocker.MagicMock()
-        assert not logs.infer_run_info()
-
-    _calc_logs = {
-        'no logs': ((), None),
-        'calc, one log': (('viperleed-calc_123456-123456.log',),
-                          ('123456-123456', (_TEST_STRING,))),
-        'tleedm, one log': (('tleedm_123456-123456.log',),
-                            ('123456-123456', (_TEST_STRING,))),
-        'calc, more logs': (
-            ('viperleed-calc_123456-123456.log',
-             'viperleed-calc_234567-234567.log',
-             'viperleed-calc_345678-345678.log',
-             'viperleed-calc_456789-456789.log'),
-            ('456789-456789', (_TEST_STRING,))
-            ),
-        'mixed logs': (
-            ('viperleed-calc_123456-123456.log',
-             'tleedm_234567-234567.log',
-             'viperleed-calc_345678-345678.log',
-             'tleedm_456789-456789.log'),
-            ('345678-345678', (_TEST_STRING,))
-            ),
-        }
-
-    @parametrize('collected,expect', _calc_logs.values(), ids=_calc_logs)
-    def test_most_recent(self, logs, collected, expect, mock_path_readlines):
-        """Test the _read_most_recent method of LogFiles."""
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._calc = tuple(logs._path/f for f in collected)
-        with mock_path_readlines():
-            # pylint: disable-next=protected-access       # OK in tests
-            logs._read_most_recent()
-        assert logs.most_recent == expect
-
-    def test_most_recent_oserror(self, logs, mock_path_readlines):
-        """Check that failure to read lines produces the expected outcome."""
-        collected, (expect_time, _) = next(
-            log for log in self._calc_logs.values() if log[1]
-            )
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._calc = tuple(logs._path/f for f in collected)
-        with mock_path_readlines() as mock_open:
-            with make_obj_raise(mock_open, OSError, 'readlines'):
-                # pylint: disable-next=protected-access   # OK in tests
-                logs._read_most_recent()
-            assert logs.most_recent == (expect_time, ())
-
-    _attr_needs_update = (
-        'files',
-        )
-    _method_needs_update = (  # Only those without args
-        'infer_run_info',
-        '_read_most_recent',
-        )
-
-    @parametrize(attr=_attr_needs_update)
-    def test_too_early_attribute_access(self, logs, attr):
-        """Check that accessing attributes before collection fails."""
-        with pytest.raises(AttributeError, match=r'.*collect.*'):
-            attrgetter(attr)(logs)
-
-    @parametrize(method_name=_method_needs_update)
-    def test_too_early_method_call(self, logs, method_name):
-        """Check that calling methods before collection fails."""
-        method = attrgetter(method_name)(logs)
-        with pytest.raises(AttributeError, match=r'.*collect.*'):
             method()
 
 
