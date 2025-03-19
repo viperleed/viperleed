@@ -7,7 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-19'
 __license__ = 'GPLv3+'
 
-from contextlib import contextmanager
 from operator import attrgetter
 
 import pytest
@@ -18,7 +17,6 @@ from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.folder import HistoryFolder
 from viperleed.calc.bookkeeper.history.folder import IncompleteHistoryFolder
-from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
 from ....helpers import not_raises
 
@@ -68,28 +66,20 @@ def mock_incomplete_folder(mock_path):
 
 
 @fixture(name='history_folder')
-def mock_history_folder(incomplete_folder, metafile):
+def mock_history_folder(incomplete_folder, patch_metafile):
     """Return a mocked HistoryFolder."""
-    with metafile() as mock_meta:
-        folder = HistoryFolder(incomplete_folder.path)
-        set_frozen_attr(folder, 'metadata', mock_meta(folder.path))
-        return folder
+    patch_metafile()
+    folder = HistoryFolder(incomplete_folder.path)
+    return folder
 
 
-@fixture(name='metafile')
-def mock_metafile(monkeypatch):
-    """Return a context with a fake BookkeeperMetaFile."""
-    @contextmanager
-    def _context(**kwargs):
+@fixture(name='patch_metafile')
+def mock_metafile(mocker):
+    """Replace BookkeeperMetaFile with another class."""
+    def _patch(**kwargs):
         fake_meta = kwargs.get('fake_meta', MockMetaFile)
-        with monkeypatch.context() as patch_:
-            patch_.setattr(
-                'viperleed.calc.bookkeeper.history.meta.BookkeeperMetaFile',
-                fake_meta,
-                )
-            patch_.setattr(f'{_MODULE}.BookkeeperMetaFile', fake_meta)
-            yield fake_meta
-    return _context
+        mocker.patch(f'{_MODULE}.BookkeeperMetaFile', fake_meta)
+    return _patch
 
 
 class TestIncompleteHistoryFolder:
@@ -167,16 +157,16 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
             HistoryFolder(mock_path)
 
     def test_analyze_path_metadata_not_found(self, mock_path,
-                                             metafile, mocker):
+                                             patch_metafile, mocker):
         """Test _analyze_path logs warning if metadata file is missing."""
         class _RaiseOnRead(MockMetaFile):
             def read(self):
                 raise FileNotFoundError
         mock_warning = mocker.patch(f'{_MODULE}.LOGGER.warning')
-        with metafile(fake_meta=_RaiseOnRead):
-            mock_path.name = _VALID_FOLDER_NAME
-            HistoryFolder(mock_path)
-            mock_warning.assert_called_once()
+        patch_metafile(fake_meta=_RaiseOnRead)
+        mock_path.name = _VALID_FOLDER_NAME
+        HistoryFolder(mock_path)
+        mock_warning.assert_called_once()
 
     @parametrize(meta_missing=(True, False))
     def test_fix(self, meta_missing, history_folder, mocker):
@@ -197,21 +187,20 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
 class TestHistoryFolderConsistency:
     """Collection of tests for consistency checks of a HistoryFolder."""
 
-    def test_check_metadata_ok(self, history_folder, metafile):
+    def test_check_metadata_ok(self, history_folder):
         """Test check_metadata method without mismatch."""
-        with metafile():
-            history_folder.check_metadata()
+        history_folder.check_metadata()
 
-    def test_check_metadata_raises(self, history_folder, metafile):
+    def test_check_metadata_raises(self, history_folder, patch_metafile):
         """Test check_metadata raises MetadataMismatchError on mismatch."""
         class _OtherHashMeta(MockMetaFile):
             def __init__(self, *args):
                 super().__init__(*args)
                 self.hash_ = 'another different hash'
 
-        with metafile(fake_meta=_OtherHashMeta):
-            with pytest.raises(MetadataMismatchError):
-                history_folder.check_metadata()
+        patch_metafile(fake_meta=_OtherHashMeta)
+        with pytest.raises(MetadataMismatchError):
+            history_folder.check_metadata()
 
     def test_check_entry_valid(self, history_folder, mock_entry):
         """Test that no error is raised when folder matches entry."""
