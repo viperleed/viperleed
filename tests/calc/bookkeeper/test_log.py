@@ -286,6 +286,7 @@ class TestLogFiles:
         )
     _method_needs_update = (  # Only those without args
         'infer_run_info',
+        '_infer_calc_version',
         '_read_most_recent',
         )
 
