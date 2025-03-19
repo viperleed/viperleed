@@ -81,7 +81,6 @@ def fixture_mock_readlines(mocker, monkeypatch):
     return _patch
 
 
-
 class TestAddBookkeeperLogfile:
     """Tests for the add_bookkeeper_logfile function."""
 
