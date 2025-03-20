@@ -23,7 +23,7 @@ from viperleed.calc.lib.itertools_utils import consecutive_groups
 
 
 def harvard_commas(*items, sep='and'):
-    """Return a Harvard-comma-separated string of the items in `sequence`."""
+    """Return a Harvard-comma-separated string of `items`."""
     if len(items) > 2:  # pylint: disable=magic-value-comparison
         commas = ', '.join(str(i) for i in items[:-1])
         return commas + f', {sep} {items[-1]}'
