@@ -99,3 +99,11 @@ class TestDeleteBetween:
         # unit cell is unchanged
         assert np.allclose(slab.ucell, original_ucell)
         assert np.allclose(processed.ucell, original_ucell)
+
+    @parametrize(invalid_c_min=INVALID_CUT_FRACTIONS)
+    @parametrize(invalid_c_max=INVALID_CUT_FRACTIONS)
+    def test_invalid_c(self, invalid_c_min, invalid_c_max):
+        """Test the DeleteBelowCLI class."""
+        cli = DeleteBelowCLI()
+        with pytest.raises(SystemExit):
+            cli.parse_cli_args([str(invalid_c_min), str(invalid_c_max)])
