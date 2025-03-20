@@ -426,12 +426,13 @@ class ViPErLEEDCLI:
             TERMINATE THE INTERPRETER.
         """
         cli = cls()
+        exit_msg = ''
         try:
             exit_code = cli()
         except KeyboardInterrupt:
-            print('Terminated by keyboard interrupt')
+            exit_msg = 'Terminated by keyboard interrupt.'
             exit_code = 1
-        sys.exit(exit_code)
+        cli.parser.exit(exit_code, exit_msg)
 
     def add_child_aliases(self, child_cli_name, *aliases):
         """Add `aliases` for `child_cli_name`."""
