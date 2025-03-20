@@ -299,6 +299,7 @@ class TestViPErLEEDCLI:
         """Check fetching a CLI class from a module name."""
         mocker.patch('importlib.import_module')
         mocker.patch('inspect.getmembers', return_value=(module_member,))
+        # pylint: disable-next=protected-access
         get = ViPErLEEDCLI._child_class_from_module_name
         if expect is NotAViPErLEEDCLIError:
             with pytest.raises(expect):
@@ -496,23 +497,21 @@ class TestFindSubUtilities:
         iter_modules.assert_not_called()
 
 
-class TestViPErLEEDCLIWithAutoChildren:
-    """Tests for the ViPErLEEDCLIWithAutoChildren CLI class."""
-
-    def test_auto_register_children(self, mocker):
-        child_module = 'child_module'
-        modules = [child_module, 'invalid_module']
-        ChildCLI = type('ChildCLI', (ViPErLEEDCLI,), {})
-        ChildCLI.__module__ = child_module
-        def _mock_child_from_module(module):
-            if module == child_module:
-                return ChildCLI
-            return 'not a cli subclass'
-        mocker.patch.object(ViPErLEEDCLIWithAutoChildren,
-                            'find_sub_utilities',
-                            return_value=modules)
-        mocker.patch.object(ViPErLEEDCLIWithAutoChildren,
-                            '_child_class_from_module_name',
-                            _mock_child_from_module)
-        ParentCLI = type('ParentCLI', (ViPErLEEDCLIWithAutoChildren,), {})
-        assert child_module in ParentCLI().children
+def test_auto_register_children(mocker):
+    """Check automatic recognition of children CLIs."""
+    child_module = 'child_module'
+    modules = [child_module, 'invalid_module']
+    ChildCLI = type('ChildCLI', (ViPErLEEDCLI,), {})
+    ChildCLI.__module__ = child_module
+    def _mock_child_from_module(module):
+        if module == child_module:
+            return ChildCLI
+        return 'not a cli subclass'
+    mocker.patch.object(ViPErLEEDCLIWithAutoChildren,
+                        'find_sub_utilities',
+                        return_value=modules)
+    mocker.patch.object(ViPErLEEDCLIWithAutoChildren,
+                        '_child_class_from_module_name',
+                        _mock_child_from_module)
+    ParentCLI = type('ParentCLI', (ViPErLEEDCLIWithAutoChildren,), {})
+    assert child_module in ParentCLI().children
