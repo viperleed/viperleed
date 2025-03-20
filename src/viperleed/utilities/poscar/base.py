@@ -248,6 +248,8 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
 
     def _read_poscar_from_infile(self, args):
         """Return a POSCAR read from args.infile."""
+        if args.infile.is_interactive:
+            sys.stderr.write('Please input the contents of a POSCAR file:\n')
         with args.infile as infile:
             return poscar.read(infile)
 
