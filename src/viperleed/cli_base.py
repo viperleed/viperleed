@@ -40,7 +40,7 @@ def _to_float(value_str):
         return float(value_str)
     except ValueError:
         raise argparse.ArgumentTypeError('Must be a floating-point '
-                                         'value') from None
+                                         'value.') from None
 
 
 def float_in_zero_one(value_str):
@@ -62,7 +62,7 @@ def float_in_zero_one(value_str):
     value = _to_float(value_str)
     if not 0 < value < 1:
         raise argparse.ArgumentTypeError('Must be between zero '
-                                         'and one (excluded)')
+                                         'and one (both excluded).')
     return value
 
 
@@ -80,7 +80,7 @@ def length_choices(*choices):
         def __call__(self, parser, args, values, option_string=None):
             n_values = len(values)
             if n_values not in choices:
-                err_ = f'argument {self.dest!r} requires {fmt_choices} values'
+                err_ = f'argument {self.dest!r} requires {fmt_choices} values.'
                 parser.error(err_)
             setattr(args, self.dest, values)
 
@@ -104,7 +104,7 @@ def positive_float(value_str):
     """
     value = _to_float(value_str)
     if value <= 0:
-        raise argparse.ArgumentTypeError('Must be strictly positive')
+        raise argparse.ArgumentTypeError('Must be strictly positive.')
     return value
 
 
@@ -118,10 +118,10 @@ def required_length(n_min=None, n_max=None):
             n_values = len(values)
             err_ = f'argument {self.dest!r} requires '
             if n_min is not None and n_values < n_min:
-                err_ += f'at least {n_min} values'
+                err_ += f'at least {n_min} values.'
                 parser.error(err_)
             if n_max is not None and n_values > n_max:
-                err_ += f'at most {n_max} values'
+                err_ += f'at most {n_max} values.'
                 parser.error(err_)
             setattr(args, self.dest, values)
 
