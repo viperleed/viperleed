@@ -79,7 +79,6 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         parser.add_argument('--infile', '-i',
                             type=stream,
                             help=help_,
-                            # default=stream(sys.stdin, close_on_exit=False))
                             default=stream(sys.stdin))
 
     def add_outfile_argument(self, parser):
@@ -111,7 +110,6 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         parser.add_argument('--outfile', '-o',
                             type=stream,
                             help=help_,
-                            # default=stream(sys.stdout, close_on_exit=False))
                             default=stream(sys.stdout))
 
     def add_parser_arguments(self, parser):
