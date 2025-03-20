@@ -22,6 +22,14 @@ from viperleed.calc.lib.itertools_utils import batched
 from viperleed.calc.lib.itertools_utils import consecutive_groups
 
 
+def harvard_commas(*items, sep='and'):
+    """Return a Harvard-comma-separated string of the items in `sequence`."""
+    if len(items) > 2:  # pylint: disable=magic-value-comparison
+        commas = ', '.join(str(i) for i in items[:-1])
+        return commas + f', {sep} {items[-1]}'
+    return f' {sep} '.join(str(i) for i in items)
+
+
 def parent_name(dotted_name, remove=''):
     """Return a version of `dotted_name` with the last attribute removed.
 
