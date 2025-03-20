@@ -103,7 +103,7 @@ class TestDeleteBetween:
     @parametrize(invalid_c_min=INVALID_CUT_FRACTIONS)
     @parametrize(invalid_c_max=INVALID_CUT_FRACTIONS)
     def test_invalid_c(self, invalid_c_min, invalid_c_max):
-        """Test the DeleteBelowCLI class."""
+        """Test complaints when c_min/c_max are out of range."""
         cli = DeleteBelowCLI()
         with pytest.raises(SystemExit):
             cli.parse_cli_args([str(invalid_c_min), str(invalid_c_max)])
