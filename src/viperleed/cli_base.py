@@ -23,6 +23,7 @@ import pkgutil
 import sys
 
 from viperleed import GLOBALS
+from viperleed.calc.lib.string_utils import harvard_commas
 from viperleed.calc.lib.string_utils import parent_name
 
 
@@ -69,17 +70,12 @@ def float_in_zero_one(value_str):
 def length_choices(*choices):
     """Return an action that forces `choices` as the only acceptable nargs."""
 
-    if len(choices) > 2:  # pylint: disable=magic-value-comparison
-        fmt_choices = ', '.join(str(c) for c in choices[:-1])
-        fmt_choices += f', or {choices[-1]}'
-    else:
-        fmt_choices = ' or '.join(str(c) for c in choices)
-
     # pylint: disable-next=too-few-public-methods
     class _LengthChoices(argparse.Action):
         def __call__(self, parser, args, values, option_string=None):
             n_values = len(values)
             if n_values not in choices:
+                fmt_choices = harvard_commas(*choices, sep='or')
                 err_ = f'argument {self.dest!r} requires {fmt_choices} values.'
                 parser.error(err_)
             setattr(args, self.dest, values)
