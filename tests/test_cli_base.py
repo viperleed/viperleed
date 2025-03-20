@@ -20,6 +20,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.cli_base import NotAViPErLEEDCLIError
+from viperleed.cli_base import StreamArgument
 from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.cli_base import ViPErLEEDCLIWithAutoChildren
 from viperleed.cli_base import float_in_zero_one
@@ -178,6 +179,55 @@ class TestRequiredLength:
     test_below_min_length = TestMinimumLength.test_too_few
     test_valid_min_length = TestMinimumLength.test_in_range
     test_valid_max_length = TestMaximumLength.test_in_range
+
+
+class TestStreamArgument:
+    """Tests for the StreamArgument argument type."""
+
+    def test_file_not_found(self):
+        """Check complaints when given an invalid file path."""
+        stream = StreamArgument('r')('does-not-exist.txt')
+        with pytest.raises(FileNotFoundError):
+            with stream:
+                pytest.fail('Should not reach this point')
+
+    def test_invalid_path(self):
+        """Check complaints when given an invalid file path."""
+        stream = StreamArgument('r')
+        with pytest.raises(ArgumentTypeError, match='Cannot open'):
+            stream(12345)  # Invalid type
+
+    @parametrize(terminal=(sys.stdout, sys.stdin, sys.stderr))
+    def test_terminal_stream(self, terminal):
+        """Check correct (not) opening/closing of a stream to the terminal."""
+        stream = StreamArgument('r')
+        assert stream(terminal).is_terminal is True
+        with stream as open_stream:
+            assert open_stream is terminal
+
+    def test_open_read_context(self, tmp_path):
+        """Check reading from a file path."""
+        expect_read = 'content'
+        file_path = tmp_path / 'test.txt'
+        file_path.write_text(expect_read)
+        open_ = StreamArgument('r')
+        with open_(file_path) as file:
+            assert file.read() == expect_read
+
+    def test_open_write_context(self, tmp_path):
+        """Check writing to a file path."""
+        expect_write = 'new content'
+        file_path = tmp_path / 'test_write.txt'
+        open_ = StreamArgument('w')
+        with open_(file_path) as file:
+            file.write(expect_write)
+        assert file_path.read_text() == expect_write
+
+    def test_is_stream_detection(self):
+        """Check correct detection of the stream nature of __call__ arg."""
+        # pylint: disable=protected-access                # OK in tests
+        assert StreamArgument._is_stream(sys.stdout)
+        assert not StreamArgument._is_stream('not_a_stream')
 
 
 class TestStripCLIModule:
