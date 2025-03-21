@@ -371,6 +371,14 @@ class TestViPErLEEDCLI:
         cli = parent_cli()
         parsed_args = cli.parse_cli_args(['test', '-v'])
         assert isinstance(parsed_args, Namespace)
+        assert parsed_args.command == _ChildCLI().cli_name
+        assert parsed_args.verbose
+        func = parsed_args.func
+        # NB: func == _ChildCLI().__call__ would fail, as the instance
+        # whose __call__ we register as func is created freshly at each
+        # add_parser_arguments call.
+        assert type(func.__self__) is _ChildCLI
+        assert func.__name__ == '__call__'
 
     def test_print_version(self, make_cli_cls, capsys, mocker):
         """Check printing of version to the terminal."""
