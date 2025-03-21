@@ -483,7 +483,7 @@ class TestFindSubUtilities:
             if Path(module) == _fake_pkg_path:
                 submodule = mocker.Mock()
                 submodule.name = 'cli'
-                return (submodule, *fake_modules[:-1])
+                return (submodule, *fake_modules)
             return (*fake_modules, fake_package)
 
         mocker.patch('pkgutil.iter_modules', _mock_iter_modules)
