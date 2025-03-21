@@ -197,6 +197,22 @@ class TestStreamArgument:
         with pytest.raises(ArgumentTypeError, match='Cannot open'):
             stream(12345)  # Invalid type
 
+    @parametrize(interactive=(True, False))
+    @parametrize(terminal=('stdin', 'stdout', 'stderr'))
+    def test_is_interactive(self, interactive, terminal, mocker):
+        """Check the is_interactive property."""
+        mock_resource = mocker.MagicMock(closed=False)
+        mock_resource.isatty.return_value = interactive
+        mocker.patch(f'sys.{terminal}', mock_resource)
+        stream = StreamArgument('r')(mock_resource)
+        assert stream.is_interactive == interactive
+
+    def test_is_stream_detection(self):
+        """Check correct detection of the stream nature of __call__ arg."""
+        # pylint: disable=protected-access                # OK in tests
+        assert StreamArgument._is_stream(sys.stdout)
+        assert not StreamArgument._is_stream('not_a_stream')
+
     @parametrize(terminal=(sys.stdout, sys.stdin, sys.stderr))
     def test_terminal_stream(self, terminal):
         """Check correct (not) opening/closing of a stream to the terminal."""
@@ -222,12 +238,6 @@ class TestStreamArgument:
         with open_(file_path) as file:
             file.write(expect_write)
         assert file_path.read_text() == expect_write
-
-    def test_is_stream_detection(self):
-        """Check correct detection of the stream nature of __call__ arg."""
-        # pylint: disable=protected-access                # OK in tests
-        assert StreamArgument._is_stream(sys.stdout)
-        assert not StreamArgument._is_stream('not_a_stream')
 
 
 class TestStripCLIModule:
