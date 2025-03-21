@@ -24,8 +24,8 @@ class FindSymmetryCLI(_PoscarSymmetryCLI, cli_name='find_symmetry'):
 
     def write_output(self, processed_slab, args):
         """Write the detected plane group to the args.outfile."""
-        with self.outfile_context(args) as f:
-            f.write(f'{processed_slab.foundplanegroup}\n')
+        with args.outfile as outfile:
+            outfile.write(f'{processed_slab.foundplanegroup}\n')
 
 
 if __name__ == '__main__':
