@@ -139,7 +139,7 @@ class TestMinimumLength:
             assert args.values == values
 
     def test_too_few(self):
-        """Check complaints when too many arguments are given."""
+        """Check complaints when too few arguments are given."""
         n_min = 3
         parser = ArgumentParser()
         action = type(self).action  # Use class: no self when calling
