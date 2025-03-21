@@ -391,25 +391,25 @@ class TestViPErLEEDCLI:
         assert re.match(r'ViPErLEED.*v[\d.]+', captured.out)
         assert not captured.err
 
-    def test_register_child_cls(self, make_cli_cls):
-        """Check registering a child using a ViPErLEEDCLI subclass."""
-        parent, child = make_cli_cls()
+    @staticmethod
+    def _check_has_child(parent, child):
+        """Check that a `parent` CLI class has a `child` class registered."""
         for child_name, child_cls in parent().children.items():
             if child().cli_name in child_name:
                 assert child_cls is child
                 return
         pytest.fail('child not found')
 
+    def test_register_child_cls(self, make_cli_cls):
+        """Check registering a child using a ViPErLEEDCLI subclass."""
+        self._check_has_child(*make_cli_cls())
+
     def test_register_child_instance(self, make_cli_cls):
         """Check registering a child using a ViPErLEEDCLI instance."""
         parent, _ = make_cli_cls()
         _, child = make_cli_cls()
         parent.register_child(child())
-        for child_name, child_cls in parent().children.items():
-            if child().cli_name in child_name:
-                assert child_cls is child
-                return
-        pytest.fail('child not found')
+        self._check_has_child(parent, child)
 
     _invalid_child = {
         'invalid_module': ValueError,
