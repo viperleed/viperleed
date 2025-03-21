@@ -259,7 +259,7 @@ class TestStripCLIModule:
 
 
 def _make_cli_cls(**cls_args):
-    """Return two subclasses of ViPErLEEDCLI as parent ans child."""
+    """Return two subclasses of ViPErLEEDCLI as parent and child."""
     parent = type('ParentCLI', (ViPErLEEDCLI,), {})
     child = type('ChildCLI', (ViPErLEEDCLI,), {}, **cls_args)
     parent.register_child(child)
@@ -285,7 +285,7 @@ class TestViPErLEEDCLI:
         child_call.assert_called_once()
 
     def test_call_without_arguments(self, make_cli_cls, capsys, mocker):
-        """Check result of calling a CLI without arguments."""
+        """Check result of calling a (child) CLI without arguments."""
         mocker.patch('sys.argv', ['test'])
         cli_cls, _ = make_cli_cls(cli_name='test')
         cli = cli_cls()
@@ -296,16 +296,16 @@ class TestViPErLEEDCLI:
         assert not captured.err
 
     _mock_cli, _ = _make_cli_cls()
-    _members = {
+    _members = {  # ((name_in_module, obj_in_module), exc_or_result)
         'not a class': (('not_a_class', '123'), NotAViPErLEEDCLIError),
         'cli base': (('ViPErLEEDCLI', ViPErLEEDCLI), NotAViPErLEEDCLIError),
-        'other cli base': (
+        'cli base, other': (
             ('ViPErLEEDCLIWithAutoChildren', ViPErLEEDCLIWithAutoChildren),
             NotAViPErLEEDCLIError,
             ),
+        'not a cli class': (('OtherClass', tuple), NotAViPErLEEDCLIError),
         'private cli': (('_Private', _mock_cli), NotAViPErLEEDCLIError),
         'valid cli': (('ValidCLI', _mock_cli), _mock_cli),
-        'not a cli class': (('OtherClass', tuple), NotAViPErLEEDCLIError),
         }
 
     @parametrize('module_member,expect', _members.values(), ids=_members)
@@ -313,7 +313,7 @@ class TestViPErLEEDCLI:
         """Check fetching a CLI class from a module name."""
         mocker.patch('importlib.import_module')
         mocker.patch('inspect.getmembers', return_value=(module_member,))
-        # pylint: disable-next=protected-access
+        # pylint: disable-next=protected-access           # OK in tests
         get = ViPErLEEDCLI._child_class_from_module_name
         if expect is NotAViPErLEEDCLIError:
             with pytest.raises(expect):
@@ -322,12 +322,12 @@ class TestViPErLEEDCLI:
             assert get('some_module') == expect
 
     def test_cli_name_default(self, make_cli_cls):
-        """Check default assignment of CLI name."""
+        """Check default assignment of a CLI name."""
         _, cli_cls = make_cli_cls()
         assert cli_cls().cli_name is not None  # From module
 
     def test_cli_name_custom(self, make_cli_cls):
-        """Check custom assignment of CLI name."""
+        """Check custom assignment of a CLI name."""
         name = 'custom_name'
         _, cli_cls = make_cli_cls(cli_name=name)
         assert cli_cls().cli_name is name
@@ -467,7 +467,7 @@ class TestFindSubUtilities:
                                 fake_modules,
                                 make_cli_with_module,
                                 mocker):
-        """Check correct finding of a module and a package."""
+        """Check correct finding of modules and packages."""
         def _mock_iter_modules(modules):
             module, *_ = modules
             _fake_pkg_path = Path(fake_package.module_finder.path)
