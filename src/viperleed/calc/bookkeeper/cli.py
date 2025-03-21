@@ -14,6 +14,7 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from argparse import Action
+from argparse import SUPPRESS
 
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_HISTORY
@@ -38,7 +39,7 @@ class StoreBookkeeperMode(Action):
     def __init__(self,
                  option_strings,
                  dest,
-                 default=False,
+                 default=SUPPRESS,
                  required=False,
                  help=None):  # pylint: disable=redefined-builtin
         """Initialize instance to behave the same as 'store_true'."""
