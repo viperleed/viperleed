@@ -184,6 +184,8 @@ class TestRequiredLength:
 class TestStreamArgument:
     """Tests for the StreamArgument argument type."""
 
+    _terminal = ('stdin', 'stdout', 'stderr')
+
     def test_file_not_found(self):
         """Check complaints when given an invalid file path."""
         stream = StreamArgument('r')('does-not-exist.txt')
@@ -198,7 +200,7 @@ class TestStreamArgument:
             stream(12345)  # Invalid type
 
     @parametrize(interactive=(True, False))
-    @parametrize(terminal=('stdin', 'stdout', 'stderr'))
+    @parametrize(terminal=_terminal)
     def test_is_interactive(self, interactive, terminal, mocker):
         """Check the is_interactive property."""
         mock_resource = mocker.MagicMock(closed=False)
@@ -213,13 +215,15 @@ class TestStreamArgument:
         assert StreamArgument._is_stream(sys.stdout)
         assert not StreamArgument._is_stream('not_a_stream')
 
-    @parametrize(terminal=(sys.stdout, sys.stdin, sys.stderr))
-    def test_terminal_stream(self, terminal):
+    @parametrize(terminal=_terminal)
+    def test_terminal_stream(self, terminal, mocker):
         """Check correct (not) opening/closing of a stream to the terminal."""
-        stream = StreamArgument('r')
-        assert stream(terminal).is_terminal is True
+        sys_terminal = mocker.patch(f'sys.{terminal}')
+        stream = StreamArgument('r')(sys_terminal)
+        assert stream.is_terminal
         with stream as open_stream:
-            assert open_stream is terminal
+            assert open_stream is sys_terminal
+        sys_terminal.open.assert_not_called()
 
     def test_open_read_context(self, tmp_path):
         """Check reading from a file path."""
