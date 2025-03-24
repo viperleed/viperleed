@@ -206,16 +206,6 @@ the  oxygen adsorbate has changed a good amount. Further, we see that the
 vibration amplitude of the oxygen atom has gone down, while the amplitude
 for iridium has gone up.
 
-.. important::
-    We want to accept the optimized positions as the new starting
-    configuration, so we need to replace our old :ref:`POSCAR` and
-    :ref:`VIBROCC` files with the optimized ones.
-    This can be done either manually or automatically by calling the
-    :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag:
-
-    .. code-block:: console
-
-        $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
 
 Fine DISPLACEMENTS and tensor-LEED error
 ========================================
@@ -250,13 +240,7 @@ Full-dynamic optimization
 
 After the finer search run finishes, we see that the |R factor| has again
 dropped quite significantly. The |R factor| is now below 0.1, which already
-indicates very good agreement, but we can get better yet. However, before
-proceeding, we should accept the new best-fit structure by calling the
-:ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag:
-
-    .. code-block:: console
-
-        $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
+indicates very good agreement, but we can get better yet.
 
 Now, remember that in the :ref:`PARAMETERS` file of
 :numref:`list_ir_parameters` we had to put in an initial guess for the
