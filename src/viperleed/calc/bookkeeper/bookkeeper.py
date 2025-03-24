@@ -627,7 +627,7 @@ class Bookkeeper:
         if not self._requires_user_confirmation:
             return True
         while True:
-            reply = input('Are you sure you want to proceed (y/N)?')
+            reply = input('Are you sure you want to proceed (y/N)? ')
             reply = reply.lower()
             if not reply or reply.startswith('n'):
                 return False
