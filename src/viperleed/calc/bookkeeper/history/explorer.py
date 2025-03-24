@@ -155,36 +155,8 @@ class HistoryExplorer:
         bool
             Whether any fixing was actually performed.
         """
-        # Create some backup of history.info for now, as we don't want
-        # to risk completely messing with the user's file. This may be
-        # removed in the future once we're sure we do the right thing.
-        backup = self._backup_info_file()
-        self.info.fix()
-        fixed_info = False
-        if not backup:  # There was no history.info to back up
-            pass
-        elif backup.read_text(encoding='utf-8') == self.info.raw_contents:
-            # We haven't modified anything. No need to keep the backup.
-            backup.unlink()
-        else:
-            fixed_info = True
-            LOGGER.info(
-                f'The original {self.info.path.name} file has been renamed to '
-                f'{backup.name}. You can safely delete it if no unexpected '
-                'changes were introduced. Please open an Issue under '
-                'https://github.com/viperleed/viperleed/issues if you '
-                'experience any unexpected change.'
-                )
-
-        # Now history folders
-        folder_fix_actions = set()
-        for folder in self._subfolders:
-            folder_fix_actions.update(folder.fix())
-        for action in sorted(folder_fix_actions, key=attrgetter('name')):
-            if action.value:
-                LOGGER.info(action.value)
-
-        fixed_folders = any(folder_fix_actions)
+        fixed_info = self._fix_info_file()
+        fixed_folders = self._fix_subfolders()
         fixed_anything = fixed_info or fixed_folders
         if fixed_anything:
             LOGGER.info(f'Successfully fixed {self.info.path.name} '
@@ -282,6 +254,40 @@ class HistoryExplorer:
         # pylint: disable-next=unsubscriptable-object   # Inference
         job_number = max(jobs[tensor_number], default=0) + 1
         return f't{tensor_number:03d}.r{job_number:03d}_{suffix}'
+
+    def _fix_info_file(self):
+        """Fix format problems in the history.info file."""
+        # Create some backup of history.info for now, as we don't want
+        # to risk completely messing with the user's file. This may be
+        # removed in the future once we're sure we do the right thing.
+        backup = self._backup_info_file()
+        self.info.fix()
+        if not backup:  # There was no history.info to back up
+            return False
+        if backup.read_text(encoding='utf-8') == self.info.raw_contents:
+            # We haven't modified anything. No need to keep the backup.
+            backup.unlink()
+            return False
+        LOGGER.info(
+            f'The original {self.info.path.name} file has been renamed to '
+            f'{backup.name}. You can safely delete it if no unexpected '
+            'changes were introduced. Please open an Issue under '
+            'https://github.com/viperleed/viperleed/issues if you '
+            'experience any unexpected change.'
+            )
+        return True
+
+    def _fix_subfolders(self):
+        """Fix issues found in all history subfolders."""
+        # Keep only folders that need fixing
+        folder_fix = {folder: folder.fix() for folder in self._subfolders}
+        folder_fix = {f: a for f, a in folder_fix.items() if a}
+        folder_fix_actions = {a for actions in folder_fix.values()
+                              for a in actions}
+        for action in sorted(folder_fix_actions, key=attrgetter('name')):
+            if action.value:
+                LOGGER.info(action.value)
+        return any(folder_fix_actions)
 
     def _update_maps(self):
         """Update inner mappings for fast access."""
