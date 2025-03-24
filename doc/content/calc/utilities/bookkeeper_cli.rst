@@ -26,7 +26,3 @@ If no new output is detected, it will simply exit without doing anything.
         :usagesection:
         :showusagemain: viperleed bookkeeper, viperleed.calc.bookkeeper
 
-        -c --cont
-            See also :ref:`bookkeeper`.
-        -d --discard
-            See also :ref:`bookkeeper`.
