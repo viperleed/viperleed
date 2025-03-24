@@ -263,10 +263,10 @@ class TestBookkeeperOthers:
                 },
             # History information, needed for removal of Tensors
             DEFAULT_HISTORY: {   # Dummy empty files for hashing
-                't003.r001_other_stuff': {'file': 'contents'},
-                't002.r001_first_run': {'file': 'contents'},
-                't002.r005_other_run': {'file': 'contents'},
-                't001.r001_first_tensor': {'file': 'contents'},
+                't003.r001_other_stuff_000000-000000': {'file': 'contents'},
+                't002.r001_first_run_000000-000000': {'file': 'contents'},
+                't002.r005_other_run_000000-000000': {'file': 'contents'},
+                't001.r001_first_tensor_000000-000000': {'file': 'contents'},
                 },
             }
         original_paths = filesystem_from_dict(root_tree, tmp_path)
@@ -529,7 +529,7 @@ class TestBookkeeperRaises:
                 },
             DEFAULT_OUT: {},
             'notes': None,
-            f'{LOG_PREFIX}-20xxxx-xxxxxx.log': None,
+            f'{LOG_PREFIX}-200101-010101.log': None,
             'PARAMETERS_ori': None,
             }
         filesystem_from_dict(root_tree, tmp_path)

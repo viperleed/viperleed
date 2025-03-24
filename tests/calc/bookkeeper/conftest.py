@@ -118,8 +118,9 @@ def factory_make_root_tree(tmp_path):
             },
 
         # Pre-existing (empty) history directories
-        f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
-        f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
+        f'{DEFAULT_HISTORY}/t001.r001_200101-111213/some_directory': {},
+        f'{DEFAULT_HISTORY}/t001.r002.001_DS_200212-141516/some_directory': {},
+        f'{DEFAULT_HISTORY}/t002.r002_200212-141516/some_directory': {},
 
         # workhistory subfolders, with dummy files
         **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}

@@ -23,7 +23,8 @@ from ....helpers import not_raises
 
 _MODULE = 'viperleed.calc.bookkeeper.history.folder'
 _FAKE_HASH = 'this is a fake hash value'
-_VALID_FOLDER_NAME = 't001.r002_other_stuff'
+_VALID_TIMESTAMP = '010203-040506'
+_VALID_FOLDER_NAME = f't001.r002_other_stuff_{_VALID_TIMESTAMP}'
 
 
 class MockMetaFile:
@@ -94,16 +95,32 @@ class TestIncompleteHistoryFolder:
 
     _cls = IncompleteHistoryFolder
 
-    def test_init(self, mock_path, incomplete_folder):
-        """Test __post_init__ of IncompleteHistoryFolder."""
-        # pylint: disable=magic-value-comparison
-        assert incomplete_folder.tensor_num == 1
-        assert incomplete_folder.job_num == 2
-        assert incomplete_folder.path == mock_path
+    _valid = {
+        'not moved': _VALID_FOLDER_NAME,
+        'moved': f't001.r002_stuff_moved-{_VALID_TIMESTAMP}'
+        }
 
-    def test_invalid_name(self, mock_path):
+    @parametrize(name=_valid.values(), ids=_valid)
+    def test_init(self, name, mock_path):
+        """Test __post_init__ of IncompleteHistoryFolder."""
+        mock_path.name = name
+        folder = self._cls(mock_path)
+        # pylint: disable=magic-value-comparison
+        assert folder.tensor_num == 1
+        assert folder.job_num == 2
+        assert folder.path == mock_path
+        # pylint: disable-next=no-member                # Inference
+        assert folder.timestamp.endswith(_VALID_TIMESTAMP)
+
+    _invalid = {
+        'no tensors/job': 'invalid_name',
+        'no timestamp': 't001.r002_stuff',
+        }
+
+    @parametrize(name=_invalid.values(), ids=_invalid)
+    def test_invalid_name(self, name, mock_path):
         """Test invalid folder name raises ValueError in _analyze_path."""
-        mock_path.name = 'invalid_name'
+        mock_path.name = name
         with pytest.raises(ValueError, match='Invalid'):
             self._cls(mock_path)
 
@@ -142,13 +159,21 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
 
     _cls = HistoryFolder
 
-    # pylint: disable=arguments-renamed  # It's a fixture
-    def test_init(self, mock_path, history_folder):
+    _valid = TestIncompleteHistoryFolder._valid
+
+    @parametrize(name=_valid.values(), ids=_valid)
+    @pytest.mark.usefixtures('logs')
+    # pylint: disable-next=arguments-differ
+    def test_init(self, name, mock_path, patch_metafile):
         """Test HistoryFolder __post_init__."""
-        assert history_folder.hash_ == _FAKE_HASH
-        assert not history_folder.parent
-        history_folder.logs.collect.assert_called_once()
-        super().test_init(mock_path, history_folder)
+        patch_metafile()
+        mock_path.name = name
+        folder = self._cls(mock_path)
+        assert folder.hash_ == _FAKE_HASH
+        assert not folder.parent
+        # pylint: disable-next=no-member                # Inference
+        folder.logs.collect.assert_called_once()
+        super().test_init(name, mock_path)
 
     @parametrize(is_file=(True, False))
     def test_has_metadata(self, is_file, history_folder, mocker):

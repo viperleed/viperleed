@@ -14,6 +14,7 @@ __license__ = 'GPLv3+'
 from enum import Enum
 import logging
 from pathlib import Path
+import re
 import shutil
 
 from viperleed.calc.bookkeeper.constants import HISTORY_FOLDER_RE
@@ -59,8 +60,9 @@ class IncompleteHistoryFolder:
     path: Path
 
     # Attributes computed during __post_init__
-    tensor_num: int = non_init_field()
     job_num: int = non_init_field()
+    tensor_num: int = non_init_field()
+    timestamp: str = non_init_field()
 
     name = make_property('path.name')
 
@@ -97,6 +99,21 @@ class IncompleteHistoryFolder:
                 )
         set_frozen_attr(self, 'tensor_num', int(match_['tensor_num']))
         set_frozen_attr(self, 'job_num', int(match_['job_num']))
+
+        # Now timestamp. This is always the last bit, after the
+        # underscore. Notice that, since we never add PREVIOUS
+        # workhistory folders to history, the timestamp can only
+        # match "(moved-)\d{6}-\d{6}". The "moved-" bit is also
+        # very unlikely, as it is only added by bookkeeper if it
+        # does not find a log file.
+        match_ = re.fullmatch(r'.*_(?P<timestamp>(moved-)?\d{6}-\d{6})',
+                              match_['rest'])
+        if not match_:
+            raise ValueError(
+                f'Invalid {DEFAULT_HISTORY} folder {path.name} at '
+                f'{path.parent}. Does not end with a timestamp.'
+                )
+        set_frozen_attr(self, 'timestamp', match_['timestamp'])
 
 
 @frozen
