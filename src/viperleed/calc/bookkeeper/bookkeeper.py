@@ -26,6 +26,7 @@ from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
+from viperleed.calc.bookkeeper.utils import file_contents_identical
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -654,5 +655,8 @@ def _check_newer(older, newer):
     """Raise if file `older` is newer than file `newer`."""
     newer_timestamp = newer.stat().st_mtime
     older_timestamp = older.stat().st_mtime
-    if newer_timestamp < older_timestamp:
-        raise _FileNotOlderError
+    if newer_timestamp >= older_timestamp:
+        return
+    if file_contents_identical(older, newer):
+        return
+    raise _FileNotOlderError

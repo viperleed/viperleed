@@ -87,24 +87,6 @@ class MockInput:  # pylint: disable=too-few-public-methods
 class TestBookkeeperComplaints:
     """Tests for situations that do not raise but issue log warnings/errors."""
 
-    def test_cwd_file_newer(self, caplog, tmp_path):
-        """Check warnings when a cwd file is newer than an original_input."""
-        bookkeeper = Bookkeeper(cwd=tmp_path)
-        ori_inputs = {
-            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {'POSCAR': None},
-            }
-        filesystem_from_dict(ori_inputs, tmp_path)
-        time.sleep(0.05)
-        (tmp_path/'POSCAR').touch()
-
-        bookkeeper.update_from_cwd()
-        # pylint: disable-next=protected-access  # OK in tests
-        bookkeeper._mode = Mode.ARCHIVE
-        # pylint: disable-next=protected-access  # OK in tests
-        bookkeeper._archive_input_files_from_original_inputs_or_cwd()
-        # pylint: disable-next=magic-value-comparison
-        assert 'is newer' in caplog.text
-
     def test_copy_from_root(self, caplog, tmp_path):
         """Check warnings when no original_input is present."""
         bookkeeper = Bookkeeper(cwd=tmp_path)
@@ -122,6 +104,42 @@ class TestBookkeeperComplaints:
         assert _FROM_ROOT in caplog.text
         assert (tmp_path/'POSCAR_ori').is_file()
         assert (target/'POSCAR_from_root').is_file()
+
+    def test_cwd_file_newer(self, caplog, tmp_path):
+        """Check warnings when a cwd file is newer than an original_input."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        ori_inputs = {
+            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {'POSCAR': None},
+            }
+        filesystem_from_dict(ori_inputs, tmp_path)
+        time.sleep(0.05)
+        (tmp_path/'POSCAR').write_text('modified contents')
+
+        bookkeeper.update_from_cwd()
+        # pylint: disable-next=protected-access  # OK in tests
+        bookkeeper._mode = Mode.ARCHIVE
+        # pylint: disable-next=protected-access  # OK in tests
+        bookkeeper._archive_input_files_from_original_inputs_or_cwd()
+        # pylint: disable-next=magic-value-comparison
+        assert 'is newer' in caplog.text
+
+    def test_cwd_file_newer_same_contents(self, caplog, tmp_path):
+        """Check that warnings are emitted only if contents differ."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        ori_inputs = {
+            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {'POSCAR': None},
+            }
+        filesystem_from_dict(ori_inputs, tmp_path)
+        time.sleep(0.05)
+        (tmp_path/'POSCAR').touch()
+
+        bookkeeper.update_from_cwd()
+        # pylint: disable-next=protected-access  # OK in tests
+        bookkeeper._mode = Mode.ARCHIVE
+        # pylint: disable-next=protected-access  # OK in tests
+        bookkeeper._archive_input_files_from_original_inputs_or_cwd()
+        # pylint: disable-next=magic-value-comparison
+        assert 'is newer' not in caplog.text
 
 
 class TestWarnsInOldCalcTree:
