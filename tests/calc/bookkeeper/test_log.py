@@ -217,6 +217,17 @@ class TestLogFiles:
         logs._infer_calc_version()
         assert logs.version == expect
 
+    @pytest.mark.xfail(reason=('Bug in Version. Should be fixed '
+                               'when merging measurement code.'))
+    def test_infer_calc_version_malformed(self, logs, mocker):
+        """Check no invalid version is stored."""
+        mocker.patch.object(logs, '_calc')
+        malformed = ('This is ViPErLEED version 1.2.3.4.5',)
+        logs.most_recent = mocker.MagicMock(lines=malformed)
+        # pylint: disable-next=protected-access           # OK in tests
+        logs._infer_calc_version()
+        assert logs.version is None
+
     _log_info = _combine_log_info(
         run=(('Executed segments: 123   ',), {'run_info': '123   '}),
         r_ref=(('Final R (refcalc)   : 0.01 ',), {'r_ref': '0.01 '}),
