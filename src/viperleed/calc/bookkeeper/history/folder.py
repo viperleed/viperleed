@@ -108,8 +108,8 @@ class IncompleteHistoryFolder:
         # very unlikely, as it is only added by bookkeeper if it
         # does not find a log file.
         match_ = re.fullmatch(
-            rf'.*_(?P<timestamp>({MOVED_LABEL})?\d{6}-\d{6})',
-            match_['rest']
+            rf'.*_(?P<timestamp>({MOVED_LABEL})?\d{{6}}-\d{{6}})',
+            match_['rest'],
             )
         if not match_:
             raise ValueError(
