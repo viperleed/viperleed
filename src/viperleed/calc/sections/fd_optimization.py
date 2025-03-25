@@ -2,6 +2,7 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2021-10-22'
@@ -21,6 +22,7 @@ from viperleed.calc.files import iofdopt
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.sections.initialization import make_compile_logs_dir
 from viperleed.calc.sections.refcalc import refcalc as section_refcalc
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 
@@ -70,6 +72,7 @@ def get_fd_r(slab, rpars, workdir):
     rpars.PHI = rpars.PHI % 360
     main_work = Path.cwd()
     with execute_in_dir(workdir, mkdir=True):
+        make_compile_logs_dir(rpars)
         for input_file in ['BEAMLIST', 'PHASESHIFTS']:
             try:
                 shutil.copy2(main_work / input_file, workdir)
