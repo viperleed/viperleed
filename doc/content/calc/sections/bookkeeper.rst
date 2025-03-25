@@ -69,10 +69,9 @@ The |bookkeeper| has four archiving-related modes:
 
     .. warning::
         Running |bookkeeper| in **Discard full** mode in a folder that has
-        been previously **Clear**\ ed or **Discard**\ ed will *not restore*
-        the input files of the last non-removed execution. The files can be
-        manually copied from the |SUPP/ori| directory of the corresponding
-        "main" |history| folder.
+        been previously **Clear**\ ed will *not restore* the input files of
+        the last non-removed execution. The files can be manually copied from
+        the |SUPP/ori| directory of the corresponding "main" |history| folder.
 
 
 All the modes that store results to |history| (i.e., **Archive**, **Clear**,
@@ -132,8 +131,8 @@ as follows:
     as the ``TENSORS`` and ``JOB ID`` numbers.
 
     .. versionchanged:: 0.13.0
-        Changed the default format of this field to ``YYYY-MM-DD HH:mm::ss``.
-        Earlier versions used ``DD.MM.yy HH:mm:ss``. |bookkeeper| will add
+        Changed the default format of this field to ``yyyy-mm-dd HH:mm::ss``.
+        Earlier versions used ``dd.mm.yy HH:mm:ss``. |bookkeeper| will add
         new |info| entries keeping the format consistent, but will warn about
         the format change. |info| files created with earlier |bookkeeper|
         versions can be updated automatically to the new format by running
@@ -152,12 +151,12 @@ as follows:
     stored in |history|.
 
 ``Notes``
-    Either added manually, or inserted automatically. When the |bookkeeper|
-    runs and a ``notes`` or ``notes.txt`` file is present in the folder, the
-    contents of that file will be automatically inserted here, and the notes
-    file will be cleared. This allows taking notes concerning a currently
-    running job in advance, without having to wait for it to finish and the
-    |bookkeeper| to run.
+    Added manually or inserted automatically. When the |bookkeeper| runs and
+    a ``notes`` or ``notes.txt`` file is present in the folder, the contents
+    of that file will be automatically inserted here, and the notes file will
+    be cleared. This allows taking notes concerning a currently running job
+    in advance, without having to wait for it to finish and the |bookkeeper|
+    to run.
 
     A run that has been ``--discard``\ ed has one ``DISCARDED`` line in the
     ``Notes`` field.
@@ -432,8 +431,8 @@ This choice, however, turned out to be fairly poor for a number of reasons:
   3. Manually running |bookkeeper| would have no effect after executing
      |calc| with default arguments, irrespective of the |bookkeeper| mode.
 
-Executing |bookkeeper| v0.13.0 and later in a tree created by versions
-0.12.0–0.12.2 will not yield the expected results in modes ``--discard``
-and ``--discard-full``: the input files will not be restored to those
-at the beginning of the discarded run. These files can, however, be
-manually copied from the corresponding |history| folder.
+Executing |bookkeeper| v0.13.0 (and later versions) in a tree created by
+versions 0.12.0–0.12.2 will not yield the expected results in modes
+``--discard`` and ``--discard-full``: the input files will not be
+restored to those at the beginning of the discarded run. These files
+can, however, be manually copied from the corresponding |history| folder.
