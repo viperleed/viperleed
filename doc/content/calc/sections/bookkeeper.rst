@@ -67,6 +67,13 @@ The |bookkeeper| has four archiving-related modes:
 
     Needs to be run manually with ``viperleed bookkeeper --discard-full``.
 
+    .. warning::
+        Running |bookkeeper| in **Discard full** mode in a folder that has
+        been previously **Clear**\ ed or **Discard**\ ed will *not restore*
+        the input files of the last non-removed execution. The files can be
+        manually copied from the |SUPP/ori| directory of the corresponding
+        "main" |history| folder.
+
 
 All the modes that store results to |history| (i.e., **Archive**, **Clear**,
 and **Discard**) check that the |state_files| files have not been edited
