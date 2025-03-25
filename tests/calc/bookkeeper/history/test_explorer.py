@@ -238,6 +238,7 @@ class TestHistoryExplorer:
                 meta_contents = fixed_tree[folder_name][_METADATA_NAME]
                 assert f'with = {parent_hash}' in meta_contents
                 assert folder in maps['main_hash_to_folders'][parent_hash]
+                assert folder.hash_ not in maps['main_hash_to_folders']
                 assert maps['hash_to_parent'][folder_hash] is not folder
             else:
                 assert parent_hash not in maps['main_hash_to_folders']

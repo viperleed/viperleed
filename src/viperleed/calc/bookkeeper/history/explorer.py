@@ -341,6 +341,8 @@ class HistoryExplorer:
             # Update also the maps
             # pylint: disable-next=unsubscriptable-object   # Inference
             self._maps['main_hash_to_folders'][parent.hash_].append(folder)
+            # pylint: disable-next=unsupported-delete-operation
+            del self._maps['main_hash_to_folders'][folder.hash_]
             # pylint: disable-next=unsupported-assignment-operation
             self._maps['hash_to_parent'][folder.hash_] = parent
         return marked_folders
