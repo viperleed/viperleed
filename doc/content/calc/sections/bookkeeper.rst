@@ -382,7 +382,7 @@ Up to v0.11.0, |bookkeeper| would automatically execute only before a
 |calc| run. It would, at that point, archive to |history|/|info| any
 results of earlier |calc| executions. Then, it would remove any outputs
 of the previous run from the root folder.
-However, at that moment input files may have been modified relative to
+However, at that moment input files could have been modified relative to
 the ones originally given when the previous |calc| execution started.
 Such edited input files would then be archived to |history|.
 
