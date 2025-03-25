@@ -21,6 +21,7 @@ from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+from viperleed.calc.sections.cleanup import MOVED_LABEL
 
 
 @frozen
@@ -49,10 +50,10 @@ _FOLDER_NAME_RE = re.compile(
     r't\d+'          # Tensor number
     r'\.r\d+'        # Run number, given by bookkeeper
     r'(?:\.\d+)?'    # Optional search number, from workhistory number
-    '_(?:moved-)?'   # Optional, if bookkeeper runs twice
+    f'_(?:{MOVED_LABEL})?'   # Optional, if bookkeeper runs twice
     r'\d{6}-\d{6})'  # Date and time, with log-name format
     rf'(?:_(?P<job_name>{_JOB_NAME_PATTERN}))?'
-    r'(?P<tail>_moved-\d{6}-\d{6})?'  # Ran twice within one second
+    rf'(?P<tail>_{MOVED_LABEL}\d{{6}}-\d{{6}})?'  # Ran twice within 1s
     )
 
 
@@ -102,7 +103,7 @@ class FolderField(StringField, tag=FieldTag.FOLDER, mandatory=True):
         if not match_:
             raise EntrySyntaxError(
                 'Does not have format '
-                'tTTT.rRRR_[moved-]yymmdd-HHMMSS[_job_name]'
+                f'tTTT.rRRR_[{MOVED_LABEL}]yymmdd-HHMMSS[_job_name]'
                 )
         set_frozen_attr(self, 'value', match_.group())  # Stripped
         set_frozen_attr(self, 'job_name', match_['job_name'])

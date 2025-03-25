@@ -29,6 +29,7 @@ from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+from viperleed.calc.sections.cleanup import MOVED_LABEL
 
 
 LOGGER = logging.getLogger(__name__)
@@ -106,8 +107,10 @@ class IncompleteHistoryFolder:
         # match "(moved-)\d{6}-\d{6}". The "moved-" bit is also
         # very unlikely, as it is only added by bookkeeper if it
         # does not find a log file.
-        match_ = re.fullmatch(r'.*_(?P<timestamp>(moved-)?\d{6}-\d{6})',
-                              match_['rest'])
+        match_ = re.fullmatch(
+            rf'.*_(?P<timestamp>({MOVED_LABEL})?\d{6}-\d{6})',
+            match_['rest']
+            )
         if not match_:
             raise ValueError(
                 f'Invalid {DEFAULT_HISTORY} folder {path.name} at '

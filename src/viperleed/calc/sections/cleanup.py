@@ -115,6 +115,10 @@ _OUT_FILES = (
 # from previous viperleed.calc executions from the work directory
 PREVIOUS_LABEL = 'previous'
 
+# Label given to workhistory folders from previous runs when no
+# log file was found
+MOVED_LABEL = 'moved-'
+
 # Output files that may be inputs in future runs - keep during prerun
 _IOFILES = (
     'control.chem',
@@ -514,7 +518,7 @@ def _find_next_workistory_dir_name(rpars, prerun):
                 if f.is_file() and f.name not in rpars.manifest
                 )
         except ValueError:  # No relevant log files
-            old_timestamp = f'moved-{rpars.timestamp}'
+            old_timestamp = f'{MOVED_LABEL}{rpars.timestamp}'
         else:
             old_timestamp = most_recent_log[-17:-4]
         return f'{dirname_prefix}_{PREVIOUS_LABEL}_{old_timestamp}'

@@ -32,6 +32,7 @@ from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.cleanup import MOVED_LABEL
 
 
 LOGGER = logging.getLogger(__name__)
@@ -192,7 +193,7 @@ class Bookkeeper:
             self._root.collect_info()
             self._state_info['timestamp'] = (
                 self._root.calc_timestamp  # If a log file was found
-                or f'moved-{DateTimeFormat.FILE_SUFFIX.now()}'
+                or f'{MOVED_LABEL}{DateTimeFormat.FILE_SUFFIX.now()}'
                 )
 
             # Infer which history subfolder we should be handling

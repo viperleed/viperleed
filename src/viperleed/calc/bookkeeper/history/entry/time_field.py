@@ -27,6 +27,7 @@ from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import replace_values
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.time_utils import DateTimeFormat
+from viperleed.calc.sections.cleanup import MOVED_LABEL
 
 
 _OUTDATED = 'outdated format'
@@ -152,7 +153,7 @@ class TimestampField(FieldBase, tag=FieldTag.TIMESTAMP, mandatory=True):
     def _sanitize_string_value(self):
         """Clean up a string value."""
         try:
-            value_str = self.value.replace('moved-', '').strip()
+            value_str = self.value.replace(MOVED_LABEL, '').strip()
         except AttributeError:
             # Not a string. Error pops up in super()._check_str_value()
             return
