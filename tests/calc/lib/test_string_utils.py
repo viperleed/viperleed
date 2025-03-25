@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize
 
+from viperleed.calc.lib.string_utils import harvard_commas
 from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.string_utils import range_to_str
 from viperleed.calc.lib.string_utils import read_int_line
@@ -21,6 +22,27 @@ from viperleed.calc.lib.string_utils import rsplit_once
 from viperleed.calc.lib.string_utils import split_string_range
 from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.calc.lib.string_utils import to_snake_case
+
+
+class TestHarvardCommas:
+    """Tests for the harvard_commas function."""
+
+    _items = {
+        'empty': ((), ''),
+        'single': (('apple',), 'apple'),
+        'two': (('apple', 'banana'), 'apple and banana'),
+        'more': (('apple', 'banana', 'cherry'), 'apple, banana, and cherry'),
+        'non-string': ((1, 2, 3), '1, 2, and 3'),
+        }
+
+    @parametrize('items,expect', _items.values(), ids=_items)
+    def test_single_item(self, items, expect):
+        """Test when a single item is passed."""
+        assert harvard_commas(*items) == expect
+
+    def test_custom_separator(self):
+        """Test using a custom separator."""
+        assert harvard_commas(1, 2, 3, sep='or') == '1, 2, or 3'
 
 
 class TestParentName:
