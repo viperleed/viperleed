@@ -19,8 +19,11 @@ from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.folder import HistoryFolder
+from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.constants import DEFAULT_HISTORY
 
+from ....helpers import filesystem_from_dict
+from ....helpers import filesystem_to_dict
 from ....helpers import not_raises
 from ....helpers import raises_exception
 
@@ -51,29 +54,194 @@ class TestHistoryExplorer:
         assert history._new_calc_run_folder is None
         assert history._info is None
 
-    @parametrize(backed_up=(Path('.bak'), None))
-    def test_fix(self, backed_up, history, patched_folder, mocker):
-        """Check correct behavior of the .fix() method."""
-        if backed_up:
-            mocker.patch('pathlib.Path.read_text', return_value='some text')
+    @parametrize(fix_file=(True, False))
+    @parametrize(fix_folders=(True, False))
+    def test_fix(self, fix_file, fix_folders, history, mocker):
+        """Check the expected behavior of the .fix() method."""
         mocker.patch.object(history, '_info')
+        called = (
+            mocker.patch.object(history,
+                                '_fix_info_file',
+                                return_value=fix_file),
+            mocker.patch.object(history,
+                                '_fix_subfolders',
+                                return_value=fix_folders),
+            )
+        if fix_file or fix_folders:
+            called += (mocker.patch(f'{_MODULE}.LOGGER.info'),)
+        result = history.fix()
+        assert result == fix_file or fix_folders
+        for fixer in called:
+            fixer.assert_called_once()
+
+    _backup = {  # backed_up, same_text
+        'no backup': (None, False),
+        'backup different': (Path('.bak'), False),
+        'backup same': (Path('.bak'), True),
+        }
+
+    @parametrize('backed_up,same_text', _backup.values(), ids=_backup)
+    def test_fix_info(self, backed_up, same_text, history, mocker):
+        """Check correct behavior of the _fix_info_file method."""
+        back_up_text = 'some text'
+        if backed_up:
+            mocker.patch('pathlib.Path.read_text', return_value=back_up_text)
+        info = mocker.patch.object(history, '_info')
+        if same_text:
+            info.raw_contents = back_up_text
         mock_log = mocker.patch(f'{_MODULE}.LOGGER.info')
-        fake_folder = patched_folder()
-        # pylint: disable=protected-access                # OK in tests
-        history._subfolders = [fake_folder]
         called = (
             mocker.patch.object(history,
                                 '_backup_info_file',
                                 return_value=backed_up),
             mocker.patch.object(history.info, 'fix'),
-            # Only works for a single folder, as calling patched_folder
-            # repeatedly always returns the same MagicMock object.
-            mocker.patch.object(fake_folder, 'fix'),
             )
-        history.fix()
+        if same_text:
+            called += mocker.patch('pathlib.Path.unlink')
+        # pylint: disable-next=protected-access           # OK in tests
+        result = history._fix_info_file()
+        assert result == bool(backed_up and not same_text)
         for fixer in called:
             fixer.assert_called_once()
-        assert mock_log.call_count == (2 if backed_up else 0)
+        assert mock_log.call_count == (1 if result else 0)
+
+    @fixture(name='misses_medatata')
+    def _fixture_misses_metadata(self, tmp_path):
+        """Create a history tree with folders without metadata."""
+        with_metadata = {
+            't000.r001_000000-000001': {_METADATA_NAME: (
+                '[archived]\nhash=7e6c9f1133c4ceae6e51bee48ae49c7f'
+                )},
+            # The next one should not have its metadata edited,
+            # even if it does not have the correct parent
+            't000.r001.001_DS_000000-000001': {_METADATA_NAME: (
+                '[archived]\nhash=a105e6c5df761776065a38d3ac73668b'
+                )},
+            }
+        no_metadata_only_main = {
+            't000.r002_000000-000002': {},
+            }
+        no_metadata_with_siblings = {
+            't001.r001_000000-000003': {},
+            't000.r003.001_DS_000000-000003': {},
+            't000.r003.002_DS_000000-000003': {},
+            't001.r001.001_RDS_000000-000003': {},
+            }
+        no_metadata_duplicate_times = {
+            't002.r001_000000-000004': {},
+            't003.r001_000000-000004': {},
+            't001.r002.001_DS_000000-000004': {},
+            't002.r002.099_DS_000000-000004': {},
+            }
+        no_metadata_moved = {
+            't004.r001_moved-000000-000005': {},
+            't003.r002.r001_DS_moved-000000-000005': {},
+            }
+        tree = {'history': {
+            **with_metadata,
+            **no_metadata_only_main,
+            **no_metadata_with_siblings,
+            **no_metadata_duplicate_times,
+            **no_metadata_moved,
+            }}
+        filesystem_from_dict(tree, tmp_path)
+
+        expect_metadata = {
+            # with_metadata: unchanged
+            't000.r001_000000-000001': {
+                'hash_': '7e6c9f1133c4ceae6e51bee48ae49c7f',
+                'parent': None,
+                },
+            't000.r001.001_DS_000000-000001': {
+                'hash_': 'a105e6c5df761776065a38d3ac73668b',
+                'parent': None,
+                },
+            # no_metadata_only_main: added metadata, no parent
+            't000.r002_000000-000002': {
+                'hash_': 'f2606fc9ad8c6d6ce810069eaadb8f27',
+                'parent': None,
+                },
+            # no_metadata_with_siblings: added metadata, marked parent
+            't001.r001_000000-000003': {
+                'hash_': '0b698119bf547e7dfcd68944fa6372b9',
+                'parent': None,
+                },
+            't000.r003.001_DS_000000-000003': {
+                'hash_': '88ec4994cc47ab9d8cb1b588728735e5',
+                'parent': '0b698119bf547e7dfcd68944fa6372b9',
+                },
+            't000.r003.002_DS_000000-000003': {
+                'hash_': '73d1cb6866abeb78b0c6336a605a6a58',
+                'parent': '0b698119bf547e7dfcd68944fa6372b9',
+                },
+            't001.r001.001_RDS_000000-000003': {
+                'hash_': '4726d09c1ffcd1229f028596871bf746',
+                'parent': '0b698119bf547e7dfcd68944fa6372b9',
+                },
+            # no_metadata_duplicate_times: added metadata, no parent
+            't002.r001_000000-000004': {
+                'hash_': '2e6bde0dd1fd08517716fd6e5025c875',
+                'parent': None,
+                },
+            't003.r001_000000-000004': {
+                'hash_': '340101cb19b66ab4189f9fb525b21c9e',
+                'parent': None,
+                },
+            't001.r002.001_DS_000000-000004': {
+                'hash_': '64aedaa473d22240bad2d37c2cee58e3',
+                'parent': None,
+                },
+            't002.r002.099_DS_000000-000004': {
+                'hash_': 'f9ce3bdf28a434d0b0bb88a109536f26',
+                'parent': None,
+                },
+            # no_metadata_moved: added metadata, no parent
+            't004.r001_moved-000000-000005': {
+                'hash_': 'ed112f0513d88962773726d7d1458252',
+                'parent': None,
+                },
+            't003.r002.r001_DS_moved-000000-000005': {
+                'hash_': '292f910c4812d65221db922010a7b9c7',
+                'parent': None,
+                },
+            }
+        # Ensure we haven't forgotten any
+        assert all(f in expect_metadata for f in tree['history'])
+        return expect_metadata
+
+    def test_fix_subfolders(self, misses_medatata, tmp_path):
+        """Ensure the correct behavior of the _fix_subfolders method."""
+        history = HistoryExplorer(tmp_path)
+        history.collect_subfolders()
+        # pylint: disable-next=protected-access           # OK in tests
+        assert history._fix_subfolders()
+
+        # Check that all have a metadata file
+        fixed_tree = filesystem_to_dict(tmp_path/'history')
+        assert all(_METADATA_NAME in folder for folder in fixed_tree.values())
+
+        # Now check the metadata contents
+        for folder_name, meta_attrs in misses_medatata.items():
+            # pylint: disable-next=protected-access       # OK in tests
+            folder = next(f for f in history._subfolders
+                          if f.name == folder_name)
+            for attr_name, attr_value in meta_attrs.items():
+                assert getattr(folder, attr_name) == attr_value
+            # Make sure the parent was written to file,
+            # and check that maps were updated correctly
+            parent_hash = meta_attrs['parent']
+            folder_hash = meta_attrs['hash_']
+            # pylint: disable-next=protected-access       # OK in tests
+            maps = history._maps
+            # pylint: disable=E1135,E1136   # Pylint inference for maps
+            if parent_hash:
+                meta_contents = fixed_tree[folder_name][_METADATA_NAME]
+                assert f'with = {parent_hash}' in meta_contents
+                assert folder in maps['main_hash_to_folders'][parent_hash]
+                assert maps['hash_to_parent'][folder_hash] is not folder
+            else:
+                assert parent_hash not in maps['main_hash_to_folders']
+                assert maps['hash_to_parent'][folder_hash] is folder
 
     def test_discard_last(self, history, mocker):
         """Test the discard_most_recent_run method."""

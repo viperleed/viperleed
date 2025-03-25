@@ -10,6 +10,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
+from collections import Counter
 from collections import defaultdict
 import logging
 from operator import attrgetter
@@ -17,12 +18,14 @@ from pathlib import Path
 import re
 import shutil
 
+from viperleed.calc.bookkeeper.history.folder import FolderFixAction
 from viperleed.calc.bookkeeper.history.folder import HistoryFolder
 from viperleed.calc.bookkeeper.history.folder import IncompleteHistoryFolder
 from viperleed.calc.bookkeeper.history.info import HistoryInfoFile
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.constants import DEFAULT_HISTORY
+from viperleed.calc.sections.cleanup import MOVED_LABEL
 
 
 LOGGER = logging.getLogger(__name__)
@@ -281,6 +284,15 @@ class HistoryExplorer:
         """Fix issues found in all history subfolders."""
         # Keep only folders that need fixing
         folder_fix = {folder: folder.fix() for folder in self._subfolders}
+
+        # Now all subfolders should have metadata. Those to which
+        # metadata was added must also be correctly marked into
+        # parent/child relationships. Do so now.
+        added_metadata = [f for f, actions in folder_fix.items()
+                          if FolderFixAction.ADD_METADATA in actions]
+        for folder in self._mark_subfolders_as_siblings(added_metadata):
+            folder_fix[folder].remove(FolderFixAction.ADD_METADATA)
+
         folder_fix = {f: a for f, a in folder_fix.items() if a}
         folder_fix_actions = {a for actions in folder_fix.values()
                               for a in actions}
@@ -288,6 +300,50 @@ class HistoryExplorer:
             if action.value:
                 LOGGER.info(action.value)
         return any(folder_fix_actions)
+
+    def _mark_subfolders_as_siblings(self, folders):
+        """Infer relations between folders based on their timestamp."""
+        # Pick first all the "main" folders: they have names with
+        # format tTTT.rRRR_* and don't have an additional .SSS
+        main_folder_re = re.compile(r't\d{3,}\.r\d{3,}_')
+
+        # We can safely assign relationships only for the folders that
+        # clearly come from calc, i.e., those that have no 'moved' in
+        # their timestamp, as these are marked as such by bookkeeper.
+        main_folders = [f for f in folders
+                        if main_folder_re.match(f.name)
+                        and MOVED_LABEL not in f.timestamp]
+
+        # Also, we can only process main folders as long as there
+        # is a unique timestamp: having two folders with the same
+        # timestamp makes it impossible to discern which other
+        # folders were created with these.
+        timestamps = Counter(f.timestamp for f in main_folders)
+        main_folder_timestamps = {
+            f.timestamp: f
+            for f in main_folders
+            # pylint: disable-next=magic-value-comparison  # Clear
+            if timestamps[f.timestamp] < 2
+            }
+
+        # Now we can mark siblings of these main folders
+        marked_folders = set(main_folder_timestamps.values())
+        for folder in folders:
+            if folder in marked_folders:
+                continue
+            try:
+                parent = main_folder_timestamps[folder.timestamp]
+            except KeyError:
+                continue
+            folder.metadata.collect_from(parent.metadata)
+            folder.metadata.write()
+            marked_folders.add(folder)
+            # Update also the maps
+            # pylint: disable-next=unsubscriptable-object   # Inference
+            self._maps['main_hash_to_folders'][parent.hash_].append(folder)
+            # pylint: disable-next=unsupported-assignment-operation
+            self._maps['hash_to_parent'][folder.hash_] = parent
+        return marked_folders
 
     def _update_maps(self):
         """Update inner mappings for fast access."""

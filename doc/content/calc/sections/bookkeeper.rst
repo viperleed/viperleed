@@ -367,11 +367,14 @@ Behavior of ``--discard-full`` mode
 ***********************************
 |bookkeeper| v0.13.0 introduced a mechanism to cross-reference the "main"
 |history| folder to intermediate results (see :ref:`history_dir` for details).
-Running |bookkeeper| in ``--discard-full`` mode in a tree created by earlier
-|bookkeeper| versions will only delete from |history| the "main" folder of
-the most recent run, and remove from |info| the corresponding entry. This
-will leave intermediate-results folders untouched. Additionally, these folders
-will not have a corresponding |info| entry.
+Before running |bookkeeper| v0.13.0 (and later) in ``--discard-full`` mode in
+a tree created by earlier |bookkeeper| versions, make sure to manually invoke
+|bookkeeper| in ``--fix`` :ref:`mode <other_bookie_modes>`. This will add the
+necessary cross-reference information where possible. Failing to execute
+``bookkeeper --fix`` before ``--discard-full`` will only delete from |history|
+the "main" folder of the most recent run, and remove from |info| the
+corresponding entry. This will leave intermediate-results folders untouched.
+Additionally, these folders will not have a corresponding |info| entry.
 
 Interaction with |calc| v0.1.0 – v0.11.0
 ****************************************
