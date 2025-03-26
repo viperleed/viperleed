@@ -116,8 +116,7 @@ class TestBookkeeperComplaints:
         (tmp_path/'POSCAR').write_text('modified contents')
 
         bookkeeper.update_from_cwd()
-        # pylint: disable-next=protected-access  # OK in tests
-        bookkeeper._mode = Mode.ARCHIVE
+        (bookkeeper.history.new_folder.path).mkdir()
         # pylint: disable-next=protected-access  # OK in tests
         bookkeeper._archive_input_files_from_original_inputs_or_cwd()
         # pylint: disable-next=magic-value-comparison
@@ -133,13 +132,12 @@ class TestBookkeeperComplaints:
         time.sleep(0.05)
         (tmp_path/'POSCAR').touch()
 
-        bookkeeper.update_from_cwd()
-        # pylint: disable-next=protected-access  # OK in tests
-        bookkeeper._mode = Mode.ARCHIVE
-        # pylint: disable-next=protected-access  # OK in tests
-        bookkeeper._archive_input_files_from_original_inputs_or_cwd()
-        # pylint: disable-next=magic-value-comparison
-        assert 'is newer' not in caplog.text
+        with caplog.at_level(logging.WARNING):
+            bookkeeper.update_from_cwd()
+            (bookkeeper.history.new_folder.path).mkdir()
+            # pylint: disable-next=protected-access  # OK in tests
+            bookkeeper._archive_input_files_from_original_inputs_or_cwd()
+        assert not caplog.text
 
 
 class TestWarnsInOldCalcTree:
