@@ -84,7 +84,7 @@ class IncompleteHistoryFolder:
             copy(file_path, self.path / dest_name)
         except OSError:
             err_msg = f'Failed to copy {file_path.name}'
-            if with_name:
+            if with_name != file_path.name:
                 err_msg += f' as {dest_name}'
             err_msg += f' to {DEFAULT_HISTORY}.'
             LOGGER.error(err_msg)
