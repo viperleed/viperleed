@@ -82,11 +82,11 @@ class IncompleteHistoryFolder:
         copy = shutil.copy2 if file_path.is_file() else shutil.copytree
         try:
             copy(file_path, self.path / dest_name)
-        except OSError:
+        except OSError as exc:
             err_msg = f'Failed to copy {file_path.name}'
             if with_name != file_path.name:
                 err_msg += f' as {dest_name}'
-            err_msg += f' to {DEFAULT_HISTORY}.'
+            err_msg += f' to {DEFAULT_HISTORY}. {exc}'
             LOGGER.error(err_msg)
 
     def _analyze_path(self):
