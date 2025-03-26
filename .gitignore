@@ -28,3 +28,6 @@ tleedmlib/wrapped/verification_data
 **/.ipynb_checkpoints
 tleedmlib/**/*.ipynb
 
+# Ignore TLE7209 logic analyzer trace files
+*.sal
+hardware/arduino/b_field_comp/arduino_utils.h

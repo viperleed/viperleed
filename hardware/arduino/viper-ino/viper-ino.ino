@@ -13,6 +13,7 @@ Date: 09.02.2022
 #include <stdarg.h>
 
 #include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
+#include "arduino_utils.h"  // from ../lib; for setChipSelectHigh, getMedian16, bigger16, biggest16
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
@@ -52,7 +53,7 @@ void setup() {
     setChipSelectHigh(CS_DAC);
     setChipSelectHigh(CS_ADC_0);
     setChipSelectHigh(CS_ADC_1);
-    pinMode(SCK, OUTPUT);  // Should not be needed, but it did not work without
+    pinMode(SCK, OUTPUT);  // Should not be needed, but it did not work without  // Probably just because SPI.begin call is missing?
     pinMode(MOSI, OUTPUT);
 
     // Reset ADC and DAC, set DAC output to zero,
@@ -2093,22 +2094,6 @@ void measureADCsRipple(){
 
 
 
-/** -------------------------- ARDUINO UTILITIES --------------------------- **/
-
-void setChipSelectHigh(byte ioPin) {
-    /**
-    Set a digital output used as a chip select signal from
-    the default high-impedance state to high (=unselected),
-    without a glitch to the low state.
-    **/
-    pinMode(ioPin, INPUT_PULLUP);
-    digitalWrite(ioPin, HIGH);
-    pinMode(ioPin, OUTPUT);
-}
-
-
-
-
 
 
 /** ---------------------------- OTHER UTILITIES --------------------------- **/
@@ -2126,22 +2111,6 @@ uint16_t analogReadMedian(byte pin) {
 
 /* TODO: probably nicer to just have the getMedian, bigger and biggest
          functions just be overloaded for uint16_t and int32_t*/
-
-/** Gets the median of three numbers */
-uint16_t getMedian16(uint16_t a0, uint16_t a1, uint16_t a2) {
-  uint16_t maximum = biggest16(a0, a1, a2);
-  if (maximum == a0) return bigger16(a1, a2);
-  if (maximum == a1) return bigger16(a0, a2);
-  else return bigger16(a0, a1);
-}
-
-uint16_t bigger16(uint16_t a, uint16_t b) {
-  return (a > b) ? a : b;
-}
-
-uint16_t biggest16(uint16_t a, uint16_t b, uint16_t c) {
-  return bigger16(a, bigger16(b, c));
-}
 
 /** Gets the median of three numbers */
 int32_t getMedian32(int32_t a0, int32_t a1, int32_t a2) {
