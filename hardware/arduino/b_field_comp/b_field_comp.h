@@ -69,33 +69,33 @@ enum error_t {
 
 class Coil {
     public:
-        INA239 measurement;                                                     
+        INA239 measurement;
         TimerCounter *pwm;
-        MOTORDRIVER driver;                                                    
+        MOTORDRIVER driver;
 
         // Class constructor, including member initializer list
         Coil(TimerCounter *pwm, byte enable, byte spi_cs_ina)
         : driver(MOTORDRIVER(enable)),
-          measurement(INA239(spi_cs_ina)), 
+          measurement(INA239(spi_cs_ina)),
           pwm(pwm) {}
-        
+
         // Class constructor, including member initializer list
         Coil(TimerCounter *pwm, byte spi_cs_motordriver, byte enable, byte spi_cs_ina)
         : driver(MOTORDRIVER(spi_cs_motordriver, enable)),
-          measurement(INA239(spi_cs_ina)), 
+          measurement(INA239(spi_cs_ina)),
           pwm(pwm) {}
 
         void setup() {
           #if DEBUG
             Serial.println("Coil setup started ...");
           #endif
-          
+
           measurement.reset();
           measurement.setup();
           pwm->setup();
           driver.reset();
           driver.setup();
-          
+
           #if DEBUG
             Serial.println("Coil setup finished.");
           #endif                                                                    // TODO: Implement Self-Calibration and Degausing Routine in setup()
@@ -109,16 +109,16 @@ class Coil {
 //                return err;
 //            _current_setpoint = coil_current;
 //        }
-    
+
         // just here for tests, later in sec. private
-        error_t set_duty_cycle(float value) {        
+        error_t set_duty_cycle(float value) {
             /**Set PWM duty cycle (average voltage), including sign output.
-        
+
             Parameters
             ----------
             value : float
                 PWM duty cycle to be set. Should be between -1.0 and +1.0.
-        
+
             Returns
             -------
             error_code : byte
@@ -128,22 +128,22 @@ class Coil {
             error_t err = pwm->set_duty_cycle(value);
             if(err)
                 return err;
-                
+
             return NoError;
         }
         // -------------------
 
-        float get_current() {     
+        float get_current() {
         // Returns float: current in Amperes
             return measurement.get_current();
         }
-        
-        float get_voltage() {     
+
+        float get_voltage() {
         // Returns float: voltage in Volt
             return measurement.get_pin8_voltage();
         }
-        
-        float get_ambient_temperature() {     
+
+        float get_ambient_temperature() {
         // Returns float: temperature in °C
             return measurement.get_temperature();
         }
@@ -165,15 +165,15 @@ class Coil {
             //    0 for no error
             //    1 for 'value' (aka coil current) out-of-range
             // -------
-            
+
             error_t err = NoError;
             float voltage, current;
             float setpoint = -1.000;
-            
+
             Serial.setTimeout(100);
             Serial.begin(9600);  // Open serial port, set data rate to 9600 bps
             delay(2000);         // The IDE needs some time to connect to the Serial Monitor
-            
+
             Serial.println("duty cycle;voltage;current");
             do {
                 err = set_duty_cycle(setpoint);
@@ -182,24 +182,24 @@ class Coil {
                 delay(100);
                 voltage = get_voltage();
                 current = get_current();
-              
+
                 Serial.print(setpoint,3);
                 Serial.print(";");
                 Serial.print(voltage,3);
                 Serial.print(";");
                 Serial.println(current,6);
-        
+
                 setpoint += delta;
             } while(abs(1 - setpoint) > 1E-10);
-            
+
             return NoError;
         }
-        
+
         void set_calibration_values() {
-            
-            
+
+
         }
-        
+
     private:
         float _current_setpoint;
 };

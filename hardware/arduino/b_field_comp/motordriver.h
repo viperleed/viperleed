@@ -17,10 +17,10 @@ Authors: Stefan Mitterhöfer
                                      // which can be provided by the motordriver
 #define MD_PWM_FREQUENCY_MAX (1/MD_PWM_PULSE_MIN)
 
-#define F_PWM             2e4        // 20 kHz; usual PWM frequency                            
-// For duty cycle values, which will generate shorter PWM pulses than 
+#define F_PWM             2e4        // 20 kHz; usual PWM frequency
+// For duty cycle values, which will generate shorter PWM pulses than
 // 'MD_PWM_PULSE_MIN', the PWM frequency will be decreased automatically to
-// avoid to high discrepancy in the set and actual value of the current. 
+// avoid to high discrepancy in the set and actual value of the current.
 // This has to be done because of limitations of the motordriver.
 #define DUTY_CYCLE_MIN (MD_PWM_PULSE_MIN * F_PWM)    // 2e4 * 10e-6 = 0.2
 #define DUTY_CYCLE_MAX (1 - DUTY_CYCLE_MIN)
@@ -31,7 +31,7 @@ class MotorDriver {
 
         MotorDriver(byte enable_pin)
         : _ENABLE_PIN(enable_pin) {}
-        
+
         MotorDriver(byte chip_select_pin, byte enable_pin)
         : _SPI_CS_PIN(chip_select_pin), _ENABLE_PIN(enable_pin) {}
 
@@ -48,7 +48,7 @@ class MotorDriver {
     protected:
         const byte _SPI_CS_PIN = 0;
         const byte _ENABLE_PIN;
-        
+
         /** Reset the TLE7209 after a fault condition occurred.**/
         void reset(byte enable_pin) {
             digitalWrite(_ENABLE_PIN, HIGH);
@@ -68,6 +68,6 @@ class MotorDriver {
   #include "DRV8842.h"    // for motor driver functions
 //  #define MOTORDRIVER  MotorDriver
 #endif
-                                                                                
+
 
 #endif  // _VIPERLEED_MOTORDRIVER

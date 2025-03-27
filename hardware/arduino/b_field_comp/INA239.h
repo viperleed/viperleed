@@ -34,15 +34,15 @@ Communication parameters for the INA239:
 #define INA239_ADC_RANGE    1           // See comment 'INA239_R_SHUNT'
 
 // Resolution of the VBUS register, Conversion factor: 3.125 mV/LSB,
-// see datasheet page 22. 
+// see datasheet page 22.
 #define INA239_VOLTAGE_LSB      0.003125
 // Resolution of the DIETEMP register, Conversion factor: 125 m°C/LSB,
-// see datasheet page 23. 
+// see datasheet page 23.
 #define INA239_TEMPERATURE_LSB  0.125
 // Resolution of the CURRENT register, see datasheet pages 27f.
 #define INA239_CURRENT_LSB      (INA239_I_MAX/pow(2, 15))
 
-// SHUNT_CAL provides the device with a conversion constant value that 
+// SHUNT_CAL provides the device with a conversion constant value that
 // represents shunt resistance used to calculate current value in Amperes
 // see datasheet pages 27f.
 #define INA239_SHUNT_CAL_0  (819.2*pow(10, 6)*INA239_CURRENT_LSB*INA239_R_SHUNT)
@@ -58,17 +58,17 @@ Communication parameters for the INA239:
   #define INA239_SHUNT_CAL    (INA239_SHUNT_CAL_0*4)
 #endif
 
-/* 
+/*
 // INA239 SPI Register addresses, see datasheet page 19.
 // For detailed desciption see datasheet pages 20ff.
 CONFIG              0x00  // General configuration
 ADC_CONFIG          0x01  // Specific configuration of the measurement parameters
-SHUNT_CAL           0x02  // Conversion constant value of shunt resistance 
+SHUNT_CAL           0x02  // Conversion constant value of shunt resistance
 VSHUNT              0x04  // Differential voltage measured across the shunt in mV
 VBUS                0x05  // Voltage at PIN8 in Volts
 DIETEMP             0x06  // Internal device temperature measurement in °C
 CURRENT             0x07  // Calculated current output in Amperes
-POWER               0x08  // NOT USED; Calculated power output 
+POWER               0x08  // NOT USED; Calculated power output
 DIAG_ALERT          0x0B  // NOT USED; Various diagnostics and alerts, see pages 23ff
 SHUNT_OVERVOLTAGE   0x0C  // NOT USED; Shunt Overvoltage Threshold
 SHUNT_UNDERVOLTAGE  0x0D  // NOT USED; Shunt Undervoltage Threshold
@@ -103,9 +103,9 @@ DEVICE_ID           0x3F  // NOT USED; Device identification and revision       
 #elif INA239_ADC_RANGE == 1
   #define INA239_CONFIG_SET_ADCRANGE  (0x01 << 4)  // Set bit 4 HIGH in Register CONFIG
 #endif
-                                                  
+
 // ADC_CONFIG sets the conversion times of the voltage, shunt voltage and
-// temperature measurements as well as the ADC sample averaging count 
+// temperature measurements as well as the ADC sample averaging count
 // see datasheet pages 21 and 29f.
 // measurements to 50 µs; ADC sample averaging count to 1
 #define INA239_ADC_CONFIG_FAST  (0x0F << 12 | 0x00 << 9 | 0x00 << 6 | 0x00 << 3 | 0x00)
@@ -120,7 +120,7 @@ class INA239 {
     INA239(byte chip_select_pin)
     : _SPI_CS_PIN(chip_select_pin) {}
 
-    // Resets all registers to default values. Setting the 'Reset Bit' to '1' 
+    // Resets all registers to default values. Setting the 'Reset Bit' to '1'
     // generates a system reset that is the same as power-on reset.
     void reset() {
       RegisterWrite(INA239_WRITE_CONFIG, INA239_CONFIG_RESET);
@@ -129,7 +129,7 @@ class INA239 {
     void setup() {
       setChipSelectHigh(_SPI_CS_PIN);  // Initialize CS PIN
       SPI_initialize();
-      
+
       RegisterWrite(INA239_WRITE_CONFIG, INA239_CONFIG_SET_ADCRANGE);
       RegisterWrite(INA239_WRITE_ADC_CONFIG, INA239_ADC_CONFIG_SWEET);
       RegisterWrite(INA239_WRITE_SHUNT_CAL, INA239_SHUNT_CAL);
@@ -137,11 +137,11 @@ class INA239 {
 
       #if DEBUG
         int16_t config, config_adc, shunt;
-        
+
         config = RegisterRead(INA239_READ_CONFIG);          // Relevant data in bits 15-0
         config_adc = RegisterRead(INA239_READ_ADC_CONFIG);  // Relevant data in bits 15-0
         shunt = RegisterRead(INA239_READ_SHUNT_CAL);        // Relevant data in bits 14-0
-        
+
         Serial.print("CONFIG: ");
         Serial.print(config, BIN);
         Serial.print(", ");
@@ -204,7 +204,7 @@ class INA239 {
 
   private:
     const byte _SPI_CS_PIN;
-  
+
     // Start an I/O operation for the INA239
     void startIO() {
       SPI.beginTransaction(INA239_SPI_SETTINGS);
@@ -226,7 +226,7 @@ class INA239 {
       data = SPI.transfer16(0x0);
       endIO();
 
-      #if DEBUG    
+      #if DEBUG
         Serial.print("Try to read from Register ");
         Serial.print(frame >> 2, HEX);
         Serial.print("h => SPI Frame: ");
@@ -234,7 +234,7 @@ class INA239 {
         Serial.print("Data: ");
         Serial.println(data, BIN);
       #endif
-      
+
       return data;
     }
 
@@ -245,7 +245,7 @@ class INA239 {
       SPI.transfer16(command);
       endIO();
 
-      #if DEBUG    
+      #if DEBUG
         Serial.print("Try to write to Register ");
         Serial.print(frame >> 2, HEX);
         Serial.print("h => SPI Frame: ");

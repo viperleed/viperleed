@@ -61,15 +61,15 @@ enum TLE7209_Error {
     TLE7209_SPINotAvailable,
 };
 
-                             
+
 class TLE7209 : public MotorDriver {
     public:
         TLE7209(byte enable_pin)
         : MotorDriver(enable_pin) {}
-        
+
         TLE7209(byte chip_select_pin, byte enable_pin)
         : MotorDriver(chip_select_pin, enable_pin) {}
-    
+
         void setup() override {
 #if TLE7209_USE_SPI
             if (_SPI_CS_PIN) {
@@ -87,8 +87,8 @@ class TLE7209 : public MotorDriver {
         TLE7209_Error get_diagnostic_info(byte* info) {
             return TLE7209readDiagnosticRegister(_SPI_CS_PIN, info);
         }
-        
-    private:                                    
+
+    private:
 #if TLE7209_USE_SPI
         /** Start an I/O operation for the TLE7209 with given chip-select pin.**/
         void TLE7209startIO(byte chipSelectPin) {
@@ -243,6 +243,6 @@ class TLE7209 : public MotorDriver {
         }
 
 };
-                                
-                                
+
+
 #endif  // _VIPERLEED_TLE7209
