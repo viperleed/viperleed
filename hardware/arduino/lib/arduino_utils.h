@@ -35,7 +35,6 @@ void SPI_initialize() {
     pinMode(MISO, INPUT);
 }
 
-
 uint16_t bigger16(uint16_t a, uint16_t b) {
   return (a > b) ? a : b;
 }
@@ -44,12 +43,31 @@ uint16_t biggest16(uint16_t a, uint16_t b, uint16_t c) {
   return bigger16(a, bigger16(b, c));
 }
 
+int32_t bigger32(int32_t a, int32_t b) {
+  return (a > b) ? a : b;
+}
+
+int32_t biggest32(int32_t a, int32_t b, int32_t c) {
+  return bigger32(a, bigger32(b, c));
+}
+
+/* TODO: probably nicer to just have the getMedian, bigger and biggest
+         functions just be overloaded for uint16_t and int32_t*/
+
 /** Gets the median of three numbers */
 uint16_t getMedian16(uint16_t a0, uint16_t a1, uint16_t a2) {
   uint16_t maximum = biggest16(a0, a1, a2);
   if (maximum == a0) return bigger16(a1, a2);
   if (maximum == a1) return bigger16(a0, a2);
   else return bigger16(a0, a1);
+}
+
+/** Gets the median of three numbers */
+int32_t getMedian32(int32_t a0, int32_t a1, int32_t a2) {
+  int32_t maximum = biggest32(a0, a1, a2);
+  if (maximum == a0) return bigger32(a1, a2);
+  if (maximum == a1) return bigger32(a0, a2);
+  else return bigger32(a0, a1);
 }
 
 uint16_t analogReadMedian(byte pin) {
@@ -75,7 +93,5 @@ uint16_t analogReadMedian(byte pin) {
 //{
 //   return log(val) / log(2);
 //}
-
-
 
 #endif
