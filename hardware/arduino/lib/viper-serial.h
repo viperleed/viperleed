@@ -6,9 +6,6 @@ Date: 26.03.2025
 ---------------------
 */
 
-// Note that the required definitions of currentState and STATE_ERROR
-// must be present in the .h file of the importing main module.
-
 /** ------------------------- Communication with PC ------------------------ **/
 
 // Constants for communication with the PC
@@ -60,9 +57,15 @@ byte numBytesRead = 0;                   // Counter for no. of bytes received. n
 byte serialInputBuffer[MSG_MAX_LENGTH];  // Contains all the raw (i.e., still encoded) bytes read from the serial line
 
 /** ------------------------- Finite state machine ------------------------- **/
+#define STATE_IDLE                 0  // Wait for requests from PC
+#define STATE_ERROR                9  // An error occurred
 bool waitingForDataFromPC = false;    // Keeps track of whether we are in a state that is waiting for the PC to send something
+uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
 
 /** -------------------- Globals for firmware functions -------------------- **/
 // Timers (defined in milliseconds)
 #define TIMEOUT 4000                  // Max 4 seconds to do stuff
 unsigned long initialTime;            // System time when switching to a new state
+
+
+#include "viper-serial.ino"

@@ -14,6 +14,90 @@ Date: 26.03.2025
 
 /** ----------------------------- COMMUNICATION ---------------------------- **/
 
+void raise(byte error_code){
+    /**Bring the system to a STATE_ERROR with a given error_code.
+
+    Parameters
+    ----------
+    error_code
+        Byte that identifies the error, see header.
+
+    Writes
+    ------
+    currentState
+
+    Goes to state
+    -------------
+    STATE_ERROR : error_code
+    **/
+    errorTraceback[0] = currentState;
+    errorTraceback[1] = error_code;
+    currentState = STATE_ERROR;
+}
+
+
+void encodeAndSend(byte *byteArray, uint16_t numBytesBeforeEncoding){
+/*
+ * Prepares message before sending it to the PC. Changes every
+ * byte which happens to have the same value as a MSG_START, and MSG_END or
+ * a MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and
+ * a following "byte - MSG_SPECIAL_BYTE."
+ *
+ * Parameters:
+ * -----------
+ * byteArray : byte*
+ *     Pointer to message to be sent
+ */
+    if (numBytesBeforeEncoding >= MSG_SPECIAL_BYTE){
+        raise(ERROR_MSG_SENT_TOO_LONG);
+        return;
+        }
+    byte encodedMessage[2*numBytesBeforeEncoding]; // Worst-case: each byte encoded as two
+    byte numBytesAfterEncoding = 0;
+    for(int i=0; i < numBytesBeforeEncoding; i++){
+        if (byteArray[i] >= MSG_SPECIAL_BYTE){
+            encodedMessage[numBytesAfterEncoding] = MSG_SPECIAL_BYTE;
+            numBytesAfterEncoding++;
+            encodedMessage[numBytesAfterEncoding] = byteArray[i] - MSG_SPECIAL_BYTE;
+        }
+        else {
+            encodedMessage[numBytesAfterEncoding] = byteArray[i];
+        }
+      numBytesAfterEncoding++;
+    }
+/*  Send byte array "encodedMessage" (i.e., the actual message) to PC as:
+       * MSG_START
+       * numbers of bytes in actual message (before encoding, excl. itself and markers)
+       * actual message
+       * MSG_END
+ */
+    Serial.write(MSG_START);
+    Serial.write(numBytesBeforeEncoding);
+    Serial.write(encodedMessage, numBytesAfterEncoding);
+    Serial.write(MSG_END);
+}
+
+
+void encodeAndSend(byte singleByte){
+/*
+ * Prepares message before sending it to the PC. Puts single
+ * byte into an array and forwards the array to the "real"
+ * encode message
+ * This overloaded function essentially prepares a single-byte-long message
+ * to be actually encoded in the next function. Having the two with the same
+ * names prevents the rest of the code from having to figure out which function
+ * to call depending on whether the message is a single byte or a byte array
+ *
+ * Parameters
+ * ----------
+ * singleByte : byte
+ *     The one byte to be sent
+ */
+  byte byteArray[] = {singleByte};
+  encodeAndSend(byteArray, 1);
+}
+
+
 bool checkIfTimedOut(){
     /**Return whether the Arduino waiting has timed out.
 
@@ -190,90 +274,6 @@ bool decodeAndCheckMessage(){
 }
 
 
-void encodeAndSend(byte singleByte){
-/*
- * Prepares message before sending it to the PC. Puts single
- * byte into an array and forwards the array to the "real"
- * encode message
- * This overloaded function essentially prepares a single-byte-long message
- * to be actually encoded in the next function. Having the two with the same
- * names prevents the rest of the code from having to figure out which function
- * to call depending on whether the message is a single byte or a byte array
- *
- * Parameters
- * ----------
- * singleByte : byte
- *     The one byte to be sent
- */
-  byte byteArray[] = {singleByte};
-  encodeAndSend(byteArray, 1);
-}
-
-
-void encodeAndSend(byte *byteArray, uint16_t numBytesBeforeEncoding){
-/*
- * Prepares message before sending it to the PC. Changes every
- * byte which happens to have the same value as a MSG_START, and MSG_END or
- * a MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and
- * a following "byte - MSG_SPECIAL_BYTE."
- *
- * Parameters:
- * -----------
- * byteArray : byte*
- *     Pointer to message to be sent
- */
-    if (numBytesBeforeEncoding >= MSG_SPECIAL_BYTE){
-        raise(ERROR_MSG_SENT_TOO_LONG);
-        return;
-        }
-    byte encodedMessage[2*numBytesBeforeEncoding]; // Worst-case: each byte encoded as two
-    byte numBytesAfterEncoding = 0;
-    for(int i=0; i < numBytesBeforeEncoding; i++){
-        if (byteArray[i] >= MSG_SPECIAL_BYTE){
-            encodedMessage[numBytesAfterEncoding] = MSG_SPECIAL_BYTE;
-            numBytesAfterEncoding++;
-            encodedMessage[numBytesAfterEncoding] = byteArray[i] - MSG_SPECIAL_BYTE;
-        }
-        else {
-            encodedMessage[numBytesAfterEncoding] = byteArray[i];
-        }
-      numBytesAfterEncoding++;
-    }
-/*  Send byte array "encodedMessage" (i.e., the actual message) to PC as:
-       * MSG_START
-       * numbers of bytes in actual message (before encoding, excl. itself and markers)
-       * actual message
-       * MSG_END
- */
-    Serial.write(MSG_START);
-    Serial.write(numBytesBeforeEncoding);
-    Serial.write(encodedMessage, numBytesAfterEncoding);
-    Serial.write(MSG_END);
-}
-
-
-void raise(byte error_code){
-    /**Bring the system to a STATE_ERROR with a given error_code.
-
-    Parameters
-    ----------
-    error_code
-        Byte that identifies the error, see header.
-
-    Writes
-    ------
-    currentState
-
-    Goes to state
-    -------------
-    STATE_ERROR : error_code
-    **/
-    errorTraceback[0] = currentState;
-    errorTraceback[1] = error_code;
-    currentState = STATE_ERROR;
-}
-
-
 void readFromSerial() {
     /**
     Store bytes (i.e., characters) read from the serial line (i.e., PC)
@@ -349,7 +349,6 @@ void readFromSerial() {
 
 
 /** ---------------------- Serial number methods --------------------- **/
-
 
 void writeSerialNR(byte *serial_nr) {
 	/**Writes the assigned serial number to the EEPROM.**/

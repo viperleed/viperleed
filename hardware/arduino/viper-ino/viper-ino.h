@@ -59,7 +59,6 @@ union floatOrBytes{
 
 
 /** ------------------------- Finite state machine ------------------------- **/
-#define STATE_IDLE                 0  // Wait for requests from PC
 #define STATE_SET_UP_ADCS          1  // Pick correct ADC channels and no. of measurement points
 #define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC, wait, then trigger the ADCs
 #define STATE_CHANGE_MEASUREMENT_MODE 3 // Get and set the desired measurement mode
@@ -68,10 +67,9 @@ union floatOrBytes{
 #define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
 #define STATE_GET_CONFIGURATION    7  // Find current hardware configuration and return it with the firmware version
 #define STATE_CALIBRATE_ADCS       8  // Figure out correct offset and calibration factors for ADCs at all gains.
-#define STATE_ERROR                9  // An error occurred
 #define STATE_SET_SERIAL_NR       10  // Read serial number from EEPROM
 bool continuousMeasurement = false;   // Decides if the Arduino continues to measure and return data or if it stops after doing so once
-uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
+
 
 /** ---------------------- Hardware-specific settings ---------------------- **/
 // Measurement devices
