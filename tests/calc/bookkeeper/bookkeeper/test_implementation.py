@@ -147,7 +147,6 @@ class TestWarnsInOldCalcTree:
     def fixture_patch_root(self, mocker):
         """Return a Bookkeeper with _root replaced."""
         bookkeeper = Bookkeeper()
-        bookkeeper = Bookkeeper()
         # pylint: disable-next=protected-access           # OK in tests
         bookkeeper._root = root = mocker.MagicMock()
         return bookkeeper, root
@@ -191,7 +190,7 @@ class TestWarnsInOldCalcTree:
 
     @parametrize(version=_versions)
     def test_no_root_log_with_old_history(self, version, caplog, patch_root):
-        """Check no warnings when the last history folder is old."""
+        """Check warnings when the last history folder is old."""
         bookkeeper, root = patch_root
         root.logs.version = None
         root.history.last_folder.logs.version = version = Version(version)

@@ -282,10 +282,10 @@ class HistoryExplorer:
 
     def _fix_subfolders(self):
         """Fix issues found in all history subfolders."""
-        # Keep only folders that need fixing
+        # Fix all folders: those that don't need a fix return empty
         folder_fix = {folder: folder.fix() for folder in self._subfolders}
 
-        # Now all subfolders should have metadata. Those to which
+        # Now all folders should have metadata. Those to which
         # metadata was added must also be correctly marked into
         # parent/child relationships. Do so now.
         added_metadata = [f for f, actions in folder_fix.items()
@@ -318,12 +318,12 @@ class HistoryExplorer:
         # is a unique timestamp: having two folders with the same
         # timestamp makes it impossible to discern which other
         # folders were created with these.
-        timestamps = Counter(f.timestamp for f in main_folders)
+        n_timestamps = Counter(f.timestamp for f in main_folders)
         main_folder_timestamps = {
             f.timestamp: f
             for f in main_folders
             # pylint: disable-next=magic-value-comparison  # Clear
-            if timestamps[f.timestamp] < 2
+            if n_timestamps[f.timestamp] < 2
             }
 
         # Now we can mark siblings of these main folders

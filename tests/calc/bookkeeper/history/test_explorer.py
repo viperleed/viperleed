@@ -97,12 +97,12 @@ class TestHistoryExplorer:
             mocker.patch.object(history.info, 'fix'),
             )
         if same_text:
-            called += mocker.patch('pathlib.Path.unlink')
+            called += (mocker.patch('pathlib.Path.unlink'),)
         # pylint: disable-next=protected-access           # OK in tests
         result = history._fix_info_file()
         assert result == bool(backed_up and not same_text)
-        for fixer in called:
-            fixer.assert_called_once()
+        for method in called:
+            method.assert_called_once()
         assert mock_log.call_count == (1 if result else 0)
 
     @fixture(name='misses_medatata')
