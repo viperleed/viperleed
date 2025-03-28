@@ -752,7 +752,6 @@ class FirmwareUploader(ArduinoCLI):
                 '--fqbn', selected_ctrl['fqbn'],
                 firmware_file,
                 # Also upload to board after compilation
-                '--upload', '--port', selected_ctrl['port'])
                 '--upload', '--port', selected_ctrl['port'],
                 '--library', str(lib_root))
 
