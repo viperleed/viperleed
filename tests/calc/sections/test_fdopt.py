@@ -46,7 +46,7 @@ class TestGetFdR:
             rfactor, rfactor_per_beam = get_fd_r(*mock_args)
         assert rfactor is rpars.last_R
         assert rfactor_per_beam is mocks['r_factor'].return_value
-        assert rpars.TENSOR_OUTPUT = [0]  # All off
+        assert rpars.TENSOR_OUTPUT == [0]  # All off
         assert workdir.is_dir()
         assert (workdir/rpars.paths.compile_logs).is_dir()
 
