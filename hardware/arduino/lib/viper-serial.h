@@ -5,6 +5,8 @@ Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr, Tun Sinner
 Date: 26.03.2025
 ---------------------
 */
+#ifndef _VIPERLEED_SERIAL
+#define _VIPERLEED_SERIAL
 
 /** ------------------------- Communication with PC ------------------------ **/
 
@@ -69,3 +71,5 @@ unsigned long initialTime;            // System time when switching to a new sta
 
 
 #include "viper-serial.ino"
+
+#endif //_VIPERLEED_SERIAL
