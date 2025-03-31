@@ -52,7 +52,7 @@ _TENSOR_INPUT_FILES = (
 # TODO: when implementing the compile task class, we should also
 # refactor the tenserleed source class such that we can directly use
 # zipped source directories
-class RefcalcCompileTask():
+class RefcalcCompileTask:
     """Information to compile a reference calculation executable.
 
     Attributes
@@ -153,12 +153,68 @@ class RefcalcCompileTask():
 # TODO: similar to RefcalcCompileTask, also RefcalcRunTask could
 # profit from some refactoring to collect portions of code similar
 # to those in deltas.DeltaRunTask (to be done in #43).
-class RefcalcRunTask():
-    """Stores information for a worker to create a subfolder, copy input there,
-    compile and run a reference calculation, and copy results back."""
+class RefcalcRunTask:
+    """Information for executing a reference calculation.
+
+    Attributes
+    ----------
+    collect_at : Pathlike
+        Folder to which the results of the calculation should be
+        moved after completion. Only used if not `single_threaded`.
+    comptask : RefcalcCompileTask
+        The task that was used to create an executable for this
+        calculation.
+    energy : float
+        The electron energy (in electronvolts) for this reference
+        calculation. Only used if not `single_threaded`.
+    fin : str
+        Contents of the input piped to the reference-calculation
+        executable. It is edited at runtime if not `single_threaded`.
+    foldername : str
+        Name of the temporary directory in which calculations
+        should be executed. Only used if not `single_threaded`.
+    logname : str
+        Name of the log file to which runtime information is
+        collected. Only used if not `single_threaded`.
+    single_threaded : bool
+        Whether this reference calculation uses one thread or
+        it is a part of a larger calculation that is split over
+        multiple threads.
+    tl_version : Version
+        The TensErLEED version used to compile the executable.
+    """
 
     def __init__(self, fin, energy, comptask, logname,
-                 collect_at="", single_threaded=False, tl_version=0.):
+                 collect_at='', single_threaded=False, tl_version=0.):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        fin : str
+            Contents of the input piped to the reference-calculation
+            executable. It is edited at runtime if not `single_threaded`.
+        energy : float
+            The electron energy (in electronvolts) for this reference
+            calculation. Only used if not `single_threaded`.
+        comptask : RefcalcCompileTask
+            The task that was used to create an executable for this
+            calculation.
+        logname : str
+            Name of the log file to which runtime information is
+            collected. Only used if not `single_threaded`.
+        collect_at : Pathlike, optional
+            Folder to which the results of the calculation should be
+            moved after completion. Only used if not `single_threaded`.
+            Default is the directory in which this RefcalcRunTask
+            is executed.
+        single_threaded : bool, optional
+            Whether this reference calculation uses one thread or
+            it is a part of a larger calculation that is split over
+            multiple threads. Default is False.
+        tl_version : float or Version, optional
+            The TensErLEED version used to compile the executable.
+            Default is 0.
+        """
         self.collect_at = collect_at
         self.comptask = comptask
         self.energy = energy

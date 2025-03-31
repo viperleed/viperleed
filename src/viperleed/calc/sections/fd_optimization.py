@@ -10,14 +10,12 @@ __license__ = 'GPLv3+'
 
 import copy
 import logging
-import os
 from pathlib import Path
 import shutil
 
 import numpy as np
 from numpy.polynomial import Polynomial
 
-from viperleed.calc import psgen
 from viperleed.calc.files import iofdopt
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
@@ -26,20 +24,23 @@ from viperleed.calc.sections.initialization import make_compile_logs_dir
 from viperleed.calc.sections.refcalc import refcalc as section_refcalc
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 
+
+_FD_COMMON_INPUT_FILES = (
+    # Input files common to all the full-dynamic calculation runs.
+    # Collected from the main work directory into the subfolders
+    # for each parameter variation.
+    'BEAMLIST',
+    'PHASESHIFTS',
+    )
 logger = logging.getLogger(__name__)
 
 
 class FullDynamicCalculationError(Exception):
     """Base class for exceptions raised by the full dynamic calculation."""
 
-    def __init__(self, message):
-        super().__init__(message)
-
 
 class FullDynamicOptimizationOutOfBoundsError(FullDynamicCalculationError):
     """Raised when the optimization is out of bounds."""
-    def __init__(self, message):
-        super().__init__(message)
 
 
 def get_fd_r(slab, rpars, workdir):
@@ -73,7 +74,7 @@ def get_fd_r(slab, rpars, workdir):
     main_work = Path.cwd()
     with execute_in_dir(workdir, mkdir=True):
         make_compile_logs_dir(rpars)
-        for input_file in ['BEAMLIST', 'PHASESHIFTS']:
+        for input_file in _FD_COMMON_INPUT_FILES:
             try:
                 shutil.copy2(main_work / input_file, workdir)
             except OSError:

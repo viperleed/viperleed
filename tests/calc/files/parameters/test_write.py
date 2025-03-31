@@ -47,14 +47,15 @@ class TestModifiedParameterValue:
 
     def test_param_comment(self):
         """Check attributes when a comment is requested for a parameter."""
+        custom_comment = 'Test Comment'
         mod_param = ModifiedParameterValue('N_BULK_LAYERS', 'value1',
                                            original=None,
-                                           comment='Test Comment')
+                                           comment=custom_comment)
         assert not mod_param.only_comment_out
         assert mod_param.param == 'N_BULK_LAYERS'
-        assert mod_param.comment == 'Test Comment'
+        assert mod_param.comment == custom_comment
         assign, _comment = (s.strip() for s in mod_param.line.split('!'))
-        assert _comment == 'Test Comment'
+        assert _comment == custom_comment
         assert assign == 'N_BULK_LAYERS = value1'
         new_assignment = mod_param.to_assignment()
         assert new_assignment == Assignment('value1', 'N_BULK_LAYERS')
@@ -346,6 +347,7 @@ class TestCommentOutAndModifyFunctions:
         """Check addition of a new multi-valued line when only one existed."""
         fpath, rpars = read_domains_file
         orig = next(a for a in rpars.readParams['DOMAIN']
+                    # pylint: disable-next=magic-value-comparison
                     if a.flags_str == 'Bi')
         with execute_in_dir(fpath.parent):
             # Comment out one of the two
@@ -379,6 +381,7 @@ class TestCommentOutAndModifyFunctions:
         """Check correct modification of one multi-valued parameter."""
         fpath, rpars = read_domains_file
         orig = next(a for a in rpars.readParams['DOMAIN']
+                    # pylint: disable-next=magic-value-comparison
                     if a.flags_str == 'Bi')
         with execute_in_dir(fpath.parent):
             # Comment out one of the two
@@ -393,6 +396,7 @@ class TestCommentOutAndModifyFunctions:
         """Check correct modification of one multi-valued parameter."""
         fpath, rpars = read_domains_file
         orig = next(a for a in rpars.readParams['DOMAIN']
+                    # pylint: disable-next=magic-value-comparison
                     if a.values_str == 'silver')
         with execute_in_dir(fpath.parent):
             modify(rpars, 'DOMAIN', new=Path('other_path'), original=orig)
@@ -403,6 +407,7 @@ class TestCommentOutAndModifyFunctions:
         """Check correct modification of one multi-valued parameter."""
         fpath, rpars = read_domains_file
         orig = next(a for a in rpars.readParams['DOMAIN']
+                    # pylint: disable-next=magic-value-comparison
                     if a.flags_str == 'Bi')
         with execute_in_dir(fpath.parent):
             modify(rpars, 'DOMAIN', new=Path('other_path'), original=orig)

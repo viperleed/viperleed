@@ -16,7 +16,6 @@ __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
 from enum import IntEnum, auto
-import itertools
 from numbers import Real
 import re
 from typing import Any

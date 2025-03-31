@@ -81,10 +81,8 @@ def fixture_factory(*args, **fixture_kwargs):                                   
         # We need an extra layer of wrapping because pytest will call
         # the fixture and pass its return value(s) to tests using it:
         # The one that will be called by pytest is _fixture.
-        if 'scope' not in fixture_kwargs:
-            fixture_kwargs['scope'] = 'session'
-        if 'name' not in fixture_kwargs:
-            fixture_kwargs['name'] = f'make_{func.__name__}'
+        fixture_kwargs.setdefault('scope', 'session')
+        fixture_kwargs.setdefault('name', f'make_{func.__name__}')
 
         @fixture(**fixture_kwargs)
         @functools.wraps(func)

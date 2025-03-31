@@ -8,10 +8,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
-import copy
 import logging
 import os
-from pathlib import Path
 
 from viperleed.calc.classes.r_error import R_Error
 from viperleed.calc.classes.searchpar import SearchPar

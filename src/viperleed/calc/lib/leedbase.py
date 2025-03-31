@@ -231,6 +231,10 @@ def getDeltas(index, basedir='', targetdir='', required=True):                  
     targetdir : str or Path, optional
         The path to the directory in which the delta files
         should be placed. Default is the current directory.
+    required : bool, optional
+        Whether the Deltas_`index` file/folder must be present at
+        `basedir`/'Deltas'. Raise RuntimeError if True and the
+        file/folder is not found. Default is True.
 
     Raises
     ------

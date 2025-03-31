@@ -269,6 +269,7 @@ class TestEnergyRange:
     def test_contains_ignore_step(self, key):
         """Check range inclusion ignoring steps."""
         out_args, in_args, result = self.contains_valid[key]
+        # pylint: disable-next=magic-value-comparison
         if key == 'diff step':
             result = True
         outer = self._class(*out_args)

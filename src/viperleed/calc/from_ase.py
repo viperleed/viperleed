@@ -14,7 +14,6 @@ from dataclasses import FrozenInstanceError, dataclass
 from io import StringIO
 import logging
 from numbers import Real
-import os
 from pathlib import Path
 import shutil
 from typing import Any, Sequence

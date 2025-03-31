@@ -1,4 +1,4 @@
-"""Moule defaults of viperleed.calc.classes.rparams.
+"""Module defaults of viperleed.calc.classes.rparams.
 
 Defines the default values of 'simple' user PARAMETERS. Not-so-simple
 parameters, which are defined as their own classes in package special,

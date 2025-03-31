@@ -661,7 +661,6 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
 
 def _check_and_warn_layer_cuts(rpars, slab):
     """Check if layer cuts are too close together and warn if so."""
-    layer_cuts = rpars.LAYER_CUTS
     min_spacing = slab.smallest_interlayer_gap
     if min_spacing < 1.0:
         logger.warning(

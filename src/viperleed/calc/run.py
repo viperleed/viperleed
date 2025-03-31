@@ -9,7 +9,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-11-12'  # Was originally tleedm.py
 __license__ = 'GPLv3+'
 
@@ -19,7 +19,6 @@ from pathlib import Path
 import shutil
 
 from viperleed import __version__
-from viperleed.calc import LOGGER
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -38,6 +37,9 @@ from viperleed.calc.sections.initialization import (
     warn_if_slab_has_atoms_in_multiple_c_cells
     )
 from viperleed.calc.sections.run_sections import section_loop
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def run_calc(

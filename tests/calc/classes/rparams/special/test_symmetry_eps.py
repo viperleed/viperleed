@@ -105,6 +105,7 @@ class TestSymmetryEps:
     def test_repr(self):
         """Check correct result of repr(eps)."""
         eps = SymmetryEps(0.1, 0.3)
+        # pylint: disable=magic-value-comparison
         assert 'z=' in repr(eps)
 
 

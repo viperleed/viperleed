@@ -38,8 +38,6 @@ from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.lib import fortran_utils
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
-from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
-from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
@@ -50,7 +48,8 @@ from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
-from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
+from .defaults import DEFAULTS
+from .defaults import NO_VALUE
 from .limits import PARAM_LIMITS
 from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter

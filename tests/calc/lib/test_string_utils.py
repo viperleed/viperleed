@@ -42,6 +42,7 @@ class TestHarvardCommas:
 
     def test_custom_separator(self):
         """Test using a custom separator."""
+        # pylint: disable-next=magic-value-comparison
         assert harvard_commas(1, 2, 3, sep='or') == '1, 2, or 3'
 
 

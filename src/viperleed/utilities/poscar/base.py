@@ -12,10 +12,10 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-03-27'
 __license__ = 'GPLv3+'
 
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from copy import deepcopy
 import logging
-import pathlib
 import sys
 
 from viperleed.calc.classes.rparams.defaults import DEFAULTS as PARAM_DEFAULTS

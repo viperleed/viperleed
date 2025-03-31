@@ -123,4 +123,5 @@ class TestSearchCullType:
         """Check selected comparisons."""
         assert SearchCullType.GENETIC == SearchCullType.GENETIC
         assert SearchCullType.GENETIC != SearchCullType.CLONE
+        # pylint: disable=magic-value-comparison
         assert SearchCullType.GENETIC != 'invalid_type'
