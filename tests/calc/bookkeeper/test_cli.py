@@ -1,5 +1,13 @@
 """Tests for the viperleed bookkeeper command-line interface."""
 
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-07-01'  # Were in calc/test_cli.py
+__license__ = 'GPLv3+'
+
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize

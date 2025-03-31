@@ -9,7 +9,7 @@ refactored by Michele Riva in Oct 2023.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = '2019-2024 ViPErLEED team'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-23'
 __license__ = 'GPLv3+'
 

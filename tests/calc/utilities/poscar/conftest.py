@@ -6,6 +6,13 @@ poscar_stream
     Mimic users piping a POSCAR file to sys.stdin.
 """
 
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-03-20'
+__license__ = 'GPLv3+'
+
 import io
 
 from pytest_cases import fixture
