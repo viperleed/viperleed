@@ -417,9 +417,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
-        tags = kwargs.pop('tags', Tag.NONE)
-        if Tag.READ_ONLY not in tags:
-            tags = tags | Tag.READ_ONLY # pylint: disable=E1131
+        tags = kwargs.pop('tags', Tag.NONE) | Tag.READ_ONLY
         option = StaticSettingsDialogOption(option_name, handler_widget,
                                             *args, tags=tags, **kwargs)
         self[section_name][option_name] = option
@@ -948,13 +946,9 @@ class SettingsDialogSection(SettingsDialogSectionBase):
         """Add one SettingsDialogOption to self."""
         self.__options.append(option)
         self.__layout.addRow(*option)
+        option.tags |= self.tags
         if self.has_tag(Tag.REGULAR):
-            option.tags = option.tags | Tag.REGULAR # pylint: disable=E1131
             option.setVisible(True)
-        if self.has_tag(Tag.ADVANCED):
-            option.tags = option.tags | Tag.ADVANCED # pylint: disable=E1131
-        if self.has_tag(Tag.MEASUREMENT):
-            option.tags = option.tags | Tag.MEASUREMENT # pylint: disable=E1131
         option.handler_widget_changed.connect(self.__on_option_widget_changed)
 
     def add_options(self, options):
@@ -1237,15 +1231,15 @@ class SettingsDialog(qtw.QDialog):
             btn_text = "Show all"
         self.adv_button.setText(btn_text)
         for widg in self.handler.widgets:
-            if not widg.has_tag(Tag.A) and not widg.has_tag(Tag.R):
+            if not widg.has_tag(Tag.A | Tag.R):
                 continue
             if isinstance(widg, SettingsDialogSection):
                 _section_visible = False
                 for option in widg.options:
-                    _section_visible |= visible or (not option.has_tag(Tag.A)
-                                                    and option.has_tag(Tag.R))
-                    option.setVisible(visible or (not option.has_tag(Tag.A)
-                                                  and option.has_tag(Tag.R)))
+                    option_visible = visible or (not option.has_tag(Tag.A)
+                                                 and option.has_tag(Tag.R))
+                    _section_visible |= option_visible
+                    option.setVisible(option_visible)
                 widg.setVisible(_section_visible)
             else:
                 widg.setVisible(visible or (not widg.has_tag(Tag.A)
