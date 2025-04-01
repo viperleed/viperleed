@@ -58,7 +58,7 @@ class RootExplorer:
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
         self.history = HistoryExplorer(self.path)
-        self.workhistory = WorkhistoryHandler(root=self.path,
+        self.workhistory = WorkhistoryHandler(root=self,
                                               bookkeeper=bookkeeper)
 
     # Simple read-only properties
