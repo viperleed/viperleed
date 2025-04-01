@@ -76,9 +76,14 @@ class RootExplorer:
             return None
 
     @property
+    def domains(self):
+        """Return one RootExplorer for each domain subfolder."""
+        return self._domains
+
+    @property
     def has_domains(self):
         """Return whether this is the root of a DOMAINS calculation."""
-        return bool(self._domains)
+        return bool(self.domains)
 
     @property
     @_needs_collect('_files_to_archive')

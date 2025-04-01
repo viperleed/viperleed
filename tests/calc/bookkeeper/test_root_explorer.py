@@ -206,8 +206,9 @@ class TestRootExplorer:
 
     @parametrize('domains,expect', _has_domains.items())
     def test_has_domains(self, domains, expect, explorer, mocker):
-        """Check the has_domains property."""
+        """Check the domains and has_domains properties."""
         mocker.patch.object(explorer, '_domains', domains)
+        assert explorer.domains == domains
         assert explorer.has_domains == expect
 
     _remove_files = {
