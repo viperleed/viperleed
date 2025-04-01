@@ -165,7 +165,7 @@ class TimerCounter {
             First change the PWM frequency, if necessary.
                 For duty cycle values, which will generate shorter PWM pulses
                 than 'MD_PWM_PULSE_MIN', the PWM frequency will be decreased
-                automatically to avoid too high discrepancy in the set and
+                automatically to avoid to high discrepancy in the set and
                 actual value of the current. See 'set_pwm_frequency'
             Then set the duty cycle.
                 Notice that the 'coil_current', i.e. the time-averaged value
