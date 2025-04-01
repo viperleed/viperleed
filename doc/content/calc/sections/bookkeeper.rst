@@ -14,8 +14,8 @@ Bookkeeper
 
 The |bookkeeper| is a built-in ViPErLEED utility that automatically runs before
 and after each ViPErLEED calculation.
-It moves input and output files to a |history| directory, maintains the main
-folder organized, and keeps track of all relevant changes.
+It moves input and output files to a |history| directory, keeps the main
+folder organized, and tracks all relevant changes.
 
 See :ref:`cli_bookkeeper` for details on how to run the |bookkeeper| manually.
 

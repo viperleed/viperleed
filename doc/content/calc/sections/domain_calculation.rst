@@ -54,7 +54,7 @@ i.e., **without** :ref:`POSCAR` and :ref:`VIBROCC`. Likewise, the
 :ref:`PARAMETERS` file should contain **no** parameters concerned with
 interpretation of :file:`POSCAR` or :file:`VIBROCC`, such as, e.g.,
 :ref:`BULK_REPEAT`, :ref:`ELEMENT_MIX`, :ref:`SITEDEF`, etc.; if any such
-parameter is present, |calc| will throw an error.
+parameter is present, |calc| will raise an error.
 Finally, in the :file:`PARAMETERS` file, **do define** the :ref:`DOMAIN`
 parameter once for each of the domains that should be included. The
 :ref:`DOMAIN` parameter can point to an absolute or relative path from
