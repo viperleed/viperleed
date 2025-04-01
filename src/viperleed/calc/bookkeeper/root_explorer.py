@@ -38,6 +38,7 @@ from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
+from viperleed.calc.lib.string_utils import harvard_commas
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
 
@@ -168,14 +169,16 @@ class RootExplorer:
             if file_contents_identical(cwd_file, ori_path / filename):
                 continue
             edited = filename + EDITED_SUFFIX
-            LOGGER.warning(f'File {filename} was modified after calc '
-                           f'started. Renaming it to {edited}.')
+            LOGGER.warning(f'File {self._relative_path(cwd_file)} was modified'
+                           f' after calc started. Renaming it to {edited}.')
             try:
                 cwd_file.replace(self.path / edited)
             except OSError:
-                LOGGER.error(f'Failed to rename {filename} to {edited}. '
-                             'It may be overwritten by the corresponding '
-                             f'file in {DEFAULT_OUT}.')
+                LOGGER.error(
+                    f'Failed to rename {self._relative_path(cwd_file)} to '
+                    f'{edited}. It may be overwritten by the corresponding '
+                    f'file in {DEFAULT_OUT}.'
+                    )
 
     def prepare_for_next_calc_run(self):
         """Rename inputs to _ori, pull new ones from OUT or original_inputs."""
@@ -205,14 +208,19 @@ class RootExplorer:
         try:
             notes = notes_path.read_text(encoding='utf-8')
         except OSError:
-            LOGGER.error(f'Error: Failed to read {notes_path.name} file.',
-                         exc_info=True)
+            LOGGER.error(
+                f'Failed to read {self._relative_path(notes_path)} file.',
+                exc_info=True,
+                )
             return ''
         try:
             notes_path.write_text('', encoding='utf-8')
         except OSError:
-            LOGGER.error(f'Failed to clear the {notes_path.name} '
-                         'file after reading.', exc_info=True)
+            LOGGER.error(
+                f'Failed to clear file {self._relative_path(notes_path)} '
+                'after reading.',
+                exc_info=True,
+                )
         return notes
 
     def remove_tensors_and_deltas(self):
@@ -284,7 +292,7 @@ class RootExplorer:
 
     def _complain_about_edited_files(self):
         """Log warnings if any _edited file is found in root."""
-        edited_files = tuple(str(f.relative_to(self.path))
+        edited_files = tuple(f'{self._relative_path(f)}'
                              for f in self.path.glob(f'*{EDITED_SUFFIX}*'))
         if not edited_files:
             return
@@ -402,8 +410,10 @@ class RootExplorer:
             if isinstance(info, Exception):
                 reason = f'raised {type(info).__name__} - {info}'
             else:  # List of paths to files that were tried
-                files = ' or '.join(str(f.relative_to(self.path))
-                                    for f in info)
+                files = harvard_commas(
+                    (f'{self._relative_path(f)}' for f in info),
+                    sep='or',
+                    )
                 reason = f'No {files} found'
             LOGGER.error(f'    {file}: {reason}')
 
@@ -418,10 +428,16 @@ class RootExplorer:
             except FileNotFoundError:  # May have been _edited
                 continue
             except OSError as exc:
-                LOGGER.error(f'Failed to rename {file} to {file_ori}.')
+                LOGGER.error(
+                    f'Failed to rename {self._relative_path(cwd_file)} '
+                    f'to {file_ori}.')
                 failed[file] = exc
         if failed:
             raise FileOperationFailedError(failed)
+
+    def _relative_path(self, path):
+        """Return a version of `path` relative to this root folder."""
+        return path.relative_to(self.path).as_posix()
 
     def _remove_ori_files(self):
         """Delete '_ori'-suffixed files from root."""
@@ -439,8 +455,10 @@ class RootExplorer:
             try:
                 ori_file.replace(state_file)
             except OSError:
-                LOGGER.error(f'Failed to rename {ori_file.name} '
-                             f'to {state_file.name}.')
+                LOGGER.error(
+                    f'Failed to rename {self._relative_path(ori_file)} '
+                    f'to {state_file.name}.'
+                    )
                 raise
         return any(to_replace)
 
