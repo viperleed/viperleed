@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-09-01'
 __license__ = 'GPLv3+'
 
@@ -385,6 +385,13 @@ class TestFieldListMethods:
         result = fields.duplicates(field)
         assert result == expect
 
+    def test_find_exact_index_raises(self):
+        """Check complaints for index look-up of a non-existing value."""
+        fields = FieldList()
+        with pytest.raises(ValueError):
+            # pylint: disable-next=protected-access       # OK in tests
+            fields._find_exact_index(UnknownField())
+
     _type = {
         'empty': ((), NotesField, ()),
         'not there': ((UnknownField(),), NotesField('123'), ()),
@@ -395,13 +402,6 @@ class TestFieldListMethods:
             ),
         'hashable non field': ((), '123', ()),
         }
-
-    def test_find_exact_index_raises(self):
-        """Check complaints for index look-up of a non-existing value."""
-        fields = FieldList()
-        with pytest.raises(ValueError):
-            # pylint: disable-next=protected-access       # OK in tests
-            fields._find_exact_index(UnknownField())
 
     @parametrize('values,field,selected', _type.values(), ids=_type)
     def test_first_by_type(self, values, field, selected):
@@ -609,10 +609,10 @@ class TestFieldListMethods:
                   if t is not FieldTag.UNKNOWN),
             ),
         'no extra, scrambled': (
-            shuffled(list(FieldBase.for_tag(t)() for t in FieldTag
-                          if t is not FieldTag.UNKNOWN)),
-            list(FieldBase.for_tag(t)() for t in FieldTag
-                if t is not FieldTag.UNKNOWN),
+            shuffled([FieldBase.for_tag(t)() for t in FieldTag
+                      if t is not FieldTag.UNKNOWN]),
+            [FieldBase.for_tag(t)() for t in FieldTag
+             if t is not FieldTag.UNKNOWN],
             ),
         'with extra, sorted': twice(
             tuple(
@@ -709,7 +709,6 @@ class TestFieldListMethods:
     _replace = {  # index to replace, new field
         # Notice that the indices here correspond to the FIRST
         # occurrence of the field that will be replaced.
-        'unique before and after': (0, TensorNumsField('abc')),
         'duplicate before, not after': (0, TensorNumsField('abc')),
         'duplicate before and after': (0, TensorNumsField('789')),
         'more duplicates': (1, TensorNumsField('789')),

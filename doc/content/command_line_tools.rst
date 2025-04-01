@@ -64,14 +64,5 @@ tool for running |LEED-IV| calculations.
         --tensorleed -t
             If not provided, the path is searched in the environment variable
             :envvar:`VIPERLEED_TENSORLEED`.
-        -j --job-name
-            See also :ref:`bookkeeper`.
-        --no-cont : @after
-            :ref:`bookkeeper` is not called manually with ``--cont``
-            before the next calculation.
-        --history-name : @after
-            See also :ref:`bookkeeper`.
-        --work-history-name : @after
-            See also :ref:`bookkeeper`.
         -w --work
             Default: ``'./work'``

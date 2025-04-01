@@ -9,20 +9,20 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from argparse import Action
-from pathlib import Path
+from argparse import SUPPRESS
 
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.cli_base import ViPErLEEDCLI
 
-from .bookkeeper import Bookkeeper
-from .history.constants import HISTORY_INFO_NAME
-from .mode import BookkeeperMode
+from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
 
 # All the pylint disables below are needed as Action subclasses
@@ -39,7 +39,7 @@ class StoreBookkeeperMode(Action):
     def __init__(self,
                  option_strings,
                  dest,
-                 default=False,
+                 default=SUPPRESS,
                  required=False,
                  help=None):  # pylint: disable=redefined-builtin
         """Initialize instance to behave the same as 'store_true'."""
@@ -75,15 +75,15 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
         what_next = parser.add_mutually_exclusive_group()
         what_next.add_argument(
             *BookkeeperMode.ARCHIVE.flags,
-            help=('Store last run in history. Overwrite PARAMETERS, POSCAR &'
-                  f'VIBROCC from {DEFAULT_OUT}. Runs after viperleed.calc by '
-                  'default.'),
+            help=('Store the last run in history. Overwrite PARAMETERS, '
+                  f'POSCAR, and VIBROCC from {DEFAULT_OUT}. Runs after '
+                  'viperleed.calc by default.'),
             action=StoreBookkeeperMode,
             )
         what_next.add_argument(
             *BookkeeperMode.CLEAR.flags,
-            help=('Clear the input directory and add last run '
-                  'to history if not already there. Runs before '
+            help=('Add the last run to history if not already there, then '
+                  'remove its outputs from the current directory. Runs before '
                   'viperleed.calc by default.'),
             action=StoreBookkeeperMode,
             )
@@ -119,7 +119,7 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
     def __call__(self, args=None):
         """Call the bookkeeper with command-line args."""
         parsed_args = self.parse_cli_args(args)
-        bookkeeper = Bookkeeper(cwd=Path.cwd().resolve())
+        bookkeeper = Bookkeeper()
         mode = getattr(parsed_args, 'mode', BookkeeperMode.ARCHIVE)
         kwargs = {
             'requires_user_confirmation': not parsed_args.skip_confirmation,

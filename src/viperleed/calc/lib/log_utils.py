@@ -9,7 +9,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-08-05'
 __license__ = 'GPLv3+'
 
@@ -68,7 +68,7 @@ def get_handlers(logger, handler_type, **with_attrs):
     ------
     handler : logging.Handler
         All handlers of type `handler_type` attached to `logger` as
-        well as to any of its parents (unless logger is set to not
+        well as to any of its parents (unless `logger` is set to not
         propagate). Only those whose attributes match `with_attrs`
         are returned.
     """

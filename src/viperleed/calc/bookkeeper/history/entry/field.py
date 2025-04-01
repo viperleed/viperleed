@@ -6,7 +6,7 @@ Defines base classes for a single 'line' of a history entry.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-07-28'
 __license__ = 'GPLv3+'
 
@@ -21,6 +21,11 @@ from typing import Dict
 from typing import Tuple
 from typing import Union
 
+from viperleed.calc.bookkeeper.history.entry.enums import FaultyLabel
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
+from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
 from viperleed.calc.lib.dataclass_utils import check_types
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
@@ -28,12 +33,6 @@ from viperleed.calc.lib.dataclass_utils import replace_values
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.string_utils import to_snake_case
 from viperleed.calc.lib.string_utils import strip_comments
-
-from ..errors import EntrySyntaxError
-from ..errors import FixableSyntaxError
-from ..errors import HistoryInfoError
-from .enums import FaultyLabel
-from .enums import FieldTag
 
 
 class CommonRegex(Enum):
@@ -82,7 +81,7 @@ class FieldBase:
     _value_str: str = non_init_field()
     _comment: str = non_init_field(default='')
     _needs_fix: FixedFieldValue = non_init_field()
-    _not_understood: str = non_init_field()
+    _not_understood: str = non_init_field()  # The reason why it wasn't
 
     # Class attributes set in __init_subclass__
     is_mandatory: ClassVar[bool] = False
@@ -109,8 +108,8 @@ class FieldBase:
         if tag is not None:
             cls._subclasses[tag] = cls
         # At this point, the class is not frozen yet.
-        setattr(cls, 'tag', tag)
-        setattr(cls, 'is_mandatory', bool(mandatory))
+        cls.tag = tag
+        cls.is_mandatory = bool(mandatory)
 
     # pylint: disable-next=unused-argument   # pylint bug #9843
     def __new__(cls, *args, **kwargs):
@@ -124,7 +123,7 @@ class FieldBase:
         if isinstance(self.value, FieldBase):
             self._update_from_field(self.value)
             return
-        if self.value is MissingField:  # Errors will pop up later
+        if self.is_missing:  # Errors will pop up later
             return
         try:
             check_types(self, init_only=True)
@@ -288,7 +287,7 @@ class FieldBase:
         return without_comments, comments
 
     def _check_not_missing(self):
-        """Complain if no value was provided at all for `attr`."""
+        """Complain if no value was provided at all."""
         if self.is_missing:
             raise EntrySyntaxError(DefaultMessage.MISSING)
 
@@ -318,7 +317,7 @@ class FieldBase:
 
         The base-class implementation complains if a field is empty
         or if a mandatory field is missing. The value of mandatory
-        or non-missing fields is then checked according to its type,
+        or non-missing field is then checked according to its type,
         as long as a suitable checker method is found. Subclasses
         may extend this method to perform more checks.
 
@@ -411,8 +410,12 @@ class MultiLineField(CommentLessField):
         single_string = super().format_faulty(with_label=with_label)
         lines = single_string.splitlines(True)  # Keeps \n
         indent = str(FaultyLabel.OK)
-        indented_lines = [lines[0]]
-        indented_lines.extend(indent + line for line in lines[1:])
+        indented_lines = (
+            # The first line is already indented by super()...
+            lines[0],
+            # ...the others need to be indented accordingly
+            *(indent + line for line in lines[1:]),
+            )
         return ''.join(indented_lines)
 
     def _check_tuple_value(self):
@@ -423,7 +426,7 @@ class MultiLineField(CommentLessField):
         if isinstance(self.value, str):
             raise TypeError(f'{type(self).__name__}: Found unprocessed '
                             'string value. Call check_value() or '
-                            '_cleanup_str_value() before')
+                            '_cleanup_str_value() before.')
         if not isinstance(self.value, tuple):
             raise EntrySyntaxError(
                 f'{type(self).__name__} only accepts \'str\' or \'tuple\'. '

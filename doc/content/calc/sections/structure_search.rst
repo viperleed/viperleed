@@ -126,11 +126,8 @@ section. ViPErLEED proceeds by first executing a :ref:`super_pos`, then
 continuing to the next segment as defined in the  :ref:`RUN` parameter
 (or it stops if there is none).
 
-.. warning::
-  **Remember** to call the :ref:`bookkeeper utility<bookkeeper>` with
-  the ``-c`` flag after a ViPErLEED run containing a structure search,
-  if you want to continue from the found best-fit structure.
-  **Otherwise the progress will be discarded** and following runs will
-  start again from the reference structure, unless :ref:`POSCAR` and
-  :ref:`VIBROCC` are manually copied from the ``OUT`` directory.
-
+.. tip::
+  If the results of a structure optimization (or any other |calc|
+  execution) are unsatisfactory, you can discard them by calling
+  the :ref:`bookkeeper utility<bookkeeper>` with the ``--discard``
+  flag.

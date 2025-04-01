@@ -4,7 +4,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -51,9 +51,20 @@ class TestCompileRefcalc:
     @fixture(name='make_comptask')
     def factory_comptask(self, mocker):
         """Return a fake RefcalcCompileTask."""
-        def _make(sources=None):
+        def _mock_sources(sources):
             if sources is None:
                 sources = self.default_sources
+            mock_sources = []
+            for src in sources:
+                if isinstance(src, str):
+                    mock_src = mocker.MagicMock()
+                    mock_src.name = src
+                else:
+                    mock_src = src
+                mock_sources.append(mock_src)
+            return mock_sources
+
+        def _make(sources=None):
             task = mocker.MagicMock(
                 exename='test_exe',
                 foldername='test_folder',
@@ -64,10 +75,7 @@ class TestCompileRefcalc:
             task.__str__.return_value = (
                 f'{self.compiler_cls_name} {task.foldername}'
                 )
-            task.get_source_files.return_value = [
-                mocker.MagicMock(name=s) if isinstance(s, str) else s
-                for s in sources
-                ]
+            task.get_source_files.return_value = _mock_sources(sources)
             return task
         return _make
 
@@ -168,10 +176,10 @@ class TestRunRefcalc:
             fin='test input',
             foldername='test_run_folder',
             logname='test.log',
-            name='test_name',
             single_threaded=False,
             tl_version=mocker.MagicMock(return_value='1.7.3'),
             )
+        runtask.name = 'test_name'
         return runtask
 
     @fixture(name='mock_implementation')
@@ -285,10 +293,10 @@ class TestRunRefcalc:
 
     # pylint: disable-next=too-many-arguments  # All fixtures
     def test_fails_move_tensors(self, runtask, run, tmp_path, mocker, caplog):
-        """Check failure when moving Tensor files fails."""
+        """Check failure when moving tensor files fails."""
         # Make sure there are some Tensor files
         filesystem_from_dict({runtask.foldername: {'T_1': None}}, tmp_path)
-        mocker.patch('shutil.move', side_effect=OSError)
+        mocker.patch(f'{_MODULE}.fs_utils.move', side_effect=OSError)
 
         result = run(fails=True, mock=True)
         expect_error = 'Failed to copy Tensor file out'
@@ -335,7 +343,7 @@ class TestRunRefcalc:
         assert expect_log in caplog.text
 
     def test_fails_to_mkdir(self, run, mocker):
-        """Check complaints failing to create work."""
+        """Check complaints when failing to create work."""
         mocker.patch('pathlib.Path.mkdir', side_effect=OSError)
         with pytest.raises(OSError):
             run()

@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
@@ -77,12 +77,12 @@ class TestDiscardFiles:
     @fixture(name='mock_log_error')
     def fixture_mock_log_error(self, mocker):
         """Return a fake LOGGER.error."""
-        yield mocker.patch('viperleed.calc.bookkeeper.utils.LOGGER.error')
+        yield mocker.patch(f'{_MODULE}.LOGGER.error')
 
     @fixture(name='mock_rmtree')
     def fixture_mock_rmtree(self, mocker):
         """Return a fake shutil.rmtree."""
-        yield mocker.patch('viperleed.calc.bookkeeper.utils.shutil.rmtree')
+        yield mocker.patch('shutil.rmtree')
 
     def test_deletion_not_exists(self, mock_file, mock_dir, mock_rmtree):
         """Test deletion of non-existing files/directories."""

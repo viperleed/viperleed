@@ -5,7 +5,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -36,14 +36,55 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: see note in refcalc. #43
-class DeltaCompileTask():
-    """Stores information for a worker to compile a delta file, and keeps
-    track of the folder that the compiled file is in afterwards."""
+class DeltaCompileTask:
+    """Information to compile a delta-amplitudes executable.
+
+    Attributes
+    ----------
+    exename : str
+        File name of the executable that will be compiled.
+    foldername : str
+        Name of the folder in which `exename` can be found
+        after successful compilation.
+    fortran_comp : tuple
+        Compiler and compilation flags.
+    hash : str
+        A unique identifier for this task. Usually calculated
+        from `param`.
+    param : str
+        Contents of the PARAM file, defining array dimensions
+        for compilation.
+    source_dir : Path
+        Path to the folder containing the static Fortran
+        source files to be compiled.
+    """
 
     def __init__(self, param, hash_, source_dir, index):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        param : str
+            Contents of the PARAM file, defining array dimensions
+            for compilation.
+        hash_ : str
+            A unique identifier for this task. Usually calculated
+            from `param`.
+        source_dir : Path
+            Path to the folder containing the static Fortran
+            source files to be compiled.
+        index : int
+            A progressive identifier for the executable to be
+            compiled. This value affects both the .foldername
+            and the .exename attributes.
+
+        Returns
+        -------
+        None.
+        """
         self.exename = f'delta-{index}'
         self.foldername = f'Delta_Compile_{index}'
-        self.fortran_comp = ["", ""]
+        self.fortran_comp = ['', '']
         self.hash = hash_
         self.param = param
         self.source_dir = Path(source_dir).resolve()  # where the fortran files are
@@ -72,9 +113,9 @@ class DeltaCompileTask():
         libpath = self.source_dir / 'lib'
         lib_tleed = next(libpath.glob('lib.tleed*'), None)
         lib_delta = next(libpath.glob('lib.delta*'), None)
-        globalname = srcpath / "GLOBAL"
+        globalname = srcpath / 'GLOBAL'
         if any(f is None for f in (srcname, lib_tleed, lib_delta)):
-            raise RuntimeError("Source files missing in {self.source_dir}")     # TODO: use a better custom exception in CompileTask (e.g., MissingSourceFileError)
+            raise RuntimeError(f'Source files missing in {self.source_dir}')    # TODO: use a better custom exception in CompileTask (e.g., MissingSourceFileError)
         return srcname, lib_tleed, lib_delta, globalname
 
     def copy_source_files_to_local(self):
@@ -85,18 +126,37 @@ class DeltaCompileTask():
 
 
 # TODO: see note in refcalc.run_refcalc. #43
-class DeltaRunTask():
-    """Stores information needed to copy the correct delta executable and
-    tensor file to a subfolder, execute the delta-calculation there, and copy
-    results back."""
+class DeltaRunTask:
+    """Information for executing a delta-amplitudes calculation.
+
+    Attributes
+    ----------
+    comptask : DeltaCompileTask
+        The task that was used to create an executable for this
+        calculation.
+    deltalogname : str
+        Name of the log file to which runtime information is
+        collected.
+    deltaname : str
+        Name of the main output file of this calculation.
+    din : str
+        Contents of the input piped to the delta-amplitudes
+        calculation executable.
+    din_short : str
+        Similar to `din`, but with repeated input replaced with
+        appropriate tags.
+    tensorname : str
+        File name for the Tensors file that this calculation uses.
+    """
 
     def __init__(self, comptask):
+        """Initialize instance from a compilation task."""
         self.comptask = comptask
-        self.deltalogname = ""
-        self.deltaname = ""
-        self.din = ""
-        self.din_short = ""
-        self.tensorname = ""
+        self.deltalogname = ''
+        self.deltaname = ''
+        self.din = ''
+        self.din_short = ''
+        self.tensorname = ''
 
     @property
     def foldername(self):
@@ -307,7 +367,7 @@ def deltas(sl, rp, subdomain=False):
     if not Path(DEFAULT_TENSORS).is_dir():
         logger.error(f'No {DEFAULT_TENSORS} directory found.')
         raise RuntimeError(f'{DEFAULT_TENSORS} not found')                      # TODO: FileNotFoundError?
-    iotensors.getTensors(rp.TENSOR_INDEX)
+    iotensors.fetch_unpacked_tensor(rp.TENSOR_INDEX)
     if 1 not in rp.runHistory:
         load_from = Path(DEFAULT_TENSORS)
         load_from /= f'{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}'
@@ -552,7 +612,7 @@ def deltas(sl, rp, subdomain=False):
         return
 
     # make sure there's a compiler ready:
-    if rp.FORTRAN_COMP[0] == "" and not subdomain:
+    if rp.FORTRAN_COMP[0] == "" and not subdomain:                              # TODO: this may mask problems of PARAMETERS settings when running a delta without a refcalc if the specified compiler does not exist.
         try:
             rp.getFortranComp()
         except Exception:
@@ -616,20 +676,19 @@ def deltas_domains(rp):
     deltaRunTasks = []
     # get input for all domains
     for dp in rp.domainParams:
-        logger.info(f'Getting input for delta calculations: domain {dp.name}')
+        logger.info(f'Getting input for delta calculations: {dp}')
         with execute_in_dir(dp.workdir):
             try:
-                r = deltas(dp.sl, dp.rp, subdomain=True)
+                r = deltas(dp.slab, dp.rpars, subdomain=True)
             except Exception:
-                logger.error('Error while creating delta '
-                             f'input for domain {dp.name}')
+                logger.error(f'Error while creating delta input for {dp}')
                 raise
         if type(r) == tuple:  # if no deltas need to be calculated returns None
             deltaCompTasks.extend(r[0])
             deltaRunTasks.extend(r[1])
         elif r is not None:
             raise RuntimeError('Unknown error while creating '
-                               f'delta input for domain {dp.name}')
+                               f'delta input for {dp}')
 
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION:

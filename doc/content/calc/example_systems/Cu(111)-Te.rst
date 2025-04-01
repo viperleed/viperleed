@@ -168,14 +168,6 @@ values are shifted by up to 0.24 Å compared to the initial model (this is
 a lot!). The |R factor| drops to :math:`R_\mathrm{P} \approx 0.47`. This is
 still quite poor, but the progress is encouraging.
 
-Remember to keep the best fit-structure by calling the
-:ref:`bookkeeper utility<bookkeeper>` with the ``--cont``
-flag before proceeding:
-
-    .. code-block:: console
-
-        $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
-
 The |R factor| resulting from an additional reference calculation, is
 decreased to :math:`R_\mathrm{P} \approx 0.33` compared to the
 :math:`R_\mathrm{P} \approx 0.47` value at the end of the optimization run

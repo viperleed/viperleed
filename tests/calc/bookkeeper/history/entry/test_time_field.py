@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-09-40'
 __license__ = 'GPLv3+'
 
@@ -17,6 +17,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.bookkeeper.history.entry.time_field import TimestampField
 from viperleed.calc.bookkeeper.history.entry.time_field import TimestampFormat
@@ -102,7 +103,7 @@ class CasesTimestampField:
 
     @case(tags=(Tag.NO_FMT, Tag.INVALID))
     def case_now_no_fmt(self, make_time):
-        """Return a format-less TimestampField with value fo now."""
+        """Return a format-less TimestampField with value of now."""
         return self.case_now(make_time, None)
 
     _string_valid = {  # With recognizable format
@@ -191,12 +192,6 @@ cases_without_fmt = parametrize_with_cases(
 class TestTimestampFormat:
     """Tests for the TimestampFormat enumeration."""
 
-    @parametrize(fmt=iter(TimestampFormat))
-    def test_now(self, fmt):
-        """Test that now method returns a correctly formatted string."""
-        result = fmt.now()
-        assert datetime.strptime(result, fmt.value)
-
     def test_invalid(self):
         """Check complaints when accessing an invalid TimestampFormat."""
         invalid = 'INVALID_FORMAT'
@@ -220,6 +215,11 @@ class TestTimestampFormat:
 
 class TestTimestampField:
     """Tests for the TimestampField class."""
+
+    def test_class_attrs(self):
+        """Check the expected class-level attributes of JobNameField."""
+        assert TimestampField.is_mandatory
+        assert TimestampField.tag is FieldTag.TIMESTAMP
 
     @parametrize_with_cases('field', CasesTimestampField.case_empty)
     def test_init_empty(self, field):
@@ -288,6 +288,12 @@ class TestTimestampField:
         new_field = field.with_format(new_fmt)
         assert new_field.value is field.value
         assert new_field.time_format is expect_fmt
+        # pylint: disable-next=protected-access           # OK in tests
+        assert new_field._value_str is None
+        if new_field.time_format is TimestampFormat.DEFAULT:
+            assert not new_field.needs_fixing
+        else:
+            assert new_field.needs_fixing
 
     _invalid_fmt = {
         None: TypeError,

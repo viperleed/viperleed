@@ -7,19 +7,29 @@ and folders present in the directory in which Bookkeeper runs.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
-from collections import namedtuple
 from contextlib import nullcontext
 from datetime import datetime
 from functools import partial
+import logging
 from operator import attrgetter
 from pathlib import Path
 import shutil
-import re
 
+from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
+from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
+from viperleed.calc.bookkeeper.constants import STATE_FILES
+from viperleed.calc.bookkeeper.errors import FileOperationFailedError
+from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
+from viperleed.calc.bookkeeper.history.workhistory import WorkhistoryHandler
+from viperleed.calc.bookkeeper.log import LogFiles
+from viperleed.calc.bookkeeper.utils import discard_files
+from viperleed.calc.bookkeeper.utils import file_contents_identical
+from viperleed.calc.bookkeeper.utils import make_property
+from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -29,31 +39,8 @@ from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
-from .constants import CALC_LOG_PREFIXES
-from .constants import EDITED_SUFFIX
-from .constants import ORI_SUFFIX
-from .constants import STATE_FILES
-from .errors import FileOperationFailedError
-from .history.explorer import HistoryExplorer
-from .history.workhistory import WorkhistoryHandler
-from .log import LOGGER
-from .utils import discard_files
-from .utils import file_contents_identical
-from .utils import make_property
-from .utils import needs_update_for_attr
 
-
-# Regular expressions for parsing the log file
-_RFAC_RE = r'[\d.( )/]+'
-_LOG_FILE_RE = {
-    'run_info': re.compile(r'Executed segments:\s*(?P<run_info>[\d ]+)\s*'),
-    'r_ref': re.compile(
-        rf'Final R \(refcalc\)\s*:\s*(?P<r_ref>{_RFAC_RE})\s*'
-        ),
-    'r_super': re.compile(
-        rf'Final R \(superpos\)\s*:\s*(?P<r_super>{_RFAC_RE})\s*'
-        ),
-    }
+LOGGER = logging.getLogger(__name__)
 
 
 # TODO: read_and_clear_notes_file  -- support multiple files
@@ -65,7 +52,7 @@ class RootExplorer:
     def __init__(self, path, bookkeeper):
         """Initialize this explorer at `path` for a `bookkeeper`."""
         self._path = Path(path).resolve()
-        self._logs = None              # LogFiles, set in collect
+        self._logs = None              # LogFiles, set in collect_info
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
         self.history = HistoryExplorer(self.path)
@@ -140,12 +127,12 @@ class RootExplorer:
         return tuple(ori_files.items())
 
     def list_paths_to_discard(self):
-        """Return a list of files and folders that will be discarded."""
+        """Return a tuple of files and folders that will be discarded."""
         to_discard = (
             self.path / DEFAULT_OUT,
             self.path / DEFAULT_SUPP,
             *self.logs.files,
-            *self.tensors.list_paths_to_discard(self.history)
+            *self.tensors.list_paths_to_discard(self.history),
             )
         return tuple(p for p in to_discard if p.exists())
 
@@ -184,7 +171,7 @@ class RootExplorer:
                              f'file in {DEFAULT_OUT}.')
 
     def prepare_for_next_calc_run(self):
-        """Rename inputs to '_ori', pull new ones from OUT/original_inputs."""
+        """Rename inputs to _ori, pull new ones from OUT or original_inputs."""
         errors = []
         try:
             self._mark_state_files_as_ori()
@@ -277,7 +264,7 @@ class RootExplorer:
     def _collect_files_to_archive(self):
         """Return a tuple of files/folders to be archived in history."""
         to_archive = (
-             # OUT and SUPP, if present
+            # OUT and SUPP, if present
             self.path / DEFAULT_OUT,
             self.path / DEFAULT_SUPP,
             # Any calc logs
@@ -294,12 +281,12 @@ class RootExplorer:
                              for f in self.path.glob(f'*{EDITED_SUFFIX}*'))
         if not edited_files:
             return
-        edited = ','.join(edited_files)
-        inputs = ','.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
+        edited = ', '.join(edited_files)
+        inputs = ', '.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
         LOGGER.warning(f'Found user-edited files {edited}. Make sure to port '
                        'any desired changes to the corresponding input files '
-                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX}'
-                       ' files.')
+                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
+                       'files.')
 
     def _copy_state_files_from(self, source, *name_fmts, only_files=None):
         """Copy input files from `source` to the root directory.
@@ -315,7 +302,8 @@ class RootExplorer:
             from `source`. The order of `name_fmts` corresponds
             to the priority in which files are searched. If no
             format is given, files are assumed to be named
-            identically to their destination name.
+            identically to their destination name. `source`
+            is glob()-bed with each of the `name_fmts`.
         only_files : iterable or None
             Only consider these file names when copying. If
             None or not given, all the "state" input files are
@@ -332,11 +320,12 @@ class RootExplorer:
             only_files = STATE_FILES
         for file in only_files:
             cwd_file = self.path / file
-            new_inputs = [source / fmt.format(file) for fmt in name_fmts]
+            patterns = [fmt.format(file) for fmt in name_fmts]
+            new_inputs = (f for p in patterns for f in source.glob(p))
             try:
                 new_input = next(f for f in new_inputs if f.is_file())
             except StopIteration:
-                failed[file] = new_inputs
+                failed[file] = [source/p for p in patterns]
                 continue
             try:
                 shutil.copy2(new_input, cwd_file)
@@ -350,9 +339,14 @@ class RootExplorer:
         # Try OUT first
         failed_out = {}
         try:
-            self._copy_state_files_from(self.path / DEFAULT_OUT,
-                                        '{}',  # First without suffix
-                                        '{}_OUT')
+            # Prefer those without an _OUT suffix, but fall back onto
+            # _OUT-suffixed ones to ensure backward compatibility. NB:
+            # The old-style _OUT-suffixed files used to also have a
+            # timestamp following '_OUT_'. Be explicit about the
+            # presence of a digit not fetch POSCAR_OUT_mincell.
+            self._copy_state_files_from(self.path/DEFAULT_OUT,
+                                        '{}',
+                                        '{}_OUT_[0-9]*')
         except FileOperationFailedError as exc:
             failed_out.update(exc.failures)
 
@@ -439,104 +433,6 @@ class RootExplorer:
                              f'to {state_file.name}.')
                 raise
         return any(to_replace)
-
-
-LogInfo = namedtuple('LogInfo', ('timestamp', 'lines'))
-
-
-class LogFiles:
-    """Container to manage log files found in the bookkeeper's root."""
-
-    _needs_collect = partial(needs_update_for_attr, updater='collect')
-
-    def __init__(self, path):
-        """Initialize an instance at path."""
-        self._path = path
-        self._calc = None    # Log files for viperleed.calc
-        self._others = None  # Other log files found at path
-        self.most_recent = None    # LogInfo from most recent calc log
-
-    calc = make_property('_calc', needs_update=True)
-
-    @property
-    @_needs_collect('_calc')
-    def files(self):
-        """Return paths to all the log files in the root directory."""
-        # tuple() is the start value. It would be nicer to specify
-        # it as a keyword, but this was only introduced in py38.
-        return self._calc + self._others
-
-    def collect(self):
-        """Collect and store internally information about log files."""
-        self._collect_logs()
-        self._read_most_recent()
-
-    def discard(self):
-        """Delete all log files at self._path.
-
-        Returns
-        -------
-        bool
-            Whether any log file was deleted.
-        """
-        logs_discarded = discard_files(*self.files)
-        self.collect()
-        return logs_discarded
-
-    # NB: the next one needs _calc, not most_recent, as the latter may
-    # be None also if there is no calc log file in the root directory.
-    @_needs_collect('_calc')
-    def infer_run_info(self):
-        """Return a dictionary of information read from the newest calc log."""
-        try:
-            log_lines = self.most_recent.lines
-        except AttributeError:  # No log in root
-            log_lines = ()
-        matched = {k: False for k in _LOG_FILE_RE}
-        for line in reversed(log_lines):  # Info is at the end
-            for info, already_matched in matched.items():
-                if already_matched:
-                    continue
-                matched[info] = _LOG_FILE_RE[info].match(line)
-            if all(matched.values()):
-                break
-        return {k: match[k] for k, match in matched.items() if match}
-
-    def _collect_logs(self):
-        """Find all the log files in the root folder. Store them internally."""
-        calc_logs, other_logs = [], []
-        for file in self._path.glob('*.log'):
-            if not file.is_file():
-                continue
-            container = (calc_logs if file.name.startswith(CALC_LOG_PREFIXES)
-                         else other_logs)
-            container.append(file)
-        self._calc = tuple(calc_logs)
-        self._others = tuple(other_logs)
-
-    @_needs_collect('_calc')
-    def _read_most_recent(self):
-        """Read information from the most recent log file, if available."""
-        split_logs = {}  # Path to most recent log for each prefix
-        for prefix in CALC_LOG_PREFIXES:  # newest to oldest
-            calc_logs = (f for f in self._calc if f.name.startswith(prefix))
-            try:
-                split_logs[prefix] = max(calc_logs, key=attrgetter('name'))
-            except ValueError:
-                pass
-        try:
-            most_recent_log = next(iter(split_logs.values()))
-        except StopIteration:  # No log files
-            return
-
-        timestamp = most_recent_log.name[-17:-4]
-        last_log_lines = ()
-        try:  # pylint: disable=too-many-try-statements
-            with most_recent_log.open('r', encoding='utf-8') as log_file:
-                last_log_lines = tuple(log_file.readlines())
-        except OSError:
-            pass
-        self.most_recent = LogInfo(timestamp, last_log_lines)
 
 
 class TensorAndDeltaInfo:

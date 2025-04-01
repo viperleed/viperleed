@@ -1,38 +1,42 @@
-"""ViPErLEED bookkeeper module of package calc."""
+"""Module bookkeeper of viperleed.calc.bookkeeper."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from contextlib import nullcontext
 from enum import IntEnum
+import logging
 from pathlib import Path
 
+from viperleed import __version__
+from viperleed.calc.bookkeeper import log
+from viperleed.calc.bookkeeper.errors import _FileNotOlderError
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
+from viperleed.calc.bookkeeper.history.errors import CantDiscardEntryError
+from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
+from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
+from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
+from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.bookkeeper.root_explorer import RootExplorer
+from viperleed.calc.bookkeeper.utils import file_contents_identical
+from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.cleanup import MOVED_LABEL
 
-from . import log
-from .errors import _FileNotOlderError
-from .history.constants import HISTORY_INFO_NAME
-from .history.entry.entry import HistoryInfoEntry
-from .history.errors import CantDiscardEntryError
-from .history.errors import CantRemoveEntryError
-from .history.errors import MetadataMismatchError
-from .history.errors import NoHistoryEntryError
-from .history.meta import BookkeeperMetaFile
-from .log import LOGGER
-from .mode import BookkeeperMode
-from .root_explorer import RootExplorer
-from .utils import make_property
+
+LOGGER = logging.getLogger(__name__)
 
 
 # Input files that may be generated at runtime - don't warn if missing
@@ -41,6 +45,17 @@ RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 # Suffix for files moved from root rather than original_inputs
 _FROM_ROOT = '_from_root'
+
+
+# Log message emitted when we detect that we're running
+# in the tree created by a pre-0.13.0 calc version.
+_MIN_CALC_WARN = '0.13.0'
+_WARN_OLD_CALC = f'''\
+Bookkeeper v{__version__} is running in a folder created by an older version of
+viperleed (v%s). Please double check that the correct files have been
+processed, as bookkeeper is not entirely backward compatible. See the
+documentation at https://viperleed.org/content/calc/sections/bookkeeper.html
+for details on the changes introduced in bookkeeper since v{_MIN_CALC_WARN}.'''
 
 
 class BookkeeperExitCode(IntEnum):
@@ -53,9 +68,10 @@ class BookkeeperExitCode(IntEnum):
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
 
-    def __init__(self, cwd=Path.cwd()):
+    def __init__(self, cwd=None):
         """Initialize the bookkeeper using `cwd` as the root folder."""
-        self._root = RootExplorer(path=cwd, bookkeeper=self)
+        self._root = RootExplorer(path=cwd or Path.cwd(),
+                                  bookkeeper=self)
         self._mode = None                        # Set in run
         self._requires_user_confirmation = None  # Set in run
         self._state_info = {
@@ -76,12 +92,12 @@ class Bookkeeper:
     @property
     def archiving_required(self):
         """Check if archiving is required."""
-        return self.files_need_archiving and not self.history.new_folder.exists
+        return self.files_need_archiving and not self._has_archived_folder
 
     @property
     def orig_inputs_dir(self):
         """Return the path to the folder containing untouched input files."""
-        return self.cwd / DEFAULT_SUPP / ORIGINAL_INPUTS_DIR_NAME
+        return self._root.orig_inputs_dir
 
     @property
     def tensor_number(self):
@@ -134,6 +150,7 @@ class Bookkeeper:
         # re-appear at the next run.
         self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
         LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
+        self._warn_about_old_calc()
         try:
             exit_code = runner()
         finally:
@@ -159,16 +176,17 @@ class Bookkeeper:
         ----------
         silent : bool, optional
             Whether logging messages should be silenced or not.
-            The default is False.
+            The default is False. One basic log message is always
+            emitted, irrespective of the value of `silent`, if a
+            this instance accesses the log file for the first time.
 
         Returns
         -------
         None.
         """
+        self._make_history_and_prepare_logger()
         context = logging_silent if silent else nullcontext
         with context():
-            self._make_history_and_prepare_logger()
-
             # Collect information from the root directory:
             # log files, SUPP, OUT, workhistory, and Tensors, as well
             # as information from the history folder (especially the
@@ -176,7 +194,7 @@ class Bookkeeper:
             self._root.collect_info()
             self._state_info['timestamp'] = (
                 self._root.calc_timestamp  # If a log file was found
-                or f'moved-{DateTimeFormat.FILE_SUFFIX.now()}'
+                or f'{MOVED_LABEL}{DateTimeFormat.FILE_SUFFIX.now()}'
                 )
 
             # Infer which history subfolder we should be handling
@@ -186,6 +204,17 @@ class Bookkeeper:
             # history.info handler (may create history.info file)
             self.history.prepare_info_file()
             self.history.info.read()
+
+    @property
+    def _has_archived_folder(self):
+        """Return whether a history folder already exists for this calc run."""
+        # NB: it's enough to check for the tensor number and the log
+        # timestamp. We don't need to explicitly check also a job
+        # number, as those are always "fresh" since we FIRST create
+        # the contents of the main folder, and only LATER move the
+        # workhistory ones (in _archive_to_history_and_add_info_entry).
+        archived_name = rf't{self.tensor_number:03d}.*_{self.timestamp}'
+        return self.history.has_subfolder(archived_name)
 
     def _add_history_info_entry(self, tensor_nums):
         """Add a new entry to the history.info file.
@@ -218,9 +247,76 @@ class Bookkeeper:
                 notes=self._root.read_and_clear_notes_file(),
                 discarded_=self._mode is BookkeeperMode.DISCARD,
                 # Optional ones
-                **self._root.infer_run_info()
+                **self._root.infer_run_info(),
                 )
         self.history.info.append_entry(new_info_entry, fix_time_format=True)
+
+    def _archive_input_files_from_original_inputs_or_cwd(self):
+        """Copy input files to the history subfolder.
+
+        The files are preferentially collected from the original_inputs
+        subfolder of SUPP. Only if they are not found there, they are
+        taken from the root directory (unless they are auto-generated
+        ones). If the root directory contains a newer version of the
+        file than in original_inputs, warn the user (but still copy
+        the one from original_inputs).
+
+        Returns
+        -------
+        None.
+        """
+        history_folder = self.history.new_folder
+        orig_inputs_dir = self.orig_inputs_dir
+        for file in ALL_INPUT_FILES:
+            original_file = orig_inputs_dir / file
+            cwd_file = self.cwd / file
+            copy_file, with_name = None, file
+            if original_file.is_file() and cwd_file.is_file():
+                # Copy original, but warn if cwd is newer
+                copy_file = original_file
+                try:
+                    _check_newer(older=cwd_file, newer=original_file)
+                except _FileNotOlderError:
+                    LOGGER.warning(
+                        f'File {file} from {orig_inputs_dir.name} was '
+                        'copied to history, but the file in the input '
+                        'directory is newer.'
+                        )
+            elif original_file.is_file():  # Just copy original
+                copy_file = original_file
+            elif file in RUNTIME_GENERATED_INPUT_FILES:
+                # Ignore optional inputs in root. If the user gave
+                # these explicitly, they have already been copied
+                # by calc to original_inputs, and they should be
+                # already handled by "elif original_file.is_file()".
+                continue
+            elif cwd_file.is_file():  # Copy cwd and warn
+                copy_file, with_name = cwd_file, f'{cwd_file.name}{_FROM_ROOT}'
+                LOGGER.warning(
+                    f'File {file} not found in {orig_inputs_dir.name}. '
+                    'Using file from root directory instead and renaming to '
+                    f'{with_name}.'
+                    )
+            if copy_file:
+                history_folder.copy_file_or_directory(copy_file,
+                                                      with_name=with_name)
+
+    def _archive_log_files(self):
+        """Copy all the log files in root to history."""
+        for file in self._root.logs.files:
+            self.history.new_folder.copy_file_or_directory(file)
+
+    def _archive_out_and_supp(self):
+        """Copy OUT and SUPP directories to history."""
+        history_folder = self.history.new_folder
+        for name in (DEFAULT_SUPP, DEFAULT_OUT):
+            directory = self.cwd / name
+            if not directory.is_dir():
+                LOGGER.warning(f'Could not find {name} directory in '
+                               f'{self.cwd}. It will not be copied '
+                               'to history.')
+                continue
+            history_folder.copy_file_or_directory(directory)
 
     def _archive_to_history_and_add_info_entry(self):
         """Store all relevant files in root to history, add a new entry.
@@ -240,14 +336,16 @@ class Bookkeeper:
         None.
         """
         # Create the new 'primary' history directory...
-        metadata = self._make_and_copy_to_history()
+        main_history_subfolder = self._make_and_copy_to_history()
         # ...move workhistory folders...
-        tensor_nums = self._workhistory.move_current_and_cleanup(metadata)
+        tensor_nums = self._workhistory.move_current_and_cleanup(
+            main_history_subfolder,
+            )
         tensor_nums.add(self.tensor_number)
         # ...and add a history.info entry
         self._add_history_info_entry(tensor_nums)
         LOGGER.info('Done archiving the current directory '
-                    f'to {self.history.path.name}')
+                    f'to {self.history.path.name}.')
 
     def _check_may_discard_full(self):
         """Log and raise if it is not possible to DISCARD_FULL."""
@@ -309,72 +407,6 @@ class Bookkeeper:
         self.__init__(cwd=self.cwd)
         self._state_info['logger_prepared'] = logger_prepared
 
-    def _copy_input_files_from_original_inputs_or_cwd(self):
-        """Copy input files to the history subfolder.
-
-        The files are preferentially collected from the original_inputs
-        subfolder of SUPP. Only if they are not found there, they are
-        taken from the root directory (unless they are auto-generated
-        ones). If the root directory contains a newer version of the
-        file than in original_inputs, warn the user (but still copy
-        the one from original_inputs).
-
-        Returns
-        -------
-        None.
-        """
-        history_folder = self.history.new_folder
-        for file in ALL_INPUT_FILES:
-            original_file = self.orig_inputs_dir / file
-            cwd_file = self.cwd / file
-            copy_file, with_name = None, file
-            if original_file.is_file() and cwd_file.is_file():
-                # Copy original, but warn if cwd is newer
-                copy_file = original_file
-                try:
-                    _check_newer(older=cwd_file, newer=original_file)
-                except _FileNotOlderError:
-                    LOGGER.warning(
-                        f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
-                        'copied to history, but the file in the input '
-                        'directory is newer.'
-                        )
-            elif original_file.is_file():  # Just copy original
-                copy_file = original_file
-            elif file in RUNTIME_GENERATED_INPUT_FILES:
-                # Ignore optional inputs in root. If the user gave
-                # these explicitly, they have already been copied
-                # by calc to original_inputs, and they should be
-                # already handled by "elif original_file.is_file()".
-                continue
-            elif cwd_file.is_file():  # Copy cwd and warn
-                copy_file, with_name = cwd_file, f'{cwd_file.name}{_FROM_ROOT}'
-                LOGGER.warning(
-                    f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
-                    'Using file from root directory instead and renaming to '
-                    f'{with_name}.'
-                    )
-            if copy_file:
-                history_folder.copy_file_or_directory(copy_file,
-                                                      with_name=with_name)
-
-    def _copy_log_files(self):
-        """Copy all the log files in root to history."""
-        for file in self._root.logs.files:
-            self.history.new_folder.copy_file_or_directory(file)
-
-    def _copy_out_and_supp(self):
-        """Copy OUT and SUPP directories to history."""
-        history_folder = self.history.new_folder
-        for name in (DEFAULT_SUPP, DEFAULT_OUT):
-            directory = self.cwd / name
-            if not directory.is_dir():
-                LOGGER.warning(f'Could not find {name} directory in '
-                               f'{self.cwd}. It will not be copied '
-                               'to history.')
-                continue
-            history_folder.copy_file_or_directory(directory)
-
     def _do_prerun_archiving_and_mark_edited(self):
         """If needed, archive files from root to history.
 
@@ -389,7 +421,7 @@ class Bookkeeper:
             Whether anything was archived at all.
         """
         in_archive_mode = self._mode is BookkeeperMode.ARCHIVE
-        if in_archive_mode and self.history.new_folder.exists:
+        if in_archive_mode and self._has_archived_folder:
             LOGGER.info(
                 f'History directory for run {self.history.new_folder.name} '
                 'exists. Exiting without doing anything.'
@@ -409,7 +441,7 @@ class Bookkeeper:
         # Notice that it is OK to decide now whether files should
         # be marked as edited rather than before archiving. In
         # fact, during archiving we recognize the right files to
-        # pull (in _copy_input_files_from_original_inputs_or_cwd):
+        # pull (in _archive_input_files_from_original_inputs_or_cwd):
         # always copy from original_inputs if possible, otherwise
         # copy with a _FROM_ROOT suffix.
         self._root.mark_edited_files()
@@ -420,9 +452,8 @@ class Bookkeeper:
 
         Returns
         -------
-        meta : BookkeeperMetaFile
-            The handler to the metadata file created with the
-            new history subfolder.
+        main_history_folder : HistoryFolder
+            The new folder added to history.
 
         Raises
         ------
@@ -436,11 +467,11 @@ class Bookkeeper:
                          f'{self.history.new_folder.name}\n Stopping...')
             raise
         LOGGER.info(f'Created history folder {self.history.new_folder.name} '
-                    'for storing results of the most-recent viperleed.calc '
-                    'execution')
-        self._copy_out_and_supp()
-        self._copy_input_files_from_original_inputs_or_cwd()
-        self._copy_log_files()
+                    'for storing results of the most recent viperleed.calc '
+                    'execution.')
+        self._archive_out_and_supp()
+        self._archive_input_files_from_original_inputs_or_cwd()
+        self._archive_log_files()
 
         # Now that all files are in place, add the metadata file
         meta = BookkeeperMetaFile(self.history.new_folder.path)
@@ -448,21 +479,20 @@ class Bookkeeper:
         meta.write()
 
         # Finally, register the new folder in history
-        self.history.register_folder(self.history.new_folder.path)
-        return meta
+        return self.history.register_folder(self.history.new_folder.path)
 
     def _make_history_and_prepare_logger(self):
         """Make history folder and add handlers to the bookkeeper logger."""
         if self._state_info['logger_prepared']:
             return
 
-        # Attach a stream handler to logger if not already present
+        # Attach a stream handler to the logger if not already present
         log.ensure_has_stream_handler()
 
-        try:  # Make top level history folder if not there yet
+        try:  # Make the top-level 'history' folder if not there yet
             self.history.path.mkdir(exist_ok=True)
         except OSError:
-            LOGGER.error('Error creating history folder.')
+            LOGGER.error(f'Error creating {self.history.path.name} folder.')
             raise
 
         # Attach file handler for history/bookkeeper.log
@@ -475,7 +505,7 @@ class Bookkeeper:
 
     def _print_discard_info(self):
         """Emit logging messages with files/folders/entry to be deleted."""
-        LOGGER.info(f'About to delete files/folders from {self.cwd}')
+        LOGGER.info(f'About to delete files/folders from {self.cwd}.')
         # First, files and folders that are simply deleted
         paths_to_discard = (
             *self._workhistory.list_paths_to_discard(),
@@ -523,6 +553,9 @@ class Bookkeeper:
         did_archive = self._do_prerun_archiving_and_mark_edited()
         did_clear_root = self._root.clear_for_next_calc_run()
         did_anything = did_archive or did_clear_root
+        if did_clear_root:
+            LOGGER.info('Successfully prepared the current directory '
+                        'for the next run of viperleed.calc.')
         return (BookkeeperExitCode.SUCCESS if did_anything
                 else BookkeeperExitCode.NOTHING_TO_DO)
 
@@ -555,31 +588,34 @@ class Bookkeeper:
         self._workhistory.discard_workhistory_root()
         self._root.revert_to_previous_calc_run()
 
-        # Tensors and Deltas, if created during the last run
+        # Tensors and deltas, if created during the last run
         self._root.remove_tensors_and_deltas()
 
         # And the history entry from history.info
         self.history.info.remove_last_entry()
+        LOGGER.info('Successfully deleted the results of '
+                    'the last viperleed.calc execution.')
         return BookkeeperExitCode.SUCCESS
 
     def _run_discard_mode(self):
         """Execute bookkeeper in DISCARD mode."""
         did_archive = self._do_prerun_archiving_and_mark_edited()
         self._root.revert_to_previous_calc_run()
-        if did_archive:
-            # We had to archive the contents of the root directory.
-            # This means that we have already marked the entry as
-            # discarded and we don't have to bother.
-            return BookkeeperExitCode.SUCCESS
-        try:
-            self.history.info.discard_last_entry()
-        except (NoHistoryEntryError, CantDiscardEntryError) as exc:
-            no_entry = isinstance(exc, NoHistoryEntryError)
-            emit_log = LOGGER.error if no_entry else LOGGER.warning
-            emit_log('Failed to mark last entry as discarded '
-                     f'in {HISTORY_INFO_NAME}: {exc}')
-            return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
-                    else BookkeeperExitCode.FAIL)
+        if not did_archive:
+            # If we had to archive the contents of the root directory,
+            # we'd have already marked the entry as discarded and we
+            # wouldn't have to bother. Here we do it explicitly.
+            try:
+                self.history.info.discard_last_entry()
+            except (NoHistoryEntryError, CantDiscardEntryError) as exc:
+                no_entry = isinstance(exc, NoHistoryEntryError)
+                emit_log = LOGGER.warning if no_entry else LOGGER.error
+                emit_log('Failed to mark as discarded the last '
+                         f'entry in {HISTORY_INFO_NAME}: {exc}')
+                return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
+                        else BookkeeperExitCode.FAIL)
+        LOGGER.info('Successfully marked as discarded the '
+                    f'last entry in {HISTORY_INFO_NAME}.')
         return BookkeeperExitCode.SUCCESS
 
     def _run_fix_mode(self):
@@ -593,17 +629,34 @@ class Bookkeeper:
         if not self._requires_user_confirmation:
             return True
         while True:
-            reply = input('Are you sure you want to proceed (y/N)?')
+            reply = input('Are you sure you want to proceed (y/N)? ')
             reply = reply.lower()
             if not reply or reply.startswith('n'):
                 return False
             if reply.startswith('y'):
                 return True
 
+    def _warn_about_old_calc(self):
+        """Emit warnings when this tree was created by an early calc."""
+        if self._mode is BookkeeperMode.FIX:
+            # FIX already emits log messages if it finds funky stuff.
+            return
+        version = self._root.logs.version
+        # See if the last history folder was created with an old calc
+        # version. All modes (except --fix) may be affected, as the
+        # handling of files has changed since v0.13.0.
+        if not version and self.history.last_folder:
+            version = self.history.last_folder.logs.version
+        if version and version < _MIN_CALC_WARN:
+            LOGGER.warning(_WARN_OLD_CALC, version)
+
 
 def _check_newer(older, newer):
     """Raise if file `older` is newer than file `newer`."""
     newer_timestamp = newer.stat().st_mtime
     older_timestamp = older.stat().st_mtime
-    if newer_timestamp < older_timestamp:
-        raise _FileNotOlderError
+    if newer_timestamp >= older_timestamp:
+        return
+    if file_contents_identical(older, newer):
+        return
+    raise _FileNotOlderError

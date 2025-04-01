@@ -6,12 +6,21 @@ Defines enumeration classes used in multiple spots.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-08-01'
 __license__ = 'GPLv3+'
 
 from enum import Enum
 from enum import auto
+
+
+class DuplicateType(Enum):
+    """Types of possible duplicates. Values are message prefixes."""
+
+    DIFFERENT = 'Problematic lines'
+    IDENTICAL = 'Problematic lines with identical contents'
+    NONE = ''
+    NOTES = 'Duplicate notes'
 
 
 class FaultyLabel(Enum):
@@ -73,15 +82,6 @@ _FAULTY_MARK_SPACING = len(_FAULTY_MARK_SEP) + max(
     len(f.value) for f in FaultyLabel
     )
 _HISTORY_INFO_SPACING = 12  # For FieldTag, i.e., the leftmost bit
-
-
-class DuplicateType(Enum):
-    """Types of possible duplicates. Values are message prefixes."""
-
-    DIFFERENT = 'Problematic lines'
-    IDENTICAL = 'Problematic lines with identical contents'
-    NONE = ''
-    NOTES = 'Duplicate notes'
 
 
 class FieldTag(Enum):

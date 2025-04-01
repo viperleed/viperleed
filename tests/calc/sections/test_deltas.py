@@ -4,7 +4,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -59,7 +59,7 @@ class TestRunDelta:
 
     @fixture(name='runtask')
     def factory_runtask(self, mocker):
-        """Return a fake RefcalcRunTask."""
+        """Return a fake DeltaRunTask."""
         comptask = mocker.MagicMock(
             exename='test_exe',
             foldername='test_folder',
@@ -70,9 +70,9 @@ class TestRunDelta:
             tensorname='test_tensor',
             deltalogname='test_delta.log',
             din='test input',
-            name='test_name',
             foldername='calculating_test_delta',
             )
+        runtask.name = 'test_name'
         return runtask
 
     @fixture(name='mock_implementation')
@@ -183,7 +183,7 @@ class TestRunDelta:
         assert expect_log in caplog.text
 
     def test_fails_to_copy_output_file(self, run, caplog):
-        """Check complaints when failing to copy a refcalc output file."""
+        """Check complaints when failing to copy a delta output file."""
         file = 'DELWV'
         def _copy_file_fails(src, _):
             if Path(src).name == file:

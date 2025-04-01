@@ -17,8 +17,11 @@ from pytest_cases import parametrize
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
+from viperleed.calc.classes.rparams.domain_params import DomainParameters
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.cleanup import move_oldruns
 from viperleed.calc.sections.cleanup import prerun_clean
 
 from ....helpers import filesystem_from_dict
@@ -76,11 +79,13 @@ class TestPrerunClean:
     def fixture_run_prerun_clean(self, tmp_path, rpars, work_tree):
         """Execute prerun_clean at tmp_path."""
         def _run(nothing_to_move=False):
-            expect, log_name, move_oldruns = work_tree
+            expect, log_name, mock_move_oldruns = work_tree
             prerun_clean(rpars, logname=log_name)
             clean = filesystem_to_dict(tmp_path)
-            if not nothing_to_move:
-                move_oldruns.assert_called_once_with(rpars, prerun=True)
+            if nothing_to_move:
+                mock_move_oldruns.assert_not_called()
+            else:
+                mock_move_oldruns.assert_called_once_with(rpars, prerun=True)
             return expect, clean
         return _run
 
@@ -128,7 +133,7 @@ class TestPrerunClean:
 
     @parametrize(file=silent_fail)
     def test_fails_to_remove_log(self, file, run, caplog, mocker):
-        """Check there no complaints when failing to remove some log files."""
+        """Check no complaints when failing to remove some log files."""
         caplog.set_level(0)  # Collect all messages
         self.check_fails_to_remove_file(file, run, mocker)
         assert not caplog.text
@@ -142,7 +147,7 @@ class TestPrerunClean:
 
     @parametrize(folder=(DEFAULT_WORK_HISTORY, DEFAULT_OUT, DEFAULT_SUPP))
     def test_fails_to_rmdir(self, folder, run, caplog, mocker):
-        """Check complaints when deleting a folder fails."""
+        """Check complaints when deleting a `folder` fails."""
         _rmtree = shutil.rmtree
         def _rmtree_raises(path):
             if Path(path).name == folder:
@@ -158,7 +163,7 @@ class TestPrerunClean:
 
     def test_no_need_to_move_oldruns(self, run, work_tree, tmp_path, caplog):
         """Check no complaints if there's no old stuff to archive."""
-        expect, *_, move_oldruns = work_tree
+        expect, *_ = work_tree
         old_logs = ('old_log.log', *self.silent_fail)
         for log in old_logs:
             (tmp_path/log).unlink()
@@ -169,7 +174,6 @@ class TestPrerunClean:
         _, clean = run(nothing_to_move=True)
         assert clean == expect
         assert not caplog.text
-        move_oldruns.assert_not_called()
 
     def test_not_an_executable(self, run, tmp_path, caplog):
         """Check that non-executable files are retained."""
@@ -184,7 +188,7 @@ class TestPrerunClean:
     # pylint: disable-next=too-many-arguments  # 4/6 are fixtures
     def test_skips_missing_folder(self, folder, work_tree,
                                   tmp_path, run, caplog):
-        """Check no complaints when folder is not found."""
+        """Check no complaints when `folder` is not found."""
         expect, *_ = work_tree
         shutil.rmtree(tmp_path/folder)
         _, clean = run()
@@ -194,7 +198,7 @@ class TestPrerunClean:
     @parametrize(file=silent_fail)
     # pylint: disable-next=too-many-arguments  # 4/6 are fixtures
     def test_skips_missing_log(self, file, work_tree, tmp_path, run, caplog):
-        """Check no complaints when folder is not found."""
+        """Check no complaints when a log file is not found."""
         expect, *_ = work_tree
         (tmp_path/file).unlink()
         _, clean = run()
@@ -206,3 +210,91 @@ class TestPrerunClean:
         expect, clean = run()
         assert clean == expect
         assert not caplog.text
+
+
+class TestPropagateToDomains:
+    """Tests for prerun_clean propagation to nested domains."""
+
+    def make_domains(self, rpars, top_level_domains, root_path, mocker):
+        """Create nested domains at `root_path`, return calls."""
+        calls = {}
+        for domain, subdomains in top_level_domains.items():
+            if isinstance(subdomains, str):  # A file
+                continue
+            workdir = root_path/domain
+            domain = DomainParameters(workdir, domain)
+            domain.rpars = Rparams()
+            domain.rpars.TENSOR_INDEX = 1
+            rpars.domainParams.append(domain)
+            has_subdomains = any(isinstance(s, dict)
+                                 for s in subdomains.values())
+            calls[str(workdir)] = mocker.call(domain.rpars, logname='')
+            if has_subdomains:
+                subcalls = self.make_domains(domain.rpars,
+                                             subdomains,
+                                             workdir,
+                                             mocker)
+                calls.update(subcalls)
+        return calls
+
+    @fixture(name='domains')
+    def fixture_domains(self, rpars, tmp_path, mocker):
+        """Create sample nested domains at `tmp_path`."""
+        domain_contents = {'log.log': ''}  # To check workhistory
+        nested_domains = {
+            'simple_domain': domain_contents,
+            'nested_domain': {'subdomain_1': domain_contents,
+                              'subdomain_2': domain_contents,
+                              **domain_contents},
+            }
+        filesystem_from_dict(nested_domains, tmp_path)
+        nested_calls = self.make_domains(rpars,
+                                         nested_domains,
+                                         tmp_path,
+                                         mocker)
+        return nested_calls, nested_domains, tmp_path
+
+    @fixture(name='register_calls')
+    def fixture_register_calls(self, mocker):
+        """Return all calls to the patched function."""
+        def _register_calls(func, calls):
+            def _wrap(*args, **kwargs):
+                calls.append(mocker.call(*args, **kwargs))
+                func(*args, **kwargs)
+            return _wrap
+
+        def _patch(func):
+            calls = []
+            mocker.patch(f'{_MODULE}.{func.__name__}',
+                         _register_calls(func, calls))
+            return calls
+        return _patch
+
+    def _check_workhistory_created(self, root_tree, domains):
+        """Check that all domain subfolders contain a non-empty workhistory."""
+        for domain, subdomains in domains.items():
+            if isinstance(subdomains, str):     # A file
+                assert domain not in root_tree  # Should be moved
+                continue
+            assert domain in root_tree
+            assert DEFAULT_WORK_HISTORY in root_tree[domain]
+            assert root_tree[domain][DEFAULT_WORK_HISTORY]
+            has_subdomains = any(isinstance(s, dict)
+                                 for s in subdomains.values())
+            if has_subdomains:
+                self._check_workhistory_created(root_tree[domain], subdomains)
+
+    def test_propagate_to_domains(self, rpars, register_calls, domains):
+        """Check that prerun_clean is correctly propagated to all domains."""
+        move_calls = register_calls(move_oldruns)
+        _, nested_domains, root = domains
+        with execute_in_dir(root):
+            prerun_clean(rpars)
+
+        # Check that move_oldruns was called correctly
+        n_domains = (1     # simple_domain
+                     + 1   # nested_domain
+                     + 2)  # subdomains of nested_domain
+        assert len(move_calls) == n_domains  # Only once per domain
+        domain_tree = filesystem_to_dict(root)
+        self._check_workhistory_created(domain_tree, nested_domains)

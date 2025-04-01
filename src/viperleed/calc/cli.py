@@ -9,7 +9,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
@@ -22,8 +22,10 @@ from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK
-from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.files.manifest import ManifestFile
+from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.fs_utils import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
@@ -94,45 +96,44 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         verbosity.add_argument(
             '-v', '--verbose',
             help='increase output verbosity and print debug messages',
-            action='store_true'
+            action='store_true',
             )
         verbosity.add_argument(
             '-vv', '--very-verbose',
             help='increase output verbosity and print more debug messages',
-            action='store_true'
+            action='store_true',
             )
 
         # PATHS
         parser.add_argument(
             '-w', '--work',
             help='specify execution work directory',
-            type=str
+            type=str,
             )
         parser.add_argument(
             '--tensorleed', '-t',
             help=('specify the path to the folder containing '
                   'the TensErLEED and EEASISSS source codes'),
-            type=str
+            type=str,
             )
 
         # CREATING/DELETING DIRECTORIES
         parser.add_argument(
             '--all-tensors',
-            help=(
-                f'copy all {DEFAULT_TENSORS} to the work directory. Required '
-                'if using the TENSORS parameter to calculate from old tensors'
-                ),
-            action='store_true'
+            help=(f'copy all {DEFAULT_TENSORS} to the work directory. '
+                  'Required if using the TENSOR_INDEX parameter to calculate '
+                  'from old tensors'),
+            action='store_true',
             )
         parser.add_argument(
             '--delete-workdir',
             help='delete work directory after execution',
-            action='store_true'
+            action='store_true',
             )
 
 
 def _copy_input_files_to_work(work_path):
-    """Copy all the known input files present here into work_path."""
+    """Copy all the known input files present here into `work_path`."""
     for file in ALL_INPUT_FILES:
         try:
             shutil.copy2(file, work_path)
@@ -141,26 +142,28 @@ def _copy_input_files_to_work(work_path):
 
 
 def _copy_files_from_manifest(to_path):
-    """Copy all files listed in file 'manifest' back to_path."""
-    manifest_file = Path('manifest')
-    if not manifest_file.is_file():
-        return
+    """Copy all files listed in file 'manifest' back `to_path`."""
+    manifest = ManifestFile()
+    manifest.read()
+    if manifest.has_absolute_paths:
+        raise ManifestFileError('Cannot copy resources from folders that are '
+                                f'not contained in {Path.cwd()}. Destination '
+                                'is not well defined.')
 
-    with manifest_file.open('r', encoding='utf-8') as file:
-        manifest = [line.strip() for line in file.readlines()]
-        manifest = (line for line in manifest if line)
-        manifest = (Path(line) for line in manifest)
-
-    for to_be_copied in manifest:
-        _copy = shutil.copy2 if to_be_copied.is_file() else copytree_exists_ok
-        try:
-            _copy(to_be_copied, to_path / to_be_copied)
-        except OSError as exc:
-            print(f'Error copying {to_be_copied} to home directory: {exc}')     # TODO: Why no logging?
+    for folder, contents in manifest.iter_sections(relative=True):
+        dest_folder = to_path/folder
+        dest_folder.mkdir(exist_ok=True)
+        for item in contents:
+            src = folder/item
+            _copy = shutil.copy2 if src.is_file() else copytree_exists_ok
+            try:
+                _copy(src, dest_folder / item)
+            except OSError as exc:
+                print(f'Error copying {src} to home directory: {exc}')          # TODO: Why no logging?
 
 
 def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
-    """Move appropriate files from 'Tensors' and 'Deltas' to work_path."""
+    """Move appropriate files from 'Tensors' and 'Deltas' to `work_path`."""
     if all_tensors:  # Copy all of them
         for directory in (DEFAULT_TENSORS, DEFAULT_DELTAS):
             try:
@@ -184,14 +187,14 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
 
 
 def _make_work_directory(cli_args):
-    """Return a suitable 'work' directory from cli_args."""
+    """Return a suitable 'work' directory from `cli_args`."""
     work_path = Path(cli_args.work or DEFAULT_WORK).resolve()
     work_path.mkdir(parents=True, exist_ok=True)
     return work_path
 
 
 def _verbosity_to_log_level(cli_args, presets):
-    """Add a LOG_LEVEL to presets if cli_args have verbosity specified."""
+    """Add a LOG_LEVEL to `presets` if `cli_args` have verbosity specified."""
     if cli_args.very_verbose:
         presets['LOG_LEVEL'] = LOG_VERY_VERBOSE
     elif cli_args.verbose:

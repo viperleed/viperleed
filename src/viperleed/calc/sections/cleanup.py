@@ -13,6 +13,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
+from functools import wraps
 import logging
 from pathlib import Path
 import re
@@ -20,7 +21,7 @@ import shutil
 from zipfile import ZIP_DEFLATED
 from zipfile import ZipFile
 
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -28,9 +29,9 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
-from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
+from viperleed.calc.lib import fs_utils
 from viperleed.calc.lib.context import execute_in_dir
-from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
@@ -114,6 +115,10 @@ _OUT_FILES = (
 # from previous viperleed.calc executions from the work directory
 PREVIOUS_LABEL = 'previous'
 
+# Label given to workhistory folders from previous runs when no
+# log file was found
+MOVED_LABEL = 'moved-'
+
 # Output files that may be inputs in future runs - keep during prerun
 _IOFILES = (
     'control.chem',
@@ -121,9 +126,40 @@ _IOFILES = (
     'superpos-spec.out',
     )
 
-logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
+def _propagate_to_domains(func):
+    """Decorate `func` to call it on all nested domains.
+
+    Parameters
+    ----------
+    func : callable
+        The function to be decorated. Its first argument should
+        be an Rparams object. It is used to determine whether
+        recursive calls for each subdomain are needed.
+
+    Returns
+    -------
+    callable
+        A new version of `func` that recursively propagates the
+        original `func` to all domains.
+    """
+    def _propagate(rpars, *args, **kwargs):
+        for domain in rpars.domainParams:
+            with execute_in_dir(domain.workdir):
+                func(domain.rpars, *args, **kwargs)
+            if domain.rpars.domainParams:
+                _propagate(domain.rpars, *args, **kwargs)
+
+    @wraps(func)
+    def _wrapper(*args, **kwargs):
+        func(*args, **kwargs)
+        _propagate(*args, **kwargs)
+    return _wrapper
+
+
+@_propagate_to_domains
 def prerun_clean(rpars, logname=''):
     """Clean up the current directory before viperleed.calc starts.
 
@@ -149,12 +185,19 @@ def prerun_clean(rpars, logname=''):
     old_logs = (f for f in Path().glob('*.log')
                 if f.is_file() and f.name != logname)
     if any(old_logs):
+        # Only handle the root directory here: decoration with
+        # _propagate_to_domains takes care of each domain subfolder.
+        # In order to force move_oldruns not to execute in domain
+        # subfolders, temporarily clear the domainParams.
+        domains_bak, rpars.domainParams = rpars.domainParams, []
         try:
             move_oldruns(rpars, prerun=True)
         except OSError:
-            logger.warning('Exception while trying to clean up from previous '
-                           'run. Program will proceed, but old files may be '
-                           'lost.', exc_info=True)
+            _LOGGER.warning('Exception while trying to clean up from previous '
+                            'run. Program will proceed, but old files may be '
+                            'lost.', exc_info=True)
+        finally:
+            rpars.domainParams = domains_bak
 
     # Get rid of other files that may be modified in place
     other_logs = (
@@ -190,9 +233,12 @@ def organize_workdir(rpars,
     delete_unzipped : bool, optional
         Whether the original Delta- and Tensor-files should be
         deleted after making the archives. The default is False.
-    tensors, deltas : bool, optional
-        Whether the Tensor/Delta files contain new information
-        and should be saved. The default is True.
+    tensors : bool, optional
+        Whether the Tensor files contain new information and
+        should be saved. The default is True.
+    deltas : bool, optional
+        Whether the Delta files contain new information and
+        should be saved. The default is True.
 
     Returns
     -------
@@ -248,23 +294,21 @@ def _collect_out_contents(rpars):
 def _copy_files_and_directories(files, directories, target):
     """Copy files and directories to target, creating it if not existing."""
     try:
-        target.mkdir(parents=True)
-    except FileExistsError:
-        pass
+        target.mkdir(parents=True, exist_ok=True)
     except OSError:
-        logger.error(f'Error creating {target.name} folder: ', exc_info=True)
+        _LOGGER.error(f'Error creating {target.name} folder: ', exc_info=True)
         return
 
     for item in (*files, *directories):
-        _copy = shutil.copy2 if item.is_file() else copytree_exists_ok
+        _copy = shutil.copy2 if item.is_file() else fs_utils.copytree_exists_ok
         try:
             _copy(item, target/item.name)
         except FileNotFoundError:
             pass
         except OSError:
             which = 'file' if item.is_file() else 'directory'
-            logger.error(f'Error moving {target.name} {which} {item.name}: ',
-                         exc_info=True)
+            _LOGGER.error(f'Error moving {target.name} {which} {item.name}: ',
+                          exc_info=True)
 
 
 def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
@@ -293,7 +337,7 @@ def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
         return
     root_name = at_path.name
     rgx = re.compile(rf'{root_name}_[0-9]{{3,}}')
-    subfolders = (p for p in at_path.glob('*') if p.is_dir())
+    subfolders = (p for p in at_path.iterdir() if p.is_dir())
     for subfolder in subfolders:
         if not rgx.fullmatch(subfolder.name):
             continue
@@ -307,7 +351,7 @@ def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
             try:
                 shutil.rmtree(subfolder)
             except OSError:
-                logger.warning(
+                _LOGGER.warning(
                     f'Error deleting unzipped {root_name} directory '
                     f'{subfolder}. This will increase the size of the '
                     'work folder, but not cause any problems.'
@@ -334,15 +378,15 @@ def _zip_folder(folder, compression_level):
     """
     kwargs = {'compression': ZIP_DEFLATED, 'compresslevel': compression_level}
     arch_name = folder.with_suffix('.zip')
-    logger.info(f'Packing {arch_name}...')
+    _LOGGER.info(f'Packing {arch_name}...')
     # Don't pack the archive into itself
-    to_pack = (f for f in folder.glob('*') if f != arch_name)
+    to_pack = (f for f in folder.iterdir() if f != arch_name)
     try:  # pylint: disable=too-many-try-statements
         with ZipFile(arch_name, 'a', **kwargs) as archive:
             for item in to_pack:
                 archive.write(item, item.relative_to(folder))
     except OSError:
-        logger.error(f'Error packing {arch_name} file: ', exc_info=True)
+        _LOGGER.error(f'Error packing {arch_name} file: ', exc_info=True)
         raise
 
 
@@ -364,12 +408,10 @@ def _collect_delta_files(tensor_index):
         return
     destination = Path(f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{tensor_index:03d}')
     try:
-        destination.mkdir(parents=True)
-    except FileExistsError:
-        pass
+        destination.mkdir(parents=True, exist_ok=True)
     except OSError:
-        logger.error(f'Failed to create {destination} folder: ',
-                     exc_info=True)
+        _LOGGER.error(f'Failed to create {destination} folder: ',
+                      exc_info=True)
         return
     errors = []
     for delta_file in deltas:
@@ -378,9 +420,10 @@ def _collect_delta_files(tensor_index):
         except OSError as exc:
             errors.append(exc)
     if errors:
-        logger.error(f'Error moving Delta files: {errors}')
+        _LOGGER.error(f'Error moving Delta files: {errors}')
 
 
+@_propagate_to_domains
 def move_oldruns(rpars, prerun=False):
     """Copy relevant files to a new 'workhistory' subfolder.
 
@@ -407,31 +450,30 @@ def move_oldruns(rpars, prerun=False):
         rpars.manifest.add(DEFAULT_WORK_HISTORY)
         kwargs = {'delete_unzipped': False,
                   'tensors': False,
-                  'deltas': False}
-        organize_workdir(rpars, path='', **kwargs)
-        for domain in rpars.domainParams:
-            organize_workdir(domain.rp, path=domain.workdir, **kwargs)
+                  'deltas': False,
+                  'path': ''}
+        organize_workdir(rpars, **kwargs)
     _collect_worhistory_contents(rpars, prerun, worhistory_subfolder)
 
 
 def _collect_worhistory_contents(rpars, prerun, to_path):
     """Copy or move files/directories to a workhistory subfolder."""
     files, directories = _find_next_workistory_contents(rpars, prerun)
-    _copy = shutil.copy2 if not prerun else shutil.move
+    _copy = fs_utils.move if prerun else shutil.copy2
     for file in files:
         _copyfile = shutil.copy2 if file in _IOFILES else _copy
         try:
             _copyfile(file, to_path)
         except OSError:
-            logger.warning(f'Error copying {file} to {to_path}. '
-                           'File may get overwritten.')
-    _copy = shutil.copytree if not prerun else shutil.move
+            _LOGGER.warning(f'Error copying {file} to {to_path}. '
+                            'File may get overwritten.')
+    _copy = fs_utils.move if prerun else shutil.copytree
     for directory in directories:
         try:
             _copy(directory, to_path / directory)
         except OSError:
-            logger.warning(f'Error copying {directory} to {to_path}. '
-                           'Files in directory may get overwritten.')
+            _LOGGER.warning(f'Error copying {directory} to {to_path}. '
+                            'Files in directory may get overwritten.')
 
 
 def _find_next_workistory_contents(rpars, prerun):
@@ -442,8 +484,8 @@ def _find_next_workistory_contents(rpars, prerun):
         # Skip manifest, generated, and IO files. Take all logs, as
         # well as SUPP and OUT directories. Also take root files that
         # may have already been copied to SUPP/OUT: the sole purpose
-        # is **removing them** from the root directory (via shutil.move
-        # in _collect_worhistory_contents).
+        # is **removing them** from the root directory (via
+        # fs_utils.move in _collect_worhistory_contents).
         files = [
             f for f in all_files
             if f not in rpars.manifest
@@ -476,12 +518,16 @@ def _find_next_workistory_dir_name(rpars, prerun):
                 if f.is_file() and f.name not in rpars.manifest
                 )
         except ValueError:  # No relevant log files
-            old_timestamp = f'moved-{rpars.timestamp}'
+            old_timestamp = f'{MOVED_LABEL}{rpars.timestamp}'
         else:
             old_timestamp = most_recent_log[-17:-4]
         return f'{dirname_prefix}_{PREVIOUS_LABEL}_{old_timestamp}'
 
     sectionabbrv = {1: 'R', 2: 'D', 3: 'S'}
+    # NB: when executed in a domain subfolder, rpars.runHistory is
+    # actually the main history of segments, as domain.rpars.runHistory
+    # is the same object as main_rpars.runHistory. This is set up in
+    # run_sections.
     new_segments = rpars.runHistory[len(rpars.lastOldruns):]
     abbreviations = ''.join(sectionabbrv.get(index, '')
                             for index in new_segments)
@@ -514,7 +560,7 @@ def _make_new_workhistory_subfolder(rpars, prerun):
     try:
         workhistory.mkdir(exist_ok=True)
     except OSError:
-        logger.error(f'Error creating {workhistory} folder: ', exc_info=True)
+        _LOGGER.error(f'Error creating {workhistory} folder: ', exc_info=True)
         raise
 
     dirname = _find_next_workistory_dir_name(rpars, prerun)
@@ -522,55 +568,59 @@ def _make_new_workhistory_subfolder(rpars, prerun):
     try:
         subfolder.mkdir()
     except OSError:
-        logger.error(f'Error creating {subfolder}: ', exc_info=True)
+        _LOGGER.error(f'Error creating {subfolder}: ', exc_info=True)
         raise
     return subfolder
 
 
-def cleanup(manifest, rpars=None):
+def cleanup(rpars_or_manifest):
     """Finalize a viperleed.calc execution.
 
     After a call to this function:
     - Files in the current directory and all domain work directories
-      are organized into SUPP, OUT, Tensors, and Deltas folders
+      are organized into SUPP, OUT, Tensors, and Deltas folders.
     - The manifest file is written in the current directory. It
       contains information about which files should be moved back
       to the original folder where calc was started.
     - Final messages are written to the log, including information
       about duration of the overall calculation, the segments that
       were executed, and the final R factors. Warnings concerning
-      the bookkeeper and a checklist of items for user are also
+      the bookkeeper and a checklist of items for users are also
       logged.
-
-    The logging module is fully shut down after this function
-    is executed, and should not be used any longer.
 
     Parameters
     ----------
-    manifest : set of str
-        The files and directories that should be preserved from
-        the work folder.
-    rpars : Rparams, optional
-        The run parameters. If None, it is assumed that the run
+    rpars_or_manifest : Rparams or ManifestFile
+        The run parameters, or information about the files and
+        directories that should be preserved from the work folder.
+        If a ManifestFile, it is assumed that the run
         crashed before an Rparams object existed.
 
     Returns
     -------
     None.
     """
-    logger.info('\nStarting cleanup...')
-    if rpars is None:  # Make a dummy, essentially empty one
+    _LOGGER.info('\nStarting cleanup...')
+    try:
+        rpars_or_manifest.add_manifest
+    except AttributeError:      # Not a ManifestFile
+        try:
+            rpars_or_manifest.BULK_REPEAT
+        except AttributeError:  # Also not an Rparams
+            raise TypeError(
+                'Expected Rparams or ManifestFile, got '
+                f'{type(rpars_or_manifest).__name__!r} instead.'
+                ) from None
+        rpars = rpars_or_manifest
+    else:
+        # Make a dummy, essentially empty Rparams
         rpars = Rparams()
-        rpars.manifest = manifest
+        rpars.manifest = rpars_or_manifest
         rpars.timer = None  # To print the correct final message
 
     _organize_all_work_directories(rpars)
-    _write_manifest_file(manifest)
+    _write_manifest_file(rpars)
     _write_final_log_messages(rpars)
-
-    # Shut down logger
-    close_all_handlers(logger)
-    logging.shutdown()
 
 
 def preserve_original_inputs(rpars):
@@ -609,21 +659,31 @@ def preserve_original_inputs(rpars):
     except StopIteration:  # No EXPBEAMS
         pass
 
-    for filename in files_to_preserve:
-        file = Path(filename)
-        if not file.is_file() and filename in OPTIONAL_INPUT_FILES:
-            continue
-        if not file.is_file():
-            logger.warning(f'Could not find file {file}. It will not '
-                           f'be stored in {ORIGINAL_INPUTS_DIR_NAME}.')
-            rpars.setHaltingLevel(1)
-            continue
+    # Remember which missing files we should not complain about
+    dont_complain = set(OPTIONAL_INPUT_FILES)
+    if 'DOMAIN' in rpars.readParams:
+        dont_complain.update(SKIP_IN_DOMAIN_MAIN)
+
+    for file in files_to_preserve:
         try:
-            shutil.copy2(file, orig_inputs)
+            _preserve_one_file(file, orig_inputs, dont_complain)
         except OSError:
-            logger.warning(f'Could not copy file {file} to '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rpars.setHaltingLevel(1)
+
+
+def _preserve_one_file(file, to_path, dont_complain):
+    """Copy `file` `to_path`."""
+    try:
+        shutil.copy2(file, to_path)
+    except FileNotFoundError:
+        if file in dont_complain:
+            return
+        _LOGGER.warning(f'Could not find file {file}. It will not '
+                        f'be stored in {to_path.name}.')
+        raise
+    except OSError:
+        _LOGGER.warning(f'Could not copy file {file} to {to_path.name}.')
+        raise
 
 
 def _delete_old_executables():
@@ -642,7 +702,7 @@ def _delete_old_executables():
             try:
                 file.unlink()
             except OSError:
-                logger.debug(f'Failed to delete file {file}')
+                _LOGGER.debug(f'Failed to delete file {file}.')
 
 
 def _delete_old_root_directories():
@@ -658,7 +718,7 @@ def _delete_old_root_directories():
         except FileNotFoundError:
             pass
         except OSError:
-            logger.warning(f'Failed to clear {directory} folder.')
+            _LOGGER.warning(f'Failed to clear {directory} folder.')
 
 
 def _delete_out_suffixed_files():
@@ -667,7 +727,7 @@ def _delete_out_suffixed_files():
         try:
             file.unlink()
         except OSError:
-            logger.warning(f'Failed to delete previous {file} file.')
+            _LOGGER.warning(f'Failed to delete previous {file} file.')
 
 
 def _organize_all_work_directories(rpars):
@@ -692,18 +752,18 @@ def _organize_all_work_directories(rpars):
                 'rpars': rpars,
                 'path': ''}]
     to_sort.extend(
-        {'tensors': DEFAULT_TENSORS in dp.rp.manifest,
-         'deltas': DEFAULT_DELTAS in dp.rp.manifest,
-         'rpars': dp.rp,
-         'path': dp.workdir}
-        for dp in rpars.domainParams
+        {'tensors': DEFAULT_TENSORS in domain.rpars.manifest,
+         'deltas': DEFAULT_DELTAS in domain.rpars.manifest,
+         'rpars': domain.rpars,
+         'path': domain.workdir}
+        for domain in rpars.domainParams
         )
     for kwargs in to_sort:
         organize_workdir(delete_unzipped=True, **kwargs)
 
 
 def _silently_remove_files(*files):
-    """Delete files from this directory without complaining for errors."""
+    """Delete `files` from this directory without complaining for errors."""
     for file in files:
         file = Path(file)
         try:
@@ -716,13 +776,15 @@ def _write_final_log_messages(rpars):
     """Emit the last logging messages concerning the calculation."""
     elapsed = ('unknown' if not rpars.timer
                else rpars.timer.how_long(as_string=True))
-    logger.info(f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
-                f'\nTotal elapsed time: {elapsed}\n')
+    _LOGGER.info(
+        f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
+        f'\nTotal elapsed time: {elapsed}\n'
+        )
 
     # Write information about executed sections
     if rpars.runHistory:
         segments = ' '.join(str(s) for s in rpars.runHistory)
-        logger.info(f'Executed segments: {segments}')
+        _LOGGER.info(f'Executed segments: {segments}')
 
     # Write the final R factors, if any, including integer/fractional
     for section, r_factors in rpars.stored_R.items():
@@ -732,35 +794,35 @@ def _write_final_log_messages(rpars):
         msg = f'Final R ({section}): {overall:.4f}'
         if integer > 0 and fractional > 0:
             msg += f' ({integer:.4f} / {fractional:.4f})'
-        logger.info(msg)
+        _LOGGER.info(msg)
 
     # Warn about manually running bookkeeper for domain calculations
     if rpars.domainParams:
-        logger.info(
+        _LOGGER.info(
             'Domain calculations have been run. Note that the bookkeeper will '
-            'only run automatically in the top level calculation directory. '
+            'only run automatically in the top-level calculation directory. '
             'To preserve optimizations for individual domains, please run '
             'bookkeeper manually in the respective domain directories. '
             'The command is: viperleed bookkeeper --archive.\n'
             )
 
     if rpars.checklist:
-        logger.info('')
-        logger.info('# The following issues should be '
-                    'checked before starting again:')
+        _LOGGER.info('')
+        _LOGGER.info('# The following issues should be '
+                     'checked before starting again:')
         for item in rpars.checklist:
-            logger.info(f'- {item}')
-    logger.info('')
+            _LOGGER.info(f'- {item}')
+    _LOGGER.info('')
 
 
-def _write_manifest_file(manifest_contents):
-    """Write items in manifest_contents to file 'manifest'."""
-    manifest_contents = set(manifest_contents)
-    manifest = Path('manifest')
+def _write_manifest_file(rpars):
+    """Write manifest to file 'manifest', collecting also domain files."""
+    manifest = rpars.manifest
+    for domain in rpars.domainParams:
+        manifest.add_manifest(domain.rpars.manifest, label=str(domain))
     try:
-        manifest.write_text('\n'.join(manifest_contents) + '\n',
-                            encoding='utf-8')
+        manifest.write()
     except OSError:
-        logger.error(f'Failed to write {manifest} file.')
+        _LOGGER.error(f'Failed to write {manifest.name} file.')
     else:
-        logger.info(f'Wrote {manifest} file successfully.')
+        _LOGGER.info(f'Wrote {manifest.name} file successfully.')

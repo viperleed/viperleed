@@ -11,7 +11,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-03'
 __license__ = 'GPLv3+'
 
@@ -25,3 +25,11 @@ DEFAULT_WORK = 'work'
 DEFAULT_WORK_HISTORY = 'workhistory'
 LOG_PREFIX = 'viperleed-calc'
 ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
+SKIP_IN_DOMAIN_MAIN = (
+    # Input files that should not be present in the
+    # main work directory in a multi-domain calculation.
+    # They are all those that are dependent on the structure.
+    'PHASESHIFTS',
+    'POSCAR',
+    'VIBROCC',
+    )

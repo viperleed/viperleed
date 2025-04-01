@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-09-01'
 __license__ = 'GPLv3+'
 
@@ -139,7 +139,7 @@ class CasesNotesField:
     def case_trailing_spaces(self, make_notes):
         """Return a multi-line NotesField with trailing spaces."""
         lines = [' '*2*i + f'Line {i}' + ' '*i for i in range(5)]
-        # Add trailing newlines, removed by FieldBase by not NotesField
+        # Add trailing \n, removed by FieldBase but not by NotesField
         lines.extend(' '*i for i in range(5))
         lines_stripped = tuple(line.rstrip() for line in lines)
         notes, info = self.make_notes_and_info('\n'.join(lines), make_notes)
@@ -187,7 +187,7 @@ class TestNotesField:
         'extra discarded': (UnknownField(_DISCARDED), 0),
         'notes field discarded': (
             NotesField('Additional note').as_discarded(),
-            1
+            1,
             ),
         'string discarded only': (_DISCARDED, 0),
         'string multi-line discarded': ('Additional note\n'*3 + _DISCARDED, 3),
@@ -360,9 +360,8 @@ class TestNotesField:
         # Now add some notes and check again
         extra = 'Some text'
         notes += extra
-        # expect_str = f'Notes: {extra}\nDISCARDED\n'
-        lines = (f'{_DISCARDED}' if notes.is_discarded else f'\n{extra}',
-                 f'{extra}' if notes.is_discarded else f'{_DISCARDED}')
+        lines = (_DISCARDED if notes.is_discarded else f'\n{extra}',
+                 f'{extra}' if notes.is_discarded else _DISCARDED)
         expect_str = 'Notes: ' + '\n'.join(lines)
         expect_value = (() if notes.is_discarded else ('',)) + (extra,)
         discarded = notes.as_discarded()
@@ -399,7 +398,7 @@ class TestNotesField:
 
     @empty_notes
     def test_empty_notes_acceptable(self, notes, _):
-        """Check that an empty notes filed is not marked as problematic."""
+        """Check that an empty notes field is not marked as problematic."""
         assert notes.value is EmptyField
         assert notes.was_understood
         assert not notes.needs_fixing

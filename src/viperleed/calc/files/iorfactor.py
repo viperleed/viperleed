@@ -9,7 +9,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -20,7 +20,7 @@ import re
 import fortranformat as ff
 import numpy as np
 
-from viperleed.calc.classes.rparams import EnergyRange
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase

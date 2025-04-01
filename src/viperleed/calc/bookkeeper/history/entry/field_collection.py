@@ -6,7 +6,7 @@ Defines base classes for collections of FieldBase objects.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-07-31'
 __license__ = 'GPLv3+'
 
@@ -15,14 +15,13 @@ from collections.abc import MutableSequence
 from copy import deepcopy
 from typing import Generator
 
+from viperleed.calc.bookkeeper.history.entry.enums import DuplicateType
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import FieldBase
+from viperleed.calc.bookkeeper.history.entry.field import UnknownField
+from viperleed.calc.bookkeeper.history.entry.notes_field import NotesField
+from viperleed.calc.bookkeeper.history.errors import FieldsScrambledError
 from viperleed.calc.lib.sequence_utils import conditional_sort
-
-from ..errors import FieldsScrambledError
-from .enums import DuplicateType
-from .enums import FieldTag
-from .field import FieldBase
-from .field import UnknownField
-from .notes_field import NotesField
 
 
 class FieldList(MutableSequence):
@@ -194,7 +193,7 @@ class FieldList(MutableSequence):
             self.insert(index, value)
 
     def remove_fields(self, *fields):
-        """Remove one of more fields from this FieldList."""
+        """Remove one or more fields from this FieldList."""
         # Store some backup values in case any fields are invalid
         backup_seq = self._seq.copy()
         backup_maps = deepcopy(self._maps)

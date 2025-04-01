@@ -4,7 +4,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -60,6 +60,7 @@ class TestSearchAg100:
         """Check that none of the files generated has an _OUT suffix."""
         out_suffixed = search_files_ag100.work_path.rglob('*_OUT*')
         # Skip R_OUT files
+        # pylint: disable-next=magic-value-comparison
         out_suffixed = (f for f in out_suffixed if 'R=' not in f.name)
         assert not any(out_suffixed)
 

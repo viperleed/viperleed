@@ -9,11 +9,12 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-11-15'
 __license__ = 'GPLv3+'
 
 import logging
+import re
 
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
@@ -21,16 +22,16 @@ from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
-from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 
 from ....helpers import filesystem_to_dict
 from ..conftest import MOCK_INPUT_CONTENT
+from ..conftest import MOCK_ORIG_CONTENT
 from ..conftest import MOCK_OUT_CONTENT
 from ..conftest import MOCK_OUT_SUFFIXED_CONTENT
-from ..conftest import MOCK_ORIG_CONTENT
 from ..conftest import MOCK_STATE_FILES
 from ..conftest import MOCK_WORKHISTORY
 
@@ -40,10 +41,43 @@ class _TestCheckers:
 
     @staticmethod
     def _check_file_contents(path, *expected_contents):
-        """Check that the file at path has any of the expected_contents."""
+        """Check that the file at `path` has any of the `expected_contents`."""
         assert path.is_file()
         contents = path.read_text()
         assert any(e in contents for e in expected_contents)
+
+    def _check_history_exists(self, bookkeeper, history_run_path, *_):
+        """Test that `history_run_path` and history.info exist."""
+        assert history_run_path.is_dir()
+        assert (bookkeeper.cwd / HISTORY_INFO_NAME).exists()
+        self.check_metadata_exists(history_run_path)
+
+    def _check_workhistory_archived(self, bookkeeper, *_):
+        """Ensure the workhistory folders have been stored correctly."""
+        history = bookkeeper.history.path
+        # pylint: disable-next=protected-access           # OK in tests
+        workhistory = bookkeeper._workhistory.path
+        assert not workhistory.is_dir()
+        for ori_name, hist_name in MOCK_WORKHISTORY.items():
+            if hist_name is None:  # File should be deleted
+                continue
+            moved_dir = history/hist_name
+            moved_file = moved_dir/'file'
+            assert moved_dir.is_dir()
+            self._check_file_contents(moved_file, ori_name)
+
+    def _check_input_files_in_history(self, *run):
+        """Make sure that input files were stored in history."""
+        *_, history_run_path, _ = run
+        for file in MOCK_STATE_FILES:
+            archived_input = history_run_path / file
+            assert archived_input.is_file()
+            self._check_file_contents(archived_input, MOCK_ORIG_CONTENT)
+
+    def _check_out_files_in_history(self, *run, out_suffixed=False):
+        """Check that the expected state files are stored in 'OUT'."""
+        *_, history_run_path, _ = run
+        self.check_out_files_at_path(history_run_path, out_suffixed)
 
     @staticmethod
     def check_complained_about_edited(caplog):
@@ -56,28 +90,23 @@ class _TestCheckers:
         """Make sure bookkeeper exited with a non-failure condition."""
         assert exit_code is not BookkeeperExitCode.FAIL
 
-    @staticmethod
-    def check_metadata_exists(history_folder):
-        """Test that the metadata file is present in `history_folder`."""
-        assert (history_folder / _METADATA_NAME).is_file()
-
-    def check_input_files_in_history(self, *run):
-        """Make sure that input files were stored in history."""
-        *_, history_run_path, _ = run
-        for file in MOCK_STATE_FILES:
-            archived_input = history_run_path / file
-            assert archived_input.is_file()
-            self._check_file_contents(archived_input, MOCK_ORIG_CONTENT)
-
-    def check_history_exists(self, bookkeeper, history_run_path, *_):
-        """Test that history_path and directory/history.info exist."""
-        assert history_run_path.is_dir()
-        assert (bookkeeper.cwd / HISTORY_INFO_NAME).exists()
-        self.check_metadata_exists(history_run_path)
+    def check_has_archived(self, run, has_out_suffixed=False, **kwargs):
+        """Check that the root directory has been archived to history."""
+        self._check_history_exists(*run)
+        self._check_out_files_in_history(*run, out_suffixed=has_out_suffixed)
+        self._check_input_files_in_history(*run)
+        if kwargs['mode'] is Mode.ARCHIVE:
+            self.check_root_after_archive(*run, out_suffixed=has_out_suffixed)
+        else:
+            self.check_root_is_clean(*run)
+        # Check that the workhistory directories are
+        # also where they should be
+        bookkeeper, *_ = run
+        self._check_workhistory_archived(bookkeeper)
 
     @staticmethod
     def check_history_folder_empty(bookkeeper, *_):
-        """Test that an empty history folder exists, except bookkeeper.log."""
+        """Test that an empty (except bookkeeper log) history folder exists."""
         cwd = bookkeeper.cwd
         assert (cwd / DEFAULT_HISTORY).exists()
         history_contents = (f for f in (cwd / DEFAULT_HISTORY).iterdir()
@@ -85,46 +114,72 @@ class _TestCheckers:
         assert not any(history_contents)
 
     @staticmethod
+    def check_last_log_message(caplog, mode, exit_code):
+        """Check that bookkeeper emits one meaningful last log message."""
+        records = ((r, r.getMessage()) for r in reversed(caplog.records))
+        last_record, msg = next((r, m) for r, m in records
+                                if m and EDITED_SUFFIX not in m)
+        expect_level = {
+            BookkeeperExitCode.FAIL: logging.ERROR,
+            BookkeeperExitCode.NOTHING_TO_DO: logging.INFO,
+            BookkeeperExitCode.SUCCESS: logging.INFO,
+            }
+        expect_msg = {
+            BookkeeperExitCode.FAIL: 'Fail.*',
+            BookkeeperExitCode.NOTHING_TO_DO: (
+                '.*Exiting without doing anything.' if mode is Mode.ARCHIVE
+                else 'Found nothing to do. Exiting...'
+                ),
+            BookkeeperExitCode.SUCCESS: '(Successfully|Done).*',
+            }
+        assert last_record.levelno == expect_level[exit_code]
+        assert re.fullmatch(expect_msg[exit_code], msg)
+
+    @staticmethod
+    def check_metadata_exists(history_folder):
+        """Test that the metadata file is present in `history_folder`."""
+        assert (history_folder / _METADATA_NAME).is_file()
+
+    @staticmethod
     def check_no_duplicate_logs(caplog):
-        """Ensure no warning is repeated twice."""
+        """Ensure all log messages appear only once."""
         all_messages = (r.getMessage() for r in caplog.records)
         messages = [m for m in all_messages if m.strip()]
         assert len(set(messages)) == len(messages)
 
     @staticmethod
-    def check_no_warnings(caplog, contain=None, exclude_msgs=()):
+    def check_no_warnings(caplog, exclude_msgs=()):
         """Check that there are no warnings or errors."""
-        if contain is None:
-            def _record_faulty(record):
-                return record.levelno >= logging.WARNING
-        else:
-            def _record_faulty(record):
-                return (record.levelno >= logging.WARNING
-                        and contain in str(record))
-        faulty = [
-            rec
-            for rec in caplog.records
-            if not any(exclude in str(rec) for exclude in exclude_msgs)
-            and _record_faulty(rec)
-            ]
+        def _record_faulty(record):
+            """Return whether record is not an excluded one."""
+            if record.levelno < logging.WARNING:
+                return False
+            msg = str(record)
+            return not any(exclude in msg for exclude in exclude_msgs)
+        faulty = [rec for rec in caplog.records if _record_faulty(rec)]
         assert not any(faulty), f'Found: {faulty[0].getMessage()!r}'
 
     def check_out_files_at_path(self, path, out_suffixed=False):
-        """Check that all output files are found at path/DEFAULT_OUT."""
+        """Check that all output files are found at `path`/DEFAULT_OUT."""
         expected_contents = (MOCK_OUT_SUFFIXED_CONTENT if out_suffixed
                              else MOCK_OUT_CONTENT)
         out_path = path / DEFAULT_OUT
         for file in MOCK_STATE_FILES:
-            other_file = file if out_suffixed else f'{file}_OUT'
-            file = f'{file}_OUT' if out_suffixed else file
-            self._check_file_contents(out_path/file, expected_contents)
+            try:
+                out_suffixed_file = next(out_path.glob(f'{file}_OUT_*'))
+            except StopIteration:
+                # pylint: disable-next=magic-value-comparison
+                if out_suffixed and file == 'PARAMETERS':
+                    # There was no PARAMETERS in OUT for < v0.13.0
+                    continue
+                if out_suffixed:
+                    raise
+                out_suffixed_file = out_path/f'{file}_OUT'  # A dummy
+            expect_file = out_suffixed_file if out_suffixed else out_path/file
+            other_file = out_path/file if out_suffixed else out_suffixed_file
+            self._check_file_contents(expect_file, expected_contents)
             # Only one between _OUT-suffixed and non-suffixed
-            assert not (out_path/other_file).is_file()
-
-    def check_out_files_in_history(self, *run, out_suffixed=False):
-        """Check that the expected state files are stored in 'OUT'."""
-        *_, history_run_path, _ = run
-        self.check_out_files_at_path(history_run_path, out_suffixed)
+            assert not other_file.is_file()
 
     def check_out_files_untouched(self, bookkeeper, *_, out_suffixed=False):
         """Ensure all expected files are found in OUT."""
@@ -149,7 +204,7 @@ class _TestCheckers:
 
     def check_root_inputs_replaced_by_out_or_ori(self, bookkeeper, *_,
                                                  out_suffixed=False):
-        """Check that the input files in root come from OUT/original_inputs."""
+        """Check that input files in root come from OUT or original_inputs."""
         cwd = bookkeeper.cwd
         out_contents = (MOCK_OUT_SUFFIXED_CONTENT if out_suffixed
                         else MOCK_OUT_CONTENT)
@@ -157,6 +212,8 @@ class _TestCheckers:
             self._check_file_contents(cwd/file,
                                       out_contents,
                                       MOCK_ORIG_CONTENT)
+            if any((cwd/DEFAULT_OUT).glob(f'{file}*')):
+                self._check_file_contents(cwd/file, out_contents)
 
     def check_root_inputs_untouched(self, bookkeeper, *_):
         """Check the the original state files have not been moved."""
@@ -179,20 +236,6 @@ class _TestCheckers:
         self.check_root_is_clean(bookkeeper)
         self.check_root_inputs_untouched(bookkeeper)
 
-    def check_workhistory_archived(self, bookkeeper, *_):
-        """Ensure the workhistory folders have been stored correctly."""
-        history = bookkeeper.history.path
-        # pylint: disable-next=protected-access           # OK in tests
-        workhistory = bookkeeper._workhistory.path
-        assert not workhistory.is_dir()
-        for ori_name, hist_name in MOCK_WORKHISTORY.items():
-            if hist_name is None:  # File should be deleted
-                continue
-            moved_dir = history/hist_name
-            moved_file = moved_dir/'file'
-            assert moved_dir.is_dir()
-            self._check_file_contents(moved_file, ori_name)
-
     def has_out_suffixed(self, bookkeeper, *_):
         """Return whether there are any old-style _OUT files in OUT.
 
@@ -203,6 +246,8 @@ class _TestCheckers:
         bookkeeper : Bookkeeper
             A bookkeeper instance. Its .cwd/OUT folder is checked
             for _OUT files.
+        *_ : object
+            Other unused positional arguments.
 
         Returns
         -------
@@ -234,18 +279,8 @@ class _TestBookkeeperRunBase(_TestCheckers):
         assert not bookkeeper.archiving_required
         self._run_bookkeeper(bookkeeper, kwargs, caplog)
         bookkeeper.update_from_cwd(silent=True)
-        self.check_history_exists(*after_archive)
-        self.check_out_files_in_history(*after_archive,
-                                        out_suffixed=has_out_suffixed)
-        self.check_input_files_in_history(*after_archive)
-        if kwargs['mode'] is BookkeeperMode.ARCHIVE:
-            self.check_root_after_archive(*after_archive,
-                                          out_suffixed=has_out_suffixed)
-        else:
-            self.check_root_is_clean(*after_archive)
-        # Check that the workhistory directories are
-        # also where they should be
-        self.check_workhistory_archived(bookkeeper)
+        kwargs['has_out_suffixed'] = has_out_suffixed
+        self.check_has_archived(after_archive, **kwargs)
 
     def run_after_calc_exec_and_check(self,
                                       after_calc_execution,
@@ -269,10 +304,8 @@ class _TestBookkeeperRunBase(_TestCheckers):
             )
         self._run_bookkeeper(bookkeeper, kwargs, caplog)
         bookkeeper.update_from_cwd(silent=True)
-        self.check_history_exists(*after_calc_execution)
-        self.check_out_files_in_history(*after_calc_execution,
-                                        out_suffixed=has_out_suffixed)
-        self.check_workhistory_archived(*after_calc_execution)
+        kwargs['has_out_suffixed'] = has_out_suffixed
+        self.check_has_archived(after_calc_execution, **kwargs)
         check_edited_files.assert_called()
 
     def run_again_and_check_nothing_changed(self, run, caplog,
@@ -350,7 +383,7 @@ class _TestBookkeeperRunBase(_TestCheckers):
             assert not bookkeeper.archiving_required
         # NOTICE: we do not update_from_cwd on purpose. This way,
         # the bookkeeper is left in the exact same state it has
-        # after a execution as part of the viperleed.calc CLI.
+        # after an execution as part of the viperleed.calc CLI.
         exit_code = self._run_bookkeeper(bookkeeper, kwargs, caplog)
         # Bookkeeper should not do anything (except for logging)
         self.check_history_folder_empty(before_calc_execution)
@@ -359,10 +392,13 @@ class _TestBookkeeperRunBase(_TestCheckers):
 
     def _run_bookkeeper(self, bookkeeper, kwargs, caplog):
         """Execute a bookkeeper run and return its exit code."""
+        caplog.set_level(5)  # < DEBUG
         kwargs.setdefault('mode', self.mode)
         exit_code = bookkeeper.run(**kwargs)
+        kwargs['mode'] = Mode(kwargs['mode'])
         # NOTICE: we do not update_from_cwd on purpose. This way,
         # the bookkeeper is left in the exact same state it has
-        # after a execution as part of the viperleed.calc CLI.
+        # after an execution as part of the viperleed.calc CLI.
         self.check_no_duplicate_logs(caplog)
+        self.check_last_log_message(caplog, kwargs['mode'], exit_code)
         return exit_code

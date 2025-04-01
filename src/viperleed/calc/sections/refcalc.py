@@ -5,7 +5,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -23,6 +23,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import beams
 from viperleed.calc.files import iorefcalc
 from viperleed.calc.files.ivplot import plot_iv
+from viperleed.calc.lib import fs_utils
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
 from viperleed.calc.lib.checksums import validate_multiple_files
@@ -51,7 +52,7 @@ _TENSOR_INPUT_FILES = (
 # TODO: when implementing the compile task class, we should also
 # refactor the tenserleed source class such that we can directly use
 # zipped source directories
-class RefcalcCompileTask():
+class RefcalcCompileTask:
     """Information to compile a reference calculation executable.
 
     Attributes
@@ -152,12 +153,68 @@ class RefcalcCompileTask():
 # TODO: similar to RefcalcCompileTask, also RefcalcRunTask could
 # profit from some refactoring to collect portions of code similar
 # to those in deltas.DeltaRunTask (to be done in #43).
-class RefcalcRunTask():
-    """Stores information for a worker to create a subfolder, copy input there,
-    compile and run a reference calculation, and copy results back."""
+class RefcalcRunTask:
+    """Information for executing a reference calculation.
+
+    Attributes
+    ----------
+    collect_at : Pathlike
+        Folder to which the results of the calculation should be
+        moved after completion. Only used if not `single_threaded`.
+    comptask : RefcalcCompileTask
+        The task that was used to create an executable for this
+        calculation.
+    energy : float
+        The electron energy (in electronvolts) for this reference
+        calculation. Only used if not `single_threaded`.
+    fin : str
+        Contents of the input piped to the reference-calculation
+        executable. It is edited at runtime if not `single_threaded`.
+    foldername : str
+        Name of the temporary directory in which calculations
+        should be executed. Only used if not `single_threaded`.
+    logname : str
+        Name of the log file to which runtime information is
+        collected. Only used if not `single_threaded`.
+    single_threaded : bool
+        Whether this reference calculation uses one thread or
+        it is a part of a larger calculation that is split over
+        multiple threads.
+    tl_version : Version
+        The TensErLEED version used to compile the executable.
+    """
 
     def __init__(self, fin, energy, comptask, logname,
-                 collect_at="", single_threaded=False, tl_version=0.):
+                 collect_at='', single_threaded=False, tl_version=0.):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        fin : str
+            Contents of the input piped to the reference-calculation
+            executable. It is edited at runtime if not `single_threaded`.
+        energy : float
+            The electron energy (in electronvolts) for this reference
+            calculation. Only used if not `single_threaded`.
+        comptask : RefcalcCompileTask
+            The task that was used to create an executable for this
+            calculation.
+        logname : str
+            Name of the log file to which runtime information is
+            collected. Only used if not `single_threaded`.
+        collect_at : Pathlike, optional
+            Folder to which the results of the calculation should be
+            moved after completion. Only used if not `single_threaded`.
+            Default is the directory in which this RefcalcRunTask
+            is executed.
+        single_threaded : bool, optional
+            Whether this reference calculation uses one thread or
+            it is a part of a larger calculation that is split over
+            multiple threads. Default is False.
+        tl_version : float or Version, optional
+            The TensErLEED version used to compile the executable.
+            Default is 0.
+        """
         self.collect_at = collect_at
         self.comptask = comptask
         self.energy = energy
@@ -329,7 +386,7 @@ def run_refcalc(runtask):
         tensorfiles = (f for f in Path().glob('T_*') if f.is_file())
         for tensor in tensorfiles:
             try:   # move instead of copy to not duplicate the large files
-                shutil.move(tensor, targetpath/f'{tensor.name}{energy}')
+                fs_utils.move(tensor, targetpath/f'{tensor.name}{energy}')
             except OSError:
                 logger.error('Failed to copy refcalc output file '
                              f'{tensor} to main folder.', exc_info=True)
@@ -819,16 +876,16 @@ def run_refcalc_for_one_domain(domain):
     """
     with execute_in_dir(domain.workdir):
         try:
-            refcalc(domain.sl, domain.rp, subdomain=True)
+            refcalc(domain.slab, domain.rpars, subdomain=True)
         except Exception:
             logger.error('Exception during reference calculation '
-                         f'for domain {domain.name}: ', exc_info=True)
+                         f'for {domain}: ', exc_info=True)
             raise
 
 
 def refcalc_domains(rp):
     """Runs reference calculations for the domains that require them."""
-    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     if not rr:
         logger.info("Found no domain which requires a reference calculation.")
         return
@@ -840,15 +897,14 @@ def refcalc_domains(rp):
             logger.error("No fortran compiler found, cancelling...")
             raise
     for dp in rp.domainParams:
-        dp.rp.FORTRAN_COMP = rp.FORTRAN_COMP
+        dp.rpars.FORTRAN_COMP = rp.FORTRAN_COMP
     rp.updateCores()  # if number of cores is not defined, try to find it
-    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     logger.info("Running reference calculations in subfolders for domains: "
                 + ", ".join([d.name for d in rr]))
 
     for dp in rr:
-        logger.info("Starting reference calculation for domain {}"
-                    .format(dp.name))
+        logger.info(f'Starting reference calculation for {dp}')
         run_refcalc_for_one_domain(dp)
     logger.info("Domain reference calculations finished.")
 
@@ -868,8 +924,9 @@ def refcalc_domains(rp):
             "Reference calculations were done for all domains, but no "
             "area weights for the different domains are available yet. "
             "Getting unweighted average over domain beams...")
-    rp.theobeams["refcalc"] = beams.averageBeams([
-        dp.rp.theobeams["refcalc"] for dp in rp.domainParams], weights=weights)
+    rp.theobeams["refcalc"] = beams.averageBeams([dp.rpars.theobeams["refcalc"]
+                                                  for dp in rp.domainParams],
+                                                 weights=weights)
     try:
         beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
         theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])

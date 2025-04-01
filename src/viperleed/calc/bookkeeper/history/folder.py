@@ -1,31 +1,38 @@
 """Module folder of viperleed.calc.bookkeeper.history.
 
-Defines the HistoryFolder class, a collection of information
-concerning a single folder in the history directory.
+Defines classes containing information about a single folder in the
+history directory.
 """
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
 from enum import Enum
+import logging
 from pathlib import Path
+import re
 import shutil
 
+from viperleed.calc.bookkeeper.constants import HISTORY_FOLDER_RE
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
+from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
+from viperleed.calc.bookkeeper.log import LogFiles
+from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
+from viperleed.calc.bookkeeper.utils import make_property
+from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
+from viperleed.calc.sections.cleanup import MOVED_LABEL
 
-from ..constants import HISTORY_FOLDER_RE
-from ..log import LOGGER
-from ..mode import BookkeeperMode as Mode
-from ..utils import make_property
-from .errors import CantRemoveEntryError
-from .errors import MetadataMismatchError
-from .meta import BookkeeperMetaFile
+
+LOGGER = logging.getLogger(__name__)
 
 
 class FolderFixAction(Enum):
@@ -54,8 +61,9 @@ class IncompleteHistoryFolder:
     path: Path
 
     # Attributes computed during __post_init__
-    tensor_num: int = non_init_field()
     job_num: int = non_init_field()
+    tensor_num: int = non_init_field()
+    timestamp: str = non_init_field()
 
     name = make_property('path.name')
 
@@ -74,11 +82,11 @@ class IncompleteHistoryFolder:
         copy = shutil.copy2 if file_path.is_file() else shutil.copytree
         try:
             copy(file_path, self.path / dest_name)
-        except OSError:
+        except OSError as exc:
             err_msg = f'Failed to copy {file_path.name}'
-            if with_name:
+            if with_name != file_path.name:
                 err_msg += f' as {dest_name}'
-            err_msg += ' to history.'
+            err_msg += f' to {DEFAULT_HISTORY}. {exc}'
             LOGGER.error(err_msg)
 
     def _analyze_path(self):
@@ -87,18 +95,37 @@ class IncompleteHistoryFolder:
         match_ = HISTORY_FOLDER_RE.fullmatch(path.name)
         if not match_:
             raise ValueError(
-                f'Invalid history folder {path.name} at {path.parent}. '
-                f'Does not match {HISTORY_FOLDER_RE.pattern}'
+                f'Invalid {DEFAULT_HISTORY} folder {path.name} at '
+                f'{path.parent}. Does not match {HISTORY_FOLDER_RE.pattern}.'
                 )
         set_frozen_attr(self, 'tensor_num', int(match_['tensor_num']))
         set_frozen_attr(self, 'job_num', int(match_['job_num']))
+
+        # Now timestamp. This is always the last bit, after the
+        # underscore. Notice that, since we never add PREVIOUS
+        # workhistory folders to history, the timestamp can only
+        # match "(moved-)\d{6}-\d{6}". The "moved-" bit is also
+        # very unlikely, as it is only added by bookkeeper if it
+        # does not find a log file.
+        match_ = re.fullmatch(
+            rf'.*_(?P<timestamp>({MOVED_LABEL})?\d{{6}}-\d{{6}})',
+            match_['rest'],
+            )
+        if not match_:
+            raise ValueError(
+                f'Invalid {DEFAULT_HISTORY} folder {path.name} at '
+                f'{path.parent}. Does not end with a timestamp.'
+                )
+        set_frozen_attr(self, 'timestamp', match_['timestamp'])
 
 
 @frozen
 class HistoryFolder(IncompleteHistoryFolder):
     """A collection of information concerning a folder in history."""
 
-    metadata: BookkeeperMetaFile = non_init_field()  # At __post_init__
+    # Attributes computed during __post_init__
+    logs: LogFiles = non_init_field()
+    metadata: BookkeeperMetaFile = non_init_field()
 
     parent = make_property('metadata.parent')
     hash_ = make_property('metadata.hash_')
@@ -107,7 +134,7 @@ class HistoryFolder(IncompleteHistoryFolder):
     def has_metadata(self):
         """Return whether this folder contains a metadata file."""
         # pylint: disable-next=no-member    # It's a BookkeeperMetaFile
-        return self.metadata.path.is_file()
+        return self.metadata.file.is_file()
 
     def check_consistent_with_entry(self, entry):
         """Raise unless this folder is consistent with a history.info entry."""
@@ -116,34 +143,34 @@ class HistoryFolder(IncompleteHistoryFolder):
         if self.name != entry_folder_name:
             raise CantRemoveEntryError(
                 f'Folder names differ: directory name is {self.name!r}, '
-                f'history.info entry has {entry_folder_name!r} instead.'
+                f'{HISTORY_INFO_NAME} entry has {entry_folder_name!r} instead.'
                 )
         # Tensor numbers too
         entry_tensors = ((0,) if entry.tensor_nums.no_tensors
                          else entry.tensor_nums.value)
         if self.tensor_num not in entry_tensors:
             raise CantRemoveEntryError(
-                f'Tensor number from folder name ({self.tensor_num}) is not '
-                f'among the ones in the history.info entry {entry_tensors}'
+                f'Tensor number from folder name ({self.tensor_num}) is '
+                f'not among the ones in the {HISTORY_INFO_NAME} entry '
+                f'({entry_tensors}).'
                 )
         # And the same for the job ids
         if self.job_num not in entry.job_nums.value:
             raise CantRemoveEntryError(
-                f'Job number from folder name ({self.job_num}) is not among '
-                f'the ones in the history.info entry {entry.job_nums.value}'
+                f'Job number from folder name ({self.job_num}) is not '
+                f'among the ones in the {HISTORY_INFO_NAME} entry '
+                f'({entry.job_nums.value}).'
                 )
 
     def check_metadata(self):
         """Raise a MetadataMismatchError if the metadata file is outdated."""
         new_meta = BookkeeperMetaFile(self.path)
         new_meta.compute_hash()
-        # pylint: disable-next=no-member    # It's a BookkeeperMetaFile
-        self_hash = self.metadata.hash_
-        if new_meta.hash_ != self_hash:
+        if new_meta.hash_ != self.hash_:
             raise MetadataMismatchError(
                 f'The metadata file in {self.path.name} has a different id'
-                f'({self_hash}) than the one calculated from the contents '
-                f'({new_meta.hash_}. This means that either the folder name '
+                f'({self.hash_}) than the one calculated from the contents '
+                f'({new_meta.hash_}). This means that either the folder name '
                 'or its contents were modified.'
                 )
 
@@ -160,16 +187,28 @@ class HistoryFolder(IncompleteHistoryFolder):
     def _analyze_path(self):
         """Collect information from the history folder at self.path."""
         if not self.path.is_dir():
-            raise ValueError(f'{self.path} is not a directory')
+            raise ValueError(f'{self.path} is not a directory.')
         super()._analyze_path()
+        self._collect_logs()
+        self._collect_metadata()
+
+    def _collect_logs(self):
+        """Collect information about log files in the root folder."""
+        set_frozen_attr(self, 'logs', LogFiles(self.path))
+        # pylint: disable-next=no-member  # It's a LogFiles
+        self.logs.collect()
+
+    def _collect_metadata(self):
+        """Collect information from the metadata file."""
         set_frozen_attr(self, 'metadata', BookkeeperMetaFile(self.path))
         try:
-            self.metadata.read()  # pylint: disable=no-member  # Inference
+            # pylint: disable-next=no-member  # Inference
+            self.metadata.read()
         except FileNotFoundError:
             folder_name = f'{self.path.parent.name}/{self.path.name}'
             LOGGER.warning(
                 f'No metadata file found in {folder_name}. '
-                f'Consider running bookkeeper {Mode.FIX.long_flag}.'
+                f'Consider running \'bookkeeper {Mode.FIX.long_flag}\'.'
                 )
             # pylint: disable-next=no-member  # It's BookkeeperMetaFile
             self.metadata.compute_hash()   # Don't write to file though

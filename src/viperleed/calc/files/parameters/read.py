@@ -13,14 +13,15 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-18'
 __license__ = 'GPLv3+'
 
 import logging
 from pathlib import Path
 
-from viperleed.calc.classes import rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import parent_name
 
 from .errors import MissingEqualsError
@@ -62,7 +63,7 @@ def read(filename='PARAMETERS'):
         _LOGGER.error('PARAMETERS file not found.')
         raise FileNotFoundError(filename)
 
-    rpars = rparams.Rparams()
+    rpars = Rparams()
     comment_out_stop = False
     with ParametersReader(filename, noisy=True) as param_file:
         while True:
@@ -76,8 +77,7 @@ def read(filename='PARAMETERS'):
                 continue
             if param == 'STOP':
                 comment_out_stop = True
-            else:
-                rpars.readParams[param].append(assignment)
+            rpars.readParams[param].append(assignment)
 
     if comment_out_stop:
         _LOGGER.warning(
@@ -85,8 +85,8 @@ def read(filename='PARAMETERS'):
             'program. Modifying PARAMETERS to disable STOP; '
             're-insert it if you actually want to stop.'
             )
-        comment_out(rpars, 'STOP', comment='Disabled at program start',
-                    path=filename.parent)
+        with execute_in_dir(filename.parent):
+            comment_out(rpars, 'STOP', comment='Disabled at program start')
     return rpars
 
 

@@ -7,21 +7,21 @@ is string-only, and its subclasses FolderField, and JobNameField.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-07-29'
 __license__ = 'GPLv3+'
 
 import re
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import MissingField
+from viperleed.calc.bookkeeper.history.entry.field import NoneIsEmptyField
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
-
-from ..errors import EntrySyntaxError
-from ..errors import FixableSyntaxError
-from .enums import FieldTag
-from .field import NoneIsEmptyField
-from .field import MissingField
+from viperleed.calc.sections.cleanup import MOVED_LABEL
 
 
 @frozen
@@ -50,10 +50,10 @@ _FOLDER_NAME_RE = re.compile(
     r't\d+'          # Tensor number
     r'\.r\d+'        # Run number, given by bookkeeper
     r'(?:\.\d+)?'    # Optional search number, from workhistory number
-    '_(?:moved-)?'   # Optional, if bookkeeper runs twice
+    f'_(?:{MOVED_LABEL})?'   # Optional, if bookkeeper runs twice
     r'\d{6}-\d{6})'  # Date and time, with log-name format
     rf'(?:_(?P<job_name>{_JOB_NAME_PATTERN}))?'
-    r'(?P<tail>_moved-\d{6}-\d{6})?'  # Ran twice within one second
+    rf'(?P<tail>_{MOVED_LABEL}\d{{6}}-\d{{6}})?'  # Ran twice within 1s
     )
 
 
@@ -99,14 +99,14 @@ class FolderField(StringField, tag=FieldTag.FOLDER, mandatory=True):
         # About the disable: pylint can't infer that self.value is
         # a string by now, as we don't call this if it is not.
         # pylint: disable-next=no-member
-        match = _FOLDER_NAME_RE.fullmatch(self.value.strip())
-        if not match:
+        match_ = _FOLDER_NAME_RE.fullmatch(self.value.strip())
+        if not match_:
             raise EntrySyntaxError(
                 'Does not have format '
-                'tTTT.rRRR_[moved-]yymmdd-HHMMSS[_job_name]'
+                f'tTTT.rRRR_[{MOVED_LABEL}]yymmdd-HHMMSS[_job_name]'
                 )
-        set_frozen_attr(self, 'value', match.group())  # r-stripped
-        set_frozen_attr(self, 'job_name', match['job_name'])
+        set_frozen_attr(self, 'value', match_.group())  # Stripped
+        set_frozen_attr(self, 'job_name', match_['job_name'])
 
 
 @frozen

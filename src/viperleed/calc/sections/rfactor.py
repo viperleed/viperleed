@@ -5,7 +5,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -23,6 +23,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iorfactor
 from viperleed.calc.files import iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
+from viperleed.calc.lib import fs_utils
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 
@@ -86,7 +87,7 @@ def _fetch_and_check_spectra(rp, index, name):
         path = DEFAULT_OUT / fn
     elif index == 11:
         # try getting from Tensors
-        iotensors.getTensors(rp.TENSOR_INDEX)                                   # TODO: this had required=False, but the argument never did anything.
+        iotensors.fetch_unpacked_tensor(rp.TENSOR_INDEX)
         directory = Path(f"{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}")
         if (DEFAULT_TENSORS / directory / fn).is_file():
             path = DEFAULT_TENSORS / directory / fn
@@ -491,7 +492,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
 
     # move log file to supp
     try:
-        shutil.move(compile_log, "compile_logs" / compile_log)
+        fs_utils.move(compile_log, "compile_logs" / compile_log)
     except OSError:
         logger.warning(f"Could not move {compile_log} to {DEFAULT_SUPP}")
     # run

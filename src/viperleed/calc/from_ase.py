@@ -5,7 +5,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
@@ -14,7 +14,6 @@ from dataclasses import FrozenInstanceError, dataclass
 from io import StringIO
 import logging
 from numbers import Real
-import os
 from pathlib import Path
 import shutil
 from typing import Any, Sequence
@@ -23,9 +22,9 @@ import warnings
 import numpy as np
 
 from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.classes.rparams import IVShiftRange
-from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import iorfactor as rf_io

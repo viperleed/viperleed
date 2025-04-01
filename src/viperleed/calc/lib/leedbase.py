@@ -5,7 +5,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
@@ -144,6 +144,7 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
+# TODO: move to iotensors?
 def get_tensor_indices(home='', zip_only=False):
     """Yield the indices of all the Tensor files/folders in `home`/Tensors.
 
@@ -188,6 +189,7 @@ def get_tensor_indices(home='', zip_only=False):
     yield from (ind for ind in indices if ind > 0)
 
 
+# TODO: move to iotensors?
 def getMaxTensorIndex(home='', zip_only=False):
     """Return the highest index of tensor files/folders in `home`/Tensors.
 
@@ -213,7 +215,7 @@ def getMaxTensorIndex(home='', zip_only=False):
         return 0
 
 
-def getDeltas(index, basedir='', targetdir='', required=True):
+def getDeltas(index, basedir='', targetdir='', required=True):                  # TODO: some similarities with code in iotensors
     """Fetch delta files with a given `index` from a folder or an archive.
 
     Parameters
@@ -229,6 +231,10 @@ def getDeltas(index, basedir='', targetdir='', required=True):
     targetdir : str or Path, optional
         The path to the directory in which the delta files
         should be placed. Default is the current directory.
+    required : bool, optional
+        Whether the Deltas_`index` file/folder must be present at
+        `basedir`/'Deltas'. Raise RuntimeError if True and the
+        file/folder is not found. Default is True.
 
     Raises
     ------
@@ -240,7 +246,7 @@ def getDeltas(index, basedir='', targetdir='', required=True):
     basedir, targetdir = Path(basedir).resolve(), Path(targetdir).resolve()
     delta_folder = basedir / DEFAULT_DELTAS / f'{DEFAULT_DELTAS}_{index:03d}'
     delta_zip = delta_folder.with_suffix('.zip')
-    if delta_folder.is_dir():
+    if delta_folder.is_dir():                                                   # TODO: why not copytree? Does it matter that we copy non-files or anything that is non DEL_*?
         for delta_file in delta_folder.glob('DEL_*'):
             if not delta_file.is_file():
                 continue
@@ -625,7 +631,7 @@ def getSymEqBeams(sl, rp):
     if not rp.domainParams:
         d = [getLEEDdict(sl, rp)]
     else:
-        d = [getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+        d = [getLEEDdict(dp.slab, dp.rpars) for dp in rp.domainParams]
     if any([v is None for v in d]):
         logger.error("Failed to get beam equivalence list")
         return []

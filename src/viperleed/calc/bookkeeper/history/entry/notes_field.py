@@ -7,7 +7,7 @@ discarding.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-07-29'
 __license__ = 'GPLv3+'
 
@@ -17,16 +17,15 @@ import re
 from typing import ClassVar
 from typing import Tuple
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import MissingField
+from viperleed.calc.bookkeeper.history.entry.field import MultiLineField
+from viperleed.calc.bookkeeper.history.entry.field import UnknownField
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
-
-from ..errors import EntrySyntaxError
-from ..errors import FixableSyntaxError
-from .enums import FieldTag
-from .field import MissingField
-from .field import MultiLineField
-from .field import UnknownField
 
 
 _DISCARDED = 'DISCARDED'    # For entries marked via --discard

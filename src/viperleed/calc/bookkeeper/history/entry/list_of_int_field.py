@@ -9,7 +9,7 @@ TensorNumsField classes.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-07-28'
 __license__ = 'GPLv3+'
 
@@ -23,18 +23,17 @@ from typing import List
 from typing import Tuple
 from typing import Union
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import CommonRegex
+from viperleed.calc.bookkeeper.history.entry.field import DefaultMessage
+from viperleed.calc.bookkeeper.history.entry.field import EmptyField
+from viperleed.calc.bookkeeper.history.entry.field import FieldBase
+from viperleed.calc.bookkeeper.history.entry.field import MissingField
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.sections.calc_section import CalcSection
-
-from ..errors import EntrySyntaxError
-from ..errors import FixableSyntaxError
-from .enums import FieldTag
-from .field import CommonRegex
-from .field import DefaultMessage
-from .field import EmptyField
-from .field import FieldBase
-from .field import MissingField
 
 
 _INVALID_SECTION_ERR = 'Contains unknown section identifiers'
@@ -76,7 +75,7 @@ class ListOfIntsField(FieldBase, ABC):
         """Extend the check for an empty field."""
         super()._check_not_empty()
         # Notice that this condition is looser than the one
-        # of NoneIsEmptyFields that only checks for 'is None'.
+        # of NoneIsEmptyField that only checks for 'is None'.
         # This is the reason why we don't inherit that here.
         if not self.value:
             set_frozen_attr(self, 'value', EmptyField)
@@ -114,18 +113,16 @@ class ListOfIntsField(FieldBase, ABC):
         """Try converting a string value to a tuple of integers."""
         super()._check_str_value()
         set_frozen_attr(self, 'value', self._clean_up_string())
-        self._store_cleaned_up_string()
         self._check_item_values()
+        self._store_cleaned_up_string()
 
     def _clean_and_validate_string_loose(self, separator):
         """Raise if a string value does not match self.rgx_loose."""
-        regex = self.rgx_loose
-        if regex is None:
+        if self.rgx_loose is None:
             raise NotImplementedError('Needs a rgx_loose class attribute!')
         # pylint: disable-next=no-member  # It's a string by now
         value_str = self.value.strip()
-        matches = re.fullmatch(regex, value_str)
-        if not matches:
+        if not re.fullmatch(self.rgx_loose, value_str):
             raise EntrySyntaxError(f'Not a {separator}-separated '
                                    'list of integers')
         return value_str
@@ -159,8 +156,8 @@ class ListOfIntsField(FieldBase, ABC):
 
     def _store_cleaned_up_string(self):
         """Store a value_str into self._value_str after cleaning up."""
-        # Use list since, compared to tuple, as it does
-        # not add trailing comma for single elements
+        # Use list since, compared to tuple, it does
+        # not add a trailing comma for single elements
         value_str = str(list(self.value))[1:-1]
         set_frozen_attr(self, '_value_str', value_str)
 
@@ -203,7 +200,7 @@ class SpaceSeparatedIntsField(ListOfIntsField):
     rgx_loose: ClassVar[str] = CommonRegex.COMMA_OR_SPACE_SEPARATED_INTS.value
 
     def _clean_up_string(self):
-        """Raise if self.value is not a comma-separated list of integers."""
+        """Raise if self.value is not a space-separated list of integers."""
         value_str = self._clean_and_validate_string_loose('space')
 
         space_separated = re.fullmatch(CommonRegex.SPACE_SEPARATED_INTS.value,

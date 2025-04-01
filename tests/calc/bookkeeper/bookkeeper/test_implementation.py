@@ -9,7 +9,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
@@ -28,6 +28,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.bookkeeper import _FROM_ROOT
+from viperleed.calc.bookkeeper.bookkeeper import _MIN_CALC_WARN
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
@@ -39,6 +40,8 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ....helpers import filesystem_from_dict
@@ -84,24 +87,6 @@ class MockInput:  # pylint: disable=too-few-public-methods
 class TestBookkeeperComplaints:
     """Tests for situations that do not raise but issue log warnings/errors."""
 
-    def test_cwd_file_newer(self, caplog, tmp_path):
-        """Check warnings when a cwd file is newer than an original_input."""
-        bookkeeper = Bookkeeper(cwd=tmp_path)
-        ori_inputs = {
-            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {'POSCAR': None},
-            }
-        filesystem_from_dict(ori_inputs, tmp_path)
-        time.sleep(0.05)
-        (tmp_path/'POSCAR').touch()
-
-        bookkeeper.update_from_cwd()
-        # pylint: disable-next=protected-access  # OK in tests
-        bookkeeper._mode = Mode.ARCHIVE
-        # pylint: disable-next=protected-access  # OK in tests
-        bookkeeper._copy_input_files_from_original_inputs_or_cwd()
-        # pylint: disable-next=magic-value-comparison
-        assert 'is newer' in caplog.text
-
     def test_copy_from_root(self, caplog, tmp_path):
         """Check warnings when no original_input is present."""
         bookkeeper = Bookkeeper(cwd=tmp_path)
@@ -120,6 +105,104 @@ class TestBookkeeperComplaints:
         assert (tmp_path/'POSCAR_ori').is_file()
         assert (target/'POSCAR_from_root').is_file()
 
+    def test_cwd_file_newer(self, caplog, tmp_path):
+        """Check warnings when a cwd file is newer than an original_input."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        ori_inputs = {
+            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {'POSCAR': None},
+            }
+        filesystem_from_dict(ori_inputs, tmp_path)
+        time.sleep(0.05)
+        (tmp_path/'POSCAR').write_text('modified contents')
+
+        bookkeeper.update_from_cwd()
+        (bookkeeper.history.new_folder.path).mkdir()
+        # pylint: disable-next=protected-access  # OK in tests
+        bookkeeper._archive_input_files_from_original_inputs_or_cwd()
+        # pylint: disable-next=magic-value-comparison
+        assert 'is newer' in caplog.text
+
+    def test_cwd_file_newer_same_contents(self, caplog, tmp_path):
+        """Check that warnings are emitted only if contents differ."""
+        bookkeeper = Bookkeeper(cwd=tmp_path)
+        ori_inputs = {
+            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {'POSCAR': None},
+            }
+        filesystem_from_dict(ori_inputs, tmp_path)
+        time.sleep(0.05)
+        (tmp_path/'POSCAR').touch()
+
+        with caplog.at_level(logging.WARNING):
+            bookkeeper.update_from_cwd()
+            (bookkeeper.history.new_folder.path).mkdir()
+            # pylint: disable-next=protected-access  # OK in tests
+            bookkeeper._archive_input_files_from_original_inputs_or_cwd()
+        assert not caplog.text
+
+
+class TestWarnsInOldCalcTree:
+    """Tests for the _warn_about_old_calc method."""
+
+    @fixture(name='patch_root')
+    def fixture_patch_root(self, mocker):
+        """Return a Bookkeeper with _root replaced."""
+        bookkeeper = Bookkeeper()
+        # pylint: disable-next=protected-access           # OK in tests
+        bookkeeper._root = root = mocker.MagicMock()
+        return bookkeeper, root
+
+    def _check_warns_old_calc(self, bookkeeper, version, caplog, warns=None):
+        """Check whether warnings about running in an old tree are emitted."""
+        # pylint: disable-next=protected-access           # OK in tests
+        bookkeeper._warn_about_old_calc()
+        if warns is None:
+            warns = version < _MIN_CALC_WARN
+        if warns:
+            # pylint: disable-next=magic-value-comparison
+            assert 'older version' in caplog.text
+        else:
+            assert not caplog.text
+
+    @parametrize(mode=(Mode.FIX,))
+    def test_dont_warn_in_mode(self, mode, caplog, patch_root):
+        """Check no warnings are emitted when running in `mode`."""
+        bookkeeper, root = patch_root
+        root.logs.version = Version('0.1.0')
+        # pylint: disable-next=protected-access           # OK in tests
+        bookkeeper._mode = mode
+        self._check_warns_old_calc(bookkeeper, None, caplog, warns=False)
+
+    def test_no_logs(self, caplog, patch_root):
+        """Check no warnings when no logs are found."""
+        bookkeeper, root = patch_root
+        root.logs.version = None
+        root.history.last_folder.logs.version = None
+        self._check_warns_old_calc(bookkeeper, None, caplog, warns=False)
+
+    def test_no_root_log_no_history(self, caplog, patch_root):
+        """Check no warnings when no root log and no history folder exist."""
+        bookkeeper, root = patch_root
+        root.logs.version = None
+        root.history.last_folder = None
+        self._check_warns_old_calc(bookkeeper, None, caplog, warns=False)
+
+    _versions = ('0.1.0', '0.9.0', '0.10.0', '0.13.0', '1.1')
+
+    @parametrize(version=_versions)
+    def test_no_root_log_with_old_history(self, version, caplog, patch_root):
+        """Check warnings when the last history folder is old."""
+        bookkeeper, root = patch_root
+        root.logs.version = None
+        root.history.last_folder.logs.version = version = Version(version)
+        self._check_warns_old_calc(bookkeeper, version, caplog)
+
+    @parametrize(version=_versions)
+    def test_with_root_log(self, version, caplog, patch_root):
+        """Check warnings when a log file is present in root."""
+        bookkeeper, root = patch_root
+        root.logs.version = version = Version(version)
+        self._check_warns_old_calc(bookkeeper, version, caplog)
+
 
 class TestBookkeeperOthers:
     """Collections of various tests for bits not covered by other tests."""
@@ -134,6 +217,12 @@ class TestBookkeeperOthers:
                 assert record == expect
             else:
                 assert expect.fullmatch(record)
+
+    def test_expected_cwd(self, tmp_path):
+        """Check that Bookkeeper correctly identifies its cwd."""
+        with execute_in_dir(tmp_path):
+            bookkeeper = Bookkeeper()
+        assert bookkeeper.cwd == tmp_path
 
     # Note about the disable: It is more convenient to modify the key
     # for the glob-all-logs pattern later, as we can then simply edit
@@ -189,10 +278,10 @@ class TestBookkeeperOthers:
                 },
             # History information, needed for removal of Tensors
             DEFAULT_HISTORY: {   # Dummy empty files for hashing
-                't003.r001_other_stuff': {'file': 'contents'},
-                't002.r001_first_run': {'file': 'contents'},
-                't002.r005_other_run': {'file': 'contents'},
-                't001.r001_first_tensor': {'file': 'contents'},
+                't003.r001_other_stuff_000000-000000': {'file': 'contents'},
+                't002.r001_first_run_000000-000000': {'file': 'contents'},
+                't002.r005_other_run_000000-000000': {'file': 'contents'},
+                't001.r001_first_tensor_000000-000000': {'file': 'contents'},
                 },
             }
         original_paths = filesystem_from_dict(root_tree, tmp_path)
@@ -210,35 +299,25 @@ class TestBookkeeperOthers:
 
     _basic_logs = {
         Mode.ARCHIVE: (
-            re.compile(r'\n### Bookkeeper running at.*###'),
-            re.compile(r'Running bookkeeper in ARCHIVE mode in .*\.'),
             re.compile(r'No files to be moved.*'
                        r'Exiting without doing anything.'),
             '',
             ),
         Mode.CLEAR: (
-            re.compile(r'\n### Bookkeeper running at.*###'),
-            re.compile(r'Running bookkeeper in CLEAR mode in .*\.'),
             'Found nothing to do. Exiting...',
             '',
             ),
         Mode.DISCARD: (
-            re.compile(r'\n### Bookkeeper running at.*###'),
-            re.compile(r'Running bookkeeper in DISCARD mode in .*\.'),
             re.compile('.*No entries to discard.'),
             'Found nothing to do. Exiting...',
             '',
             ),
         Mode.DISCARD_FULL: (
-            re.compile(r'\n### Bookkeeper running at.*###'),
-            re.compile(r'Running bookkeeper in DISCARD_FULL mode in .*\.'),
             re.compile('.*No entries to remove.'),
             'Found nothing to do. Exiting...',
             '',
             ),
         Mode.FIX: (
-            # No header message, as we silence the logger. Not great.
-            re.compile(r'Running bookkeeper in FIX mode in .*\.'),
             'Found nothing to do. Exiting...',
             '',
             ),
@@ -247,10 +326,14 @@ class TestBookkeeperOthers:
     @parametrize('mode,expect_records', _basic_logs.items())
     def test_run_logs(self, mode, expect_records, tmp_path, caplog):
         """Check the emission of basic log messages upon .run()."""
+        header_records = (
+            re.compile(r'\n### Bookkeeper running at.*###'),
+            re.compile(rf'Running bookkeeper in {mode.name} mode in .*\.'),
+            )
         bookkeeper = Bookkeeper(tmp_path)
         caplog.set_level(logging.INFO)
         bookkeeper.run(mode)
-        self.check_has_logs(caplog, expect_records)
+        self.check_has_logs(caplog, header_records+expect_records)
 
     @fixture(name='funky_files')
     def fixture_funky_files(self, tmp_path):
@@ -435,7 +518,7 @@ class TestBookkeeperRaises:
     logs = object()
     skips = object()
     _os_error = {
-        '_copy_out_and_supp': ('shutil.copytree', logs),
+        '_archive_out_and_supp': ('shutil.copytree', logs),
         '_make_and_copy_to_history': ('pathlib.Path.mkdir', raises),
         '_root.read_and_clear_notes_file-read': ('pathlib.Path.read_text',
                                                  logs),
@@ -461,7 +544,7 @@ class TestBookkeeperRaises:
                 },
             DEFAULT_OUT: {},
             'notes': None,
-            f'{LOG_PREFIX}-20xxxx-xxxxxx.log': None,
+            f'{LOG_PREFIX}-200101-010101.log': None,
             'PARAMETERS_ori': None,
             }
         filesystem_from_dict(root_tree, tmp_path)
@@ -504,9 +587,9 @@ class TestBookkeeperRaises:
         )
     _method_needs_update = (
         '_archive_to_history_and_add_info_entry',
-        '_copy_input_files_from_original_inputs_or_cwd',
-        '_copy_log_files',
-        '_copy_out_and_supp',
+        '_archive_input_files_from_original_inputs_or_cwd',
+        '_archive_log_files',
+        '_archive_out_and_supp',
         '_make_and_copy_to_history',
         'history._find_name_for_new_history_subfolder(None, None)',
         'history.find_new_history_directory(None, None)',

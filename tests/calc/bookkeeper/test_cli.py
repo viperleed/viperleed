@@ -1,7 +1,16 @@
 """Tests for the viperleed bookkeeper command-line interface."""
 
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-07-01'  # Were in calc/test_cli.py
+__license__ = 'GPLv3+'
+
 import pytest
-from pytest_cases import fixture, parametrize
+from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.cli import BookkeeperCLI
@@ -50,7 +59,7 @@ class TestBookkeeperParser:
         assert parsed.mode is BookkeeperMode.DISCARD_FULL
 
     def test_fix(self, bookkeeper_parser):
-        """Check interpretation of --discard-full mode."""
+        """Check interpretation of --fix mode."""
         parsed = bookkeeper_parser.parse_args(['--fix',])
         assert parsed.fix
         assert parsed.mode is BookkeeperMode.FIX

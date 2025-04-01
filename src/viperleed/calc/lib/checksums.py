@@ -16,7 +16,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2022-10-12'
 __license__ = 'GPLv3+'
 
@@ -95,10 +95,8 @@ class TLSourceFile:
         base_path = self.path.parents[1]
         self._name = self.path.relative_to(base_path)
 
-        if version in OLD_TL_VERSION_NAMES.keys():
-            version = OLD_TL_VERSION_NAMES[version]
-        version = Version(version)
-        if (version not in KNOWN_TL_VERSIONS):
+        version = Version(OLD_TL_VERSION_NAMES.get(version, version))
+        if version not in KNOWN_TL_VERSIONS:
             raise UnknownTensErLEEDVersionError(version)
         self._version = version
 
@@ -235,10 +233,9 @@ def validate_checksum(tl_version, filename):
     # Ensure TL version is valid
     if not isinstance(tl_version, (Version, str)):
         raise TypeError('Invalid type for tl_version')
-    version = Version(tl_version)
+    version_str = str(Version(tl_version))
     # convert old version names if necessary
-    if str(version) in OLD_TL_VERSION_NAMES.keys():
-        version = Version(OLD_TL_VERSION_NAMES[str(version)])
+    version = Version(OLD_TL_VERSION_NAMES.get(version_str, version_str))
 
     if str(version) not in KNOWN_TL_VERSIONS:
         raise UnknownTensErLEEDVersionError(version)
@@ -444,16 +441,16 @@ def _add_checksums_for_dir(source,
     -------
     None.
     """
-    if str(source.version) not in checksum_dict_.keys():
-        checksum_dict_[str(source.version)] = {}
-    version = source.version
+    version = str(source.version)
+    if version not in checksum_dict_:
+        checksum_dict_[version] = {}
     for pattern in patterns:
         for file in source.path.glob(pattern):
             checksum = get_file_checksum(file)
             key = str(file.relative_to(source.path).as_posix())
             if key not in checksum_dict_:
-                checksum_dict_[str(source.version)][key] = set()
-            checksum_dict_[str(source.version)][key].add(checksum)
+                checksum_dict_[version][key] = set()
+            checksum_dict_[version][key].add(checksum)
 
 
 def _parse_args(parser):
@@ -583,9 +580,9 @@ if __name__ != '__main__':
 
     # Generate set of all files
     TL_INPUT_FILES = set()
-    for version, checksums in VALID_CHECKSUMS.items():
-        for file_, f_checksums in checksums.items():
-            TL_INPUT_FILES.add(TLSourceFile(file_, version, f_checksums))
+    for known_version, known_checksums in VALID_CHECKSUMS.items():
+        for file_, f_checksums in known_checksums.items():
+            TL_INPUT_FILES.add(TLSourceFile(file_, known_version, f_checksums))
 
 
 else:  # Write new checksum file when executed as a module

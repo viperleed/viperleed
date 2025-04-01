@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-08-31'
 __license__ = 'GPLv3+'
 
@@ -16,7 +16,6 @@ from viperleed.calc.bookkeeper.history.entry.enums import DuplicateType
 from viperleed.calc.bookkeeper.history.entry.enums import FaultyLabel
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.enums import FixAction
-
 
 
 class MockFieldOK:  # pylint: disable=too-few-public-methods
@@ -101,7 +100,6 @@ class TestFaultyLabel(_TestEnumBase):
         'EXTRA': 'extra',
         'SORTING': 'scrambled',
         }
-
     _str = {
         'EDITED': '  edited? -> ',
         'OK': ' ' * 13,

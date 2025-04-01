@@ -9,7 +9,7 @@ history folders were created simultaneously.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-13'
 __license__ = 'GPLv3+'
 
@@ -51,16 +51,16 @@ class BookkeeperMetaFile:
     """A handler for bookkeeper_meta files."""
 
     def __init__(self, path):
-        """Initialize a metadata file for `path`."""
+        """Initialize a metadata file for the folder at `path`."""
         self._hash = None
-        self._path = Path(path)
+        self._folder_path = Path(path)
         self._parser = ConfigParser()
         self._parser.read_dict(_SECTIONS)
 
     @property
-    def file(self):
-        """Return the path to the metadata file handled."""
-        return self.path / _METADATA_NAME
+    def folder(self):
+        """Return the path to the folder where this metadata file is stored."""
+        return self._folder_path
 
     @property
     def hash_(self):
@@ -82,8 +82,10 @@ class BookkeeperMetaFile:
 
     @property
     def path(self):
-        """Return the path where this metadata file is stored."""
-        return self._path
+        """Return the path to the metadata file handled."""
+        return self.folder / _METADATA_NAME
+
+    file = path
 
     def collect_from(self, other):
         """Store information read from another metadata file in here.
@@ -101,16 +103,17 @@ class BookkeeperMetaFile:
 
     def compute_hash(self):
         """Compute and store a hash from all the files in path."""
-        if not any(self._hashable_contents(self.path)):
+        if not self.folder.exists():
             return
-        self._hash = hashlib.md5(self.path.name.encode())
-        self._update_hash_from_folder(self.path)
+        self._hash = hashlib.md5(self.folder.name.encode())
+        self._update_hash_from_folder(self.folder)
         self._parser['archived']['hash'] = self.hash_
 
     def read(self):
         """Read the metadata file in the root folder."""
         if not self.file.is_file():
-            raise FileNotFoundError(f'No {self.file.name} file at {self.path}')
+            raise FileNotFoundError(f'No {self.file.name} '
+                                    f'file at {self.folder}')
         with self.file.open('r', encoding='utf-8') as meta_file:
             # Skip header lines
             lines = (line for line in meta_file if strip_comments(line))
@@ -148,7 +151,7 @@ class BookkeeperMetaFile:
         sorted_contents = sorted(self._hashable_contents(folder_path),
                                  key=lambda p: p.name.lower())
         for path in sorted_contents:
-            relative_path = path.relative_to(self.path).as_posix()
+            relative_path = path.relative_to(self.folder).as_posix()
             self._hash.update(str(relative_path).encode())
             if path.is_file():
                 self._update_hash_from_file(path)

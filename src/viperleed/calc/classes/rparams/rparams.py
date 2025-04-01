@@ -12,7 +12,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
@@ -32,13 +32,12 @@ from viperleed.calc.constants import COMPILE_LOGS_DIRNAME
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
+from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.lib import fortran_utils
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
-from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
-from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
@@ -49,7 +48,8 @@ from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
-from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
+from .defaults import DEFAULTS
+from .defaults import NO_VALUE
 from .limits import PARAM_LIMITS
 from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
@@ -106,8 +106,8 @@ class Rparams:
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
         self.BULK_REPEAT = None
-        self.DOMAINS = {}         # {name: path_to_tensors_zip_or_dir}
-        self.DOMAIN_STEP = 1      # area step in percent for domain search
+        self.DOMAINS = {}      # {name: (source_path, user_assignment)}
+        self.DOMAIN_STEP = 1   # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
         self.FILAMENT_WF = DEFAULTS['FILAMENT_WF']['lab6']   # work function of emitting cathode
@@ -197,7 +197,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = {DEFAULT_SUPP, DEFAULT_OUT}
+        self.manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT)
         self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
@@ -1202,22 +1202,21 @@ class Rparams:
         for dp in self.domainParams:
             with execute_in_dir(dp.workdir):
                 try:
-                    dp.rp.generateSearchPars(dp.sl, subdomain=True)
+                    dp.rpars.generateSearchPars(dp.slab, subdomain=True)
                 except Exception:
-                    _LOGGER.error('Error while creating delta '
-                                  f'input for domain {dp.name}')
+                    _LOGGER.error(f'Error while creating delta input for {dp}')
                     raise
-            for sp in dp.rp.searchpars:
+            for sp in dp.rpars.searchpars:
                 if not isinstance(sp.restrictTo, int):
                     continue
                 sp.restrictTo += len(self.searchpars)
-            self.searchpars.extend(dp.rp.searchpars)
-            self.indyPars += dp.rp.indyPars
+            self.searchpars.extend(dp.rpars.searchpars)
+            self.indyPars += dp.rpars.indyPars
         for dp in self.domainParams:
             self.searchpars.append(SearchPar(None, 'dom', '', ''))
             self.searchpars[-1].steps = int(100 / self.DOMAIN_STEP) + 1
-        self.search_maxfiles = max(dp.rp.search_maxfiles
+        self.search_maxfiles = max(dp.rpars.search_maxfiles
                                    for dp in self.domainParams)
-        self.search_maxconc = max(dp.rp.search_maxconc
+        self.search_maxconc = max(dp.rpars.search_maxconc
                                   for dp in self.domainParams)
-        self.mncstep = max(dp.rp.mncstep for dp in self.domainParams)
+        self.mncstep = max(dp.rpars.mncstep for dp in self.domainParams)

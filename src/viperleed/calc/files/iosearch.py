@@ -8,7 +8,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -330,7 +330,7 @@ def readDataChem(rp, source, cutoff=0, max_configs=0):
             dp_vals = pars[-len(rp.domainParams):]
             percent = getPercent(rp.DOMAIN_STEP, dp_vals)
             dpars = []
-            for v in [len(dp.rp.searchpars) for dp in rp.domainParams]:
+            for v in [len(dp.rpars.searchpars) for dp in rp.domainParams]:
                 dpars.append(tuple(pars[:v]))
                 pars = pars[v:]
             returnList.append((rfac, tuple(zip(percent, dpars))))
@@ -482,10 +482,10 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
 
     # merge offsets with displacement lists
     if rp.domainParams:
-        attodo = [at for dp in rp.domainParams for at in dp.rp.search_atlist]
+        attodo = [at for d in rp.domainParams for at in d.rpars.search_atlist]
         ndom = len(rp.domainParams)
         astep = rp.DOMAIN_STEP
-        nplaces = max([len(dp.rp.search_atlist) for dp in rp.domainParams])
+        nplaces = max([len(dp.rpars.search_atlist) for dp in rp.domainParams])
     else:
         attodo = rp.search_atlist
         ndom = 1

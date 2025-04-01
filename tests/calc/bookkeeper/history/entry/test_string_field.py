@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-09-03'
 __license__ = 'GPLv3+'
 
@@ -11,19 +11,20 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.field import EmptyField
 from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.bookkeeper.history.entry.string_field import FolderField
 from viperleed.calc.bookkeeper.history.entry.string_field import JobNameField
 from viperleed.calc.bookkeeper.history.entry.string_field import StringField
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 
 from .....helpers import not_raises
 from .test_field import _TestFieldUtils
 
 
 class TestFolderField(_TestFieldUtils):
-    """Tests for the FolderField class."""
+    """Tests for the tag-bearing FolderField class."""
 
     test_cls = FolderField
 
@@ -32,22 +33,30 @@ class TestFolderField(_TestFieldUtils):
         """Return a factory of FolderField instances."""
         return make_field_factory(self.test_cls)
 
+    def test_class_attrs(self):
+        """Check the expected class-level attributes of FolderField."""
+        field = self.test_cls
+        assert field.is_mandatory
+        assert field.tag is FieldTag.FOLDER
+
     _init = {
         'empty': (
             '',
-            {'value': EmptyField, 'job_name': None, 'is_missing': False,
+            {'value': EmptyField,
+             'job_name': None, 'is_missing': False,
              'is_empty': True, 'was_understood': False},
             ),
         'invalid': (
             'invalid_format',
-            {'value': 'invalid_format', 'was_understood': False,
-             'is_empty': False, 'is_missing': False, 'job_name': None},
+            {'value': 'invalid_format',
+             'job_name': None, 'is_missing': False,
+             'is_empty': False, 'was_understood': False},
             ),
         'job': (
             't123.r456_789101-121314_jobname',
-            {'value': 't123.r456_789101-121314_jobname', 'is_missing': False,
-             'job_name': 'jobname', 'was_understood': True,
-             'needs_fixing': False},
+            {'value': 't123.r456_789101-121314_jobname',
+             'job_name': 'jobname', 'is_missing': False,
+             'was_understood': True, 'needs_fixing': False},
             ),
         'job, hyphen': (
             't123.r456_230101-123456_job-1-23-b_moved-123456',
@@ -56,8 +65,8 @@ class TestFolderField(_TestFieldUtils):
             ),
         'job, invalid chars': (
             't123.r456_789101-121314_!@#$',
-            {'value': 't123.r456_789101-121314_!@#$', 'job_name': None,
-             'was_understood': False},
+            {'value': 't123.r456_789101-121314_!@#$',
+             'job_name': None, 'was_understood': False},
             ),
         'job, white spaces': (
             't123.r456_789101-121314_job name  ',
@@ -89,9 +98,9 @@ class TestFolderField(_TestFieldUtils):
             ),
         'no job': (
             't123.r456_789101-121314',
-            {'value': 't123.r456_789101-121314', 'job_name': None,
-             'is_missing': False, 'was_understood': True,
-             'needs_fixing': False},
+            {'value': 't123.r456_789101-121314',
+             'job_name': None, 'is_missing': False,
+             'was_understood': True, 'needs_fixing': False},
             ),
         'only optional parts': (
             '_moved-230101-123456_job',
@@ -99,8 +108,13 @@ class TestFolderField(_TestFieldUtils):
             ),
         'suffix, moved': (
             't123.r456_moved-789101-121314',
-            {'value': 't123.r456_moved-789101-121314', 'job_name': None,
-             'was_understood': True},
+            {'value': 't123.r456_moved-789101-121314',
+             'job_name': None, 'was_understood': True},
+            ),
+        'suffix, moved, job': (
+            't123.r456_moved-789101-121314_job',
+            {'value': 't123.r456_moved-789101-121314_job',
+             'job_name': 'job', 'was_understood': True},
             ),
         'suffix, moved, time conflict': (
             't123.r456_moved-789101-121314_moved-123456-789012',
@@ -112,16 +126,11 @@ class TestFolderField(_TestFieldUtils):
             {'value': 't123.r456_moved-789101-121314_job_moved-123456-789012',
              'job_name': 'job', 'was_understood': True},
             ),
-        'suffix, moved, job': (
-            't123.r456_moved-789101-121314_job',
-            {'value': 't123.r456_moved-789101-121314_job', 'job_name': 'job',
-             'was_understood': True},
-            ),
         'suffix, search': (
             't123.r456.999_789101-121314_job',
-            {'value': 't123.r456.999_789101-121314_job', 'job_name': 'job',
-             'is_missing': False, 'was_understood': True,
-             'needs_fixing': False},
+            {'value': 't123.r456.999_789101-121314_job',
+             'job_name': 'job', 'is_missing': False,
+             'was_understood': True, 'needs_fixing': False},
             ),
         'suffix, time conflict': (
             't123.r456_789101-121314_moved-123456-789012',
@@ -139,11 +148,13 @@ class TestFolderField(_TestFieldUtils):
             ),
         'trailing space': (
             't123.r456_789101-121314_my_job ',
-            {'value': 't123.r456_789101-121314_my_job', 'job_name': 'my_job'},
+            {'value': 't123.r456_789101-121314_my_job',
+             'job_name': 'my_job'},
             ),
         'wrong date-time': (
             't123.r456_23-01-01_123456',
-            {'value': 't123.r456_23-01-01_123456', 'was_understood': False},
+            {'value': 't123.r456_23-01-01_123456',
+             'was_understood': False},
             ),
         }
 
@@ -209,7 +220,7 @@ class TestFolderField(_TestFieldUtils):
 
 
 class TestJobNameField(_TestFieldUtils):
-    """Tests for the JobNameField class."""
+    """Tests for the tag-bearing JobNameField class."""
 
     test_cls = JobNameField
 
@@ -217,6 +228,12 @@ class TestJobNameField(_TestFieldUtils):
     def fixture_job_field(self, make_field_factory):
         """Return a factory of JobNameField instances."""
         return make_field_factory(self.test_cls)
+
+    def test_class_attrs(self):
+        """Check the expected class-level attributes of JobNameField."""
+        field = self.test_cls
+        assert not field.is_mandatory
+        assert field.tag is FieldTag.JOB_NAME
 
     _init = {
         'empty': (
@@ -259,7 +276,7 @@ class TestJobNameField(_TestFieldUtils):
 
 
 class TestStringField(_TestFieldUtils):
-    """Tests for the StringField class."""
+    """Tests for the tag-less StringField class."""
 
     test_cls = StringField
 

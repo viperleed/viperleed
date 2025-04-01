@@ -3,14 +3,12 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-16'
 __license__ = 'GPLv3+'
 
 from collections import namedtuple
-from contextlib import contextmanager
 from itertools import combinations
-from itertools import permutations
 from itertools import product
 from operator import attrgetter
 from pathlib import Path
@@ -25,7 +23,6 @@ from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.errors import FileOperationFailedError
-from viperleed.calc.bookkeeper.root_explorer import LogFiles
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
 from viperleed.calc.bookkeeper.root_explorer import TensorAndDeltaInfo
 from viperleed.calc.constants import DEFAULT_DELTAS
@@ -56,15 +53,9 @@ def fixture_explorer(mocker):
     return RootExplorer(root_path, mock_bookkeeper)
 
 
-@fixture(name='logs')
-def fixture_logfiles():
-    """Return a LogFiles instance."""
-    return LogFiles(Path(_MOCK_ROOT))
-
-
 @fixture(name='tensors')
 def fixture_tensor_and_delta_info():
-    """Fixture to initialize TensorAndDeltaInfo with a mock root path."""
+    """Return a TensorAndDeltaInfo with a mock root path."""
     return TensorAndDeltaInfo(Path('/fake/root'))
 
 
@@ -80,24 +71,9 @@ def fixture_mock_history(mocker):
     return _mock
 
 
-@fixture(name='mock_path_readlines')
-def fixture_mock_readlines(mocker, monkeypatch):
-    """Temporarily replace open and readlines for pathlib.Path."""
-    @contextmanager
-    def _patch():
-        mock_readlines = mocker.MagicMock(return_value=(_TEST_STRING,))
-        mock_open_file = mocker.MagicMock(readlines=mock_readlines)
-        mock_open = mocker.MagicMock()
-        mock_open.return_value.__enter__.return_value = mock_open_file
-        with monkeypatch.context() as patch_:
-            patch_.setattr('pathlib.Path.open', mock_open)
-            yield mock_open_file
-    return _patch
-
-
 @fixture(name='patched_path')
 def fixture_patched_path(explorer, mocker):
-    """Return a version of pathlib.Path with fake read/write_text."""
+    """Return a version of pathlib.Path with fake methods."""
     MockedPath = namedtuple('MockedPath', ('read', 'write', 'glob'))
     notes_file = explorer.path / 'notes.txt'
     mock_glob = mocker.patch('pathlib.Path.glob',
@@ -108,32 +84,9 @@ def fixture_patched_path(explorer, mocker):
     yield MockedPath(mock_read, mock_write, mock_glob)
 
 
-@fixture(name='mock_attributes')
-def fixture_mock_attributes(mocker):
-    """Replace attributes of obj with MagicMock(s)."""
-    def _patch(obj, *attrs):
-        for attr_name in attrs:
-            mocker.patch.object(obj, attr_name)
-    return _patch
-
-
 def called_or_not(condition):
-    """Return the name of an assertion method depending on condition."""
+    """Return the name of an assertion method depending on `condition`."""
     return 'assert_called' if condition else 'assert_not_called'
-
-
-@fixture(name='check_methods_called')
-def fixture_check_methods_called(mock_attributes):
-    """Check that calling method_name also calls other methods."""
-    def check_methods_called(obj, method_name, **called):
-        mock_attributes(obj, *called)
-        method = attrgetter(method_name)(obj)
-        method()
-
-        for mocked_attr, called_attr in called.items():
-            method = attrgetter(called_attr or mocked_attr)(obj)
-            method.assert_called_once()
-    return check_methods_called
 
 
 def mock_exists(collection):
@@ -294,7 +247,7 @@ class TestRootExplorer:
         patched_path.write.assert_called_once_with('', encoding='utf-8')
 
     def test_read_and_clear_notes_file_no_notes(self, explorer, patched_path):
-        """Test successful reading and clearing of a notes file."""
+        """Test result of reading notes whn no file exists."""
         patched_path.glob.return_value = iter(())
         notes = explorer.read_and_clear_notes_file()
         assert not notes
@@ -352,16 +305,15 @@ class TestRootExplorerNextCalc:
     @parametrize(method=errors_delayed)
     def test_errors_delayed(self, method, explorer, mocker):
         """Check failure when one method fails."""
+        mock_called = [mocker.patch.object(explorer, m) for m in self.called]
         exc = FileOperationFailedError({'fail_file': 'fail_reason'})
-        mocker.patch.object(explorer, method, side_effect=exc)
-        # Patch all the other methods too
-        for other in self.called:
-            if other == method:
-                continue
-            mocker.patch.object(explorer, other)
+        getattr(explorer, method).side_effect = exc
         with pytest.raises(OSError) as exc_info:
             explorer.prepare_for_next_calc_run()
         assert exc_info.match('fail_file: fail_reason')
+        # All methods called even if there was an exception
+        for called_method in mock_called:
+            called_method.assert_called()
 
     @parametrize(missing=(True,False))
     def test_mark_state_files_as_ori(self, missing, explorer, mocker):
@@ -389,9 +341,7 @@ class TestRootExplorerNextCalc:
         """An exception with equality."""
 
         def __eq__(self, other):
-            # We want to really make sure the classes are the same
-            # pylint: disable-next=unidiomatic-typecheck
-            return type(self) == type(other) and self.args == other.args
+            return type(self) is type(other) and self.args == other.args
 
     _copy_excs = {
         # Keys are: Exceptions on attempts from OUT/original_inputs
@@ -443,7 +393,7 @@ class TestRootExplorerNextCalc:
             # pylint: disable-next=protected-access       # OK in tests
             explorer._copy_state_files_from_out_or_original_inputs()
         expect_calls = [
-            mocker.call(explorer.path / DEFAULT_OUT, '{}', '{}_OUT'),
+            mocker.call(explorer.path / DEFAULT_OUT, '{}', '{}_OUT_[0-9]*'),
             mocker.call(explorer.orig_inputs_dir,
                         only_files=out_exc.failures if out_exc else {}),
             ]
@@ -470,8 +420,13 @@ class TestRootExplorerNextCalc:
         def copy2(_, dst):
             if dst.name in fail:
                 raise oserror
+        def _glob(path, pattern):
+            globbed = next(f for f in only_files or MOCK_STATE_FILES
+                           if pattern.startswith(f))
+            return (path/globbed,)
 
         mocker.patch('pathlib.Path.is_file', is_file)
+        mocker.patch('pathlib.Path.glob', _glob)
         mocker.patch('shutil.copy2', copy2)
         src = Path.cwd()/'does_not_exist'
 
@@ -512,8 +467,7 @@ class TestRootExplorerListFiles:
             explorer.path / DEFAULT_TENSORS / f'{DEFAULT_TENSORS}_001.zip',
             )
         mock_paths = (
-            explorer.path / DEFAULT_OUT,
-            # explorer.path / DEFAULT_SUPP,  # No SUPP
+            explorer.path / DEFAULT_OUT,  # No SUPP
             *mock_files
             )
         explorer.collect_info()
@@ -711,187 +665,24 @@ class TestRootExplorerRaises:
 
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, explorer, attr):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that accessing attributes before collection fails."""
         with pytest.raises(AttributeError,
                            match=r'.*collect_(info|subfolders).*'):
             attrgetter(attr)(explorer)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, explorer, method_name):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that calling methods before collection fails."""
         method = attrgetter(method_name)(explorer)
         with pytest.raises(AttributeError,
                            match=r'.*collect_(info|subfolders).*'):
             method()
 
 
-def _combine_log_info(**log_info):
-    """Return all combinations of lines and expected values for log_info."""
-    _info_keys = tuple(log_info)
-    for _repeat in range(2, len(_info_keys)+1):
-        for keys in permutations(_info_keys, _repeat):
-            all_lines, all_expect = zip(*(log_info[k] for k in keys))
-            lines = sum(all_lines, tuple())
-            expect = {k: v for dict_ in all_expect for k, v in dict_.items()}
-            log_info['+'.join(keys)] = (lines, expect)
-    return log_info
-
-
-class TestLogFiles:
-    """Tests for the LogFiles class."""
-
-    def test_collect_calls(self, logs, check_methods_called):
-        """Check that calling .collect calls other methods."""
-        called = {
-            '_collect_logs': None,
-            '_read_most_recent': None,
-            }
-        check_methods_called(logs, 'collect', **called)
-
-    def test_collect_logs(self, logs, mocker):
-        """Test that _collect_logs finds files in the root directory."""
-        files = {
-            '_calc': ('viperleed-calc_1.log', 'tleedm_1.log', 'tleedm_2.log'),
-            '_others': ('other_stuff.log',)
-            }
-        for attr, file_list in files.items():
-            # pylint: disable-next=protected-access       # OK in tests
-            files[attr] = tuple(logs._path / f for f in file_list)
-        mocker.patch('pathlib.Path.glob',
-                     return_value=sum(files.values(), tuple()))
-        mocker.patch('pathlib.Path.is_file', return_value=True)
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._collect_logs()
-        for attr, expect in files.items():
-            assert getattr(logs, attr) == expect
-
-    def test_collect_logs_no_logs(self, logs, mocker):
-        """Test that _collect_logs finds files in the root directory."""
-        files = {
-            '_calc': ('viperleed-calc_1.log', 'tleedm_1.log', 'tleedm_2.log'),
-            '_others': ('other_stuff.log',)
-            }
-        for attr, file_list in files.items():
-            # pylint: disable-next=protected-access       # OK in tests
-            files[attr] = tuple(logs._path / f for f in file_list)
-        mocker.patch('pathlib.Path.glob',
-                     return_value=sum(files.values(), tuple()))
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._collect_logs()
-        for attr in files:
-            collected = getattr(logs, attr)
-            assert collected is not None
-            # None of the files above are actual files.
-            assert not any(collected)
-
-    @patch_discard
-    def test_discard(self, discard_files, logs, check_methods_called):
-        """Check deletion of all log files in root."""
-        # pylint: disable-next=protected-access           # OK in tests
-        files = [logs._path / f'file{i}.log' for i in range(5)]
-        logs._calc, logs._others = files[:2], files[2:]
-
-        check_methods_called(logs, 'discard', collect=None)
-        discard_files.assert_called_once_with(*files)
-
-    def test_files_property(self, logs):
-        """Test the files property of LogFiles."""
-        # pylint: disable-next=protected-access           # OK in tests
-        files = tuple(logs._path / f
-                      for f in ('calc1.log', 'calc2.log', 'other.log'))
-        logs._calc, logs._others = files[:2], files[2:]
-        assert logs.files == files
-
-    _log_info = _combine_log_info(
-        run=(('Executed segments: 123   ',), {'run_info': '123   '}),
-        r_ref=(('Final R (refcalc)   : 0.01 ',), {'r_ref': '0.01 '}),
-        r_super=(('Final R (superpos)   : 0.02  ',), {'r_super': '0.02  '}),
-        )
-
-    @parametrize('lines,expect', _log_info.values(), ids=_log_info)
-    def test_infer_run_info(self, logs, lines, expect, mocker):
-        """Check correct inference of information from log files."""
-        mocker.patch.object(logs, '_calc')
-        logs.most_recent = mocker.MagicMock(lines=lines)
-        assert logs.infer_run_info() == expect
-
-    def test_infer_run_info_no_log(self, logs, mocker):
-        """Check correct result when no log is found in root."""
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._calc = mocker.MagicMock()
-        assert not logs.infer_run_info()
-
-    _calc_logs = {
-        'no logs': ((), None),
-        'calc, one log': (('viperleed-calc_123456-123456.log',),
-                          ('123456-123456', (_TEST_STRING,))),
-        'tleedm, one log': (('tleedm_123456-123456.log',),
-                            ('123456-123456', (_TEST_STRING,))),
-        'calc, more logs': (
-            ('viperleed-calc_123456-123456.log',
-             'viperleed-calc_234567-234567.log',
-             'viperleed-calc_345678-345678.log',
-             'viperleed-calc_456789-456789.log'),
-            ('456789-456789', (_TEST_STRING,))
-            ),
-        'mixed logs': (
-            ('viperleed-calc_123456-123456.log',
-             'tleedm_234567-234567.log',
-             'viperleed-calc_345678-345678.log',
-             'tleedm_456789-456789.log'),
-            ('345678-345678', (_TEST_STRING,))
-            ),
-        }
-
-    @parametrize('collected,expect', _calc_logs.values(), ids=_calc_logs)
-    def test_most_recent(self, logs, collected, expect, mock_path_readlines):
-        """Test the _read_most_recent method of LogFiles."""
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._calc = tuple(logs._path/f for f in collected)
-        with mock_path_readlines():
-            # pylint: disable-next=protected-access       # OK in tests
-            logs._read_most_recent()
-        assert logs.most_recent == expect
-
-    def test_most_recent_oserror(self, logs, mock_path_readlines):
-        """Check that failure to read lines produces the expected outcome."""
-        collected, (expect_time, _) = next(
-            log for log in self._calc_logs.values() if log[1]
-            )
-        # pylint: disable-next=protected-access           # OK in tests
-        logs._calc = tuple(logs._path/f for f in collected)
-        with mock_path_readlines() as mock_open:
-            with make_obj_raise(mock_open, OSError, 'readlines'):
-                # pylint: disable-next=protected-access   # OK in tests
-                logs._read_most_recent()
-            assert logs.most_recent == (expect_time, ())
-
-    _attr_needs_update = (
-        'files',
-        )
-    _method_needs_update = (  # Only those without args
-        'infer_run_info',
-        '_read_most_recent',
-        )
-
-    @parametrize(attr=_attr_needs_update)
-    def test_too_early_attribute_access(self, logs, attr):
-        """Check that accessing attributes before update_from_cwd fails."""
-        with pytest.raises(AttributeError, match=r'.*collect.*'):
-            attrgetter(attr)(logs)
-
-    @parametrize(method_name=_method_needs_update)
-    def test_too_early_method_call(self, logs, method_name):
-        """Check that accessing attributes before update_from_cwd fails."""
-        method = attrgetter(method_name)(logs)
-        with pytest.raises(AttributeError, match=r'.*collect.*'):
-            method()
-
-
 class TestTensorsAndDeltasInfo:
     """Tests for the TensorsAndDeltasInfo class."""
 
-    tensor_index = 5  # Example index to use for Tensor/Delta files
+    tensor_index = 5  # Example index to use for tensor/delta files
 
     @fixture(name='mock_get_tensors', autouse=True)
     def patch_get_tensors(self, mocker):
@@ -905,7 +696,7 @@ class TestTensorsAndDeltasInfo:
         return mock_history({self.tensor_index: 1})
 
     def test_collect(self, tensors, mock_get_tensors):
-        """Test that collect sets the correct Tensor index."""
+        """Test that collect sets the correct tensor index."""
         tensors.collect()
         # pylint: disable-next=protected-access       # OK in tests
         mock_get_tensors.assert_called_once_with(home=tensors._root,
@@ -913,7 +704,7 @@ class TestTensorsAndDeltasInfo:
         assert tensors.most_recent == self.tensor_index
 
     def test_to_discard(self, tensors, simple_history, mocker):
-        """Test list_paths_to_discard when Tensor and Delta files exist."""
+        """Test list_paths_to_discard when tensor and delta files exist."""
         history = simple_history
         history.last_folder_and_siblings.extend(
             # Simulate some siblings too
@@ -928,11 +719,11 @@ class TestTensorsAndDeltasInfo:
         expected = tuple(tensors._root / f for f in expected)
         tensors.collect()
         mocker.patch.object(Path, 'is_file', new=mock_exists(expected))
-        discard_paths = tensors.list_paths_to_discard(simple_history)
+        discard_paths = tensors.list_paths_to_discard(history)
         assert discard_paths == expected
 
     def test_to_discard_none(self, tensors, simple_history, mocker):
-        """Test list_paths_to_discard when no Tensor/Delta files exist."""
+        """Test list_paths_to_discard when no tensor/delta files exist."""
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=False)
         assert not any(tensors.list_paths_to_discard(simple_history))
@@ -954,7 +745,7 @@ class TestTensorsAndDeltasInfo:
     @patch_discard
     def test_discard(self, mock_discard_files,
                      tensors, simple_history, mocker):
-        """Test removal of Tensors and Deltas."""
+        """Test removal of tensors and deltas."""
         removed = (
             f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{self.tensor_index:03d}.zip',
             f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{self.tensor_index:03d}.zip',
@@ -975,13 +766,13 @@ class TestTensorsAndDeltasInfo:
 
     @parametrize(attr=_attr_needs_update)
     def test_too_early_attribute_access(self, tensors, attr):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that accessing attributes before collection fails."""
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             attrgetter(attr)(tensors)
 
     @parametrize(method_name=_method_needs_update)
     def test_too_early_method_call(self, tensors, method_name):
-        """Check that accessing attributes before update_from_cwd fails."""
+        """Check that calling methods before collection fails."""
         method = attrgetter(method_name)(tensors)
         with pytest.raises(AttributeError, match=r'.*collect.*'):
             method()

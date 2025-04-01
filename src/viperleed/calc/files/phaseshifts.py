@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-18'
 __license__ = 'GPLv3+'
 
@@ -89,15 +89,12 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                     "_PHASESHIFTS. Renaming _PHASESHIFTS to PHASESHIFTS.")
         os.rename('_PHASESHIFTS', 'PHASESHIFTS')
 
+    readfile = Path(readfile)
     try:
-        rf = open(readfile, 'r')
+        filelines = readfile.read_text().splitlines()
     except FileNotFoundError:
         logger.error("PHASESHIFTS file not found.")
         raise
-    else:
-        filelines = rf.readlines()
-    finally:
-        rf.close()
 
     try:
         nel = ri3.read(filelines[0])[0]
@@ -485,7 +482,7 @@ def __check_consistency_element_order(rp, sl, phaseshifts,
     return may_have_wrong_phaseshifts
 
 
-def writePHASESHIFTS(firstline, phaseshifts, file_path=Path()/'PHASESHIFTS'):
+def writePHASESHIFTS(firstline, phaseshifts, file_path='PHASESHIFTS'):
     """Takes phaseshift data and writes it to a PHASESHIFTS file."""
     _file_path = Path(file_path)
     output = firstline

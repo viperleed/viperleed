@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-09-17'
 __license__ = 'GPLv3+'
 
@@ -57,7 +57,7 @@ cant_fix = parametrize_with_cases(
                         Tag.MULTI_ENTRY,
                         Tag.NEEDS_NO_FIX,
                         Tag.RAISES,
-                        Tag.EMPTY)
+                        Tag.EMPTY),
     )
 need_no_fix = parametrize_with_cases('entry_str',
                                      cases=cases_entry,
@@ -119,7 +119,7 @@ class TestHistoryEntry:
     @parametrize_with_cases('entry_str',
                             cases=cases_entry.CasesInfoEntryCommented)
     def test_has_comments(self, entry_str, make_entry):
-        """Check an entry that has no extra comments."""
+        """Check an entry that has extra comments."""
         entry = make_entry(entry_str)
         assert entry.has_comments
 
@@ -242,7 +242,7 @@ class TestHistoryEntry:
 
     @_preserved
     def test_from_to_string(self, entry_str, make_entry):                       # TODO: This test is somewhat slow!
-        """Ensure that making a entry from str(entry) gives stable results."""
+        """Ensure that making an entry from str(entry) gives stable results."""
         entry = make_entry(entry_str)
         for _ in range(5):
             as_string = str(entry)
@@ -261,9 +261,9 @@ class TestHistoryEntry:
         entry_edited = entry.with_time_format(fmt)
         assert entry.timestamp.value == entry_edited.timestamp.value
         if fmt is not TimestampFormat.DEFAULT:
-            pytest.xfail(reason=('Not sure yet if we should really mark '       # TODO
-                                 'those as such. We currently do not'))
             assert entry_edited.needs_fixing
+        else:
+            assert not entry_edited.needs_fixing
 
     def test_multiple_notes_no_extras(self, make_entry):
         """Check that an entry with repeated notes has no UnknownField."""
@@ -306,14 +306,14 @@ class TestHistoryEntryFormatProblematicFields:
 
     @auto_fix
     def test_auto_fix(self, entry_str, make_entry):
-        """Check that no problematic fields are marked."""
+        """Check that fixable fields are marked as such."""
         entry = make_entry(entry_str)
         formatted = entry.format_problematic_fields()
         assert FaultyLabel.FIXABLE.value in formatted
 
     @cant_fix
     def test_cant_fix(self, entry_str, make_entry, subtests):
-        """Check that no problematic fields are marked."""
+        """Check marking of unfixable fields."""
         entry = make_entry(entry_str)
         problems = entry.format_problematic_fields()
         with subtests.test('edited or missing'):
@@ -345,7 +345,7 @@ class TestHistoryEntryFormatProblematicFields:
 
     @_scrambled
     def test_scrambled(self, entry_str, make_entry):
-        """Check that scrambled fields are labeled as such."""
+        """Check that unsorted fields are labeled as such."""
         entry = make_entry(entry_str)
         problems = entry.format_problematic_fields().splitlines()
         assert problems
@@ -370,7 +370,7 @@ class TestHistoryEntryFix:
         )
 
     @cant_fix
-    def test_fix_cannot_be_fixed(self, entry_str, make_entry):
+    def test_cannot_be_fixed(self, entry_str, make_entry):
         """Check complaints when trying to fix a non-fixable entry."""
         entry = make_entry(entry_str)
         assert not entry.was_understood
@@ -385,7 +385,7 @@ class TestHistoryEntryFix:
             assert fixed is entry
 
     @auto_fix_whole_entry
-    def test_fix_entry_as_a_whole(self, entry_str, make_entry):
+    def test_entry_as_a_whole(self, entry_str, make_entry):
         """Check appropriate fixing of an entry with entry-level issues."""
         entry = make_entry(entry_str)
         assert entry.needs_fixing
@@ -398,8 +398,7 @@ class TestHistoryEntryFix:
         assert str(fixed) != str(entry)
 
     @auto_fix
-    def test_fix_entry_whole_raises_unfixed_fields(self, entry_str,
-                                                   make_entry):
+    def test_entry_whole_raises_unfixed_fields(self, entry_str, make_entry):
         """Check complaints when fixing entry issues before field issues."""
         entry = make_entry(entry_str)
         assert entry.needs_fixing
@@ -407,7 +406,7 @@ class TestHistoryEntryFix:
             entry.fix_entry_issues()
 
     @auto_fix_whole_entry
-    def test_fix_failed(self, entry_str, make_entry, monkeypatch):
+    def test_failed(self, entry_str, make_entry, monkeypatch):
         """Check complaints when fixing an entry fails."""
         def _do_not_fix(*_):
             pass
@@ -422,7 +421,7 @@ class TestHistoryEntryFix:
             entry.as_fixed()
 
     @auto_fix_field_only
-    def test_fix_fields_only(self, entry_str, make_entry):
+    def test_fields_only(self, entry_str, make_entry):
         """Check appropriate fixing of an entry with funny fields."""
         entry = make_entry(entry_str)
         assert entry.needs_fixing
@@ -436,7 +435,7 @@ class TestHistoryEntryFix:
         assert str(fixed) != str(entry)
 
     @need_no_fix
-    def test_fix_not_needed(self, entry_str, make_entry):
+    def test_no_fix_needed(self, entry_str, make_entry):
         """Check that correct entries need no fixing."""
         entry = make_entry(entry_str)
         assert not entry.needs_fixing

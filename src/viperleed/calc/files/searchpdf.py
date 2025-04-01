@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -234,7 +234,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     offsets = []
     rpToDo = [rp]
     if rp.domainParams:
-        rpToDo.extend([dp.rp for dp in rp.domainParams])
+        rpToDo.extend([dp.rpars for dp in rp.domainParams])
     for (k, crp) in enumerate(rpToDo):
         sps = [sp for sp in crp.searchpars if sp.el != "vac" and sp.steps > 1]
         if not rp.domainParams:
@@ -259,8 +259,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                 title = labels[mode]
                 addinfo = []
                 if mode != "dom" and rp.domainParams:
-                    addinfo.append("domain {}"
-                                   .format(rp.domainParams[k-1].name))
+                    addinfo.append(str(rp.domainParams[k-1]))
                 if len(crp.disp_blocks) > 1:
                     addinfo.append("search {}".format(searchname[:20]))
                 if addinfo:

@@ -8,7 +8,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
@@ -18,23 +18,35 @@ from enum import Enum
 class BookkeeperMode(Enum):
     """Enumeration of bookkeeper modes.
 
+    Modes ARCHIVE, CLEAR, DISCARD, and DISCARD_FULL emit logging
+    warnings if any *_edited file is found (after potentially
+    archiving).
+
     Attributes
     ----------
     ARCHIVE
         Store last run in history. Overwrite PARAMETERS, POSCAR, and
-        VIBROCC from OUT. Runs after run_calc by default.
+        VIBROCC from OUT. The original inputs in root are renamed to
+        *_ori, unless they were edited after calc started and before
+        bookkeeper ran. For such files: the edited version is marked
+        as *_edited, no *_ori is present, and the corresponding
+        "unlabeled" file is pulled from SUPP/original_inputs. Runs
+        after run_calc by default.
     CLEAR
-        Clear the input directory of the last run, archiving files
-        beforehand if they haven't been archived already. During
-        archiving, it takes the '_ori'-suffixed files, if present,
-        to create the history folder. Runs before run_calc by default.
+        Archive files if they haven't been archived already, then
+        clean up the input directory from *_ori files and all the
+        already archived outputs of the previous calc execution
+        (i.e., log files, OUT, and SUPP). When archiving, *_edited
+        files are marked as such, but missing input files are not
+        pulled from SUPP/original_inputs. Runs before run_calc by
+        default.
     DISCARD
-        Re-start from the same input as the previous run. The
-        discarded run is kept in history and marked as such (the
-        behavior upon archiving is identical to CLEAR). Has to
-        be run manually after run_calc.
+        Re-start from the same input as the previous run. The discarded
+        run is kept in history and marked as such. The behavior upon
+        archiving is identical to CLEAR. *_ori files are taken as new
+        inputs. Has to be run manually after run_calc.
     DISCARD_FULL
-        Discard previous run as if it never happened and remove
+        Discard previous run as if it never happened, and remove
         it from history. Has to be run manually after run_calc.
     FIX
         Edit information in history and history.info according

@@ -21,7 +21,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-26'
 __license__ = 'GPLv3+'
 
@@ -33,8 +33,8 @@ from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import tenserleed
-from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.fs_utils import copytree_exists_ok
 from viperleed.calc.lib.version import Version
 from viperleed.calc.run import run_calc
 
@@ -155,6 +155,10 @@ class BaseCalcFilesSetup:
         shutil.copy(deltas_path, self.work_path / 'Deltas_001.zip')
         with ZipFile(deltas_path, 'r') as archive:
             archive.extractall(self.work_path)
+
+    def read_manifest(self):
+        """Collect the contents of the main manifest file."""
+        return (self.work_path/'manifest').read_text().splitlines()
 
 
 @fixture(scope='session')

@@ -6,13 +6,13 @@ Defines exceptions related to handling the history.info file.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-07-25'
 __license__ = 'GPLv3+'
 
 from enum import Enum
 
-from ..errors import BookkeeperError
+from viperleed.calc.bookkeeper.errors import BookkeeperError
 
 
 class HistoryInfoError(BookkeeperError):

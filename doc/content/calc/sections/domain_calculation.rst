@@ -42,11 +42,13 @@ following settings must also be the same in each of the reference calculations
 -  :ref:`BEAMINCIDENCE`
 -  :ref:`IVBEAMS`
 
+.. _run_domains:
+
 Running the domain calculations
 -------------------------------
 
-To execute a domain calculation, set up a base folder (:file:`my_domain_calc`
-in :numref:`list_domains_directories`) containing all the normal input files,
+To execute a domain calculation, set up a base folder (\ :file:`my_domain_calc`
+in :numref:`list_domains_inputs`) containing all the normal input files,
 except for the ones specifically concerned with the structures,
 i.e., **without** :ref:`POSCAR` and :ref:`VIBROCC`. Likewise, the
 :ref:`PARAMETERS` file should contain **no** parameters concerned with
@@ -59,22 +61,55 @@ parameter once for each of the domains that should be included. The
 which the input data for a given domain should be fetched. The path may
 point to a complete :file:`Tensors_<index>.zip` :ref:`file<tensorszip>`
 (e.g., :file:`my_domain_2/Tensors/Tensors_005.zip` in
-:numref:`list_domains_directories`) or to a folder containing the
+:numref:`list_domains_inputs`) or to a folder containing the
 :ref:`usual input files<list_input_files>` for a reference calculation
 (:ref:`EXPBEAMS` and :ref:`DISPLACEMENTS` files in the subfolder are ignored),
-as those in :file:`my_domain_1` of :numref:`list_domains_directories`. If
+as those in :file:`my_domain_1` of :numref:`list_domains_inputs`. If
 the target path is a directory in which previous ViPErLEED calculations
 have been executed, |calc| will check whether there is a :file:`Tensors`
 folder, and fetch the highest-number :file:`Tensors_<index>.zip` file.
 For more information, see the :ref:`DOMAIN` page. Use the :ref:`DOMAIN_STEP`
 parameter to define the step width for domain-area variations.
 
-.. _list_domains_directories:
+.. _list_domains_inputs:
 .. code-block:: console
-    :caption: Example directory tree for a domain calculation.
+    :caption: Example directory tree with inputs for a domain calculation.
 
     my_domain_calc/
-    ├── Domain_1/          <-- Created by calc at initialization
+    ├── my_domain_1/       <-- Use input files, requires reference calculation
+    │   ├── PARAMETERS
+    │   ├── POSCAR
+    │   ├── VIBROCC
+    │   └── DISPLACEMENTS  <-- Not used
+    ├── my_domain_2/       <-- Use most recent Tensors
+    │   ├── Tensors/
+    │   │   ├── ...
+    │   │   └── Tensors_005.zip
+    │   ├── PARAMETERS     <-- Use Tensors_005 instead of this
+    │   ├── POSCAR         <-- Use Tensors_005 instead of this
+    │   └── VIBROCC        <-- Use Tensors_005 instead of this
+    ├── EXPBEAMS.csv
+    ├── DISPLACEMENTS
+    └── PARAMETERS
+
+
+You can then run |calc| :ref:`as usual<cli_calc>`.
+:numref:`list_domains_outputs` shows the tree structure at the end of the
+domain calculation. All structure-specific output files (e.g., :ref:`poscar`,
+:ref:`vibrocc`) are collected in the respective domain subfolders (i.e.,
+:file:`my_domain_1` and :file:`my_domain_2`). Instead, output concerning all
+domains taken together will go to the main :file:`my_domain_calc` folder (e.g.,
+the :ref:`searchprogresspdf` file and the |R-factor| :ref:`plots<Rfactorplots>`
+after the :ref:`super_pos`).
+
+.. _list_domains_outputs:
+.. code-block:: console
+    :caption:
+        Same directory tree as in :numref:`list_domains_inputs` after execution
+        of a domain calculation.
+
+    my_domain_calc/
+    ├── my_domain_1/       <-- Use input files, requires reference calculation
     │   ├── OUT/           <-- Created by calc at end
     │   │   ├── POSCAR
     │   │   ├── VIBROCC
@@ -82,13 +117,14 @@ parameter to define the step width for domain-area variations.
     │   ├── SUPP/          <-- Created by calc at end
     │   │   ├── POSCAR_bulk
     │   │   └── ...
-    │   ├── Tensors/       <-- Copied by calc from /my_domain_1/
-    │   │   └── Tensors_027.zip
-    │   ├── PARAMETERS     <-- Copied by calc from /my_domain_1/
-    │   ├── POSCAR         <-- Copied by calc from /my_domain_1/
-    │   └── VIBROCC        <-- Copied by calc from /my_domain_1/
+    │   ├── Tensors/       <-- Created by calc at end
+    │   │   └── Tensors_001.zip
+    │   ├── PARAMETERS
+    │   ├── POSCAR
+    │   ├── VIBROCC
+    │   └── DISPLACEMENTS  <-- Not used
     │
-    ├── Domain_another/    <-- Created by calc at initialization
+    ├── my_domain_2/       <-- Use most recent Tensors
     │   ├── OUT/           <-- Created by calc at end
     │   │   ├── POSCAR
     │   │   ├── VIBROCC
@@ -96,8 +132,12 @@ parameter to define the step width for domain-area variations.
     │   ├── SUPP/          <-- Created by calc at end
     │   │   ├── POSCAR_bulk
     │   │   └── ...
-    │   └── Tensors/       <-- Copied by calc from /my_domain_2/
-    │       └── Tensors_005.zip
+    │   ├── Tensors/
+    │   │   ├── ...
+    │   │   └── Tensors_005.zip
+    │   ├── PARAMETERS
+    │   ├── POSCAR
+    │   └── VIBROCC
     │
     ├── OUT/
     │   ├── Rfactor_analysis_superpos.pdf
@@ -108,50 +148,24 @@ parameter to define the step width for domain-area variations.
     ├── DISPLACEMENTS
     └── PARAMETERS
 
-
-    my_domain_1/
-    ├── Tensors/
-    │   ├── Tensors_001.zip
-    │   ├── ...
-    │   └── Tensors_027.zip
-    ├── PARAMETERS
-    ├── POSCAR
-    └── VIBROCC
-
-
-    my_domain_2/
-    └── Tensors/
-        └── Tensors_005.zip
-
-
-You can then run |calc| :ref:`as usual<cli_calc>`. In the base directory,
-a subfolder is created for each domain (folders :file:`Domain_1` and
-:file:`Domain_another` in :numref:`list_domains_directories`). Input
-files for each domain are copied there. All structure-specific output
-files (e.g., :ref:`poscar`, :ref:`vibrocc`) will go to these subfolders,
-*not* to the original paths from which the inputs were fetched. Output
-concerning all domains taken together will go to the main folder (e.g.,
-the :ref:`searchprogresspdf` file and the |R-factor| :ref:`plots<Rfactorplots>`
-after the :ref:`super_pos`).
-
 To specify which segments should be run, either use the :ref:`RUN` parameter
 as usual, or set ``RUN = 4`` as a shorthand for a domain calculation. This
-will be interpreted as ``RUN = 1-3`` or ``RUN = 2-3``, depending on whether
+will be interpreted as ``RUN = 2-3`` or ``RUN = 1-3``, depending on whether
 the input files are compatible :file:`Tensors.zip` files or whether a reference
 calculation is needed, respectively. For ``RUN = 4``, reference calculations
 will only be executed for the domains that need them. Specify ``RUN = 1-3``
 explicitly to rerun reference calculations for all domains. However, as
 discussed above, it is recommended to run the reference calculations separately
-beforehand for better control, and specify ``RUN = 2-3`` explicitly here.
+beforehand for better control.
 
 .. warning::
     The :ref:`bookkeeper<bookkeeper>` functionality is only partially
     implemented for domain calculations. Only the :file:`history` folder and
     :file:`history.info` file for the root directory (\ :file:`my_domain_calc`
-    in :numref:`list_domains_directories`) are handled automatically.
-    The domain-specific subfolders (i.e., :file:`Domain_1` and
-    :file:`Domain_another` in :numref:`list_domains_directories`) will not be
-    cleaned up. To preserve the domain-specific output files, you must manually
+    in :numref:`list_domains_outputs`) are handled automatically.
+    The domain-specific subfolders (i.e., :file:`my_domain_1` and
+    :file:`my_domain_2` in :numref:`list_domains_outputs`) will not be
+    processed. To preserve the domain-specific output files, you must manually
     run the :program:`bookkeeper` in each of the domain subfolders using the
     command ``viperleed bookkeeper --archive``. Then, to clean the directories
     and remove old ``*_ori`` and ``*.log`` files, run the :program:`bookkeeper`
@@ -160,6 +174,11 @@ beforehand for better control, and specify ``RUN = 2-3`` explicitly here.
     the results of a structure optimization (especially, files :file:`POSCAR`
     and :file:`VIBROCC`) **will be lost**: the next calculation will **start**
     **from the same inputs as the previous one**.
+
+.. versionchanged:: 0.13.0
+    In earlier versions of |calc|, the results of the calculations from each
+    domain in a domain calculation would **not be copied back from the work**
+    **folder**.
 
 
 The DISPLACEMENTS file for domains
@@ -188,3 +207,110 @@ calculation with two domains called ``1x1`` and ``2x1``:
        * L(3) z = -0.05 0.05 0.025
 
 .. note:: Indentation is allowed, but does not affect the functionality.
+
+
+.. _domain_inputs_outside:
+
+Fetching domain inputs from other filesystem locations
+------------------------------------------------------
+
+The :ref:`DOMAIN` parameter also supports the specification of other locations
+from which inputs for each domain should be collected.
+:numref:`list_domains_inputs_abs` shows an example of such a filesystem: inputs
+for the domains defined in :file:`my_domain_calc/PARAMETERS` are to be fetched
+from the :file:`domain_1_somewhere_else` and :file:`domain_2_somewhere_else`
+folders. This section describes the differences that such a layout entails, as
+compared to the simpler one in :numref:`list_domains_inputs`.
+
+.. _list_domains_inputs_abs:
+.. code-block:: console
+    :caption:
+        Example directory tree for a domain calculation with inputs
+        for each domain stored at arbitrary locations on the filesystem.
+        A better structure for the input tree is displayed in
+        :numref:`list_domains_inputs`.
+
+    my_domain_calc/
+    ├── EXPBEAMS.csv
+    ├── DISPLACEMENTS
+    └── PARAMETERS
+
+    domain_1_somewhere_else/
+    ├── PARAMETERS
+    ├── POSCAR
+    ├── VIBROCC
+    └── DISPLACEMENTS  <-- Not used
+
+    domain_2_somewhere_else/
+    └── Tensors/
+        ├── ...
+        └── Tensors_005.zip
+
+In this case, |calc| will create new subfolders of :file:`my_domain_calc`,
+uniquely named from either the user-given name or a progressive index, as
+:file:`Domain_<name-or-index>`. Only the necessary input files for each domain
+are copied there from the source directories.
+:numref:`list_domains_outputs_abs` shows the structure of the
+:file:`my_domain_calc` folder after execution. Notice that file
+:file:`DISPLACEMENTS` was not copied from :file:`domain_1_somewhere_else`,
+and only the most recent tensor file (\ :file:`Tensors_005.zip`) was
+collected from :file:`domain_2_somewhere_else`.
+
+.. _list_domains_outputs_abs:
+.. code-block:: console
+    :caption:
+        Example directory tree at the end of a domain calculation with inputs
+        fetched from arbitrary locations on the filesystem.
+
+    my_domain_calc/
+    ├── Domain_1/          <-- Created by calc at initialization
+    │   ├── OUT/           <-- Created by calc at end
+    │   │   ├── POSCAR
+    │   │   ├── VIBROCC
+    │   │   └── ...
+    │   ├── SUPP/          <-- Created by calc at end
+    │   │   ├── POSCAR_bulk
+    │   │   └── ...
+    │   ├── Tensors/       <-- Created by calc at end
+    │   │   └── Tensors_001.zip
+    │   ├── PARAMETERS     <-- Copied by calc from /domain_1_somewhere_else/
+    │   ├── POSCAR         <-- Copied by calc from /domain_1_somewhere_else/
+    │   └── VIBROCC        <-- Copied by calc from /domain_1_somewhere_else/
+    │
+    ├── Domain_another/    <-- Created by calc at initialization
+    │   ├── OUT/           <-- Created by calc at end
+    │   │   ├── POSCAR
+    │   │   ├── VIBROCC
+    │   │   └── ...
+    │   ├── SUPP/          <-- Created by calc at end
+    │   │   ├── POSCAR_bulk
+    │   │   └── ...
+    │   └── Tensors/       <-- Copied by calc from /domain_2_somewhere_else/
+    │       └── Tensors_005.zip
+    │
+    ├── OUT/
+    │   ├── Rfactor_analysis_superpos.pdf
+    │   ├── Search_progress.pdf
+    │   └── ...
+    ├── viperleed-calc-<timestamp>.log
+    ├── EXPBEAMS.csv
+    ├── DISPLACEMENTS
+    └── PARAMETERS
+
+
+Execution then proceeds as described in :ref:`run_domains`, treating
+:file:`my_domain_calc` as an independent folder. No further reference
+is made to the original paths where the inputs were collected from.
+In particular, all structure-specific output files will go to the
+newly created subfolders, *not* to the original paths.
+
+Additionally, the DOMAIN parameters in the PARAMETERS file of the
+main directory (i.e., :file:`my_domain_calc/PARAMETERS`, as well
+as :file:`my_domain_calc/OUT/PARAMETERS`) are automatically modified
+to point to the newly created subfolders of :file:`my_domain_calc`
+(i.e., :file:`Domain_1` and :file:`Domain_another` in
+:numref:`list_domains_outputs_abs`).
+
+.. versionchanged:: 0.13.0
+    The main PARAMETERS file is updated such that each DOMAIN points to the
+    subfolders of the directory in which |calc| was executed.

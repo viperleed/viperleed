@@ -11,7 +11,7 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-12-16'
 __license__ = 'GPLv3+'
 
@@ -20,7 +20,7 @@ import copy
 import numpy as np
 
 from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.slab import NoBulkRepeatError
 from viperleed.calc.files import poscar
 from viperleed.calc.lib.woods_notation import writeWoodsNotation

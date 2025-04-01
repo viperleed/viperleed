@@ -7,7 +7,7 @@ and RSuperField.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-07-28'
 __license__ = 'GPLv3+'
 
@@ -15,15 +15,15 @@ __license__ = 'GPLv3+'
 import re
 from typing import Union
 
+from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
+from viperleed.calc.bookkeeper.history.entry.field import CommonRegex
+from viperleed.calc.bookkeeper.history.entry.field import DefaultMessage
+from viperleed.calc.bookkeeper.history.entry.field import MissingField
+from viperleed.calc.bookkeeper.history.entry.field import NoneIsEmptyField
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.dataclass_utils import frozen
 
-from ..errors import EntrySyntaxError
-from .enums import FieldTag
-from .field import CommonRegex
-from .field import DefaultMessage
-from .field import NoneIsEmptyField
-from .field import MissingField
 
 _EPS = 1e-5   # Tolerance on the limits for the R factor
 _FMT = '.4f'  # Format for single-float value

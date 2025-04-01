@@ -21,6 +21,7 @@ from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import LOG_PREFIX
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.calc.sections.cleanup import move_oldruns
@@ -54,7 +55,7 @@ class TestCollectWorhistoryContents:
 
     @fixture(name='run')
     def fixture_run(self, rpars, mock_implementation, tmp_path):
-        """Call _collect_worhistory_contents in tmp_path."""
+        """Call _collect_worhistory_contents in `tmp_path`."""
         subfolder = tmp_path/'subfolder'
         def _run(prerun, **kwargs):
             subfolder.mkdir()
@@ -65,13 +66,13 @@ class TestCollectWorhistoryContents:
         return _run
 
     _directories = {  # (dirname, prerun) : called
-        ('some_dir', True): 'shutil.move',
+        ('some_dir', True): f'{_MODULE}.fs_utils.move',
         ('some_dir', False): 'shutil.copytree',
-        (DEFAULT_SUPP, True): 'shutil.move',
+        (DEFAULT_SUPP, True): f'{_MODULE}.fs_utils.move',
         (DEFAULT_SUPP, False): 'shutil.copytree',
         }
     _files = {  # (file, prerun): called
-        ('some_file', True): 'shutil.move',
+        ('some_file', True): f'{_MODULE}.fs_utils.move',
         ('some_file', False): 'shutil.copy2',
         ('control.chem', True): 'shutil.copy2',
         ('control.chem', False): 'shutil.copy2',
@@ -85,7 +86,7 @@ class TestCollectWorhistoryContents:
         mocker.patch(raises, side_effect=OSError)
         run(prerun, files_and_dirs=((), (directory,)))
         expect_log = re.compile(rf'.*Error copying {directory} to .*'
-                                r'Files in directory may .*overwritten.\n')
+                                r'Files in directory may .*overwritten\.\n')
         assert expect_log.fullmatch(caplog.text)
 
     @parametrize('args,raises', _files.items())
@@ -96,15 +97,19 @@ class TestCollectWorhistoryContents:
         mocker.patch(raises, side_effect=OSError)
         run(prerun, files_and_dirs=((file,), ()))
         expect_log = re.compile(rf'.*Error copying {file} to .*'
-                                r'File may .*overwritten.\n')
+                                r'File may .*overwritten\.\n')
         assert expect_log.fullmatch(caplog.text)
 
     @parametrize('args,expect', _directories.items())
     def test_copy_or_move_directory(self, args, expect, run, mocker):
         """Check that a file is moved or copied depending on prerun."""
         directory, prerun = args
-        mocks = {'shutil.move': mocker.patch('shutil.move'),
-                 'shutil.copytree': mocker.patch('shutil.copytree')}
+        mocks = {
+            f'{_MODULE}.fs_utils.move': mocker.patch(
+                f'{_MODULE}.fs_utils.move',
+                ),
+            'shutil.copytree': mocker.patch('shutil.copytree'),
+            }
         called = mocks.pop(expect)
         run(prerun, files_and_dirs=((), (directory,)))
         called.assert_called_once()
@@ -115,8 +120,12 @@ class TestCollectWorhistoryContents:
     def test_copy_or_move_file(self, args, expect, run, mocker):
         """Check that a file is moved or copied depending on prerun."""
         file, prerun = args
-        mocks = {'shutil.move': mocker.patch('shutil.move'),
-                 'shutil.copy2': mocker.patch('shutil.copy2')}
+        mocks = {
+            f'{_MODULE}.fs_utils.move': mocker.patch(
+                f'{_MODULE}.fs_utils.move',
+                ),
+            'shutil.copy2': mocker.patch('shutil.copy2'),
+            }
         called = mocks.pop(expect)
         run(prerun, files_and_dirs=((file,), ()))
         called.assert_called_once()
@@ -154,9 +163,8 @@ class TestFindNextWorkistoryContents:
             }
         all_files = skipped_files | collected_files
         all_dirs = skipped_dirs | collected_dirs
-        rpars.manifest |= collected_files
-        rpars.manifest |= all_dirs
-        rpars.manifest.add(calc_log)
+        for item in (*collected_files, *all_dirs, calc_log):
+            rpars.manifest.add(item)
         contents = tuple(Path(f) for f in (*all_files, *all_dirs))
         mocker.patch('pathlib.Path.iterdir', return_value=contents)
         mocker.patch('pathlib.Path.is_file', lambda f: f.name in all_files)
@@ -225,8 +233,9 @@ class TestFindNextWorkistoryDirName:
 
     @fake_run
     def test_logs_no_prerun(self, mock_rpars, mocker):
-        """Check the expected result when there are log files."""
-        mock_glob = mocker.patch('pathlib.Path.glob', return_value=())
+        """Check the expected result during a non-prerun call."""
+        # The result does not depend on whether there are logs or not
+        mock_glob = mocker.patch('pathlib.Path.glob')
         dirname = _find_next_workistory_dir_name(mock_rpars, prerun=False)
         expected = f't001.r1234_{mock_rpars.timestamp}'
         assert dirname == expected
@@ -273,14 +282,6 @@ class TestFindNextWorkistoryDirName:
         assert mock_rpars.lastOldruns == history
 
     @fake_run
-    def test_no_logs_no_prerun(self, mock_rpars, mocker):
-        """Check the expected result when there are no log files."""
-        mocker.patch('pathlib.Path.glob', return_value=())
-        dirname = _find_next_workistory_dir_name(mock_rpars, prerun=False)
-        expected = f't001.r1234_{mock_rpars.timestamp}'
-        assert dirname == expected
-
-    @fake_run
     def test_no_logs_prerun(self, mock_rpars, mocker):
         """Check the expected result when there are no log files."""
         mocker.patch('pathlib.Path.glob', return_value=())
@@ -320,13 +321,13 @@ class TestFindNextWorkistoryRunNumber:
         existing = (
             Path('t234.r001_'),
             Path('t234.r002_'),
-            Path('t234.r099_more_text_with.r578'),
-            Path('t999.r999_'),
+            Path('t234.r099_more_text_with.r578'),  # Last one
+            Path('t999.r999_'),       # Different TENSOR_INDEX
             )
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
-        number =_find_next_workistory_run_number(rpars, prerun)
-        expect = 100  # There's one folder for a different TENSOR_INDEX
+        number = _find_next_workistory_run_number(rpars, prerun)
+        expect = 100
         assert number == expect
 
     @all_prerun
@@ -337,7 +338,7 @@ class TestFindNextWorkistoryRunNumber:
         existing = tuple(Path(p) for p in existing)
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
-        number =_find_next_workistory_run_number(rpars, prerun)
+        number = _find_next_workistory_run_number(rpars, prerun)
         expect = 1002
         assert number == expect
 
@@ -353,7 +354,7 @@ class TestFindNextWorkistoryRunNumber:
         existing = tuple(Path(p) for p in existing)
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', _mock_isdir)
-        number =_find_next_workistory_run_number(rpars, prerun)
+        number = _find_next_workistory_run_number(rpars, prerun)
         expect = 2
         assert number == expect
 
@@ -381,7 +382,7 @@ class TestFindNextWorkistoryRunNumber:
         existing = tuple(Path(p) for p in existing)
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
-        number =_find_next_workistory_run_number(rpars, prerun)
+        number = _find_next_workistory_run_number(rpars, prerun)
         expect = 9
         assert number == expect
 
@@ -398,7 +399,7 @@ class TestFindNextWorkistoryRunNumber:
             )
         mocker.patch('pathlib.Path.iterdir', return_value=existing)
         mocker.patch('pathlib.Path.is_dir', return_value=True)
-        number =_find_next_workistory_run_number(rpars, prerun)
+        number = _find_next_workistory_run_number(rpars, prerun)
         expect = 6
         assert number == expect
 
@@ -444,7 +445,7 @@ class TestMakeNewWorkhistorySubfolder:
 
     @all_prerun
     def test_fails_to_create_subfolder(self, prerun, run, caplog, mocker):
-        """Check complaints when creating workhistory fails."""
+        """Check complaints when creating a workhistory subfolder fails."""
         _mkdir = Path.mkdir
         dirname = 'test_subfolder'
         def _mkdir_fails(path, **kwargs):
@@ -483,7 +484,7 @@ class TestMakeNewWorkhistorySubfolder:
 
     @all_prerun
     def test_workhistory_exists(self, prerun, run, tmp_path):
-        """Check that workhistory exists after execution."""
+        """Check workhistory subfolders are created if the parent exists."""
         workhistory = tmp_path/DEFAULT_WORK_HISTORY
         workhistory.mkdir()
         workhistory_subfolder = workhistory/'test'
@@ -494,34 +495,48 @@ class TestMakeNewWorkhistorySubfolder:
 class TestMoveOldruns:
     """Tests for the move_oldruns function."""
 
+    # Arguments to organize_workdir for all domains
+    organize_common = {
+        'delete_unzipped': False,
+        'tensors': False,
+        'deltas': False,
+        'path': '',
+        }
+
     @fixture(name='mock_implementation')
-    def fixture_mock_implementation(self, tmp_path, mocker):
+    def fixture_mock_implementation(self, mocker):
         """Replace implementation details of move_oldruns with mocks."""
-        subfolder = tmp_path/'tst_workhistory_dir'
         def _mock():
             return {
                 'make_subfolder': mocker.patch(
                     f'{_MODULE}._make_new_workhistory_subfolder',
-                    return_value=subfolder,
+                    return_value=mocker.MagicMock(spec=Path),
                     ),
                 'contents': mocker.patch(
                     f'{_MODULE}._collect_worhistory_contents',
                     ),
                 'organize_workdir': mocker.patch(
-                    f'{_MODULE}.organize_workdir'
+                    f'{_MODULE}.organize_workdir',
                     ),
                 }
         return _mock
 
     @fixture(name='run')
     def fixture_run(self, rpars, mock_implementation, tmp_path):
-        """Call move_oldruns at tmp_path, optionally with mocks."""
+        """Call move_oldruns at `tmp_path` after mocking implementation."""
         def _run(prerun):
             with execute_in_dir(tmp_path):
                 mocked = mock_implementation()
                 move_oldruns(rpars, prerun)
                 return mocked
         return _run
+
+    @staticmethod
+    def check_manifest_updated(rpars, prerun):
+        """Check that workhistory is in manifest, if needed."""
+        should_contain_workhistory = not prerun
+        contains_workhistory = DEFAULT_WORK_HISTORY in rpars.manifest
+        assert contains_workhistory == should_contain_workhistory
 
     @all_prerun
     def test_implementation_called(self, prerun, run, rpars, mocker):
@@ -535,42 +550,61 @@ class TestMoveOldruns:
                 mocks['make_subfolder'].return_value,
                 ),
             }
+        if not prerun:
+            expect_calls['organize_workdir'] = mocker.call(
+                rpars,
+                **self.organize_common,
+                )
         for called_func, call in expect_calls.items():
             mock = mocks[called_func]
             mock.assert_called_once()
             mock.assert_has_calls((call,))
 
+    def test_implementation_called_domains(self, rpars, run, mocker):
+        """Check expected calls to the implementation with domains."""
+        # Prepare some fake domains
+        domain_rp = Rparams()
+        domain_wrk = mocker.MagicMock(spec=Path)
+        rpars.domainParams = [
+            mocker.MagicMock(rpars=domain_rp, workdir=domain_wrk),
+            ]
+
+        def _propagate_calls(*args, **kwargs):
+            """Return one main call and one call per domain."""
+            return (mocker.call(rpars, *args, **kwargs),
+                    mocker.call(domain_rp, *args, **kwargs))
+
+        prerun = False
+        mocks = run(prerun=prerun)
+
+        # Prepare the expected calls
+        expect_calls = {
+            # Each method should be called once for the
+            # main work folder, and once per each domain.
+            'make_subfolder': _propagate_calls(prerun),
+            'organize_workdir': _propagate_calls(**self.organize_common),
+            'contents': _propagate_calls(prerun,
+                                         mocks['make_subfolder'].return_value),
+            }
+        for mock_name, mock in mocks.items():
+            calls = expect_calls[mock_name]
+            assert mock.call_count == len(calls)
+            mock.assert_has_calls(calls)
+
+        # Check workhistory is in all manifest files
+        self.check_manifest_updated(rpars, prerun)
+        self.check_manifest_updated(domain_rp, prerun)
+
     @all_prerun
     def test_manifest_updated(self, rpars, prerun, run):
         """Check that rpars.manifest is updated as expected."""
         run(prerun)
-        should_contain_workhistory = not prerun
-        contains_workhistory = DEFAULT_WORK_HISTORY in rpars.manifest
-        assert contains_workhistory == should_contain_workhistory
+        self.check_manifest_updated(rpars, prerun)
 
-    def test_organize_workdir_calls(self, rpars, run, mocker):
-        """Check expected calls to organize_workdir."""
-        common_args = {'delete_unzipped': False,
-                       'tensors': False,
-                       'deltas': False}
-        domain_rp = mocker.MagicMock()
-        domain_wrk = mocker.MagicMock()
-        rpars.domainParams = [
-            mocker.MagicMock(rp=domain_rp, workdir=domain_wrk),
-            ]
-        expect_calls = [
-            # One for the main
-            mocker.call(rpars, path='', **common_args),
-            # and one for each domain
-            mocker.call(domain_rp, path=domain_wrk, **common_args),
-            ]
-        mocks = run(prerun=False)
-        organize_workdir = mocks['organize_workdir']
-        assert organize_workdir.call_count == len(expect_calls)
-        organize_workdir.has_calls(expect_calls)
-
-    def test_prerun_does_not_touch_workdir(self, run):
+    def test_prerun_does_not_touch_workdir(self, rpars, run):
         """Check that organize_workdir is called only when running."""
-        mocks = run(prerun=True)
+        prerun = True
+        mocks = run(prerun=prerun)
         organize_workdir = mocks['organize_workdir']
         organize_workdir.assert_not_called()
+        self.check_manifest_updated(rpars, prerun)  # No workhistory

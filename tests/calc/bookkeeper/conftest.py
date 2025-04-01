@@ -11,6 +11,11 @@ after_calc_execution
     Prepare a directory like the one after calc executes.
 before_calc_execution
     Return a bookkeeper ready to run in a directory with calc inputs.
+check_methods_called
+    Patch selected methods of an object, and ensure that calling
+    another method also calls the patched ones.
+mock_attributes
+    Replace multiple attributes of an object with MagicMock()s.
 mock_tree_after_calc_execution
     Factory that produces and returns a temporary directory with
     contents like after a calc run.
@@ -23,11 +28,12 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
 from copy import deepcopy
+from operator import attrgetter
 
 from pytest_cases import fixture
 from pytest_cases import fixture_ref
@@ -70,8 +76,13 @@ MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
 MOCK_TIMESTAMP = '680203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
 MOCK_WORKHISTORY = {  # name in workhistory: name in history
+    # One run involving an already existing, previous tensor
+    f't002.r009_DS_{MOCK_TIMESTAMP}': f't002.r003.009_DS_{MOCK_TIMESTAMP}',
+    # One run involving a tensor that is not yet in history
     f't003.r005_DS_{MOCK_TIMESTAMP}': f't003.r001.005_DS_{MOCK_TIMESTAMP}',
-    f't003.r000_{PREVIOUS_LABEL}_xxx': None,  # deleted
+    # A previous one, that should be deleted
+    f't003.r000_{PREVIOUS_LABEL}_xxx': None,
+    # And a couple runs from the current tensor
     f't004.r001_RDS_{MOCK_TIMESTAMP}': f't004.r001.001_RDS_{MOCK_TIMESTAMP}',
     f't004.r002_RDS_{MOCK_TIMESTAMP}': f't004.r001.002_RDS_{MOCK_TIMESTAMP}',
     }
@@ -88,88 +99,82 @@ def factory_after_bookkeeper_run():
     return _make
 
 
+@fixture(name='_make_root_tree')
+def factory_make_root_tree(tmp_path):
+    """Populate a temporary directory with files."""
+    default_root_contents = {
+        DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
+        DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
+
+        # Input files
+        **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
+
+        # OUT files
+        DEFAULT_OUT : {f: MOCK_OUT_CONTENT for f in MOCK_STATE_FILES},
+
+        # Original inputs in SUPP
+        f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
+            f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
+            },
+
+        # Pre-existing (empty) history directories
+        f'{DEFAULT_HISTORY}/t001.r001_200101-111213/some_directory': {},
+        f'{DEFAULT_HISTORY}/t001.r002.001_DS_200212-141516/some_directory': {},
+        f'{DEFAULT_HISTORY}/t002.r002_200212-141516/some_directory': {},
+
+        # workhistory subfolders, with dummy files
+        **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
+           for f in MOCK_WORKHISTORY},
+        }
+
+    def _make(**kwargs):
+        def _populate_root():
+            root_contents = {**default_root_contents, **kwargs}
+            filesystem_from_dict(root_contents, tmp_path)
+            return tmp_path
+        return _populate_root
+
+    return _make
+
+
 @fixture(name='mock_tree_after_calc_execution')
 @parametrize(log_file_name=MOCK_LOG_FILES)
-@parametrize(with_notes=(True,False))
+@parametrize(with_notes=(True, False))
 @parametrize_with_cases('history_info_contents',
                         cases=(cases_entry, cases_history),
                         has_tag=Tag.BOOKKEEPER)
-def factory_mock_tree_after_calc_execution(log_file_name, with_notes,
-                                           history_info_contents, tmp_path):
+def factory_mock_tree_after_calc_execution(log_file_name,
+                                           with_notes,
+                                           history_info_contents,
+                                           _make_root_tree):
     """Return a temporary directory with contents like after a calc run."""
-    def _make():
-        root_contents = {
-            DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
-            DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
-            log_file_name: None,
-
-            # Input files
-            **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
-
-            # OUT files
-            DEFAULT_OUT : {f: MOCK_OUT_CONTENT for f in MOCK_STATE_FILES},
-
-            # Original inputs in SUPP
-            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
-                f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
-                },
-
-            # Pre-existing (empty) history directories
-            f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
-            f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
-
-            # workhistory subfolders, with dummy files
-            **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
-               for f in MOCK_WORKHISTORY},
-            }
-        # Files/folders that depend on the arguments
-        if with_notes:
-            root_contents['notes.txt'] = NOTES_TEST_CONTENT
-        if history_info_contents is not None:  # history.info
-            root_contents[HISTORY_INFO_NAME] = history_info_contents
-
-        # Actually create files and folders
-        filesystem_from_dict(root_contents, tmp_path)
-
-        return tmp_path
-    return _make
+    kwargs = {
+        log_file_name: None,
+        }
+    # Files/folders that depend on the arguments
+    if with_notes:
+        kwargs['notes.txt'] = NOTES_TEST_CONTENT
+    if history_info_contents is not None:  # history.info
+        kwargs[HISTORY_INFO_NAME] = history_info_contents
+    return _make_root_tree(**kwargs)
 
 
 @fixture(name='mock_tree_after_calc_execution_with_out_suffix')
-def factory_mock_tree_after_calc_execution_out_suffix(tmp_path):
+def factory_mock_tree_after_calc_execution_out_suffix(_make_root_tree):
     """Create files like those after calc HAD run before we dropped _OUT."""
-    def _make():
-        root_contents = {
-            DEFAULT_DELTAS: {f'{DEFAULT_DELTAS}_004.zip': None},
-            DEFAULT_TENSORS: {f'{DEFAULT_TENSORS}_004.zip': None},
-            f'{LOG_PREFIX}_{MOCK_TIMESTAMP}.log': None,
+    old_style_out = {
+        f'{f}_OUT_010203-040506': MOCK_OUT_SUFFIXED_CONTENT
+        for f in ('POSCAR', 'VIBROCC')
+        }
+    # In < v0.13.0, there was no PARAMETERS in OUT. It was in root.
+    # old_style_out['PARAMETERS'] = MOCK_OUT_CONTENT
+    kwargs = {
+        f'{LOG_PREFIX}_{MOCK_TIMESTAMP}.log': None,
 
-            # Input files
-            **{f: MOCK_INPUT_CONTENT for f in MOCK_STATE_FILES},
-
-            # OUT files, with an old-style _OUT suffix
-            DEFAULT_OUT : {f'{f}_OUT': MOCK_OUT_SUFFIXED_CONTENT
-                           for f in MOCK_STATE_FILES},
-
-            # Original inputs in SUPP
-            f'{DEFAULT_SUPP}/{ORIGINAL_INPUTS_DIR_NAME}': {
-                f: MOCK_ORIG_CONTENT for f in MOCK_STATE_FILES
-                },
-
-            # Pre-existing (empty) history directories
-            f'{DEFAULT_HISTORY}/t001.r001_20xxxx-xxxxxx/some_directory': {},
-            f'{DEFAULT_HISTORY}/t002.r002_20xxxx-xxxxxx/some_directory': {},
-
-            # workhistory subfolders, with dummy files
-            **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
-               for f in MOCK_WORKHISTORY},
-            }
-
-        # Actually create files and folders
-        filesystem_from_dict(root_contents, tmp_path)
-
-        return tmp_path
-    return _make
+        # OUT files, with an old-style _OUT suffix
+        DEFAULT_OUT : old_style_out,
+        }
+    return _make_root_tree(**kwargs)
 
 
 @fixture(name='mock_tree_before_calc_execution')
@@ -206,6 +211,8 @@ def fixture_after_archive(after_calc_execution, after_bookkeper_run):
     history_run_path : Path
         Path to the main history subfolder created by `bookkeeper`
         as a result of the archiving.
+    mocker : fixture
+        The pytest-mock fixture.
     """
     return after_bookkeper_run(after_calc_execution, BookkeeperMode.ARCHIVE)
 
@@ -245,33 +252,6 @@ def fixture_after_calc_execution(make_calc_tree, mocker):
     history_path = bookkeeper.cwd / DEFAULT_HISTORY
     history_run_path = history_path / f't004.r001_{MOCK_TIMESTAMP}'
     return bookkeeper, history_run_path, mocker
-
-
-@fixture(name='before_calc_execution')
-def fixture_before_calc_execution(mock_tree_before_calc_execution):
-    """Return a bookkeeper ready to run in a directory with calc inputs.
-
-    This represents a new calculation, i.e., before any viperleed.calc
-    or bookkeeper run. However, the bookkeeper is up to date about the
-    contents of its root directory.
-
-    Parameters
-    ----------
-    mock_tree_before_calc_execution : fixture
-        Factory that produces a temporary directory containing
-        calc input files when called.
-
-    Returns
-    ------
-    bookkeeper : Bookkeeper
-        A bookkeeper instance ready for running in the
-        temporary directory.
-    """
-    # Create mock input files
-    tmp_path = mock_tree_before_calc_execution()
-    bookkeeper = Bookkeeper(cwd=tmp_path)
-    bookkeeper.update_from_cwd(silent=True)
-    return bookkeeper
 
 
 @fixture(name='after_calc_with_edited_file')
@@ -345,3 +325,53 @@ def fixture_after_calc_with_edited(tmp_path):
     bookkeeper = Bookkeeper(cwd=tmp_path)
     bookkeeper.update_from_cwd(silent=True)
     return bookkeeper, before, archived
+
+
+@fixture(name='before_calc_execution')
+def fixture_before_calc_execution(mock_tree_before_calc_execution):
+    """Return a bookkeeper ready to run in a directory with calc inputs.
+
+    This represents a new calculation, i.e., before any viperleed.calc
+    or bookkeeper run. However, the bookkeeper is up to date about the
+    contents of its root directory.
+
+    Parameters
+    ----------
+    mock_tree_before_calc_execution : fixture
+        Factory that produces a temporary directory containing
+        calc input files when called.
+
+    Returns
+    ------
+    bookkeeper : Bookkeeper
+        A bookkeeper instance ready for running in the
+        temporary directory.
+    """
+    # Create mock input files
+    tmp_path = mock_tree_before_calc_execution()
+    bookkeeper = Bookkeeper(cwd=tmp_path)
+    bookkeeper.update_from_cwd(silent=True)
+    return bookkeeper
+
+
+@fixture(name='check_methods_called')
+def fixture_check_methods_called(mock_attributes):
+    """Check that calling `method_name` also calls other methods."""
+    def check_methods_called(obj, method_name, **called):
+        mock_attributes(obj, *called)
+        method = attrgetter(method_name)(obj)
+        method()
+
+        for mocked_attr, called_attr in called.items():
+            method = attrgetter(called_attr or mocked_attr)(obj)
+            method.assert_called_once()
+    return check_methods_called
+
+
+@fixture(name='mock_attributes')
+def fixture_mock_attributes(mocker):
+    """Replace attributes of `obj` with MagicMock(s)."""
+    def _patch(obj, *attrs):
+        return {attr_name: mocker.patch.object(obj, attr_name)
+                for attr_name in attrs}
+    return _patch

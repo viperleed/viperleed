@@ -239,7 +239,7 @@ four layers to vary by up to :math:`\pm 0.20` Å with a step width of
 
 
 After setting up the :ref:`DISPLACEMENTS` file, we can run the delta-amplitudes
-calculation and structure optimization by setting :ref:`RUN = 2-3<run>` in 
+calculation and structure optimization by setting :ref:`RUN = 2-3<run>` in
 :ref:`PARAMETERS`.
 For a large system, this step can take many hours to finish, but for our simple
 system it only takes about 4 min to converge (using 10 CPU cores).
@@ -248,14 +248,17 @@ we find that the |R factor| dropped significantly from
 :math:`R_\mathrm{P} \approx 0.17` to :math:`R_\mathrm{P} \approx 0.095`.
 That's not bad, but we can do a bit better.
 
-Now that we found a better configuration, we can use the
-:ref:`bookkeeper utility<bookkeeper>` with the ``--cont``
-flag to keep the new configuration and use it as our new
-starting point, overwriting the old POSCAR and VIBROCC files:
+.. todo::
+    It would be good, perhaps, to report here (or perhaps even earlier) the
+    tree resulting from the calculation. It would give us an occasion to
+    introduce people to ori and non-ori files, as well as the bookkeeper.
+    If we do, we should move the sentence of the next paragraph about history
+    to the relevant part.
 
-.. code-block:: console
-
-   $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
+Now that we found a better configuration, we can use it as our new starting
+point. This will happen automatically when |calc| will start the next time.
+The results of the previous calculation are stored in a :file:`history` folder
+for reference. See the :ref:`bookkeeper` page for more details.
 
 Starting from this configuration, let's optimize with a finer grid.
 We change the DISPLACEMENTS accordingly, as in

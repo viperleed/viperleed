@@ -7,7 +7,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
@@ -31,6 +31,7 @@ from .run_bookkeeper_base import _TestBookkeeperRunBase
 def fixture_after_discard(after_archive, after_bookkeper_run):
     """Prepare a directory like the one after DISCARD was executed."""
     return after_bookkeper_run(after_archive, BookkeeperMode.DISCARD)
+
 
 @fixture
 def with_dummy_edited_file(tmp_path):
@@ -57,7 +58,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         self.check_no_warnings(
             caplog,
             exclude_msgs=(
-                'Failed to mark last entry as discarded',
+                'Failed to mark as discarded the last entry',
                 'user-edited',
                 ),
             )
@@ -154,7 +155,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         # DISCARD reverts everything, except for adding a history entry
         expect = self._get_discarded_tree_from_archived(archived)
         # However, we don't pull back original_inputs of _edited files.
-        # This is the only difference from a ARCHIVE-then-DISCARD case
+        # This is the only difference from an ARCHIVE-then-DISCARD case
         del expect['POSCAR']
         assert self.collect_root_contents(bookkeeper) == expect
 

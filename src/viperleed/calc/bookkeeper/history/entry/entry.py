@@ -8,7 +8,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
@@ -17,9 +17,35 @@ from contextlib import AbstractContextManager
 from contextlib import nullcontext
 from dataclasses import InitVar
 from dataclasses import fields as data_fields
+import logging
 from typing import ClassVar
 from typing import Dict
 
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_SEPARATOR
+from viperleed.calc.bookkeeper.history.entry.enums import DuplicateType
+from viperleed.calc.bookkeeper.history.entry.enums import FaultyLabel
+from viperleed.calc.bookkeeper.history.entry.field import FieldBase
+from viperleed.calc.bookkeeper.history.entry.enums import FixAction
+from viperleed.calc.bookkeeper.history.entry.field import UnknownField
+from viperleed.calc.bookkeeper.history.entry.field_collection import FieldList
+from viperleed.calc.bookkeeper.history.entry.list_of_int_field import (
+    JobIdsField,
+    RunInfoField,
+    TensorNumsField,
+    )
+from viperleed.calc.bookkeeper.history.entry.notes_field import NotesField
+from viperleed.calc.bookkeeper.history.entry.rfactor_field import RRefField
+from viperleed.calc.bookkeeper.history.entry.rfactor_field import RSuperField
+from viperleed.calc.bookkeeper.history.entry.string_field import FolderField
+from viperleed.calc.bookkeeper.history.entry.string_field import JobNameField
+from viperleed.calc.bookkeeper.history.entry.time_field import TimestampField
+from viperleed.calc.bookkeeper.history.entry.time_field import TimestampFormat
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FieldsScrambledError
+from viperleed.calc.bookkeeper.history.errors import FixFailedError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
+from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.lib.collections_utils import IdentitySet
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import non_init_field
@@ -27,30 +53,8 @@ from viperleed.calc.lib.dataclass_utils import replace_values
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.log_utils import logging_silent
 
-from ...log import LOGGER
-from ...mode import BookkeeperMode as Mode
-from ..constants import HISTORY_INFO_NAME
-from ..constants import HISTORY_INFO_SEPARATOR
-from ..errors import EntrySyntaxError
-from ..errors import FieldsScrambledError
-from ..errors import FixableSyntaxError
-from ..errors import FixFailedError
-from .enums import DuplicateType
-from .enums import FaultyLabel
-from .enums import FixAction
-from .field import FieldBase
-from .field import UnknownField
-from .field_collection import FieldList
-from .list_of_int_field import JobIdsField
-from .list_of_int_field import RunInfoField
-from .list_of_int_field import TensorNumsField
-from .notes_field import NotesField
-from .rfactor_field import RRefField
-from .rfactor_field import RSuperField
-from .string_field import FolderField
-from .string_field import JobNameField
-from .time_field import TimestampField
-from .time_field import TimestampFormat
+
+LOGGER = logging.getLogger(__name__)
 
 
 # Format string for FixableSyntaxError raised because issues
@@ -133,7 +137,8 @@ class HistoryInfoEntry:
         retained, but will cause the field to be marked as 'not
         understood'. This field is optional and may be missing.
     folder_name : FolderField
-        The name of the history folder that corresponding to this run.
+        The name of the **main** history folder that corresponds
+        to this run (i.e., not one of the workhistory folders).
     notes : NotesField
         The notes that users have added for this run. It excludes the
         DISCARDED tag. May span multiple lines. The default is an empty
@@ -449,7 +454,7 @@ class HistoryInfoEntry:
         # First of all, check the values of the raw fields,
         # skipping the ones already stored in self, as we
         # have checked them already in __post_init__.
-        checked_already = set(self._iter_values())
+        checked_already = set(self)
         for field in self._raw_fields:  # pylint: disable=E1133   #7437
             if field in checked_already:
                 continue
@@ -548,7 +553,7 @@ class HistoryInfoEntry:
         if not duplicates:
             return
         # Keep all the duplicates that we're storing as field values
-        self_values = IdentitySet(self._iter_values())
+        self_values = IdentitySet(self)
         duplicates = (d for d in duplicates if d not in self_values)
         # pylint: disable-next=no-member             # See pylint #7437
         self._raw_fields.remove_fields(*duplicates)
@@ -814,7 +819,7 @@ class SyntaxErrorLogger(AbstractContextManager):
         return msg + ' '
 
     def _get_unfixable_log_msg(self):
-        """Return a message of the logger for an unfixable problem."""
+        """Return a message for the logger for an unfixable problem."""
         if not self.field:
             return 'entry'
         value_msg = ('' if self.field.is_missing or self.field.is_empty
@@ -826,7 +831,7 @@ class SyntaxErrorLogger(AbstractContextManager):
         self._add_fixable_todo(exc.action)
         LOGGER.warning(
             f'{HISTORY_INFO_NAME}: {self._get_fixable_log_msg(exc.reason)}'
-            f'Consider running bookkeeper {Mode.FIX.long_flag}.'
+            f'Consider running \'bookkeeper {Mode.FIX.long_flag}\'.'
             )
 
     def _handle_unfixable(self, exc):

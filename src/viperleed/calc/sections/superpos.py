@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michael Riva (@michele-riva)'
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -196,20 +196,20 @@ def superpos_domains(rp, configs):
     percentages = []
     for (percent, params), dp in zip(configs, rp.domainParams):
         percentages.append(percent)
-        dp.rp.searchResultConfig = [[(100, params)]]
-        logger.info(f"Running superpos calculation for domain {dp.name}")
+        dp.rpars.searchResultConfig = [[(100, params)]]
+        logger.info(f'Running superpos calculation for {dp}')
         with execute_in_dir(dp.workdir):
             try:
-                superpos(dp.sl, dp.rp, subdomain=True)
+                superpos(dp.slab, dp.rpars, subdomain=True)
             except Exception:
-                logger.error("Error while running superpos "
-                             f"calculation for domain {dp.name}")
+                logger.error('Error while running superpos '
+                             f'calculation for {dp}')
                 raise
 
     logger.info("Getting weighted average over domain beams...")
     rp.theobeams["superpos"] = averageBeams(
-        [dp.rp.theobeams["superpos"] for dp in rp.domainParams],
-        weights=percentages
+        [dp.rpars.theobeams["superpos"] for dp in rp.domainParams],
+        weights=percentages,
         )
     _write_fitbeams(rp)
 

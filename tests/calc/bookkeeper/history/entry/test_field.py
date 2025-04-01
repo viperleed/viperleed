@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-08-30'
 __license__ = 'GPLv3+'
 
@@ -15,9 +15,6 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
-from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
-from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
 from viperleed.calc.bookkeeper.history.entry.enums import FaultyLabel
 from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.field import CommonRegex
@@ -30,6 +27,9 @@ from viperleed.calc.bookkeeper.history.entry.field import MissingField
 from viperleed.calc.bookkeeper.history.entry.field import MultiLineField
 from viperleed.calc.bookkeeper.history.entry.field import NoneIsEmptyField
 from viperleed.calc.bookkeeper.history.entry.field import UnknownField
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
+from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
+from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
 from viperleed.calc.lib.dataclass_utils import frozen
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 
@@ -49,7 +49,7 @@ class _TestFieldUtils:
     test_cls = None
 
     def check_attrs(self, field_factory, attrs, *args, **kwargs):
-        """Check that `field_factory(value)` has the given `attrs`.
+        """Check that `field_factory(*args, **kwargs)` has `attrs`.
 
         Parameters
         ----------
@@ -66,7 +66,7 @@ class _TestFieldUtils:
         Returns
         -------
         field : FieldBase
-            The result of field_factory(*args, **kwargs)
+            The result of field_factory(*args, **kwargs).
         """
         field = field_factory(*args, **kwargs)
         for attr, expect in attrs.items():
@@ -141,45 +141,28 @@ class TestCommonRegex:
 class TestFieldBase(_TestFieldUtils):
     """Tests for the FieldBase class."""
 
-    _init = {  # field_args, attrs_to_check
-        'missing': ((UnknownField,),
-                    {'is_missing': True, 'is_empty': False,
-                     'was_understood': True, 'needs_fixing': False,
-                     'has_comments': False, '_value_str': None}),
-        'empty string': ((UnknownField, ''),
-                         {'is_missing': False, 'is_empty': True,
-                          'was_understood': False, 'needs_fixing': False,
-                          'has_comments': False, '_value_str': None}),
+    _common = {'is_missing': False, 'is_empty': False,
+               'was_understood': True, 'needs_fixing': False,
+               'has_comments': False, '_value_str': None}
+    _empty = {**_common, 'is_empty': True, 'was_understood': False}
+    _init = {  # (field_type, *field_args), attrs_to_check
+        'missing': ((UnknownField,), {**_common, 'is_missing': True}),
+        'empty string': ((UnknownField, ''), _empty),
         'empty list': ((UnknownField, []),
-                       {'is_missing': False, 'is_empty': False,
-                        'was_understood': False, 'needs_fixing': False,
-                        'has_comments': False, '_value_str': None}),
+                       {**_common, 'was_understood': False}),
         'non-empty': ((UnknownField, 'test_value'),
-                      {'is_missing': False, 'is_empty': False,
-                       'was_understood': True, 'needs_fixing': False,
-                       'has_comments': False, '_value_str': None,
-                       'value': 'test_value'}),
+                      {**_common, 'value': 'test_value'}),
         'minimal': ((UnknownField, 'x'),
-                    {'is_missing': False, 'is_empty': False,
-                     'was_understood': True, 'needs_fixing': False,
-                     'has_comments': False, '_value_str': None,
-                     'value': 'x'}),
+                    {**_common, 'value': 'x'}),
         'field value': ((UnknownField, UnknownField('test_value')),
-                        {'is_missing': False, 'is_empty': False,
-                         'was_understood': True, 'needs_fixing': False,
-                         'has_comments': False, '_value_str': None,
-                         'value': 'test_value'}),
-        'white space only': ((UnknownField, '    '),
-                             {'is_missing': False, 'is_empty': True,
-                              'was_understood': False, 'needs_fixing': False,
-                              'has_comments': False, '_value_str': None}),
+                        {**_common, 'value': 'test_value'}),
+        'white space only': ((UnknownField, '    '), _empty),
         'rstrip': ((UnknownField, 'test_value   \t     '),
-                   {'is_missing': False, 'is_empty': False,
-                   'was_understood': True, 'needs_fixing': False,
-                   'has_comments': False, '_value_str': None,
-                   'value': 'test_value'}),
+                   {**_common, 'value': 'test_value'}),
         'special chars': ((UnknownField, 'special chars: \n\t©∆'),
-                          {'value': 'special chars: \n\t©∆'})
+                          {**_common,
+                           'was_understood': False,   # Because of \n
+                           'value': 'special chars: \n\t©∆'})
         }
 
     @parametrize('args,expect', _init.values(), ids=_init)
@@ -497,7 +480,7 @@ class TestFieldBaseSubclasses:
 
     @fixture(name='empty_ok')
     def fixture_empty_ok(self, make_concrete_field_instance):
-        """Return a subclass that may call _check_str_value on non-strings."""
+        """Return a subclass that tolerates empty values."""
         @frozen
         class _EmptyOK(FieldBase):
             def _check_not_empty(self):

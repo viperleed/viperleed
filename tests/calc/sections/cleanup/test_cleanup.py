@@ -13,9 +13,11 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.domain_params import DomainParameters
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import _organize_all_work_directories
@@ -31,72 +33,76 @@ class TestCleanup:
     """Tests for the cleanup function."""
 
     mocked = (  # All the stuff that is called inside cleanup
-        'logger.info',
+        '_LOGGER.info',
         '_organize_all_work_directories',
         '_write_manifest_file',
         '_write_final_log_messages',
-        'close_all_handlers',
+        )
+    not_called = (
         'logging.shutdown',
         )
 
     @fixture(name='mock_implementation')
     def fixture_mock_implementation(self, mocker):
         """Replace implementation details of cleanup with mocks."""
-        return {f: mocker.patch(f'{_MODULE}.{f}') for f in self.mocked}
+        return {f: mocker.patch(f'{_MODULE}.{f}')
+                for f in (*self.mocked, *self.not_called)}
 
     @fixture(name='manifest')
     def mock_manifest(self):
         """Return the contents of a sample manifest file."""
-        return {'file1.txt', 'file2.txt', 'dir1'}
+        return ManifestFile('file1.txt', 'file2.txt', 'dir1')
 
     def test_no_rpars(self, manifest, mock_implementation, mocker):
         """Check calls when no Rparams is passed."""
         # Create a "singleton" that we can use to check that
         # cleanup creates an empty Rparams in this case
-        fake_rpars = mocker.MagicMock()
+        fake_rpars = mocker.MagicMock(spec=Rparams)
         mocker.patch(f'{_MODULE}.Rparams', return_value=fake_rpars)
 
         cleanup(manifest)
         calls = {
-            'logger.info': '\nStarting cleanup...',
+            '_LOGGER.info': '\nStarting cleanup...',
             '_organize_all_work_directories': fake_rpars,
-            '_write_manifest_file': fake_rpars.manifest,
+            '_write_manifest_file': fake_rpars,
             '_write_final_log_messages': fake_rpars,
-            'close_all_handlers': None,
-            'logging.shutdown': None,
             }
         for func, arg in calls.items():
             mock = mock_implementation[func]
-            if arg is None:
-                mock.assert_called_once()
-            else:
-                mock.assert_called_once_with(arg)
+            mock.assert_called_once_with(arg)
+        for mock_name in self.not_called:
+            mock = mock_implementation[mock_name]
+            mock.assert_not_called()
 
     @parametrize(mock_name=mocked)
-    def test_raises(self, mock_name, rpars, manifest, mock_implementation):
+    def test_raises(self, mock_name, rpars, mock_implementation):
         """Check complaints when the implementation raises exceptions."""
         mock = mock_implementation[mock_name]
         mock.side_effect = CustomTestException
         with pytest.raises(CustomTestException):
-            cleanup(manifest, rpars)
+            cleanup(rpars)
 
-    def test_success(self, rpars, manifest, mock_implementation):
+    def test_success(self, rpars, mock_implementation):
         """Check a successful execution of cleanup."""
-        cleanup(manifest, rpars)
+        cleanup(rpars)
         calls = {
-            'logger.info': '\nStarting cleanup...',
+            '_LOGGER.info': '\nStarting cleanup...',
             '_organize_all_work_directories': rpars,
-            '_write_manifest_file': manifest,
+            '_write_manifest_file': rpars,
             '_write_final_log_messages': rpars,
-            'close_all_handlers': None,
-            'logging.shutdown': None,
             }
         for func, arg in calls.items():
             mock = mock_implementation[func]
-            if arg is None:
-                mock.assert_called_once()
-            else:
-                mock.assert_called_once_with(arg)
+            mock.assert_called_once_with(arg)
+        for mock_name in self.not_called:
+            mock = mock_implementation[mock_name]
+            mock.assert_not_called()
+
+    @parametrize(arg=(None, 'str', set(), {}, tuple()))
+    def test_typeerror(self, arg):
+        """Check complaints for an invalid argument type."""
+        with pytest.raises(TypeError):
+            cleanup(arg)
 
 
 class TestOrganizeAllWorkDirectories:
@@ -116,25 +122,25 @@ class TestOrganizeAllWorkDirectories:
                                 tensors=False,
                                 deltas=False)
         # Add some fake domains
-        domain_1 = mocker.MagicMock()
-        domain_1.workdir = mocker.MagicMock()
-        domain_1.rp = Rparams()  # No Tensors/Deltas in manifest
-        call_1 = mocker.call(rpars=domain_1.rp,
-                             path=domain_1.workdir,
-                             delete_unzipped=True,
-                             tensors=False,
-                             deltas=False)
-        domain_2 = mocker.MagicMock()
-        domain_2.workdir = mocker.MagicMock()
-        domain_2.rp = Rparams()
-        domain_2.rp.manifest = {DEFAULT_TENSORS, DEFAULT_DELTAS}
-        call_2 = mocker.call(rpars=domain_2.rp,
-                             path=domain_2.workdir,
-                             delete_unzipped=True,
-                             tensors=True,
-                             deltas=True)
-        rpars.domainParams = domain_1, domain_2
-        calls = main_call, call_1, call_2
+        domain_one = mocker.MagicMock()
+        domain_one.workdir = mocker.MagicMock()
+        domain_one.rpars = Rparams()  # No Tensors/Deltas in manifest
+        call_one = mocker.call(rpars=domain_one.rpars,
+                               path=domain_one.workdir,
+                               delete_unzipped=True,
+                               tensors=False,
+                               deltas=False)
+        domain_two = mocker.MagicMock()
+        domain_two.workdir = mocker.MagicMock()
+        domain_two.rpars = Rparams()
+        domain_two.rpars.manifest = {DEFAULT_TENSORS, DEFAULT_DELTAS}
+        call_two = mocker.call(rpars=domain_two.rpars,
+                               path=domain_two.workdir,
+                               delete_unzipped=True,
+                               tensors=True,
+                               deltas=True)
+        rpars.domainParams = domain_one, domain_two
+        calls = main_call, call_one, call_two
 
         _organize_all_work_directories(rpars)
         rpars.closePdfReportFigs.assert_called_once()
@@ -174,10 +180,8 @@ class TestWriteFinalLogMessages:
 
     @staticmethod
     def check_has_records(caplog, records):
-        """Ensure caplog has only certain records."""
+        """Ensure `caplog` has only certain `records`."""
         logged = tuple(r.getMessage() for r in caplog.records)
-        print(logged)
-        print(records)
         assert len(logged) == len(records)
         for log, expect in zip(logged, records):
             if isinstance(expect, str):
@@ -263,36 +267,67 @@ class TestWriteFinalLogMessages:
 class TestWriteManifest:
     """Tests for the _write_manifest_file function."""
 
+    def test_fails(self, rpars, tmp_path, mocker, caplog):
+        """Test logging when opening manifest fails."""
+        with execute_in_dir(tmp_path):
+            rpars.manifest = manifest = ManifestFile()
+            mocker.patch.object(manifest, 'write', side_effect=OSError)
+            _write_manifest_file(rpars)
+        expect_log = 'Failed to write manifest file.'
+        assert not (tmp_path/'manifest').is_file()
+        assert expect_log in caplog.text
+
+    def test_collects_domains(self, rpars, tmp_path):
+        """Check that contents of domains are collected."""
+        rpars.manifest = manifest = ManifestFile(root_path=tmp_path)
+        for i in range(5):
+            d_path = tmp_path/f'dd_{i}'
+            d_rpars = Rparams()
+            d_rpars.manifest = ManifestFile(root_path=d_path)
+            domain = DomainParameters(d_path, f'name {i}')
+            domain.rpars = d_rpars
+            rpars.domainParams.append(domain)
+        with execute_in_dir(tmp_path):
+            _write_manifest_file(rpars)
+        # Check that now all sub-manifests are present
+        subpaths = set(manifest.sections)
+        expect_paths = (
+            tmp_path,
+            *(d.rpars.manifest.root for d in rpars.domainParams),
+            )
+        assert all(p in subpaths for p in expect_paths)
+
+        # And verify that contents have been written correctly
+        contents = manifest.file.read_text().splitlines()
+        headers = [line for line in contents if line.startswith('[')]
+        expect_headers = [f'[domain name {i} at dd_{i}]' for i in range(5)]
+        assert headers == expect_headers
+
+    def test_raises(self, rpars):
+        """Check that only OSError is caught cleanly."""
+        rpars.manifest = manifest = ManifestFile()
+        with raises_test_exception(manifest, 'write'):
+            _write_manifest_file(rpars)
+
     _success = {
         'unique': ('file1.txt', 'file2.txt', 'file3.txt'),
         'duplicates': ('file1.txt', 'file2.txt', 'file1.txt'),
         }
 
-    def test_fails(self, tmp_path, mocker, caplog):
-        """Test logging when opening manifest fails."""
-        mocker.patch('pathlib.Path.write_text', side_effect=OSError)
-        with execute_in_dir(tmp_path):
-            _write_manifest_file(('should not write',))
-        expect_log = 'Failed to write manifest file.'
-        assert not (tmp_path/'manifest').is_file()
-        assert expect_log in caplog.text
-
-    def test_raises(self):
-        """Check that only OSError is caught cleanly."""
-        with raises_test_exception('pathlib.Path.write_text'):
-            _write_manifest_file(('should not write',))
-
     @parametrize(contents=_success.values(), ids=_success)
-    def test_success(self, contents, tmp_path, caplog):
+    def test_success(self, rpars, contents, tmp_path, caplog):
         """Check successful writing to the manifest file."""
         caplog.set_level(0)  # All messages
         with execute_in_dir(tmp_path):
-            _write_manifest_file(contents)
+            rpars.manifest = ManifestFile(*contents)
+            _write_manifest_file(rpars)
         manifest = tmp_path/'manifest'
         assert manifest.is_file()
 
         # Check contents
-        written = sorted(manifest.read_text().splitlines())
+        written = sorted(line
+                         for line in manifest.read_text().splitlines()
+                         if line)
         assert written == sorted(set(contents))
 
         # Check logging
