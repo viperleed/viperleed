@@ -28,6 +28,7 @@ from viperleed.calc.classes.slab import NoVacuumError
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
+from viperleed.calc.constants import DEFAULT_DOMAIN_FOLDER_PREFIX
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
@@ -742,7 +743,8 @@ def _make_domain_workdir(name, src, calc_started_at, must_use_auto_name):
        and src.is_dir()
        and src.parent == calc_started_at
        )
-    workdir = Path(src.name if should_use_src else f'Domain_{name}')
+    workdir = Path(src.name if should_use_src
+                   else f'{DEFAULT_DOMAIN_FOLDER_PREFIX}{name}')
     try:
         workdir.mkdir()
     except FileExistsError:
