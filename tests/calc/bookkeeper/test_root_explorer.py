@@ -386,8 +386,8 @@ class TestRootExplorerCopyStateFilesFrom:
                                            info,
                                            call_copy,
                                            mocker):
-        """Test the _copy_state_files_from method."""
-        mocker.patch.object(explorer, '_domains', ['a domain'])
+        """Test the _copy_state_files_from method for the main domain root."""
+        mocker.patch.object(explorer, '_domains', ('a domain',))
         failures, exc_info = call_copy(info.missing, info.fail, None)
         for file in info.no_complain:
             try:

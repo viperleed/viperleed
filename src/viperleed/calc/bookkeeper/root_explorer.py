@@ -53,7 +53,7 @@ class RootExplorer:
     def __init__(self, path, bookkeeper):
         """Initialize this explorer at `path` for a `bookkeeper`."""
         self._path = Path(path).resolve()
-        self._domains = []    # RootExplorer for each domain subfolder
+        self._domains = ()    # RootExplorer for each domain subfolder
         self._logs = None              # LogFiles, set in collect_info
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
