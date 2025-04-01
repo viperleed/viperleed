@@ -199,6 +199,16 @@ class TestRootExplorer:
         to_archive = explorer._files_to_archive
         assert to_archive == tuple(explorer.path / f for f in expected_files)
 
+    _has_domains = {
+        (): False,
+        ('domain_one',): True,
+        }
+
+    @parametrize('domains,expect', _has_domains.items())
+    def test_has_domains(self, domains, expect, explorer, mocker):
+        """Check the has_domains property."""
+        mocker.patch.object(explorer, '_domains', domains)
+        assert explorer.has_domains == expect
 
     _remove_files = {
         '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
