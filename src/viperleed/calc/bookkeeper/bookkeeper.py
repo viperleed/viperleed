@@ -52,7 +52,7 @@ _FROM_ROOT = '_from_root'
 _MIN_CALC_WARN = '0.13.0'
 _WARN_OLD_CALC = f'''\
 Bookkeeper v{__version__} is running in a folder created by an older version of
-viperleed (v%s). Please double check that the correct files have been
+viperleed (v%s). Please double-check that the correct files have been
 processed, as bookkeeper is not entirely backward compatible. See the
 documentation at https://viperleed.org/content/calc/sections/bookkeeper.html
 for details on the changes introduced in bookkeeper since v{_MIN_CALC_WARN}.'''
@@ -177,7 +177,7 @@ class Bookkeeper:
         silent : bool, optional
             Whether logging messages should be silenced or not.
             The default is False. One basic log message is always
-            emitted, irrespective of the value of `silent`, if a
+            emitted, irrespective of the value of `silent`, if
             this instance accesses the log file for the first time.
 
         Returns
@@ -328,7 +328,7 @@ class Bookkeeper:
         except for those workhistory folders that were archived
         to history. The workhistory folder itself is cleaned-up
         of "previous" runs, and may not exist anymore if it was
-        empty a the end of the archiving. A new entry is added
+        empty at the end of the archiving. A new entry is added
         to the history.info file.
 
         Returns
