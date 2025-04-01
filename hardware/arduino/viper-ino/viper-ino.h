@@ -47,6 +47,19 @@ union floatOrBytes{
 
 /** ------------------------- Communication with PC ------------------------ **/
 
+// Acceptable messages for communication with the PC
+#define PC_AUTOGAIN          65  // PC requested auto-gain for ADCs (ASCII 'A')
+#define PC_CALIBRATION       67  // PC requested self-calibration of all ADCs at all gains (ASCII 'C')
+#define PC_CHANGE_MEAS_MODE 109  // PC requested a change between continuous and single measurement mode (ASCII 'm')
+#define PC_CONFIGURATION     63  // PC requested hardware configuration (ASCII '?')
+#define PC_MEASURE_ONLY      77  // PC requested measurement without changing Voltage (ASCII 'M')
+#define PC_RESET             82  // PC requested a global reset (ASCII 'R')
+#define PC_SET_SERIAL_NR    115  // PC requested serial number (ASCII 's')
+#define PC_SET_UP_ADCS       83  // PC requested to prepare the ADCs for a measurement (ASCII 'S')   // TODO: The python side will have to keep track of when the last calibration was done, and warn if it is too old.
+#define PC_SET_VOLTAGE       86  // PC requested to set a certain energy (ASCII 'V')
+#define PC_SET_VOLTAGE_ONLY 118  // PC requested set energy without follow up measurement (ASCII 'v')
+#define PC_STOP             120  // PC requested a stop on all activity. Return to idle (ASCII 'x')
+
 // Error codes
 #define ERROR_HARDWARE_UNKNOWN   10   // The PC never asked for the hardware configuration
 

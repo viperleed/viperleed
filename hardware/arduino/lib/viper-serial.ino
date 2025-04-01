@@ -12,6 +12,17 @@ Date: 26.03.2025
 #include <SPI.h>
 #include <stdarg.h>
 
+/**
+This module contains functions for serial communication between PC and
+Arduino.
+
+Note that the "raise" function only sets currentState to STATE_ERROR
+if STATE_ERROR has been defined. The "Goes to state" documentation
+therefore only applies to state machines that use this module and that
+contain the STATE_ERROR. currentState and STATE_ERROR are defined in the
+states-def.h module.
+**/
+
 /** ----------------------------- COMMUNICATION ---------------------------- **/
 
 void raise(byte error_code){
@@ -32,7 +43,9 @@ void raise(byte error_code){
     **/
     errorTraceback[0] = currentState;
     errorTraceback[1] = error_code;
+#ifdef STATE_ERROR
     currentState = STATE_ERROR;
+#endif // Skip setting state to STATE_ERROR if no state machine is present.
 }
 
 
@@ -249,28 +262,11 @@ bool decodeAndCheckMessage(){
             raise(ERROR_MSG_UNKNOWN);
             return false;
         }
-        // Defer checking to state handlers
         return true;
+        // Defer checking to state handlers
     }
 
-    // Check that it is one of the understandable commands
-    switch(data_received[0]){													// TODO: split off general commands, add function that checks for specific device commands
-        case PC_AUTOGAIN: break;
-        case PC_CALIBRATION: break;
-        case PC_CONFIGURATION: break;
-        case PC_SET_UP_ADCS: break;
-        case PC_RESET: break;
-        case PC_SET_VOLTAGE: break;
-        case PC_MEASURE_ONLY: break;
-        case PC_CHANGE_MEAS_MODE: break;
-        case PC_STOP: break;
-        case PC_SET_VOLTAGE_ONLY: break;
-        case PC_SET_SERIAL_NR: break;
-        default:
-            raise(ERROR_MSG_UNKNOWN);
-            return false;
-    }
-    return true;
+	return isAllowedCommand();
 }
 
 

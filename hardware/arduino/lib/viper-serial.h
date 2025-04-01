@@ -9,7 +9,6 @@ Date: 26.03.2025
 #define _VIPERLEED_SERIAL
 
 /** ------------------------- Communication with PC ------------------------ **/
-
 // Constants for communication with the PC
 #define MSG_START         254      // Beginning of a serial message
 #define MSG_END           255      // End of a serial message
@@ -20,20 +19,9 @@ Date: 26.03.2025
 #endif
 
 // Acceptable messages for communication with the PC
-#define PC_AUTOGAIN          65  // PC requested auto-gain for ADCs (ASCII 'A')
-#define PC_CALIBRATION       67  // PC requested self-calibration of all ADCs at all gains (ASCII 'C')
-#define PC_CHANGE_MEAS_MODE 109  // PC requested a change between continuous and single measurement mode (ASCII 'm')
-#define PC_CONFIGURATION     63  // PC requested hardware configuration (ASCII '?')
 #define PC_DEBUG            252  // Header for debug messages sent to the PC. No debug can come from the PC
 #define PC_ERROR            253  // An error occurred
-#define PC_MEASURE_ONLY      77  // PC requested measurement without changing Voltage (ASCII 'M')
 #define PC_OK                75  // Acknowledge request from PC (ASCCI 'K')
-#define PC_RESET             82  // PC requested a global reset (ASCII 'R')
-#define PC_SET_SERIAL_NR    115  // PC requested serial number (ASCII 's')
-#define PC_SET_UP_ADCS       83  // PC requested to prepare the ADCs for a measurement (ASCII 'S')   // TODO: The python side will have to keep track of when the last calibration was done, and warn if it is too old.
-#define PC_SET_VOLTAGE       86  // PC requested to set a certain energy (ASCII 'V')
-#define PC_SET_VOLTAGE_ONLY 118  // PC requested set energy without follow up measurement (ASCII 'v')
-#define PC_STOP             120  // PC requested a stop on all activity. Return to idle (ASCII 'x')
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
@@ -53,22 +41,30 @@ byte errorTraceback[2];               // Keeps track of: (0) the state that prod
 // Variables used while communicating with the PC
 boolean newMessage = false;              // True when a complete, acceptable message has been read
 boolean readingFromSerial = false;       // True while Arduino is receiving a message
+boolean waitingForDataFromPC = false;       // Keeps track of whether we are waiting for the PC to send something
 byte data_received[MSG_MAX_LENGTH];      // Real message. NB: it will never reach MSG_MAX_LENGTH because of markers, length, and encoding
 byte msgLength = 0;                      // No. bytes to be expected in message (2nd byte of received message). Used in states that expect data to check the message
 byte numBytesRead = 0;                   // Counter for no. of bytes received. numBytesRead may be larger than the number of true data bytes due to encoding.
 byte serialInputBuffer[MSG_MAX_LENGTH];  // Contains all the raw (i.e., still encoded) bytes read from the serial line
 
-/** ------------------------- Finite state machine ------------------------- **/
-#define STATE_IDLE                 0  // Wait for requests from PC
-#define STATE_ERROR                9  // An error occurred
-bool waitingForDataFromPC = false;    // Keeps track of whether we are in a state that is waiting for the PC to send something
-uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
 
 /** -------------------- Globals for firmware functions -------------------- **/
 // Timers (defined in milliseconds)
 #define TIMEOUT 4000                  // Max 4 seconds to do stuff
 unsigned long initialTime;            // System time when switching to a new state
 
+bool isAllowedCommand(); /** Check if the received 1-byte command is allowed.
+	This function needs to reimplemented in state machines to check
+	whether any of the received commands is allowed. If an allowed
+	command has been received, then the function needs to return true.
+	Otherwise, the default return must be false. Similar to:
+    switch(data_received[0]){
+		{Add allowed commands here in reimplementations.}
+        default:
+            raise(ERROR_MSG_UNKNOWN);
+            return false;
+	}
+	return true; **/
 
 #include "viper-serial.ino"
 

@@ -6,7 +6,8 @@ Date: 09.02.2022
 ---------------------
 */
 
-#include "viper-serial.h"
+#include "states-def.h" // Basic state manchine definitions
+#include "viper-serial.h" // Serial communication functions
 #include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
 #include "arduino_utils.h"  // from ../lib; for setChipSelectHigh, getMedian16, bigger16, biggest16
 
@@ -195,6 +196,35 @@ void updateState() {
             break;
     }
     newMessage = false;
+}
+
+bool isAllowedCommand(){
+	/**
+	Check if the received command is among the commands the arduino can
+	process.
+
+	Returns
+    -------
+    True if the message is acceptable
+	**/
+    // Check that it is one of the understandable commands
+    switch(data_received[0]){
+        case PC_AUTOGAIN: break;
+        case PC_CALIBRATION: break;
+        case PC_CONFIGURATION: break;
+        case PC_SET_UP_ADCS: break;
+        case PC_RESET: break;
+        case PC_SET_VOLTAGE: break;
+        case PC_MEASURE_ONLY: break;
+        case PC_CHANGE_MEAS_MODE: break;
+        case PC_STOP: break;
+        case PC_SET_VOLTAGE_ONLY: break;
+        case PC_SET_SERIAL_NR: break;
+        default:
+            raise(ERROR_MSG_UNKNOWN);
+            return false;
+	}
+    return true;
 }
 
 
