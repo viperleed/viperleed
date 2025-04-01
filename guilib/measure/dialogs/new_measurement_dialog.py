@@ -26,6 +26,8 @@ from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
 
+default = object()
+
 
 class SelectNewMeasurementDialog(qtw.QDialog):
     """Dialog that handles selecting measurements."""
@@ -60,6 +62,16 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         if had_no_path:
             self._ctrls['settings_folder'].path_changed.emit(self._cfg_dir)
 
+    @property
+    def selected_type(self):
+        """Return the selected measurement type."""
+        return self._ctrls['type_selection'].currentData()
+
+    @property
+    def selected_file(self):
+        """Return the selected settings file."""
+        return self._ctrls['settings_file'].currentData()
+
     def _compose_and_connect(self):
         """Place children widgets and connect signals."""
         layout = qtw.QVBoxLayout()
@@ -83,7 +95,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             self._find_appropriate_settings
             )
         self._ctrls['settings_file'].currentTextChanged.connect(
-            self._switch_clone_settings
+            self._update_clone_settings_enabled
             )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -92,22 +104,26 @@ class SelectNewMeasurementDialog(qtw.QDialog):
     @qtc.pyqtSlot()
     def _find_appropriate_settings(self, *_):
         """Find appropriate settings for the selected measurement type."""
-        cls = self._ctrls['type_selection'].currentData()
         settings_folder = self._ctrls['settings_folder'].path
         self._ctrls['settings_file'].clear()
         self._ctrls['settings_file'].addItem(
-            'Create new settigns from default settings', 'default'
+            'Create new settings from defaults', default
             )
-        if not settings_folder or settings_folder == Path():
+        if not settings_folder:
             return
-        matching_settings = cls.find_matching_settings_files(
+        matching_settings = self.selected_type.find_matching_settings_files(
                                 None, settings_folder, False,
                                 )
         for settings in matching_settings:
             self._ctrls['settings_file'].addItem(settings.stem, settings)
 
-    def _clone_and_return_settings(self, cls, source_path):
+    def _duplicate_settings_file(self, cls, source_path):
         """Create a copy of the settings file at `source_path`.
+
+        A clone of the chosen settings is created in the default config
+        directory for user settings. The name consists of the class
+        __name__ the file is associated with and the currrent date and
+        time at creation.
 
         Parameters
         ----------
@@ -128,10 +144,9 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         return settings_path
 
     @qtc.pyqtSlot()
-    def _switch_clone_settings(self, *_):
+    def _update_clone_settings_enabled(self, *_):
         """Disable/enable clone settings choice."""
-        current_choice = self._ctrls['settings_file'].currentData()
-        enable = not current_choice == 'default'
+        enable = self.selected_file is not default
         self._ctrls['clone_settings'].setEnabled(enable)
 
     @qtc.pyqtSlot()
@@ -146,15 +161,15 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             If the settings was not found. Carries the
             settings path and the MissingSettingsFileError.
         """
-        cls = self._ctrls['type_selection'].currentData()
-        settings_path = self._ctrls['settings_file'].currentData()
+        cls = self.selected_type
+        settings_path = self.selected_file
         default_path = cls.find_matching_settings_files(None, DEFAULTS_PATH,
                                                         False,)[0]
 
-        if not settings_path or settings_path in ('default', default_path):
-            settings_path = self._clone_and_return_settings(cls, default_path)
+        if not settings_path or settings_path in (default, default_path):
+            settings_path = self._duplicate_settings_file(cls, default_path)
         elif self._ctrls['clone_settings'].isChecked():
-            settings_path = self._clone_and_return_settings(cls, settings_path)
+            settings_path = self._duplicate_settings_file(cls, settings_path)
 
         config = ViPErLEEDSettings()
         try:
