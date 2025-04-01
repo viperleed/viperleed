@@ -8,7 +8,7 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer
                         CLass Coil
 27.11.2024, SM: Overhaul whole code
                         Move Class MotorDriver to separate file
-                        Wrap INA239 and TimerCounter Methods into Coil
+                        Wrap INA239 and TimerCounter methods into Coil
 ---------------------
 */
 
