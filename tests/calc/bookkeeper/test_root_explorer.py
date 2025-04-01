@@ -288,6 +288,116 @@ class TestRootExplorer:
         assert returned == bool(files)
 
 
+class TestRootExplorerCopyStateFilesFrom:
+    """Tests for the _copy_state_files_from method."""
+
+    copy_info = namedtuple('copy_info', ('missing', 'fail'))
+    copy_info_domain = namedtuple('copy_info',
+                                  ('missing', 'fail', 'no_complain'))
+
+    @fixture(name='call_copy')
+    def fixture_call_copy(self, src, explorer, mock):
+        """Call _copy_state_files_from, return expected failures."""
+        def _call(missing, fail, only_files):
+            failures = mock(missing, fail, only_files)
+            context = pytest.raises if failures else not_raises
+            with context(FileOperationFailedError) as exc_info:
+                # pylint: disable-next=protected-access
+                explorer._copy_state_files_from(src, '{}', '{}_fmt',
+                                                only_files=only_files)
+            return failures, exc_info
+        return _call
+
+    @fixture(name='make_expected_failures')
+    def fixture_make_expected_failures(self, src, oserror):
+        """Return a dict of failures for copying state files."""
+        def _make(missing, fail, only_files):
+            failures = {}
+            for file in (*missing, *fail):
+                if only_files and file not in only_files:
+                    continue
+                if not only_files and file not in MOCK_STATE_FILES:
+                    continue
+                failures[file] = (oserror if file in fail
+                                  else [src/file, src/f'{file}_fmt'])
+            return failures
+        return _make
+
+    @fixture(name='mock')
+    def fixture_mock_implementation(self,
+                                    oserror,
+                                    make_expected_failures,
+                                    mocker):
+        """Replace implementation details with mocks."""
+        def _mock(missing, fail, only_files):
+            def is_file(path):
+                return not path.name.startswith(missing)
+            def copy2(_, dst):
+                if dst.name in fail:
+                    raise oserror
+            def _glob(path, pattern):
+                globbed = next(f for f in only_files or MOCK_STATE_FILES
+                               if pattern.startswith(f))
+                return (path/globbed,)
+            mocker.patch('pathlib.Path.is_file', is_file)
+            mocker.patch('pathlib.Path.glob', _glob)
+            mocker.patch('shutil.copy2', copy2)
+            return make_expected_failures(missing, fail, only_files)
+        return _mock
+
+    @fixture(name='oserror')
+    def fixture_oserror(self):
+        """Return a OSError instance."""
+        return OSError()
+
+    @fixture(name='src')
+    def fixture_src(self):
+        """Return a non-existing path."""
+        return Path.cwd()/'does_not_exist'
+
+    _copy_from = {  # missing, copy failures
+        'successful': copy_info((), ()),
+        'not found': copy_info(('fake', 'PARAMETERS'), ()),
+        'fail to copy': copy_info((), ('fake',)),
+        }
+
+    @parametrize(info=_copy_from.values(), ids=_copy_from)
+    @parametrize(only_files=(None, ('fake',)))
+    def test_copy_state_files_from(self, info, only_files, call_copy):
+        """Test the _copy_state_files_from method."""
+        failures, exc_info = call_copy(*info, only_files)
+        if failures:
+            assert exc_info.value.failures == failures
+
+    _copy_from_domain_main = {  # missing, copy failures, no complaints
+        'successful': copy_info_domain((), (), ()),
+        'not found': copy_info_domain(('PARAMETERS', 'POSCAR'),
+                                      (),
+                                      ('POSCAR',)),
+        # VIBROCC should not be there, but if it is and
+        # we fail to copy it, we should still complain
+        'fail to copy': copy_info_domain((), ('VIBROCC',), ()),
+        }
+
+    @parametrize(info=_copy_from_domain_main.values(),
+                 ids=_copy_from_domain_main)
+    def test_copy_state_files_from_domains(self,
+                                           explorer,
+                                           info,
+                                           call_copy,
+                                           mocker):
+        """Test the _copy_state_files_from method."""
+        mocker.patch.object(explorer, '_domains', ['a domain'])
+        failures, exc_info = call_copy(info.missing, info.fail, None)
+        for file in info.no_complain:
+            try:
+                del failures[file]
+            except KeyError:
+                pass
+        if failures:
+            assert exc_info.value.failures == failures
+
+
 class TestRootExplorerNextCalc:
     """Tests for prepare_for_next_calc_run and related methods."""
 
@@ -411,52 +521,6 @@ class TestRootExplorerNextCalc:
         if fails:
             assert exc_info.value.failures == fails
             mock_log.assert_called_once_with(fails)
-
-    _copy_from = {  # missing, copy failures
-        'successful': ((), ()),
-        'not found': (('fake', 'PARAMETERS'), ()),
-        'fail to copy': ((), ('fake',)),
-        }
-
-    @parametrize('missing,fail', _copy_from.values(), ids=_copy_from)
-    @parametrize(only_files=(None, ('fake',)))
-    # pylint: disable-next=too-many-arguments  # 2 fixtures
-    def test_copy_state_files_from(self, missing, fail, only_files,
-                                   explorer, mocker):
-        """Test the _copy_state_files_from method."""
-        def is_file(path):
-            return not path.name.startswith(missing)
-        oserror = OSError()
-        def copy2(_, dst):
-            if dst.name in fail:
-                raise oserror
-        def _glob(path, pattern):
-            globbed = next(f for f in only_files or MOCK_STATE_FILES
-                           if pattern.startswith(f))
-            return (path/globbed,)
-
-        mocker.patch('pathlib.Path.is_file', is_file)
-        mocker.patch('pathlib.Path.glob', _glob)
-        mocker.patch('shutil.copy2', copy2)
-        src = Path.cwd()/'does_not_exist'
-
-        # Build the expected result of a failure
-        failures = {}
-        for file in (*missing, *fail):
-            if only_files and file not in only_files:
-                continue
-            if not only_files and file not in MOCK_STATE_FILES:
-                continue
-            failures[file] = (oserror if file in fail
-                              else [src/file, src/f'{file}_fmt'])
-
-        context = pytest.raises if failures else not_raises
-        with context(FileOperationFailedError) as exc_info:
-            # pylint: disable-next=protected-access
-            explorer._copy_state_files_from(src, '{}', '{}_fmt',
-                                            only_files=only_files)
-        if failures:
-            assert exc_info.value.failures == failures
 
 
 class TestRootExplorerListFiles:

@@ -35,6 +35,7 @@ from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.lib.time_utils import DateTimeFormat
@@ -324,6 +325,7 @@ class RootExplorer:
         name_fmts = name_fmts or ('{}',)
         if only_files is None:
             only_files = STATE_FILES
+        dont_complain = set(SKIP_IN_DOMAIN_MAIN if self.has_domains else ())
         for file in only_files:
             cwd_file = self.path / file
             patterns = [fmt.format(file) for fmt in name_fmts]
@@ -331,6 +333,8 @@ class RootExplorer:
             try:
                 new_input = next(f for f in new_inputs if f.is_file())
             except StopIteration:
+                if file in dont_complain:
+                    continue
                 failed[file] = [source/p for p in patterns]
                 continue
             try:
