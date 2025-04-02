@@ -51,10 +51,8 @@ union floatOrBytes{
 #define PC_AUTOGAIN          65  // PC requested auto-gain for ADCs (ASCII 'A')
 #define PC_CALIBRATION       67  // PC requested self-calibration of all ADCs at all gains (ASCII 'C')
 #define PC_CHANGE_MEAS_MODE 109  // PC requested a change between continuous and single measurement mode (ASCII 'm')
-#define PC_CONFIGURATION     63  // PC requested hardware configuration (ASCII '?')
 #define PC_MEASURE_ONLY      77  // PC requested measurement without changing Voltage (ASCII 'M')
 #define PC_RESET             82  // PC requested a global reset (ASCII 'R')
-#define PC_SET_SERIAL_NR    115  // PC requested serial number (ASCII 's')
 #define PC_SET_UP_ADCS       83  // PC requested to prepare the ADCs for a measurement (ASCII 'S')   // TODO: The python side will have to keep track of when the last calibration was done, and warn if it is too old.
 #define PC_SET_VOLTAGE       86  // PC requested to set a certain energy (ASCII 'V')
 #define PC_SET_VOLTAGE_ONLY 118  // PC requested set energy without follow up measurement (ASCII 'v')
@@ -81,9 +79,7 @@ union floatOrBytes{
 #define STATE_MEASURE_ADCS         4  // ADC measurements in progress
 #define STATE_ADC_VALUES_READY     5  // ADC measurements done
 #define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
-#define STATE_GET_CONFIGURATION    7  // Find current hardware configuration and return it with the firmware version
 #define STATE_CALIBRATE_ADCS       8  // Figure out correct offset and calibration factors for ADCs at all gains.
-#define STATE_SET_SERIAL_NR       10  // Read serial number from EEPROM
 bool continuousMeasurement = false;   // Decides if the Arduino continues to measure and return data or if it stops after doing so once
 
 
