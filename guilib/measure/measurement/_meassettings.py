@@ -17,6 +17,7 @@ from ast import literal_eval
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
     SettingsTag,
@@ -67,11 +68,14 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._controllers = CollapsibleControllerList()
         self._cameras = CollapsibleCameraList()
         self._default_settings_folder = None
-        if default_folder:
-            self.default_settings_folder = default_folder
-
+        self.default_settings_folder = default_folder
         self.settings_changed.connect(self._store_device_settings)
         self._compose_and_connect_collapsible_lists(may_have_cameras)
+
+    @property
+    def _device_lists(self):
+        """Return the device lists."""
+        return(self._controllers, self._cameras)
 
     @property
     def default_settings_folder(self):
@@ -112,12 +116,10 @@ class DeviceEditor(SettingsDialogSectionBase):
         if may_have_cameras:
             central_layout.addWidget(self._cameras)
         self.central_widget.setLayout(central_layout)
-        self._controllers.settings_changed.connect(self.settings_changed)
-        self._cameras.settings_changed.connect(self.settings_changed)
-        self._controllers.error_occurred.connect(self.error_occurred)
-        self._controllers.settings_ok_changed.connect(self.settings_ok_changed)
-        self._cameras.error_occurred.connect(self.error_occurred)
-        self._cameras.settings_ok_changed.connect(self.settings_ok_changed)
+        for collapsible_list in self._device_lists:
+            collapsible_list.settings_changed.connect(self.settings_changed)
+            collapsible_list.error_occurred.connect(self.error_occurred)
+            collapsible_list.settings_ok_changed.connect(self.settings_ok_changed)
         self._controllers.requires_device = True
         meas = self._settings.get('measurement_settings', 'measurement_class')
         must_have_cameras = ('IVVideo',)
@@ -153,7 +155,7 @@ class DeviceEditor(SettingsDialogSectionBase):
 
     def store_lower_level_settings(self):
         """Store the settings of the selected devices."""
-        for collapsible_list in (self._controllers, self._cameras):
+        for collapsible_list in self._device_lists:
             collapsible_list.store_settings()
 
     @qtc.pyqtSlot()
@@ -184,15 +186,6 @@ class StepProfileViewer(ButtonWithLabel):
         self.set_button_text('Edit')
         self.profile_editor = StepProfileEditor(parent=self)
         self._connect()
-        self._delay = qtc.QTimer()
-        self._delay.setSingleShot(True)
-        self._delay.setInterval(10)
-        self._delay.timeout.connect(self._connect_finished)
-        self._delay.start()
-
-    def _connect_finished(self):
-        """Connect finished signal after full instantiation."""
-        self.window().finished.connect(self.profile_editor.reject)
 
     def _connect(self):
         """Connect (only once) relevant signals and slots."""
@@ -213,6 +206,12 @@ class StepProfileViewer(ButtonWithLabel):
         """Return the value to be stored in the config."""
         return str(self.profile_editor.profile)
 
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Connect finished signal when shown."""
+        base.safe_connect(self.window().finished, self.profile_editor.reject,
+                          type=qtc.Qt.UniqueConnection)
+        super().showEvent(event)
+
     def set_(self, value):
         """Set label and load profile into step profile editor."""
         value = literal_eval(value)
@@ -227,7 +226,7 @@ class StepProfileViewer(ButtonWithLabel):
         self.set_label_text('fractional profile')
 
 
-class StepProfileEditor(qtw.QDialog):
+class StepProfileEditor(qtw.QDialog):                                           # TODO: visually draw profiles
     """Editor for setting step profiles.
 
     Provides a selection of step profiles and allows
