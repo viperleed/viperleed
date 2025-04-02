@@ -37,17 +37,17 @@ waves in between adjacent layers.
 
 -  The ``list`` input explicitly contains the positions at which the layers
    should be cut (order does not matter). These positions are expressed as a
-   fraction of the height of the cell as defined by the **c** vector in the
+   fraction of the height of the cell as defined by the |c| vector in the
    POSCAR file. The list should not contain the edges of the cell (i.e., 0
    and 1). The topmost layer goes from *c* = the largest value in the list
    to *c* = 1.0.
 -  ``dc(<float>)`` will automatically generate a list of cut positions, such
-   that the distance along the **c** direction between the highest atom of
+   that the distance along the |c| direction between the highest atom of
    each layer and the lowest atom of the layer above is larger than ``float``
    (in Ångström).
 -  ``dz(<float>)`` works similarly to ``dc(<float>)``, but the distances are
    expressed along the *z* cartesian coordinate (in Ångström), i.e.,
-   perpendicular to the plane of the **a** and **b** unit vectors.
+   perpendicular to the plane of the |a| and |b| unit vectors.
 -  Both ``dz`` and ``dc`` can be limited in scope by combining them with
    ``<`` or ``>`` characters, to specify that automatic cuts should be
    applied only above or below the values to the left and/or right. An

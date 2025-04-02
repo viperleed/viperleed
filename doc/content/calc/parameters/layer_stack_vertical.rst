@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _layer_stack_vertical:
 
 LAYER_STACK_VERTICAL
@@ -5,7 +7,7 @@ LAYER_STACK_VERTICAL
 
 LAYER_STACK_VERTICAL defines whether the interlayer vectors of non-bulk layers
 in the :ref:`AUXGEO` file (input to the underlying TensErLEED program) are
-parallel to z (if True) or parallel to the **c** vector of the input unit
+parallel to z (if True) or parallel to the |c| vector of the input unit
 cell (if False). In this file, the atom coordinates per layer will change
 accordingly.
 

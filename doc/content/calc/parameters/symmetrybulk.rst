@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _symmetrybulk:
 
 SYMMETRY_BULK
@@ -25,8 +27,8 @@ input structure.
 Additional rotational symmetry can be specified by ``ri``, with ``i`` the
 order for rotation. Additional mirror planes can be specified using syntax
 ``m[i1 i2]``, where ``i1`` and ``i2`` specify a direction for the mirror
-as ``i1``\ ×\ **a**\ :sub:`bulk` + ``i2``\ ×\ **b**\ :sub:`bulk` (with
-the bulk unit cell vectors **a**\ :sub:`bulk`, **b**\ :sub:`bulk`).
+as ``i1``\ ×\ |a|:sub:`bulk` + ``i2``\ ×\ |b|:sub:`bulk` (with
+|a|:sub:`bulk` and |b|:sub:`bulk` the unit-cell vectors of the bulk).
 
 The symmetry group must be a valid group for the bulk unit cell type
 (e.g., a rectangular cell cannot be p3). Additional mirrors and

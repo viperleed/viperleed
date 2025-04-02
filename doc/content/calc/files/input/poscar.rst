@@ -28,12 +28,13 @@ convention in the input as well.
 **See also:** `POSCAR in the VASP wiki <https://www.vasp.at/wiki/index.php/POSCAR>`__
 
 ViPErLEED has some requirements concerning the orientation of the structure
-in the POSCAR file. The first two unit-cell vectors **a** and **b** must lie
+in the POSCAR file. The first two unit-cell vectors |a| and |b| must lie
 in the surface plane, i.e. their *z* component (perpendicular to the surface)
-must be zero. The third unit-cell vector **c** must have a non-zero component
+must be zero. The third unit-cell vector |c| must have a non-zero component
 in the *z* direction, but does not necessarily have to be perpendicular to the
-surface. Slabs must be asymmetric, with +*z* pointing away from the surface into
-vacuum, and the lowest-lying layers (i.e. smallest *z* coordinates) bulk-like.
+surface. Slabs must be asymmetric, with +\ *z* pointing away from the surface
+into vacuum, and the lowest-lying layers (i.e., smallest *z* coordinates)
+bulk-like.
 
 After the |calc| :ref:`initialization<initialization>` is run for the first
 time, the original POSCAR file will be copied to POSCAR_user. The following
@@ -177,7 +178,7 @@ POSCAR_vacuum_corrected
 
 A **POSCAR_vacuum_corrected** file is provided (in folder SUPP) if the original
 POSCAR file does not have a suitable vacuum gap (> 5 Å) between its topmost and
-(a **c**-periodic replica of its) bottommost atom. The following POSCAR input
+(a |c|-periodic replica of its) bottommost atom. The following POSCAR input
 files will be considered unsuitable for ViPErLEED:
 
 * The vacuum gap is somewhere in the middle. This means that there are multiple
