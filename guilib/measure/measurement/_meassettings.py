@@ -21,8 +21,9 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
     SettingsTag,
     )
-from viperleed.guilib.measure.widgets.collapsiblelists import CollapsibleCameraList
-from viperleed.guilib.measure.widgets.collapsiblelists import CollapsibleControllerList
+from viperleed.guilib.measure.widgets.collapsiblelists import (
+    CollapsibleCameraList, CollapsibleControllerList,
+    )
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
@@ -34,13 +35,19 @@ class DeviceEditor(SettingsDialogSectionBase):
 
     error_occurred = qtc.pyqtSignal(tuple)
 
-    def __init__(self, settings, **kwargs):
+    def __init__(self, settings, may_have_cameras=False, default_folder=None,
+                 **kwargs):
         """Initialize instance.
 
         Parameters
         ----------
         settings : ViPErLEEDSettings
             The settings of the loaded measurement.
+        may_have_cameras : bool
+            Whether a collapsible list for cameras should be added.
+        default_folder : path-like or None
+            Default folder to look for settings in.
+            None if none was given.
         **kwargs : dict
             Keyword arguments passed on to super().__init__
             'display_name' : Displayed name of section.
@@ -52,21 +59,19 @@ class DeviceEditor(SettingsDialogSectionBase):
         None.
         """
         self._settings = settings
-        self._add_cameras = kwargs.pop('add_cameras', False)
-        default_settings_folder = kwargs.pop('default_folder', None)
-        kwargs['display_name'] = 'Device configuration'
-        kwargs['tags'] = SettingsTag.REGULAR
-        kwargs['tooltip'] = ('This section lists devices, allows their '
-                             'selection, and the editing of their settings.')
+        kwargs.setdefault('display_name', 'Device configuration')
+        kwargs.setdefault('tags', SettingsTag.REGULAR)
+        kwargs.setdefault('tooltip', 'This section lists devices, allows their'
+                          'selection, and the editing of their settings.')
         super().__init__(**kwargs)
         self._controllers = CollapsibleControllerList()
         self._cameras = CollapsibleCameraList()
         self._default_settings_folder = None
-        if default_settings_folder:
-            self.default_settings_folder = default_settings_folder
+        if default_folder:
+            self.default_settings_folder = default_folder
 
         self.settings_changed.connect(self._store_device_settings)
-        self._compose_and_connect_collapsible_lists()
+        self._compose_and_connect_collapsible_lists(may_have_cameras)
 
     @property
     def default_settings_folder(self):
@@ -90,11 +95,21 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._cameras.default_settings_folder = settings_path
         self._controllers.default_settings_folder = settings_path
 
-    def _compose_and_connect_collapsible_lists(self):
-        """Compose the collapsible lists for cameras and controllers."""
+    def _compose_and_connect_collapsible_lists(self, may_have_cameras):
+        """Compose the collapsible lists for cameras and controllers.
+
+        Parameters
+        ----------
+        may_have_cameras : bool
+            Whether a collapsible list for cameras should be added.
+
+        Returns
+        -------
+        None.
+        """
         central_layout = qtw.QHBoxLayout()
         central_layout.addWidget(self._controllers)
-        if self._add_cameras:
+        if may_have_cameras:
             central_layout.addWidget(self._cameras)
         self.central_widget.setLayout(central_layout)
         self._controllers.settings_changed.connect(self.settings_changed)
@@ -106,7 +121,7 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._controllers.requires_device = True
         meas = self._settings.get('measurement_settings', 'measurement_class')
         must_have_cameras = ('IVVideo',)
-        self._cameras.requires_device = meas in must_have_cameras 
+        self._cameras.requires_device = meas in must_have_cameras
 
     @qtc.pyqtSlot()
     def _store_device_settings(self):

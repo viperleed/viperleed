@@ -828,7 +828,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         column_info = SettingsSectionColumnInfo(1)
         device_section = _settings.DeviceEditor(
             self.settings, default_folder=settings_path,
-            add_cameras=True, column_info=column_info,
+            may_have_cameras=True, column_info=column_info,
             )
         handler.add_complex_section(device_section)
 
