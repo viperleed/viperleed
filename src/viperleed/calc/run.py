@@ -341,6 +341,6 @@ def _set_system_name(rpars, system_name):
     """Assign a system name to `rpars` from `system_name` or the CWD."""
     if system_name is None:
         system_name = Path.cwd().parent.name
-        LOGGER.info('No system name specified. Using name of'
+        LOGGER.info('No system name specified. Using name of '
                     f'the parent directory: {system_name}.')
     rpars.systemName = system_name
