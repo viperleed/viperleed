@@ -115,11 +115,31 @@ PARAMETERS FOR VIBROCC
    :ref:`determined <vibrocc_auto>` from the Debye temperature.
 
 
-That's all the input we need to start the initialization run.
+That's all the input we need to start the initialization run. To execute
+|calc|, navigate to the folder containing the input files in your terminal
+using
 
-.. todo::
+.. tab-set::
 
-   Insert an example command for how to start the calculation here.
+    .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+
+        .. code-block:: bash
+
+            cd /path/to/folder/containing/input/files
+
+    .. tab-item:: Windows
+
+        .. code-block:: bat
+
+            cd "path\to\folder\containing\input\files"
+
+Then run
+
+.. code-block:: console
+
+    viperleed calc
+
+in the terminal.
 
 Once the run finishes, we can have a look at the
 :ref:`log file<log_files_calc>` to see if everything went as expected.
