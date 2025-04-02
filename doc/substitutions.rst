@@ -19,3 +19,6 @@
 .. |RP|           replace:: :math:`R_\mathrm{P}`
 .. |V0i|          replace:: :math:`V_{0\mathrm{i}}`
 .. |V0r|          replace:: :math:`V_{0\mathrm{r}}`
+.. |x|            replace:: :math:`x`
+.. |y|            replace:: :math:`y`
+.. |z|            replace:: :math:`z`

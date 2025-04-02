@@ -233,7 +233,7 @@ vary in the optimization. In ViPErLEED, we give this information in the
    :caption: DISPLACEMENTS over a rough grid for Ag(100)-(1×1).
 
 See the page on the :ref:`DISPLACEMENTS` file for details on the syntax.
-Here, we allow the :math:`z` positions of all silver atoms in the first
+Here, we allow the |z| positions of all silver atoms in the first
 four layers to vary by up to :math:`\pm 0.20` Å with a step width of
 :math:`0.01` Å.
 

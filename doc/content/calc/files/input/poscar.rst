@@ -29,11 +29,11 @@ convention in the input as well.
 
 ViPErLEED has some requirements concerning the orientation of the structure
 in the POSCAR file. The first two unit-cell vectors |a| and |b| must lie
-in the surface plane, i.e. their *z* component (perpendicular to the surface)
+in the surface plane, i.e. their |z| component (perpendicular to the surface)
 must be zero. The third unit-cell vector |c| must have a non-zero component
-in the *z* direction, but does not necessarily have to be perpendicular to the
-surface. Slabs must be asymmetric, with +\ *z* pointing away from the surface
-into vacuum, and the lowest-lying layers (i.e., smallest *z* coordinates)
+in the |z| direction, but does not necessarily have to be perpendicular to the
+surface. Slabs must be asymmetric, with +\ |z| pointing away from the surface
+into vacuum, and the lowest-lying layers (i.e., smallest |z| coordinates)
 bulk-like.
 
 After the |calc| :ref:`initialization<initialization>` is run for the first

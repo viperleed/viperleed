@@ -27,8 +27,8 @@ vector and the layers.
 layers are "bulk-like" (i.e. unrelaxed), automatically detects the minimal
 repeat vector. Otherwise, assumes that the bulk repeat vector is parallel
 to |c| and defines BULK_REPEAT as a bulk layer thickness. This is done by
-detecting the cartesian distance in z direction between bottom atom in bottom
-bulk layer and bottom atom in bottom non-bulk layer.
+detecting the cartesian distance in |z| direction between bottom atom in
+bottom bulk layer and bottom atom in bottom non-bulk layer.
 
 **Allowed values:** positive float, or any three float values if vector
 

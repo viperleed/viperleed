@@ -35,7 +35,7 @@ during optimization.
 
 The bulk unit cell is detected by taking only the slab below BULK_LIKE_BELOW
 and finding the smallest translation vector (towards vacuum) with a |c|
-component that preserves the structure. Only translation vectors with **z**
+component that preserves the structure. Only translation vectors with |z|
 components of less than or equal to the thickness of the slab below
 BULK_LIKE_BELOW are considered. The minimal such translation vector
 is by definition the minimal :ref:`BULK_REPEAT` vector.

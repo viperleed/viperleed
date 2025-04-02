@@ -46,7 +46,7 @@ waves in between adjacent layers.
    each layer and the lowest atom of the layer above is larger than ``float``
    (in Ångström).
 -  ``dz(<float>)`` works similarly to ``dc(<float>)``, but the distances are
-   expressed along the *z* cartesian coordinate (in Ångström), i.e.,
+   expressed along the |z| cartesian coordinate (in Ångström), i.e.,
    perpendicular to the plane of the |a| and |b| unit vectors.
 -  Both ``dz`` and ``dc`` can be limited in scope by combining them with
    ``<`` or ``>`` characters, to specify that automatic cuts should be

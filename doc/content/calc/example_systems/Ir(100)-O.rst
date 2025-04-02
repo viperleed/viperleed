@@ -139,14 +139,14 @@ relatively rough grid, as in :numref:`list_ir_displacements_rough`.
 By setting multiple search blocks in DISPLACEMENTS, we can tell ViPErLEED to
 execute them one after the other. When starting to optimize a new system such
 as here, it is generally a good idea to begin with a geometric optimization
-perpendicular to the surface (i.e., along :math:`z`). This is because the
-|LEED-IV| curves are most sensitive to out-of-plane displacements.
+perpendicular to the surface (i.e., along |z|). This is because the |LEED-IV|
+curves are most sensitive to out-of-plane displacements.
 
 We then follow up with rough optimizations of in-plane positions and
 vibration amplitudes of surface atoms.\ [1]_
 For the in-plane optimization, we use a simplified assignment for all four
-layers, although any movement along the :math:`x` direction (here parallel
-to the |a| unit vector) is forbidden by symmetry for Ir atoms in the second and
+layers, although any movement along the |x| direction (here parallel to the
+|a| unit vector) is forbidden by symmetry for Ir atoms in the second and
 fourth layers.\ [2]_ ViPErLEED automatically sorts out any symmetry-forbidden
 displacements, cf. :numref:`fig_Ir_O_search_progress_2`.
 
@@ -155,7 +155,7 @@ displacements, cf. :numref:`fig_Ir_O_search_progress_2`.
    directions for a given atom. Vibration amplitudes can be optimized
    together with one geometric displacement; here we do it separately to
    speed up the calculation. However, it is generally advisable to combine
-   vibration-amplitude displacements and displacements along the :math:`z`
+   vibration-amplitude displacements and displacements along the |z|
    direction, as the parameters may be coupled.
 
 With the files set up, we can start the ViPErLEED calculation.
@@ -201,7 +201,7 @@ during the structure optimization.
    Pages 2–4 of ``Search-progress.pdf`` for the rough initial
    structure optimization of Ir(100)-(2×1)-O (white space removed).
 
-:numref:`fig_Ir_O_search_progress_2` shows that the (:math:`z`) position of
+:numref:`fig_Ir_O_search_progress_2` shows that the (|z|) position of
 the  oxygen adsorbate has changed a good amount. Further, we see that the
 vibration amplitude of the oxygen atom has gone down, while the amplitude
 for iridium has gone up.

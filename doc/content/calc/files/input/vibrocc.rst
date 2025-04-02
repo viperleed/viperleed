@@ -152,8 +152,8 @@ occupations. On the left-hand side, each line is expected to contain:
 On the right-hand side, the syntax is similar to the vibration amplitudes
 and displacements blocks. For vibration amplitudes or occupations, one value
 per element is expected, while for position offsets, three values per element
-are expected. The three values for geometry are cartesian x, y and z offsets,
-in ångströms, where positive z means away from the surface.
+are expected. The three values for geometry are cartesian |x|, |y| and |z|
+offsets, in ångströms, where positive |z| means away from the surface.
 
 
 .. _vibrocc_out:
