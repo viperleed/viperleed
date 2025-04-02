@@ -61,6 +61,9 @@ union floatOrBytes{
 #define PC_STOP             120  // PC requested a stop on all activity. Return to idle (ASCII 'x')
 
 // Error codes
+#define ERROR_NEVER_CALIBRATED    6   // The ADCs have never been calibrated before since bootup
+#define ERROR_ADC_SATURATED       8   // One of the ADC values reached saturation, and gain can't be decreased further
+#define ERROR_TOO_HOT             9   // The temperature read by the LM35 is too high
 #define ERROR_HARDWARE_UNKNOWN   10   // The PC never asked for the hardware configuration
 
 /** TODO:

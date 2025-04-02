@@ -14,5 +14,10 @@ Date: 31.03.2025
 #define STATE_ERROR                9  // An error occurred
 uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
 
+/** ------------------------- Communication with PC ------------------------ **/
+
+// Error codes
+#define ERROR_RUNTIME           255   // Some function has been called from an inappropriate state. This is to flag possible bugs for future development.
+
 
 #endif // _VIPERLEED_STATES

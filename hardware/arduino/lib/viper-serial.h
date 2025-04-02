@@ -30,12 +30,8 @@ Date: 26.03.2025
 #define ERROR_MSG_INCONSISTENT    3   // Message received from PC is inconsistent. Probably corrupt.
 #define ERROR_MSG_UNKNOWN         4   // Unknown request from PC
 #define ERROR_MSG_DATA_INVALID    5   // Request from PC contains invalid information
-#define ERROR_NEVER_CALIBRATED    6   // The ADCs have never been calibrated before since bootup
 #define ERROR_TIMEOUT             7   // Timed out while waiting for something
-#define ERROR_ADC_SATURATED       8   // One of the ADC values reached saturation, and gain can't be decreased further
-#define ERROR_TOO_HOT             9   // The temperature read by the LM35 is too high
 #define ERROR_MSG_SENT_TOO_LONG 254   // Any message must be shorter than MSG_SPECIAL_BYTE
-#define ERROR_RUNTIME           255   // Some function has been called from an inappropriate state. This is to flag possible bugs for future development.
 byte errorTraceback[2];               // Keeps track of: (0) the state that produced the error, (1) which error occurred (one of ERROR_*)
 
 // Variables used while communicating with the PC
