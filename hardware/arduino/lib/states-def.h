@@ -23,6 +23,9 @@ uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
 
 // Acceptable messages for communication with the PC
 #define PC_CONFIGURATION     63  // PC requested hardware configuration (ASCII '?')
+#define PC_RESET             82  // PC requested a global reset (ASCII 'R')
 #define PC_SET_SERIAL_NR    115  // PC requested serial number (ASCII 's')
+#define PC_STOP             120  // PC requested a stop on all activity. Return to idle (ASCII 'x')
+
 
 #endif // _VIPERLEED_STATES

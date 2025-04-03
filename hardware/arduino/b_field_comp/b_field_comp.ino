@@ -104,6 +104,9 @@ void loop()
 		case STATE_SET_SERIAL_NR:
             setSerialNr();
             break;
+        case STATE_ERROR:
+        	handleErrors();
+        	break;
 	}
 
 
@@ -208,7 +211,10 @@ bool isAllowedCommand() {
     // Check that it is one of the understandable commands
     switch(data_received[0]){
         case PC_CONFIGURATION: break;
+        case PC_RESET: break;
         case PC_SET_SERIAL_NR: break;
+        case PC_STOP: break;
+       // case PC_: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
@@ -247,11 +253,22 @@ void updateState() {
 			initialTime = millis();
 			currentState = STATE_GET_CONFIGURATION;
 			break;
+		case PC_RESET:
+            encodeAndSend(PC_OK);
+            reset();
+            break;
 		case PC_SET_SERIAL_NR:
 			waitingForDataFromPC = true;
             initialTime = millis();
 			currentState = STATE_SET_SERIAL_NR;
 			break;
+		case PC_STOP:
+            currentState = STATE_IDLE;
+            encodeAndSend(PC_OK);
+            break;
+		/*case PC_:
+			currentState = STATE_;
+			break;*/
 	}
 
 	newMessage = false;
@@ -313,6 +330,83 @@ void getConfiguration(){
 	}
     encodeAndSend(configuration, LENGTH(configuration));
     currentState = STATE_IDLE;
+}
+
+
+/** Handler of STATE_ERROR */
+void handleErrors(){
+    /**Clean up after an error, and report it to the PC.                    //TODO: handle coils in case of error
+
+    Reads
+    -----
+    currentState, errorTraceback
+
+    Msg to PC
+    ---------
+    First message : PC_ERROR
+    Second message : errorTraceback, i.e., two bytes
+        First byte : state of the Arduino while the error occurred
+        Second byte : error code
+
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within a STATE_ERROR
+    STATE_IDLE
+        Otherwise
+    **/
+    if (currentState != STATE_ERROR){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+    // First, report the error, so the PC knows
+    // there may be some cleanup going on
+    encodeAndSend(PC_ERROR);
+    encodeAndSend(errorTraceback, LENGTH(errorTraceback));
+
+    // Then clean up possible mess that caused the error
+    switch(errorTraceback[1]){
+        case ERROR_SERIAL_OVERFLOW:
+            // Discard all characters in the serial buffer,
+            // since messages are anyway likely corrupt.
+            while(Serial.available()) Serial.read();
+            break;
+        case ERROR_MSG_TOO_LONG:
+            numBytesRead = 0;
+            readingFromSerial = false;
+            break;
+    }
+    waitingForDataFromPC = false;
+    newMessage = false;
+    currentState = STATE_IDLE;
+}
+
+
+/** Handler of PC_RESET */
+void reset(){                                      //TODO: add reset settings for coils
+    /**
+    Reset the Arduino, mimicking as much as possible the state right
+    after boot-up or a hardware reset.
+
+    Writes
+    ------
+    numBytesRead, msgLength, readingFromSerial, newMessage,
+    waitingForDataFromPC,
+
+    Goes to state
+    -------------
+    STATE_IDLE
+    **/
+    numBytesRead = 0;
+    msgLength = 0;
+    readingFromSerial = false;
+    newMessage = false;
+
+    currentState = STATE_IDLE;
+    waitingForDataFromPC = false;
+
+    }
 }
 
 
