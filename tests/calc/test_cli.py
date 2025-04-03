@@ -7,7 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
-from argparse import Namespace
 import os
 
 import pytest
@@ -37,7 +36,7 @@ class TestCalcCliCall:
     """Tests for the __call__ method of ViPErLEEDCalcCLI."""
 
     @fixture(name='mock_implementation')
-    def fixture_mock_implementation(self, tmp_path, mocker):
+    def fixture_mock_implementation(self, mocker):
         """Replace implementation details with mocks."""
         def _mock(exit_code):
             return {
@@ -59,7 +58,7 @@ class TestCalcCliCall:
                 }
         return _mock
 
-    def test_delete_workdir(self, tmp_path, mock_implementation, mocker):
+    def test_delete_workdir(self, tmp_path, mock_implementation):
         """Check the successful removal of the work directory."""
         cli = ViPErLEEDCalcCLI()
         mocks = mock_implementation(exit_code=0)
@@ -71,8 +70,7 @@ class TestCalcCliCall:
     def test_delete_workdir_fails(self,
                                   tmp_path,
                                   mock_implementation,
-                                  capsys,
-                                  mocker):
+                                  capsys):
         """Check complaints are printed when removing work fails."""
         cli = ViPErLEEDCalcCLI()
         mocks = mock_implementation(exit_code=0)
@@ -81,6 +79,7 @@ class TestCalcCliCall:
             error = cli(['--delete-workdir'])
         assert not error
         captured = capsys.readouterr().out
+        # pylint: disable-next=magic-value-comparison
         assert 'Error deleting' in captured
 
     def test_exit_code(self, tmp_path, mock_implementation, mocker):
@@ -251,7 +250,8 @@ class TestCopyTensorsDeltas:
         """Check correct copying of all Tensors/Deltas."""
         copy = mocker.patch(f'{_MODULE}.copytree_exists_ok')
         _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=True)
-        assert copy.call_count == 2  # Tensors and Deltas folders
+        n_folders = 2  # Tensors and Deltas folders
+        assert copy.call_count == n_folders
 
     def test_copy_all_not_found(self, mocker, caplog):
         """Check correct copying of all Tensors/Deltas."""
@@ -259,7 +259,8 @@ class TestCopyTensorsDeltas:
         copy = mocker.patch(f'{_MODULE}.copytree_exists_ok',
                             side_effect=FileNotFoundError)
         _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=True)
-        assert copy.call_count == 2  # Tried Tensors and Deltas folders
+        n_folders_tried = 2  # Tried Tensors and Deltas folders
+        assert copy.call_count == n_folders_tried
         assert not caplog.text
 
     def test_copy_most_recent(self, mocker):
@@ -268,17 +269,20 @@ class TestCopyTensorsDeltas:
         mocker.patch('pathlib.Path.is_file', return_value=True)
         copy = mocker.patch('shutil.copy2')
         _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=False)
-        assert copy.call_count == 2   # Tensors.zip and Deltas.zip
+        n_files = 2  # Tensors.zip and Deltas.zip
+        assert copy.call_count == n_files
 
     def test_copy_most_recent_missing(self, mocker):
         """Check no complaints when no Tensors exist."""
         def _is_file(path):
+            # pylint: disable-next=magic-value-comparison
             return 'Tensors' in path.name
         mocker.patch(f'{_MODULE}.getMaxTensorIndex', return_value=123)
         mocker.patch('pathlib.Path.is_file', _is_file)
         copy = mocker.patch('shutil.copy2')
         _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=False)
-        assert copy.call_count == 1   # Only Tensors.zip, no Deltas.zip
+        n_files = 1  # Only Tensors.zip, no Deltas.zip
+        assert copy.call_count == n_files
 
     def test_copy_most_recent_none(self, mocker, caplog):
         """Check no complaints when no Tensors exist."""
