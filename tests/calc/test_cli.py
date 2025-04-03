@@ -15,11 +15,17 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.cli import LOG_VERBOSE
+from viperleed.calc.cli import LOG_VERY_VERBOSE
 from viperleed.calc.cli import ViPErLEEDCalcCLI
 from viperleed.calc.cli import _copy_files_from_manifest
+from viperleed.calc.cli import _copy_input_files_to_work
+from viperleed.calc.cli import _copy_tensors_and_deltas_to_work
+from viperleed.calc.cli import _verbosity_to_log_level
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 
 from ..helpers import filesystem_from_dict
 from ..helpers import filesystem_to_dict
@@ -61,6 +67,21 @@ class TestCalcCliCall:
             error = cli(['--delete-workdir'])
         assert not error
         mocks['rmtree'].assert_called_once_with(tmp_path/DEFAULT_WORK)
+
+    def test_delete_workdir_fails(self,
+                                  tmp_path,
+                                  mock_implementation,
+                                  capsys,
+                                  mocker):
+        """Check the successful call to ViPErLEEDCalcCLI."""
+        cli = ViPErLEEDCalcCLI()
+        mocks = mock_implementation(exit_code=0)
+        mocks['rmtree'].side_effect = OSError
+        with execute_in_dir(tmp_path):
+            error = cli(['--delete-workdir'])
+        assert not error
+        captured = capsys.readouterr().out
+        assert 'Error deleting' in captured
 
     def test_exit_code(self, tmp_path, mock_implementation, mocker):
         """Check the successful call to ViPErLEEDCalcCLI."""
@@ -205,3 +226,85 @@ two/domain_file
         manifest.has_absolute_paths = True
         with pytest.raises(ManifestFileError):
             _copy_files_from_manifest(manifest)
+
+
+class TestCopyInputFiles:
+    """Tests for the _copy_input_files_to_work helper."""
+
+    def test_success(self, mocker):
+        """Check the successful copy of input files."""
+        copy = mocker.patch('shutil.copy2')
+        _copy_input_files_to_work(mocker.MagicMock())
+        assert copy.call_count == len(ALL_INPUT_FILES)
+
+    def test_copy_fails(self, mocker, caplog):
+        """Check no complaints when files are missing."""
+        caplog.set_level(0)  # All messages
+        copy = mocker.patch('shutil.copy2', side_effect=FileNotFoundError)
+        _copy_input_files_to_work(mocker.MagicMock())
+        assert copy.call_count == len(ALL_INPUT_FILES)
+        assert not caplog.text
+
+
+class TestCopyTensorsDeltas:
+    """Tests for the _copy_tensors_and_deltas_to_work helper."""
+
+    def test_copy_all(self, mocker):
+        """Check correct copying of all Tensors/Deltas."""
+        copy = mocker.patch(f'{_MODULE}.copytree_exists_ok')
+        _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=True)
+        assert copy.call_count == 2  # Tensors and Deltas folders
+
+    def test_copy_all_not_found(self, mocker, caplog):
+        """Check correct copying of all Tensors/Deltas."""
+        caplog.set_level(0)  # All messages
+        copy = mocker.patch(f'{_MODULE}.copytree_exists_ok',
+                            side_effect=FileNotFoundError)
+        _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=True)
+        assert copy.call_count == 2  # Tried Tensors and Deltas folders
+        assert not caplog.text
+
+    def test_copy_most_recent(self, mocker):
+        """Check no complaints when no Tensors exist."""
+        mocker.patch(f'{_MODULE}.getMaxTensorIndex', return_value=123)
+        mocker.patch('pathlib.Path.is_file', return_value=True)
+        copy = mocker.patch('shutil.copy2')
+        _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=False)
+        assert copy.call_count == 2   # Tensors.zip and Deltas.zip
+
+    def test_copy_most_recent_missing(self, mocker):
+        """Check no complaints when no Tensors exist."""
+        def _is_file(path):
+            return 'Tensors' in path.name
+        mocker.patch(f'{_MODULE}.getMaxTensorIndex', return_value=123)
+        mocker.patch('pathlib.Path.is_file', _is_file)
+        copy = mocker.patch('shutil.copy2')
+        _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=False)
+        assert copy.call_count == 1   # Only Tensors.zip, no Deltas.zip
+
+    def test_copy_most_recent_none(self, mocker, caplog):
+        """Check no complaints when no Tensors exist."""
+        caplog.set_level(0)  # All messages
+        mocker.patch(f'{_MODULE}.getMaxTensorIndex', return_value=None)
+        copy = mocker.patch('shutil.copy2')
+        _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=False)
+        copy.assert_not_called()
+        assert not caplog.text
+
+
+_presets = {  # cli_args: expected_presets
+    (): {},
+    ('verbose',): {'LOG_LEVEL': LOG_VERBOSE},
+    ('very_verbose',): {'LOG_LEVEL': LOG_VERY_VERBOSE},
+    ('verbose', 'very_verbose'): {'LOG_LEVEL': LOG_VERY_VERBOSE},
+    }
+
+@parametrize('args,expect', _presets.items())
+def test_verbosity_to_log(args, expect, mocker):
+    """Tests for the _verbosity_to_log_level helper."""
+    cli_args = mocker.MagicMock(verbose=False, very_verbose=False)
+    for attr_name in args:
+        setattr(cli_args, attr_name, True)
+    presets = {}
+    _verbosity_to_log_level(cli_args, presets)
+    assert presets == expect
