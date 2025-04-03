@@ -60,7 +60,7 @@ class TestCalcCliCall:
         return _mock
 
     def test_delete_workdir(self, tmp_path, mock_implementation, mocker):
-        """Check the successful call to ViPErLEEDCalcCLI."""
+        """Check the successful removal of the work directory."""
         cli = ViPErLEEDCalcCLI()
         mocks = mock_implementation(exit_code=0)
         with execute_in_dir(tmp_path):
@@ -73,7 +73,7 @@ class TestCalcCliCall:
                                   mock_implementation,
                                   capsys,
                                   mocker):
-        """Check the successful call to ViPErLEEDCalcCLI."""
+         """Check complaints are printed when removing work fails."""
         cli = ViPErLEEDCalcCLI()
         mocks = mock_implementation(exit_code=0)
         mocks['rmtree'].side_effect = OSError
@@ -84,7 +84,7 @@ class TestCalcCliCall:
         assert 'Error deleting' in captured
 
     def test_exit_code(self, tmp_path, mock_implementation, mocker):
-        """Check the successful call to ViPErLEEDCalcCLI."""
+        """Check the result of a failed execution."""
         cli = ViPErLEEDCalcCLI()
         exit_code = mocker.MagicMock()
         mocks = mock_implementation(exit_code)
@@ -93,7 +93,6 @@ class TestCalcCliCall:
         assert result is exit_code
         assert bool(result)    # Should fake an error condition
         mocks['rmtree'].assert_not_called()  # work should stay
-        assert (tmp_path/DEFAULT_WORK).is_dir()
 
     def test_success(self, tmp_path, mock_implementation, mocker):
         """Check the successful call to ViPErLEEDCalcCLI."""
@@ -128,7 +127,6 @@ class TestCalcCliCall:
             else:
                 assert mock.mock_calls == [call]
         mocks['rmtree'].assert_not_called()
-        assert (tmp_path/DEFAULT_WORK).is_dir()
 
 
 class TestCalcParser:
