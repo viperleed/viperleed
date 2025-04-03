@@ -127,7 +127,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             action='store_true',
             )
         parser.add_argument(
-            '--keep-workdir',
+            '--keep-workdir', '-k',
             help=('do not delete the work directory after execution. By '
                   'default, the work directory is also not deleted in '
                   'case of errors.'),
