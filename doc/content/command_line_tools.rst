@@ -84,3 +84,5 @@ tool for running |LEED-IV| calculations.
     manually running :ref:`bookkeeper` after |calc|.
     Removed the ``--job-name``, ``--history-name``, and ``--work-history-name``
     arguments.
+    Removed the ``--delete-workdir`` argument, whose default was ``False``.
+    It is replaced by ``--keep-workdir``.

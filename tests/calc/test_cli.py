@@ -63,7 +63,7 @@ class TestCalcCliCall:
         cli = ViPErLEEDCalcCLI()
         mocks = mock_implementation(exit_code=0)
         with execute_in_dir(tmp_path):
-            error = cli(['--delete-workdir'])
+            error = cli([])
         assert not error
         mocks['rmtree'].assert_called_once_with(tmp_path/DEFAULT_WORK)
 
@@ -76,7 +76,7 @@ class TestCalcCliCall:
         mocks = mock_implementation(exit_code=0)
         mocks['rmtree'].side_effect = OSError
         with execute_in_dir(tmp_path):
-            error = cli(['--delete-workdir'])
+            error = cli([])
         assert not error
         captured = capsys.readouterr().out
         # pylint: disable-next=magic-value-comparison
@@ -92,6 +92,15 @@ class TestCalcCliCall:
         assert result is exit_code
         assert bool(result)    # Should fake an error condition
         mocks['rmtree'].assert_not_called()  # work should stay
+
+    def test_keep_workdir(self, tmp_path, mock_implementation):
+        """Check that work is not deleted if requested."""
+        cli = ViPErLEEDCalcCLI()
+        mocks = mock_implementation(exit_code=0)
+        with execute_in_dir(tmp_path):
+            error = cli(['--keep-workdir'])
+        assert not error
+        mocks['rmtree'].assert_not_called()
 
     def test_success(self, tmp_path, mock_implementation, mocker):
         """Check the successful call to ViPErLEEDCalcCLI."""
@@ -116,6 +125,7 @@ class TestCalcCliCall:
             'log_level': None,
             'manifest': mocker.call(tmp_path),
             'multiprocess': mocker.call(),
+            'rmtree': mocker.call(tmp_path/DEFAULT_WORK),
             'run': None,
             'tensors_deltas': None,
             }
@@ -125,7 +135,6 @@ class TestCalcCliCall:
                 mock.assert_called_once()
             else:
                 assert mock.mock_calls == [call]
-        mocks['rmtree'].assert_not_called()
 
 
 class TestCalcParser:

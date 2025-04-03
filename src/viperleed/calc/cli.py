@@ -74,7 +74,8 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested
-        if args.delete_workdir:
+        keep_workdir = args.keep_workdir or exit_code
+        if not keep_workdir:
             try:
                 shutil.rmtree(work_path)
             except OSError as exc:
@@ -126,8 +127,10 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             action='store_true',
             )
         parser.add_argument(
-            '--delete-workdir',
-            help='delete work directory after execution',
+            '--keep-workdir',
+            help=('do not delete the work directory after execution. By '
+                  'default, the work directory is also not deleted in '
+                  'case of errors.'),
             action='store_true',
             )
 

@@ -195,8 +195,6 @@ Your root folder should now look like this:
     │   ├── original_inputs/
     │   │   └── ...
     │   └── ...
-    ├── work/
-    │   └── ...
     ├── EXPBEAMS.csv
     ├── history.info
     ├── IVBEAMS
@@ -210,10 +208,7 @@ Your root folder should now look like this:
     └── viperleed-calc-<timestamp>.log
 
 Folders :file:`OUT` and :file:`SUPP` always contain the main
-:ref:`results <files>` of the calculation. Folder :file:`work`
-is where |calc| actually runs. It is kept for debugging purposes,
-and you can safely delete it (use the ``--delete-workdir``
-:ref:`command-line argument <cli_calc>` to do this automatically).
+:ref:`results <files>` of the calculation.
 Files :ref:`ivbeams`, :ref:`phaseshifts`, and :ref:`vibrocc` were
 automatically created by |calc|. :file:`POSCAR_user` is an exact
 copy of the :ref:`poscar` file given as input the first time |calc|
