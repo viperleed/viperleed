@@ -32,6 +32,10 @@ from viperleed.guilib.widgets.basewidgets import ButtonWithLabel
 from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
 
 
+DELTA_ENERGY_NAME = 'Step height'
+MAX_NUM_STEPS = 7
+
+
 class DeviceEditor(SettingsDialogSectionBase):
     """Class for selecting devices and editing their settings."""
 
@@ -361,7 +365,7 @@ class LinearStepEditor(ProfileEditorBase):
         """Initialise object."""
         super().__init__()
         self._controls = {
-            'step_number' : CoercingSpinBox(soft_range=(0, 32767)),
+            'n_steps' : CoercingSpinBox(soft_range=(0, MAX_NUM_STEPS)),
             'duration' : CoercingSpinBox(soft_range=(0, 9999), suffix=' ms'),
             }
         self._compose()
@@ -380,9 +384,10 @@ class LinearStepEditor(ProfileEditorBase):
         step_number_label = qtw.QLabel('Nr. of steps:')
         layout.addWidget(step_number_label)
         size = step_number_label.fontMetrics().boundingRect('a').height()
-        info = 'The number of intermediate steps.'
+        info = ('<nobr>The number of intermediate steps.</nobr> '
+                f'Cannot be higher than {MAX_NUM_STEPS}.')
         layout.addWidget(FieldInfo(info, size=size))
-        layout.addWidget(self._controls['step_number'])
+        layout.addWidget(self._controls['n_steps'])
         return layout
 
     def _compose_duration_selection(self):
@@ -399,12 +404,12 @@ class LinearStepEditor(ProfileEditorBase):
 
     def set_profile(self, profile):
         """Set linear profile."""
-        self._controls['step_number'].setValue(profile[1])
+        self._controls['n_steps'].setValue(profile[1])
         self._controls['duration'].setValue(profile[2])
 
     def update_profile(self):
         """Set the profile to the selected values."""
-        self.profile = ('linear', self._controls['step_number'].value(),
+        self.profile = ('linear', self._controls['n_steps'].value(),
                         self._controls['duration'].value())
         if self.profile == ('linear', 0, 0):
             self.profile = ('abrupt',)
@@ -445,6 +450,7 @@ class FractionalStepEditor(ProfileEditorBase):
             handler.destroyed.connect(self._emit_step_count_reduced)
             layout.addWidget(handler)
         self._steps.append(layout)
+        self._update_button_states()
         self.layout().insertLayout(self.layout().count() - 1, layout)
 
     def _compose(self):
@@ -462,6 +468,7 @@ class FractionalStepEditor(ProfileEditorBase):
         layout.addWidget(self._controls['add_step'])
         self._controls['remove_step'].setText('Remove')
         layout.addWidget(self._controls['remove_step'])
+        self._controls['remove_step'].setEnabled(False)
         return layout
 
     def _compose_labels(self):
@@ -472,7 +479,8 @@ class FractionalStepEditor(ProfileEditorBase):
         layout.addWidget(fraction_label)
         size = fraction_label.fontMetrics().boundingRect('a').height()
         info = ('<nobr>The energies to set given as a '
-                'fraction</nobr> of "Delta energy".')
+                f'fraction</nobr> of "{DELTA_ENERGY_NAME}". '
+                f'Number of steps cannot exceed {MAX_NUM_STEPS}.')
         layout.addWidget(FieldInfo(info, size=size))
         duration_label = qtw.QLabel()
         duration_label.setText('Duration')
@@ -502,8 +510,15 @@ class FractionalStepEditor(ProfileEditorBase):
             return
         item = layout.itemAt(layout.count() - 2)
         layout.removeItem(item)
+        del(self._steps[-1])
+        self._update_button_states()
         for widget_index in range(item.layout().count()):
             item.itemAt(widget_index).widget().deleteLater()
+
+    def _update_button_states(self):
+        """Enable/disable add/remove buttons."""
+        self._controls['add_step'].setEnabled(len(self._steps) < MAX_NUM_STEPS)
+        self._controls['remove_step'].setEnabled(len(self._steps) != 0)
 
     def set_profile(self, profile):
         """Set fractional profile."""
@@ -512,6 +527,7 @@ class FractionalStepEditor(ProfileEditorBase):
         self.profile = profile
         for fraction, duration in zip(profile[0::2], profile[1::2]):
             self._add_step(fraction, duration)
+        self._update_button_states()
 
     def update_profile(self):
         """Set the profile to the selected values."""

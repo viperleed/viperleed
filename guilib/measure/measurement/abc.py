@@ -38,7 +38,6 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
 from viperleed.guilib.measure.measurement import _meassettings as _settings
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 
-
 _INVOKE = qtc.QMetaObject.invokeMethod
 _QUEUED = qtc.Qt.QueuedConnection
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -796,10 +795,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         type_display.setText(type(self).__name__)
         handler.add_static_option('measurement_settings', 'measurement_class',
                                   type_display, display_name='Measurment type')
+
         info = (
             ('start_energy', 'Start energy',
              '<nobr>The energy at which the measurement starts.</nobr>'),
-            ('delta_energy', 'Step height',
+            ('delta_energy', _settings.DELTA_ENERGY_NAME,
              '<nobr>The energy difference between two measurement '
              'steps.</nobr>'),
             ('end_energy', 'End energy',
