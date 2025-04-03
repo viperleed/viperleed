@@ -29,6 +29,7 @@ from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.guilib.widgets.basewidgets import ButtonWithLabel
+from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
 
 
 class DeviceEditor(SettingsDialogSectionBase):
@@ -195,12 +196,15 @@ class StepProfileViewer(ButtonWithLabel):
     @qtc.pyqtSlot()
     def _on_settings_changed(self):
         """Update step profile to selected profile."""
-        if isinstance(self.profile_editor.profile[0], str):
-            chosen_profile = self.profile_editor.profile[0]
-        else:
-            chosen_profile = 'fractional'
-        self.set_label_text(chosen_profile + ' profile')
+        self._set_label_text(self.profile_editor.profile[0])
         self.settings_changed.emit()
+
+    def _set_label_text(self, value):
+        """Set label text from selected profile."""
+        if isinstance(value, str):
+            self.set_label_text(value.capitalize() + ' profile')
+            return
+        self.set_label_text('Fractional profile')
 
     def get_(self):
         """Return the value to be stored in the config."""
@@ -220,10 +224,7 @@ class StepProfileViewer(ButtonWithLabel):
         if isinstance(value, str):
             value = (value,)
         self.profile_editor.profile = value
-        if isinstance(value[0], str):
-            self.set_label_text(value[0] + ' profile')
-            return
-        self.set_label_text('fractional profile')
+        self._set_label_text(value[0])
 
 
 class StepProfileEditor(qtw.QDialog):                                           # TODO: visually draw profiles
@@ -236,13 +237,10 @@ class StepProfileEditor(qtw.QDialog):                                           
     def __init__(self, **kwargs):
         """Initialize editor."""
         super().__init__(**kwargs)
-        self._controls = {
-            'profile' : qtw.QComboBox(),
-            'abrupt' : AbruptStep(),
-            'linear_editor' : LinearStepEditor(),
-            'fraction_editor' : FractionalStepEditor(),
-            'accept' : qtw.QPushButton('Accept'),
-            'cancel' : qtw.QPushButton('Cancel'),
+        self.pick_profile = qtw.QComboBox()
+        self._profile_editors = {
+            name: cls()
+            for name, cls in ProfileEditorBase().subclasses.items()
             }
         self._populate_profile_options()
         self.setWindowTitle('Edit energy-step profile')
@@ -252,107 +250,92 @@ class StepProfileEditor(qtw.QDialog):                                           
         self._delay.setSingleShot(True)
         self._delay.setInterval(3)
         self._delay.timeout.connect(self.adjustSize)
-        self._compose()
-        self._connect()
-
-    @property
-    def fraction_editor(self):
-        """Return the fraction editor."""
-        return self._controls['fraction_editor']
-
-    @property
-    def linear_editor(self):
-        """Return the linear editor."""
-        return self._controls['linear_editor']
+        self._compose_and_connect()
 
     @property
     def profile(self):
         """Return the currently selected profile."""
-        return self._controls['profile'].currentData().profile
+        return self.pick_profile.currentData().profile
 
     @profile.setter
     def profile(self, profile_data):
         """Set the profile from settings."""
-        if isinstance(profile_data[0], str):
-            if profile_data[0] == 'linear':
-                index = self._controls['profile'].findText('Linear profile')
-            else:
-                index = self._controls['profile'].findText('Abrupt')
-        else:
-            index = self._controls['profile'].findText('Fractional profile')
-        self._controls['profile'].setCurrentIndex(index)
-        self._controls['profile'].currentData().set_profile(profile_data)
+        first = profile_data[0]
+        name = (first if isinstance(first, str) else 'custom')
+        index = self.pick_profile.findText(name.capitalize() + ' profile')
+        self.pick_profile.setCurrentIndex(index)
+        self.pick_profile.currentData().set_profile(profile_data)
 
-    def _compose(self):
-        """Compose StepProfileEditor."""
+    def _compose_and_connect(self):
+        """Compose StepProfileEditor and connect signals."""
         layout = qtw.QVBoxLayout()
         layout.addLayout(self._compose_editor())
-        layout.addLayout(self._compose_accept_cancel())
+        _bbox = QNoDefaultDialogButtonBox
+        buttons = _bbox(_bbox.Ok | _bbox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
         self.setLayout(layout)
-
-    def _compose_accept_cancel(self):
-        """Compose accept and cancel buttons."""
-        layout = qtw.QHBoxLayout()
-        layout.addWidget(self._controls['cancel'])
-        layout.addStretch(1)
-        layout.addWidget(self._controls['accept'])
-        return layout
+        self.pick_profile.currentTextChanged.connect(self._on_profile_selected)
+        self._profile_editors['custom'].step_count_reduced.connect(
+            self._delay.start
+            )
 
     def _compose_editor(self):
         """Compose editor section."""
         layout = qtw.QHBoxLayout()
         profile_with_stretch = qtw.QVBoxLayout()
-        profile_with_stretch.addWidget(self._controls['profile'])
+        profile_with_stretch.addWidget(self.pick_profile)
         profile_with_stretch.addStretch(1)
         layout.addLayout(profile_with_stretch)
-        layout.addWidget(self.linear_editor)
-        layout.addWidget(self.fraction_editor)
-        self.linear_editor.hide()
-        self.fraction_editor.hide()
+        for profile_editor in self._profile_editors.values():
+            layout.addWidget(profile_editor)
+            profile_editor.hide()
         return layout
-
-    def _connect(self):
-        """Connect signals."""
-        self._controls['profile'].currentTextChanged.connect(
-            self._on_profile_selected
-            )
-        self._controls['accept'].clicked.connect(self.accept)
-        self._controls['cancel'].clicked.connect(self.reject)
-        self.fraction_editor.step_count_reduced.connect(self._delay.start)
 
     def _on_profile_selected(self):
         """Update the displayed step profile editor."""
-        self.linear_editor.hide()
-        self.fraction_editor.hide()
-        self._controls['profile'].currentData().show()
+        for profile_editor in self._profile_editors.values():
+            profile_editor.hide()
+        self.pick_profile.currentData().show()
         self._delay.start()
 
     def _populate_profile_options(self):
         """Add profile options to profile selection."""
-        control_text = ('Abrupt', 'Linear profile', 'Fractional profile')
-        control_options = (self._controls['abrupt'], self.linear_editor,
-                           self.fraction_editor)
-        for text, option in zip(control_text, control_options):
-            self._controls['profile'].addItem(text, userData=option)
+        for profile_editor in self._profile_editors.values():
+            name = profile_editor.name.capitalize()+' profile'
+            self.pick_profile.addItem(name, userData=profile_editor)
 
     @qtc.pyqtSlot()
     def accept(self):
         """Store selected profile then accept."""
-        self._controls['profile'].currentData().update_profile()
+        self.pick_profile.currentData().update_profile()
         super().accept()
 
 
-class ProfileStep(qtw.QWidget):
+class ProfileEditorBase(qtw.QWidget):
     """Base class for step profiles."""
+
+    _subclasses = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls._subclasses[cls.name] = cls
 
     def __init__(self):
         """Initialise object."""
         super().__init__()
         self.profile = ()
 
+    @property
+    def subclasses(self):
+        return self._subclasses.copy()
 
-class AbruptStep(ProfileStep):
+
+class AbruptStepEditor(ProfileEditorBase):
     """Abrupt step."""
+
+    name = 'abrupt'
 
     def __init__(self):
         """Initialise object."""
@@ -369,8 +352,10 @@ class AbruptStep(ProfileStep):
         """Do nothing."""
 
 
-class LinearStepEditor(ProfileStep):
+class LinearStepEditor(ProfileEditorBase):
     """Editor for selecting settings of a linear energy profile."""
+
+    name = 'linear'
 
     def __init__(self):
         """Initialise object."""
@@ -425,9 +410,10 @@ class LinearStepEditor(ProfileStep):
             self.profile = ('abrupt',)
 
 
-class FractionalStepEditor(ProfileStep):
+class FractionalStepEditor(ProfileEditorBase):
     """Editor for the settings of an energy profile with custom steps."""
 
+    name = 'custom'
     step_count_reduced = qtc.pyqtSignal()
 
     def __init__(self):
