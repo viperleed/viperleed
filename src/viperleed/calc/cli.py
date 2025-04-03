@@ -190,7 +190,8 @@ def _make_work_directory(cli_args):
     """Return a suitable 'work' directory from `cli_args`."""
     work_path = Path(cli_args.work or DEFAULT_WORK).resolve()
     work_path.mkdir(parents=True, exist_ok=True)
-    return work_path
+    # Resolve again, in case it did not exist yet
+    return work_path.resolve()
 
 
 def _verbosity_to_log_level(cli_args, presets):
