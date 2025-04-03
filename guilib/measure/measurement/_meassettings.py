@@ -34,6 +34,7 @@ from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
 
 DELTA_ENERGY_NAME = 'Step height'
 MAX_NUM_STEPS = 7
+MAX_DELAY = 65535
 
 
 class DeviceEditor(SettingsDialogSectionBase):
@@ -366,7 +367,8 @@ class LinearStepEditor(ProfileEditorBase):
         super().__init__()
         self._controls = {
             'n_steps' : CoercingSpinBox(soft_range=(0, MAX_NUM_STEPS)),
-            'duration' : CoercingSpinBox(soft_range=(0, 9999), suffix=' ms'),
+            'duration' : CoercingSpinBox(soft_range=(0, MAX_DELAY),
+                                         suffix=' ms'),
             }
         self._compose()
 
@@ -442,7 +444,8 @@ class FractionalStepEditor(ProfileEditorBase):
         layout = qtw.QHBoxLayout()
         fraction_handler = CoercingDoubleSpinBox(decimals=2, soft_range=(0, 2),
                                                  step=0.05)
-        duration_handler = CoercingSpinBox(soft_range=(0, 32767), suffix=' ms')
+        duration_handler = CoercingSpinBox(soft_range=(0, MAX_DELAY),
+                                           suffix=' ms')
         for value, handler in zip((fraction, duration),
                                   (fraction_handler, duration_handler)):
             if value:
