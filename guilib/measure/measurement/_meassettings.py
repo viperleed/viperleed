@@ -204,7 +204,7 @@ class StepProfileViewer(ButtonWithLabel):
         if isinstance(value, str):
             self.set_label_text(value.capitalize() + ' profile')
             return
-        self.set_label_text('Fractional profile')
+        self.set_label_text('Custom profile')
 
     def get_(self):
         """Return the value to be stored in the config."""
