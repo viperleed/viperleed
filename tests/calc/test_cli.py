@@ -73,7 +73,7 @@ class TestCalcCliCall:
                                   mock_implementation,
                                   capsys,
                                   mocker):
-         """Check complaints are printed when removing work fails."""
+        """Check complaints are printed when removing work fails."""
         cli = ViPErLEEDCalcCLI()
         mocks = mock_implementation(exit_code=0)
         mocks['rmtree'].side_effect = OSError
