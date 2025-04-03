@@ -65,4 +65,22 @@ tool for running |LEED-IV| calculations.
             If not provided, the path is searched in the environment variable
             :envvar:`VIPERLEED_TENSORLEED`.
         -w --work
-            Default: ``'./work'``
+            Default: ``./work``
+
+.. versionchanged:: 0.12.0
+    Added the ``--all-tensors``, ``--delete-workdir``, ``--history-name``,
+    ``--job-name``, ``--name``, ``--no-cont``, ``--verbose``,
+    ``--very-verbose``, and ``--work-history-name`` arguments. In earlier
+    versions, the functionality of ``--all-tensors`` and ``--delete-workdir``
+    was available by editing the job script.
+    Renamed the ``--source`` argument to ``--tensorleed``.
+    Modified the behavior of the ``--work`` argument. In earlier versions,
+    calculations would run in a :file:`work` subfolder of the path specified
+    via the ``--work`` argument. Now calculations run in the path given as
+    the ``--work`` argument.
+
+.. versionchanged:: 0.13.0
+    Removed the ``--no-cont`` argument. The same effect can be obtained by
+    manually running :ref:`bookkeeper` after |calc|.
+    Removed the ``--job-name``, ``--history-name``, and ``--work-history-name``
+    arguments.
