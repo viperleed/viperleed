@@ -1,9 +1,11 @@
-/*
-ViPErLEED - Serial communication functions for hardware controllers
----------------------
-Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr, Tun Sinner
+/* ViPErLEED - Serial communication functions for hardware controllers
+
+@author: Bernhard Mayr
+@author: Michael Schmid (@schmid-iap)
+@author: Michele Riva (@michele-riva)
+@author: Florian Dörr (@FlorianDoerr)
+@author: Tun Sinner (@SinTu404)
 Date: 26.03.2025
----------------------
 */
 
 // Libraries

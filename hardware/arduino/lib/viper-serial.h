@@ -1,9 +1,11 @@
-/*
-ViPErLEED - Firmware for Arduino hardware controller
----------------------
-Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr, Tun Sinner
+/* ViPErLEED - Serial communication definitions for hardware controllers
+
+@author: Bernhard Mayr
+@author: Michael Schmid (@schmid-iap)
+@author: Michele Riva (@michele-riva)
+@author: Florian Dörr (@FlorianDoerr)
+@author: Tun Sinner (@SinTu404)
 Date: 26.03.2025
----------------------
 */
 #ifndef _VIPERLEED_SERIAL
 #define _VIPERLEED_SERIAL

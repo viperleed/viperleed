@@ -5,6 +5,7 @@
 @author: Florian Dörr (@FlorianDoerr)
 @author: Christoph Pfungen (@cpfungen)
 @author: Stefan Mitterhöfer (@Stefan-Mitterhoefer)
+@author: Tun Sinner (@SinTu404)
 **/
 
 #ifndef _VIPERLEED_ARDUINO_UTILS
@@ -82,16 +83,7 @@ uint16_t analogReadMedian(byte pin) {
 }
 
 #define sgn(x) (x < 0 ? -1 : 1)
-//static inline int8_t sgn(float val) {
-//  if (val < 0) return -1;
-////  if (val == 0) return 0;
-//  return 1;
-//}
 
 #define log2(x) (log(x)/log(2))
-//float log2(float val)
-//{
-//   return log(val) / log(2);
-//}
 
 #endif
