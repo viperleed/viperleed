@@ -1,10 +1,10 @@
 /**Useful functions for Arduino, not included in STDlib
 
-@author: Michele Riva
-@author: Michael Schmid
-@author: Florian Doerr
-@author: Christoph Pfungen
-@author: Stefan Mitterhöfer
+@author: Michele Riva (@michele-riva)
+@author: Michael Schmid (@schmid-iap)
+@author: Florian Dörr (@FlorianDoerr)
+@author: Christoph Pfungen (@cpfungen)
+@author: Stefan Mitterhöfer (@Stefan-Mitterhoefer)
 **/
 
 #ifndef _VIPERLEED_ARDUINO_UTILS
