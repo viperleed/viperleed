@@ -14,7 +14,11 @@ Date: 26.03.2025
 // Constants for communication with the PC
 #define MSG_START         254      // Beginning of a serial message
 #define MSG_END           255      // End of a serial message
-#define MSG_SPECIAL_BYTE  251      // Prevents clashing of data with (start, end, error)
+#ifndef MSG_SPECIAL_BYTE
+    #define MSG_SPECIAL_BYTE  251  // Prevents clashing of data with
+                                   // MSG_START, MSG_END, PC_DEBUG,
+                                   // and PC_ERROR
+#endif
 #define MSG_MAX_LENGTH     63      // Max no. of bytes in an incoming serial message; one less than SERIAL_BUFFER_SIZE
 #ifndef SERIAL_BUFFER_SIZE
     #define SERIAL_BUFFER_SIZE 64  // Arduino limit for serial buffer. If buffer is full, new bytes are DISCARDED
