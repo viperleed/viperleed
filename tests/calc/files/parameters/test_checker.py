@@ -3,14 +3,14 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-25'
 __license__ = 'GPLv3+'
 
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 

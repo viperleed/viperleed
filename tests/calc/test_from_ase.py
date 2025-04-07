@@ -8,7 +8,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-02-23'
 __license__ = 'GPLv3+'
 
@@ -18,9 +18,9 @@ import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import from_ase as vpr_ase
 from viperleed.calc.classes.slab import Slab
+from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.lib.math_utils import angle
@@ -483,12 +483,11 @@ class TestSuccessfulRefcalc:
          self.ase_atoms) = run_from_ase_refcalc
 
     @pytest.fixture(autouse=True)
-    def read_theobeams_from_results(self, run_refcalc):
+    @pytest.mark.usefixtures('run_refcalc')
+    def read_theobeams_from_results(self):
         """Store a list of full-dynamically calculated beams."""
-        # pylint: disable=attribute-defined-outside-init
-        # See note in fixture_run_refcalc
-        _ = run_refcalc  # Otherwise unused-argument
         theobeams_content, *_ = self.refcalc_results
+        # pylint: disable-next=attribute-defined-outside-init
         self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
 
     @pytest.mark.parametrize('file', ('BEAMLIST', 'VIBROCC', 'IVBEAMS'))
@@ -536,12 +535,11 @@ class TestFailingRefcalc:
          self.ase_atoms) = run_from_ase_refcalc_fails
 
     @pytest.fixture(autouse=True)
-    def read_theobeams_from_results(self, run_refcalc):
+    @pytest.mark.usefixtures('run_refcalc')
+    def read_theobeams_from_results(self):
         """Store an (empty) list of full-dynamically calculated beams."""
-        # pylint: disable=attribute-defined-outside-init
-        # See note in fixture_run_refcalc
-        _ = run_refcalc  # Otherwise unused-argument
         theobeams_content, *_ = self.refcalc_results
+        # pylint: disable-next=attribute-defined-outside-init
         self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
 
     @pytest.mark.parametrize('file', ('BEAMLIST', ))

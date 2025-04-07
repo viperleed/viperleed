@@ -57,7 +57,7 @@ also meaningful for other |R-factor| :ref:`definitions<r-factor_calculation>`.
    also that what is "far away" depends on how strongly the atom scatters
    (i.e., on the chemical species and on the depth within the solid), and
    in some cases may be as small as 0.1 Å, e.g., for displacements
-   along the surface-normal, :math:`z` direction of a surface atom.
+   along the surface-normal, |z| direction of a surface atom.
 -  Hydrogen is a very weak electron scatterer: the |R factor| depends only
    weakly on its position.
 
@@ -90,22 +90,22 @@ Note that defining multiple sections
 in the :ref:`DISPLACEMENTS` file, as is possible for the search, is not
 allowed here. Only one section of the :ref:`DISPLACEMENTS` file is read: the
 last one if the error calculation is run following a :ref:`sec_search`, the
-first one otherwise. Defining geometric, vibrational, and occupation variations
+first one otherwise. Defining geometric, vibration, and occupation variations
 all in the same :ref:`DISPLACEMENTS` file is allowed, but the different
 variations are split up, so the result is the same as executing multiple
 error calculations. This means that you cannot have simultaneous error
 calculations for multiple geometric-displacement directions (e.g.,
-:math:`x` *and* :math:`z`) for the same atom, since this would
-require multiple consecutive blocks in the DISPLACEMENTS file.
+|x| *and* |z|) for the same atom, since this would require multiple
+consecutive blocks in the DISPLACEMENTS file.
 
 .. todo::
-    The next note used to say "Simultaneous geometric AND vibrational..."
+    The next note used to say "Simultaneous geometric AND vibration..."
     but was in contraction with the "we read one block", or was unclear
     how the input would be. This is a typical case in which an explicit
     example would be useful.
 
 .. tip::
-    Simultaneous geometric or vibrational variations of multiple chemical
+    Simultaneous geometric or vibration variations of multiple chemical
     elements occupying the same site is possible, and the displacement values
     for the different elements may differ. However, all displacement ranges
     must have the same number of steps.
@@ -114,13 +114,13 @@ require multiple consecutive blocks in the DISPLACEMENTS file.
 
 The error calculation does *not* require a set of
 :ref:`Delta files<Deltaszip>`, since the normal delta-calculation routines
-mix geometric and vibrational displacements. Instead, the error calculation
+mix geometric and vibration displacements. Instead, the error calculation
 runs the required delta calculations automatically, splitting the
-geometric and vibrational variations into separate delta files to
+geometric and vibration variations into separate delta files to
 reduce computational cost.
 
 The results of the error calculation consists of the :ref:`errorspdf_header`
-files, stored in the :file:`OUT` directory.
+files, stored in the |OUT| directory.
 
 If the Pendry |R factor| is used, the value of |R+varR| is calculated
 for each error type and drawn as a horizontal line in :ref:`errorspdf`.

@@ -8,13 +8,12 @@ __created__ = '2025-03-06'
 __license__ = 'GPLv3+'
 
 import io
-import os
-from pathlib import Path
 
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.cli import ViPErLEEDMain
+from viperleed.calc.lib.context import execute_in_dir
 
 from .helpers import CustomTestException
 
@@ -56,12 +55,8 @@ def fixture_mock_stdin(tmp_path, mocker):
     # Some of our utilities require user input
     mocker.patch('builtins.input', side_effect=CustomTestException)
     mocker.patch('sys.stdin', io.StringIO('user input on stdin'))
-    home = Path.cwd()
-    os.chdir(tmp_path)
-    try:
+    with execute_in_dir(tmp_path):
         yield
-    finally:
-        os.chdir(home)
 
 
 def call_cli(cli_cls, argv=None):

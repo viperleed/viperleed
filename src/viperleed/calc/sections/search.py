@@ -5,7 +5,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -31,12 +31,14 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
 from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iosearch
 from viperleed.calc.files import parameters
 from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
@@ -208,27 +210,24 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     # domain_parameters) for each domain under variation
     best_doms = configs[0]
     if rp.domainParams:
-        doms_info = ((dp.sl, dp.rp, dp.workdir, dp.name)
+        doms_info = ((dp.slab, dp.rpars, dp.workdir, dp.name)
                      for dp in rp.domainParams)
     else:
         doms_info = ((sl, rp, Path.cwd(), ""),)
 
     # Finally write out the best structures
-    home = Path.cwd()
     for (*dom_info, work, name), (_, dom_config) in zip(doms_info, best_doms):
-        os.chdir(work)
-        try:
-            _store_and_write_best_structure(rp, *dom_info,
-                                            dom_config, final)
-        except Exception:                                                       # TODO: catch better
-            _err = "Error while writing search output"
-            if name:
-                _err += f" for domain {name}"
-            logger.error(_err, exc_info=rp.is_debug_mode)
-            rp.setHaltingLevel(2)
-            raise
-        finally:
-            os.chdir(home)
+        with execute_in_dir(work):
+            try:
+                _store_and_write_best_structure(rp, *dom_info,
+                                                dom_config, final)
+            except Exception:                                                   # TODO: catch better
+                _err = "Error while writing search output"
+                if name:
+                    _err += f" for domain {name}"
+                logger.error(_err, exc_info=rp.is_debug_mode)
+                rp.setHaltingLevel(2)
+                raise
 
 
 def _write_control_chem(rp, generation, configs):
@@ -316,9 +315,9 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
     """Modify dom_slab to the parameters in best_config. Write it out.
 
     If there is a predicted optimum for the parameters (via parabola
-    fit), POSCAR_OUT and VIBROCC_OUT files are also written for this
-    predicted optimum. However, `dom_slab` will always contain the
-    configuration passed via `best_config` at the end of this call.
+    fit), POSCAR and VIBROCC files are also written for this predicted
+    optimum. However, `dom_slab` will always contain the configuration
+    passed via `best_config` at the end of this call.
 
     Parameters
     ----------
@@ -326,7 +325,7 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
         The PARAMETERS for the whole calculation.
     dom_slab : Slab
         The slab of the domain to be modified, and used to write
-        POSCAR_OUT and VIBROCC_OUT files.
+        POSCAR and VIBROCC files.
     dom_rp : Rparams
         The PARAMETERS for this specific domain to be written out.
     best_config : Sequence
@@ -505,13 +504,15 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
         indep_pars = reshaped[:, :, 0].astype(int)  # contains the percentages
         # then the 'real' parameters:
         for (j, dp) in enumerate(rp.domainParams):
-            new_sps = [sp for sp in dp.rp.searchpars if
+            new_sps = [sp for sp in dp.rpars.searchpars if
                        sp.el != "vac" and sp.steps*localizeFactor >= 3 and
                        sp.linkedTo is None and sp.restrictTo is None and
                        sp.mode != "dom"]
             new_ip = np.array([*reshaped[:, j, 1]])
-            new_ip = np.delete(new_ip, [i for i in range(len(dp.rp.searchpars))
-                               if dp.rp.searchpars[i] not in new_sps], 1)
+            new_ip = np.delete(new_ip,
+                               [i for i in range(len(dp.rpars.searchpars))
+                                if dp.rpars.searchpars[i] not in new_sps],
+                                1)
             sps.extend(new_sps)
             indep_pars = np.append(indep_pars, new_ip, axis=1)
     indep_pars = indep_pars.astype(float)
@@ -710,9 +711,9 @@ def search(sl, rp):
 
     rp.searchResultConfig = None
     if rp.domainParams:
-        initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
+        initToDo = [(dp.rpars, dp.slab, dp.workdir) for dp in rp.domainParams]
     else:
-        initToDo = [(rp, sl, rp.paths.work)]
+        initToDo = [(rp, sl, Path.cwd())]
     for (rpt, slt, path) in initToDo:
         # read DISPLACEMENTS block
         if not rpt.disp_block_read:
@@ -721,7 +722,7 @@ def search(sl, rp):
             rpt.disp_block_read = True
         # get Deltas
         if 2 not in rpt.runHistory:
-            if "Tensors" in rpt.manifest:
+            if DEFAULT_TENSORS in rpt.manifest:
                 logger.error("New tensors were calculated, but no new delta "
                              "files were generated. Cannot execute search.")
                 raise RuntimeError("Delta calculations was not run for "
@@ -731,7 +732,7 @@ def search(sl, rp):
     rp.updateCores()
     # generate rf.info
     try:
-        rf_info_path = rp.paths.work / "rf.info"
+        rf_info_path = Path('rf.info')
         rf_info_content = iosearch.writeRfInfo(sl, rp, file_path=rf_info_path)
     except Exception:
         logger.error("Error generating search input file rf.info")
@@ -882,13 +883,13 @@ def search(sl, rp):
         leedbase.fortran_compile_batch(ctasks, logname=compile_log)
     except Exception:
         leedbase.copy_compile_log(rp, Path(compile_log),
-                                  log_name="search-compile")
+                                  save_as='search-compile')
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
     # run
     if rp.LOG_SEARCH:
-        search_log_path = (rp.paths.work / searchname).with_suffix(".log")
+        search_log_path = Path(searchname).with_suffix('.log')
         logger.info(f"Search log will be written to file {search_log_path}.")
     else:
         search_log_path = None
@@ -918,8 +919,8 @@ def search(sl, rp):
         )
     if rp.domainParams:
         config_size += sum(
-            sys.getsizeof((0,) * len(dp.rp.searchpars))
-            + sys.getsizeof(1) * len(dp.rp.searchpars)
+            sys.getsizeof((0,) * len(dp.rpars.searchpars))
+            + sys.getsizeof(1) * len(dp.rpars.searchpars)
             for dp in rp.domainParams
             )
     else:
@@ -1170,8 +1171,8 @@ def search(sl, rp):
                             processSearchResults(sl, rp, search_log_path,
                                                  final=False)
                         except Exception as exc:                                # TODO: too general
-                            logger.warning("Failed to update POSCAR_OUT "
-                                           f"and VIBROCC_OUT: {exc}")
+                            logger.warning("Failed to update POSCAR "
+                                           f"and VIBROCC: {exc}")
                 if stop:
                     logger.info("Stopping search...")
                     kill_process(proc, default_pgid=pgid)
@@ -1296,7 +1297,7 @@ def search(sl, rp):
         except Exception:
             logger.warning("Error writing Search-report.pdf",
                            exc_info=True)
-    # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
+    # process SD.TL to get POSCAR and VIBROCC for OUT
     try:
         processSearchResults(sl, rp, search_log_path)
     except FileNotFoundError:

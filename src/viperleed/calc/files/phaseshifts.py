@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-18'
 __license__ = 'GPLv3+'
 
@@ -482,7 +482,7 @@ def __check_consistency_element_order(rp, sl, phaseshifts,
     return may_have_wrong_phaseshifts
 
 
-def writePHASESHIFTS(firstline, phaseshifts, file_path=Path()/'PHASESHIFTS'):
+def writePHASESHIFTS(firstline, phaseshifts, file_path='PHASESHIFTS'):
     """Takes phaseshift data and writes it to a PHASESHIFTS file."""
     _file_path = Path(file_path)
     output = firstline
@@ -552,6 +552,9 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
               "#F0E442", "#0072B2", "#D55E00", "#CC79A7"]  # colorblind safe 8
     styles = ["-", "--", ":", "-."]  # for when we run out of colors
     for i, label in enumerate(ps_labels):
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         fig, ax = plt.subplots(figsize=figsize)
         figs.append(fig)
         fig.subplots_adjust(left=0.1, right=0.98,
@@ -573,6 +576,9 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         legend.get_frame().set_linewidth(linewidth*0.7)
 
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(filename)
         for fig in figs:
             pdf.savefig(fig)

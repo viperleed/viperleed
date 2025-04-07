@@ -127,11 +127,11 @@ For the delta-amplitudes calculation and the structure optimization
 (:ref:`RUN = 1-3<run>`), we will start out with a very rough grid of
 geometric optimizations (:ref:`DISPLACEMENTS` file). Refer
 to :numref:`list_cu-te_diplacements_rough`. As is generally recommended,
-we start with optimizations normal to the surface (:math:`z`). Immediately
+we start with optimizations normal to the surface (|z|). Immediately
 following that comes an in-plane optimization. Due to the complex structure,
 one in-plane direction is not sufficient: we need to run an optimization
-along both :math:`x` *and* :math:`y` directions. For details on the syntax
-used, see the entry on the :ref:`DISPLACEMENTS` file.
+along both |x| *and* |y| directions. For details on the syntax used, see
+the entry on the :ref:`DISPLACEMENTS` file.
 
 .. _list_cu-te_diplacements_rough:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_1
@@ -167,14 +167,6 @@ is very far from the ideal positions. Over the rough optimization, parameter
 values are shifted by up to 0.24 Å compared to the initial model (this is
 a lot!). The |R factor| drops to :math:`R_\mathrm{P} \approx 0.47`. This is
 still quite poor, but the progress is encouraging.
-
-Remember to keep the best fit-structure by calling the
-:ref:`bookkeeper utility<bookkeeper>` with the ``--cont``
-flag before proceeding:
-
-    .. code-block:: console
-
-        $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
 
 The |R factor| resulting from an additional reference calculation, is
 decreased to :math:`R_\mathrm{P} \approx 0.33` compared to the
@@ -287,8 +279,8 @@ Refined structure fit
 
 As usual, we can now perform some final structure fits over a fine-grained
 grid with subpicometre step. In particular, we should also optimize the
-**vibrational amplitudes**, which we have skipped so far. We recommend
-starting with the vibrational amplitudes here, since we have not touched
+**vibration amplitudes**, which we have skipped so far. We recommend
+starting with the vibration amplitudes here, since we have not touched
 them at all in the previous optimization step.
 :numref:`list_cu-te_diplacements_very_fine` shows the DISPLACEMENTS file
 for the refined structure optimization.
@@ -298,8 +290,8 @@ for the refined structure optimization.
    :language: console
    :caption: DISPLACEMENTS (0.5 pm step) for |CuTe|.
 
-You may want to finish up with a last "fine tuning" of the vibrational
-amplitudes and (\ :math:`z`) positions. See, for instance,
+You may want to finish up with a last "fine tuning" of the vibration
+amplitudes and (|z|) positions. See, for instance,
 ``DISPLACEMENTS_fine_2`` in the input files, but feel free to play around
 with the setting yourself, to get a feeling for the available options.
 Altogether, this should bring us to a Pendry |R factor|
@@ -319,24 +311,24 @@ the requested steps.
 
 .. only:: html
 
-   :numref:`list_cu-te_errors_x` shows an example for displacements along the
-   :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
-   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibrational
-   amplitudes are provided in the
+   :numref:`list_cu-te_errors_x` shows an example for displacements along
+   the |x| direction (i.e., parallel to the |a| unit-cell vector for the
+   POSCAR file used here). Examples for |y|, |z|, and vibration amplitudes
+   are provided in the
    :download:`input files</_static/example_systems/Cu(111)-Te/input_files.zip>`.
 
 .. only:: not html
 
    :numref:`list_cu-te_errors_x` shows an example for displacements along the
-   :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
-   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibrational
-   amplitudes are provided in the input files available in the online version
-   of the documentation at `viperleed.org <viperleed.org>`__.
+   |x| direction (i.e., parallel to the |a| unit-cell vector for the POSCAR
+   file used here). Examples for |y|, |z|, and vibration amplitudes are
+   provided in the input files available in the online version of the
+   documentation at `viperleed.org <viperleed.org>`__.
 
 .. _list_cu-te_errors_x:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_errors_x
    :language: console
-   :caption: DISPLACEMENTS for error calculation in :math:`x` direction.
+   :caption: DISPLACEMENTS for error calculation in |x| direction.
 
 The results are plotted in the :ref:`errorspdf` file, shown in
 :numref:`fig_cu-te_errors`. We see that displacements for atoms in all
@@ -349,5 +341,5 @@ structure.
    :width: 100%
    :align: center
 
-   Page 1 of file ``Errors.pdf`` for (left) displacements in :math:`x`
-   direction and (right) changes of vibrational amplitudes.
+   Page 1 of file ``Errors.pdf`` for (left) displacements in |x|
+   direction and (right) changes of vibration amplitudes.

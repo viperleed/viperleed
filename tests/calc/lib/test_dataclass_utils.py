@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-08-04'
 __license__ = 'GPLv3+'
 
@@ -338,6 +338,12 @@ class TestReplaceValues:
         self._check_equal_attrs(new_instance, instance, info)
         assert getattr(new_instance, new_attr) != getattr(instance, new_attr)
         assert getattr(new_instance, skip) != getattr(instance, skip)
+
+    def test_invalid_attribute(self):
+        """Check complaints when trying to replace non-existing attributes."""
+        instance = SampleFrozenClass(1)
+        with pytest.raises(TypeError):
+            replace_values(instance, non_existent_attr=3)
 
 
 class TestSetFrozenAttr:

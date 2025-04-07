@@ -256,7 +256,7 @@ POSCAR file by adding or removing vacuum around the slab.
 project_c_to_z
 ==============
 
-Projects the |c| vector of the POSCAR file onto the :math:`z` axis. Note this
+Projects the |c| vector of the POSCAR file onto the |z| axis. Note this
 does not alter atomic coordinates, only the orientation of the lattice vectors.
 The bulk-stacking direction is assumed to be along the :math:`\mathbf{z}`
 vector. See also the :ref:`page on used conventions<conventions>`.

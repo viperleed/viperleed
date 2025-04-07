@@ -7,9 +7,10 @@ line_profiler   # Profiling code line-by-line
 
 # Here other developer dependencies, stored in the respective
 # requirements files
--r requirements-dist.txt   # Building sdist for pypi
--r requirements-doc.txt    # Building documentation; !!! py >= 3.9 !!!
--r requirements-tests.txt  # Running pytest tests
+-r dist.txt   # Building sdist for pypi
+-r doc.txt    # Building documentation; !!! py >= 3.9 !!!
+-r lint.txt   # Running style checks
+-r tests.txt  # Running pytest tests
 
 
 ## List of some useful packages, but we don't want to depend on them

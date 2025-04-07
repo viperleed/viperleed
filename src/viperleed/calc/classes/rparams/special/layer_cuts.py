@@ -10,13 +10,12 @@ partly in ParameterInterpreter, partly in Slab.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-21'
 __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
 from enum import IntEnum, auto
-import itertools
 from numbers import Real
 import re
 from typing import Any

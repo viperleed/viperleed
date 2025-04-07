@@ -65,7 +65,7 @@ To start off, we place the files :ref:`EXPBEAMS.csv<expbeams>` and
 .. _list_ag_poscar:
 .. literalinclude :: /_static/example_systems/Ag(100)/POSCAR
    :language: console
-   :caption: POSCAR file containing the initial structure.
+   :caption: |POSCAR| file containing the initial structure.
 
 We then create a :ref:`PARAMETERS` file (cf. :numref:`list_ag_paramters`)
 which tells ViPErLEED what to do.
@@ -73,7 +73,7 @@ which tells ViPErLEED what to do.
 .. _list_ag_paramters:
 .. literalinclude :: /_static/example_systems/Ag(100)/PARAMETERS
    :language: console
-   :caption: PARAMETERS file for the initial reference calculation.
+   :caption: |PARAMETERS| file for the initial reference calculation.
 
 GLOBAL PARAMETERS
    Since we only want to run the :ref:`initialization` for now, we set
@@ -87,7 +87,7 @@ PARAMETERS FOR INTERPRETING POSCAR
    0.45 (unit-cell fraction along |c|) the given structure is bulklike.
 
    With the :ref:`sitedef` command, we further define that the first atom in
-   the POSCAR file (here the topmost atom) should be treated as a distinct
+   the |POSCAR| file (here the topmost atom) should be treated as a distinct
    species. See the page on the :ref:`sitedef` parameter for details  on how
    this works, and see also the notes on
    :ref:`element names<elementnamecollision>`.
@@ -95,31 +95,51 @@ PARAMETERS FOR INTERPRETING POSCAR
    .. hint::
        Instead of ``SITE_DEF Ag = surf 1``, we could also set
        ``SITE_DEF Ag = surf top(1)`` to select the topmost silver atom,
-       irrespective of the order in the POSCAR.
+       irrespective of the order in the |POSCAR|.
 
 PARAMETERS FOR VIBROCC
    In addition to the atomic positions, the calculation of scattering
-   intensities also requires vibrational amplitudes for every atom in
+   intensities also requires vibration amplitudes for every atom in
    the unit cell.
    While the atomic positions are contained in the :ref:`POSCAR` file,
-   the vibrational amplitudes are given in the :ref:`VIBROCC` file.
+   the vibration amplitudes are given in the :ref:`VIBROCC` file.
    However, rather than writing the :ref:`VIBROCC` file ourselves, we
-   can also let ViPErLEED calculate bulk vibrational amplitudes by providing
+   can also let ViPErLEED calculate bulk vibration amplitudes by providing
    the :ref:`T_DEBYE` and :ref:`T_EXPERIMENT` parameters. By further setting
-   :ref:`VIBR_AMP_SCALE`, we guess the vibrational amplitudes for the surface
+   :ref:`VIBR_AMP_SCALE`, we guess the vibration amplitudes for the surface
    atoms.
    The VIBR_AMP_SCALE assignment means that all atoms defined as ``surf`` (via
    SITE_DEF) have vibration amplitudes 1.3 times larger than those calculated
    from the Debye temperature. All other atoms, which are implicitly assigned
-   a ``def`` tag, will be given vibrational amplitudes
+   a ``def`` tag, will be given vibration amplitudes
    :ref:`determined <vibrocc_auto>` from the Debye temperature.
 
 
-That's all the input we need to start the initialization run.
+That's all the input we need to start the initialization run. To execute
+|calc|, navigate to the folder containing the input files in your terminal
+using
 
-.. todo::
+.. tab-set::
 
-   Insert an example command for how to start the calculation here.
+    .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+
+        .. code-block:: bash
+
+            cd /path/to/folder/containing/input/files
+
+    .. tab-item:: Windows
+
+        .. code-block:: bat
+
+            cd "path\to\folder\containing\input\files"
+
+Then run
+
+.. code-block:: console
+
+    viperleed calc
+
+in the terminal.
 
 Once the run finishes, we can have a look at the
 :ref:`log file<log_files_calc>` to see if everything went as expected.
@@ -132,6 +152,7 @@ like these
    Found unit cell type: square
    Starting symmetry search...
    Found plane group: p4m
+   Detected bulk repeat vector: [-1.44000 -1.44000 2.03647]
    Checking bulk unit cell...
    Found SUPERLATTICE = (1x1)
    ...
@@ -144,8 +165,8 @@ electron-scattering phase shifts (based on atomic species and positions)
 to be used as input for the following calculations. They are stored in the
 :ref:`PHASESHIFTS` file that was copied into the source directory.
 This format, however, is hard to interpret for a human reader.
-Instead we can look at a plotted version of the same data in the file
-:ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the ``SUPP`` subfolder.
+Instead, we can look at a plotted version of the same data in the file
+:ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the |SUPP| subfolder.
 The first page (see :numref:`fig_ag_phaseshifts`) shows the energy-dependent
 phase shifts for the surface atom.
 
@@ -158,6 +179,74 @@ phase shifts for the surface atom.
 
 The second page shows the (rather similar) phase shifts for lower-lying
 bulk atoms.
+
+Your root folder should now look like this:
+
+.. code-block::
+
+    root/
+    ├── history/
+    │   ├── t000.r001_<timestamp>/
+    │   │   └── ...
+    │   └── bookkeeper.log
+    ├── OUT/
+    │   └── ...
+    ├── SUPP/
+    │   ├── original_inputs/
+    │   │   └── ...
+    │   └── ...
+    ├── work/
+    │   └── ...
+    ├── EXPBEAMS.csv
+    ├── history.info
+    ├── IVBEAMS
+    ├── PARAMETERS
+    ├── PARAMETERS_ori
+    ├── PHASESHIFTS
+    ├── POSCAR
+    ├── POSCAR_ori
+    ├── POSCAR_user
+    ├── VIBROCC
+    └── viperleed-calc-<timestamp>.log
+
+You can find more details on the structure of the root folder in
+the :ref:`dir_organization_output` section, including a brief
+description of the most important files and folders as well as
+the convention on automatic renaming of input/output files.
+
+In addition to the auto-generated :file:`PHASESHIFTS` file discussed
+above, |calc| has also created files :ref:`ivbeams` and :ref:`vibrocc`
+based on the inputs given in files :file:`EXPBEAMS.csv`, and
+|POSCAR|/|PARAMETERS|, respectively.
+
+As introduced in the :ref:`dir_organization_output` section, and described 
+in detail on the :ref:`bookkeeper` page, the results of each |calc| run are
+automatically collected into a :file:`history` folder.
+A plain-text :file:`history.info` file contains a summary of information about
+each such run. :numref:`list_history_info_ag_init` shows the contents of the
+:file:`history.info` file after this first execution of |calc|.
+
+.. _list_history_info_ag_init:
+.. code-block:: text
+    :caption:
+        Contents of the :file:`history.info` file after running
+        the initialization for the Ag(100)-(1×1) example.  See
+        :ref:`this section <history_info>` for more information
+        on the contents of each line. The ``Notes`` were manually
+        edited to keep track of what was calculated.
+
+    # TENSORS   None
+    # JOB ID    1
+    # RUN       0
+    # TIME      yyyy-mm-dd HH:mm:ss
+    # FOLDER    t000.r001_<timestamp>
+    Notes: Running viperleed.calc for the first time on the Ag(100)-(1x1)
+           example. The experimental data come from the Erlangen group,
+           and the calculation was started with a bulk-truncated POSCAR.
+
+It is a very good idea to use it as an electronic logbook by
+editing the ``Notes`` section. Do so now, following the example
+in :numref:`list_history_info_ag_init`.
 
 
 Reference calculation and *R* factor
@@ -187,7 +276,7 @@ chosen settings) we find a result for the |R factor| at the very end of the
    Executed segments: 0 1 11
    Final R (refcalc): 0.1732
 
-Additionally, in the :ref:`OUT directory<dir_organization_output>`, we
+Additionally, in the |OUT| :ref:`directory<dir_organization_output>`, we
 find a file :ref:`THEOBEAMS.csv<theobeams>`, which contains the calculated
 |IV| curves and a file :ref:`Rfactor_plots_refcalc.pdf<rfactorplots>`, in
 which the experimental and calculated beams are plotted. An extract is shown
@@ -215,6 +304,7 @@ the :ref:`structure search<sec_search>`.
    They are required as starting point for the delta-amplitude calculation
    and will be recognized automatically by ViPErLEED.
 
+
 Delta amplitudes and structure search
 =====================================
 
@@ -233,13 +323,13 @@ vary in the optimization. In ViPErLEED, we give this information in the
    :caption: DISPLACEMENTS over a rough grid for Ag(100)-(1×1).
 
 See the page on the :ref:`DISPLACEMENTS` file for details on the syntax.
-Here, we allow the :math:`z` positions of all silver atoms in the first
+Here, we allow the |z| positions of all silver atoms in the first
 four layers to vary by up to :math:`\pm 0.20` Å with a step width of
 :math:`0.01` Å.
 
 
 After setting up the :ref:`DISPLACEMENTS` file, we can run the delta-amplitudes
-calculation and structure optimization by setting :ref:`RUN = 2-3<run>` in 
+calculation and structure optimization by setting :ref:`RUN = 2-3<run>` in
 :ref:`PARAMETERS`.
 For a large system, this step can take many hours to finish, but for our simple
 system it only takes about 4 min to converge (using 10 CPU cores).
@@ -248,14 +338,9 @@ we find that the |R factor| dropped significantly from
 :math:`R_\mathrm{P} \approx 0.17` to :math:`R_\mathrm{P} \approx 0.095`.
 That's not bad, but we can do a bit better.
 
-Now that we found a better configuration, we can use the
-:ref:`bookkeeper utility<bookkeeper>` with the ``--cont``
-flag to keep the new configuration and use it as our new
-starting point, overwriting the old POSCAR and VIBROCC files:
-
-.. code-block:: console
-
-   $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
+Now that we found a better configuration, we can use it as our new starting
+point. As introduced in section :ref:`dir_organization_output`, this will
+happen automatically when |calc| will run the next time.
 
 Starting from this configuration, let's optimize with a finer grid.
 We change the DISPLACEMENTS accordingly, as in
@@ -267,7 +352,7 @@ We change the DISPLACEMENTS accordingly, as in
    :caption: DISPLACEMENTS with a finer grid
 
 Here we allow a :math:`\pm 0.020` Å variation on a :math:`0.004` Å grid.
-Additionally, we also allow the topmost atom to change its vibrational
+Additionally, we also allow the topmost atom to change its vibration
 amplitude.
 This may not seem like much, but already gives :math:`11^5` grid
 points (11 values for 5 varied parameters) and will take about three
@@ -282,7 +367,7 @@ times as long as the the last run.
 
 Once finished, we get an |R factor| of :math:`R_\mathrm{P} = 0.0836`.
 To visualize how our optimization went, we can also take a look at the
-:ref:`Search-progress.pdf file<searchprogresspdf>` in the ``OUT`` directory.
+:ref:`Search-progress.pdf file<searchprogresspdf>` in the |OUT| directory.
 The first page is shown in :numref:`fig_ag_search_progress`.
 
 .. _fig_ag_search_progress:
@@ -293,10 +378,11 @@ The first page is shown in :numref:`fig_ag_search_progress`.
    First page of the ``Search-progress.pdf`` file showing convergence of the
    structure search (top) and development of atomic parameters (bottom).
 
-The final result of the optimization (POSCAR with coordinates and VIBROCC
-with vibrational amplitudes) are saved in the ``OUT`` directory. Interatomic
-distances and angles can easily be measured in a visualization software such
-as :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
+The final result of the optimization (|POSCAR| with coordinates and |VIBROCC|
+with vibration amplitudes) are saved in the |OUT| directory, and can also be
+found in the root folder right after the end of the execution.
+Interatomic distances and angles can easily be measured in a visualization
+software such as :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
 
 Next steps
 ==========

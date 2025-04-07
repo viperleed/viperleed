@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-12-14'
 __license__ = 'GPLv3+'
 
@@ -123,4 +123,5 @@ class TestSearchCullType:
         """Check selected comparisons."""
         assert SearchCullType.GENETIC == SearchCullType.GENETIC
         assert SearchCullType.GENETIC != SearchCullType.CLONE
+        # pylint: disable=magic-value-comparison
         assert SearchCullType.GENETIC != 'invalid_type'

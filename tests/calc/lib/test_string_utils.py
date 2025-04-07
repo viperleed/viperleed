@@ -4,7 +4,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
@@ -42,6 +42,7 @@ class TestHarvardCommas:
 
     def test_custom_separator(self):
         """Test using a custom separator."""
+        # pylint: disable-next=magic-value-comparison
         assert harvard_commas(1, 2, 3, sep='or') == '1, 2, or 3'
 
 

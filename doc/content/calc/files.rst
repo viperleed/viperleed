@@ -19,23 +19,36 @@ depending on the work-segment (:ref:`see above<work-segments>`).
     :width: 100%
     :widths: 22 39 39
 
-    +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-    | File                                 | Function                                          | Required                                                          |
-    +======================================+===================================================+===================================================================+
-    | :ref:`PARAMETERS`                    | What to execute, and how to interpret other input | Always required                                                   |
-    +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-    | :ref:`POSCAR`                        | Structural information                            | Always required                                                   |
-    +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-    | :ref:`VIBROCC`                       | Vibrational amplitudes and site occupations       | Always required, can be generated automatically                   |
-    +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-    | :ref:`IVBEAMS`                       | Which beams to calculate                          | Always required, can be generated automatically from EXPBEAMS.csv |
-    +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-    | :ref:`DISPLACEMENTS`                 | What to vary during the search                    | Required for delta calculations and search                        |
-    +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-    | :ref:`EXPBEAMS.csv<EXPBEAMS>`        | Experimental |IV| curves                          | Required for |R-factor| calculations and search                   |
-    +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-    | :ref:`PHASESHIFTS`                   | Contains elastic electron scattering phaseshifts  | Generated automatically if needed                                 |
-    +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
+    +-------------------------------+----------------------------+----------------------+
+    | File                          | Function                   | Required             |
+    +===============================+============================+======================+
+    | :ref:`PARAMETERS`             | What to execute, and how \ | Always required      |
+    |                               | to interpret other input   |                      |
+    +-------------------------------+----------------------------+----------------------+
+    | :ref:`POSCAR`                 | Structural information     | Always required      |
+    +-------------------------------+----------------------------+----------------------+
+    | :ref:`VIBROCC`                | Vibrational amplitudes \   | Always required, \   |
+    |                               | and site occupations       | can be generated \   |
+    |                               |                            | automatically        |
+    +-------------------------------+----------------------------+----------------------+
+    | :ref:`IVBEAMS`                | Which beams to calculate   | Always required, \   |
+    |                               |                            | can be generated \   |
+    |                               |                            | automatically        |
+    |                               |                            | from EXPBEAMS.csv    |
+    +-------------------------------+----------------------------+----------------------+
+    | :ref:`DISPLACEMENTS`          | What to vary during \      | Required for delta \ |
+    |                               | the search                 | calculations and \   |
+    |                               |                            | search               |
+    +-------------------------------+----------------------------+----------------------+
+    | :ref:`EXPBEAMS.csv<EXPBEAMS>` | Experimental |IV| curves   | Required for \       |
+    |                               |                            | |R-factor| \         |
+    |                               |                            | calculation and \    |
+    |                               |                            | search               |
+    +-------------------------------+----------------------------+----------------------+
+    | :ref:`PHASESHIFTS`            | Contains elastic \         | Generated \          |
+    |                               | electron scattering \      | automatically \      |
+    |                               | phase shifts               | if needed            |
+    +-------------------------------+----------------------------+----------------------+
 
 .. toctree::
    :hidden:
@@ -57,49 +70,75 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
     :width: 100%
     :widths: 32 42 26
 
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | File                                            | Function                                                               | Output by                     |
-    +=================================================+========================================================================+===============================+
-    | :ref:`POSCAR_OUT<POSCAR>`                       | Best-fit structure                                                     | :ref:`Search<sec_search>`     |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`VIBROCC_OUT<vibrocc>`                     | Best-fit vibrational amplitudes and occupations                        | :ref:`Search<sec_search>`     |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`THEOBEAMS.csv, THEOBEAMS.pdf<THEOBEAMS>`  | Theoretical |IV| curves                                                | :ref:`ref-calc`               |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`FITBEAMS.csv<FITBEAMS>`                   | Theoretical |IV| curves                                                | :ref:`super_pos`              |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`searchprogresspdf`                        | Progress information on current search                                 | :ref:`Search<sec_search>`     |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`searchreportpdf`                          | Summary of several consecutive searches                                | :ref:`Search<sec_search>`     |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`rfactorplots`                             | Plots of experimental and theoretical |IV| curves with |R factor|\ s   | |R-factor| calculation        |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`rfactoranalysis`                          | Same as :ref:`rfactorplots`, with Y-functions and analysis             | |R-factor| calculation        |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`errorspdf_header`                         | |R factor|\ s for one-dimensional parameter variation                  | :ref:`error_calculation`      |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`fdoptimizationdata`                       | |R factor|\ s for variation in full-dynamic optimization               | :ref:`Fdoptimization`         |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`fdoptimizationbeams`                      | |IV| curves generated during full-dynamic optimization                 | :ref:`Fdoptimization`         |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`PatternInfo`                              | Input for :term:`GUI`                                                  | :ref:`Initialization`         |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`Tensors.zip<tensorszip>`                  | Tensor files for Delta-amplitudes calculation                          | :ref:`ref-calc`               |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`Deltas.zip<Deltaszip>`                    | Delta files for search                                                 | :ref:`sec_deltas`             |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | **Raw output files from TensErLEED:**                                                                                                                    |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`R_OUT`                                    | |R factor|\ s for every beam and every inner potential shift           | |R-factor| calculation        |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`controlchem`                              | Search parameter values for the latest generation                      | :ref:`Search<sec_search>`     |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`sdtl`                                     | Search parameter values and |R factor|\ s per generation               | :ref:`Search<sec_search>`     |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`fd_out`                                   | Theoretical |IV| curves                                                | :ref:`ref-calc`               |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`superpos-spec_out`                        | Theoretical |IV| curves                                                | :ref:`super_pos`              |
-    +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
+    +-------------------------------+---------------------------------+------------------------------+
+    | File                          | Function                        | Output by                    |
+    +===============================+=================================+==============================+
+    | :ref:`PARAMETERS`             | Automatically edited version \  | :ref:`Initialization`        |
+    |                               | of the user-given PARAMETERS    |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`POSCAR`                 | Modified input POSCAR \         | :ref:`Initialization`, \     |
+    |                               | (\ :ref:`Initialization`) \     | :ref:`Search<sec_search>`, \ |
+    |                               | or best-fit structure           | :ref:`Fdoptimization`        |
+    |                               | (\ :ref:`Search<sec_search>`, \ |                              |
+    |                               | :ref:`Fdoptimization`)          |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`VIBROCC`                | Auto-generated VIBROCC \        | :ref:`Initialization`, \     |
+    |                               | (\ :ref:`Initialization`) \     | :ref:`Search<sec_search>`    |
+    |                               | or best-fit vibration \         |                              |
+    |                               | amplitudes and occupations \    |                              |
+    |                               | (\ :ref:`Search<sec_search>`)   |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`THEOBEAMS`.csv/.pdf     | Theoretical |IV| curves         | :ref:`ref-calc`              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`FITBEAMS.csv<FITBEAMS>` | Theoretical |IV| curves         | :ref:`super_pos`             |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`searchprogresspdf`      | Progress information \          | :ref:`Search<sec_search>`    |
+    |                               | on current search               |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`searchreportpdf`        | Summary of several \            | :ref:`Search<sec_search>`    |
+    |                               | consecutive searches            |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`rfactorplots`           | Plots of experimental and \     | |R-factor| calculation       |
+    |                               | theoretical |IV| curves with \  |                              |
+    |                               | |R factor|\ s                   |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`rfactoranalysis`        | Same as :ref:`rfactorplots`, \  | |R-factor| calculation       |
+    |                               | with Y-functions and analysis   |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`errorspdf_header`       | |R factor|\ s for \             | :ref:`error_calculation`     |
+    |                               | one-dimensional \               |                              |
+    |                               | parameter variation             |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`fdoptimizationdata`     | |R factor|\ s for variation \   | :ref:`Fdoptimization`        |
+    |                               | in full-dynamic optimization    |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`fdoptimizationbeams`    | |IV| curves generated during \  | :ref:`Fdoptimization`        |
+    |                               | full-dynamic optimization       |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`PatternInfo`            | Input for :term:`GUI`           | :ref:`Initialization`        |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`Tensors.zip<tensorszip>`| Tensor files for \              | :ref:`ref-calc`              |
+    |                               | delta-amplitude calculation     |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`Deltas.zip<Deltaszip>`  | Delta files for search          | :ref:`sec_deltas`            |
+    +-------------------------------+---------------------------------+------------------------------+
+    | **Raw output files** \                                                                         |
+    | **from TensErLEED:**                                                                           |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`R_OUT`                  | |R factor|\ s for every \       | |R-factor| calculation       |
+    |                               | beam and every \                |                              |
+    |                               | inner-potential shift           |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`controlchem`            | Search-parameter values for \   | :ref:`Search<sec_search>`    |
+    |                               | the latest generation           |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`sdtl`                   | Search parameter values and \   | :ref:`Search<sec_search>`    |
+    |                               | |R factor|\ s per generation    |                              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`fd_out`                 | Theoretical |IV| curves         | :ref:`ref-calc`              |
+    +-------------------------------+---------------------------------+------------------------------+
+    | :ref:`superpos-spec_out`      | Theoretical |IV| curves         | :ref:`super_pos`             |
+    +-------------------------------+---------------------------------+------------------------------+
 
 .. toctree::
     :hidden:
@@ -118,35 +157,56 @@ ViPErLEED produces supplementary files that are required during execution, that
 contain intermediate results or that may be of interest for debugging purposes.
 These files are stored in the ``SUPP`` subfolder of the root directory.
 
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| File                                                                                         | Function                                                                                  |
-+==============================================================================================+===========================================================================================+
-| **Input for TensErLEED**                                                                     |                                                                                           |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`BEAMLIST`                                                                              | All relevant beams                                                                        |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`AUXBEAMS`                                                                              | Information on beams used by multiple TensErLEED parts, based on :ref:`IVBEAMS<IVBEAMS>`  |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`AUXEXPBEAMS`                                                                           | Contents of :ref:`EXPBEAMS.csv<EXPBEAMS>`, formatted for TensErLEED                       |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`refcalc-PARAM, muftin.f, AUXGEO, AUXLATGEO, AUXNONSTRUCT, refcalc-FIN<refcalc-input>`  | Input files for the reference calculation                                                 |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`delta-input`                                                                           | Input files for the delta-amplitudes calculations                                         |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`search.steu, search-rf.info, restrict.f, search-PARAM<search-input>`                   | Input files for the search                                                                |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`superpos-PARAM, superpos-CONTRIN<superpos-input>`                                      | Input files for the superpos calculation                                                  |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`rfactor-PARAM, rfactor-WEXPEL<rfactor-input>`                                          | Input files for the |R-factor| calculation                                                |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| **Files for user information and troubleshooting**                                           |                                                                                           |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`POSCAR_bulk, POSCAR_bulk_appended, POSCAR_oricell, POSCAR_vacuum_corrected<POSCAR>`    | Modified POSCAR files to check structure                                                  |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`searchpars.info<searchparsinfo>`                                                       | Information on search parameters used in the search                                       |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`phaseshiftplots`                                                                       | Plots of PHASESHIFTS, generated during initialization                                     |
-+----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
++------------------------------------------+-----------------------------------+
+| File                                     | Function                          |
++==========================================+===================================+
+| **Input for TensErLEED**                 |                                   |
++------------------------------------------+-----------------------------------+
+| :ref:`BEAMLIST`                          | All relevant beams                |
++------------------------------------------+-----------------------------------+
+| :ref:`AUXBEAMS`                          | Information on beams used by \    |
+|                                          | multiple TensErLEED parts, \      |
+|                                          | based on :ref:`IVBEAMS<IVBEAMS>`  |
++------------------------------------------+-----------------------------------+
+| :ref:`AUXEXPBEAMS`                       | Contents of \                     |
+|                                          | :ref:`EXPBEAMS.csv<EXPBEAMS>`, \  |
+|                                          | formatted for TensErLEED          |
++------------------------------------------+-----------------------------------+
+| :ref:`refcalc-PARAM<refcalc-input>`, \   | Input files for the \             |
+| :ref:`muftin.f<refcalc-input>`, \        | reference calculation             |
+| :ref:`AUXGEO<refcalc-input>`, \          |                                   |
+| :ref:`AUXLATGEO<refcalc-input>`, \       |                                   |
+| :ref:`AUXNONSTRUCT<refcalc-input>`, \    |                                   |
+| :ref:`refcalc-FIN<refcalc-input>`        |                                   |
++------------------------------------------+-----------------------------------+
+| :ref:`delta-input`                       | Input files for the \             |
+|                                          | delta-amplitudes calculation      |
++------------------------------------------+-----------------------------------+
+| :ref:`search.steu<search-input>`, \      | Input files for the search        |
+| :ref:`search-rf.info<search-input>`, \   |                                   |
+| :ref:`restrict.f<search-input>`, \       |                                   |
+| :ref:`rsearch-PARAM<search-input>`       |                                   |
++------------------------------------------+-----------------------------------+
+| :ref:`superpos-PARAM<superpos-input>`, \ | Input files for the \             |
+| :ref:`superpos-CONTRIN<superpos-input>`  | superpos calculation              |
++------------------------------------------+-----------------------------------+
+| :ref:`rfactor-PARAM<rfactor-input>`, \   | Input files for the \             |
+| :ref:`rfactor-WEXPEL<rfactor-input>`     | |R-factor| calculation            |
++------------------------------------------+-----------------------------------+
+| **Files for user information** \         |                                   |
+| **and troubleshooting**                  |                                   |
++------------------------------------------+-----------------------------------+
+| :ref:`POSCAR_bulk<POSCAR>`, \            | Modified POSCAR files to \        |
+| :ref:`POSCAR_bulk_appended<POSCAR>`, \   | check structure                   |
+| :ref:`POSCAR_oricell<POSCAR>`, \         |                                   |
+| :ref:`POSCAR_vacuum_corrected<POSCAR>`   |                                   |
++------------------------------------------+-----------------------------------+
+| :ref:`searchpars.info<searchparsinfo>`   | Information on search \           |
+|                                          | parameters used in the search     |
++------------------------------------------+-----------------------------------+
+| :ref:`phaseshiftplots`                   | Plots of PHASESHIFTS, generated \ |
+|                                          | during initialization             |
++------------------------------------------+-----------------------------------+
 
 
 .. todo::

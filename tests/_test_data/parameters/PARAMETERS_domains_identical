@@ -1,0 +1,18 @@
+
+! ####### GLOBAL PARAMETERS #######
+
+RUN = 4
+LOG_DEBUG = True
+THEO_ENERGIES =   50 152 3
+
+
+! ####### PARAMETERS FOR REFCALC #######
+
+V0_IMAG = 5.0
+LMAX = 8-12
+
+
+#### DOMAIN stuff
+
+DOMAIN = silver
+DOMAIN = silver

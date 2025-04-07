@@ -377,7 +377,9 @@ class TestViPErLEEDCLI:
         # NB: func == _ChildCLI().__call__ would fail, as the instance
         # whose __call__ we register as func is created freshly at each
         # add_parser_arguments call.
+        # pylint: disable-next=unidiomatic-typecheck
         assert type(func.__self__) is _ChildCLI
+        # pylint: disable-next=magic-value-comparison
         assert func.__name__ == '__call__'
 
     def test_print_version(self, make_cli_cls, capsys, mocker):
