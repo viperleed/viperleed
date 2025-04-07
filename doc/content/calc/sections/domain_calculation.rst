@@ -52,10 +52,10 @@ in :numref:`list_domains_inputs`) containing all the normal input files,
 except for the ones specifically concerned with the structures,
 i.e., **without** :ref:`POSCAR` and :ref:`VIBROCC`. Likewise, the
 :ref:`PARAMETERS` file should contain **no** parameters concerned with
-interpretation of :file:`POSCAR` or :file:`VIBROCC`, such as, e.g.,
-:ref:`BULK_REPEAT`, :ref:`ELEMENT_MIX`, :ref:`SITEDEF`, etc.; if any such
-parameter is present, |calc| will raise an error.
-Finally, in the :file:`PARAMETERS` file, **do define** the :ref:`DOMAIN`
+interpretation of |POSCAR| or |VIBROCC|, such as, e.g., :ref:`BULK_REPEAT`,
+:ref:`ELEMENT_MIX`, :ref:`SITEDEF`, etc.; if any such parameter is present,
+|calc| will raise an error.
+Finally, in the |PARAMETERS| file, **do define** the :ref:`DOMAIN`
 parameter once for each of the domains that should be included. The
 :ref:`DOMAIN` parameter can point to an absolute or relative path from
 which the input data for a given domain should be fetched. The path may
@@ -109,6 +109,8 @@ after the :ref:`super_pos`).
         of a domain calculation.
 
     my_domain_calc/
+    ├── history/           <-- For the main directory
+    │   └── ...
     ├── my_domain_1/       <-- Use input files, requires reference calculation
     │   ├── OUT/           <-- Created by calc at end
     │   │   ├── POSCAR
@@ -143,10 +145,12 @@ after the :ref:`super_pos`).
     │   ├── Rfactor_analysis_superpos.pdf
     │   ├── Search_progress.pdf
     │   └── ...
-    ├── viperleed-calc-<timestamp>.log
-    ├── EXPBEAMS.csv
     ├── DISPLACEMENTS
-    └── PARAMETERS
+    ├── EXPBEAMS.csv
+    ├── history.info       <-- For the main directory
+    ├── PARAMETERS_ori
+    ├── PARAMETERS
+    └── viperleed-calc-<timestamp>.log
 
 To specify which segments should be run, either use the :ref:`RUN` parameter
 as usual, or set ``RUN = 4`` as a shorthand for a domain calculation. This
@@ -166,14 +170,14 @@ beforehand for better control.
     The domain-specific subfolders (i.e., :file:`my_domain_1` and
     :file:`my_domain_2` in :numref:`list_domains_outputs`) will not be
     processed. To preserve the domain-specific output files, you must manually
-    run the :program:`bookkeeper` in each of the domain subfolders using the
-    command ``viperleed bookkeeper --archive``. Then, to clean the directories
-    and remove old ``*_ori`` and ``*.log`` files, run the :program:`bookkeeper`
-    with the ``--clear`` flag in each of the domain subfolders. If you do not
-    run the :program:`bookkeeper` (in ``--archive`` mode) in the subfolders,
-    the results of a structure optimization (especially, files :file:`POSCAR`
-    and :file:`VIBROCC`) **will be lost**: the next calculation will **start**
-    **from the same inputs as the previous one**.
+    run the |bookkeeper| in each of the domain subfolders using the command
+    ``viperleed bookkeeper --archive``. Then, to clean the directories
+    and remove old ``*_ori`` and ``*.log`` files, run the |bookkeeper|
+    with the ``--clear`` flag in each of the domain subfolders. If you
+    do not run the |bookkeeper| (in ``--archive`` mode) in the subfolders,
+    the results of a structure optimization (especially, files |POSCAR| and
+    |VIBROCC|) **will be lost**: the next calculation will **start from the**
+    **same inputs as the previous one**.
 
 .. versionchanged:: 0.13.0
     In earlier versions of |calc|, the results of the calculations from each
@@ -304,13 +308,13 @@ is made to the original paths where the inputs were collected from.
 In particular, all structure-specific output files will go to the
 newly created subfolders, *not* to the original paths.
 
-Additionally, the DOMAIN parameters in the PARAMETERS file of the
-main directory (i.e., :file:`my_domain_calc/PARAMETERS`, as well
+Additionally, the ``DOMAIN`` parameters in the |PARAMETERS| file of
+the main directory (i.e., :file:`my_domain_calc/PARAMETERS`, as well
 as :file:`my_domain_calc/OUT/PARAMETERS`) are automatically modified
 to point to the newly created subfolders of :file:`my_domain_calc`
 (i.e., :file:`Domain_1` and :file:`Domain_another` in
 :numref:`list_domains_outputs_abs`).
 
 .. versionchanged:: 0.13.0
-    The main PARAMETERS file is updated such that each DOMAIN points to the
-    subfolders of the directory in which |calc| was executed.
+    The main |PARAMETERS| file is updated such that each ``DOMAIN`` points
+    to the subfolders of the directory in which |calc| was executed.

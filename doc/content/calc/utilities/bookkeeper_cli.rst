@@ -28,17 +28,25 @@ If no new output is detected, it will simply exit without doing anything.
 
 
 .. versionchanged:: 0.12.0
+    |bookkeeper| now runs automatically in ``--cont`` mode after
+    |calc| (in addition to running before |calc|, in "default" mode).
+
+.. versionchanged:: 0.12.0
     The ``--name`` command-line argument was renamed to ``--job-name``.
-    The ``--history-name`` and ``--work-history-name`` command-line arguments
-    were added. |bookkeeper| now runs automatically in ``--cont`` mode after
-    |calc| (in addition to running before |calc|, in default mode).
+
+.. versionadded:: 0.12.0
+    ``--history-name`` and ``--work-history-name`` command-line arguments.
+    These arguments were removed again in v0.13.0.
 
 .. versionchanged:: 0.13.0
-    The ``--job-name``, ``--history-name``, and ``--work-history-name``
-    command-line arguments were removed. The behavior of the ``--discard``
-    mode has been changed. The new equivalent mode is ``--discard-full``.
+    The behavior of the ``--discard`` mode has been changed. The new equivalent
+    mode is ``--discard-full``.
     The ``--cont`` command-line argument was renamed to ``--archive``. The
     behavior was changed to keep both inputs and outputs from a calculation
     in the root folder. What was previously the "default" mode can now be
     executed with ``--clear``. See the :ref:`bookkeeper<bookkeeper>` page
     for more details.
+
+.. versionremoved:: 0.13.0
+    The ``--job-name``, ``--history-name``, and ``--work-history-name``
+    command-line arguments.

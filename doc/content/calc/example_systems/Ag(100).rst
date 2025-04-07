@@ -65,7 +65,7 @@ To start off, we place the files :ref:`EXPBEAMS.csv<expbeams>` and
 .. _list_ag_poscar:
 .. literalinclude :: /_static/example_systems/Ag(100)/POSCAR
    :language: console
-   :caption: POSCAR file containing the initial structure.
+   :caption: |POSCAR| file containing the initial structure.
 
 We then create a :ref:`PARAMETERS` file (cf. :numref:`list_ag_paramters`)
 which tells ViPErLEED what to do.
@@ -73,7 +73,7 @@ which tells ViPErLEED what to do.
 .. _list_ag_paramters:
 .. literalinclude :: /_static/example_systems/Ag(100)/PARAMETERS
    :language: console
-   :caption: PARAMETERS file for the initial reference calculation.
+   :caption: |PARAMETERS| file for the initial reference calculation.
 
 GLOBAL PARAMETERS
    Since we only want to run the :ref:`initialization` for now, we set
@@ -87,7 +87,7 @@ PARAMETERS FOR INTERPRETING POSCAR
    0.45 (unit-cell fraction along |c|) the given structure is bulklike.
 
    With the :ref:`sitedef` command, we further define that the first atom in
-   the POSCAR file (here the topmost atom) should be treated as a distinct
+   the |POSCAR| file (here the topmost atom) should be treated as a distinct
    species. See the page on the :ref:`sitedef` parameter for details  on how
    this works, and see also the notes on
    :ref:`element names<elementnamecollision>`.
@@ -95,7 +95,7 @@ PARAMETERS FOR INTERPRETING POSCAR
    .. hint::
        Instead of ``SITE_DEF Ag = surf 1``, we could also set
        ``SITE_DEF Ag = surf top(1)`` to select the topmost silver atom,
-       irrespective of the order in the POSCAR.
+       irrespective of the order in the |POSCAR|.
 
 PARAMETERS FOR VIBROCC
    In addition to the atomic positions, the calculation of scattering
@@ -166,7 +166,7 @@ to be used as input for the following calculations. They are stored in the
 :ref:`PHASESHIFTS` file that was copied into the source directory.
 This format, however, is hard to interpret for a human reader.
 Instead, we can look at a plotted version of the same data in the file
-:ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the ``SUPP`` subfolder.
+:ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the |SUPP| subfolder.
 The first page (see :numref:`fig_ag_phaseshifts`) shows the energy-dependent
 phase shifts for the surface atom.
 
@@ -207,53 +207,44 @@ Your root folder should now look like this:
     ├── VIBROCC
     └── viperleed-calc-<timestamp>.log
 
-Folders :file:`OUT` and :file:`SUPP` always contain the main
-:ref:`results <files>` of the calculation.
-Files :ref:`ivbeams`, :ref:`phaseshifts`, and :ref:`vibrocc` were
-automatically created by |calc|. :file:`POSCAR_user` is an exact
-copy of the :ref:`poscar` file given as input the first time |calc|
-started.
+You can find more details on the structure of the root folder in
+the :ref:`dir_organization_output` section, including a brief
+description of the most important files and folders as well as
+the convention on automatic renaming of input/output files.
 
-Files :file:`PARAMETERS_ori` and :file:`POSCAR_ori` (as well as
-:file:`VIBROCC_ori` if a :file:`VIBROCC` file was given explicitly)
-are the files used as inputs during a specific |calc| run. A copy of these
-and all other input files can be found under :file:`SUPP/original_inputs/`.
-The :file:`PARAMETERS`, :file:`POSCAR`, and :file:`VIBROCC` files are the
-**results** of the |calc| run. This renaming of files is such that |calc|
-will automatically use the **outputs** of a previous execution as inputs
-for the next one. You can manually invoke the :ref:`bookkeeper` utility
-after |calc| if you want a different behavior for a specific run.
+In addition to the auto-generated :file:`PHASESHIFTS` file discussed
+above, |calc| has also created files :ref:`ivbeams` and :ref:`vibrocc`
+based on the inputs given in files :file:`EXPBEAMS.csv`, and
+|POSCAR|/|PARAMETERS|, respectively.
 
-The results of each |calc| run are automatically collected into the
-:file:`history` folder. See the :ref:`bookkeeper` page for more details
-on how |calc| results are organized in :file:`history`.
-A plain-text :file:`history.info` file contains a summary of information
-about each such run. :numref:`list_history_info_ag_init` shows the contents of
-the :file:`history.info` file after this first execution of |calc|.
+As introduced in the :ref:`dir_organization_output` section, and described 
+in detail on the :ref:`bookkeeper` page, the results of each |calc| run are
+automatically collected into a :file:`history` folder.
+A plain-text :file:`history.info` file contains a summary of information about
+each such run. :numref:`list_history_info_ag_init` shows the contents of the
+:file:`history.info` file after this first execution of |calc|.
 
 .. _list_history_info_ag_init:
 .. code-block:: text
     :caption:
         Contents of the :file:`history.info` file after running
-        the initialization for the Ag(100)-(1×1) example. See
+        the initialization for the Ag(100)-(1×1) example.  See
         :ref:`this section <history_info>` for more information
-        on the contents of each line.
+        on the contents of each line. The ``Notes`` were manually
+        edited to keep track of what was calculated.
 
     # TENSORS   None
     # JOB ID    1
     # RUN       0
     # TIME      yyyy-mm-dd HH:mm:ss
     # FOLDER    t000.r001_<timestamp>
-    Notes:
+    Notes: Running viperleed.calc for the first time on the Ag(100)-(1x1)
+           example. The experimental data come from the Erlangen group,
+           and the calculation was started with a bulk-truncated POSCAR.
 
-The :file:`history.info` can be used as an electronic logbook to keep track
-of which calculations were executed.
-It is **very good practice** to add some comments to the ``Notes`` section
-of each entry. This allows you to quickly recall what was done.
-Typical notes for a first run like this one include which sample, which raw
-data, and which initial structural model were used for the calculation.
-Normally, entries for subsequent runs should be complemented with notes
-concerning why the run was executed as well some comments about the outcome.
+It is a very good idea to use it as an electronic logbook by
+editing the ``Notes`` section. Do so now, following the example
+in :numref:`list_history_info_ag_init`.
 
 
 Reference calculation and *R* factor
@@ -283,7 +274,7 @@ chosen settings) we find a result for the |R factor| at the very end of the
    Executed segments: 0 1 11
    Final R (refcalc): 0.1732
 
-Additionally, in the :ref:`OUT directory<dir_organization_output>`, we
+Additionally, in the |OUT| :ref:`directory<dir_organization_output>`, we
 find a file :ref:`THEOBEAMS.csv<theobeams>`, which contains the calculated
 |IV| curves and a file :ref:`Rfactor_plots_refcalc.pdf<rfactorplots>`, in
 which the experimental and calculated beams are plotted. An extract is shown
@@ -346,8 +337,8 @@ we find that the |R factor| dropped significantly from
 That's not bad, but we can do a bit better.
 
 Now that we found a better configuration, we can use it as our new starting
-point. As mentioned :ref:`earlier <ag_init>`, this will happen automatically
-when |calc| will start the next time.
+point. As introduced in section :ref:`dir_organization_output`, this will
+happen automatically when |calc| will run the next time.
 
 Starting from this configuration, let's optimize with a finer grid.
 We change the DISPLACEMENTS accordingly, as in
@@ -374,7 +365,7 @@ times as long as the the last run.
 
 Once finished, we get an |R factor| of :math:`R_\mathrm{P} = 0.0836`.
 To visualize how our optimization went, we can also take a look at the
-:ref:`Search-progress.pdf file<searchprogresspdf>` in the ``OUT`` directory.
+:ref:`Search-progress.pdf file<searchprogresspdf>` in the |OUT| directory.
 The first page is shown in :numref:`fig_ag_search_progress`.
 
 .. _fig_ag_search_progress:
@@ -385,10 +376,11 @@ The first page is shown in :numref:`fig_ag_search_progress`.
    First page of the ``Search-progress.pdf`` file showing convergence of the
    structure search (top) and development of atomic parameters (bottom).
 
-The final result of the optimization (POSCAR with coordinates and VIBROCC
-with vibration amplitudes) are saved in the ``OUT`` directory. Interatomic
-distances and angles can easily be measured in a visualization software such
-as :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
+The final result of the optimization (|POSCAR| with coordinates and |VIBROCC|
+with vibration amplitudes) are saved in the |OUT| directory, and can also be
+found in the root folder right after the end of the execution.
+Interatomic distances and angles can easily be measured in a visualization
+software such as :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
 
 Next steps
 ==========
