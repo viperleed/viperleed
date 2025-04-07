@@ -88,3 +88,7 @@ tool for running |LEED-IV| calculations.
 .. versionremoved:: 0.13.0
     The ``--job-name``, ``--history-name``, and ``--work-history-name``
     arguments.
+
+.. versionchanged:: 0.13.0
+    Removed the ``--delete-workdir`` argument, whose default was ``False``.
+    It is replaced by ``--keep-workdir``.
