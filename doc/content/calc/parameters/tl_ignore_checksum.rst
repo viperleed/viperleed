@@ -32,5 +32,5 @@ modifications to TensErLEED code or for high-throughput calculations.
 Changelog
 ---------
 
-.. versionchanged:: TensErLEED 0.11.0
-   Change default value from True to False.
+.. versionchanged:: 0.11.0
+   Changed the default value from True to False.
