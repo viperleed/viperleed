@@ -109,9 +109,11 @@ A typical call may look like this:
 
             viperleed calc -w %work_path% -t %tensorleed_path%
 
-The directory at ``work_path`` is the one where the calculation will be
+The directory at :file:`work_path` is the one where the calculation will be
 executed and all temporary files will be stored. It is created if it does not
-exist. The ``tensorleed_path`` is the path to the :ref:`install_tensorleed`.
+exist, and automatically deleted upon successful termination (unless the ``-k``
+command-line flag is specified).
+The ``tensorleed_path`` is the path to the :ref:`install_tensorleed`.
 If the ``-t`` option is not given, ViPErLEED looks for the TensErLEED source
 code under the path specified by the :envvar:`VIPERLEED_TENSORLEED`
 :term:`environment variable` (see also :ref:`set_envvar`).
@@ -164,7 +166,9 @@ a :ref:`manifest` file that lists the files and directories to be copied back.
 :numref:`list_organization_output` shows an example of the directory tree
 after a run. The :file:`my_work` directory may be on a different file-system
 path (including a different drive, a network path, or a remote server) or be
-a subfolder of :file:`my_surface`.
+a subfolder of :file:`my_surface`. It is shown mainly for illustration
+purposes, as the work directory is automatically deleted after a successful
+execution (unless the ``-k`` command-line flag is given).
 
 .. _list_organization_output:
 .. code-block:: console
@@ -207,7 +211,7 @@ a subfolder of :file:`my_surface`.
     ├── VIBROCC              <-- output, created or edited by calc
     └── viperleed-calc-<timestamp>.log
 
-    my_work/
+    my_work/                 <-- deleted upon successful termination
     ├── manifest
     └── ...
 
