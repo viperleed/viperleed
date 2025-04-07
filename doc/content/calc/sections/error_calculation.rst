@@ -120,7 +120,7 @@ geometric and vibration variations into separate delta files to
 reduce computational cost.
 
 The results of the error calculation consists of the :ref:`errorspdf_header`
-files, stored in the :file:`OUT` directory.
+files, stored in the |OUT| directory.
 
 If the Pendry |R factor| is used, the value of |R+varR| is calculated
 for each error type and drawn as a horizontal line in :ref:`errorspdf`.

@@ -59,8 +59,8 @@ this cutoff is bulklike.
    :width: 100%
    :align: center
 
-   POSCAR rendered in :term:`VESTA`, viewed along |a| (left), |b| (center) and
-   |c| (right). Ir atoms are shown in blue, oxygen in red.
+   |POSCAR| rendered in :term:`VESTA`, viewed along |a| (left), |b| (center)
+   and |c| (right). Ir atoms are shown in blue, oxygen in red.
 
 .. hint::
    Of course there are other possible structural models, including adsorption
@@ -86,7 +86,7 @@ very similar to the one described in the tutorial for the
 .. _list_ir_parameters:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/PARAMETERS
    :language: console
-   :caption: PARAMETERS file for Ir(100)-(2×1)-O.
+   :caption: |PARAMETERS| file for Ir(100)-(2×1)-O.
 
 GLOBAL PARAMETERS
     At the top of the file, we specify some general settings, such as the
@@ -122,7 +122,7 @@ PARAMETERS FOR VIBROCC
     as explained in the section on :ref:`T_DEBYE`.
 
 .. tip::
-    Grouping the settings in the PARAMETERS file as described above is not
+    Grouping the settings in the |PARAMETERS| file as described above is not
     required, but it helps with readability.
 
 
@@ -167,7 +167,7 @@ and :ref:`PHASESHIFTS` files.
     You will notice that the first time we run a new system, ViPErLEED stops
     execution after the initialization. This is on purpose, and is supposed
     to give the user a chance to double check the recognized symmetry and
-    annotated POSCAR.
+    annotated |POSCAR|.
 
     You will need to **restart the run manually** after making these checks.
 
@@ -176,7 +176,7 @@ has decreased quite a bit. The first reference calculation gave a value
 of :math:`R_\mathrm{P} \approx 0.55`, but |RP| has dropped to around
 :math:`\approx 0.21` over the search. We can get a better idea of how
 the search has converged by taking a look at the file :ref:`searchprogresspdf`
-in the ``SUPP`` directory.
+in the |SUPP| directory.
 
 .. _fig_Ir_O_search_progress_1:
 .. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_1.svg
@@ -254,7 +254,7 @@ value for |V0i|.
 During the :ref:`full-dynamic optimization<fdoptimization>`, multiple reference
 calculations are run while the chosen global parameter is varied. ViPErLEED
 then tries to determine an optimal value using a parabola fit. We select |V0i|
-for optimization by adding the following line to PARAMETERS:
+for optimization by adding the following line to |PARAMETERS|:
 
 .. code-block:: console
 
@@ -263,7 +263,7 @@ for optimization by adding the following line to PARAMETERS:
 We then chose to run the :ref:`full-dynamic optimization<fdoptimization>` by
 setting the parameter :ref:`RUN = 6<run>` and restarting. Once finished, the
 log file will let us know of the optimized value for the chosen parameter.
-ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT``
+ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the |OUT|
 directory which contains a visualization of the |R factor|\ s calculated for
 the various values of the parameter and a fit parabola.
 It is shown in :numref:`fig_ir_fdopt`.
@@ -306,7 +306,7 @@ calculation and structure search.
 
 Using the DISPLACEMENTS file in :numref:`list_ir_error_calc`, we run the error
 calculation by selecting the segment :ref:`RUN = 5<run>`.
-The :ref:`result <errorspdf_header>` will again be saved in the :file:`OUT`
+The :ref:`result <errorspdf_header>` will again be saved in the |OUT|
 directory. ViPErLEED generates a plot of the error curves in :file:`Errors.pdf`
 and stores the raw data in :file:`Errors.csv`. The :file:`Errors.pdf` file in
 :numref:`fig_ir_errors_geo` shows that displacement of surface atoms even by a
@@ -352,7 +352,7 @@ be more asymmetric, as these amplitudes enter the calculation differently
        available.
 .. [2] Actually, no in-plane movement is allowed for these Ir atoms. They
        coincide with twofold rotation axes of the pmm group. See also the
-       ``FreeDir`` column in the POSCAR file after initialization.
+       ``FreeDir`` column in the |POSCAR| file after initialization.
 .. [3] There is one exception to this rule. The full-dynamic reference
        calculation cannot provide exact results when an atom has mixed
        chemical composition and the elements have different optimized

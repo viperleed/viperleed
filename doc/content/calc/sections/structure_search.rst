@@ -85,7 +85,7 @@ are performed before the actual calculation starts:
 #.  The TensErLEED input files :file:`rf.info`, :file:`PARAM`, and
     :file:`search.steu` are prepared based on the slab and on the
     :ref:`EXPBEAMS file<expbeams>`. (They are available for inspection among
-    the :ref:`supplementary files<supp_files>` in the :file:`SUPP` directory.)
+    the :ref:`supplementary files<supp_files>` in the |SUPP| directory.)
 #.  Based on the slab symmetry and the
     :ref:`symmetry settings<symmetry_settings>`, symmetry-linked parameters
     are identified. The :file:`control.chem` input file for TensErLEED is

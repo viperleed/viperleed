@@ -6,7 +6,7 @@
 VIBROCC
 =======
 
-The VIBROCC file lists the starting guesses for vibration amplitudes
+The |VIBROCC| file lists the starting guesses for vibration amplitudes
 (in ångstrom) and site occupations. The minimum input is a vibration
 amplitude for each element in the :ref:`POSCAR` file. If the :ref:`ELEMENT_MIX`
 parameter is defined for an element in the :ref:`PARAMETERS` file, explicitly
@@ -14,11 +14,11 @@ assigning vibration amplitudes and occupations to all sub-elements is
 recommended. See also :ref:`this page<occdelta>` for instructions on how
 to vary the occupation of a site during structure optimization.
 
-Additionally, the VIBROCC file can contain a block defining offsets in
+Additionally, the |VIBROCC| file can contain a block defining offsets in
 vibration amplitudes, occupation, or position per element for specific
 sites.
 
-A VIBROCC file containing only some starting guesses for vibration
+A |VIBROCC| file containing only some starting guesses for vibration
 amplitudes can be generated automatically using the :ref:`VIBR_AMP_SCALE`,
 :ref:`T_EXPERIMENT` and :ref:`T_DEBYE` parameters in the
 :ref:`PARAMETERS` file. See :ref:`below<vibrocc_auto>` for details.
@@ -53,7 +53,7 @@ Example
    POS 4 = Fe 0.0 0.0 0.01, Ni 0.0 0.0 -0.01     ! PFe_def
    OCC 4 = Fe 0.01, Ni -0.01     ! PFe_def
 
-The two main blocks in the VIBROCC files are 'Vibration Amplitudes'
+The two main blocks in the |VIBROCC| files are 'Vibration Amplitudes'
 and 'Occupations'. Lines starting with '=' indicate the start of a
 block.
 
@@ -74,7 +74,7 @@ expressions (see also:
 `python re HOWTO <https://docs.python.org/3/howto/regex.html>`__). This feature
 is turned off by default to avoid unintentional issues with e.g. full stops in
 site names (not recommended!), but can be turned on by inserting a line
-``= regex on`` at any point in the VIBROCC file, and disabled later by the
+``= regex on`` at any point in the |VIBROCC| file, and disabled later by the
 line ``= regex off``. Note that if regular expressions is on, the asterisk
 ``*`` will *not* be a wildcard character any more (the equivalent would be
 ``.*``)!
@@ -82,7 +82,7 @@ line ``= regex off``. Note that if regular expressions is on, the asterisk
 On the right-hand side of the '=' sign, you can either give only one value, or
 give multiple values for different elements. Here, the elements are either the
 ones found in the :ref:`POSCAR` file, or the ones defined in :ref:`element_mix`.
-If element names in the POSCAR file and in ELEMENT_MIX overlap, the assignment
+If element names in the |POSCAR| file and in ELEMENT_MIX overlap, the assignment
 will nevertheless be made only for the chemical element, see
 :ref:`element name collision<ElementNameCollision>`.
 If only one value is given in the ``Vibration Amplitudes`` block, the
@@ -118,18 +118,18 @@ Search offsets
 --------------
 
 Apart from starting values for vibration amplitudes and occupations, the
-VIBROCC file can contain an additional block called "search offsets". This
+|VIBROCC| file can contain an additional block called "search offsets". This
 can be used to, *for a specific atom*, define positional, vibration, or
 occupational offsets from the site's values. This has two use cases:
 
 -  If a parameter, e.g. the vibration amplitude, is varied independently for
    the different atoms sharing a site type, the search result will likely yield
    different values for these atoms. These values will be written to the
-   OUT/VIBROCC file to initialize a potential continuation job with the
-   exact results from the previous search, instead of an average.
+   :file:`OUT/VIBROCC` file to initialize a potential continuation job with
+   the exact results from the previous search, instead of an average.
 -  If there are multiple elements sharing a site via :ref:`element_mix`, the
    positions of the different chemical species may be different depending on
-   the element. This cannot be mapped in the POSCAR file or the reference
+   the element. This cannot be mapped in the |POSCAR| file or the reference
    calculation of :term:`TensErLEED`, but can be mapped to the calculation
    via the search offsets block, by defining different values for different
    elements in the site.
@@ -147,7 +147,7 @@ occupations. On the left-hand side, each line is expected to contain:
 
 -  A flag ``POS`` / ``VIB`` / ``OCC`` defining what type of parameter should
    be modified
--  An atom number (corresponding to the number in the POSCAR file)
+-  An atom number (corresponding to the number in the |POSCAR| file)
 
 On the right-hand side, the syntax is similar to the vibration amplitudes
 and displacements blocks. For vibration amplitudes or occupations, one value
@@ -161,39 +161,39 @@ offsets, in ångströms, where positive |z| means away from the surface.
 OUT/VIBROCC
 -----------
 
-After executing a search, the VIBROCC file found in the OUT folder
-contains the vibration amplitudes and occupations of the best-fit
-structure found during the (last) search (i.e., the one with the
-smallest |R factor|). If atoms in the same site were allowed to
-vary independently, the vibrations and occupations written for
-each site will be the average, and values for the single atoms
+After executing a search, the |VIBROCC| file found in the |OUT| folder contains
+the vibration amplitudes and occupations of the best-fit structure found during
+the (last) search (i.e., the one with the smallest |R factor|). If atoms in the
+same site were allowed to vary independently, the vibrations and occupations
+written for each site will be the average, and values for the single atoms
 will be written as search offsets.
 
-When VIBROCC is :ref:`automatically generated<vibrocc_auto>` during
-:ref:`initialization`, the resulting VIBROCC file is stored in the
-OUT folder.
+When |VIBROCC| is :ref:`automatically generated<vibrocc_auto>` during
+:ref:`initialization`, the resulting |VIBROCC| file is stored in the
+|OUT| folder.
 
 .. note::
     A non-halted execution (i.e., one where :ref:`halting` was set to a
     value larger than the default) that includes a structure optimization
-    will overwrite an auto-generated OUT/VIBROCC file with the one found by
-    the (last) optimization step. In this case, a copy of the auto-generated
-    VIBROCC file can be found in SUPP (named VIBROCC_generated).
+    will overwrite an auto-generated :file:`OUT/VIBROCC` file with the one
+    found by the (last) optimization step. In this case, a copy of the
+    auto-generated |VIBROCC| file can be found in |SUPP| (named
+    :file:`VIBROCC_generated`).
 
 .. versionchanged:: 0.13.0
-    In earlier versions of |calc|, the automatically created VIBROCC file
+    In earlier versions of |calc|, the automatically created |VIBROCC| file
     would only appear in the root directory after :ref:`initialization`,
-    and only the VIBROCC file resulting from a structural optimization
-    would be stored in OUT. This file used to be named VIBROCC_OUT.
+    and only the |VIBROCC| file resulting from a structural optimization
+    would be stored in |OUT|. This file used to be named :file:`VIBROCC_OUT`.
 
 
 .. _vibrocc_auto:
 
-Automatic generation of VIBROCC
--------------------------------
+Automatic generation of |VIBROCC|
+---------------------------------
 
-ViPErLEED can automatically generate a VIBROCC file containing starting guesses
-for vibration amplitudes.
+ViPErLEED can automatically generate a |VIBROCC| file containing starting
+guesses for vibration amplitudes.
 To do this, the experiment temperature :math:`T` (:ref:`T_EXPERIMENT`) and the
 sample Debye temperature :math:`\Theta_D` (:ref:`T_DEBYE`) must be specified in
 :ref:`PARAMETERS`.

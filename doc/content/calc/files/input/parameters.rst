@@ -1,9 +1,11 @@
+.. include:: /substitutions.rst
+
 .. _parameters:
 
 PARAMETERS
 ==========
 
-The PARAMETERS file lists parameters defining what to run, how to
+The |PARAMETERS| file lists parameters defining what to run, how to
 interpret the other input files, and what to pass on to the TensErLEED
 scripts.
 Generally, elements are separated by whitespace, and ``!``, ``#`` or
