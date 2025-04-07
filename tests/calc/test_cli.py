@@ -218,7 +218,7 @@ two/domain_file
         assert expect_print in stdout
 
     def test_manifest_absolute_paths_raises(self, mocker):
-        """Check complaints are printed if copying resources fails."""
+        """Check complaints when copying manifest contents with abs paths."""
         manifest = mocker.patch(f'{_MODULE}.ManifestFile')
         manifest.has_absolute_paths = True
         with pytest.raises(ManifestFileError):
