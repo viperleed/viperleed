@@ -48,4 +48,4 @@ desirable. See the :ref:`bookkeeper` page for more details.
     were renamed to :file:`PARAMETERS_ori_<timestamp>` before editing.
     The ``_<timestamp>`` was dropped in ``v0.13.0``. The original,
     unedited version is stored in :file:`SUPP/original_inputs`.
-    The edited |PARAMETERS| file can be found in |OUT|.
+    The edited |PARAMETERS| file can also be found in |OUT|.
