@@ -15,8 +15,8 @@ the file was *first created* (in the format ``yyMMdd-hhmmss``).
 
 .. _log_files_calc:
 
-``calc-<timestamp>.log``
-==========================
+``viperleed-calc-<timestamp>.log``
+==================================
 
 This is the main log file for |calc| and contains the most important
 information for the run, including all raised warnings, error messages
