@@ -254,7 +254,7 @@ class TestCopyTensorsDeltas:
         assert copy.call_count == n_folders
 
     def test_copy_all_not_found(self, mocker, caplog):
-        """Check correct copying of all Tensors/Deltas."""
+        """Check no complaints when failing to copy all Tensors/Deltas."""
         caplog.set_level(0)  # All messages
         copy = mocker.patch(f'{_MODULE}.copytree_exists_ok',
                             side_effect=FileNotFoundError)
@@ -264,7 +264,7 @@ class TestCopyTensorsDeltas:
         assert not caplog.text
 
     def test_copy_most_recent(self, mocker):
-        """Check no complaints when no Tensors exist."""
+        """Check copying of the most recent Tensors/Deltas ZIP files."""
         mocker.patch(f'{_MODULE}.getMaxTensorIndex', return_value=123)
         mocker.patch('pathlib.Path.is_file', return_value=True)
         copy = mocker.patch('shutil.copy2')
@@ -273,7 +273,7 @@ class TestCopyTensorsDeltas:
         assert copy.call_count == n_files
 
     def test_copy_most_recent_missing(self, mocker):
-        """Check no complaints when no Tensors exist."""
+        """Check copying most recent Tensors/Deltas when one is missing."""
         def _is_file(path):
             # pylint: disable-next=magic-value-comparison
             return 'Tensors' in path.name
