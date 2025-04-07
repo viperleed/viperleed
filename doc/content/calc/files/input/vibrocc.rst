@@ -174,6 +174,14 @@ When |VIBROCC| is :ref:`automatically generated<vibrocc_auto>` during
 :ref:`initialization`, the resulting |VIBROCC| file is stored in the
 |OUT| folder.
 
+At the end of each |calc| execution, the file given as input for that run
+is renamed to :file:`VIBROCC_ori`, while the (potentially) edited file
+is copied to the root directory (from |OUT|) as a new |VIBROCC| file.
+This ensures that further invocations of |calc| will automatically use
+the output of previous executions as an input. You can manually call the
+|bookkeeper| utility after a specific |calc| run if this behavior is not
+desirable. See the :ref:`bookkeeper` page for more details.
+
 .. note::
     A non-halted execution (i.e., one where :ref:`halting` was set to a
     value larger than the default) that includes a structure optimization

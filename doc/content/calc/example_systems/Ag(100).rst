@@ -209,56 +209,44 @@ Your root folder should now look like this:
     ├── VIBROCC
     └── viperleed-calc-<timestamp>.log
 
-Folders :file:`OUT` and :file:`SUPP` always contain the main
-:ref:`results <files>` of the calculation. Folder :file:`work`
-is where |calc| actually runs. It is kept for debugging purposes,
-and you can safely delete it (use the ``--delete-workdir``
-:ref:`command-line argument <cli_calc>` to do this automatically).
-Files :ref:`ivbeams`, :ref:`phaseshifts`, and :ref:`vibrocc` were
-automatically created by |calc|. :file:`POSCAR_user` is an exact
-copy of the :ref:`poscar` file given as input the first time |calc|
-started.
+You can find more details on the structure of the root folder in
+the :ref:`dir_organization_output` section, including a brief
+description of the most important files and folders as well as
+the convention on automatic renaming of input/output files.
 
-Files :file:`PARAMETERS_ori` and :file:`POSCAR_ori` (as well as
-:file:`VIBROCC_ori` if a :file:`VIBROCC` file was given explicitly)
-are the files used as inputs during a specific |calc| run. A copy of these
-and all other input files can be found under :file:`SUPP/original_inputs/`.
-The :file:`PARAMETERS`, :file:`POSCAR`, and :file:`VIBROCC` files are the
-**results** of the |calc| run. This renaming of files is such that |calc|
-will automatically use the **outputs** of a previous execution as inputs
-for the next one. You can manually invoke the :ref:`bookkeeper` utility
-after |calc| if you want a different behavior for a specific run.
+In addition to the auto-generated :file:`PHASESHIFTS` file discussed
+above, |calc| has also created files :ref:`ivbeams` and :ref:`vibrocc`
+based on the inputs given in files :file:`EXPBEAMS.csv`, and
+|POSCAR|/|PARAMETERS|, respectively.
 
-The results of each |calc| run are automatically collected into the
-:file:`history` folder. See the :ref:`bookkeeper` page for more details
-on how |calc| results are organized in :file:`history`.
-A plain-text :file:`history.info` file contains a summary of information
-about each such run. :numref:`list_history_info_ag_init` shows the contents of
-the :file:`history.info` file after this first execution of |calc|.
+As introduced in the :ref:`dir_organization_output` section, and described 
+in detail on the :ref:`bookkeeper` page, the results of each |calc| run are
+automatically collected into a :file:`history` folder.
+A plain-text :file:`history.info` file contains a summary of information about
+each such run. :numref:`list_history_info_ag_init` shows the contents of the
+:file:`history.info` file after this first execution of |calc|.
 
 .. _list_history_info_ag_init:
 .. code-block:: text
     :caption:
         Contents of the :file:`history.info` file after running
-        the initialization for the Ag(100)-(1×1) example. See
+        the initialization for the Ag(100)-(1×1) example.  See
         :ref:`this section <history_info>` for more information
-        on the contents of each line.
+        on the contents of each line. The ``Notes`` were manually
+        edited to keep track of what was calculated.
 
     # TENSORS   None
     # JOB ID    1
     # RUN       0
     # TIME      yyyy-mm-dd HH:mm:ss
     # FOLDER    t000.r001_<timestamp>
-    Notes:
+    Notes: Running viperleed.calc for the first time on the Ag(100)-(1x1)
+           example. The experimental data come from the Erlangen group,
+           and the calculation was started with a bulk-truncated POSCAR.
 
-The :file:`history.info` can be used as an electronic logbook to keep track
-of which calculations were executed.
-It is **very good practice** to add some comments to the ``Notes`` section
-of each entry. This allows you to quickly recall what was done.
-Typical notes for a first run like this one include which sample, which raw
-data, and which initial structural model were used for the calculation.
-Normally, entries for subsequent runs should be complemented with notes
-concerning why the run was executed as well some comments about the outcome.
+It is a very good idea to use it as an electronic logbook by
+editing the ``Notes`` section. Do so now, following the example
+in :numref:`list_history_info_ag_init`.
 
 
 Reference calculation and *R* factor
@@ -351,8 +339,8 @@ we find that the |R factor| dropped significantly from
 That's not bad, but we can do a bit better.
 
 Now that we found a better configuration, we can use it as our new starting
-point. As mentioned :ref:`earlier <ag_init>`, this will happen automatically
-when |calc| will start the next time.
+point. As introduced in section :ref:`dir_organization_output`, this will
+happen automatically when |calc| will run the next time.
 
 Starting from this configuration, let's optimize with a finer grid.
 We change the DISPLACEMENTS accordingly, as in

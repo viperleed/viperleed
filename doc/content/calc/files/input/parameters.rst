@@ -33,3 +33,19 @@ different elements.
     ../../param_name
     ../../param_topics
     ../../param_section
+
+The |PARAMETERS| file given as input may be automatically edited by |calc|.
+At the end of each |calc| execution, the file given as input for that run
+is renamed to :file:`PARAMETERS_ori`, while the (potentially) edited file
+is copied to the root directory (from |OUT|) as a new |PARAMETERS| file.
+This ensures that further invocations of |calc| will automatically use
+the output of previous executions as an input. You can manually call the
+|bookkeeper| utility after a specific |calc| run if this behavior is not
+desirable. See the :ref:`bookkeeper` page for more details.
+
+.. versionchanged:: 0.13.0
+    In earlier versions of |calc| the |PARAMETERS| files given as inputs
+    were renamed to :file:`PARAMETERS_ori_<timestamp>` before editing.
+    The ``_<timestamp>`` was dropped in ``v0.13.0``. The original,
+    unedited version is stored in :file:`SUPP/original_inputs`.
+    The edited |PARAMETERS| file can be found in |OUT|.

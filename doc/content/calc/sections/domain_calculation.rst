@@ -109,6 +109,8 @@ after the :ref:`super_pos`).
         of a domain calculation.
 
     my_domain_calc/
+    ├── history/           <-- For the main directory
+    │   └── ...
     ├── my_domain_1/       <-- Use input files, requires reference calculation
     │   ├── OUT/           <-- Created by calc at end
     │   │   ├── POSCAR
@@ -143,10 +145,12 @@ after the :ref:`super_pos`).
     │   ├── Rfactor_analysis_superpos.pdf
     │   ├── Search_progress.pdf
     │   └── ...
-    ├── viperleed-calc-<timestamp>.log
-    ├── EXPBEAMS.csv
     ├── DISPLACEMENTS
-    └── PARAMETERS
+    ├── EXPBEAMS.csv
+    ├── history.info       <-- For the main directory
+    ├── PARAMETERS_ori
+    ├── PARAMETERS
+    └── viperleed-calc-<timestamp>.log
 
 To specify which segments should be run, either use the :ref:`RUN` parameter
 as usual, or set ``RUN = 4`` as a shorthand for a domain calculation. This
