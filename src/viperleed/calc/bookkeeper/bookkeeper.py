@@ -653,6 +653,13 @@ class Bookkeeper:
         """Execute bookkeeper in subdomains with the given `mode`."""
         if not domains:
             return
+        LOGGER.info('Running bookkeeper in domain folders:')
+        for path in domains:
+            try:
+                path = path.relative_to(self.cwd).as_posix()
+            except ValueError:
+                pass
+            LOGGER.info(f'    {path}')
         for path in domains:
             domain_bookie = Bookkeeper(path)
             yield domain_bookie.run(mode, **kwargs)

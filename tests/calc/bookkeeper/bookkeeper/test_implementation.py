@@ -144,8 +144,9 @@ class TestBookkeeperDomains:
     """Tests for running bookkeeper in subdomains."""
 
     @parametrize(mode=Mode)
-    def test_run_domains(self, mode, tmp_path, mocker):
+    def test_run_domains(self, mode, tmp_path, mocker, caplog):
         """Check calls of run when executed with a given domains argument."""
+        caplog.set_level(0)  # All messages
         mock_exit = mocker.MagicMock()
         run = mocker.patch.object(Bookkeeper,
                                   '_run_one_domain',
@@ -171,6 +172,8 @@ class TestBookkeeperDomains:
         assert run.mock_calls == [mocker.call(mode, **kwargs)
                                   for _ in range(n_calls)]
         assert exit_code is mock_exit
+        # pylint: disable-next=magic-value-comparison
+        assert 'Running bookkeeper in domain folders:' in caplog.text
 
 
 class TestWarnsInOldCalcTree:
