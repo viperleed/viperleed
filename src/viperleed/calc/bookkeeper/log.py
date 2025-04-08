@@ -61,6 +61,17 @@ def ensure_has_stream_handler():
     LOGGER.propagate = True
 
 
+def remove_bookkeeper_logfile(at_path):
+    """Remove the FileHandler(s) at_path for LOGGER, if any."""
+    handlers = get_handlers(LOGGER,
+                            logging.FileHandler,
+                            baseFilename=str(at_path/BOOKIE_LOGFILE))
+    for handler in handlers:
+        handler.flush()
+        LOGGER.removeHandler(handler)
+        handler.close()
+
+
 class LogFiles:
     """Container to manage log files found in a folder."""
 

@@ -31,6 +31,7 @@ from viperleed.calc.bookkeeper.bookkeeper import _FROM_ROOT
 from viperleed.calc.bookkeeper.bookkeeper import _MIN_CALC_WARN
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
+from viperleed.calc.bookkeeper.bookkeeper import LOGGER
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_HISTORY
@@ -45,6 +46,7 @@ from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 
 from ....helpers import filesystem_from_dict
+from ....helpers import filesystem_to_dict
 from ....helpers import not_raises
 from ....helpers import make_obj_raise
 from ....helpers import raises_exception
@@ -174,6 +176,44 @@ class TestBookkeeperDomains:
         assert exit_code is mock_exit
         # pylint: disable-next=magic-value-comparison
         assert 'Running bookkeeper in domain folders:' in caplog.text
+
+    def test_run_domains_logging(self, tmp_path, mocker):
+        """Check log messages are dispatched to the right files."""
+        def _run_archive(bookie, *_, **__):
+            LOGGER.warning(f'From folder {bookie.cwd.name}')
+            return BookkeeperExitCode.SUCCESS
+        mocker.patch.object(Bookkeeper, '_run_archive_mode', _run_archive)
+        domains = [tmp_path/str(i) for i in range(5)]
+        for path in domains:
+            path.mkdir()
+        main_bookie = Bookkeeper(tmp_path)
+        main_bookie.run(Mode.ARCHIVE, domains=domains)
+
+        # Log messages should only go to the specific domains:
+        log_file = 'history/bookkeeper.log'
+        expect_lines = {f'{d.name}/{log_file}': (f'From folder {d.name}',)
+                        for d in domains}
+
+        # But the main one collects all of them
+        expect_lines[log_file] = tuple(
+            line for lines in expect_lines.values() for line in lines
+            )
+
+        # Now collect the log files in the various subfolders
+        tree = filesystem_to_dict(tmp_path)
+        log_contents = {
+            f'{d.name}/{log_file}': tree[d.name]['history']['bookkeeper.log']
+            for d in domains
+            }
+        log_contents[log_file] = tree['history']['bookkeeper.log']
+
+        # Finally, check the contents is as expected
+        for log, contents in log_contents.items():
+            expect = expect_lines[log]
+            assert all(line in contents for line in expect)
+            not_there = [line for line in expect_lines[log_file]
+                         if line not in expect]
+            assert not any(line in contents for line in not_there)
 
 
 class TestWarnsInOldCalcTree:

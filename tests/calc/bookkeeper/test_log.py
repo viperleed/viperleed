@@ -20,6 +20,7 @@ from pytest_cases import parametrize
 from viperleed.calc.bookkeeper.log import LogFiles
 from viperleed.calc.bookkeeper.log import add_bookkeeper_logfile
 from viperleed.calc.bookkeeper.log import ensure_has_stream_handler
+from viperleed.calc.bookkeeper.log import remove_bookkeeper_logfile
 
 from ...helpers import make_obj_raise
 
@@ -43,6 +44,10 @@ class MockLogger:
     def addHandler(self, handler):       # pylint: disable=invalid-name
         """Add one handler."""
         self.handlers.append(handler)
+
+    def removeHandler(self, handler):    # pylint: disable=invalid-name
+        """Remove one handler."""
+        self.handlers.remove(handler)
 
     def setLevel(self, level):           # pylint: disable=invalid-name
         """set a new logging level."""
@@ -96,6 +101,23 @@ class TestAddBookkeeperLogfile:
         assert not logger.handlers
         add_bookkeeper_logfile(tmp_path)
         assert logger.handlers
+
+
+class TestRemoveBookkeeperLogfile:
+    """Tests for the remove_bookkeeper_logfile function."""
+
+    def test_no_handler(self, logger, tmp_path):
+        """Check that no handler is removed if none exists."""
+        remove_bookkeeper_logfile(tmp_path)
+        assert not logger.handlers
+
+    def test_remove_one(self, logger, tmp_path):
+        """Check removal of a file handler to BOOKIE_LOGFILE."""
+        assert not logger.handlers
+        add_bookkeeper_logfile(tmp_path)
+        assert logger.handlers
+        remove_bookkeeper_logfile(tmp_path)
+        assert not logger.handlers
 
 
 class TestEnsureHasStreamHandler:

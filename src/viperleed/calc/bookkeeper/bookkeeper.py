@@ -663,6 +663,7 @@ class Bookkeeper:
         for path in domains:
             domain_bookie = Bookkeeper(path)
             yield domain_bookie.run(mode, **kwargs)
+            log.remove_bookkeeper_logfile(domain_bookie.history.path)
 
     def _user_confirmed(self):
         """Return whether the user wants to proceed with discarding."""
