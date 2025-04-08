@@ -117,7 +117,7 @@ class Bookkeeper:
         return (tensor_number if tensor_number is not None
                 else self._root.tensors.most_recent)
 
-    def run(self, mode, requires_user_confirmation=True):
+    def run(self, mode, requires_user_confirmation=True, domains=None):
         """Run the bookkeeper in the given mode.
 
         Parameters
@@ -128,6 +128,9 @@ class Bookkeeper:
             Whether user confirmation is necessary before proceeding
             with destructive actions. Only used in DISCARD_FULL mode.
             Default is True.
+        domains : Sequence or None, optional
+            Paths to subdomains subfolders. If not given or None, run
+            bookkeeper only in self.cwd. Default is None.
 
         Returns
         -------
@@ -147,7 +150,16 @@ class Bookkeeper:
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
             }
-        return self._run_one_domain(mode, **kwargs)
+        main_exit_code = self._run_one_domain(mode, **kwargs)
+        if not domains:
+            return main_exit_code
+
+        # Execute one Bookkeeper for each of the domains
+        exit_codes = [main_exit_code]
+        for path in domains:
+            domain_bookie = Bookkeeper(path)
+            exit_codes.append(domain_bookie.run(mode, **kwargs))
+        return BookkeeperExitCode.from_codes(exit_codes)
 
     def update_from_cwd(self, silent=False):
         """Update timestamp, tensor number, log lines, etc. from root.

@@ -140,6 +140,31 @@ class TestBookkeeperComplaints:
         assert not caplog.text
 
 
+class TestBookkeeperDomains:
+    """Tests for running bookkeeper in subdomains."""
+
+    def test_run_domains(self, tmp_path, mocker):
+        """Check calls of run when executed with a given domains argument."""
+        mock_exit = mocker.MagicMock()
+        run = mocker.patch.object(Bookkeeper,
+                                  '_run_one_domain',
+                                  return_value=mock_exit)
+        combine_exit = mocker.patch.object(BookkeeperExitCode, 'from_codes')
+        mode = mocker.MagicMock()
+        kwargs = {
+            'requires_user_confirmation': mocker.MagicMock(),
+            }
+
+        domains = [tmp_path/str(i) for i in range(5)]
+        main_bookie = Bookkeeper(tmp_path)
+        main_bookie.run(mode, **kwargs, domains=domains)
+
+        n_calls = 1 + len(domains)
+        combine_exit.assert_called_once_with([mock_exit]*n_calls)
+        assert run.mock_calls == [mocker.call(mode, **kwargs)
+                                  for _ in range(n_calls)]
+
+
 class TestWarnsInOldCalcTree:
     """Tests for the _warn_about_old_calc method."""
 
