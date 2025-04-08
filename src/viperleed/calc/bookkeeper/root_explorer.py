@@ -19,10 +19,12 @@ from operator import attrgetter
 from pathlib import Path
 import shutil
 
+from viperleed.calc.bookkeeper.constants import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.errors import FileOperationFailedError
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
 from viperleed.calc.bookkeeper.history.workhistory import WorkhistoryHandler
 from viperleed.calc.bookkeeper.log import LogFiles
@@ -31,9 +33,12 @@ from viperleed.calc.bookkeeper.utils import file_contents_identical
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_DOMAIN_FOLDER_PREFIX
+from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import DEFAULT_WORK_HISTORY
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
@@ -118,6 +123,7 @@ class RootExplorer:
             self.tensors.collect()
             self._collect_files_to_archive()
             self.history.collect_subfolders()
+            self._collect_subdomain_info()
 
     def infer_run_info(self):
         """Return a dictionary of information read from the newest calc log."""
@@ -295,6 +301,18 @@ class RootExplorer:
         self._files_to_archive = tuple(p for p in to_archive
                                        if p.is_file() or p.is_dir())
 
+    def _collect_subdomain_info(self):
+        """Collect information from any subdomain."""
+        had_domains = self.has_domains
+        if not had_domains:
+            self._find_domain_subfolders()
+        for domain in self.domains:
+            # Be silent on subdomains if we have just found them.
+            # At this point we don't know whether we have ever run
+            # bookkeeper there, and we don't want to spam the log
+            # file with "there is no history folder" messages.
+            domain.collect_info(silent=not had_domains)
+
     def _complain_about_edited_files(self):
         """Log warnings if any _edited file is found in root."""
         edited_files = tuple(f'{self._relative_path(f)}'
@@ -395,6 +413,22 @@ class RootExplorer:
             self._log_failures_when_copying_input_files(failed)
             raise FileOperationFailedError(failed)
 
+    def _find_domain_subfolders(self):
+        """Find all subfolders of self.path that look like subdomains."""
+        not_a_domain = {
+            DEFAULT_OUT,
+            DEFAULT_SUPP,
+            DEFAULT_HISTORY,
+            DEFAULT_WORK_HISTORY,
+            }
+        subfolders = (d for d in self.path.iterdir()
+                      if d.is_dir()
+                      and d.name not in not_a_domain)
+        bookkeeper = self.workhistory.bookkeeper
+        self._domains = tuple(DomainRootExplorer(d, bookkeeper, main=self)
+                              for d in subfolders
+                              if self._is_domain_subfolder(d))
+
     def _log_failures_when_copying_input_files(self, failed):
         """Emit logging errors about failures to pull input files.
 
@@ -421,6 +455,24 @@ class RootExplorer:
                     )
                 reason = f'No {files} found'
             LOGGER.error(f'    {file}: {reason}')
+
+    def _is_domain_subfolder(self, path):
+        """Return whether `path` points to a (likely) domain subfolder."""
+        if path.name.startswith(DEFAULT_DOMAIN_FOLDER_PREFIX):
+            return True
+        contents = (
+            # A folder is likely a domain subfolder if it contains:
+            DEFAULT_OUT,            # an OUT subfolder
+            DEFAULT_SUPP,           # or a SUPP subfolder
+            DEFAULT_WORK_HISTORY,   # or a workhistory subfolder
+            # or it has a calc log file (this means calc
+            # was run explicitly in the subfolder)
+            *(f'{prefix}*.log' for prefix in CALC_LOG_PREFIXES),
+            # or it has been processed before by bookkeeper
+            DEFAULT_HISTORY,
+            HISTORY_INFO_NAME,
+            )
+        return any(f for pattern in contents for f in path.glob(pattern))
 
     def _mark_state_files_as_ori(self):
         """Suffix input files in root as _ori. Raise on failure."""

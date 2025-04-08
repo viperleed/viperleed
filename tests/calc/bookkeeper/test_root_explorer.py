@@ -23,6 +23,7 @@ from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.errors import FileOperationFailedError
+from viperleed.calc.bookkeeper.root_explorer import DomainRootExplorer
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
 from viperleed.calc.bookkeeper.root_explorer import TensorAndDeltaInfo
 from viperleed.calc.constants import DEFAULT_DELTAS
@@ -50,6 +51,7 @@ def fixture_explorer(mocker):
     """Return a RootExplorer with a fake bookkeeper."""
     mock_bookkeeper = mocker.MagicMock()
     root_path = Path(_MOCK_ROOT)
+    mocker.patch('pathlib.Path.iterdir', return_value=())
     return RootExplorer(root_path, mock_bookkeeper)
 
 
@@ -165,11 +167,16 @@ class TestRootExplorer:
         mock_logs = mocker.patch(f'{_MODULE}.LogFiles')
         mock_attributes(mock_logs, 'collect')
         mock_attributes(explorer, '_collect_files_to_archive')
+        mock_attributes(explorer, '_find_domain_subfolders')
 
         explorer.collect_info()
 
         explorer.logs.collect.assert_called_once()
-        called = {'_collect_files_to_archive', 'collect_info'}
+        called = {
+            '_collect_files_to_archive',
+            'collect_info',
+            '_find_domain_subfolders',
+            }
         for method in dir(explorer):
             try:
                 called_ok = getattr(explorer, called_or_not(method in called))
@@ -199,17 +206,72 @@ class TestRootExplorer:
         to_archive = explorer._files_to_archive
         assert to_archive == tuple(explorer.path / f for f in expected_files)
 
-    _has_domains = {
-        (): False,
-        ('domain_one',): True,
-        }
+    @parametrize(n_domains=(0, 1, 5))
+    def test_collect_subdomain_info(self, n_domains, explorer, mocker):
+        """Check calls in _collect_subdomain_info."""
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._domains = tuple(mocker.MagicMock() for _ in range(n_domains))
+        mocker.patch.object(explorer, '_find_domain_subfolders')
+        calls = {
+            # Preexisting domains always called with silent=False
+            getattr(d, 'collect_info'): {'silent': False}
+            for d in explorer.domains
+            }
+        calls[getattr(explorer, '_find_domain_subfolders')] = (
+            None if n_domains else {}
+            )
 
-    @parametrize('domains,expect', _has_domains.items())
-    def test_has_domains(self, domains, expect, explorer, mocker):
-        """Check the domains and has_domains properties."""
-        mocker.patch.object(explorer, '_domains', domains)
-        assert explorer.domains == domains
-        assert explorer.has_domains == expect
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._collect_subdomain_info()
+        for method, kwargs in calls.items():
+            if kwargs is None:
+                method.assert_not_called()
+            else:
+                method.assert_called_once_with(**kwargs)
+
+    def test_find_domains(self, tmp_path, caplog, mocker):
+        """Test the _find_domain_subfolders method."""
+        caplog.set_level(0)  # All messages
+        not_domains = {
+            DEFAULT_DELTAS: {},   # We don't explicitly check for this
+            DEFAULT_OUT: {},
+            DEFAULT_SUPP: {},
+            DEFAULT_TENSORS: {},  # We don't explicitly check for this
+            'history': {},
+            'workhistory': {},
+            }
+        domains = {
+            'Domain_1': {},    # An automatically-labeled domain
+            'Domain_two': {},  # A domain with a user label
+            'domain_after_calc': {
+                # A root domain with all the expected contents at the
+                # end of a calc run, not yet processed by bookkeeper.
+                # (Having only one of the contents would be enough.)
+                DEFAULT_OUT: {},
+                DEFAULT_SUPP: {},
+                },
+            'domain_with_workhistory': {
+                # A root domain with a workhistory folder,
+                # not yet processed by bookkeeper.
+                'workhistory': {},
+                },
+            'domain_after_calc_with_bookkeeper': {
+                # A root domain already processed by bookkeeper.
+                # (Having only one of the contents would be enough.)
+                'history': {},
+                'history.info': '',
+                },
+            'domain_with_log_file': {
+                # A root domain in which calc was run manually.
+                f'{LOG_PREFIX}_timestamp.log': '',
+                },
+            }
+        filesystem_from_dict({**not_domains, **domains}, tmp_path)
+        explorer = RootExplorer(tmp_path, mocker.MagicMock())
+        explorer.collect_info()
+        assert not caplog.text
+        assert len(explorer.domains) == len(domains)
+        assert {d.path.name for d in explorer.domains} == set(domains)
 
     _remove_files = {
         '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
@@ -229,6 +291,18 @@ class TestRootExplorer:
         removed = (explorer.path / f for f in files)
         discard_files.assert_called_once_with(*removed)
         assert returned is expect
+
+    _has_domains = {
+        (): False,
+        ('domain_one',): True,
+        }
+
+    @parametrize('domains,expect', _has_domains.items())
+    def test_has_domains(self, domains, expect, explorer, mocker):
+        """Check the domains and has_domains properties."""
+        mocker.patch.object(explorer, '_domains', domains)
+        assert explorer.domains == domains
+        assert explorer.has_domains == expect
 
     def test_infer_run_info(self, explorer, mocker):
         """Check correct result of inferring info from log files."""
