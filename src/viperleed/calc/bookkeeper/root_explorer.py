@@ -416,7 +416,7 @@ class RootExplorer:
                 reason = f'raised {type(info).__name__} - {info}'
             else:  # List of paths to files that were tried
                 files = harvard_commas(
-                    (f'{self._relative_path(f)}' for f in info),
+                    *(f'{self._relative_path(f)}' for f in info),
                     sep='or',
                     )
                 reason = f'No {files} found'
