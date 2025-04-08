@@ -133,38 +133,10 @@ class Bookkeeper:
             If creation of the history folder or any of the subfolders
             where results are to be stored fails.
         """
-        try:
-            mode = BookkeeperMode(mode)
-        except ValueError as exc:
-            raise ValueError(f'Unknown mode {mode}') from exc
-
-        try:
-            runner = getattr(self, f'_run_{mode.name.lower()}_mode')
-        except AttributeError as exc:
-            raise NotImplementedError from exc
-
-        self._mode = mode
-        self._requires_user_confirmation = requires_user_confirmation
-        # Do not bother logging messages when the user asked to
-        # --fix: some warnings will be fixed anyway. Others will
-        # re-appear at the next run.
-        self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
-        LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
-        self._warn_about_old_calc()
-        try:
-            exit_code = runner()
-        finally:
-            # Clean up all the state attributes so we
-            # don't risk giving the wrong information.
-            self._clean_state()
-        found_nothing = (
-           exit_code is BookkeeperExitCode.NOTHING_TO_DO
-           and mode not in (BookkeeperMode.ARCHIVE,)  # logs already
-           )
-        if found_nothing:
-            LOGGER.info('Found nothing to do. Exiting...')
-        LOGGER.info('')
-        return exit_code
+        kwargs = {
+            'requires_user_confirmation': requires_user_confirmation,
+            }
+        return self._run_one_domain(mode, **kwargs)
 
     def update_from_cwd(self, silent=False):
         """Update timestamp, tensor number, log lines, etc. from root.
@@ -623,6 +595,41 @@ class Bookkeeper:
         did_fix = self.history.fix()
         return (BookkeeperExitCode.SUCCESS if did_fix
                 else BookkeeperExitCode.NOTHING_TO_DO)
+
+    def _run_one_domain(self, mode, requires_user_confirmation=True):
+        """Execute Bookkeeper in `mode` in a single domain."""
+        try:
+            mode = BookkeeperMode(mode)
+        except ValueError as exc:
+            raise ValueError(f'Unknown mode {mode}') from exc
+
+        try:
+            runner = getattr(self, f'_run_{mode.name.lower()}_mode')
+        except AttributeError as exc:
+            raise NotImplementedError from exc
+
+        self._mode = mode
+        self._requires_user_confirmation = requires_user_confirmation
+        # Do not bother logging messages when the user asked to
+        # --fix: some warnings will be fixed anyway. Others will
+        # re-appear at the next run.
+        self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
+        LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
+        self._warn_about_old_calc()
+        try:
+            exit_code = runner()
+        finally:
+            # Clean up all the state attributes so we
+            # don't risk giving the wrong information.
+            self._clean_state()
+        found_nothing = (
+           exit_code is BookkeeperExitCode.NOTHING_TO_DO
+           and mode not in (BookkeeperMode.ARCHIVE,)  # logs already
+           )
+        if found_nothing:
+            LOGGER.info('Found nothing to do. Exiting...')
+        LOGGER.info('')
+        return exit_code
 
     def _user_confirmed(self):
         """Return whether the user wants to proceed with discarding."""
