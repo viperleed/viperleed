@@ -64,6 +64,17 @@ class BookkeeperExitCode(IntEnum):
     NOTHING_TO_DO = -1
     FAIL = 1
 
+    @classmethod
+    def from_codes(cls, exit_codes):
+        """Return an overall exit code from multiple ones."""
+        if not exit_codes:
+            raise ValueError('At least one exit code needed.')
+        if any(c is cls.FAIL for c in exit_codes):
+            return cls.FAIL
+        if all(c is cls.NOTHING_TO_DO for c in exit_codes):
+            return cls.NOTHING_TO_DO
+        return cls.SUCCESS
+
 
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
