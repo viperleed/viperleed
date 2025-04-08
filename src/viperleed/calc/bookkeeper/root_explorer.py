@@ -54,7 +54,7 @@ class RootExplorer:
     def __init__(self, path, bookkeeper):
         """Initialize this explorer at `path` for a `bookkeeper`."""
         self._path = Path(path).resolve()
-        self._domains = ()    # RootExplorer for each domain subfolder
+        self._domains = ()     # DomainRootExplorer for each subfolder
         self._logs = None              # LogFiles, set in collect_info
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
@@ -466,6 +466,51 @@ class RootExplorer:
                     )
                 raise
         return any(to_replace)
+
+
+class DomainRootExplorer(RootExplorer):
+    """A RootExplorer for a domain subfolder."""
+
+    def __init__(self, path, bookkeeper, main):
+        """Initialize an root explorer for a domain subfolder.
+
+        Parameters
+        ----------
+        path : Pathlike
+            Path to the domain subfolder handled.
+        bookkeeper : Bookkeeper
+            A Bookkeeper instance. May be the one running in the
+            main folder, or the one running in this domain subfolder.
+        main : RootExplorer
+            The handler of the root folder of the "main" calculation,
+            i.e., the one in which calc was started during a DOMAINS
+            calculation.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(path, bookkeeper)
+        self._main = main
+
+    @property
+    def calc_timestamp(self):
+        """Return the timestamp of the main calc log file."""
+        # There usually is no calc log file in the domain subfolders,
+        # unless calc was explicitly invoked in this subfolder.
+        return super().calc_timestamp or self._main.calc_timestamp
+
+    def infer_run_info(self):
+        """Return a dictionary of information read from the newest calc log."""
+        return super().infer_run_info() or self._main.infer_run_info()
+
+    def _relative_path(self, path):
+        """Return a relative version of `path`."""
+        try:
+            return path.relative_to(self._main.path).as_posix()
+        except ValueError:
+            pass
+        return super()._relative_path(path)
 
 
 class TensorAndDeltaInfo:

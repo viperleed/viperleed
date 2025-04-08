@@ -754,6 +754,67 @@ class TestRootExplorerRaises:
             method()
 
 
+class TestDomainRootExplorer:
+    """Tests for the DomainRootExplorer subclass of RootExplorer."""
+
+    @fixture(name='domain')
+    def fixture_domain(self, explorer):
+        """Return an initialized DomainRootExplorer."""
+        return DomainRootExplorer(explorer.path/'domain',
+                                  explorer.workhistory.bookkeeper,
+                                  explorer)
+
+    def test_calc_timestamp_from_domain(self, domain, explorer, mocker):
+        """Check pulling of the calc_timestamp property from root logs."""
+        most_recent_domain = mocker.MagicMock()
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._logs = mocker.MagicMock(most_recent=mocker.MagicMock())
+        # pylint: disable-next=protected-access           # OK in tests
+        domain._logs = mocker.MagicMock(most_recent=most_recent_domain)
+        assert domain.calc_timestamp is most_recent_domain.timestamp
+
+    def test_calc_timestamp_from_main(self, domain, explorer, mocker):
+        """Check pulling of the calc_timestamp property from main."""
+        most_recent = mocker.MagicMock()
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._logs = mocker.MagicMock(most_recent=most_recent)
+        # pylint: disable-next=protected-access           # OK in tests
+        domain._logs = mocker.MagicMock(most_recent=None)
+        assert domain.calc_timestamp is most_recent.timestamp
+
+    def test_infer_run_info_from_domain(self, domain, explorer, mocker):
+        """Check inferring run info from the log file in the domain folder."""
+        for root in (domain, explorer):
+            mocker.patch.object(root, '_logs')
+        domain_info = mocker.MagicMock()
+        explorer.logs.infer_run_info.return_value = mocker.MagicMock()
+        domain.logs.infer_run_info.return_value = domain_info
+        assert domain.infer_run_info() is domain_info
+
+    def test_infer_run_info_from_main(self, domain, explorer, mocker):
+        """Check inferring run info from the main log file."""
+        for root in (domain, explorer):
+            mocker.patch.object(root, '_logs')
+        main_info = mocker.MagicMock()
+        explorer.logs.infer_run_info.return_value = main_info
+        domain.logs.infer_run_info.return_value = {}
+        assert domain.infer_run_info() is main_info
+
+    def test_relative_path_from_domain(self, domain, explorer):
+        """Check the expected return of _relative_path."""
+        # pylint: disable-next=protected-access           # OK in tests
+        domain._path = Path('/some/other/path')
+        # pylint: disable-next=protected-access           # OK in tests
+        result = domain._relative_path(domain.path/'abc')
+        assert result == Path('abc').as_posix()
+
+    def test_relative_path_from_main(self, domain, explorer):
+        """Check the expected return of _relative_path."""
+        # pylint: disable-next=protected-access           # OK in tests
+        result = domain._relative_path(domain.path/'abc')
+        assert result == Path('domain/abc').as_posix()
+
+
 class TestTensorsAndDeltasInfo:
     """Tests for the TensorsAndDeltasInfo class."""
 
