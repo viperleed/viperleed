@@ -155,15 +155,10 @@ class Bookkeeper:
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
             }
-        main_exit_code = self._run_one_domain(mode, **kwargs)
-        if not domains:
-            return main_exit_code
-
-        # Execute one Bookkeeper for each of the domains
-        exit_codes = [main_exit_code]
-        for path in domains:
-            domain_bookie = Bookkeeper(path)
-            exit_codes.append(domain_bookie.run(mode, **kwargs))
+        exit_codes = [
+            self._run_one_domain(mode, **kwargs),
+            *self._run_subdomains(domains, mode, **kwargs)
+            ]
         return BookkeeperExitCode.from_codes(exit_codes)
 
     def update_from_cwd(self, silent=False):
@@ -653,6 +648,14 @@ class Bookkeeper:
             LOGGER.info('Found nothing to do. Exiting...')
         LOGGER.info('')
         return exit_code
+
+    def _run_subdomains(self, domains, mode, **kwargs):
+        """Execute bookkeeper in subdomains with the given `mode`."""
+        if not domains:
+            return
+        for path in domains:
+            domain_bookie = Bookkeeper(path)
+            yield domain_bookie.run(mode, **kwargs)
 
     def _user_confirmed(self):
         """Return whether the user wants to proceed with discarding."""
