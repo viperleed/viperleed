@@ -143,14 +143,14 @@ class TestBookkeeperComplaints:
 class TestBookkeeperDomains:
     """Tests for running bookkeeper in subdomains."""
 
-    def test_run_domains(self, tmp_path, mocker):
+    @parametrize(mode=Mode)
+    def test_run_domains(self, mode, tmp_path, mocker):
         """Check calls of run when executed with a given domains argument."""
         mock_exit = mocker.MagicMock()
         run = mocker.patch.object(Bookkeeper,
                                   '_run_one_domain',
                                   return_value=mock_exit)
         combine_exit = mocker.patch.object(BookkeeperExitCode, 'from_codes')
-        mode = mocker.MagicMock()
         kwargs = {
             'requires_user_confirmation': mocker.MagicMock(),
             }

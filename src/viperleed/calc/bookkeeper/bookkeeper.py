@@ -147,6 +147,11 @@ class Bookkeeper:
             If creation of the history folder or any of the subfolders
             where results are to be stored fails.
         """
+        try:
+            mode = BookkeeperMode(mode)
+        except ValueError as exc:
+            raise ValueError(f'Unknown mode {mode}') from exc
+
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
             }
@@ -621,11 +626,6 @@ class Bookkeeper:
 
     def _run_one_domain(self, mode, requires_user_confirmation=True):
         """Execute Bookkeeper in `mode` in a single domain."""
-        try:
-            mode = BookkeeperMode(mode)
-        except ValueError as exc:
-            raise ValueError(f'Unknown mode {mode}') from exc
-
         try:
             runner = getattr(self, f'_run_{mode.name.lower()}_mode')
         except AttributeError as exc:
