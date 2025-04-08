@@ -7,7 +7,7 @@ reference calculation.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -501,7 +501,7 @@ def writeAUXGEO(sl, rp):
                     except Exception:
                         logger.error(
                             "Exception while trying to write occupation / "
-                            "vibrational amplitude for site " + site.label,
+                            "vibration amplitude for site " + site.label,
                             exc_info=True)
                     output += ol + comment + '\n'
 

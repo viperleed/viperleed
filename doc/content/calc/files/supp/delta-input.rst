@@ -22,5 +22,5 @@ The input files listed are of two different categories:
     :ref:`PHASESHIFTS` files, which are abbreviated simply as
     [AUXBEAMS] and [PHASESHIFTS] in the delta-input file.
     Then assigns an index of blocks in the :ref:`PHASESHIFTS` file to use,
-    and lists all geometrical and vibrational displacements, as given in the
+    and lists all geometric and vibration displacements, as given in the
     :ref:`DISPLACEMENTS` file.

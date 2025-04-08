@@ -28,7 +28,7 @@ Tests are *not* distributed with the ``viperleed`` package on
 
 .. code-block:: bash
 
-    python -m pip install --upgrade -r requirements-tests.txt
+    python -m pip install --upgrade -r requirements/tests.txt
 
 To execute tests, navigate to your local copy of the |repo|,
 then run
@@ -92,7 +92,7 @@ running
 
 .. code-block:: bash
 
-    python -m pip install --upgrade -r requirements-tests.txt
+    python -m pip install --upgrade -r requirements/tests.txt
 
 in your local copy of the |repo|.
 
@@ -122,7 +122,7 @@ Install the distribution dependencies by running
 
 .. code-block:: bash
 
-    python -m pip install --upgrade -r requirements-dist.txt
+    python -m pip install --upgrade -r requirements/dist.txt
 
 in your local copy of the |repo|.
 
@@ -147,6 +147,6 @@ running
 
 .. code-block:: bash
 
-    python -m pip install --upgrade -r requirements-dev.txt
+    python -m pip install --upgrade -r requirements/dev.txt
 
 in your local copy of the |repo|.

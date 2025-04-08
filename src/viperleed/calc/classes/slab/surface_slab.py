@@ -10,7 +10,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)'
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-02-21'
 __license__ = 'GPLv3+'
 
@@ -1180,7 +1180,7 @@ class SurfaceSlab(BaseSlab):
         return subcell_slab
 
     def restoreOriState(self, keepDisp=False):
-        """Resets the atom positions and site vibrational amplitudes to the
+        """Resets the atom positions and site vibration amplitudes to the
         original state, and stores the deviations as offset instead."""
         for site in self.sitelist:
             if site.oriState is None:

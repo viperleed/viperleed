@@ -1,0 +1,7 @@
+# This file contains a list of the required python packages for
+# running utility scripts for development.
+
+# 1. Dependencies of build/scripts/embed_fonts.py
+brotli     # Some dependency of parsel? We do not use it explicitly
+fontTools
+parsel

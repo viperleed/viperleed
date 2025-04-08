@@ -11,57 +11,82 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-03-22'
 __license__ = 'GPLv3+'
 
 import copy
 import logging
-import os
 from pathlib import Path
-import re
-import shutil
+from zipfile import BadZipFile
 from zipfile import ZipFile
 
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import parameters, poscar, vibrocc
+from viperleed.calc.lib.fs_utils import copytree_exists_ok
 
 logger = logging.getLogger(__name__)
 
 
-def getTensors(index, base_dir=".", target_dir=".", required=True):
-    """Fetches Tensor files from Tensors or archive with specified tensor
-    index. If required is set True, an error will be printed if no Tensor
-    files are found.
-    base_dir is the directory in which the Tensor directory is based.
-    target_dir is the directory to which the Tensor files should be moved."""
-    dn = "Tensors_"+str(index).zfill(3)
-    tensor_dir = (Path(base_dir) / "Tensors").resolve()
-    unpack_path = (Path(target_dir) / "Tensors" / dn).resolve()
-    zip_path = (tensor_dir / dn).with_suffix(".zip")
+def fetch_unpacked_tensor(index, base_dir='', target_dir=''):
+    """Fetch Tensors with a given `index` from a folder or an archive.
 
-    if (os.path.basename(base_dir) == "Tensors"
-            and not tensor_dir.is_dir()):
-        base_dir = os.path.dirname(base_dir)
-    if not (tensor_dir / dn).is_dir():
-        if (tensor_dir / dn).with_suffix(".zip").is_file():
-            logger.info(f"Unpacking {dn}.zip...")
-            os.makedirs(unpack_path, exist_ok=True)
-            try:
-                with ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(unpack_path)                             # TODO: maybe it would be nicer to read directly from the zip file
-            except Exception:
-                logger.error(f"Failed to unpack {dn}.zip")
-                raise
-        else:
-            logger.error("Tensors not found")
-            raise RuntimeError("Tensors not found")
-    elif base_dir != target_dir:
+    Parameters
+    ----------
+    index : int
+        The tensor index to be retrieved.
+    base_dir : str or Path, optional
+        The folder from which Tensors should be retrieved. It may
+        be 'Tensors' or its parent folder. Default is the current
+        directory.
+    target_dir : str or Path, optional
+        The root of the target tree in which the Tensor files should
+        be placed. The files are placed into `target_dir`/'Tensors'.
+        Default is the current directory.
+
+    Raises
+    ------
+    FileNotFoundError
+        When no Tensor file is found for `index`.
+    BadZipFile
+        If a tensor archive to be unzipped is an invalid ZIP file.
+    OSError
+        If any copying/extraction fails.
+    """
+    base_dir = Path(base_dir).resolve()
+    # See if by chance we were given the 'Tensors' folder as base_dir
+    # instead of its parent, in which case we navigate one level up.
+    if (base_dir.name == DEFAULT_TENSORS
+            and not (base_dir/DEFAULT_TENSORS).is_dir()):
+        base_dir = base_dir.parent
+
+    tensor_name = f'{DEFAULT_TENSORS}_{index:03d}'
+    tensor_folder = base_dir / DEFAULT_TENSORS / tensor_name
+    tensor_file = tensor_folder.with_suffix('.zip')
+    target_dir = Path(target_dir).resolve()
+    unpack_path = target_dir / DEFAULT_TENSORS / tensor_name
+
+    if not tensor_folder.is_dir() and not tensor_file.is_file():
+        logger.error(f'{DEFAULT_TENSORS} not found')
+        raise FileNotFoundError(f'No {DEFAULT_TENSORS} folder/zip file '
+                                f'for index {index} in {base_dir}')
+
+    if not tensor_folder.is_dir() and tensor_file.is_file():
+        logger.info(f'Unpacking {tensor_file.name}...')
         try:
-            os.makedirs(unpack_path, exist_ok=True)
-            for file in os.listdir(os.path.join(base_dir, "Tensors", dn)):
-                shutil.copy2(file, unpack_path)
+            unpack_tensor_file(tensor_file, unpack_path)
+        except (OSError, BadZipFile):
+            logger.error(f'Failed to unpack {tensor_file.name}')
+            raise
+        return
+
+    assert tensor_folder.is_dir()
+    if base_dir != target_dir:
+        try:
+            copytree_exists_ok(tensor_folder, unpack_path)
         except OSError:
-            logger.error(f"Failed to move Tensors from {dn}")
+            logger.error(f'Failed to move {DEFAULT_TENSORS} '
+                         f'from {tensor_folder.name}')
             raise
 
 
@@ -73,7 +98,9 @@ def getTensorOriStates(sl, path):
     for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
         if not (path / fn).is_file():
             logger.error(f"No {fn} file in {path}")
-            raise RuntimeError("Could not check Tensors: File missing")         # TODO: FileNotFoundError?
+            raise RuntimeError(                                                 # TODO: FileNotFoundError?
+                f"Could not check {DEFAULT_TENSORS}: File missing"
+                )
     dn = path.parent
     try:
         tsl = poscar.read(path / "POSCAR")
@@ -83,28 +110,35 @@ def getTensorOriStates(sl, path):
         vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
         tsl.full_update(trp)
     except Exception as exc:
-        logger.error("Error checking Tensors: Error while reading "
-                     f"input files in {dn}")
+        logger.error(f"Error checking {DEFAULT_TENSORS}: Error "
+                     f"while reading input files in {dn}")
         logger.debug("Exception:", exc_info=True)
-        raise RuntimeError("Could not check Tensors: Error loading old input "
-                           "files") from exc
+        raise RuntimeError(f"Could not check {DEFAULT_TENSORS}: Error "
+                           "loading old input files") from exc
     if tsl.n_atoms != sl.n_atoms:
         logger.error(f"POSCAR from {dn} is incompatible with "
                      "current POSCAR.")
-        raise RuntimeError("Tensors file incompatible")
+        raise RuntimeError(f"{DEFAULT_TENSORS} file incompatible")
     for at in sl:
         tat = tsl.atlist.get(at.num, None)
         if tat is None:
             logger.error(f"POSCAR from {dn} is incompatible with "
                          "current POSCAR.")
-            raise RuntimeError("Tensors file incompatible")
+            raise RuntimeError(f"{DEFAULT_TENSORS} file incompatible")
         at.copyOriState(tat)
     if len(tsl.sitelist) != len(sl.sitelist):
         logger.error(f"Sites from {dn} input differ from current input.")
-        raise RuntimeError("Tensors file incompatible")
+        raise RuntimeError(f"{DEFAULT_TENSORS} file incompatible")
     for site in sl.sitelist:
         tsitel = [s for s in tsl.sitelist if site.label == s.label]
         if len(tsitel) != 1:
             logger.error(f"Sites from {dn} input differ from current input.")
-            raise RuntimeError("Tensors file incompatible")
+            raise RuntimeError(f"{DEFAULT_TENSORS} file incompatible")
         site.oriState = copy.deepcopy(tsitel[0])
+
+
+def unpack_tensor_file(tensor_file, unpack_path):                               # TODO: maybe it would be nicer to read directly from the zip file. See also https://github.com/viperleed/viperleed/pull/305#discussion_r1971601291
+    """Extract the contents of `tensor_file` into `unpack_path`."""
+    unpack_path.mkdir(parents=True, exist_ok=True)
+    with ZipFile(tensor_file, 'r') as archive:
+        archive.extractall(unpack_path)

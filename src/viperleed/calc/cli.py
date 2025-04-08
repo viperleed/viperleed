@@ -9,21 +9,23 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
 import multiprocessing
-import os
 from pathlib import Path
 import shutil
 
-from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK
-from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc.bookkeeper import BookkeeperMode
-from viperleed.calc.bookkeeper import bookkeeper
-from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
+from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.files.manifest import ManifestFile
+from viperleed.calc.files.manifest import ManifestFileError
+from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.fs_utils import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
@@ -49,41 +51,31 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         presets = {}  # Replace selected PARAMETERS
         _verbosity_to_log_level(args, presets)
 
-        print('Running bookkeeper...')                                          # TODO: This is lost to stdout if we don't log it
-        # NB: job_name is None, as we're cleaning up the previous run
-        bookkeeper(mode=BookkeeperMode.DEFAULT,
-                   job_name=None,
-                   history_name=args.history_name,
-                   work_history_name=args.work_history_name)
+        bookkeeper = Bookkeeper()
+        bookkeeper.run(mode=BookkeeperMode.CLEAR)
 
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
         _copy_input_files_to_work(work_path)
 
-        # Go to work directory, execute there
-        cwd = Path.cwd().resolve()
-        os.chdir(work_path)
+        cwd = Path.cwd()
         exit_code = 2
-        try:
-            exit_code, _ = run_calc(
-                system_name=args.name,
-                source=args.tensorleed,
-                preset_params=presets,
-                home=cwd,
-                )
-        finally:
-            # Copy back everything listed in manifest, then go back
-            _copy_files_from_manifest(cwd)
-            os.chdir(cwd)
+        with execute_in_dir(work_path):
+            try:
+                exit_code, _ = run_calc(
+                    system_name=args.name,
+                    source=args.tensorleed,
+                    preset_params=presets,
+                    home=cwd,
+                    )
+            finally:
+                _copy_files_from_manifest(cwd)
 
-        # Call bookkeeper again to clean up unless --no-cont is set
-        if not args.no_cont:
-            bookkeeper(mode=BookkeeperMode.CONT,
-                       job_name=args.job_name,
-                       history_name=args.history_name,
-                       work_history_name=args.work_history_name)
+        # Run bookkeeper in archive mode
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested
-        if args.delete_workdir:
+        keep_workdir = args.keep_workdir or exit_code
+        if not keep_workdir:
             try:
                 shutil.rmtree(work_path)
             except OSError as exc:
@@ -105,103 +97,78 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         verbosity.add_argument(
             '-v', '--verbose',
             help='increase output verbosity and print debug messages',
-            action='store_true'
+            action='store_true',
             )
         verbosity.add_argument(
             '-vv', '--very-verbose',
             help='increase output verbosity and print more debug messages',
-            action='store_true'
+            action='store_true',
             )
 
         # PATHS
-        parser.add_argument(                                                    # TODO: bookkeeper always assumes DEFAULT_WORK!
+        parser.add_argument(
             '-w', '--work',
             help='specify execution work directory',
-            type=str
+            type=str,
             )
         parser.add_argument(
             '--tensorleed', '-t',
             help=('specify the path to the folder containing '
                   'the TensErLEED and EEASISSS source codes'),
-            type=str
-            )
-
-        # BOOKKEPER
-        parser.add_argument(
-            '--no-cont',
-            help='do not overwrite POSCAR/VIBROCC with those after a search',
-            action='store_true'
-            )
-        parser.add_argument(                                                    # TODO: implement (for cont at end; warn if called with --no_cont)
-            '-j', '--job-name',
-            help=('define a name for the current run. Will be appended to the '
-                  'name of the history folder that is created, and is logged '
-                  'in history.info. Passed along to the bookkeeper'),
-            type=str
-            )
-        parser.add_argument(
-            '--history-name',
-            help=('define the name of the history folder that is '
-                  'created/used. Passed along to the bookkeeper. '
-                  f'Default is {DEFAULT_HISTORY!r}'),
             type=str,
-            default=DEFAULT_HISTORY
-            )
-        parser.add_argument(
-            '--work-history-name',
-           help=('define the name of the workhistory folder that '
-                 'is created/used. Passed along to the bookkeeper. '
-                 f'Default is {DEFAULT_WORK_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_WORK_HISTORY
             )
 
         # CREATING/DELETING DIRECTORIES
         parser.add_argument(
             '--all-tensors',
-            help=('copy all Tensors to the work directory. Required if using '
-                  'the TENSORS parameter to calculate from old tensors'),
-            action='store_true'
+            help=(f'copy all {DEFAULT_TENSORS} to the work directory. '
+                  'Required if using the TENSOR_INDEX parameter to calculate '
+                  'from old tensors'),
+            action='store_true',
             )
         parser.add_argument(
-            '--delete-workdir',
-            help='delete work directory after execution',
-            action='store_true'
+            '--keep-workdir', '-k',
+            help=('do not delete the work directory after execution. By '
+                  'default, the work directory is also not deleted in '
+                  'case of errors.'),
+            action='store_true',
             )
 
 
 def _copy_input_files_to_work(work_path):
-    """Copy all the known input files present here into work_path."""
+    """Copy all the known input files present here into `work_path`."""
     for file in ALL_INPUT_FILES:
         try:
-            shutil.copy2(file, work_path / file)
+            shutil.copy2(file, work_path)
         except FileNotFoundError:
             pass
 
 
 def _copy_files_from_manifest(to_path):
-    """Copy all files listed in file 'manifest' back to_path."""
-    manifest_file = Path('manifest')
-    if not manifest_file.is_file():
-        return
+    """Copy all files listed in file 'manifest' back `to_path`."""
+    manifest = ManifestFile()
+    manifest.read()
+    if manifest.has_absolute_paths:
+        raise ManifestFileError('Cannot copy resources from folders that are '
+                                f'not contained in {Path.cwd()}. Destination '
+                                'is not well defined.')
 
-    with manifest_file.open('r', encoding='utf-8') as file:
-        manifest = [line.strip() for line in file.readlines()]
-        manifest = (line for line in manifest if line)
-        manifest = (Path(line) for line in manifest)
-
-    for to_be_copied in manifest:
-        _copy = shutil.copy2 if to_be_copied.is_file() else copytree_exists_ok
-        try:
-            _copy(to_be_copied, to_path / to_be_copied)
-        except OSError as exc:
-            print(f'Error copying {to_be_copied} to home directory: {exc}')     # TODO: Why no logging?
+    for folder, contents in manifest.iter_sections(relative=True):
+        dest_folder = to_path/folder
+        dest_folder.mkdir(exist_ok=True)
+        for item in contents:
+            src = folder/item
+            _copy = shutil.copy2 if src.is_file() else copytree_exists_ok
+            try:
+                _copy(src, dest_folder / item)
+            except OSError as exc:
+                print(f'Error copying {src} to home directory: {exc}')          # TODO: Why no logging?
 
 
 def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
-    """Move appropriate files from 'Tensors' and 'Deltas' to work_path."""
+    """Move appropriate files from 'Tensors' and 'Deltas' to `work_path`."""
     if all_tensors:  # Copy all of them
-        for directory in ('Tensors', 'Deltas'):
+        for directory in (DEFAULT_TENSORS, DEFAULT_DELTAS):
             try:
                 copytree_exists_ok(directory, work_path / directory)
             except FileNotFoundError:
@@ -213,7 +180,7 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
     if not tensor_num:
         return
 
-    for local_dir in ('Tensors', 'Deltas'):
+    for local_dir in (DEFAULT_TENSORS, DEFAULT_DELTAS):
         local_file = Path(f'{local_dir}/{local_dir}_{tensor_num:03d}.zip')
         if not local_file.is_file():
             continue
@@ -223,14 +190,15 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
 
 
 def _make_work_directory(cli_args):
-    """Return a suitable 'work' directory from cli_args."""
+    """Return a suitable 'work' directory from `cli_args`."""
     work_path = Path(cli_args.work or DEFAULT_WORK).resolve()
     work_path.mkdir(parents=True, exist_ok=True)
-    return work_path
+    # Resolve again, in case it did not exist yet
+    return work_path.resolve()
 
 
 def _verbosity_to_log_level(cli_args, presets):
-    """Add a LOG_LEVEL to presets if cli_args have verbosity specified."""
+    """Add a LOG_LEVEL to `presets` if `cli_args` have verbosity specified."""
     if cli_args.very_verbose:
         presets['LOG_LEVEL'] = LOG_VERY_VERBOSE
     elif cli_args.verbose:

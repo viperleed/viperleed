@@ -68,4 +68,4 @@ structural optimization discussed in the example calculation discussed
 
    Example of the second page of a Search-report.pdf file showing the
    parameter scatter plots. The upper three lines show z-displacements,
-   the lowest line shows changes in vibrational amplitude.
+   the lowest line shows changes in vibration amplitude.

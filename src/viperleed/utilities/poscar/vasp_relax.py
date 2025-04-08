@@ -9,7 +9,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
@@ -61,19 +61,19 @@ class PrepareForVASPRelaxCLI(_PoscarStreamCLI, cli_name='vasp_relax'):
         write_vasp_poscar(processed_slab, args)
 
 
-    def write_vasp_poscar(self, slab, args):
-        """Pipe a Slab to stdout given some command-line arguments."""
-        # What follows is very similar to poscar.write. The reason not
-        # to do this there is to prevent adding a dedicated argument
-        # that would only be used in this specific use case. It would
-        # also complicate uselessly the code: it would need to decide
-        # to use a VASPPOSCARWriter rather than a POSCARFileWriter
-        slab.sort_by_element()
-        relax_info = {'above_c': args.above_c,
-                    'c_only': not args.all_directions}
-        with self.outfile_context(args) as outfile:
-            writer = poscar.VASPPOSCARWriter(outfile, relax_info=relax_info)
-            writer.write(slab)
+def write_vasp_poscar(slab, args):
+    """Write `slab` to `args.outfile` in VASP format."""
+    # What follows is very similar to poscar.write. The reason not
+    # to do this there is to prevent adding a dedicated argument
+    # that would only be used in this specific use case. It would
+    # also complicate uselessly the code: it would need to decide
+    # to use a VASPPOSCARWriter rather than a POSCARFileWriter
+    slab.sort_by_element()
+    relax_info = {'above_c': args.above_c,
+                  'c_only': not args.all_directions}
+    with args.outfile as outfile:
+        writer = poscar.VASPPOSCARWriter(outfile, relax_info=relax_info)
+        writer.write(slab)
 
 
 if __name__ == '__main__':

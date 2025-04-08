@@ -38,7 +38,7 @@ Initialization
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`N_BULK_LAYERS`       | Define how many layers in the :ref:`POSCAR` file represent the bulk                                          |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibrational amplitude          |
+  | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibration amplitude            |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SUPERLATTICE`        | The relationship between the surface and bulk unit cells                                                     |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -101,7 +101,7 @@ Reference calculation
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`SCREEN_APERTURE`           | The aperture of the acceptance cone of the LEED screen                                                       |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibrational amplitude          |
+  | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibration amplitude            |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SUPERLATTICE`        | The relationship between the surface and bulk unit cells                                                     |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -163,7 +163,7 @@ Behavior is mainly governed by the :ref:`DISPLACEMENTS` file. Some relevant para
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`PHASESHIFTMIN`             | Cutoff in phaseshifts magnitudes to determine :ref:`LMAX`                                                    |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibrational amplitude          |
+  | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibration amplitude            |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SUPERLATTICE`        | The relationship between the surface and bulk unit cells                                                     |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
