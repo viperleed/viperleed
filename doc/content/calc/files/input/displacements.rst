@@ -52,9 +52,9 @@ detail here:
 
 .. note::
     Geometric displacements for any atom can only be applied along one
-    :ref:`direction <geodelta_direction>` (e.g. z, x, y, along arcs etc.) at a
-    time. To optimize positions in multiple directions, multiple subsequent 
-    search blocks are necessary.
+    :ref:`direction <geodelta_direction>` (e.g., |z|, |x|, |y|, along arcs,
+    etc.) at a time. To optimize positions in multiple directions, multiple
+    subsequent search blocks are necessary.
 
 
 Generally, any displacement applied to one atom will also be applied to
@@ -65,7 +65,7 @@ If multiple assignments are made for the same atom, the assignments will be
 ignored if they are consistent, but the user will be warned and the program
 may stop if there is a contradiction. For example, if some of the iridium
 atoms 2–11 in the code above were linked by a mirror plane, assigning a
-displacement in z direction to all of them would be accepted, but assigning
+displacement in |z| direction to all of them would be accepted, but assigning
 the very same in-plane displacement (not parallel to the mirror plane) to
 all of them would lead to a contradiction, as this would break the symmetry.
 In that case, it would be preferable to assign the displacement explicitly
@@ -122,10 +122,10 @@ delta calculations and search, the program will then loop back to execute
 delta calculations and search again, starting from the optimized results of
 the previous search.
 
-For example, the following DISPLACEMENTS file would first optimize z position
+For example, the following DISPLACEMENTS file would first optimize |z| position
 and vibration amplitudes simultaneously for the given set of atoms,
-then run another search from the optimized z and vibration amplitudes,
-this time optimizing the x coordinate:
+then run another search from the optimized |z| and vibration amplitudes,
+this time optimizing the |x| coordinate:
 
 ..  code-block:: none
 
@@ -146,7 +146,7 @@ The successive search blocks are each introduced by a line starting with
 ``== SEARCH``. Any text after the ``== SEARCH`` tag in the same line will
 be treated as a 'name' for the block (in the above example ``z`` and ``x``).
 The name will be referenced in the log files, but does not have any influence
-on the behaviour of the program.
+on the behavior of the program.
 
 
 In-plane optimization shorthand
@@ -200,9 +200,9 @@ tags ``<loop>`` and ``</loop>``. Note that these flags are expected to
 always be directly before a ``== SEARCH`` statement, or before the end of
 the file. Loops will end when their latest iteration does not yield a better
 |R factor| than the previous iteration (note that this means each looped block
-will be executed at least twice). For example, to optimize the z coordinate,
-then search x based on the optimized z, and then loop back to searching z
-with the optimized x, the example above could be modified like this:
+will be executed at least twice). For example, to optimize the |z| coordinate,
+then search |x| based on the optimized |z|, and then loop back to searching |z|
+with the optimized |x|, the example above could be modified like this:
 
 ..  code-block:: none
 
@@ -222,9 +222,9 @@ with the optimized x, the example above could be modified like this:
 
    </loop>
 
-You can also nest loops; for example, to optimize z, then loop in-plane
-optimization to get optimal x and y for that z, then start again with z,
-you could do:
+You can also nest loops; for example, to optimize |z|, then loop in-plane
+optimization to get optimal |x| and |y| for that |z|, then start again with
+|z|, you could do:
 
 ..  code-block:: none
 

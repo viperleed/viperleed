@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _bulk_like_below:
 
 BULK_LIKE_BELOW
@@ -5,7 +7,7 @@ BULK_LIKE_BELOW
 
 BULK_LIKE_BELOW is a helper parameter that can be used to automatically
 determine :ref:`BULK_REPEAT`, :ref:`N_BULK_LAYERS` and :ref:`LAYER_CUTS`.
-It specifies a fraction of **c** in the :ref:`POSCAR` unit cell below
+It specifies a fraction of |c| in the :ref:`POSCAR` unit cell below
 which the structure is bulklike, i.e., unrelaxed (if coming from DFT), or
 sufficiently close to unrelaxed to fall within :ref:`sym_eps`.
 Generally, this is the most easy way to detect and define the bulk if at least
@@ -32,8 +34,8 @@ some of the layers that are initially bulk-like are then varied
 during optimization.
 
 The bulk unit cell is detected by taking only the slab below BULK_LIKE_BELOW
-and finding the smallest translation vector (towards vacuum) with a **c**
-component that preserves the structure. Only translation vectors with **z**
+and finding the smallest translation vector (towards vacuum) with a |c|
+component that preserves the structure. Only translation vectors with |z|
 components of less than or equal to the thickness of the slab below
 BULK_LIKE_BELOW are considered. The minimal such translation vector
 is by definition the minimal :ref:`BULK_REPEAT` vector.

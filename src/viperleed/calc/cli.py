@@ -74,7 +74,8 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested
-        if args.delete_workdir:
+        keep_workdir = args.keep_workdir or exit_code
+        if not keep_workdir:
             try:
                 shutil.rmtree(work_path)
             except OSError as exc:
@@ -126,8 +127,10 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             action='store_true',
             )
         parser.add_argument(
-            '--delete-workdir',
-            help='delete work directory after execution',
+            '--keep-workdir', '-k',
+            help=('do not delete the work directory after execution. By '
+                  'default, the work directory is also not deleted in '
+                  'case of errors.'),
             action='store_true',
             )
 
@@ -190,7 +193,8 @@ def _make_work_directory(cli_args):
     """Return a suitable 'work' directory from `cli_args`."""
     work_path = Path(cli_args.work or DEFAULT_WORK).resolve()
     work_path.mkdir(parents=True, exist_ok=True)
-    return work_path
+    # Resolve again, in case it did not exist yet
+    return work_path.resolve()
 
 
 def _verbosity_to_log_level(cli_args, presets):

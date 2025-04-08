@@ -14,8 +14,8 @@ Bookkeeper
 
 The |bookkeeper| is a built-in ViPErLEED utility that automatically runs before
 and after each ViPErLEED calculation.
-It moves input and output files to a |history| directory, maintains the main
-folder organized, and keeps track of all relevant changes.
+It moves input and output files to a |history| directory, keeps the main
+folder organized, and tracks all relevant changes.
 
 See :ref:`cli_bookkeeper` for details on how to run the |bookkeeper| manually.
 
@@ -30,7 +30,7 @@ The |bookkeeper| has four archiving-related modes:
 **Archive**
     Stores the results of the previous calculation into the |history|
     directory, and overwrites the input files |state_files| with the
-    results of the previous calculation stored in the ``OUT`` directory.
+    results of the previous calculation stored in the |OUT| directory.
     The previous input files are renamed to |ori_files|, respectively.
     They may be used for comparison with the non-suffixed files.
     See :ref:`history_dir` for more details on how results are stored
@@ -40,8 +40,8 @@ The |bookkeeper| has four archiving-related modes:
 
 **Clear**
     Removes files belonging to a previous run.\ [#1]_ This includes all
-    :file:`*_ori` files, :file:`*.log` files, as well as the :file:`OUT`
-    and :file:`SUPP` directories.
+    :file:`*_ori` files, :file:`*.log` files, as well as the |OUT| and
+    |SUPP| directories.
 
     Runs automatically **at the start of every calculation**.
 
@@ -191,7 +191,7 @@ by |bookkeeper| to the |info| file.
 The "main" |history| folder (``t002.r001_250321-101512`` in
 :numref:`hist_folder_example`) collects both the input files (in the root of
 the folder) as well as the final results of a |calc| execution (i.e., the main
-:file:`*.log` file and :file:`SUPP`\ /\ :file:`OUT` directories).
+:file:`*.log` file and |SUPP|/|OUT| directories).
 
 .. _hist_folder_example:
 .. code-block:: console

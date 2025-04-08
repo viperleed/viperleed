@@ -155,8 +155,9 @@ def initialization(sl, rp, subdomain=False):
                 )
             parameters.modify(rp, 'LAYER_CUTS')
             parameters.modify(rp, 'N_BULK_LAYERS')
-            logger.info('Detected bulk repeat vector: %s',
-                        bulk_repeat.fmt_value)
+            logger.info(
+                f'Detected bulk repeat vector: {bulk_repeat.fmt_value}'
+                )
         parameters.comment_out(rp, 'BULK_LIKE_BELOW')
 
     # create bulk slab:

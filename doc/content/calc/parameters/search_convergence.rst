@@ -138,6 +138,6 @@ Changelog
 .. versionchanged:: 0.12.0
     Changed default values for ``SEARCH_CONVERGENCE gaussian`` from 0.5 0.5 to
     0.1 0.5.
-    Change default values for ``SEARCH_CONVERGENCE dgen`` from 100
+    Changed default values for ``SEARCH_CONVERGENCE dgen`` from 100
     1/(scaling factor of ``gaussian``) to 200 0.75/(scaling factor of
     ``gaussian``).
