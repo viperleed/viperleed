@@ -25,7 +25,7 @@ contain the STATE_ERROR. currentState and STATE_ERROR are defined in the
 states-def.h module.
 **/
 
-/** ----------------------------- COMMUNICATION ---------------------------- **/
+/** ---------------------------- COMMUNICATION --------------------------- **/
 
 void raise(byte error_code){
     /**Bring the system to a STATE_ERROR with a given error_code.
@@ -52,22 +52,23 @@ void raise(byte error_code){
 
 
 void encodeAndSend(byte *byteArray, uint16_t numBytesBeforeEncoding){
-/*
- * Prepares message before sending it to the PC. Changes every
- * byte which happens to have the same value as a MSG_START, and MSG_END or
- * a MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and
- * a following "byte - MSG_SPECIAL_BYTE."
- *
- * Parameters:
- * -----------
- * byteArray : byte*
- *     Pointer to message to be sent
- */
+    /**
+    Prepare a message before sending it to the PC. Changes every
+    byte which happens to have the same value as MSG_START, MSG_END, or
+    MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and
+    a following "byte - MSG_SPECIAL_BYTE."
+
+    Parameters:
+    -----------
+    byteArray : byte*
+        Pointer to message to be sent
+    **/
     if (numBytesBeforeEncoding >= MSG_SPECIAL_BYTE){
         raise(ERROR_MSG_SENT_TOO_LONG);
         return;
         }
-    byte encodedMessage[2*numBytesBeforeEncoding]; // Worst-case: each byte encoded as two
+    byte encodedMessage[2*numBytesBeforeEncoding];
+    // Worst-case: each byte encoded as two
     byte numBytesAfterEncoding = 0;
     for(int i=0; i < numBytesBeforeEncoding; i++){
         if (byteArray[i] >= MSG_SPECIAL_BYTE){
@@ -80,12 +81,13 @@ void encodeAndSend(byte *byteArray, uint16_t numBytesBeforeEncoding){
         }
       numBytesAfterEncoding++;
     }
-/*  Send byte array "encodedMessage" (i.e., the actual message) to PC as:
-       * MSG_START
-       * numbers of bytes in actual message (before encoding, excl. itself and markers)
-       * actual message
-       * MSG_END
- */
+    /* Send byte array "encodedMessage" (i.e., the actual message) to PC as:
+        MSG_START
+        numbers of bytes in actual message (before encoding, excl.
+                                            itself and markers)
+        actual message
+        MSG_END
+    */
     Serial.write(MSG_START);
     Serial.write(numBytesBeforeEncoding);
     Serial.write(encodedMessage, numBytesAfterEncoding);
@@ -94,22 +96,20 @@ void encodeAndSend(byte *byteArray, uint16_t numBytesBeforeEncoding){
 
 
 void encodeAndSend(byte singleByte){
-/*
- * Prepares message before sending it to the PC. Puts single
- * byte into an array and forwards the array to the "real"
- * encode message
- * This overloaded function essentially prepares a single-byte-long message
- * to be actually encoded in the next function. Having the two with the same
- * names prevents the rest of the code from having to figure out which function
- * to call depending on whether the message is a single byte or a byte array
- *
- * Parameters
- * ----------
- * singleByte : byte
- *     The one byte to be sent
- */
-  byte byteArray[] = {singleByte};
-  encodeAndSend(byteArray, 1);
+    /**
+    This overloaded function essentially prepares a single-byte-long
+    message to be actually encoded in the next function by putting the
+    byte into an array. Having two functions with the same name prevents
+    the rest of the code from having to differentiate between byteArray
+    and singleByte messages.
+
+    Parameters
+    ----------
+    singleByte : byte
+        The one byte to be sent
+    **/
+    byte byteArray[] = {singleByte};
+    encodeAndSend(byteArray, 1);
 }
 
 
@@ -185,9 +185,9 @@ bool decodeAndCheckMessage(){
     In practice, only the actual characters are kept.
     This means:
     (1) Skipping:
-           MSG_START == serialInputBuffer[0]
-           no. of bytes after decoding == serialInputBuffer[1]
-           MSG_END == serialInputBuffer[last]
+            MSG_START == serialInputBuffer[0]
+            no. of bytes after decoding == serialInputBuffer[1]
+            MSG_END == serialInputBuffer[last]
     (2) Decoding bytes with value MSG_SPECIAL_BYTE. In this case, the
         actual character is MSG_SPECIAL_BYTE + the next character.
 
@@ -217,18 +217,18 @@ bool decodeAndCheckMessage(){
     Goes to state
     -------------
     (unchanged)
-        if message is acceptable
+        If message is acceptable
     STATE_ERROR : ERROR_MSG_INCONSISTENT
-        if the number of decoded bytes does not match the
+        If the number of decoded bytes does not match the
         length expected from the value that came with the
         message itself
     STATE_ERROR : ERROR_MSG_UNKNOWN
-        if the message is an unknown command, or if we
+        If the message is an unknown command, or if we
         got some 'data' while we were not expecting any
     STATE_ERROR : ERROR_MSG_DATA_INVALID
-        if the message only contains a length byte with
+        If the message only contains a length byte with
         length 0
-    */
+    **/
     // Decode the message, starting at the second byte,
     // and going up to numBytesRead - 2 (included). This
     // skips MSG_START, the length, and MSG_END
@@ -247,8 +247,8 @@ bool decodeAndCheckMessage(){
     // Check if data was received
     msgLength = serialInputBuffer[1];
     if (msgLength == 0){
-      raise(ERROR_MSG_DATA_INVALID);
-      return false;
+        raise(ERROR_MSG_DATA_INVALID);
+        return false;
     }
 
     // Check that the number of bytes decoded fits
@@ -268,7 +268,7 @@ bool decodeAndCheckMessage(){
         // Defer checking to state handlers
     }
 
-	return isAllowedCommand();
+    return isAllowedCommand();
 }
 
 
@@ -286,7 +286,7 @@ void readFromSerial() {
     Writes
     ------
     numBytesRead, serialInputBuffer, readingFromSerial, msgLength,
-	newMessage
+    newMessage
 
     Goes to state
     -------------
@@ -296,11 +296,12 @@ void readFromSerial() {
         In case the number of bytes read does not fit with the
         number expected from the first byte after MSG_START
 
-    */
+    **/
     // Do something only if there is data on the serial line
     if(not Serial.available())  return;
 
-    if(Serial.available() >= SERIAL_BUFFER_SIZE){  // Should never be '>', but better safe than sorry
+    if(Serial.available() >= SERIAL_BUFFER_SIZE){
+        // Should never be '>', but better safe than sorry
         // The serial buffer is full and it potentially
         // already discarded some of the bytes that came.
         // The buffer will be flushed in the error handler
@@ -319,7 +320,7 @@ void readFromSerial() {
         // Accumulate characters
         if(readingFromSerial) {
             // Make sure we are not going to write
-            // past the end of serialInputBuffer
+            // past the end of serialInputBuffer.
             if (numBytesRead == MSG_MAX_LENGTH) {
                 raise(ERROR_MSG_TOO_LONG);
                 return;
@@ -328,7 +329,7 @@ void readFromSerial() {
             numBytesRead++;
         }
 
-        // A full message has been read
+        // A full message has been read.
         if (byteRead == MSG_END) {
             readingFromSerial = false;
             /*for (int i; i < numBytesRead; i++)  // echo message, for debug
@@ -346,36 +347,44 @@ void readFromSerial() {
 }
 
 
-/** ---------------------- Serial number methods --------------------- **/
+/** ----------------------- Serial number methods ------------------------ **/
 
-void writeSerialNR(byte *serial_nr) {
-	/**Writes the assigned serial number to the EEPROM.**/
+void storeSerialNumber(byte *serial_nr) {
+    /**Writes the assigned serial number to the EEPROM.
+
+    Parameters
+    ----------
+    serial_nr : byte*
+        The 4-byte serial number that will be written to the EEPROM.
+        The serial number can only consist of ASCII representations
+        of numbers and capital letters.
+    **/
     // Check if address only contains allowed values.
     int address = 0;
     byte tmp_char;
     while(address <= 3){
-      tmp_char = serial_nr[address];
-      if (not ((tmp_char > 47 and tmp_char < 58)
-                || (tmp_char > 64 and tmp_char < 91))){
-        raise(ERROR_MSG_DATA_INVALID);
-        return;
-      }
-      address += 1;
+        tmp_char = serial_nr[address];
+        if (not ((tmp_char > 47 and tmp_char < 58)
+            || (tmp_char > 64 and tmp_char < 91))){
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+        }
+        address += 1;
     }
-	// Serial number is stored on EEPROM bytes with addresses 0 to 3.
+    // Serial number is stored on EEPROM bytes with addresses 0 to 3.
     address = 0;
     while(address <= 3){
-      EEPROM.update(address, serial_nr[address]);
-      address += 1;
+        EEPROM.update(address, serial_nr[address]);
+        address += 1;
     }
 }
 
 
 void getSerialNR(byte *serial_nr) {
-	/**Get the serial number assigned to the controller.**/
-	int address = 0;
+    /**Get the serial number assigned to the controller.**/
+    int address = 0;
     while(address <= 3){
-      serial_nr[address] = EEPROM.read(address);
-      address += 1;
+        serial_nr[address] = EEPROM.read(address);
+        address += 1;
     }
 }

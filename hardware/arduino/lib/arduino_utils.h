@@ -1,4 +1,4 @@
-/**Useful functions for Arduino, not included in STDlib
+/** Useful functions for Arduino, not included in STDlib
 
 @author: Michele Riva (@michele-riva)
 @author: Michael Schmid (@schmid-iap)
@@ -13,7 +13,7 @@
 
 
 #include <Arduino.h>  // For pin definitions and macros
-
+#include <SPI.h>
 
 void setChipSelectHigh(byte ioPin) {
     /**
@@ -37,49 +37,49 @@ void SPI_initialize() {
 }
 
 uint16_t bigger16(uint16_t a, uint16_t b) {
-  return (a > b) ? a : b;
+    return (a > b) ? a : b;
 }
 
 uint16_t biggest16(uint16_t a, uint16_t b, uint16_t c) {
-  return bigger16(a, bigger16(b, c));
+    return bigger16(a, bigger16(b, c));
 }
 
 int32_t bigger32(int32_t a, int32_t b) {
-  return (a > b) ? a : b;
+    return (a > b) ? a : b;
 }
 
 int32_t biggest32(int32_t a, int32_t b, int32_t c) {
-  return bigger32(a, bigger32(b, c));
+    return bigger32(a, bigger32(b, c));
 }
 
 /* TODO: probably nicer to just have the getMedian, bigger and biggest
-         functions just be overloaded for uint16_t and int32_t*/
+   functions just be overloaded for uint16_t and int32_t*/
 
 /** Gets the median of three numbers */
 uint16_t getMedian16(uint16_t a0, uint16_t a1, uint16_t a2) {
-  uint16_t maximum = biggest16(a0, a1, a2);
-  if (maximum == a0) return bigger16(a1, a2);
-  if (maximum == a1) return bigger16(a0, a2);
-  else return bigger16(a0, a1);
+    uint16_t maximum = biggest16(a0, a1, a2);
+    if (maximum == a0) return bigger16(a1, a2);
+    if (maximum == a1) return bigger16(a0, a2);
+    else return bigger16(a0, a1);
 }
 
 /** Gets the median of three numbers */
 int32_t getMedian32(int32_t a0, int32_t a1, int32_t a2) {
-  int32_t maximum = biggest32(a0, a1, a2);
-  if (maximum == a0) return bigger32(a1, a2);
-  if (maximum == a1) return bigger32(a0, a2);
-  else return bigger32(a0, a1);
+    int32_t maximum = biggest32(a0, a1, a2);
+    if (maximum == a0) return bigger32(a1, a2);
+    if (maximum == a1) return bigger32(a0, a2);
+    else return bigger32(a0, a1);
 }
 
 uint16_t analogReadMedian(byte pin) {
-  /**
-  Read the Arduino ADC for a given pin
-  (A0...) three times and return the median
-  */
-  uint16_t a0 = analogRead(pin);
-  uint16_t a1 = analogRead(pin);
-  uint16_t a2 = analogRead(pin);
-  return getMedian16(a0, a1, a2);
+    /**
+    Read the Arduino ADC for a given pin
+    (A0...) three times and return the median
+    */
+    uint16_t a0 = analogRead(pin);
+    uint16_t a1 = analogRead(pin);
+    uint16_t a2 = analogRead(pin);
+    return getMedian16(a0, a1, a2);
 }
 
 #define sgn(x) (x < 0 ? -1 : 1)
