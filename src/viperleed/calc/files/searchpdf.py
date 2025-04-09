@@ -617,5 +617,5 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
         np.array(report_csv_data).T,
         delimiter=',',
         header=headers,
-    )
+        )
     logger.info(f'Written to {csv_name}.')
