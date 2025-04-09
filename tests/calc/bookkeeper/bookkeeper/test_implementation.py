@@ -152,7 +152,7 @@ class TestBookkeeperDomains:
         mock_exit = mocker.MagicMock()
         run = mocker.patch.object(Bookkeeper,
                                   '_run_one_domain',
-                                  return_value=mock_exit)
+                                  return_value=(mock_exit, None))
         combine_exit = mocker.patch.object(BookkeeperExitCode,
                                            'from_codes',
                                            return_value=mock_exit)
@@ -181,7 +181,7 @@ class TestBookkeeperDomains:
         """Check log messages are dispatched to the right files."""
         def _run_archive(bookie, *_, **__):
             LOGGER.warning(f'From folder {bookie.cwd.name}')
-            return BookkeeperExitCode.SUCCESS
+            return BookkeeperExitCode.SUCCESS, None
         mocker.patch.object(Bookkeeper, '_run_archive_mode', _run_archive)
         domains = [tmp_path/str(i) for i in range(5)]
         for path in domains:
@@ -567,7 +567,7 @@ class TestBookkeeperRaises:
             bookkeeper._run_discard_full_mode()
         with make_raise_oserror('shutil.rmtree'):
             # pylint: disable-next=protected-access    # OK in tests
-            exit_code = bookkeeper._run_discard_full_mode()
+            exit_code, _ = bookkeeper._run_discard_full_mode()
             # pylint: disable-next=magic-value-comparison
             assert 'Failed to delete' in caplog.text
             assert exit_code is BookkeeperExitCode.FAIL

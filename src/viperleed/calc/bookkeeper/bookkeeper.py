@@ -155,9 +155,10 @@ class Bookkeeper:
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
             }
+        main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)
         exit_codes = [
-            self._run_one_domain(mode, **kwargs),
-            *self._run_subdomains(domains, mode, **kwargs)
+            main_exit_code,
+            *self._run_subdomains(domains, main_folder, mode, **kwargs)
             ]
         return BookkeeperExitCode.from_codes(exit_codes)
 
@@ -533,15 +534,16 @@ class Bookkeeper:
         # a history.info entry, mark edited input files...
         did_archive = self._do_prerun_archiving_and_mark_edited()
         if not did_archive:
-            return BookkeeperExitCode.NOTHING_TO_DO
+            return BookkeeperExitCode.NOTHING_TO_DO, None
 
+        last_folder = self.history.last_folder
         # ...mark non-edited inputs as _ori, and prepare inputs for
         # the next execution of calc (from OUT or original_inputs)
         try:
             self._root.prepare_for_next_calc_run()
         except OSError:
-            return BookkeeperExitCode.FAIL
-        return BookkeeperExitCode.SUCCESS
+            return BookkeeperExitCode.FAIL, last_folder
+        return BookkeeperExitCode.SUCCESS, last_folder
 
     def _run_clear_mode(self):
         """Execute bookkeeper in CLEAR mode."""
@@ -551,8 +553,10 @@ class Bookkeeper:
         if did_clear_root:
             LOGGER.info('Successfully prepared the current directory '
                         'for the next run of viperleed.calc.')
-        return (BookkeeperExitCode.SUCCESS if did_anything
-                else BookkeeperExitCode.NOTHING_TO_DO)
+        exit_code = (BookkeeperExitCode.SUCCESS if did_anything
+                     else BookkeeperExitCode.NOTHING_TO_DO)
+        last_folder = self.history.last_folder if did_archive else None
+        return exit_code, last_folder
 
     # TODO: how to handle the TENSOR_INDEX case? Currently we attempt
     # removal of the MAXIMUM tensor number, not the LAST one that ran.
@@ -564,22 +568,22 @@ class Bookkeeper:
         try:
             self._check_may_discard_full()
         except NoHistoryEntryError:
-            return BookkeeperExitCode.NOTHING_TO_DO
+            return BookkeeperExitCode.NOTHING_TO_DO, None
         except (CantRemoveEntryError,
                 FileNotFoundError,
                 MetadataMismatchError):
-            return BookkeeperExitCode.FAIL
+            return BookkeeperExitCode.FAIL, None
 
         self._print_discard_info()
         if not self._user_confirmed():
-            return BookkeeperExitCode.NOTHING_TO_DO
+            return BookkeeperExitCode.NOTHING_TO_DO, None
 
         # Delete the history folders, stuff in workhistory,
         # and output files/folders in the root directory
         try:
             self.history.discard_most_recent_run()
         except OSError:
-            return BookkeeperExitCode.FAIL
+            return BookkeeperExitCode.FAIL, None
         self._workhistory.discard_workhistory_root()
         self._root.revert_to_previous_calc_run()
 
@@ -590,7 +594,7 @@ class Bookkeeper:
         self.history.info.remove_last_entry()
         LOGGER.info('Successfully deleted the results of '
                     'the last viperleed.calc execution.')
-        return BookkeeperExitCode.SUCCESS
+        return BookkeeperExitCode.SUCCESS, None
 
     def _run_discard_mode(self):
         """Execute bookkeeper in DISCARD mode."""
@@ -607,17 +611,19 @@ class Bookkeeper:
                 emit_log = LOGGER.warning if no_entry else LOGGER.error
                 emit_log('Failed to mark as discarded the last '
                          f'entry in {HISTORY_INFO_NAME}: {exc}')
-                return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
-                        else BookkeeperExitCode.FAIL)
+                exit_code = (BookkeeperExitCode.NOTHING_TO_DO if no_entry
+                             else BookkeeperExitCode.FAIL)
+                return exit_code, None
         LOGGER.info('Successfully marked as discarded the '
                     f'last entry in {HISTORY_INFO_NAME}.')
-        return BookkeeperExitCode.SUCCESS
+        return BookkeeperExitCode.SUCCESS, self.history.last_folder
 
     def _run_fix_mode(self):
         """Fix format inconsistencies found in history and history.info."""
         did_fix = self.history.fix()
-        return (BookkeeperExitCode.SUCCESS if did_fix
-                else BookkeeperExitCode.NOTHING_TO_DO)
+        exit_code = (BookkeeperExitCode.SUCCESS if did_fix
+                     else BookkeeperExitCode.NOTHING_TO_DO)
+        return exit_code, None
 
     def _run_one_domain(self, mode, requires_user_confirmation=True):
         """Execute Bookkeeper in `mode` for a single domain.
@@ -634,6 +640,9 @@ class Bookkeeper:
         Returns
         -------
         exit_code : BookkeeperExitCode
+            The result of executing Bookkeeper in `mode`.
+        last_folder : HistoryFolder or None
+            The last folder that was archived, if any. None otherwise.
 
         Raises
         ------
@@ -658,7 +667,7 @@ class Bookkeeper:
         LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
         self._warn_about_old_calc()
         try:
-            exit_code = runner()
+            exit_code, last_folder = runner()
         finally:
             # Clean up all the state attributes so we
             # don't risk giving the wrong information.
@@ -670,9 +679,9 @@ class Bookkeeper:
         if found_nothing:
             LOGGER.info('Found nothing to do. Exiting...')
         LOGGER.info('')
-        return exit_code
+        return exit_code, last_folder
 
-    def _run_subdomains(self, domains, mode, **kwargs):
+    def _run_subdomains(self, domains, main_folder, mode, **kwargs):
         """Execute bookkeeper in subdomains with the given `mode`."""
         if not domains:
             return
@@ -683,9 +692,13 @@ class Bookkeeper:
             except ValueError:
                 pass
             LOGGER.info(f'    {path}')
+        domain_folders = []    # Archived HistoryFolder for each domain
         for path in domains:
             domain_bookie = Bookkeeper(path)
-            yield domain_bookie.run(mode, **kwargs)
+            # pylint: disable-next=protected-access        # Same class
+            dom_exit, folder = domain_bookie._run_one_domain(mode, **kwargs)
+            domain_folders.append(folder)
+            yield dom_exit
             log.remove_bookkeeper_logfile(domain_bookie.history.path)
 
     def _user_confirmed(self):
