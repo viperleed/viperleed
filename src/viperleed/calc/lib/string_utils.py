@@ -9,7 +9,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-06-13'
 __license__ = 'GPLv3+'
 
@@ -20,6 +20,14 @@ import numpy as np
 
 from viperleed.calc.lib.itertools_utils import batched
 from viperleed.calc.lib.itertools_utils import consecutive_groups
+
+
+def harvard_commas(*items, sep='and'):
+    """Return a Harvard-comma-separated string of `items`."""
+    if len(items) > 2:  # pylint: disable=magic-value-comparison
+        commas = ', '.join(str(i) for i in items[:-1])
+        return commas + f', {sep} {items[-1]}'
+    return f' {sep} '.join(str(i) for i in items)
 
 
 def parent_name(dotted_name, remove=''):

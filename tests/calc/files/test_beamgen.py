@@ -4,7 +4,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-06-09'
 __license__ = 'GPLv3+'
 
@@ -14,7 +14,7 @@ import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import symmetry
-from viperleed.calc.classes.rparams import EnergyRange
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.files import beamgen
 from viperleed.calc.lib.version import Version
 
@@ -79,7 +79,7 @@ class TestGenerateBeamlist:
         # reasonable system
         rpars.THEO_ENERGIES = EnergyRange(stop=300)
         rpars.initTheoEnergies()
-        rpars.source_dir = tensorleed_path
+        rpars.paths.tensorleed = tensorleed_path
         rpars.updateDerivedParams()  # for TL_VERSION
         return slab, rpars, info
 

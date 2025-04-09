@@ -35,18 +35,18 @@ Linking parameters
 
 The main function of CONSTRAIN blocks is to **link** parameters together, i.e.,
 if one of them is at the *N*\ th index of its displacement range, all of them
-will be. A simple example would be to keep all vibrational amplitudes for a
+will be. A simple example would be to keep all vibration amplitudes for a
 given site type the same:
 
 ::
 
    = VIB_DELTA
-   Ir_top = -0.05 0.05 0.01       ! vary vibrational amplitudes for all atoms in Ir_top sites over the range [-0.05, 0.05] with step 0.01
-   Ir_def = -0.03 0.03 0.01       ! vary vibrational amplitudes for all atoms in Ir_def sites over the range [-0.03, 0.03] with step 0.01
+   Ir_top = -0.05 0.05 0.01       ! vary vibration amplitudes for all atoms in Ir_top sites over the range [-0.05, 0.05] with step 0.01
+   Ir_def = -0.03 0.03 0.01       ! vary vibration amplitudes for all atoms in Ir_def sites over the range [-0.03, 0.03] with step 0.01
 
    = CONSTRAIN
-   vib Ir_top = linked            ! keep the vibrational amplitudes of all Ir_top atoms the same at all times
-   vib Ir_def = linked            ! keep the vibrational amplitudes of all Ir_def atoms the same at all times
+   vib Ir_top = linked            ! keep the vibration amplitudes of all Ir_top atoms the same at all times
+   vib Ir_def = linked            ! keep the vibration amplitudes of all Ir_def atoms the same at all times
 
 Note that for linking to work, the linked parameters have to have the same
 number of steps. In the above example, the following would **not** work,
@@ -55,7 +55,7 @@ because the displacement ranges have different sizes:
 ::
 
    = CONSTRAIN
-   vib Ir = linked                ! keep the parameter index for the vibrational amplitudes of all Ir atoms the same at all times
+   vib Ir = linked                ! keep the parameter index for the vibration amplitudes of all Ir atoms the same at all times
 
 However, it can be made to work if the displacement
 ranges have the same size, i.e.,
@@ -63,13 +63,13 @@ ranges have the same size, i.e.,
 ::
 
    = VIB_DELTA
-   Ir_top = -0.05 0.05 0.01     ! vary vibrational amplitudes for all atoms in Ir_top sites over the range [-0.05, 0.05] with step 0.01
-   Ir_def = -0.025 0.025 0.005  ! vary vibrational amplitudes for all atoms in Ir_def sites over the range [-0.025, 0.025] with step 0.005
+   Ir_top = -0.05 0.05 0.01     ! vary vibration amplitudes for all atoms in Ir_top sites over the range [-0.05, 0.05] with step 0.01
+   Ir_def = -0.025 0.025 0.005  ! vary vibration amplitudes for all atoms in Ir_def sites over the range [-0.025, 0.025] with step 0.005
 
    = CONSTRAIN
-   vib Ir = linked              ! keep the vibrational amplitude index of all Ir_top atoms the same at all times
+   vib Ir = linked              ! keep the vibration amplitude index of all Ir_top atoms the same at all times
 
-Note that while in this example, the *indices* for vibrational variation
+Note that while in this example, the *indices* for vibration variation
 of Ir_top and Ir_def are tied together, that does in no way mean that the
 *values* have to be the same. Both the *base values* (defined in the
 :ref:`VIBROCC` file) and the actual values within the displacement
@@ -108,7 +108,7 @@ displacements range, or by giving a specific index:
 ::
 
    = VIB_DELTA
-   Ir_top = -0.05 0.05 0.02     ! vary vibrational amplitudes for Ir_top atoms over the range [-0.05, 0.05] with step 0.02
+   Ir_top = -0.05 0.05 0.02     ! vary vibration amplitudes for Ir_top atoms over the range [-0.05, 0.05] with step 0.02
 
    = CONSTRAIN
    vib Ir_top = -0.03           ! although a displacement range is defined for Ir_top, fix it's value to -0.03 instead

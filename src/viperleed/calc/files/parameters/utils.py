@@ -13,7 +13,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
@@ -181,23 +181,23 @@ class Assignment:
     Attributes
     ----------
     values_str : str
-        The right-hand side of the parameter assignment. Can also be
-        passed as a tuple of strings upon instantiation. In this case
+        The right-hand side of the parameter assignment. Can also
+        be passed as a tuple of strings upon creation. In this case
         elements will be joined.
-    flags_str : str
-        The left-hand side of the parameter assignment, excluding the
-        parameter itself. Can also be passed as a tuple of strings upon
-        instantiation. In this case elements will be joined.
     parameter : str
         The PARAMETER this assignment corresponds to.
+    flags_str : str
+        The left-hand side of the parameter assignment, excluding
+        the parameter itself. Can also be passed as a tuple of
+        strings upon creation. In this case elements will be joined.
     flags : tuple
         The flags of the parameter as a tuple of strings.
         This is automatically generated from the string
-        arguments given at instantiation.
+        arguments given at creation.
     values : tuple
         The values of the parameter as a tuple of strings.
         This is automatically generated from the string
-        arguments given at instantiation.
+        arguments given at creation.
     """
     values_str: str
     parameter: str

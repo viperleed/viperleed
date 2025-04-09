@@ -9,7 +9,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-06-14'
 __license__ = 'GPLv3+'
 
@@ -19,6 +19,7 @@ import logging
 import numpy as np
 
 from viperleed.calc.files import poscar
+from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.cli_base import ViPErLEEDCLI
@@ -47,7 +48,7 @@ class AttachBulkCLI(ViPErLEEDCLI, cli_name='attach_bulk'):
         except KeyboardInterrupt:
             return 1
         finally:
-            _tear_down_logger()
+            close_all_handlers(logging.getLogger())
 
     @staticmethod
     def _call_impl():
@@ -165,12 +166,6 @@ def _set_up_logger(logname):
     logging.basicConfig(level=logging.DEBUG, filename=logname,
                         filemode='w', format=_LOG_FORMAT)
     logging.getLogger().addHandler(_CONSOLE_HANDLER)
-
-
-def _tear_down_logger():
-    """Remove handlers and shutdown the logger."""
-    logging.getLogger().removeHandler(_CONSOLE_HANDLER)
-    logging.shutdown()
 
 
 if __name__ == '__main__':

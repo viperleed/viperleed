@@ -39,7 +39,7 @@ Acceptable values
    symmetry linking entirely, which is equivalent to setting the symmetry group
    to p1. ``True`` turns symmetry linking back on.
 -  One can also directly specify a symmetry group with ``SYM_DELTA = group``.
-   That group will then be used to restrict geometrical displacements or link
+   That group will then be used to restrict geometric displacements or link
    symmetry-equivalent atoms. This is functionally equivalent to changing the
    value of :ref:`ISYM`, but only for the operations that follow. Note that
    only symmetry *reduction* from the overall slab symmetry is allowed. See
