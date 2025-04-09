@@ -10,6 +10,10 @@ current optimization, stretching over multiple searches. If only one search
 is performed, it is mostly redundant with the
 :ref:`Search-progress.pdf<searchprogresspdf>` file.
 
+In addition to Search-report.pdf a Search-report.csv file is also created
+which contains the same information in a tabular format. This file can be
+imported into other programs for custom analysis.
+
 R-factor / Generations
 ~~~~~~~~~~~~~~~~~~~~~~
 
