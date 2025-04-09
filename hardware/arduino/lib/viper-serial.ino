@@ -43,11 +43,11 @@ void raise(byte error_code){
     -------------
     STATE_ERROR : error_code
     **/
-    errorTraceback[0] = currentState;
-    errorTraceback[1] = error_code;
 #ifdef STATE_ERROR
+    errorTraceback[0] = currentState;
     currentState = STATE_ERROR;
 #endif // Skip setting state to STATE_ERROR if no state machine is present.
+    errorTraceback[1] = error_code;
 }
 
 
