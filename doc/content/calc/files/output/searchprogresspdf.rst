@@ -8,6 +8,11 @@ Search-progress.pdf
 The Search-progress.pdf file is meant to give an overview of the current status
 of the search, and of the convergence, while the search is running. It contains
 several different plots, listed in the following.
+See also :ref:`Search-report.pdf<searchreportpdf>`.
+
+In addition to Search-progress.pdf a Search-progress.csv file is also created
+which contains the same information in a tabular format. This file can be
+imported into other programs for custom analysis.
 
 R-factor / Generations
 ~~~~~~~~~~~~~~~~~~~~~~
