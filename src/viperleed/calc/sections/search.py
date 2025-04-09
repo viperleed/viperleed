@@ -20,7 +20,6 @@ import signal
 import subprocess
 import sys
 import time
-from timeit import default_timer as timer
 
 import numpy as np
 import scipy
@@ -38,6 +37,9 @@ from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.time_utils import ExecutionTimer
+from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
+from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -46,40 +48,103 @@ logger = logging.getLogger(__name__)
 class SearchError(Exception):
     """Base class for exceptions in this module."""
 
-
-class SearchMaxIntensitiesError(SearchError):
-    message = ("TensErLEED stopped due to unreasonably high beam amplitudes.\n"
-               "This may be causes by convergence problems due to a too small "
-               "value of LMAX. "
-               "Alternatively, this error may be caused either by scatterers "
-               "with very small distances as a result of a very large "
-               "range used in DISPLACEMENTS."
-               "Check your input files and consider increasing LMAX or "
-               "decreasing the DISPLACEMENTS ranges.")
+    base_message = ''
+    detailed_message = ''
+    log_records = ()   # Strings in the log that signal this exception
+    _matcher = all     # Should all or any of the log records match?
 
     def __init__(self, *args, **kwargs):
-        super().__init__(self.message, *args, **kwargs)
+        """Initialize exception instance."""
+        message = (self.base_message
+                   + (' ' if self.base_message else '')
+                   + self.detailed_message)
+        if message:
+            args = message, *args
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def matches(cls, log_contents):
+        """Return whether this exception matches `log_contents`."""
+        return cls._matcher(rec in log_contents for rec in cls.log_records)
 
 
-class SearchSigbusError(SearchError):
-    message = ("TensErLEED stopped due to a SIGBUS signal.\n"
-               "This may be caused by a compiler error. "
-               "If you are using gfortran, consider lowering the optimization "
-               "level to '-O1' or '-O0' using the FORTRAN_COMP parameter.")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(self.message, *args, **kwargs)
+class SearchParameterError(SearchError):
+    """A value in PARAMETERS is inappropriate for the search."""
 
 
-class SearchInconsistentV0ImagError(SearchError):
-    message = ("TensErLEED search stopped because stored Delta files were "
-               "calculated with a different imaginary inner potential "
-               "(optical potential) than requested in PARAMETERS. "
-               "Make sure to use the same value for V0_IMAG for "
-               "Delta-Amplitudes and structure search.")
+class TensErLEEDSearchError(SearchError):
+    """A known, fatal TensErLEED error occurred during the search."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(self.message, *args, **kwargs)
+    base_message = ('TensErLEED error encountered in '
+                    'search. Execution cannot proceed.')
+
+
+class InconsistentV0ImagError(SearchParameterError, TensErLEEDSearchError):
+    """The V0i value in PARAMETERS does not match the one in the Deltas."""
+
+    detailed_message = (
+        'TensErLEED search stopped because stored Delta files were calculated '
+        'with a different imaginary inner potential (optical potential) than '
+        'requested in PARAMETERS. Make sure to use the same value of V0_IMAG '
+        'for delta amplitudes and structure search.'
+        )
+    log_records = ('Average optical potential value in rf.info is incorrect:',)
+
+
+class MaxIntensitiesError(SearchParameterError, TensErLEEDSearchError):
+    """Search failed with "too high intensity" error."""
+
+    detailed_message = (
+        'TensErLEED stopped due to unreasonably high beam amplitudes.\n'
+        'This may be caused by convergence problems due to a too small '
+        'value of LMAX. Alternatively, this error may be caused by '
+        'scatterers with very small distances as a result of a very '
+        'large range used in DISPLACEMENTS. Check your input files and '
+        'consider increasing LMAX or decreasing the DISPLACEMENTS ranges.'
+        )
+    log_records = ('MAX. INTENS. IN THEOR. BEAM',
+                   'IS SUSPECT',
+                   '****** STOP PROGRAM ******')
+
+
+class NotEnoughSlotsError(SearchParameterError):
+    """Could not spawn the requested N_CORES Open MPI processes."""
+
+    detailed_message = (
+        'GNU mpirun failed to allocate the number of processes '
+        'requested via N_CORES. Try reducing the N_CORES parameter.'
+        )
+    log_records = ('There are not enough slots available in the system',)
+
+
+class ProcessKilledError(SearchError):
+    """The mpirun process died. Typically, it required too much memory."""
+
+    detailed_message = (
+        'The search was stopped because the MPI process was killed by the '
+        'system. This is most likely because the process ran out of available '
+        'memory. Consider reducing the number of MPI processes by setting a '
+        'smaller value for N_CORES or limiting the parameter space in the '
+        'DISPLACEMENTS file.'
+        )
+    _matcher = any  # Two different error messages for Intel and GNU
+    log_records = (
+        'APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)',
+        '=   KILLED BY SIGNAL: 9 (Killed)',
+        )
+
+
+class SigbusError(TensErLEEDSearchError):
+    """Tried to write to a non-existing memory address."""
+
+    detailed_message = (
+        'TensErLEED stopped due to a SIGBUS signal.\nThis may be caused by a '
+        'compiler error. If you are using gfortran, consider lowering the '
+        'optimization level to \'-O1\' or \'-O0\' using the FORTRAN_COMP '
+        'parameter.'
+        )
+    log_records = ('received signal SIGBUS',
+                   'undefined portion of a memory object')
 
 
 def processSearchResults(sl, rp, search_log_path, final=True):
@@ -286,7 +351,7 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
 
 
 def _check_search_log(search_log_path):
-    """Check the file at `search_log_path` for fatal TensErLEED errors.
+    """Check the file at `search_log_path` for known fatal errors.
 
     Parameters
     ----------
@@ -295,39 +360,33 @@ def _check_search_log(search_log_path):
 
     Raises
     ------
-    OSError
-        When failing to open or read a non-None `search_log_path`.
-    RuntimeError                                                                # TODO: would be nice to raise a nicer error. Some TensErLEEDExecutionError perhaps?
-        If an error message is found in the search log file that
-        corresponds to a fatal TensErLEED error.
+    SearchError
+        If error messages are found in the log file at `search_log_path`
+        that correspond to a fatal error (from TensErLEED or other
+        source).
     """
-    if search_log_path is None:
+    if not search_log_path:
         return
 
+    search_log_path = Path(search_log_path)
     try:
-        with open(search_log_path, "r", encoding="utf-8") as search_log:
-            log_content = search_log.read()
+        log_contents = search_log_path.read_text(encoding='utf-8')
     except OSError:
-        logger.error(f"Could not read search logfile {search_log_path}. "
-                     "Execution will continue, but TensErLEED errors related "
-                     "to the search may not be detected properly.")
+        logger.error(f'Could not read search log file {search_log_path}. '
+                     'Execution will continue, but errors related '
+                     'to the search may not be reported properly.')
         return
-
-    gen_err_msg = ("TensErLEED Error encountered in search. "
-                   "Execution cannot proceed.")
-    # (1) unreasonably high amplitude values:
-    if ("MAX. INTENS. IN THEOR. BEAM" in log_content
-            and "IS SUSPECT" in log_content
-            and "****** STOP PROGRAM ******" in log_content):
-        raise SearchMaxIntensitiesError from None
-    # (2) SIGBUS signal
-    elif ("received signal SIGBUS" in log_content
-          and "undefined portion of a memory object" in log_content):
-        raise SearchSigbusError from None
-    # (3) different V0_IMAG between Deltas and Search
-    elif ("Average optical potential value in rf.info is incorrect:" 
-          in log_content):
-        raise SearchInconsistentV0ImagError from None
+    _known_errors = (
+        MaxIntensitiesError,
+        SigbusError,
+        InconsistentV0ImagError,
+        ProcessKilledError,
+        NotEnoughSlotsError,
+        )
+    try:
+        raise next(e for e in _known_errors if e.matches(log_contents))
+    except StopIteration:  # No error
+        pass
 
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
@@ -710,33 +769,29 @@ def search(sl, rp):
         rp.setHaltingLevel(3)
         return None
 
-    # check for mpirun, decide whether to use parallelization
-    usempi = True
-    if rp.N_CORES == 1:
-        logger.warning(
-            "The N_CORES parameter is set to 1. The search will be run "
-            "without multiprocessing. This will be much slower!")
-        usempi = False
-
-    if usempi and shutil.which("mpirun", os.X_OK) is None:
-        usempi = False
-        logger.warning(
-            "mpirun is not present. Search will be compiled and executed "
-            "without parallelization. This will be much slower!")
+    # Decide whether to use parallelization
+    usempi = rp.N_CORES > 1 and shutil.which('mpirun')
+    if not usempi:
+        reason = (
+            f'The N_CORES parameter is set to {rp.N_CORES}' if rp.N_CORES <= 1
+            else 'mpirun is not present'
+            )
+        logger.warning(f'{reason}. The search will be run without '
+                       'parallelization. This will be much slower!')
 
     _find_compiler = None
     if usempi and not rp.FORTRAN_COMP_MPI[0]:
         _find_compiler = rp.getFortranMpiComp
     elif not rp.FORTRAN_COMP[0]:
         _find_compiler = rp.getFortranComp
-
     if _find_compiler:
         try:
             _find_compiler()
         except Exception as exc:
             _mpi = 'mpi ' if usempi else ''
-            logger.error(f"No fortran {_mpi}compiler found, cancelling...")
-            raise FileNotFoundError("Fortran compile error") from exc
+            logger.error(f'No fortran {_mpi}compiler found, cancelling...')
+            raise FileNotFoundError('Fortran compile error') from exc
+
     # get fortran files
     try:
         tl_source = rp.get_tenserleed_directory()
@@ -749,15 +804,16 @@ def search(sl, rp):
                          if 'mpi' not in f.name)
             src_file = next(src_files, None)
         if src_file is None:
-            raise FileNotFoundError(f"No Fortran source for search in {tl_path}")
+            raise FileNotFoundError('No Fortran source for '
+                                    f'search in {tl_path}')
         shutil.copy2(src_file, src_file.name)
         libpath = tl_path / 'lib'
-        libpattern = "lib.search"
+        libpattern = 'lib.search'
         if usempi and rp.TL_VERSION <= Version('1.7.3'):
-            libpattern += ".mpi"
-        lib_file = next(libpath.glob(libpattern + "*"), None)
+            libpattern += '.mpi'
+        lib_file = next(libpath.glob(libpattern + '*'), None)
         if lib_file is None:
-            raise FileNotFoundError(f"File {libpattern}.f not found.")
+            raise FileNotFoundError(f'File {libpattern}.f not found.')
 
         # copy to work dir
         shutil.copy2(lib_file, lib_file.name)
@@ -768,16 +824,15 @@ def search(sl, rp):
         else:
             hashname = ""
 
-        randname = "MPIrandom_.o" if usempi else "random_.o"
+        randname = 'MPIrandom_.o' if usempi else 'random_.o'
         if rp.TL_VERSION <= Version('1.7.3'):
-            # these are short C scripts - use pre-compiled versions
-
-            # try to copy randomizer lib object file
+            # Try to copy randomizer lib object file
+            # These are short C scripts - use pre-compiled versions
             try:
                 shutil.copy2(libpath / randname, randname)
             except FileNotFoundError:
-                logger.error("Could not find required random_.o object file. "
-                             "You may have forgotten to compile random_.c.")
+                logger.error(f'Could not find required {randname} file. '
+                             'You may have forgotten to compile random_.c.')
                 raise
 
         globalname = "GLOBAL"
@@ -795,27 +850,24 @@ def search(sl, rp):
         validate_multiple_files(files_to_check, logger,
                                 "search", rp.TL_VERSION)
 
-    # compile fortran files
-    searchname = f"search-{rp.timestamp}"
-    if usempi:
-        fcomp = rp.FORTRAN_COMP_MPI
-    else:
-        fcomp = rp.FORTRAN_COMP
-    logger.info("Compiling fortran input files...")
-    # compile
+    # Prepare to compile fortran files
+    searchname = f'search-{rp.timestamp}'
+    fcomp = rp.FORTRAN_COMP_MPI if usempi else rp.FORTRAN_COMP
+    logger.info('Compiling fortran input files...')
+
     # compile task could be inherited from general CompileTask (issue #43)
     ctasks = [(f"{fcomp[0]} -o lib.search.o -c", lib_file.name, fcomp[1])]
     if hashname:
         ctasks.append((f"{fcomp[0]} -c", hashname, fcomp[1]))
     ctasks.append((f"{fcomp[0]} -o restrict.o -c", "restrict.f", fcomp[1]))
-    format_tag = ""
     _fixed_format = any(f.endswith('.f90')
                         for f in (lib_file.name, src_file.name, hashname))
+    is_gfortran = any(s in fcomp[0]
+                      # Assume that mpifort uses gfortran
+                      for s in ('gfortran', 'mpifort'))
+    format_tag = ''
     if _fixed_format:
-        format_tag = "-fixed"
-        if any(s in fcomp[0] for s in ("gfortran", "mpifort")):
-            # assume that mpifort also uses gfortran
-            format_tag = "--fixed-form"  # different formatting string
+        format_tag =  '--fixed-form' if is_gfortran else '-fixed'
     ctasks.append(
         (f"{fcomp[0]} -o search.o -c {format_tag}", src_file.name, fcomp[1])
         )
@@ -878,31 +930,42 @@ def search(sl, rp):
     # start search process
     repeat = True
     genOffset = 0
-    last_debug_write_gen = 0
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
-    parab_x0 = None     # starting guess for parabola                           # TODO: would be nicer to incorporate it into a ParabolaFit class
+    parab_x0 = None    # starting guess for parabola                            # TODO: would be nicer to incorporate it into a ParabolaFit class
     rfac_predict = []  # tuples (gen, r) from parabola fit                      # TODO: would be nicer to incorporate it into a ParabolaFit class
     realLastConfig = {"all": [], "best": [], "dec": []}                         # TODO: would be nicer with a SearchConfigurationTracker class that has an .update
     realLastConfigGen = {"all": 0, "best": 0, "dec": 0}
     convergedConfig = {"all": None, "best": None, "dec": None}
     lastconfig = None
     rp.searchMaxGenInit = rp.SEARCH_MAX_GEN
-    absstarttime = timer()
-    tried_repeat = False        # if SD.TL is not written, try restarting
+    since_started = ExecutionTimer()
+    since_last_debug = ExpiringOnCountTimer(
+            interval=rp.output_interval,
+            count_start=0,
+            )
+    tried_repeat = False  # if SD.TL is not written, try restarting
     pgid = None
     logger.info("Starting search. See files Search-progress.pdf "
                 "and SD.TL for progress information.")
+
+    # Prepare the command to be run via subprocess
+    executable = os.path.join('.', searchname)
+    if usempi:
+        command = ['mpirun', '-n', str(rp.N_CORES)]
+    if usempi and is_gfortran:
+        # Assume we're using OpenMPI: we need to specify the use of all
+        # CPU threads explicitly, otherwise OpenMPI will use only the
+        # physical cores. However, our auto-detected N_CORES counts all
+        # the logical cores, not only the physical ones.
+        command.append('--use-hwthread-cpus')
+    command.append(executable)
+
     while repeat:                                                               # TODO: all this mess would be nicer to handle with a state machine approach. This would at least help readability on the various ways things are handled
         repeat = False
         interrupted = False
         proc = None
-        if usempi:
-            command = ["mpirun", "-n", str(rp.N_CORES),
-                       os.path.join(".", searchname)]
-        else:
-            command = [os.path.join('.', searchname),]
         # if LOG_SEARCH -> log search
         if search_log_path:
             log_exists = search_log_path.is_file()
@@ -944,13 +1007,14 @@ def search(sl, rp):
                          "Check files SD.TL and rf.info.")
 
         # MONITOR SEARCH
-        searchStartTime = timer()
-        last_debug_print_time = searchStartTime
+        search_eval_timer = ExpiringTimerWithDeadline(                          # TODO: would be nicer with a QTimer, or even a QFileSystemWatcher
+            interval=rp.searchEvalTime,  # How often to read SD.TL
+            deadline=900,   # Max 15 min without an SD.TL produced
+            )
+        since_last_debug.synchronize_with(search_eval_timer)
         filepos = 0
         timestep = 1  # time step to check files
         # !!! evaluation time could be higher - keep low only for debugging; TODO
-        evaluationTime = rp.searchEvalTime  # how often should SD.TL be evaluated # TODO: would be nicer with a QTimer, or even a QFileSystemWatcher
-        lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""
         sdtlGenNum = 0
         gaussianWidthOri = rp.GAUSSIAN_WIDTH
@@ -980,10 +1044,8 @@ def search(sl, rp):
                     comment = f"GAUSSIAN_WIDTH = {rp.GAUSSIAN_WIDTH}"
                     logger.info("GAUSSIAN_WIDTH parameter changed. "
                                 "Search will restart.")
-                t = timer() - searchStartTime
-                if (t - lastEval > evaluationTime) or stop:
+                if search_eval_timer.has_expired() or stop:
                     # evaluate
-                    lastEval = t
                     newData = []
                     if os.path.isfile("SD.TL"):
                         filepos, content = iosearch.readSDTL_next(
@@ -994,7 +1056,8 @@ def search(sl, rp):
                                 content, whichR=rp.SEARCH_BEAMS,
                                 n_expect=rp.SEARCH_POPULATION
                                 )
-                    elif t >= 900 and rp.HALTING < 3:                           # TODO: nicer with a QTimer timeout
+                    elif (search_eval_timer.has_reached_deadline()              # TODO: nicer with a QTimer timeout
+                          and rp.HALTING < 3):
                         stop = True
                         if tried_repeat:
                             logger.warning(
@@ -1049,18 +1112,18 @@ def search(sl, rp):
                                 break
                     # decide to write debug info
                     # will only write once per SD.TL read
-                    time_since_print = timer() - last_debug_print_time
                     current_gen = gens[-1] if gens else 0
-                    if (current_gen - last_debug_write_gen > rp.output_interval):
-                        speed = 1000*(timer() - absstarttime)/current_gen # in s/kG
+                    if since_last_debug.count_expired(current_gen):
+                        # "speed" is actually the inverse of a
+                        # speed, in seconds per 1000 generations
+                        speed = 1000 * since_started.how_long() / current_gen
                         logger.debug(
-                            f"R = {min(rfacs)} (Generation {current_gen}, "
-                            f"{time_since_print:.3f} s since "
-                            f"gen. {last_debug_write_gen}, "
-                            f"{speed:.1f} s/kG overall)"
+                            f'R = {min(rfacs)} (Generation {current_gen}, '
+                            f'{since_last_debug.how_long():.3f} s since '
+                            f'gen. {since_last_debug.previous_count}, '
+                            f'{speed:.1f} s/kG overall)'
                             )
-                        last_debug_print_time = timer()
-                        last_debug_write_gen = current_gen
+                        since_last_debug.restart()
                         check_datafiles = True
                     if newData:
                         _, _, lastconfig = newData[-1]

@@ -21,6 +21,7 @@ import sys
 from viperleed.calc.classes.rparams import Rparams, SymmetryEps
 from viperleed.calc.classes.rparams.defaults import DEFAULTS as PARAM_DEFAULTS
 from viperleed.calc.files import poscar
+from viperleed.calc.lib.log_utils import debug_or_lower
 from viperleed.cli_base import ViPErLEEDCLI, positive_float
 
 
@@ -45,6 +46,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         slab = self.read_poscar(parsed_args)
         processed_slab = self.process_slab(slab, parsed_args)
         self.write_output(processed_slab, parsed_args)
+        self._close_open_files(parsed_args)
         return 0
 
     def add_infile_argument(self, parser):
@@ -77,7 +79,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                             help=help_,
                             default=sys.stdin)
 
-    def add_outfile_argument(self, parser, help_=None):
+    def add_outfile_argument(self, parser):
         """Add an optional --outfile/-o argument to parser.
 
         This method is automatically called by the base implementation
@@ -202,6 +204,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
             return poscar.read(args.infile)
         except (ValueError, poscar.POSCARError) as exc:
             self.parser.error(f'Failed to read POSCAR. Stopping. Info: {exc}')
+        return None  # Unreachable as .error does SystemExit
 
     def write_output(self, processed_slab, args):
         """Write output to an output file or the terminal.
@@ -217,7 +220,7 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
             The slab processed by this utility.
         args : argparse.Namespace
             The processed command-line arguments.
-        
+
         Raises
         ------
         AttributeError
@@ -234,11 +237,23 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'also overriding write_output, make sure to '
                                  'call add_outfile_argument in your overridden'
                                  ' add_parser_arguments') from None
-        log_level = self.get_logger().getEffectiveLevel()
         poscar.write(processed_slab,
                      filename=args.outfile,
                      comments='none',
-                     silent=log_level<=logging.DEBUG)
+                     silent=debug_or_lower(self.get_logger()))
+
+    def _close_open_files(self, args):
+        """Close any open file in args."""
+        cli_args = ('infile', 'outfile')
+        for cli_arg in cli_args:
+            try:
+                file = getattr(args, cli_arg)
+            except AttributeError:
+                # Someone has removed the CLI argument. Don't complain
+                pass
+            if file in (sys.stdin, sys.stdout):  # Leave terminal open
+                continue
+            file.close()
 
 
 EPS_DEFAULT = PARAM_DEFAULTS['SYMMETRY_EPS']
@@ -261,6 +276,7 @@ class _PoscarSymmetryCLI(_PoscarStreamCLI, ABC, cli_name=None):
                   'not provided, the value of --symmetry-eps is used.'),
             type=positive_float,
             )
+        super().add_parser_arguments(parser)
 
     def prepare_rpars(self, slab, args):
         """Return an Rparams with symmetry information, and update slab."""

@@ -22,7 +22,7 @@ from pytest_cases import fixture, parametrize, parametrize_with_cases
 from pytest_cases.filters import id_has_suffix
 
 from viperleed.calc import symmetry
-from viperleed.calc.lib.base import angle as angle_radians
+from viperleed.calc.lib.math_utils import angle as angle_radians
 
 from ...helpers import duplicate_all
 from ..poscar_slabs import make_poscar_ids
@@ -395,45 +395,47 @@ class TestSlabSymmetrization:
         'square_cm_1m1': 'Often reduced to pm',
         'square_pmm': 'Sometimes reduced to pm',
         'square_cmm': 'Sometimes reduced to cm',
-        'poscar_ag100': 'Often reduced from p4m to cm',
-        'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
         'poscar_36carbon_atoms_p6m': 'Often reduced to cmm',
-        'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
-        'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
-        'poscar_mgo': 'Sometimes reduced to cmm from p4m',
-        'poscar_sb_si_111': 'Sometimes symmetry increased to rcm from pm',
-        'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
-        'poscar_tio2_small': 'Sometimes reduced to pm from pmm',
+        'poscar_ag100': 'Often reduced from p4m to cm',
         'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
             'Sometimes reduced to p1 from p3'
             ),
-        'bulk_repeat_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
-        'infoless_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
         'poscar-Cu2O(111)_1x1_surplus_oxygen': (
             'Sometimes reduced to cm from p3m1'
             ),
+        'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
+        'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
+        'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
+        'poscar_mgo': 'Sometimes reduced to cmm from p4m',
+        'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
+        'poscar_tio2_small': 'Sometimes reduced to pm from pmm',
+        'poscar-SiC_H': 'Often reduced to cm from p3m1',
+        'poscar_sb_si_111': 'Sometimes symmetry increased to rcm from pm',
+        'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
         'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
+            'Sometimes reduced to p1 from p3'
+            ),
+        'infoless_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
         'infoless_poscar-Cu2O(111)_1x1_surplus_oxygen': (
             'Sometimes reduced to cm from p3m1'
             ),
+        'infoless_poscar-diamond': 'Invalid pm. May be correct rcm here',
         'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'infoless_poscar-Fe3O4_(001)_cod1010369': (
             'Sometimes reduced to cm from cmm'
             ),
-        'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
+        'infoless_poscar-graphene': 'Sometimes reduced to pmg from pmm',
         'infoless_poscar-In2O3_(111)': 'Sometimes reduced to p1 from p3',
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
-        'infoless_poscar-diamond': 'Invalid pm. May be correct rcm here',
-        'infoless_poscar-graphene': 'Sometimes reduced to pmg from pmm',
         'infoless_poscar-MgO_cod_9006456': 'Sometimes reduced to cmm from p4m',
         'infoless_poscar-TiO2_supercell': 'Sometimes reduced to pm from pmm',
         'infoless_poscar-TiO2_small': 'Sometimes reduced to pm/p1 from pmm',
-        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
-            'Sometimes reduced to p1 from p3'
-            ),
+        'infoless_poscar-SiC_H': 'Often reduced to cm from p3m1',
         'infoless_poscar-Sb_Si(111)_rect': (
             'Sometimes symmetry increased to rcm from pm'
             ),
+        'bulk_repeat_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
         'double_bulk-fe3o4': 'Often reduced to pm/p1 (from pmm)',
         'fe3o4_bulk': 'Known invalid group pm. May be correct pmm here.',
         }
