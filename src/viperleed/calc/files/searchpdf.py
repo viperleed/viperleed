@@ -606,13 +606,14 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
             pass
     close_figures(plt, fig)
 
+
+    # Output for Search-report.csv
     if csv_name is None:
         # No CSV output requested
         return
 
     report_csv_data = [allgens, allmin, allmax, allmean]
-    headers = "Generation,R_min,R_max,R_mean"
-    # optionally add timestamps if available
+    headers = 'Generation,R_min,R_max,R_mean'
 
     np.savetxt(
         csv_name,
