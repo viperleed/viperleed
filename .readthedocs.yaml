@@ -22,7 +22,6 @@ sphinx:
 # install the dependencies
 python:
    install:
-   - requirements: requirements-dist.txt
-   - requirements: requirements-doc.txt
+   - requirements: requirements/doc.txt
    - method: pip
      path: .  # install viperleed from repository
