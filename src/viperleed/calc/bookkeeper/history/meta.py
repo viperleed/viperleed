@@ -13,10 +13,13 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-13'
 __license__ = 'GPLv3+'
 
+import ast
 import hashlib
+from collections import namedtuple
 from configparser import ConfigParser
 from pathlib import Path
 
+from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.lib.checksums import with_posix_line_endings
 from viperleed.calc.lib.string_utils import strip_comments
 
@@ -39,8 +42,17 @@ _SECTIONS = {
         'hash': _EMPTY,
         'with': _EMPTY,  # hash of 'main' directory
         },
+    'domains': {
+        # Contains information about whether the folder has been
+        # created with any other during a DOMAIN calculation.
+        'main': _EMPTY,     # (path, hash)
+        'domains': _EMPTY,  # ((path, hash), ...)
+        },
     }
 
+# A simple container of domain information,
+# as in the keys of the domains section.
+DomainInfo = namedtuple('DomainInfo', ('path', 'hash_'))
 
 # Hashing inspired by https://stackoverflow.com/questions/24937495, but
 # uses posix-style paths relative to the root one instead of bare file
@@ -56,6 +68,34 @@ class BookkeeperMetaFile:
         self._folder_path = Path(path)
         self._parser = ConfigParser()
         self._parser.read_dict(_SECTIONS)
+
+    @property
+    def domains(self):
+        """Return a dictionary of domain information."""
+        domains = {}
+        main = self._parser['domains']['main']
+        subdomains = self._parser['domains']['domains']
+        try:
+            domains['main'] = DomainInfo(*ast.literal_eval(main))
+        except (TypeError, ValueError, MemoryError,
+                RecursionError, SyntaxError):
+            if main != _EMPTY:
+                raise
+        try:
+            subdomains_tuple = ast.literal_eval(subdomains)
+        except (TypeError, ValueError, MemoryError,
+                RecursionError, SyntaxError):
+            if subdomains != _EMPTY:
+                raise
+        else:
+            domains['domains'] = tuple(DomainInfo(*d)
+                                       for d in subdomains_tuple)
+        if len(domains) > 1:
+            raise MetadataError(
+                f'Found corrupted \'domains\' section {domains}. '
+                'Contains both \'main\' and \'domains\'.'
+                )
+        return domains
 
     @property
     def folder(self):
@@ -109,6 +149,38 @@ class BookkeeperMetaFile:
         self._update_hash_from_folder(self.folder)
         self._parser['archived']['hash'] = self.hash_
 
+    def mark_as_domains_main(self, domains):
+        """Register this metadata as the main of a DOMAINS calculation.
+
+        Parameters
+        ----------
+        domains : Sequence of tuples
+            Items are tuples containing the path and the hash of
+            the main folder for each the subdomains that should
+            be registered. All items in the tuple must be strings.
+
+        Returns
+        -------
+        None.
+        """
+        parser_domains = tuple(tuple(domain) for domain in domains) or _EMPTY
+        self._parser.set('domains', 'domains', str(parser_domains))
+
+    def mark_as_domain(self, main):
+        """Register this metadata as a subdomain of a `main` one.
+
+        Parameters
+        ----------
+        main : tuple
+            The path and the hash of the main folder.
+            All items must be strings.
+
+        Returns
+        -------
+        None.
+        """
+        self._parser.set('domains', 'main', str(tuple(main) or _EMPTY))
+
     def read(self):
         """Read the metadata file in the root folder."""
         if not self.file.is_file():
@@ -117,8 +189,11 @@ class BookkeeperMetaFile:
         with self.file.open('r', encoding='utf-8') as meta_file:
             # Skip header lines
             lines = (line for line in meta_file if strip_comments(line))
+            # And skip _EMPTY_ ones
+            lines = (line for line in lines if not line.endswith(_EMPTY))
             self._parser.read_file(lines)
         self._hash = self._parser['archived']['hash']
+        _ = self.domains   # Raises MetadataError for corrupted section
 
     def write(self):
         """Store the information to file."""
