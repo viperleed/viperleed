@@ -33,8 +33,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                            outname="Search-progress.pdf",
                            csvname="Search-progress.csv",
                            markers=None,
-                           rfac_predict=None,
-                           timestamps=None):
+                           rfac_predict=None):
     """
     Writes a pdf file with reports on R-factor convergence and current
     parameter scatter. Also writes a csv file containing the most basic
@@ -62,8 +61,6 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     rfac_predict : list of float, optional
         List of r-factor values determined from the parabola fit, by
         generation. The default is [].
-    timestamps : list of float, optional
-        List of timestamps for each generation. The default is None.
 
     Returns
     -------
