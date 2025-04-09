@@ -486,7 +486,7 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
         The file name to write to. The default is "Search-report.pdf".
     csv_name : str, optional
         The file name of the csv file to write to. The default is
-        "Search-report.csv".
+        "Search-report.csv". If None, no CSV file is written.
 
     Returns
     -------
