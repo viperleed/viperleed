@@ -874,7 +874,7 @@ class TestDomainRootExplorer:
         domain.logs.infer_run_info.return_value = {}
         assert domain.infer_run_info() is main_info
 
-    def test_relative_path_from_domain(self, domain, explorer):
+    def test_relative_path_from_domain(self, domain):
         """Check the expected return of _relative_path."""
         # pylint: disable-next=protected-access           # OK in tests
         domain._path = Path('/some/other/path')
@@ -882,7 +882,7 @@ class TestDomainRootExplorer:
         result = domain._relative_path(domain.path/'abc')
         assert result == Path('abc').as_posix()
 
-    def test_relative_path_from_main(self, domain, explorer):
+    def test_relative_path_from_main(self, domain):
         """Check the expected return of _relative_path."""
         # pylint: disable-next=protected-access           # OK in tests
         result = domain._relative_path(domain.path/'abc')

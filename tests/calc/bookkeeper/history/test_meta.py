@@ -18,7 +18,6 @@ from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
-from viperleed.calc.bookkeeper.history.meta import _EMPTY
 from viperleed.calc.bookkeeper.history.meta import _HEADER
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.history.meta import _SECTIONS
@@ -132,7 +131,6 @@ class TestBookkeeperMetaFile:
         """Check the value of the domains property."""
         # pylint: disable-next=protected-access           # OK in tests
         meta._parser['domains'].update(parser_contents)
-        print(dict(meta._parser['domains']))
         assert meta.domains == expect
 
     def test_file_property(self, meta, mock_path):
