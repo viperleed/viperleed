@@ -620,7 +620,30 @@ class Bookkeeper:
                 else BookkeeperExitCode.NOTHING_TO_DO)
 
     def _run_one_domain(self, mode, requires_user_confirmation=True):
-        """Execute Bookkeeper in `mode` in a single domain."""
+        """Execute Bookkeeper in `mode` for a single domain.
+
+        Parameters
+        ----------
+        mode : str or BookkeeperMode
+            Which bookkeeper mode to use. See help(BookkeeperMode).
+        requires_user_confirmation : bool, optional
+            Whether user confirmation is necessary before proceeding
+            with destructive actions. Only used in DISCARD_FULL mode.
+            Default is True.
+
+        Returns
+        -------
+        exit_code : BookkeeperExitCode
+
+        Raises
+        ------
+        NotImplementedError
+            If `mode` is a valid bookkeeper mode, but
+            there is no method named _run_<mode>_mode.
+        OSError
+            If creation of the history folder or any of the subfolders
+            where results are to be stored fails.
+        """
         try:
             runner = getattr(self, f'_run_{mode.name.lower()}_mode')
         except AttributeError as exc:
