@@ -68,10 +68,11 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
                     home=cwd,
                     )
             finally:
-                _copy_files_from_manifest(cwd)
+                domains = _copy_files_from_manifest(cwd)
 
-        # Run bookkeeper in archive mode
-        bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+        # Run bookkeeper in archive mode,
+        # propagating to domains if needed
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE, domains=domains)
 
         # Finally clean up work if requested
         keep_workdir = args.keep_workdir or exit_code
@@ -145,7 +146,20 @@ def _copy_input_files_to_work(work_path):
 
 
 def _copy_files_from_manifest(to_path):
-    """Copy all files listed in file 'manifest' back `to_path`."""
+    """Copy all files listed in file 'manifest' back `to_path`.
+
+    Parameters
+    ----------
+    to_path : Path
+        Where files/folders listed in the manifest file of
+        the current directory should be copied to.
+
+    Returns
+    -------
+    domain_paths : list
+        Absolute paths to the subfolders of `to_path` that contain
+        the results for subdomains in a DOMAIN calculation.
+    """
     manifest = ManifestFile()
     manifest.read()
     if manifest.has_absolute_paths:
@@ -153,6 +167,7 @@ def _copy_files_from_manifest(to_path):
                                 f'not contained in {Path.cwd()}. Destination '
                                 'is not well defined.')
 
+    dest_folders = []
     for folder, contents in manifest.iter_sections(relative=True):
         dest_folder = to_path/folder
         dest_folder.mkdir(exist_ok=True)
@@ -163,6 +178,8 @@ def _copy_files_from_manifest(to_path):
                 _copy(src, dest_folder / item)
             except OSError as exc:
                 print(f'Error copying {src} to home directory: {exc}')          # TODO: Why no logging?
+        dest_folders.append(dest_folder)
+    return dest_folders[1:]  # The first one is always to_path
 
 
 def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
