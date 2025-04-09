@@ -332,8 +332,6 @@ void readFromSerial() {
         // A full message has been read.
         if (byteRead == MSG_END) {
             readingFromSerial = false;
-            /*for (int i; i < numBytesRead; i++)  // echo message, for debug
-                Serial.write(serialInputBuffer[i]);*/
             newMessage = decodeAndCheckMessage();
             return;
         }

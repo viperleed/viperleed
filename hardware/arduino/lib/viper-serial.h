@@ -87,13 +87,6 @@ byte numBytesRead = 0;
 // bytes read from the serial line.
 byte serialInputBuffer[MSG_MAX_LENGTH];
 
-/** TODO:
-    Judging from the code, and if I didn't misinterpret anything, I think
-    we can have only one buffer for the input/output to the PC, so we can
-    replace "data_received" and "data_send" with a single "message" array
-    Alternatively, we can have them be a decodedCommand[] and encodedReply[]
-*/
-
 
 /** ------------------- Globals for firmware functions ------------------- **/
 // Timers (defined in milliseconds)
