@@ -13,6 +13,9 @@ See also :ref:`Search-report.pdf<searchreportpdf>`.
 In addition to Search-progress.pdf a Search-progress.csv file is also created
 which contains the same information in a tabular format. This file can be
 imported into other programs for custom analysis.
+Search-progress.csv is a :term:`CSV` file containing four columns, listing the
+generation, and the corresponding minimum, mean and maximum |R factor| of the
+population for all search generations that were queried by |calc|.
 
 R-factor / Generations
 ~~~~~~~~~~~~~~~~~~~~~~
