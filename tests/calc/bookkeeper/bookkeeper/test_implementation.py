@@ -165,12 +165,7 @@ class TestBookkeeperDomains:
         exit_code = main_bookie.run(mode, **kwargs, domains=domains)
 
         n_calls = 1 + len(domains)
-        assert combine_exit.mock_calls == [
-            # One call per subdomain
-            *(mocker.call([mock_exit]) for _ in domains),
-            # Plus one for the main one
-            mocker.call([mock_exit]*n_calls),
-            ]
+        assert combine_exit.mock_calls == [mocker.call([mock_exit]*n_calls)]
         assert run.mock_calls == [mocker.call(mode, **kwargs)
                                   for _ in range(n_calls)]
         assert exit_code is mock_exit
