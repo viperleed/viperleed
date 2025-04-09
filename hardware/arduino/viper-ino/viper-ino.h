@@ -13,7 +13,7 @@ Date: 26.04.2021
 
 // arduino_utils.h, states-def.h and viper-serial.h come from ../lib
 #include "arduino_utils.h"  // from ../lib; for setChipSelectHigh,
-                            // getMedian16, bigger16, biggest16
+                            // getMedian, bigger, biggest
 #include "states-def.h"     // Basic state manchine definitions
 #include "viper-serial.h"   // Serial-communication functions and constants
 #include "ADC_AD7705.h"     // Settings of the currently used ADC

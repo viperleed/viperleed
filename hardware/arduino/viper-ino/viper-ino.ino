@@ -519,7 +519,7 @@ void calibrateADCsAtAllGains(){
         for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: using the externalADCs array of struct would make this easier: externalADCs[iADC].channel
             for (int offsetOrGain = 0; offsetOrGain < 2; offsetOrGain++) {
-                int32_t median = getMedian32(
+                int32_t median = getMedian(
                     selfCalDataForMedian[0][iADC][offsetOrGain],
                     selfCalDataForMedian[1][iADC][offsetOrGain],
                     selfCalDataForMedian[2][iADC][offsetOrGain]
