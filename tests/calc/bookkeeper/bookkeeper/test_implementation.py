@@ -170,7 +170,7 @@ class TestBookkeeperDomains:
                                   for _ in range(n_calls)]
         assert exit_code is mock_exit
         # pylint: disable-next=magic-value-comparison
-        assert 'Running bookkeeper in domain folders:' in caplog.text
+        assert 'Running bookkeeper in domain folders' in caplog.text
 
     def test_run_domains_logging(self, tmp_path, mocker):
         """Check log messages are dispatched to the right files."""

@@ -31,6 +31,7 @@ from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.lib.log_utils import logging_silent
+from viperleed.calc.lib.string_utils import harvard_commas
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import MOVED_LABEL
@@ -685,21 +686,29 @@ class Bookkeeper:
         """Execute bookkeeper in subdomains with the given `mode`."""
         if not domains:
             return
-        LOGGER.info('Running bookkeeper in domain folders:')
+        domain_rel_paths = []
         for path in domains:
             try:
                 path = path.relative_to(self.cwd).as_posix()
             except ValueError:
                 pass
-            LOGGER.info(f'    {path}')
+            domain_rel_paths.append(path)
+        LOGGER.info('Running bookkeeper in domain folders %s',
+                    harvard_commas(*domain_rel_paths))
         domain_folders = []    # Archived HistoryFolder for each domain
         for path in domains:
             domain_bookie = Bookkeeper(path)
             # pylint: disable-next=protected-access        # Same class
             dom_exit, folder = domain_bookie._run_one_domain(mode, **kwargs)
+            if folder:
+                folder.mark_as_domain(self.cwd, main_folder)
+                folder.metadata.write()
             domain_folders.append(folder)
             yield dom_exit
             log.remove_bookkeeper_logfile(domain_bookie.history.path)
+        if main_folder:
+            main_folder.mark_as_domains_main(domain_rel_paths, domain_folders)
+            main_folder.metadata.write()
 
     def _user_confirmed(self):
         """Return whether the user wants to proceed with discarding."""
