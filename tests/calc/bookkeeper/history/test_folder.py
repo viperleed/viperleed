@@ -8,6 +8,7 @@ __created__ = '2024-10-19'
 __license__ = 'GPLv3+'
 
 from operator import attrgetter
+from pathlib import Path
 
 import pytest
 from pytest_cases import fixture
@@ -215,6 +216,73 @@ class TestHistoryFolder(TestIncompleteHistoryFolder):
         assert_called = (meta.write.assert_called_once if meta_missing
                          else meta.write.assert_not_called)
         assert_called()
+
+
+class TestHistoryFolderDomains:
+    """Tests for marking history folders in a DOMAINS calculation."""
+
+    @fixture(name='make_fake_path')
+    def factory_make_fake_path(self, mocker):
+        """Return a fake Path to a history subfolder."""
+        folder_name = 't000.r001_010203-040506'
+        def _make(str_value=None):
+            fake_path = mocker.MagicMock(spec=Path)
+            fake_path.name = folder_name
+            fake_path.is_dir.return_value = True
+            if str_value is not None:
+                fake_path.__str__.return_value = str_value
+            return fake_path
+        return _make
+
+    def test_mark_domain(self, make_fake_path, mocker):
+        """Check successful marking of a history folder as the main one."""
+        mocker.patch(f'{_MODULE}.BookkeeperMetaFile.compute_hash')
+        main_folder = HistoryFolder(make_fake_path())
+        # pylint: disable-next=protected-access,assigning-non-slot
+        main_folder.metadata._hash = 'main_hash'
+        main_path = make_fake_path('main_path')
+        domain = HistoryFolder(make_fake_path())
+        domain.mark_as_domain(main_path, main_folder)
+        # pylint: disable-next=no-member  # Inference
+        assert domain.metadata.domains == {'main': ('main_path', 'main_hash')}
+
+    _domains = {
+        'no subdomains': ((), {}),
+        'with subdomains': (
+            (('path_1', 'hash_1'), ('path_2', 'hash_2')),
+            {'domains': (('path_1', 'hash_1'), ('path_2', 'hash_2'))},
+            ),
+        'with subdomains none': (
+            (('path_1', 'hash_1'), ('path_2', 'hash_2'), ('skipped', None)),
+            {'domains': (('path_1', 'hash_1'), ('path_2', 'hash_2'))},
+            ),
+        }
+
+    @parametrize('domains,expect', _domains.values(), ids=_domains)
+    def test_mark_main(self, domains, expect, make_fake_path, mocker):
+        """Check successful marking of a history folder as the main one."""
+        mocker.patch(f'{_MODULE}.BookkeeperMetaFile.compute_hash')
+        domain_paths = []
+        domain_folders = []
+        for domain_path, domain_hash in domains:
+            if domain_hash:
+                folder = HistoryFolder(make_fake_path())
+                # pylint: disable-next=protected-access,assigning-non-slot
+                folder.metadata._hash = domain_hash
+            else:
+                folder = domain_hash
+            domain_paths.append(make_fake_path(domain_path))
+            domain_folders.append(folder)
+        main_path = make_fake_path()
+        history_folder = HistoryFolder(main_path)
+        history_folder.mark_as_domains_main(domain_paths, domain_folders)
+        # pylint: disable-next=no-member  # Inference
+        assert history_folder.metadata.domains == expect
+
+    def test_mark_main_raises(self, history_folder):
+        """Check complaints when inconsistent paths and folders are given."""
+        with pytest.raises(ValueError, match='Inconsistent number'):
+            history_folder.mark_as_domains_main((1, 2, 3), (1, 2))
 
 
 class TestHistoryFolderConsistency:
