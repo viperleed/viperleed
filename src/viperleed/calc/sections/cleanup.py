@@ -104,6 +104,7 @@ _OUT_FILES = (
     'refcalc-fd.out',
     'Search-progress.csv',
     'Search-progress.pdf',
+    'Search-report.csv',
     'Search-report.pdf',
     'superpos-spec.out',
     'THEOBEAMS_norm.csv',

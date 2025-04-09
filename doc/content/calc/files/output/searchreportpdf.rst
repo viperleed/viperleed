@@ -10,6 +10,17 @@ current optimization, stretching over multiple searches. If only one search
 is performed, it is mostly redundant with the
 :ref:`Search-progress.pdf<searchprogresspdf>` file.
 
+In addition to Search-report.pdf a Search-report.csv file is also created
+which contains the same information in a tabular format. This file can be
+imported into other programs for custom analysis.
+Search-report.csv is a :term:`CSV` file containing seven columns,
+listing the following values from from left to right  for all search generations
+that were queried by |calc|:
+Generation number, generations since any |R factor| change, generations since
+the best |R factor| of the population, generations since a change in the top
+~10% of the population, and the minimum, mean and maximum |R factor| across the
+population.
+
 R-factor / Generations
 ~~~~~~~~~~~~~~~~~~~~~~
 
