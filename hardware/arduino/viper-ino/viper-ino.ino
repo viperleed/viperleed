@@ -1,17 +1,17 @@
-/*
-ViPErLEED - Firmware for Arduino hardware controller
----------------------
-Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr
+/* ViPErLEED - Firmware for Arduino hardware controller
+
+@author: Bernhard Mayr
+@author: Michael Schmid (@schmid-iap)
+@author: Michele Riva (@michele-riva)
+@author: Florian Dörr (@FlorianDoerr)
 Date: 09.02.2022
----------------------
 */
 
-#include "states-def.h" // Basic state manchine definitions
-#include "viper-serial.h" // Serial communication functions
-#include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
-#include "arduino_utils.h"  // from ../lib; for setChipSelectHigh, getMedian16, bigger16, biggest16
+#include "viper-ino.h"  // Arduino-related constants, globals and functions.
+                        // Includes serial, states, ADC and DAC.
 
-#define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
+#define DEBUG   false   // Debug mode, writes to serial line,
+                        // for use in serial monitor.
 
 // The box ID is an indentifier that is necessary for the PC to know what
 // type of Arduino it is handling. 1 is the identifier of a ViPErino
@@ -39,13 +39,15 @@ void setup() {
         delay(1000);
     #endif
 
-    analogReference(INTERNAL);  // Used for LM35 and for checking relay presence
+    analogReference(INTERNAL); // Used for LM35 and for checking relay presence
 
-    // Set all inverted chip-select pins to high via pull-up (to avoid low glitch)
+    // Set all inverted chip-select pins to high via pull-up
+    // (to avoid low glitch)
     setChipSelectHigh(CS_DAC);
     setChipSelectHigh(CS_ADC_0);
     setChipSelectHigh(CS_ADC_1);
-    pinMode(SCK, OUTPUT);  // Should not be needed, but it did not work without  // Probably just because SPI.begin call is missing?
+    pinMode(SCK, OUTPUT);  // Should not be needed, but it did not work without
+                           // Probably just because SPI.begin call is missing?
     pinMode(MOSI, OUTPUT);
 
     // Reset ADC and DAC, set DAC output to zero,
@@ -171,7 +173,8 @@ void updateState() {
             break;
         case PC_MEASURE_ONLY:
             encodeAndSend(PC_OK);
-            triggerMeasurements(); //This contains the state switch to STATE_MEASURE_ADCS
+            triggerMeasurements();
+            // This contains the state switch to STATE_MEASURE_ADCS.
             break;
         case PC_CHANGE_MEAS_MODE:
             waitingForDataFromPC = true;
@@ -198,15 +201,15 @@ void updateState() {
     newMessage = false;
 }
 
-bool isAllowedCommand(){
-	/**
-	Check if the received command is among the commands the arduino can
-	process.
 
-	Returns
+bool isAllowedCommand(){
+    /**
+    Check if the received command is among those that the arduino can process.
+
+    Returns
     -------
     True if the message is acceptable
-	**/
+    **/
     // Check that it is one of the understandable commands
     switch(data_received[0]){
         case PC_AUTOGAIN: break;
@@ -223,7 +226,7 @@ bool isAllowedCommand(){
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
-	}
+    }
     return true;
 }
 
@@ -286,7 +289,8 @@ void triggerMeasurements() {
     // trigger each time the gain is changed.
     decreaseADCGainsIfNeeded();
 
-    // After triggering, 3/updateRate sec pass before the first data is available
+    // After triggering, 3/updateRate sec pass
+    // before the first data is available
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
@@ -297,8 +301,6 @@ void triggerMeasurements() {
     initialTime = millis();
     currentState = STATE_MEASURE_ADCS;
 }
-
-
 
 
 /** ---------------------- STATE & PC-REQUEST HANDLERS --------------------- **/
@@ -335,20 +337,20 @@ void getConfiguration(){
     // Note that the ATmega32U4 of Arduino Micro uses
     // little-endian memory layout, i.e., LSB is
     // at lower memory index
-	
+
     hardwareDetected.asInt = getHardwarePresent();
-	byte serial_nr[4];
-	getSerialNR(serial_nr);
+    byte serial_nr[4];
+    getSerialNumber(serial_nr);
     byte configuration[9] = {BOX_ID,
                              FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR,
                              hardwareDetected.asBytes[1],
-							 hardwareDetected.asBytes[0]};
-	int address = 0;
-	while(address <= 3){
-	  configuration[address + 5] = serial_nr[address];
-	  address += 1;
-	}
+                             hardwareDetected.asBytes[0]};
+    int address = 0;
+    while(address <= 3){
+        configuration[address + 5] = serial_nr[address];
+        address += 1;
+    }
     encodeAndSend(configuration, LENGTH(configuration));
     hardwareNeverChecked = false;
     currentState = STATE_IDLE;
@@ -518,7 +520,7 @@ void calibrateADCsAtAllGains(){
         for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: using the externalADCs array of struct would make this easier: externalADCs[iADC].channel
             for (int offsetOrGain = 0; offsetOrGain < 2; offsetOrGain++) {
-                int32_t median = getMedian32(
+                int32_t median = getMedian(
                     selfCalDataForMedian[0][iADC][offsetOrGain],
                     selfCalDataForMedian[1][iADC][offsetOrGain],
                     selfCalDataForMedian[2][iADC][offsetOrGain]
@@ -534,7 +536,7 @@ void calibrateADCsAtAllGains(){
         // Remember which channels we have calibrated
         for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;
-            calibratedChannels[iADC][channel] = true;  // TODO: perhaps should only set to true only for the ADCs that are present. Think what are the consequences.
+            calibratedChannels[iADC][channel] = true;                           // TODO: perhaps should only set to true only for the ADCs that are present. Think what are the consequences.
         }
 
         // Set gains to the lowest value, and load the
@@ -755,8 +757,8 @@ void setVoltageWaitAndTrigger(){
         triggerMeasurements();  // This switches to STATE_MEASURE_ADCS
     }
     else {
-      currentState = STATE_IDLE;
-      takeMeasurements = true;
+        currentState = STATE_IDLE;
+        takeMeasurements = true;
     }
     nextVoltageStep = 0;    // This is not strictly needed, but nicer for cleanup
 }
@@ -814,7 +816,7 @@ void measureADCs(){
     //       the error. It could be solved easily by a simple check:
     //       if (currentState == STATE_ERROR) return;
     if (checkIfTimedOut()){
-      return;
+        return;
     }
     if(numMeasurementsDone == numMeasurementsToDo){
         currentState = STATE_ADC_VALUES_READY;
@@ -890,8 +892,8 @@ void sendMeasuredValues(){
     byte littleToBigEndian[4];
     for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB+1; iADC++){  // external ADCs + LM35
         for (int i = 0; i < 4; i++){
-          littleToBigEndian[i] = fDataOutput[iADC].asBytes[3-i];
-          }
+            littleToBigEndian[i] = fDataOutput[iADC].asBytes[3-i];
+        }
         encodeAndSend(littleToBigEndian, 4);
     }
     //encodeAndSend(adc0Gain); //uncomment for debug (adapt python side accordingly)
@@ -958,7 +960,7 @@ void findOptimalADCGains(){
     // end of the self-calibration.
     measureADCsRipple();
     if (numMeasurementsDone < numMeasurementsToDo){
-        if(checkIfTimedOut()){
+        if (checkIfTimedOut()){
             // Do some cleanup:
             resetMeasurementData();
             numMeasurementsToDo = numMeasurementsToDoBackup;
@@ -987,13 +989,13 @@ void findOptimalADCGains(){
     //       if the specific ADC is present.
     if(hardwareDetected.asInt & ADC_0_PRESENT){
         while(((autogain_value0 << (adc0Gain + 1)) < ADC_RANGE_THRESHOLD)
-              && (adc0Gain < AD7705_MAX_GAIN)){
+                && (adc0Gain < AD7705_MAX_GAIN)){
             adc0Gain++;
         }
     }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         while(((autogain_value1 << (adc1Gain + 1)) < ADC_RANGE_THRESHOLD)
-              && (adc1Gain < AD7705_MAX_GAIN)){
+                && (adc1Gain < AD7705_MAX_GAIN)){
             adc1Gain++;
         }
     }
@@ -1148,7 +1150,7 @@ void reset(){
     AD5683setVoltage(CS_DAC, 0x0000);
 
     for (int iDevice=0; iDevice<N_MAX_MEAS; iDevice++){
-        fDataOutput[iDevice].asFloat = 0.0;  
+        fDataOutput[iDevice].asFloat = 0.0;
     }
 }
 
@@ -1220,8 +1222,8 @@ void changeMeasurementMode() {
         continuousMeasurement = false;
     }
     if (continuous_mode != 1 and continuous_mode != 0) {
-      raise(ERROR_MSG_DATA_INVALID);
-      return;
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
     }
 
     encodeAndSend(PC_OK);
@@ -1286,9 +1288,9 @@ void setSerialNr() {
         raise(ERROR_MSG_DATA_INVALID);
         return;
     }
-	
-	writeSerialNR(data_received);
-	
+
+    storeSerialNumber(data_received);
+
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
 }
@@ -1297,70 +1299,76 @@ void setSerialNr() {
 
 /** Returns a bit mask of which hardware was detected */
 uint16_t getHardwarePresent() {
-  int result = 0;
-  //Check for ADCs
-  //First reset AD7705 IO. Note that (inverted) chip select = high does not reset
-  //communication. Reset is done by writing 32 high bits.
-  delay(1);     //make sure that all lines have settled (1 millisec)
-  AD7705resetCommunication(CS_ADC_0);
-  AD7705resetCommunication(CS_ADC_1);
-  delay(1);     //make sure that all lines have settled (1 millisec)
-  byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0); //0xff if only pullup, no ADC
-  if (adc0comm != 0xff)
-    result |= ADC_0_PRESENT;
-  byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
-  if (adc1comm != 0xff)
-    result |= ADC_1_PRESENT;
-  //Check for LM35 temperature sensor: the analog voltage should be within
-  //the ADC range and settle to a similar value after connecting to a pullup resistor
-  //(the LM35 cannot sink more than about 1 uA, so the pullup will drive it high)
-  pinMode(LM35_PIN, INPUT);
-  analogReadMedian(LM35_PIN); //unused measurement; the ADC needs time till it works correctly
-  delay(10);    //make sure the voltage has settled (10 millisec)
-  int sensorValue0 = analogReadMedian(LM35_PIN);
-  int sensorValue0a = analogReadMedian(LM35_PIN);
-  pinMode(LM35_PIN, INPUT_PULLUP);  //measure the voltage with internal pullup
-  delay(10);    //apply pullup for 10 millisec
-  int sensorValue1 = analogReadMedian(LM35_PIN);
-  pinMode(LM35_PIN, INPUT);         //reset for usual measurements
-  delay(10);    //make sure the voltage has settled (10 millisec)
-  int sensorValue2 = analogReadMedian(LM35_PIN);
-  if (sensorValue0 > 0 && sensorValue0 < LM35_MAX_ADU &&
-      sensorValue2 > 0 && sensorValue2 < LM35_MAX_ADU &&
-      abs(sensorValue2 - sensorValue0) < 10 &&
-      sensorValue1 == ARDUINO_ADC_MAX)
-    result |= LM35_PRESENT;
-  //Check for relay present: If the relay is mounted, it should also have an
-  //external pullup that results in about 0.12 V at the pin, about 48 ADUs.
-  //If no relay is mounted, it is either open or jumpered to ground, signalling
-  //whether the input range is 10 V or 2.5 V range, respectively.
-  //If the input is open, the arduino internal pullup would drive it high;
-  //if the input is grounded, the voltage should be close to 0.
-  pinMode(RELAY_PIN, INPUT_PULLUP);  //measure the voltage with arduino pullup
-  analogReadMedian(RELAY_PIN);       //unused measurement just to make sure
-  delay(10);    //apply pullup for 10 millisec
-  int sensorValue3 = analogReadMedian(RELAY_PIN);
-  pinMode(RELAY_PIN, INPUT);  //measure the voltage without pullup
-  delay(10);    //no pullup for 10 millisec
-  int sensorValue4 = analogReadMedian(RELAY_PIN);
-  if (sensorValue3 < ARDUINO_ADC_MAX && //not an open input
-      sensorValue4 > RELAY_MIN_ADU && sensorValue4 < RELAY_MAX_ADU) {
-    result |= RELAY_PRESENT;
-  } else {
-    //Check jumper at JP3 indicating 2.5 V I0 range set by user (if no relay)
-    pinMode(JP_I0_PIN, INPUT_PULLUP);
-    delay(1);
-    if (digitalRead(JP_I0_PIN) == 0)
-      result |= JP_I0_CLOSED;
-    pinMode(JP_I0_PIN, INPUT);      //pullup off, reduces power consuption
-  }
-    //Check jumper at JP5 indicating 2.5 V AUX range set by user (if no relay)
+    int result = 0;
+    // Check for ADCs
+    // First reset AD7705 IO. Note that (inverted) chip select = high does
+    // not reset communication. Reset is done by writing 32 high bits.
+    delay(1);     // Make sure that all lines have settled (1 millisec)
+    AD7705resetCommunication(CS_ADC_0);
+    AD7705resetCommunication(CS_ADC_1);
+    delay(1);     // Make sure that all lines have settled (1 millisec)
+    byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0);
+    if (adc0comm != 0xff) // 0xff if only pullup, no ADC
+        result |= ADC_0_PRESENT;
+    byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
+    if (adc1comm != 0xff) // 0xff if only pullup, no ADC
+        result |= ADC_1_PRESENT;
+    // Check for LM35 temperature sensor: the analog voltage should be within
+    // the ADC range and settle to a similar value after connecting to a pullup
+    // resistor (the LM35 cannot sink more than about 1 uA, so the pullup will
+    // drive it high)
+    pinMode(LM35_PIN, INPUT);
+    // Unused measurement; the ADC needs time till it works correctly
+    analogReadMedian(LM35_PIN);
+    delay(10);    // Make sure the voltage has settled (10 millisec)
+    int sensorValue0 = analogReadMedian(LM35_PIN);
+    // Measure the voltage with internal pullup
+    pinMode(LM35_PIN, INPUT_PULLUP);
+    delay(10);    // Apply pullup for 10 millisec
+    int sensorValue1 = analogReadMedian(LM35_PIN);
+    pinMode(LM35_PIN, INPUT);         // Reset for usual measurements
+    delay(10);    // Make sure the voltage has settled (10 millisec)
+    int sensorValue2 = analogReadMedian(LM35_PIN);
+    if (sensorValue0 > 0 && sensorValue0 < LM35_MAX_ADU
+            && sensorValue2 > 0 && sensorValue2 < LM35_MAX_ADU
+            && abs(sensorValue2 - sensorValue0) < 10
+            && sensorValue1 == ARDUINO_ADC_MAX)
+        result |= LM35_PRESENT;
+    // Check for relay present: If the relay is mounted, it should also have an
+    // external pullup that results in about 0.12 V at the pin, about 48 ADUs.
+    // If no relay is mounted, it is either open or jumpered to ground,
+    // signalling whether the input range is 10 V or 2.5 V range, respectively.
+    // If the input is open, the arduino internal pullup would drive it high;
+    // if the input is grounded, the voltage should be close to 0.
+    // Measure the voltage with arduino pullup
+    pinMode(RELAY_PIN, INPUT_PULLUP);
+    // Unused measurement just to make sure
+    analogReadMedian(RELAY_PIN);
+    delay(10);    // Apply pullup for 10 millisec
+    int sensorValue3 = analogReadMedian(RELAY_PIN);
+    pinMode(RELAY_PIN, INPUT);  // Measure the voltage without pullup
+    delay(10);    // No pullup for 10 millisec
+    int sensorValue4 = analogReadMedian(RELAY_PIN);
+    if (sensorValue3 < ARDUINO_ADC_MAX // Not an open input
+            && sensorValue4 > RELAY_MIN_ADU && sensorValue4 < RELAY_MAX_ADU) {
+        result |= RELAY_PRESENT;
+    }
+    else {
+        // Check jumper at JP3 indicating 2.5 V I0 range
+        // set by user (if no relay)
+        pinMode(JP_I0_PIN, INPUT_PULLUP);
+        delay(1);
+        if (digitalRead(JP_I0_PIN) == 0)
+            result |= JP_I0_CLOSED;
+        pinMode(JP_I0_PIN, INPUT);     // Pullup off, reduces power consuption
+    }
+    // Check jumper at JP5 indicating 2.5 V AUX range set by user (if no relay)
     pinMode(JP_AUX_PIN, INPUT_PULLUP);
     delay(1);
     if (digitalRead(JP_AUX_PIN) == 0)
-      result |=   JP_AUX_CLOSED;
-    pinMode(JP_AUX_PIN, INPUT);     //pullup off, reduces power consuption
-  return result;
+        result |=   JP_AUX_CLOSED;
+    pinMode(JP_AUX_PIN, INPUT);        // Pullup off, reduces power consuption
+    return result;
 }
 
 
@@ -1564,7 +1572,7 @@ void makeAndSumMeasurements() {
                                    measurement, adc0RipplePP);
         }
     if (checkIfTimedOut()){
-      return;
+        return;
     }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
@@ -1618,9 +1626,9 @@ void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
     Stays unchanged
         Otherwise
     **/
-    if(abs(adcValue) > (ADC_RANGE_THRESHOLD - abs(ripple>>*gain))
-       && (*gain > 0)
-       && !(*adcShouldDecreaseGain)){
+    if (abs(adcValue) > (ADC_RANGE_THRESHOLD - abs(ripple>>*gain))
+            && (*gain > 0)
+            && !(*adcShouldDecreaseGain)){
         // The measured value is above the "saturation" threshold,
         // but not yet at true saturation, which would make the
         // measured value completely wrong. Defer the decrease of
