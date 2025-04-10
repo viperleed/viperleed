@@ -18,20 +18,27 @@ LABEL_PATTERN = (
     r'(?P<label>\*|\*?\w+\*?)'  # Match '*' or labels with/without wildcards
 )
 WHICH_PATTERN = r'(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?'
+
 DIRECTION_PATTERN = (
-    r'(?P<direction>[a-zA-Z]+(?:\[[^\]]+\]|\([^\)]+\))?|(?:\[[^\]]+\]))'
+    r'(?P<direction>('
+    r'[abcxyz]'  # 1D single-letter shorthand
+    r'|abc|xyz'  # 3D multi-letter shorthand directions
+    r'|\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'  # [1 0] or [1.0 -2]
+    r'|ab\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'  # ab[1 2]
+    r'|xy\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'  # xy[0 1]
+    r'|azi\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'  # azi(ab[1 2])
+    r'|r\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'  # r([1.0 -1])
+    r'))'
 )
+
+
 START_PATTERN = r'(?P<start>-?\d+(\.\d+)?)'
 STOP_PATTERN = r'(?P<stop>-?\d+(\.\d+)?)'
 STEP_PATTERN = r'(?P<step>-?\d+(\.\d+)?)'
 VALUE_PATTERN = r'-?\d+(\.\d+)?'
 
 # TARGETS_PATTERN
-TARGETS_PATTERN = (
-    r'(?P<targets>\*(?:\s+\d+|\s+\d+-\d+)*'
-    r'|\*?\w+\*?(?:\s+\d+|\s+\d+-\d+)*'
-    r'(?:\s*,\s*(?:\*|\*?\w+\*?)(?:\s+\d+|\s+\d+-\d+)*)*)'
-)
+TARGETS_PATTERN = r'(?P<targets>[^=]+?)'
 
 CHEM_BLOCKS_PATTERN = (
     r'(?P<chem_blocks>(?P<chem>\w+)\s+'
@@ -73,10 +80,6 @@ VIB_LINE_PATTERN = re.compile(
     rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
     rf'\s*=\s*{START_PATTERN}\s+{STOP_PATTERN}(?:\s+{STEP_PATTERN})?$'
 )
-
-# OCC_LINE_PATTERN = re.compile(
-#     rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?\s*=\s*{CHEM_BLOCKS_PATTERN}$'
-# )
 
 CONSTRAIN_LINE_PATTERN = re.compile(
     rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
