@@ -106,17 +106,17 @@ TEST_LINES_OCC = {
 TEST_LINES_CONSTRAIN = {
     'geo O L(1-2), Ir L(1) = linked': (
         'geo',
-        ['O L(1-2)', 'Ir L(1)'],
+        'O L(1-2), Ir L(1)',
+        None,
         'linked',
     ),
-    'vib Ir_top = linked': ('vib', ['Ir_top'], 'linked'),
-    'vib Ir_top = -0.03': ('vib', ['Ir_top'], -0.03),  # Fix to a specific value
-    'geo C L(1), N L(2) = 0.1': (
-        'geo',
-        ['C L(1)', 'N L(2)'],
-        0.1,
-    ),  # Geo constraint to 0.1
-    'occ Fe L(3), Ni = linked': ('occ', ['Fe L(3)', 'Ni'], 'linked'),
+    'geo O 1-5 z = linked': ('geo', 'O 1-5', 'z', 'linked'),
+    'vib Ir_top = linked': ('vib', 'Ir_top', None, 'linked'),
+    # Fix to a specific value
+    'vib Ir_top = -0.03': ('vib', 'Ir_top', None, -0.03),
+    # Geo constraint to 0.1
+    'geo C L(1), N L(2) = 0.1': ('geo', 'C L(1), N L(2)', None, 0.1),
+    'occ Fe L(3), Ni = linked': ('occ', 'Fe L(3), Ni', None, 'linked'),
 }
 
 # Test cases for OFFSETS lines
@@ -223,10 +223,11 @@ def test_constrain_line_regex(input, expected):
     """Check that the regex for CONSTRAIN lines works as expected."""
     match = match_constrain_line(input)
     assert match is not None
-    constraint_type, parameters, value = match
-    e_constraint_type, e_parameters, e_value = expected
+    constraint_type, targets, direction, value = match
+    e_constraint_type, e_targets, e_direction, e_value = expected
     assert constraint_type == e_constraint_type
-    assert parameters == e_parameters
+    assert targets == e_targets
+    assert direction == e_direction
     assert value == e_value
 
 
