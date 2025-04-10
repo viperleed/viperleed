@@ -364,8 +364,11 @@ void storeSerialNumber(byte *serial_nr) {
     byte tmp_char;
     while(address <= 3){
         tmp_char = serial_nr[address];
-        if (not ((tmp_char > 47 and tmp_char < 58)
-            || (tmp_char > 64 and tmp_char < 91))){
+        boolean char_acceptable = (
+            (tmp_char > 47 and tmp_char < 58)
+            || (tmp_char > 64 and tmp_char < 91)
+            );
+        if (not char_acceptable){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
