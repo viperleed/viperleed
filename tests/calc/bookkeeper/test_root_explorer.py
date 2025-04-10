@@ -167,7 +167,7 @@ class TestRootExplorer:
         mock_logs = mocker.patch(f'{_MODULE}.LogFiles')
         mock_attributes(mock_logs, 'collect')
         mock_attributes(explorer, '_collect_files_to_archive')
-        mock_attributes(explorer, '_find_domain_subfolders')
+        mock_attributes(explorer, '_find_potential_domain_subfolders')
 
         explorer.collect_info()
 
@@ -175,7 +175,7 @@ class TestRootExplorer:
         called = {
             '_collect_files_to_archive',
             'collect_info',
-            '_find_domain_subfolders',
+            '_find_potential_domain_subfolders',
             }
         for method in dir(explorer):
             try:
@@ -206,72 +206,16 @@ class TestRootExplorer:
         to_archive = explorer._files_to_archive
         assert to_archive == tuple(explorer.path / f for f in expected_files)
 
-    @parametrize(n_domains=(0, 1, 5))
-    def test_collect_subdomain_info(self, n_domains, explorer, mocker):
-        """Check calls in _collect_subdomain_info."""
+    def test_find_domains(self, explorer, mocker):
+        """Test the _find_potential_domain_subfolders method."""
+        mock_finder = mocker.MagicMock()
+        mock_domains = mocker.MagicMock()
+        mock_finder.find_potential_domains.return_value = mock_domains
+        mocker.patch(f'{_MODULE}.DomainFinder', return_value=mock_finder)
         # pylint: disable-next=protected-access           # OK in tests
-        explorer._domains = tuple(mocker.MagicMock() for _ in range(n_domains))
-        mocker.patch.object(explorer, '_find_domain_subfolders')
-        calls = {
-            # Preexisting domains always called with silent=False
-            getattr(d, 'collect_info'): {'silent': False}
-            for d in explorer.domains
-            }
-        calls[getattr(explorer, '_find_domain_subfolders')] = (
-            None if n_domains else {}
-            )
-
-        # pylint: disable-next=protected-access           # OK in tests
-        explorer._collect_subdomain_info()
-        for method, kwargs in calls.items():
-            if kwargs is None:
-                method.assert_not_called()
-            else:
-                method.assert_called_once_with(**kwargs)
-
-    def test_find_domains(self, tmp_path, caplog, mocker):
-        """Test the _find_domain_subfolders method."""
-        caplog.set_level(0)  # All messages
-        not_domains = {
-            DEFAULT_DELTAS: {},   # We don't explicitly check for this
-            DEFAULT_OUT: {},
-            DEFAULT_SUPP: {},
-            DEFAULT_TENSORS: {},  # We don't explicitly check for this
-            'history': {},
-            'workhistory': {},
-            }
-        domains = {
-            'Domain_1': {},    # An automatically-labeled domain
-            'Domain_two': {},  # A domain with a user label
-            'domain_after_calc': {
-                # A root domain with all the expected contents at the
-                # end of a calc run, not yet processed by bookkeeper.
-                # (Having only one of the contents would be enough.)
-                DEFAULT_OUT: {},
-                DEFAULT_SUPP: {},
-                },
-            'domain_with_workhistory': {
-                # A root domain with a workhistory folder,
-                # not yet processed by bookkeeper.
-                'workhistory': {},
-                },
-            'domain_after_calc_with_bookkeeper': {
-                # A root domain already processed by bookkeeper.
-                # (Having only one of the contents would be enough.)
-                'history': {},
-                'history.info': '',
-                },
-            'domain_with_log_file': {
-                # A root domain in which calc was run manually.
-                f'{LOG_PREFIX}_timestamp.log': '',
-                },
-            }
-        filesystem_from_dict({**not_domains, **domains}, tmp_path)
-        explorer = RootExplorer(tmp_path, mocker.MagicMock())
-        explorer.collect_info()
-        assert not caplog.text
-        assert len(explorer.domains) == len(domains)
-        assert {d.path.name for d in explorer.domains} == set(domains)
+        explorer._find_potential_domain_subfolders()
+        mock_finder.find_potential_domains.assert_called_once()
+        assert explorer.domains is mock_domains
 
     _remove_files = {
         '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
