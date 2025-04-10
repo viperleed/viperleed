@@ -1,9 +1,11 @@
+.. _appendix:
+
+========
+Appendix
+========
+
 
 .. only:: latex
-
-    ========
-    Appendix
-    ========
 
     .. toctree::
         :maxdepth: 1
