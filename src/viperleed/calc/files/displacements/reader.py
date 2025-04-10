@@ -122,7 +122,7 @@ class DisplacementsReader(InputFileReader):
                 f"Cannot parse line '{line}' in OFFSETS section."
             )
         offset_type, targets, direction, value = match
-        return OffsetsLine(line, offset_type, targets, direction, value)
+        return OffsetsLine(offset_type, targets, direction, value, line=line)
 
     def _read_geo_delta_line(self, line):
         """Parse a line in the GEO_DELTA section."""
@@ -133,7 +133,7 @@ class DisplacementsReader(InputFileReader):
             )
 
         label, which, direction, start, stop, step = match
-        return GeoDeltaLine(line, label, which, direction, start, stop, step)
+        return GeoDeltaLine(label, which, direction, start, stop, step, line=line)
 
     def _read_vib_delta_line(self, line):
         """Parse a line in the VIB_DELTA section."""
@@ -144,7 +144,7 @@ class DisplacementsReader(InputFileReader):
             )
 
         label, which, start, stop, step = match
-        return VibDeltaLine(line, label, which, start, stop, step)
+        return VibDeltaLine(label, which, start, stop, step, line=line)
 
     def _read_occ_delta_line(self, line):
         """Parse a line in the OCC_DELTA section."""
@@ -155,7 +155,7 @@ class DisplacementsReader(InputFileReader):
             )
 
         label, which, chem_blocks = match
-        return OccDeltaLine(line, label, which, chem_blocks)
+        return OccDeltaLine(label, which, chem_blocks, line=line)
 
     def _read_constraints_line(self, line):
         """Parse a line in the CONSTRAIN section."""
@@ -166,4 +166,4 @@ class DisplacementsReader(InputFileReader):
             )
 
         constraint_type, targets, direction, value = match
-        return ConstraintLine(line, constraint_type, targets, direction, value)
+        return ConstraintLine(constraint_type, targets, direction, value, line=line)
