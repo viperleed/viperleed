@@ -87,13 +87,13 @@ TEST_LINES_OCC = {
         [
             ('Fe', 0.3, 0.5, None),
             ('Ni', 0.6, 0.4, None),
-            ('Ti', 0.1, None, None),
+            ('Ti', 0.1, 0.1, None),
         ],
     ),  # Missing steps
     'Si 1 = Si 0.2 0.5, Ge 0.5': (
         'Si',
         '1',
-        [('Si', 0.2, 0.5, None), ('Ge', 0.5, None, None)],
+        [('Si', 0.2, 0.5, None), ('Ge', 0.5, 0.5, None)],
     ),
     'Cu = Cu 0.6 1.0, Zn 0.4 0.0': (
         'Cu',
