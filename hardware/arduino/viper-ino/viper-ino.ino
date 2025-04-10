@@ -989,13 +989,13 @@ void findOptimalADCGains(){
     //       if the specific ADC is present.
     if(hardwareDetected.asInt & ADC_0_PRESENT){
         while(((autogain_value0 << (adc0Gain + 1)) < ADC_RANGE_THRESHOLD)
-              && (adc0Gain < AD7705_MAX_GAIN)){
+                && (adc0Gain < AD7705_MAX_GAIN)){
             adc0Gain++;
         }
     }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         while(((autogain_value1 << (adc1Gain + 1)) < ADC_RANGE_THRESHOLD)
-              && (adc1Gain < AD7705_MAX_GAIN)){
+                && (adc1Gain < AD7705_MAX_GAIN)){
             adc1Gain++;
         }
     }
@@ -1329,10 +1329,10 @@ uint16_t getHardwarePresent() {
     pinMode(LM35_PIN, INPUT);         // Reset for usual measurements
     delay(10);    // Make sure the voltage has settled (10 millisec)
     int sensorValue2 = analogReadMedian(LM35_PIN);
-    if (sensorValue0 > 0 && sensorValue0 < LM35_MAX_ADU &&
-        sensorValue2 > 0 && sensorValue2 < LM35_MAX_ADU &&
-        abs(sensorValue2 - sensorValue0) < 10 &&
-        sensorValue1 == ARDUINO_ADC_MAX)
+    if (sensorValue0 > 0 && sensorValue0 < LM35_MAX_ADU
+            && sensorValue2 > 0 && sensorValue2 < LM35_MAX_ADU
+            && abs(sensorValue2 - sensorValue0) < 10
+            && sensorValue1 == ARDUINO_ADC_MAX)
         result |= LM35_PRESENT;
     // Check for relay present: If the relay is mounted, it should also have an
     // external pullup that results in about 0.12 V at the pin, about 48 ADUs.
@@ -1349,8 +1349,8 @@ uint16_t getHardwarePresent() {
     pinMode(RELAY_PIN, INPUT);  // Measure the voltage without pullup
     delay(10);    // No pullup for 10 millisec
     int sensorValue4 = analogReadMedian(RELAY_PIN);
-    if (sensorValue3 < ARDUINO_ADC_MAX && // Not an open input
-        sensorValue4 > RELAY_MIN_ADU && sensorValue4 < RELAY_MAX_ADU) {
+    if (sensorValue3 < ARDUINO_ADC_MAX // Not an open input
+            && sensorValue4 > RELAY_MIN_ADU && sensorValue4 < RELAY_MAX_ADU) {
         result |= RELAY_PRESENT;
     }
     else {
@@ -1627,8 +1627,8 @@ void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
         Otherwise
     **/
     if (abs(adcValue) > (ADC_RANGE_THRESHOLD - abs(ripple>>*gain))
-        && (*gain > 0)
-        && !(*adcShouldDecreaseGain)){
+            && (*gain > 0)
+            && !(*adcShouldDecreaseGain)){
         // The measured value is above the "saturation" threshold,
         // but not yet at true saturation, which would make the
         // measured value completely wrong. Defer the decrease of
