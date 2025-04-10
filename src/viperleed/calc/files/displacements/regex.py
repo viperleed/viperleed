@@ -43,6 +43,18 @@ CHEM_BLOCKS_PATTERN = (
     + r'(?:\s*,\s*(?P<additional_blocks>.+))?)?)'
 )
 
+LABEL_PATTERN = r'(?P<label>[A-Za-z0-9_]+)'
+
+CHEM_LITERAL_BLOCK_PATTERN = rf'[A-Z][a-z]?(?:\s+{VALUE_PATTERN}){{1,3}}'
+CHEM_LITERAL_BLOCKS_PATTERN = (
+    rf'{CHEM_LITERAL_BLOCK_PATTERN}(?:\s*,\s*{CHEM_LITERAL_BLOCK_PATTERN})*'
+)
+
+OCC_LINE_PATTERN = re.compile(
+    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?\s*=\s*'
+    rf'(?P<chem_blocks>{CHEM_LITERAL_BLOCKS_PATTERN})$'
+)
+
 # Line patterns
 OFFSETS_LINE_PATTERN = re.compile(
     rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
@@ -62,10 +74,9 @@ VIB_LINE_PATTERN = re.compile(
     rf'\s*=\s*{START_PATTERN}\s+{STOP_PATTERN}(?:\s+{STEP_PATTERN})?$'
 )
 
-OCC_LINE_PATTERN = re.compile(
-    rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?'
-    rf'\s*=\s*{CHEM_BLOCKS_PATTERN}$'
-)
+# OCC_LINE_PATTERN = re.compile(
+#     rf'^{LABEL_PATTERN}(?:\s+{WHICH_PATTERN})?\s*=\s*{CHEM_BLOCKS_PATTERN}$'
+# )
 
 CONSTRAIN_LINE_PATTERN = re.compile(
     rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
@@ -111,7 +122,14 @@ def match_vib_line(line):
 
 
 def match_occ_line(line):
-    """Match and parse OCC_DELTA line, returning chemical blocks and ranges."""
+    """Match and parse OCC_DELTA line, returning chemical blocks as parametric triples.
+
+    Returns a tuple: (label, which, list of (element, start, stop, step))
+
+    - If only 1 value is given: stop = start, step = None
+    - If 2 values: step = None
+    - If 3 values: step is set
+    """
     match = OCC_LINE_PATTERN.match(line)
     if match is None:
         return None
@@ -119,38 +137,32 @@ def match_occ_line(line):
     label = match.group('label')
     which = match.group('which')
 
-    # Parse the first chemical block
     chem_blocks = []
-    chem = match.group('chem')
-    start = float(match.group('start'))
-    stop = (
-        float(match.group('stop')) if match.group('stop') is not None else None
-    )
-    step = (
-        float(match.group('step')) if match.group('step') is not None else None
-    )
-    chem_blocks.append((chem, start, stop, step))
 
-    # Handle additional blocks, if present
-    additional_blocks = match.group('additional_blocks')
-    if additional_blocks:
-        for block in additional_blocks.split(','):
-            _block = block.strip()
-            m = re.match(CHEM_BLOCKS_PATTERN, _block)
-            if m:
-                chem = m.group('chem')
-                start = float(m.group('start'))
-                stop = (
-                    float(m.group('stop'))
-                    if m.group('stop') is not None
-                    else None
-                )
-                step = (
-                    float(m.group('step'))
-                    if m.group('step') is not None
-                    else None
-                )
-                chem_blocks.append((chem, start, stop, step))
+    chem_blocks_str = match.group('chem_blocks')
+    for block in chem_blocks_str.split(','):
+        tokens = block.strip().split()
+        if len(tokens) < 2:
+            continue  # Not enough data to process
+
+        element = tokens[0]
+        try:
+            numbers = [float(tok) for tok in tokens[1:]]
+        except ValueError:
+            continue  # Skip malformed values
+
+        if len(numbers) == 1:
+            start = stop = numbers[0]
+            step = None
+        elif len(numbers) == 2:
+            start, stop = numbers
+            step = None
+        elif len(numbers) == 3:
+            start, stop, step = numbers
+        else:
+            continue  # Invalid number of numeric values
+
+        chem_blocks.append((element, start, stop, step))
 
     return label, which, chem_blocks
 
