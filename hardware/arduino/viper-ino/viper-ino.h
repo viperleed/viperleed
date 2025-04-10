@@ -14,7 +14,7 @@ Date: 26.04.2021
 // arduino_utils.h, states-def.h and viper-serial.h come from ../lib
 #include "arduino_utils.h"  // from ../lib; for setChipSelectHigh,
                             // getMedian, bigger, biggest
-#include "states-def.h"     // Basic state manchine definitions
+#include "states-def.h"     // Basic state-manchine definitions
 #include "viper-serial.h"   // Serial-communication functions and constants
 #include "ADC_AD7705.h"     // Settings of the currently used ADC
 #include "DAC_AD5683.h"     // Settings of the currently used DAC
@@ -64,12 +64,12 @@ union floatOrBytes{
 // of all ADCs at all gains (ASCII 'C').
 #define PC_CALIBRATION       67
 // PC_CHANGE_MEAS_MODE: PC requested a change between
-// continuous and single measurement mode (ASCII 'm').
+// continuous and single-measurement modes (ASCII 'm').
 #define PC_CHANGE_MEAS_MODE 109
 // PC_CONFIGURATION: PC requested hardware configuration (ASCII '?').
 #define PC_CONFIGURATION     63
 // PC_MEASURE_ONLY: PC requested measurement
-// without changing Voltage (ASCII 'M').
+// without changing voltage (ASCII 'M').
 #define PC_MEASURE_ONLY      77
 // PC_RESET: PC requested a global reset (ASCII 'R').
 #define PC_RESET             82
@@ -81,7 +81,7 @@ union floatOrBytes{
 // PC_SET_VOLTAGE: PC requested to set a certain energy (ASCII 'V').
 #define PC_SET_VOLTAGE       86
 // PC_SET_VOLTAGE_ONLY: PC requested set energy without
-// follow up measurement (ASCII 'v').
+// follow-up measurement (ASCII 'v').
 #define PC_SET_VOLTAGE_ONLY 118
 // PC_STOP: PC requested a stop on all activity. Return to idle (ASCII 'x').
 #define PC_STOP             120
@@ -117,7 +117,7 @@ union floatOrBytes{
 // STATE_AUTOGAIN_ADCS: Find optimal gain for both ADCs.
 #define STATE_AUTOGAIN_ADCS        6
 // STATE_GET_CONFIGURATION: Find current hardware configuration
-// and return it with the firmware version.
+// and return it, together with firmware version, box ID, and serial number.
 #define STATE_GET_CONFIGURATION    7
 // STATE_CALIBRATE_ADCS: Figure out correct offset and
 // calibration factors for ADCs at all gains.
@@ -306,7 +306,7 @@ uint16_t numMeasurementsDone;
 // summedMeasurements: Measurements of ADCs and LM35 are summed up here.
 int32_t  summedMeasurements[N_MAX_MEAS];
 // continuousMeasurementInterval: Time between measurements
-// if continuous-measurement mode is on.
+// if continuous-measurement mode is on. Currently unused.
 uint16_t continuousMeasurementInterval;
 
 // floatOrBytes: Measurements in physical units

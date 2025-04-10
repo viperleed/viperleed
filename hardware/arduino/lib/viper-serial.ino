@@ -301,7 +301,7 @@ void readFromSerial() {
     if(not Serial.available())  return;
 
     if(Serial.available() >= SERIAL_BUFFER_SIZE){
-        // Should never be '>', but better safe than sorry
+        // Should never be '>', but better safe than sorry.
         // The serial buffer is full and it potentially
         // already discarded some of the bytes that came.
         // The buffer will be flushed in the error handler

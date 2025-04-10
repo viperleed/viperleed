@@ -28,9 +28,9 @@ uint16_t currentState = STATE_IDLE;
 
 /** ------------------------ Communication with PC ----------------------- **/
 /* For communication purposes, users must define commands and error
-codes. Commands are supposed to be single byte messages that instruct
+codes. Commands are supposed to be single-byte messages that instruct
 the state machine to enter a certain state or perform a specific task.
-Error codes are single byte definitions, that are meant to carry
+Error codes are single-byte definitions that are meant to carry
 information about which error occurred. These can be defined in the
 following manner:
 #define ERROR_*   byte_value (error)
