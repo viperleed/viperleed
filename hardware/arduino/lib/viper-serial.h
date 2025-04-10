@@ -60,6 +60,7 @@ Date: 26.03.2025
 // ERROR_TIMEOUT: Timed out while waiting for something.
 #define ERROR_TIMEOUT             7
 // ERROR_MSG_SENT_TOO_LONG: Any message must be shorter than MSG_SPECIAL_BYTE.
+// Otherwise numBytesBeforeEncoding would be confused with a special byte.
 #define ERROR_MSG_SENT_TOO_LONG 254
 // errorTraceback: Keeps track of: (0) the state that produced the error,
 // (1) which error occurred (one of ERROR_*).
@@ -78,7 +79,8 @@ boolean waitingForDataFromPC = false;
 // MSG_MAX_LENGTH because of markers, length, and encoding.
 byte data_received[MSG_MAX_LENGTH];
 // msgLength: No. bytes to be expected in message (2nd byte of received
-// message). Used in states that expect data to check the message.
+// message). Used in states that expect data to check the message. Must
+// be equal to the numDecodedBytes of any received message.
 byte msgLength = 0;
 // numBytesRead: Counter for no. of bytes received. numBytesRead may be
 // larger than the number of true data bytes due to encoding.

@@ -61,14 +61,16 @@ void encodeAndSend(byte *byteArray, uint16_t numBytesBeforeEncoding){
     Parameters:
     -----------
     byteArray : byte*
-        Pointer to message to be sent
+        Pointer to message to be sent.
+    numBytesBeforeEncoding : uint16_t
+        The number of message bytes before the message was encoded.
     **/
     if (numBytesBeforeEncoding >= MSG_SPECIAL_BYTE){
         raise(ERROR_MSG_SENT_TOO_LONG);
         return;
         }
-    byte encodedMessage[2*numBytesBeforeEncoding];
     // Worst-case: each byte encoded as two
+    byte encodedMessage[2*numBytesBeforeEncoding];
     byte numBytesAfterEncoding = 0;
     for(int i=0; i < numBytesBeforeEncoding; i++){
         if (byteArray[i] >= MSG_SPECIAL_BYTE){
@@ -378,7 +380,7 @@ void storeSerialNumber(byte *serial_nr) {
 }
 
 
-void getSerialNR(byte *serial_nr) {
+void getSerialNumber(byte *serial_nr) {
     /**Get the serial number assigned to the controller.**/
     int address = 0;
     while(address <= 3){

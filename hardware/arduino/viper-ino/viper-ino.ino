@@ -339,7 +339,7 @@ void getConfiguration(){
 
     hardwareDetected.asInt = getHardwarePresent();
     byte serial_nr[4];
-    getSerialNR(serial_nr);
+    getSerialNumber(serial_nr);
     byte configuration[9] = {BOX_ID,
                              FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR,

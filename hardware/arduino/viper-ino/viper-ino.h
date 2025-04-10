@@ -79,6 +79,7 @@ union floatOrBytes{
 // ADCs for a measurement (ASCII 'S').
 #define PC_SET_UP_ADCS       83                                                 // TODO: The python side will have to keep track of when the last calibration was done, and warn if it is too old.
 // PC_SET_VOLTAGE: PC requested to set a certain energy (ASCII 'V').
+// After setting the voltage, the arduino will start measuring.
 #define PC_SET_VOLTAGE       86
 // PC_SET_VOLTAGE_ONLY: PC requested set energy without
 // follow-up measurement (ASCII 'v').
@@ -117,7 +118,7 @@ union floatOrBytes{
 // STATE_AUTOGAIN_ADCS: Find optimal gain for both ADCs.
 #define STATE_AUTOGAIN_ADCS        6
 // STATE_GET_CONFIGURATION: Find current hardware configuration
-// and return it, together with firmware version, box ID, and serial number.
+// and return it, together with box ID, firmware version, and serial number.
 #define STATE_GET_CONFIGURATION    7
 // STATE_CALIBRATE_ADCS: Figure out correct offset and
 // calibration factors for ADCs at all gains.
@@ -171,7 +172,7 @@ bool continuousMeasurement = false;
 // ARDUINO_ADU_VOLTS: Internal ADC: volts per ADU.
 #define ARDUINO_ADU_VOLTS (VREF_INTERNAL/ARDUINO_ADC_MAX)
 // ARDUINO_ADU_DEG_C: LM35 degC per ADU.
-#define ARDUINO_ADU_DEG_C (100*VREF_INTERNAL/ARDUINO_ADC_MAX)
+#define ARDUINO_ADU_DEG_C (100*ARDUINO_ADU_VOLTS)
 
 // Scaling of ADC input ranges due to voltage
 // dividers or preamplification on the board.

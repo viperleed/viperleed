@@ -33,8 +33,8 @@ the state machine to enter a certain state or perform a specific task.
 Error codes are single-byte definitions that are meant to carry
 information about which error occurred. These can be defined in the
 following manner:
-#define ERROR_*   byte_value (error)
-#define PC_*   byte_value (coomand)
+#define ERROR_*     byte_value (error)
+#define PC_*        byte_value (command)
 Commands and error codes should not be added in this file, but in the
 .h of the created state machine.
 */
