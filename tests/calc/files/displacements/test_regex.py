@@ -1,6 +1,9 @@
+import re
+
 import pytest
 
 from viperleed_jax.files.displacements.regex import (
+    DIRECTION_PATTERN,
     SEARCH_HEADER_PATTERN,
     SECTION_HEADER_PATTERN,
     match_constrain_line,
@@ -132,6 +135,50 @@ TEST_LINES_OFFSETS = {
         'Fe 0.6, Ni 0.4',
     ),  # Complex value (not float)
 }
+
+class TestDirectionPattern:
+    @pytest.mark.parametrize(
+        'direction',
+        [
+            'z',
+            'x',
+            'y',
+            'a',
+            'b',
+            'c',  # basic
+            'abc',
+            'xyz',  # extended
+            '[1 0]',
+            '[ 1.0 -2 ]',  # bracket vectors
+            'ab[1 2]',
+            'xy[-1 3.5]',  # ab/xy bracket
+            'azi([0 0])',
+            'azi(ab[0 1])',  # circular arc
+            'r([1 1])',
+            'r(xy[0.5 -0.5])',  # radial
+        ],
+    )
+    def test_valid_directions(self, direction):
+        match = re.compile(DIRECTION_PATTERN).fullmatch(direction)
+        assert match is not None, f'Valid direction did not match: {direction}'
+
+
+    @pytest.mark.parametrize(
+        'direction',
+        [
+            'L(1)',
+            'offset',
+            'foo',
+            'abc[1 2]',
+            'r(ab1 2)',
+            'aziab[1 2]',
+            'x[y]',
+            '1 0',
+        ],
+    )
+    def test_invalid_directions(self, direction):
+        match = re.compile(DIRECTION_PATTERN).fullmatch(direction)
+        assert match is None, f'Invalid direction matched: {direction}'
 
 
 @pytest.mark.parametrize(
