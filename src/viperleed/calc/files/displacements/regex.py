@@ -136,7 +136,7 @@ def match_occ_line(line):
     if additional_blocks:
         for block in additional_blocks.split(','):
             _block = block.strip()
-            m = re.match(CHEM_BLOCK_PATTERN, _block)
+            m = re.match(CHEM_BLOCKS_PATTERN, _block)
             if m:
                 chem = m.group('chem')
                 start = float(m.group('start'))
