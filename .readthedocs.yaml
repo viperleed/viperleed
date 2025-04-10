@@ -1,0 +1,29 @@
+# .readthedocs.yaml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Set the OS, Python version
+build:
+  os: ubuntu-22.04
+  apt_packages:
+    - inkscape
+  tools:
+    python: "3.12"
+
+# Build documentation in the "doc/" directory with Sphinx
+sphinx:
+  configuration: doc/conf.py
+
+# Optionally build your docs in additional formats such as PDF and ePub
+formats:
+   - pdf
+
+# install the dependencies
+python:
+   install:
+   - requirements: requirements-doc.txt
+   - method: pip
+     path: .  # install viperleed from repository
