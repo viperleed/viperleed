@@ -65,7 +65,8 @@ OCC_LINE_PATTERN = re.compile(
 # Line patterns
 OFFSETS_LINE_PATTERN = re.compile(
     rf'^(?P<type>geo|vib|occ)\s+{TARGETS_PATTERN}'
-    rf'(?:\s+{DIRECTION_PATTERN})?\s*=\s*{VALUE_PATTERN}$'
+    rf'(?:\s+{DIRECTION_PATTERN})?\s*=\s*'
+    rf'(?P<value>{VALUE_PATTERN}|{CHEM_LITERAL_BLOCKS_PATTERN})$'
 )
 
 GEO_LINE_PATTERN = re.compile(
