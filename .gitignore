@@ -21,6 +21,9 @@ utilities/recompile_parts.log
 
 # built docs
 doc/_build/
+doc/_static/hardware/SpectaLEED_modification/datasheets
+doc/_static/hardware/SpectaLEED_modification/original_pictures/_modified
+doc/_static/hardware/SpectaLEED_modification/original_pictures/_unused
 
 # Ignore testing folder
 calculations/
@@ -63,6 +66,7 @@ tensorleed/eeasisss_new/Fortran_quicktests
 tensorleed/eeasisss
 *.plist
 *.mod
+**/*.dll
 **/_lint
 
 # Ignore test, coverage, and profiling results
