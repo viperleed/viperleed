@@ -22,6 +22,7 @@ WHICH_PATTERN = r'(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?'
 DIRECTION_PATTERN = (
     r'(?P<direction>('
     r'[abcxyz]'  # 1D single-letter shorthand
+    r'|ab|xy'    # 2D multi-letter in-plane shorthand
     r'|abc|xyz'  # 3D multi-letter shorthand directions
     r'|\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'  # [1 0] or [1.0 -2]
     r'|ab\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'  # ab[1 2]
