@@ -7,10 +7,11 @@
 Date: 09.02.2022
 */
 
-#include "viper-ino.h"       // Arduino-related settings. Includes ADC and DAC
+#include "viper-ino.h"  // Arduino-related constants, globals and functions.
+                        // Includes serial, states, ADC and DAC.
 
-#define DEBUG   false        // Debug mode, writes to serial line,
-                            //for use in serial monitor
+#define DEBUG   false   // Debug mode, writes to serial line,
+                        // for use in serial monitor.
 
 // The box ID is an indentifier that is necessary for the PC to know what
 // type of Arduino it is handling. 1 is the identifier of a ViPErino
@@ -173,7 +174,7 @@ void updateState() {
         case PC_MEASURE_ONLY:
             encodeAndSend(PC_OK);
             triggerMeasurements();
-            //This contains the state switch to STATE_MEASURE_ADCS
+            // This contains the state switch to STATE_MEASURE_ADCS.
             break;
         case PC_CHANGE_MEAS_MODE:
             waitingForDataFromPC = true;
@@ -892,7 +893,7 @@ void sendMeasuredValues(){
     for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB+1; iADC++){  // external ADCs + LM35
         for (int i = 0; i < 4; i++){
             littleToBigEndian[i] = fDataOutput[iADC].asBytes[3-i];
-            }
+        }
         encodeAndSend(littleToBigEndian, 4);
     }
     //encodeAndSend(adc0Gain); //uncomment for debug (adapt python side accordingly)
@@ -1306,12 +1307,11 @@ uint16_t getHardwarePresent() {
     AD7705resetCommunication(CS_ADC_0);
     AD7705resetCommunication(CS_ADC_1);
     delay(1);     // Make sure that all lines have settled (1 millisec)
-    // 0xff if only pullup, no ADC
     byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0);
-    if (adc0comm != 0xff)
+    if (adc0comm != 0xff) // 0xff if only pullup, no ADC
         result |= ADC_0_PRESENT;
     byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
-    if (adc1comm != 0xff)
+    if (adc1comm != 0xff) // 0xff if only pullup, no ADC
         result |= ADC_1_PRESENT;
     // Check for LM35 temperature sensor: the analog voltage should be within
     // the ADC range and settle to a similar value after connecting to a pullup
@@ -1322,7 +1322,6 @@ uint16_t getHardwarePresent() {
     analogReadMedian(LM35_PIN);
     delay(10);    // Make sure the voltage has settled (10 millisec)
     int sensorValue0 = analogReadMedian(LM35_PIN);
-    int sensorValue0a = analogReadMedian(LM35_PIN);
     // Measure the voltage with internal pullup
     pinMode(LM35_PIN, INPUT_PULLUP);
     delay(10);    // Apply pullup for 10 millisec
