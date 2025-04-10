@@ -6,6 +6,8 @@ __created__ = '2024-10-03'
 import contextlib
 import re
 
+from viperleed_jax.perturbation_type import PerturbationType
+
 SEARCH_HEADER_PATTERN = re.compile(r'^=+\s+(?i:search)\s+(.*)$')
 SECTION_HEADER_PATTERN = re.compile(
     r'^=+\s*(OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
@@ -50,8 +52,6 @@ CHEM_BLOCKS_PATTERN = (
     + STEP_PATTERN
     + r'(?:\s*,\s*(?P<additional_blocks>.+))?)?)'
 )
-
-LABEL_PATTERN = r'(?P<label>[A-Za-z0-9_]+)'
 
 CHEM_LITERAL_BLOCK_PATTERN = rf'[A-Z][a-z]?(?:\s+{VALUE_PATTERN}){{1,3}}'
 CHEM_LITERAL_BLOCKS_PATTERN = (
@@ -178,9 +178,7 @@ def match_constrain_line(line):
     if match is None:
         return None
 
-    offset_type = match.group(
-        'type'
-    )  # Type can be 'geo', 'vib', or 'occ'     # TODO: make into Enum
+    offset_type = PerturbationType.from_string(match.group('type'))
     targets = match.group('targets')  # Multiple comma-separated targets
     direction = match.group('direction')  # Optional complex direction for geo
     value = match.group('value')
@@ -198,7 +196,7 @@ def match_offsets_line(line):
     if match is None:
         return None
 
-    offset_type = match.group('type')  # Type can be 'geo', 'vib', or 'occ'
+    offset_type = PerturbationType.from_string(match.group('type'))
     targets = match.group('targets').strip()  # Multiple comma-separated targets
     direction = match.group('direction')  # Optional complex direction for geo
     value = match.group('value')
