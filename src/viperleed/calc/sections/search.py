@@ -1155,7 +1155,7 @@ def search(sl, rp):
                         try:
                             searchpdf.writeSearchProgressPdf(
                                 rp, gens, rfaclist, lastconfig,
-                                markers=markers, rfac_predict=rfac_predict
+                                markers=markers, rfac_predict=rfac_predict,
                                 )
                         except Exception:
                             logger.warning("Error writing Search-progress.pdf",
