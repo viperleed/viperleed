@@ -12,6 +12,7 @@ from viperleed_jax.files.displacements.regex import (
     match_offsets_line,
     match_vib_line,
 )
+from viperleed_jax.perturbation_type import PerturbationType
 
 # Test cases for SECTION_HEADER_PATTERN
 TEST_LINES_SECTION = {
@@ -108,29 +109,29 @@ TEST_LINES_OCC = {
 # Test cases for CONSTRAIN lines
 TEST_LINES_CONSTRAIN = {
     'geo O L(1-2), Ir L(1) = linked': (
-        'geo',
+        PerturbationType.GEO,
         'O L(1-2), Ir L(1)',
         None,
         'linked',
     ),
-    'geo O 1-5 z = linked': ('geo', 'O 1-5', 'z', 'linked'),
-    'vib Ir_top = linked': ('vib', 'Ir_top', None, 'linked'),
+    'geo O 1-5 z = linked': (PerturbationType.GEO, 'O 1-5', 'z', 'linked'),
+    'vib Ir_top = linked': (PerturbationType.VIB, 'Ir_top', None, 'linked'),
     # Fix to a specific value
-    'vib Ir_top = -0.03': ('vib', 'Ir_top', None, -0.03),
+    'vib Ir_top = -0.03': (PerturbationType.VIB, 'Ir_top', None, -0.03),
     # Geo constraint to 0.1
-    'geo C L(1), N L(2) = 0.1': ('geo', 'C L(1), N L(2)', None, 0.1),
-    'occ Fe L(3), Ni = linked': ('occ', 'Fe L(3), Ni', None, 'linked'),
+    'geo C L(1), N L(2) = 0.1': (PerturbationType.GEO, 'C L(1), N L(2)', None, 0.1),
+    'occ Fe L(3), Ni = linked': (PerturbationType.OCC, 'Fe L(3), Ni', None, 'linked'),
 }
 
 # Test cases for OFFSETS lines
 TEST_LINES_OFFSETS = {
-    'geo O L(1-2) z = 0.05': ('geo', 'O L(1-2)', 'z', 0.05),
-    'geo Ir_top x = -0.02': ('geo', 'Ir_top', 'x', -0.02),
-    'vib Si 1 = 0.01': ('vib', 'Si 1', None, 0.01),
-    'vib O_top = -0.005': ('vib', 'O_top', None, -0.005),
-    'occ Fe 1 = 0.3': ('occ', 'Fe 1', None,  0.3),
+    'geo O L(1-2) z = 0.05': (PerturbationType.GEO, 'O L(1-2)', 'z', 0.05),
+    'geo Ir_top x = -0.02': (PerturbationType.GEO, 'Ir_top', 'x', -0.02),
+    'vib Si 1 = 0.01': (PerturbationType.VIB, 'Si 1', None, 0.01),
+    'vib O_top = -0.005': (PerturbationType.VIB, 'O_top', None, -0.005),
+    'occ Fe 1 = 0.3': (PerturbationType.OCC, 'Fe 1', None,  0.3),
     'occ M_top = Fe 0.6, Ni 0.4': (
-        'occ',
+        PerturbationType.OCC,
         'M_top',
         None,
         'Fe 0.6, Ni 0.4',
