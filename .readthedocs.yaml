@@ -8,6 +8,8 @@ version: 2
 # Set the OS, Python version
 build:
   os: ubuntu-22.04
+  apt_packages:
+    - inkscape
   tools:
     python: "3.12"
 
