@@ -124,14 +124,15 @@ TEST_LINES_CONSTRAIN = {
 
 # Test cases for OFFSETS lines
 TEST_LINES_OFFSETS = {
-    'geo O L(1-2) z = 0.05': ('geo', 'O L(1-2) z', 0.05),
-    'geo Ir_top x = -0.02': ('geo', 'Ir_top x', -0.02),
-    'vib Si 1 = 0.01': ('vib', 'Si 1', 0.01),
-    'vib O_top = -0.005': ('vib', 'O_top', -0.005),
-    'occ Fe 1 = 0.3': ('occ', 'Fe 1', 0.3),
+    'geo O L(1-2) z = 0.05': ('geo', 'O L(1-2)', 'z', 0.05),
+    'geo Ir_top x = -0.02': ('geo', 'Ir_top', 'x', -0.02),
+    'vib Si 1 = 0.01': ('vib', 'Si 1', None, 0.01),
+    'vib O_top = -0.005': ('vib', 'O_top', None, -0.005),
+    'occ Fe 1 = 0.3': ('occ', 'Fe 1', None,  0.3),
     'occ M_top = Fe 0.6, Ni 0.4': (
         'occ',
         'M_top',
+        None,
         'Fe 0.6, Ni 0.4',
     ),  # Complex value (not float)
 }
@@ -285,8 +286,9 @@ def test_offsets_line_regex(input, expected):
     """Check that the regex for OFFSETS lines works as expected."""
     match = match_offsets_line(input)
     assert match is not None
-    offset_type, parameters, value = match
-    e_offset_type, e_parameters, e_value = expected
+    offset_type, targets, direction, value = match
+    e_offset_type, e_targets, e_direction, e_value = expected
     assert offset_type == e_offset_type
-    assert parameters == e_parameters
+    assert targets == e_targets
+    assert direction == e_direction
     assert value == e_value
