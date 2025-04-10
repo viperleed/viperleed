@@ -78,15 +78,17 @@ class BookkeeperMetaFile:
         try:
             domains['main'] = DomainInfo(*ast.literal_eval(main))
         except (TypeError, ValueError, MemoryError,
-                RecursionError, SyntaxError):
+                RecursionError, SyntaxError) as exc:
             if main != _EMPTY:
-                raise
+                raise MetadataError('Found corrupted \'main\' key '
+                                    'in \'domains\' section') from exc
         try:
             subdomains_tuple = ast.literal_eval(subdomains)
         except (TypeError, ValueError, MemoryError,
-                RecursionError, SyntaxError):
+                RecursionError, SyntaxError) as exc:
             if subdomains != _EMPTY:
-                raise
+                raise MetadataError('Found corrupted \'domains\' key '
+                                    'in \'domains\' section') from exc
         else:
             domains['domains'] = tuple(DomainInfo(*d)
                                        for d in subdomains_tuple)

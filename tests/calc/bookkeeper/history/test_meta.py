@@ -230,10 +230,10 @@ class TestBookkeeperMetaFileRaises:
             MetadataError,
             ),
         'main misses end parenthesis': ({'main': '(\'p\', \'h\''},
-                                        SyntaxError),
+                                        MetadataError),
         'domain misses end parenthesis': (
             {'domains': '((\'p_1\', \'h_1\', (\'p_2\', \'h_2\'))'},
-            SyntaxError,
+            MetadataError,
             ),
         }
 
