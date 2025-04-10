@@ -12,12 +12,13 @@ from viperleed_jax.files.displacements.regex import (
 
 # Test cases for SECTION_HEADER_PATTERN
 TEST_LINES_SECTION = {
-    'GEO_DELTA': 'GEO_DELTA',
-    'VIB_DELTA': 'VIB_DELTA',
-    'OCC_DELTA': 'OCC_DELTA',
-    'CONSTRAIN': 'CONSTRAIN',
     '= GEO_DELTA': 'GEO_DELTA',
-    'OFFSETS': 'OFFSETS',
+    '= VIB_DELTA': 'VIB_DELTA',
+    '= OCC_DELTA': 'OCC_DELTA',
+    '= CONSTRAIN': 'CONSTRAIN',
+    '= OFFSETS': 'OFFSETS',
+    '== GEO_DELTA': 'GEO_DELTA',
+    'GEO_DELTA': None, # No '=' at the start
     'NOT_A_SECTION': None,
     'GEO_DELTA_EXTRA': None,
 }
