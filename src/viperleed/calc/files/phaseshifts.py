@@ -17,20 +17,16 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.lib.leedbase import HARTREE_TO_EV
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
+from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 from viperleed.calc.lib.periodic_table import (get_atomic_number,
                                                get_element_symbol)
 
-try:
-    import matplotlib
-except ImportError:
-    _CAN_PLOT = False
-else:
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')
+if CAN_PLOT:
+    prepare_matplotlib_for_calc()
+    from matplotlib import pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    plt.style.use('viperleed.calc')
-    _CAN_PLOT = True
 
 
 logger = logging.getLogger(__name__)
@@ -184,7 +180,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     # Check consitency of phaseshift values (unless we
     # already know we have to make a new file anyway)
     if not newpsGen:
-        __check_consitency_element_order(rp, sl, phaseshifts)
+        __check_consistency_element_order(rp, sl, phaseshifts)
 
     return firstline, phaseshifts, newpsGen, newpsWrite
 
@@ -369,8 +365,8 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen):
     return newpsGen
 
 
-def __check_consitency_element_order(rp, sl, phaseshifts,
-                                     eps=None, l_max_cutoff=4):
+def __check_consistency_element_order(rp, sl, phaseshifts,
+                                     eps=None, l_max_cutoff=3):
     """Determine if elements may have been assigned wrong phaseshifts.
 
     In general at high energies and at high LMAX, heavier elements
@@ -402,7 +398,7 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
         higher phaseshifts in the limit of high energy and high angular
         momentum. Behaviour for low energy/low angular momentum is not
         as clear cut, as phaseshifts may cross zero and are pi periodic.
-        Default is 4.
+        Default is 3.
 
     Returns
     -------
@@ -440,13 +436,15 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
         if all(abs(ps_sites) > eps):
             break
     else:
-        # None of the phaseshifts are larger than eps at this energy
+        # At least one of the phaseshifts are smaller than eps at this energy
         logger.warning(
-            "Could not check consistency of PHASESHIFTS file: All "
-            f"PHASESHIFTS are smaller than {eps} at the largest energy."
+            "Could not check consistency of PHASESHIFTS file: "
+            f"PHASESHIFTS for some sites are smaller than {eps} at the largest "
+            "energy for LMAX >= {l_max_cutoff}. This may happen if you are "
+            "using very light scatterers (e.g. hydrogen)."
             )
         rp.setHaltingLevel(1)
-        return
+        return set()
 
     affected_elements = set()
     ps_pairs = list(zip(atomic_numbers, ps_sites))
@@ -510,6 +508,7 @@ def writePHASESHIFTS(firstline, phaseshifts, file_path=Path()/'PHASESHIFTS'):
     return
 
 
+@log_without_matplotlib(logger, msg='Skipping Phaseshift plotting.')
 def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
     """
     Outputs plots of the phaseshifts in rp.phaseshifts in a pdf file.
@@ -528,10 +527,6 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
     -------
     None.
     """
-    if not _CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "Phaseshift plotting.")
-        return
     ps_labels = []
     for el in sl.elements:
         # this reproduces the order of blocks contained in PHASESHIFTS:

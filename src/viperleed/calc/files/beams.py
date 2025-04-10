@@ -11,10 +11,12 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
+
 import copy
 from io import StringIO
 import logging
 import os
+from pathlib import Path
 import re
 
 import fortranformat as ff
@@ -239,11 +241,12 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
             with open(filename, 'r') as rf:
                 lines = [li[:-1] for li in rf.readlines()]
         except FileNotFoundError:
-            if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
-                with open(filename[:-4], 'r') as rf:
+            filename = Path(filename)
+            if filename.with_suffix('').is_file():
+                with open(filename.with_suffix(''), 'r') as rf:
                     lines = [li[:-1] for li in rf.readlines()]
             else:
-                logger.error("Error reading "+filename)
+                logger.error(f"Error reading {filename.name}.")
                 raise
 
     firstline = True

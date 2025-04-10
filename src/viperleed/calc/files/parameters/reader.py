@@ -17,12 +17,11 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-16'
 __license__ = 'GPLv3+'
 
-from collections.abc import Iterator
-from contextlib import AbstractContextManager
-from pathlib import Path
 import re
 
-from viperleed.calc.lib.base import strip_comments
+from viperleed.calc.files.input_reader import InputFileReader
+from viperleed.calc.files.input_reader import ShouldSkipLineError
+from viperleed.calc.lib.string_utils import strip_comments
 
 from .errors import MissingEqualsError
 from .errors import ParameterHasNoValueError
@@ -32,48 +31,8 @@ from .known_parameters import from_alias
 from .utils import Assignment
 
 
-class ParametersReader(AbstractContextManager, Iterator):
+class ParametersReader(InputFileReader):
     """A context manager that iterates the contents of a PARAMETERS file."""
-
-    def __init__(self, filename, noisy=True):
-        """Initialize instance.
-
-        Parameters
-        ----------
-        filename : str or Path
-            Path to the file to be read.
-        noisy : bool, optional
-            Whether the reader will emit logging messages and raise
-            errors if unknown or malformed parameters are encountered.
-        """
-        self.filename = Path(filename)
-        self.noisy = noisy
-        self._file_obj = None
-        self._current_line = 0
-
-    def __enter__(self):
-        """Enter context."""
-        self._file_obj = self.filename.open('r', encoding='utf-8')
-        self._current_line = 0
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Close file, then return control to caller to handle exceptions."""
-        try:
-            self._file_obj.close()
-        except AttributeError:
-            pass
-        return super().__exit__(exc_type, exc_value, traceback)
-
-    def __next__(self):
-        """Return the next understandable information in the file."""
-        for line in self._file_obj:
-            self._current_line += 1
-            param, *rest = self._read_one_line(line)
-            if not param:
-                continue
-            return (param, *rest)
-        raise StopIteration
 
     def _complain_about_line_parse_errors(self, line, exc):
         """Re-raise an exception occurred while line was being parsed."""
@@ -115,16 +74,16 @@ class ParametersReader(AbstractContextManager, Iterator):
 
         if '=' not in line:
             self._complain_about_missing_equals(line)
-            return '', None
+            raise ShouldSkipLineError
 
         try:
             param, assignment = self._parse_line(line)
         except (ParameterNotRecognizedError, ParameterHasNoValueError) as exc:
-            if not self.noisy:
-                return '', None
-            self._complain_about_line_parse_errors(line, exc)
+            if self.noisy:
+                self._complain_about_line_parse_errors(line, exc)
+            raise ShouldSkipLineError from exc
         if not param:
-            return '', None
+            raise ShouldSkipLineError
         return param.upper(), assignment
 
     def _parse_line(self, line):
@@ -178,5 +137,8 @@ class RawLineParametersReader(ParametersReader):
 
     def _read_one_line(self, line):
         """Return a parameter, and the whole raw line it was in."""
-        param, *_ = super()._read_one_line(line)
+        try:
+            param, *_ = super()._read_one_line(line)
+        except ShouldSkipLineError:
+            param = ''
         return param, line
