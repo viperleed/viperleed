@@ -33,15 +33,15 @@ def mock_displacements():
         SectionHeaderLine('VIB_DELTA'),
         VibDeltaLine('O', '1', -0.05, 0.05, 0.02),
         VibDeltaLine('Ir_top', None, -0.05, 0.05, 0.01),
-        VibDeltaLine('Si', None, 0.1, None, None),
+        VibDeltaLine('Si*', '2', 0.05, -0.05, None),
         SectionHeaderLine('OCC_DELTA'),
         OccDeltaLine(
             'M_top', None, [('Fe', 0.4, 0.6, 0.05), ('Ni', 0.6, 0.4, 0.05)]
         ),
-        OccDeltaLine('O', '1', [('O', 0.8, None, None)]),
+        OccDeltaLine('O', '1', [('O', 0.8, 1.0, None)]),
         SectionHeaderLine('CONSTRAIN'),
-        ConstraintLine('vib', ['Ir_top'], 'linked'),
-        ConstraintLine('geo', ['O L(1-2)', 'Ir L(1)'], 'linked'),
+        ConstraintLine('vib', 'Ir_top', None, 'linked'),
+        ConstraintLine('geo', 'O L(1-2), Ir L(1)', 'z', 'linked'),
     ]
     return path, expected_lines
 
@@ -52,10 +52,13 @@ def mock_displacements_simple():
     expected_lines = [
         SearchHeaderLine('test'),
         SectionHeaderLine('GEO_DELTA'),
-        GeoDeltaLine('Cu_surf', None, 'z', -0.1, 0.1, 0.05),
+        GeoDeltaLine('Cu_surf', None, 'z', -0.1, 0.1, 0.05,
+                     'Cu_surf z = -0.1 0.1 0.05'),
         SectionHeaderLine('VIB_DELTA'),
-        VibDeltaLine('Cu_surf', None, -0.1, 0.1, 0.05),
+        VibDeltaLine('Cu_surf', None, -0.1, 0.1, 0.05,
+                     'Cu_surf = -0.1 0.1 0.05'),
     ]
+    return path, expected_lines
 
 
 def test_displacements_reader(mock_displacements):
@@ -68,7 +71,7 @@ def test_displacements_reader(mock_displacements):
 
 
 def test_displacements_reader_simple(mock_displacements_simple):
-    path, expected_lines = mock_displacements
+    path, expected_lines = mock_displacements_simple
     with DisplacementsReader(path) as reader:
         parsed_lines = list(reader)
     assert len(parsed_lines) == len(expected_lines)
