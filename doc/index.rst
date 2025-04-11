@@ -144,8 +144,8 @@ project:
         License<content/appendix/license>
         content/appendix/notes_for_developers
 
-   A PDF version of this documentation is available for download in the version
-   selection menu in the bottom right corner of this page.
+   A PDF version of this documentation is available for download in the
+   version-selection menu in the bottom-right corner of this page.
 
 .. raw:: latex
 
