@@ -44,9 +44,11 @@ _SECTIONS = {
         },
     'domains': {
         # Contains information about whether the folder has been
-        # created with any other during a DOMAIN calculation.
-        'main': _EMPTY,     # (path, hash)
-        'domains': _EMPTY,  # ((path, hash), ...)
+        # created with any other during a DOMAIN calculation. Both
+        # options are _EMPTY for a single-domain run (or a run that
+        # has no domain-related marking).
+        'main': _EMPTY,     # (path, hash)         # Only in subdomains
+        'domains': _EMPTY,  # ((path, hash), ...)  # Only in main
         },
     }
 
