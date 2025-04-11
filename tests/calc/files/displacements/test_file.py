@@ -58,11 +58,11 @@ def mock_displacements_file():
     )
     expected_blocks[0].add_line(
         DisplacementFileSections.CONSTRAIN,
-        ConstraintLine('vib', ['Ir_top'], 'linked'),
+        ConstraintLine('vib', 'Ir_top', None, 'linked'),
     )
     expected_blocks[0].add_line(
         DisplacementFileSections.CONSTRAIN,
-        ConstraintLine('geo', ['O L(1-2)', 'Ir L(1)'], 'linked'),
+        ConstraintLine('geo', 'O L(1-2), Ir L(1)', None, 'linked'),
     )
 
     return path, expected_blocks
