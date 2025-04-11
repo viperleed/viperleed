@@ -25,6 +25,7 @@ from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.bookkeeper.root_explorer import DomainRootExplorer
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
 from viperleed.calc.bookkeeper.utils import file_contents_identical
 from viperleed.calc.bookkeeper.utils import make_property
@@ -153,13 +154,24 @@ class Bookkeeper:
         except ValueError as exc:
             raise ValueError(f'Unknown mode {mode}') from exc
 
+        # Store the RootExplorer instance BEFORE running on the main
+        # domain, as _run_on_domain will collect information from there
+        # and later on create a new instance (in _clean_state).
+        # However, we need up-to-date information for running in the
+        # subdomains, BEFORE any deleting/archiving is done, as the
+        # log file may be moved.
+        main_root = self._root
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
             }
         main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)
         exit_codes = [
             main_exit_code,
-            *self._run_subdomains(domains, main_folder, mode, **kwargs)
+            *self._run_subdomains(domains,
+                                  main_root,
+                                  main_folder,
+                                  mode,
+                                  **kwargs)
             ]
         return BookkeeperExitCode.from_codes(exit_codes)
 
@@ -682,7 +694,7 @@ class Bookkeeper:
         LOGGER.info('')
         return exit_code, last_folder
 
-    def _run_subdomains(self, domains, main_folder, mode, **kwargs):
+    def _run_subdomains(self, domains, main_root, main_folder, mode, **kwargs):
         """Execute bookkeeper in subdomains with the given `mode`."""
         if not domains:
             return
@@ -697,9 +709,8 @@ class Bookkeeper:
                     harvard_commas(*domain_rel_paths))
         domain_folders = []    # Archived HistoryFolder for each domain
         for path in domains:
-            domain_bookie = Bookkeeper(path)
-            # pylint: disable-next=protected-access        # Same class
-            dom_exit, folder = domain_bookie._run_one_domain(mode, **kwargs)
+            domain_bookie = DomainBookkeeper(main_root, cwd=path)
+            dom_exit, folder = domain_bookie.run_in_subdomain(mode, **kwargs)
             if folder:
                 folder.mark_as_domain(self.cwd, main_folder)
                 folder.metadata.write()
@@ -735,6 +746,65 @@ class Bookkeeper:
             version = self.history.last_folder.logs.version
         if version and version < _MIN_CALC_WARN:
             LOGGER.warning(_WARN_OLD_CALC, version)
+
+
+class DomainBookkeeper(Bookkeeper):
+    """A Bookkeeper for handling a domain subfolder.
+
+    The primary reason for having an explicit class for this is that
+    domain subfolders do not contain a log file. Hence information
+    derived from the log file should be taken from the root folder
+    of the main calculation.
+    """
+
+    def __init__(self, main_root, cwd=None):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        main_root : RootExplorer
+            Information from the root folder of the main calculation
+            directory.
+        cwd : Pathlike, optional
+            Path to the domain subfolder to be handled. If not given
+            or None, take the current directory. Default is None.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(cwd)
+        self._main_root = main_root
+        self._root = DomainRootExplorer(self._root.path, self, main_root)
+
+    def run_in_subdomain(self, *args, **kwargs):
+        """Execute Bookkeeper in this subdomain."""
+        return self._run_one_domain(*args, **kwargs)
+
+    # The next method needs to be overridden because the signature
+    # of __init__ is changed compared to the one of Bookkeeper.
+    def _clean_state(self):
+        """Rebuild (almost) the same state as after __init__.
+
+        The only surviving attributes are the ones given
+        at __init__ and the state that concerns logging.
+
+        Returns
+        -------
+        None.
+        """
+        logger_prepared = self._state_info['logger_prepared']
+
+        # Note on the disable: while it is indeed not very elegant to
+        # call __init__ again, it is the simplest way to (i) make it
+        # clear in __init__ which attributes we have, and (ii) avoid
+        # code repetition here. The alternative would be to set all
+        # attributes and keys to None in __init__, and call another
+        # method both in __init__ and here. This seems a lot of
+        # complication just to reset (almost) everything to None.
+        # pylint: disable-next=unnecessary-dunder-call
+        self.__init__(self._main_root, cwd=self.cwd)
+        self._state_info['logger_prepared'] = logger_prepared
 
 
 def _check_newer(older, newer):
