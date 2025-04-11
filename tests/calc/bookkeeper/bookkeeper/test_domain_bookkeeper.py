@@ -11,8 +11,7 @@ from pathlib import Path
 
 from viperleed.calc.bookkeeper.bookkeeper import DomainBookkeeper
 
-
-_MODULE = 'viperleed.calc.bookkeeper.bookkeeper'
+from .conftest import _MODULE
 
 
 class TestDomainBookkeeper:

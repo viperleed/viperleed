@@ -53,6 +53,7 @@ from ....helpers import raises_exception
 from ....helpers import raises_test_exception
 from ..conftest import MOCK_TIMESTAMP
 from ..conftest import MOCK_STATE_FILES
+from .conftest import _MODULE
 
 
 _UPDATE_METHODS = (
@@ -72,18 +73,6 @@ def check_too_early():
     """Ensure an AttributeError is raised for a too-early getattr."""
     match_re = '|'.join(_UPDATE_METHODS)
     return pytest.raises(AttributeError, match=match_re)
-
-
-class MockInput:  # pylint: disable=too-few-public-methods
-    """Fake replacement for the input built-in function."""
-
-    def __init__(self, *responses):
-        """Initialize with some expected user responses."""
-        self._responses = iter(responses)
-
-    def __call__(self, *_):
-        """Return a user response."""
-        return next(self._responses, 'yes')
 
 
 class TestBookkeeperComplaints:
@@ -494,31 +483,16 @@ class TestBookkeeperOthers:
         assert not_collected_log.exists()
         assert not (history_dir/not_collected_log.name).exists()
 
-    _user_replies = {
-        'no reply': ('', False),  # No by default
-        'invalid reply, then no': (
-            'please do not',
-            'NoPe',  # This is the one that is used
-            False,
-            ),
-        'confirmed': ('YES please', True),
-        'invalid reply, then yes': (
-            'maybe',
-            'y',     # This is the one that is used
-            True,
-            ),
-        }
-
-    @parametrize(replies_and_expect=_user_replies.values(), ids=_user_replies)
-    def test_user_confirmed(self, replies_and_expect, mock_path, mocker):
+    def test_user_confirmed(self, mock_path, mocker):
         """Check the result of asking user confirmation to proceed."""
         bookkeeper = Bookkeeper(mock_path)
         # pylint: disable-next=protected-access           # OK in tests
         bookkeeper._requires_user_confirmation = True
-        *replies, expect = replies_and_expect
-        mocker.patch('builtins.input', new=MockInput(*replies))
+
+        reply = mocker.MagicMock()
+        mocker.patch(f'{_MODULE}.ask_user_confirmation', return_value=reply)
         # pylint: disable-next=protected-access           # OK in tests
-        assert bookkeeper._user_confirmed() == expect
+        assert bookkeeper._user_confirmed() is reply
 
 
 class TestBookkeeperRaises:

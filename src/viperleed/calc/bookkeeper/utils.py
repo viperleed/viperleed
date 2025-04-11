@@ -19,6 +19,17 @@ import shutil
 LOGGER = logging.getLogger(__name__)
 
 
+def ask_user_confirmation():
+    """Request user input on an action."""
+    while True:
+        reply = input('Are you sure you want to proceed (y/N)? ')
+        reply = reply.lower()
+        if not reply or reply.startswith('n'):
+            return False
+        if reply.startswith('y'):
+            return True
+
+
 def discard_files(*file_paths):
     """Delete files/folders at `file_paths`. Log if they can't be deleted.
 

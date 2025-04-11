@@ -13,6 +13,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.bookkeeper.utils import ask_user_confirmation
 from viperleed.calc.bookkeeper.utils import discard_files
 from viperleed.calc.bookkeeper.utils import file_contents_identical
 from viperleed.calc.bookkeeper.utils import make_property
@@ -45,6 +46,44 @@ class MockClass:
     def other_update(self):
         """Set attr_value to _OTHER_UPDATED_VALUE."""
         self.attr_value = _OTHER_UPDATED_VALUE
+
+
+class MockInput:  # pylint: disable=too-few-public-methods
+    """Fake replacement for the input built-in function."""
+
+    def __init__(self, *responses):
+        """Initialize with some expected user responses."""
+        self._responses = iter(responses)
+
+    def __call__(self, *_):
+        """Return a user response."""
+        return next(self._responses, 'yes')
+
+
+class TestAskUserConfirmation:
+    """Tests for the ask_user_confirmation function."""
+
+    _user_replies = {
+        'no reply': ('', False),  # No by default
+        'invalid reply, then no': (
+            'please do not',
+            'NoPe',  # This is the one that is used
+            False,
+            ),
+        'confirmed': ('YES please', True),
+        'invalid reply, then yes': (
+            'maybe',
+            'y',     # This is the one that is used
+            True,
+            ),
+        }
+
+    @parametrize(replies_and_expect=_user_replies.values(), ids=_user_replies)
+    def test_user_confirmed(self, replies_and_expect, mocker):
+        """Check the result of asking user confirmation to proceed."""
+        *replies, expect = replies_and_expect
+        mocker.patch('builtins.input', new=MockInput(*replies))
+        assert ask_user_confirmation() == expect
 
 
 class TestDiscardFiles:

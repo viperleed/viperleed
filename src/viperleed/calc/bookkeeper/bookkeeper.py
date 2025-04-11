@@ -27,6 +27,7 @@ from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.bookkeeper.root_explorer import DomainRootExplorer
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
+from viperleed.calc.bookkeeper.utils import ask_user_confirmation
 from viperleed.calc.bookkeeper.utils import file_contents_identical
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.constants import DEFAULT_OUT
@@ -725,13 +726,7 @@ class Bookkeeper:
         """Return whether the user wants to proceed with discarding."""
         if not self._requires_user_confirmation:
             return True
-        while True:
-            reply = input('Are you sure you want to proceed (y/N)? ')
-            reply = reply.lower()
-            if not reply or reply.startswith('n'):
-                return False
-            if reply.startswith('y'):
-                return True
+        return ask_user_confirmation()
 
     def _warn_about_old_calc(self):
         """Emit warnings when this tree was created by an early calc."""
