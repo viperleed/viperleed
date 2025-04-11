@@ -58,6 +58,7 @@ class InvalidTargets:
 )
 def test_target_lexing(atom_basis, target_str, expected_mask):
     target = BSTarget(target_str)
+    assert target.target_str == target_str
 
 
 @parametrize_with_cases(
