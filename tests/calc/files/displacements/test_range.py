@@ -1,3 +1,9 @@
+"""Tests for module files/displacements/range."""
+
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__created__ = '2025-04-11'
+
+
 import pytest
 
 from viperleed_jax.files.displacements.range import DisplacementsRange
