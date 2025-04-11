@@ -5,6 +5,8 @@ __created__ = '2024-10-04'
 
 from collections import namedtuple
 
+from viperleed_jax.perturbation_type import PerturbationType
+
 from .direction import Direction
 from .range import DisplacementsRange
 from .targeting import BSTarget
@@ -109,13 +111,11 @@ class OccDeltaLine:
 class ConstraintLine:
     def __init__(self, constraint_type, targets, direction, value, line=None):
         self._line = line
-        self.constraint_type = constraint_type
-        if self.constraint_type == 'geo':
-            if direction is not None:
-                self.direction = Direction(direction)
-            else:
-                self.direction = None
-        elif self.constraint_type != 'geo' and direction is not None:
+        self.constraint_type = PerturbationType.from_string(constraint_type)
+        self.direction = None
+        if self.constraint_type == PerturbationType.GEO and direction is not None:
+            self.direction = Direction(direction)
+        elif self.constraint_type != PerturbationType.GEO and direction is not None:
             msg = (
                 f'A direction is not allowed for {self.constraint_type} '
                 f'constraints.'
@@ -128,8 +128,10 @@ class ConstraintLine:
         if isinstance(other, ConstraintLine):
             return (
                 self.constraint_type == other.constraint_type
-                and self.parameters == other.parameters
+                and self.targets == other.targets
                 and self.value == other.value
+                and (self.direction == other.direction
+                     if self.direction is not None else other.direction is None)
             )
         return False
 
