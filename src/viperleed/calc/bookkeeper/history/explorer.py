@@ -187,6 +187,28 @@ class HistoryExplorer:
         self._update_maps()
         return appended
 
+    @needs_update_for_attr('_maps[hash_to_parent]', updater=_updater)
+    def subfolder_from_hash(self, hash_):
+        """Return the subfolder with a given `hash_`.
+
+        Parameters
+        ----------
+        hash_ : str
+            Hash value of the folder to be returned.
+
+        Returns
+        -------
+        main_folder : HistoryFolder or None
+            The "main" folder added by bookkeeper in history
+            together with the one whose hash equals `hash_`.
+            None if no subfolder with such hash exists.
+        """
+        try:
+            # pylint: disable-next=unsubscriptable-object   # Inference
+            return self._maps['hash_to_parent'][hash_]
+        except (KeyError, TypeError):
+            return None
+
     def _append_existing_folder(self, path_to_folder, insert_sorted=True):
         """Register a new folder, without updating the parent mapping.
 

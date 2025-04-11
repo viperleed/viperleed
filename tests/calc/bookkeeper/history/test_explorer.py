@@ -344,6 +344,7 @@ class TestHistoryExplorer:
         'fix': 'prepare_info_file',
         'find_new_history_directory(None, None)': None,
         'register_folder': None,
+        'subfolder_from_hash(None)': None,
         '_backup_info_file': 'prepare_info_file',
         '_find_name_for_new_history_subfolder(None, None)': None,
         }
@@ -510,6 +511,21 @@ class TestHistoryExplorerCollection:
         history._maps['jobs_for_tensor'] = {1: {1, 2}, 2: {3}}
         expected_result = {1: 2, 2: 3}
         assert history.max_run_per_tensor == expected_result
+
+    def test_subfolder_from_hash_existing(self, history, mocker):
+        """Check returning of an existing subfolder."""
+        mock_folder = mocker.MagicMock()
+        mock_hash = 'mock_hash'
+        # pylint: disable-next=protected-access           # OK in tests
+        history._maps['hash_to_parent'] = {mock_hash: mock_folder}
+        assert history.subfolder_from_hash(mock_hash) is mock_folder
+
+    @parametrize(hash_=({}, 'non-existing-hash'))
+    def test_subfolder_from_hash_not_there(self, hash_, history):
+        """Check returning of an existing subfolder."""
+        # pylint: disable-next=protected-access           # OK in tests
+        history._maps['hash_to_parent'] = {}
+        assert history.subfolder_from_hash(hash_) is None
 
     def test_update_maps(self, history, mocker):
         """Test _update_maps method."""
