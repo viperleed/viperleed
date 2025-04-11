@@ -108,7 +108,6 @@ class OccDeltaLine:
         if self._line is None:
             line = f'{self.label} {self.which}'
             line += f' = {self.chem_blocks}'
-            line = self._line
         else:
             line = self._line
         return line
