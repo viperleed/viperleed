@@ -26,6 +26,8 @@ class GeoDeltaLine:
     def __init__(self, label, which, direction, start, stop, step,
                  line=None):
         self._line= line
+        self.label = label
+        self.which = which
         self.targets = _get_target(label, which)
         self.direction = Direction(direction)
         self.range = DisplacementsRange(start, stop, step)
@@ -58,6 +60,8 @@ class GeoDeltaLine:
 class VibDeltaLine:
     def __init__(self, label, which, start, stop, step, line=None):
         self._line = line
+        self.label = label
+        self.which = which
         self.targets = _get_target(label, which)
         self.range = DisplacementsRange(start, stop, step)
 
@@ -86,6 +90,8 @@ class VibDeltaLine:
 class OccDeltaLine:
     def __init__(self, label, which, chem_blocks, line=None):
         self._line = line
+        self.label = label
+        self.which = which
         self.targets = _get_target(label, which)
         self.chem_blocks = chem_blocks
 
