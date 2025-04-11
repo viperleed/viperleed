@@ -144,6 +144,10 @@ def match_occ_line(line):
 
     chem_blocks = []
 
+    # Extract the chemical blocks from the match
+    # TODO: refactor to separate function
+    # Also TODO: maybe we should introduce a chemical element Enum
+
     chem_blocks_str = match.group('chem_blocks')
     for block in chem_blocks_str.split(','):
         tokens = block.strip().split()
