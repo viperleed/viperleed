@@ -10,7 +10,7 @@ CU_111_VALID_TARGETS = {
     'Cu_surf': [True, False, False, False, False],
     'Cu_def 2': [False, True, False, False, False],
     'Cu_def 2 4': [False, True, False, True, False],
-    'Cu_def L(2-4)': [False, False, True, True, True],
+    'Cu_def L(2-4)': [False, True, True, True, False],
 }
 
 # Test cases for invalid targeting
