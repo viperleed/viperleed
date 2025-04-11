@@ -8,9 +8,12 @@ from viperleed_jax.files.displacements.targeting import BSTarget
 # Test cases for valid target with the expected mask
 CU_111_VALID_TARGETS = {
     'Cu_surf': [True, False, False, False, False],
+    '*_surf': [True, False, False, False, False],
     'Cu_def 2': [False, True, False, False, False],
-    'Cu_def 2 4': [False, True, False, True, False],
+    'Cu_* 2 4': [False, True, False, True, False],
+    'Cu_* 1 5': [True, False, False, False, True],
     'Cu_def L(2-4)': [False, True, True, True, False],
+    'Cu*' : [True, True, True, True, True],
 }
 
 # Test cases for invalid targeting
