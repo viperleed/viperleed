@@ -37,6 +37,11 @@ a:visited {
 .wy-side-nav-search {
     background-color: #6ab1e1 !important;
 }
+/* Change colors of version switch*/
+.wy-side-nav-search>div.switch-menus>div.language-switch select,
+.wy-side-nav-search>div.switch-menus>div.version-switch select {
+    color: #166cc0 !important;
+}
 
 /* Place equation numbers on the right side instead of above. See
 https://github.com/readthedocs/sphinx_rtd_theme/pull/383#issuecomment-348803509 */
