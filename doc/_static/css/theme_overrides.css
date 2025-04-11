@@ -40,7 +40,7 @@ a:visited {
 /* Change colors of version switch*/
 .wy-side-nav-search>div.switch-menus>div.language-switch select,
 .wy-side-nav-search>div.switch-menus>div.version-switch select {
-    color: #166cc0 !important;
+    color: #404040 !important;
 }
 
 /* Place equation numbers on the right side instead of above. See
