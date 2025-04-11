@@ -44,17 +44,17 @@ def mock_displacements_file():
     )
     expected_blocks[0].add_line(
         DisplacementFileSections.VIB_DELTA,
-        VibDeltaLine('Si', None, 0.1, None, None),
+        VibDeltaLine('Si*', '2', 0.05, -0.05, None),
     )
     expected_blocks[0].add_line(
         DisplacementFileSections.OCC_DELTA,
         OccDeltaLine(
-            'M_top', None, [('Fe', 0.4, 0.6, 0.05), ('Ni', 0.6, 0.4, 0.05)]
+            'M_top', None, [('Fe', 0.4, 0.6, 0.05),('Ni', 0.6, 0.4, 0.05)]
         ),
     )
     expected_blocks[0].add_line(
         DisplacementFileSections.OCC_DELTA,
-        OccDeltaLine('O', '1', [('O', 0.8, None, None)]),
+        OccDeltaLine('O', '1', [('O', 0.8, 1.0, None)]),
     )
     expected_blocks[0].add_line(
         DisplacementFileSections.CONSTRAIN,
@@ -62,7 +62,7 @@ def mock_displacements_file():
     )
     expected_blocks[0].add_line(
         DisplacementFileSections.CONSTRAIN,
-        ConstraintLine('geo', 'O L(1-2), Ir L(1)', None, 'linked'),
+        ConstraintLine('geo', 'O L(1-2), Ir L(1)', 'z', 'linked'),
     )
 
     return path, expected_blocks
