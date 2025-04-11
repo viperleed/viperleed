@@ -16,4 +16,4 @@
 
     = CONSTRAIN
     vib Ir_top = linked
-    geo O L(1-2), Ir L(1) = linked
+    geo O L(1-2), Ir L(1) z = linked
