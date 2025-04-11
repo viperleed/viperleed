@@ -37,7 +37,8 @@ class SearchBlock:
     def add_line(self, section, line):
         """Add a line to the corresponding section."""
         if section not in self.sections:
-            raise ValueError(f'Invalid section: {section}')
+            msg = f'Invalid section: {section}'
+            raise ValueError(msg)
         self.sections[section].append(line)
 
     @property
