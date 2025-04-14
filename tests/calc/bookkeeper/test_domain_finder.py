@@ -30,6 +30,7 @@ class TestDomainFinder:
             DEFAULT_TENSORS: {},  # We don't explicitly check for this
             'history': {},
             'workhistory': {},
+            'another_folder': {},
             }
         domains = {
             'Domain_1': {},    # An automatically-labeled domain
