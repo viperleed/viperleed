@@ -108,7 +108,7 @@ class TestBookkeeperComplaints:
 
         bookkeeper.update_from_cwd()
         (bookkeeper.history.new_folder.path).mkdir()
-        # pylint: disable-next=protected-access  # OK in tests
+        # pylint: disable-next=protected-access           # OK in tests
         bookkeeper._archive_input_files_from_original_inputs_or_cwd()
         # pylint: disable-next=magic-value-comparison
         assert 'is newer' in caplog.text
@@ -126,7 +126,7 @@ class TestBookkeeperComplaints:
         with caplog.at_level(logging.WARNING):
             bookkeeper.update_from_cwd()
             (bookkeeper.history.new_folder.path).mkdir()
-            # pylint: disable-next=protected-access  # OK in tests
+            # pylint: disable-next=protected-access       # OK in tests
             bookkeeper._archive_input_files_from_original_inputs_or_cwd()
         assert not caplog.text
 
@@ -306,7 +306,7 @@ class TestBookkeeperOthers:
             shutil.copy2(logfile, tmp_path)
         bookkeeper = Bookkeeper(cwd=tmp_path)
         bookkeeper.update_from_cwd(silent=True)
-        # pylint: disable-next=protected-access   # OK in tests
+        # pylint: disable-next=protected-access           # OK in tests
         logs = bookkeeper._root.logs
         log_info = logs.infer_run_info()
         assert logs.files
@@ -350,7 +350,7 @@ class TestBookkeeperOthers:
                          for file, contents in root_tree[folder].items()
                          if contents is None}
         bookkeeper.update_from_cwd()
-        # pylint: disable-next=protected-access   # OK in tests
+        # pylint: disable-next=protected-access           # OK in tests
         bookkeeper._root.remove_tensors_and_deltas()
         assert not any(f.exists() for f in removed_files)
         assert all(f.exists()
@@ -444,7 +444,7 @@ class TestBookkeeperOthers:
         bookkeeper.update_from_cwd(silent=True)
         history_dir = bookkeeper.history.new_folder.path
         history_info = bookkeeper.history.info
-        # pylint: disable-next=protected-access   # OK in tests
+        # pylint: disable-next=protected-access           # OK in tests
         logs = bookkeeper._root.logs.files
         assert tensor_num_unused not in bookkeeper.max_job_for_tensor
         assert not_collected_log not in logs
@@ -513,11 +513,11 @@ class TestBookkeeperRaises:
         """Check complaints when we fail to make the history directory."""
         bookkeeper = Bookkeeper()
         with raises_oserror('pathlib.Path.mkdir'):
-            # pylint: disable-next=protected-access    # OK in tests
+            # pylint: disable-next=protected-access       # OK in tests
             bookkeeper._make_history_and_prepare_logger()
 
         with raises_test_exception('pathlib.Path.mkdir'):
-            # pylint: disable-next=protected-access    # OK in tests
+            # pylint: disable-next=protected-access       # OK in tests
             bookkeeper._make_history_and_prepare_logger()
 
     def test_discard_full_cant_remove_folder(self, after_archive, caplog):
@@ -532,10 +532,10 @@ class TestBookkeeperRaises:
         bookkeeper.history.info.read()
 
         with raises_test_exception('shutil.rmtree'):
-            # pylint: disable-next=protected-access    # OK in tests
+            # pylint: disable-next=protected-access       # OK in tests
             bookkeeper._run_discard_full_mode()
         with make_raise_oserror('shutil.rmtree'):
-            # pylint: disable-next=protected-access    # OK in tests
+            # pylint: disable-next=protected-access       # OK in tests
             exit_code, _ = bookkeeper._run_discard_full_mode()
             # pylint: disable-next=magic-value-comparison
             assert 'Failed to delete' in caplog.text
