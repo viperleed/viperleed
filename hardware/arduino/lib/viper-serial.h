@@ -39,7 +39,7 @@ Date: 26.03.2025
 #define PC_DEBUG            252
 // PC_ERROR: An error occurred
 #define PC_ERROR            253
-// PC_OK: Acknowledge request from PC (ASCCI 'K')
+// PC_OK: Acknowledge request from PC (ASCII 'K')
 #define PC_OK                75
 
 // Serial-communication-related error codes
