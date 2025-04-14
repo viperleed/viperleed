@@ -88,7 +88,7 @@ class DomainFinder:
         last_folder = self._bookkeeper.history.last_folder
         self._domain_info = (
             {} if last_folder is None
-            else last_folder.domain_info
+            else last_folder.metadata.domains
             )
 
     def find_potential_domains(self):

@@ -60,8 +60,8 @@ class TestDomainFinder:
         """Check the collection of domain information with a history folder."""
         mock_info = {'main': mocker.MagicMock()}
         bookkeeper = finder.bookkeeper
-        bookkeeper.history.last_folder = mocker.MagicMock(
-            domain_info=mock_info,
+        bookkeeper.history.last_folder.metadata = mocker.MagicMock(
+            domains=mock_info,
             )
         finder.collect_info()
         bookkeeper.update_from_cwd.assert_called_once_with(silent=True)
