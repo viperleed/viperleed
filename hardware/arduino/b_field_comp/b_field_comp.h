@@ -15,6 +15,41 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer
 #ifndef _VIPERLEED_B_FIELD_COMP
 #define _VIPERLEED_B_FIELD_COMP
 
+
+/** ------------------------- Communication with PC ------------------------ **/
+
+// PC requested to set a specific duty cycle (ASCII 'D')
+#define PC_SET_DUTY_CYCLE         68
+// PC requested to set a specific current (ASCII 'I')
+#define PC_SET_CURRENT		 	  73
+// PC requested measurement (ASCII 'M')
+#define PC_MEASURE	              77
+// PC requested time constant (ASCII 'T')
+#define PC_SET_TIME_CONSTANT	      84
+// PC requested enable dynamic (ASCII 'E')
+#define PC_SET_ENABLE_DYNAMIC	      69
+// PC requested to set transformation matrix (ASCII 't')
+#define PC_SET_TRANSFORMATION_MATRIX	      116
+// PC requested to set calibration curve (ASCII 'c')
+#define PC_SET_CALIBRATION_CURVE	      99
+
+/** ------------------------- Finite state machine ------------------------- **/
+// Set duty cycle for the coil using PWM.
+#define STATE_SET_DUTY_CYCLE	  50
+// Set current for the coil. 
+#define STATE_SET_CURRENT		  51
+// Measure the current and voltage of the respective coil.
+#define STATE_MEASURE		      52
+// Set the time constant.
+#define STATE_SET_TIME_CONSTANT		  53
+// Enable/disable dynamic magnetic field compensation.
+#define STATE_SET_ENABLE_DYNAMIC	  54
+// Set transformation matrix.
+#define STATE_SET_TRANSFORMATION_MATRIX	  55
+// Set calibration curve.
+#define STATE_SET_CALIBRATION_CURVE  56
+
+
 // The pins belonging to 'COIL_1_PWM' and 'COIL_2_PWM' should not be changed.
 // Changing these may require choosing a different Timer/Counter module.
 // Possible Pins for TimerCounter1: 9, 10, 11
@@ -216,4 +251,48 @@ TimerCounter4 pwm2(COIL_2_PWM, COIL_2_SIGN);
   Coil coil_2(&pwm2, COIL_2_ENABLE, INA_2_SPI_CS);
 #endif
 
+// Useful macros, structs and unions
+#define LENGTH(array)  (sizeof(array) / sizeof((array)[0]))
+#define MIN(a, b)      ((a) < (b) ? (a) : (b))
+#ifndef NAN
+    #define NAN   (1.0/0)   // Floating-point not-a-number
+#endif
+
+// Interpret the same value as either uint16_t or a 2-bytes array
+union uint16OrBytes{
+    uint16_t asInt;
+    byte asBytes[2];
+};
+
+// Interpret the same value as either int16_t or a 2-bytes array
+union int16OrBytes{
+    int16_t asInt;
+    byte asBytes[2];
+};
+
+// Interpret the same value as either int32_t or a 4-bytes array
+union int32OrBytes{
+    int32_t asInt;
+    byte asBytes[4];
+};
+
+// Interpret the same value as either (32-bit) float or a 4-bytes array
+union floatOrBytes{
+    float asFloat;
+    byte asBytes[4];
+};
+
+// Two floats that represent the duty cycles of each respective coil.
+floatOrBytes dutyCycle[2];
+// Two current values that have to be converted to duty cycles.
+floatOrBytes targetCurrent[2];
+// Two floats which represent the time constants of the coils.
+floatOrBytes timeConstant[2];
+// Enable/disable dynamic magnetic field compensation.
+bool enableDynamic;
+// Transformation matrix which converts external field to field on sample.
+floatOrBytes transformationMatrix[3][2];
+// Calibration curve for converting PWM duty cycles to currents.
+#define N  6														//TODO: Replace N and use proper calibration curve values.
+byte calibrationCurve[N];
 #endif  // _VIPERLEED_B_FIELD_COMP

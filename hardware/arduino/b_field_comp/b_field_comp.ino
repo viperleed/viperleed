@@ -13,8 +13,8 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer, Florian Dörr, Tu
 #define DEBUG false                  // Debug mode, writes to serial line, for use in serial monitor
 
 #include "states-def.h"				 // Basic state machine definitions
-#include "viper-serial.h"			 // Serial communication functions
 #include "arduino_utils.h"           // from '../lib'; for setChipSelectHigh
+#include "viper-serial.h"			 // Serial communication functions
 #include "b_field_comp.h"            // Globals, #defines, etc.
 
 // The box ID is an indentifier that is necessary for the PC to know what
@@ -106,6 +106,27 @@ void loop()
             break;
         case STATE_ERROR:
         	handleErrors();
+        	break;
+        case STATE_SET_DUTY_CYCLE:
+        	setDutyCycle();
+        	break;
+        case STATE_SET_CURRENT:
+        	setCurrent();
+        	break;
+        case STATE_MEASURE:
+        	measure();
+        	break;
+        case STATE_SET_TIME_CONSTANT:
+        	setTimeConstant();
+        	break;
+        case STATE_SET_ENABLE_DYNAMIC:
+        	setEnableDynamic();
+        	break;
+        case STATE_SET_TRANSFORMATION_MATRIX:
+        	setTransformationMatrix();
+        	break;
+        case STATE_SET_CALIBRATION_CURVE:
+        	setCalibrationCurve();
         	break;
 	}
 
@@ -214,6 +235,13 @@ bool isAllowedCommand() {
         case PC_RESET: break;
         case PC_SET_SERIAL_NR: break;
         case PC_STOP: break;
+        case PC_SET_DUTY_CYCLE: break;
+        case PC_SET_CURRENT: break;
+        case PC_MEASURE: break;
+        case PC_SET_TIME_CONSTANT: break;
+        case PC_SET_ENABLE_DYNAMIC: break;
+        case PC_SET_TRANSFORMATION_MATRIX: break;
+        case PC_SET_CALIBRATION_CURVE: break;
        // case PC_: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
@@ -266,6 +294,32 @@ void updateState() {
             currentState = STATE_IDLE;
             encodeAndSend(PC_OK);
             break;
+        case PC_SET_DUTY_CYCLE:
+        	waitingForDataFromPC = true;
+        	initialTime = millis();
+        	currentState = STATE_SET_DUTY_CYCLE;
+        case PC_SET_CURRENT:
+        	waitingForDataFromPC = true;
+        	initialTime = millis();
+        	currentState = STATE_SET_CURRENT;
+        case PC_MEASURE:
+        	currentState = STATE_MEASURE;
+        case PC_SET_TIME_CONSTANT:
+        	waitingForDataFromPC = true;
+        	initialTime = millis();
+        	currentState = STATE_SET_TIME_CONSTANT;
+        case PC_SET_ENABLE_DYNAMIC:
+        	waitingForDataFromPC = true;
+        	initialTime = millis();
+        	currentState = STATE_SET_ENABLE_DYNAMIC;
+        case PC_SET_TRANSFORMATION_MATRIX:
+        	waitingForDataFromPC = true;
+        	initialTime = millis();
+        	currentState = STATE_SET_TRANSFORMATION_MATRIX;
+        case PC_SET_CALIBRATION_CURVE:
+        	waitingForDataFromPC = true;
+        	initialTime = millis();
+        	currentState = STATE_SET_CALIBRATION_CURVE;
 		/*case PC_:
 			currentState = STATE_;
 			break;*/
@@ -406,7 +460,6 @@ void reset(){                                      //TODO: add reset settings fo
     currentState = STATE_IDLE;
     waitingForDataFromPC = false;
 
-    }
 }
 
 
@@ -463,4 +516,515 @@ void setSerialNr(){
 	
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
+}
+
+
+/** Handler of STATE_SET_DUTY_CYCLE */
+void setDutyCycle(){
+ 	/**
+    Wait until we get data from the PC and set a duty cycle for the respective coil.
+
+    For each coil, we need 4 bytes from the data_received[] buffer.
+    Their meaning is:
+    - Set duty cycle for coil 1
+    - Set duty cycle for coil 2
+
+    Reads
+    -----
+    currentState, newMessage, waitingForDataFromPC, data_received, msgLength
+
+    Writes
+    ------
+    newMessage, waitingForDataFromPC, dutyCycle, 
+
+    Msg to PC
+    ---------
+    PC_OK, signaling that we're done setting the duty cycle
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_DUTY_CYCLE
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_DUTY_CYCLE message
+        and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If we receive data, but it isn't exactly the amount
+        we were expecting to get
+    STATE_IDLE  : 
+    	Successfully finished
+    
+    **/
+	
+	 if (currentState != STATE_SET_DUTY_CYCLE){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+    if (not newMessage and waitingForDataFromPC){
+        // Waiting for data from PC
+        checkIfTimedOut();
+        return;
+    }
+    
+    if (newMessage and waitingForDataFromPC){ // Do this only once
+        // Data has arrived
+        waitingForDataFromPC = false;
+        newMessage = false;
+
+        // Check that it is the right amount of data
+        // We need exactly 8 bytes, 4 bytes for each float representing one duty cycle
+        if (msgLength != 8){                                   
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+        }
+        for(int j=0; j<2;j++){
+        	for(int i = 0; i < 4 ;i++){
+        		dutyCycle[j].asBytes[4-i] = data_received[i+j*4];	
+			 }
+        }
+                                  									//TODO: catch errors from coils and report them
+        coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1
+        coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2
+
+		encodeAndSend(PC_OK);
+		currentState = STATE_IDLE;
+     }     
+}
+
+
+/** Handler of STATE_SET_CURRENT */
+void setCurrent(){
+   /** Wait until we get data (a target current) from the PC, convert the received data in order to set a duty cycle 
+
+    For each coil, we need 4 bytes from the data_received[] buffer.
+    Their meaning is:
+    - Target current for coil 1
+    - Target current for coil 2
+
+    Reads
+    -----
+    currentState, newMessage, waitingForDataFromPC, data_received, msgLength
+
+    Writes
+    ------
+    newMessage, waitingForDataFromPC, targetCurrent, 
+
+    Msg to PC
+    ---------
+    PC_OK, signaling that we're done setting the current/duty cycle
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_CURRENT
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_CURRENT message
+        and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If we receive data, but it isn't exactly the amount
+        we were expecting to get
+    STATE_IDLE  : 
+    	Successfully finished
+    
+    **/
+	
+	 if (currentState != STATE_SET_CURRENT){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+    if (not newMessage and waitingForDataFromPC){
+        // Waiting for data from PC
+        checkIfTimedOut();
+        return;
+    }
+    
+    if (newMessage and waitingForDataFromPC){ // Do this only once
+        // Data has arrived
+        waitingForDataFromPC = false;
+        newMessage = false;
+        
+        // Check that it is the right amount of data
+        // 2 floats -> msgLength is 8
+        if (msgLength != 8){                                   
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+        }
+        for(int j=0; j<2;j++){
+        	for(int i = 0; i < 4 ;i++){
+        		targetCurrent[j].asBytes[3-i] = data_received[i+j*4];
+			 }
+        }
+        
+        //Function convertCurrentToDutyCycle() needs to be written
+        convertCurrentToDutyCycle();
+                     									
+        coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1 using the current
+        coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2 using the current
+
+		encodeAndSend(PC_OK);
+		currentState = STATE_IDLE;
+     }      
+}
+
+
+void convertCurrentToDutyCycle(){
+	//This function converts the target current given by the PC, to a duty cycle which will be set on the respective coils
+	float x = 0; 
+	dutyCycle[0].asFloat = targetCurrent[0].asFloat * x;        // TODO: implement
+	dutyCycle[1].asFloat = targetCurrent[1].asFloat * x;		// TODO: implement
+}
+
+
+/** Handler of STATE_MEASURE */
+void measure(){
+   /** We are measuring the current and the supply voltage.
+	
+	Reads
+    -----
+    currentState
+
+    Writes
+    ------
+    voltage1, voltage2, current1, current2
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_MEASURE
+    STATE_IDLE  : 
+    	Successfully finished
+    
+    **/
+	
+	 if (currentState != STATE_MEASURE){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+    
+    floatOrBytes voltage1;  //TODO: make implementation of the returning data more efficient if this works
+	floatOrBytes voltage2;
+	floatOrBytes current1;
+	floatOrBytes current2;
+
+	//Measure the current of the respective coil
+	current1.asFloat = coil_1.get_current();
+	current2.asFloat = coil_2.get_current();
+	
+	//Measure the voltage at pin8 (motor driver's supply voltage) of the respective coil
+	voltage1.asFloat = coil_1.get_voltage();
+	voltage2.asFloat = coil_2.get_voltage();
+	
+	
+	sendFloatToPC(current1);
+	sendFloatToPC(current2);
+	sendFloatToPC(voltage1);
+	sendFloatToPC(voltage2);
+	
+	
+	
+	currentState = STATE_IDLE;     
+}
+
+
+void sendFloatToPC(floatOrBytes value){
+	// Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout, we
+    // have flip the bytes over to maintain consistency of our messages, which
+    // are in big-endian order
+    byte littleToBigEndian[4];
+    
+    for (int i = 0; i < 4; i++){
+    	littleToBigEndian[i] = value.asBytes[3-i];
+    }
+    encodeAndSend(littleToBigEndian, 4);
+}
+
+
+/** Handler of STATE_SET_TIME_CONSTANT */
+void setTimeConstant(){
+   /** Wait until we get data (time constant) from the PC, convert the received data
+
+    For each coil, we need 4 bytes from the data_received[] buffer. ???
+    Their meaning is:
+    - ...
+    - ...
+
+    Reads
+    -----
+    currentState, newMessage, waitingForDataFromPC, data_received, msgLength
+
+    Writes
+    ------
+    newMessage, waitingForDataFromPC, timeConstant 
+
+    Msg to PC
+    ---------
+    PC_OK, signaling that we're done
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_TIME_CONSTANT
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_TIME_CONSTANT message
+        and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If we receive data, but it isn't exactly the amount
+        we were expecting to get
+    STATE_IDLE  : 
+    	Successfully finished
+    
+    **/
+	
+	 if (currentState != STATE_SET_TIME_CONSTANT){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+    if (not newMessage and waitingForDataFromPC){
+        // Waiting for data from PC
+        checkIfTimedOut();
+        return;
+    }
+    
+    if (newMessage and waitingForDataFromPC){ // Do this only once
+        // Data has arrived
+        waitingForDataFromPC = false;
+        newMessage = false;
+        
+        // Check that it is the right amount of data
+        // 2 floats ->  msgLength is 8
+        if (msgLength != 8){                                   
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+        }
+        
+		for(int j=0; j<2;j++){
+        	for(int i = 0; i < 4 ;i++){
+        		timeConstant[j].asBytes[3-i] = data_received[i+j*4];
+			 }
+        }
+        
+		encodeAndSend(PC_OK);
+		currentState = STATE_IDLE;
+     }      
+}
+
+
+/** Handler of STATE_SET_ENABLE_DYNAMIC */
+void setEnableDynamic(){
+   /** Wait until we get data from the PC, convert the received data
+
+    For each coil, we need 4 bytes from the data_received[] buffer.  ???
+    Their meaning is:
+    - ...
+    - ...
+
+    Reads
+    -----
+    currentState, newMessage, waitingForDataFromPC, data_received, msgLength
+
+    Writes
+    ------
+    newMessage, waitingForDataFromPC, enableDynamic
+
+    Msg to PC
+    ---------
+    PC_OK, signaling that we're done
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_ENABLE_DYNAMIC
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_ENABLE_DYNAMIC message
+        and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If we receive data, but it isn't exactly the amount
+        we were expecting to get
+    STATE_IDLE  : 
+    	Successfully finished
+    
+    **/
+	
+	 if (currentState != STATE_SET_ENABLE_DYNAMIC){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+    if (not newMessage and waitingForDataFromPC){
+        // Waiting for data from PC
+        checkIfTimedOut();
+        return;
+    }
+    
+    if (newMessage and waitingForDataFromPC){ // Do this only once
+        // Data has arrived
+        waitingForDataFromPC = false;
+        newMessage = false;
+        
+        // Check that it is the right amount of data
+        // Our msgLength is 1 as we get one byte.
+        if (msgLength != 1){                                   
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+        }
+     
+		if (data_received[0] == 1){
+			enableDynamic = true;
+		}
+     
+     	if (data_received[0] == 0){ 
+			enableDynamic = false;
+		}
+		
+		else{                                   
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+		}
+
+		encodeAndSend(PC_OK);
+		currentState = STATE_IDLE;
+     }      
+}
+
+
+/** Handler of STATE_SET_TRANSFORMATION_MATRIX */
+void setTransformationMatrix(){
+   /** Wait until we get data from the PC (what data?), convert the received data in order to set a transformation matrix
+
+    For each coil, we need ? bytes from the data_received[] buffer.
+    Their meaning is:
+    - 
+    - 
+
+    Reads
+    -----
+    currentState, newMessage, waitingForDataFromPC, data_received, msgLength
+
+    Writes
+    ------
+    newMessage, waitingForDataFromPC, transformationMatrix 
+
+    Msg to PC
+    ---------
+    PC_OK, signaling that we're done
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_TRANSFORMATION_MATRIX
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_TRANSFORMATION_MATRIX message
+        and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If we receive data, but it isn't exactly the amount
+        we were expecting to get
+    STATE_IDLE  : 
+    	Successfully finished
+    
+    **/
+	
+	 if (currentState != STATE_SET_TRANSFORMATION_MATRIX){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+    if (not newMessage and waitingForDataFromPC){
+        // Waiting for data from PC
+        checkIfTimedOut();
+        return;
+    }
+    
+    if (newMessage and waitingForDataFromPC){ // Do this only once
+        // Data has arrived
+        waitingForDataFromPC = false;
+        newMessage = false;
+        
+        // Check that it is the right amount of data
+        // 6 floats in the matrix -> msgLength is 24
+        if (msgLength != 24){                                   
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+        }
+        for(int m=0; m<3;m++){
+        	for(int j=0; j<2;j++){
+        		for(int i = 0; i < 4 ;i++){
+        			transformationMatrix[m][j].asBytes[3-i] = data_received[i+j*4+m*8];
+				 }
+        	}
+		}
+		encodeAndSend(PC_OK);
+		currentState = STATE_IDLE;
+     }      
+}
+
+
+/** Handler of STATE_SET_CALIBRATION_CURVE */
+void setCalibrationCurve(){
+   /** Wait until we get data from the PC (what data?), convert the received data in order to set a calibration curve
+
+    For each coil, we need ? bytes from the data_received[] buffer.
+    Their meaning is:
+    - 
+    - 
+
+    Reads
+    -----
+    currentState, newMessage, waitingForDataFromPC, data_received, msgLength
+
+    Writes
+    ------
+    newMessage, waitingForDataFromPC, calibrationCurve 
+
+    Msg to PC
+    ---------
+    PC_OK, signaling that we're done 
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_CALIBRATION_CURVE
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_CALIBRATION_CURVE message
+        and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If we receive data, but it isn't exactly the amount
+        we were expecting to get
+    STATE_IDLE  : 
+    	Successfully finished
+    
+    **/
+	
+	 if (currentState != STATE_SET_CALIBRATION_CURVE){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+    if (not newMessage and waitingForDataFromPC){
+        // Waiting for data from PC
+        checkIfTimedOut();
+        return;
+    }
+    
+    if (newMessage and waitingForDataFromPC){ // Do this only once
+        // Data has arrived
+        waitingForDataFromPC = false;
+        newMessage = false;
+        
+        // Check that it is the right amount of data
+        // N bytes in the array -> msgLength is N
+        if (msgLength != N){                                   
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+        }
+        
+        for(int j=0; j<N;j++){
+        	calibrationCurve[j] = data_received[j];
+        }
+        
+		encodeAndSend(PC_OK);
+		currentState = STATE_IDLE;
+     }      
 }
