@@ -60,6 +60,10 @@ class MockInput:  # pylint: disable=too-few-public-methods
         return next(self._responses, 'yes')
 
 
+# About the disable: better to keep tests confined to classes.
+# Otherwise we'd need to make the cases a module global, which
+# is not ideal.
+# pylint: disable-next=too-few-public-methods
 class TestAskUserConfirmation:
     """Tests for the ask_user_confirmation function."""
 
