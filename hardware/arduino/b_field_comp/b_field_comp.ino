@@ -373,7 +373,7 @@ void getConfiguration(){
     // at lower memory index
 
 	byte serial_nr[4];
-	getSerialNR(serial_nr);
+	getSerialNumber(serial_nr);
     byte configuration[7] = {BOX_ID,
                              FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR};
@@ -512,7 +512,7 @@ void setSerialNr(){
         return;
     }
 	
-	writeSerialNR(data_received);
+	storeSerialNumber(data_received);
 	
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
