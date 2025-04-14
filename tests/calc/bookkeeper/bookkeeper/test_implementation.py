@@ -547,7 +547,7 @@ class TestBookkeeperRaises:
         with pytest.raises(ValueError):
             bookkeeper.run('invalid')
 
-    def test_no_runner_implemented(self, monkeypatch):
+    def test_no_runner_implemented(self, monkeypatch, tmp_path):
         """Check complaints if a runner is not available for a mode."""
         class _MockMode(Enum):
             INVALID = 'invalid'
@@ -555,7 +555,7 @@ class TestBookkeeperRaises:
             'viperleed.calc.bookkeeper.bookkeeper.BookkeeperMode',
             _MockMode
             )
-        bookkeeper = Bookkeeper()
+        bookkeeper = Bookkeeper(tmp_path)
         with pytest.raises(NotImplementedError):
             bookkeeper.run('invalid')
 
