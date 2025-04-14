@@ -82,22 +82,26 @@ class BookkeeperMetaFile:
         except (TypeError, ValueError, MemoryError,
                 RecursionError, SyntaxError) as exc:
             if main != _EMPTY:
-                raise MetadataError('Found corrupted \'main\' key '
-                                    'in \'domains\' section') from exc
+                raise MetadataError(
+                    f'Metadata of {self.folder}: Found corrupted '
+                    '\'main\' option in \'domains\' section.'
+                    ) from exc
         try:
             subdomains_tuple = ast.literal_eval(subdomains)
         except (TypeError, ValueError, MemoryError,
                 RecursionError, SyntaxError) as exc:
             if subdomains != _EMPTY:
-                raise MetadataError('Found corrupted \'domains\' key '
-                                    'in \'domains\' section') from exc
+                raise MetadataError(
+                    f'Metadata of {self.folder}: Found corrupted \'domains\' '
+                    'option in \'domains\' section.'
+                    ) from exc
         else:
             domains['domains'] = tuple(DomainInfo(*d)
                                        for d in subdomains_tuple)
         if len(domains) > 1:
             raise MetadataError(
-                f'Found corrupted \'domains\' section {domains}. '
-                'Contains both \'main\' and \'domains\'.'
+                f'Metadata of {self.folder}: Found corrupted \'domains\' '
+                f'section {domains}. Contains both \'main\' and \'domains\'.'
                 )
         return domains
 
