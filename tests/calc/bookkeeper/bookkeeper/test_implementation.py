@@ -32,6 +32,8 @@ from viperleed.calc.bookkeeper.bookkeeper import _MIN_CALC_WARN
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.bookkeeper import LOGGER
+from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
+from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_HISTORY
@@ -134,6 +136,42 @@ class TestBookkeeperComplaints:
 class TestBookkeeperDomains:
     """Tests for running bookkeeper in subdomains."""
 
+    @parametrize(exc=(MetadataError, MainPathNotFoundError(None)))
+    def test_find_domains_fails(self, exc, tmp_path, caplog, mocker):
+        """Check failure to detect domains."""
+        bookkeeper = Bookkeeper(tmp_path)
+        mocker.patch.object(bookkeeper, '_find_domains', side_effect=exc)
+        expect_log = 'proceed manually'
+        exit_code = bookkeeper.run('archive')
+        assert exit_code is BookkeeperExitCode.FAIL
+        assert expect_log in caplog.text
+
+    def test_find_domains_implementation(self, mocker):
+        """Check the inner calls in _find_domains."""
+        bookkeeper = Bookkeeper()
+        mock_finder = mocker.MagicMock()
+        mock_mode = mocker.MagicMock()
+        mocks = {
+            'update': mocker.patch.object(bookkeeper, 'update_from_cwd'),
+            'finder': mocker.patch(f'{_MODULE}.DomainFinder',
+                                   return_value=mock_finder),
+            'collect_domain': mock_finder.collect_info,
+            'find_domains': mock_finder.find_domains,
+            }
+        calls = {
+            'update': mocker.call(silent=True),
+            'finder': mocker.call(bookkeeper),
+            'collect_domain': mocker.call(),
+            'find_domains': mocker.call(mock_mode),
+            }
+        assert calls.keys() == mocks.keys()
+        # pylint: disable-next=protected-access           # OK in tests
+        result = bookkeeper._find_domains(mock_mode)
+        assert result is mock_finder.find_domains.return_value
+        for call_name, call in calls.items():
+            mock = mocks[call_name]
+            assert mock.mock_calls == [call]
+
     @parametrize(mode=Mode)
     def test_run_domains(self, mode, tmp_path, mocker, caplog):
         """Check calls of run when executed with a given domains argument."""
@@ -151,6 +189,7 @@ class TestBookkeeperDomains:
 
         domains = [tmp_path/str(i) for i in range(5)]
         main_bookie = Bookkeeper(tmp_path)
+        mock_find = mocker.patch.object(main_bookie, '_find_domains')
         exit_code = main_bookie.run(mode, **kwargs, domains=domains)
 
         n_calls = 1 + len(domains)
@@ -160,6 +199,7 @@ class TestBookkeeperDomains:
         assert exit_code is mock_exit
         # pylint: disable-next=magic-value-comparison
         assert 'Running bookkeeper in domain folders' in caplog.text
+        mock_find.assert_not_called()  # We passed a domains kwarg
 
     def test_run_domains_logging(self, tmp_path, mocker):
         """Check log messages are dispatched to the right files."""
@@ -540,6 +580,17 @@ class TestBookkeeperRaises:
             # pylint: disable-next=magic-value-comparison
             assert 'Failed to delete' in caplog.text
             assert exit_code is BookkeeperExitCode.FAIL
+
+    def test_find_domains_metadata_error(self, mocker, tmp_path, caplog):
+        """Check logging and re-raising of MetadataError in _find_domains."""
+        bookkeeper = Bookkeeper(tmp_path)
+        error_txt = 'error text'
+        mocker.patch(f'{_MODULE}.DomainFinder.find_domains',
+                     side_effect=MetadataError(error_txt))
+        with pytest.raises(MetadataError):
+            # pylint: disable-next=protected-access       # OK in tests
+            bookkeeper._find_domains(Mode.ARCHIVE)
+        assert error_txt in caplog.text
 
     def test_invalid_mode(self):
         """Check complaints when an invalid mode is used."""

@@ -16,11 +16,14 @@ from pathlib import Path
 
 from viperleed import __version__
 from viperleed.calc.bookkeeper import log
+from viperleed.calc.bookkeeper.domain_finder import DomainFinder
+from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
 from viperleed.calc.bookkeeper.errors import _FileNotOlderError
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.errors import CantDiscardEntryError
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
@@ -154,6 +157,14 @@ class Bookkeeper:
             mode = BookkeeperMode(mode)
         except ValueError as exc:
             raise ValueError(f'Unknown mode {mode}') from exc
+
+        if domains is None:
+            try:
+                domains = self._find_domains(mode)
+            except (MetadataError, MainPathNotFoundError):
+                LOGGER.error('Please proceed manually.')
+                LOGGER.info('')
+                return BookkeeperExitCode.FAIL
 
         # Store the RootExplorer instance BEFORE running on the main
         # domain, as _run_on_domain will collect information from there
@@ -456,6 +467,17 @@ class Bookkeeper:
         # copy with a _FROM_ROOT suffix.
         self._root.mark_edited_files()
         return True
+
+    def _find_domains(self, mode):
+        """Identify domain subfolders in the current directory."""
+        self.update_from_cwd(silent=True)  # Only the first log message
+        finder = DomainFinder(self)
+        finder.collect_info()
+        try:
+            return finder.find_domains(mode)
+        except MetadataError as exc:
+            LOGGER.error(str(exc))
+            raise
 
     def _make_and_copy_to_history(self):
         """Create new history subfolder and copy all files there.
