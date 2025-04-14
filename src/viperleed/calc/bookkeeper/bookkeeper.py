@@ -135,8 +135,9 @@ class Bookkeeper:
             with destructive actions. Only used in DISCARD_FULL mode.
             Default is True.
         domains : Sequence or None, optional
-            Paths to subdomain folders. If not given or None, run
-            bookkeeper only in self.cwd. Default is None.
+            Paths to subdomain folders. If not given or None, search
+            domain subfolders in self.cwd and automatically run there
+            too. Default is None.
 
         Returns
         -------
