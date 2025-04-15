@@ -30,6 +30,7 @@ from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.guilib.widgets.basewidgets import ButtonWithLabel
 from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
+from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
 
 
 DELTA_ENERGY_NAME = 'Step height'
@@ -251,10 +252,13 @@ class StepProfileEditor(qtw.QDialog):                                           
         self.setWindowTitle('Edit energy-step profile')
         self.setWindowFlags(self.windowFlags()
                             & ~qtc.Qt.WindowContextHelpButtonHint)
-        self._delay = qtc.QTimer()
-        self._delay.setSingleShot(True)
-        self._delay.setInterval(3)
-        self._delay.timeout.connect(self.adjustSize)
+        # The _adjust_size_timer timer is used to trigger a replot in
+        # case the step count is reduced and the StepProfileEditor
+        # therefore needs less space to fit all its widgets.
+        self._adjust_size_timer = qtc.QTimer()
+        self._adjust_size_timer.setSingleShot(True)
+        self._adjust_size_timer.setInterval(3)
+        self._adjust_size_timer.timeout.connect(self.adjustSize)
         self._compose_and_connect()
 
     @property
@@ -283,7 +287,7 @@ class StepProfileEditor(qtw.QDialog):                                           
         self.setLayout(layout)
         self.pick_profile.currentTextChanged.connect(self._on_profile_selected)
         self._profile_editors['custom'].step_count_reduced.connect(
-            self._delay.start
+            self._adjust_size_timer.start
             )
 
     def _compose_editor(self):
@@ -303,7 +307,7 @@ class StepProfileEditor(qtw.QDialog):                                           
         for profile_editor in self._profile_editors.values():
             profile_editor.hide()
         self.pick_profile.currentData().show()
-        self._delay.start()
+        self._adjust_size_timer.start()
 
     def _populate_profile_options(self):
         """Add profile options to profile selection."""
@@ -374,38 +378,54 @@ class LinearStepEditor(ProfileEditorBase):
 
     def _compose(self):
         """Place children widgets."""
-        layout = qtw.QVBoxLayout()
-        layout.addLayout(self._compose_step_nr_selection())
-        layout.addLayout(self._compose_duration_selection())
-        layout.addStretch(1)
+        layout = qtw.QFormLayout()
+        layout.addRow(self._make_step_nr_label(), self._controls['n_steps'])
+        layout.addRow(self._make_duration_label(), self._controls['duration'])
         self.setLayout(layout)
 
-    def _compose_step_nr_selection(self):
+    def _make_step_nr_label(self):
         """Return a layout of the step-number selection."""
+        container = qtw.QWidget()
         layout = qtw.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         step_number_label = qtw.QLabel('Nr. of steps:')
         layout.addWidget(step_number_label)
         size = step_number_label.fontMetrics().boundingRect('a').height()
         info = ('<nobr>The number of intermediate steps.</nobr> '
                 f'Cannot be higher than {MAX_NUM_STEPS}.')
         layout.addWidget(FieldInfo(info, size=size))
-        layout.addWidget(self._controls['n_steps'])
-        return layout
+        container.setLayout(layout)
+        return container
 
-    def _compose_duration_selection(self):
+    def _make_duration_label(self):
         """Return a layout of the duration selection."""
+        container = qtw.QWidget()
         layout = qtw.QHBoxLayout()
-        duration_label = qtw.QLabel()
-        duration_label.setText('Step duration:')
+        layout.setContentsMargins(0, 0, 0, 0)
+        duration_label = qtw.QLabel('Step duration:')
         layout.addWidget(duration_label)
         size = duration_label.fontMetrics().boundingRect('a').height()
         info = 'The settle time after each energy.'
         layout.addWidget(FieldInfo(info, size=size))
-        layout.addWidget(self._controls['duration'])
-        return layout
+        container.setLayout(layout)
+        return container
 
     def set_profile(self, profile):
-        """Set linear profile."""
+        """Set linear profile.
+
+        Parameters
+        ----------
+        profile : tuple or list
+            A tuple or list of a str and two int values. The first value
+            is a str, which should say 'linear' in this case. The second
+            value is an integer, which will be set as the number of
+            steps in the linear profile, the third value is the duration
+            of the delay after each intermediate step in milliseconds.
+
+        Returns
+        -------
+        None.
+        """
         self._controls['n_steps'].setValue(profile[1])
         self._controls['duration'].setValue(profile[2])
 
@@ -413,7 +433,7 @@ class LinearStepEditor(ProfileEditorBase):
         """Set the profile to the selected values."""
         self.profile = ('linear', self._controls['n_steps'].value(),
                         self._controls['duration'].value())
-        if self.profile == ('linear', 0, 0):
+        if any(value == 0 for value in self.profile):
             self.profile = ('abrupt',)
 
 
@@ -427,21 +447,19 @@ class FractionalStepEditor(ProfileEditorBase):
         """Initialise object."""
         super().__init__()
         self._controls = {
-            'add_step' : qtw.QPushButton(),
-            'remove_step' : qtw.QPushButton(),
+            'add_step' : QNoDefaultPushButton(),
+            'remove_step' : QNoDefaultPushButton(),
             }
         # In order to keep track whether a step has properly been removed
         # from the editor, we have to keep track of how many widgets have
         # been deleted.
         self._n_widgets_removed = 0
-        self._steps = []
         self._connect()
         self._compose()
 
     @qtc.pyqtSlot()
     def _add_step(self, fraction=None, duration=None):
         """Add a step to the fractional step profile."""
-        layout = qtw.QHBoxLayout()
         fraction_handler = CoercingDoubleSpinBox(decimals=2, soft_range=(0, 2),
                                                  step=0.05)
         duration_handler = CoercingSpinBox(soft_range=(0, MAX_DELAY),
@@ -451,17 +469,14 @@ class FractionalStepEditor(ProfileEditorBase):
             if value:
                 handler.setValue(value)
             handler.destroyed.connect(self._emit_step_count_reduced)
-            layout.addWidget(handler)
-        self._steps.append(layout)
+        self.layout().addRow(fraction_handler, duration_handler)
         self._update_button_states()
-        self.layout().insertLayout(self.layout().count() - 1, layout)
 
     def _compose(self):
         """Place children widgets."""
-        layout = qtw.QVBoxLayout()
-        layout.addLayout(self._compose_buttons())
-        layout.addLayout(self._compose_labels())
-        layout.addStretch(1)
+        layout = qtw.QFormLayout()
+        layout.addRow(self._compose_buttons())
+        layout.addRow(self._compose_labels())
         self.setLayout(layout)
 
     def _compose_buttons(self):
@@ -508,24 +523,34 @@ class FractionalStepEditor(ProfileEditorBase):
     @qtc.pyqtSlot()
     def _remove_step(self):
         """Remove a step from the fractional step profile."""
-        layout = self.layout()
-        if layout.count() < 4:
+        # The first 2 rows are the buttons and the labels.
+        if self.layout().rowCount() < 3:
             return
-        item = layout.itemAt(layout.count() - 2)
-        layout.removeItem(item)
-        del(self._steps[-1])
+        self.layout().removeRow(self.layout().rowCount()-1)
         self._update_button_states()
-        for widget_index in range(item.layout().count()):
-            item.itemAt(widget_index).widget().deleteLater()
 
     def _update_button_states(self):
         """Enable/disable add/remove buttons."""
-        self._controls['add_step'].setEnabled(len(self._steps) < MAX_NUM_STEPS)
-        self._controls['remove_step'].setEnabled(len(self._steps) != 0)
+        num_rows = self.layout().rowCount()
+        max_rows = MAX_NUM_STEPS + 2
+        self._controls['add_step'].setEnabled(num_rows < max_rows)
+        self._controls['remove_step'].setEnabled(num_rows > 2)
 
     def set_profile(self, profile):
-        """Set fractional profile."""
-        while self.layout().count() >= 4:
+        """Set fractional profile.
+
+        Parameters
+        ----------
+        profile : tuple or list
+            A tuple or list of int values. Even-numbered values will be
+            set as a fraction of the step height, odd-numbered values
+            are the delays in milliseconds.
+
+        Returns
+        -------
+        None.
+        """
+        while self.layout().rowCount() > 2:
             self._remove_step()
         self.profile = profile
         for fraction, duration in zip(profile[0::2], profile[1::2]):
@@ -534,12 +559,14 @@ class FractionalStepEditor(ProfileEditorBase):
 
     def update_profile(self):
         """Set the profile to the selected values."""
-        tmp = []
+        profile = []
         layout = self.layout()
-        for index in range(2, layout.count() - 1):
+        # The first two elements in the layout are the add/remove
+        # buttons and the labels. After that, each widget, of which
+        # there are two per line, is a separate item.
+        for index in range(2, layout.count()):
             item = layout.itemAt(index)
-            for widget_index in range(item.layout().count()):
-                tmp.append(item.itemAt(widget_index).widget().value())
-        self.profile = tuple(tmp)
+            profile.append(item.widget().value())
+        self.profile = tuple(profile)
         if not self.profile or not any(self.profile):
             self.profile = ('abrupt',)
