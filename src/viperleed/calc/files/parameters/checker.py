@@ -16,6 +16,7 @@ import operator
 
 from viperleed.calc.lib.base import available_cpu_count   # For N_CORES
 from viperleed.calc.lib.string_utils import parent_name
+from viperleed.calc.sections.calc_section import CalcSection as Section
 
 from .errors import ParameterConflictError
 
@@ -87,4 +88,26 @@ class ParametersChecker:
                 f'than the number of available processors ({available}). This '
                 'may not be ideal for performance, or may render execution '
                 'impossible. Consider reducing N_CORES.'
+                )
+
+    def _check_search_backend_and_run_segments(self):
+        """Check SEARCH_BACKEND and RUN for consistency.
+
+        When using the ViPErLEED JAX plugin for the search, delta-amplitude
+        calculations become moot. In this method, we check for any delta-
+        amplitude calculations in the RUN parameter and remove them if
+        necessary. We also warn the user that this is the case.
+        """
+        if self._rpars.SEARCH_BACKEND != 'viperleed-jax':
+            # ignore for TensErLEED backend
+            return
+
+        deltas_removed = [sec for sec in self._rpars.RUN
+                          if sec is not Section.DELTAS]
+        if len(deltas_removed) < len(self._rpars.RUN):
+            # warn that we removed the delta-amplitude calculation
+            _LOGGER.warning(
+                'Delta-amplitude calculations are not supported with the '
+                'ViPErLEED JAX backend. The delta-amplitude calculation '
+                'segments have been removed from the RUN parameter.'
                 )
