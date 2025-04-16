@@ -354,6 +354,14 @@ def compile_delta(comptask):
 def deltas(sl, rp, subdomain=False):
     """Runs the delta-amplitudes calculation."""
 
+    # During normal operation we deltas should never be called with the
+    # viperleed-jax backend, but for API compatibility we still check for it.
+    if rp.SEARCH_BACKEND == 'viperleed-jax':
+        raise RuntimeError(
+            'Delta calculations are not supported with the viperleed-jax '
+            'backend. Please use the TensorCalculator.delta_amplitudes() method'
+            ' instead.')
+
     if rp.domainParams:
         deltas_domains(rp)
         return
