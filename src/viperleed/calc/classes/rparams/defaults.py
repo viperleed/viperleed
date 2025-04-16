@@ -62,6 +62,7 @@ DEFAULTS = {
         'f': 0.01,
         },
     'RUN': (0, 1, 2, 3),
+    'SEARCH_BACKEND': 'TensErLEED',
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
     'SEARCH_MAX_DGEN': {'all': 0, 'best': 0, 'dec': 100},
     'SYMMETRY_FIX': '',

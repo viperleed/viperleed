@@ -1193,6 +1193,18 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             segments.insert(0, Section.INITIALIZATION)
         self.rpars.RUN = [s.value for s in segments]                            # TODO: replace with "segments" to keep Section objects
 
+    def interpret_search_backend(self, assignment):
+        """Assign parameter SEARCH_BACKEND."""
+        param = 'SEARCH_BACKEND'
+        self._ensure_simple_assignment(assignment)
+        value = assignment.value.lower()
+        if value in ('tenserleed', 'tenser'):
+            self.rpars.SEARCH_BACKEND = 'TensErLEED'
+        elif value in ('viperleed', 'viperleed-jax', 'jax', 'vlj'):
+            self.rpars.SEARCH_BACKEND = 'VLJ'
+        else:
+            raise ParameterValueError(param, value)
+
     def interpret_search_beams(self, assignment):
         """Assign parameter SEARCH_BEAMS."""
         param = 'SEARCH_BEAMS'
