@@ -79,18 +79,15 @@ def initialize_coil_geometry(loop):
     
     # Initialize even-numbered layers 0, 2, 4, ...
     for i in range(0, NUM_LAYERS, 2):
-        #print(i)
         for j in range(0, TURNS_FIRST_LAYER):
-            #print(int(j + i * TURNS_FIRST_LAYER - i / 2))
             loop[int(j + i * TURNS_FIRST_LAYER - i / 2)]["radius"] = LOOP_INNER_RADIUS + i * LAYER_OFFSET
             loop[int(j + i * TURNS_FIRST_LAYER - i / 2)]["offset"] = - ((TURNS_FIRST_LAYER - 1) * WIRE_DIA_INSULATION) / 2 + j * WIRE_DIA_INSULATION
             
     # Initialize even-numbered layers 1, 3, 5, ...
     for i in range(1, NUM_LAYERS, 2):
-        for j in range(1, TURNS_FIRST_LAYER):
-            #print(int(j + i * TURNS_FIRST_LAYER - i / 2))
-            loop[int(j + i * TURNS_FIRST_LAYER - i / 2)]["radius"] = (LOOP_INNER_RADIUS + LAYER_OFFSET) + (i - 1) * LAYER_OFFSET
-            loop[int(j + i * TURNS_FIRST_LAYER - i / 2)]["offset"] = - (TURNS_FIRST_LAYER * WIRE_DIA_INSULATION) / 2 + (j + 1) * WIRE_DIA_INSULATION
+        for j in range(0, TURNS_FIRST_LAYER - 1):
+            loop[int(j + i * TURNS_FIRST_LAYER - int(i / 2))]["radius"] = (LOOP_INNER_RADIUS + LAYER_OFFSET) + (i - 1) * LAYER_OFFSET
+            loop[int(j + i * TURNS_FIRST_LAYER - int(i / 2))]["offset"] = - (TURNS_FIRST_LAYER * WIRE_DIA_INSULATION) / 2 + (j + 1) * WIRE_DIA_INSULATION
             
 
 def self_inductance(loop):
@@ -107,8 +104,6 @@ def self_inductance(loop):
     """
 
     for i in range(0, loop_count):
-        #print(loop[i], i, TURNS_FIRST_LAYER)
-        #print(8 * loop[i]["radius"] / WIRE_RADIUS)
         loop[i]["self_inductance"] = MU_0 * loop[i]["radius"] * (math.log(8 * loop[i]["radius"] / WIRE_RADIUS) - 2 + 0.25)
 
 
@@ -134,9 +129,7 @@ def mutual_inductance(loop):
             center_dist = abs(loop[i]["offset"] - loop[j]["offset"])
             
             k = 2 * math.sqrt(loop[i]["radius"] * loop[j]["radius"] / ((loop[i]["radius"] + loop[j]["radius"]) * (loop[i]["radius"] + loop[j]["radius"]) + center_dist * center_dist))
-            
-            print(scipy.special.ellipk(k*k))
-            print(scipy.special.ellipe(k*k))
+
             loop[i]["mutual_inductance"] += MU_0 * math.sqrt(loop[i]["radius"] * loop[j]["radius"]) * ((2 / k - k) * scipy.special.ellipk(k*k) - 2 / k * scipy.special.ellipe(k*k))
 
 
