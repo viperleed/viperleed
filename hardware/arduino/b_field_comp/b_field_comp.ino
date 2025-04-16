@@ -12,9 +12,9 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer, Florian Dörr, Tu
 
 #define DEBUG false                  // Debug mode, writes to serial line, for use in serial monitor
 
-#include "states-def.h"				 // Basic state machine definitions
+#include "states-def.h"                 // Basic state machine definitions
 #include "arduino_utils.h"           // from '../lib'; for setChipSelectHigh
-#include "viper-serial.h"			 // Serial communication functions
+#include "viper-serial.h"             // Serial communication functions
 #include "b_field_comp.h"            // Globals, #defines, etc.
 
 // The box ID is an indentifier that is necessary for the PC to know what
@@ -54,7 +54,7 @@ void loop()
 {
     //uint8_t byteRead;
     // TLE7209_Error errcode = TLE7209_NoError;
-    float current, temperature, shuntvoltage, voltage;							// TODO: globals?
+    float current, temperature, shuntvoltage, voltage;                            // TODO: globals?
     float setpoint;
 
     // delay(1000);
@@ -64,7 +64,7 @@ void loop()
     #endif
 
 
-	/***
+    /***
     setpoint = -1.000;
     Serial.println("duty cycle;voltage;current");
     do {
@@ -81,54 +81,54 @@ void loop()
 
       setpoint += 0.001;
     }while(setpoint < 1.0);
-	***/
+    ***/
 
 
 
     /**Read from serial line and handle the state machine.**/
     // See if there is anything coming from the PC.
-	readFromSerial();
+    readFromSerial();
 
-	// Then see if the current state needs updating,
-	// depending on the message receive
-	updateState();
+    // Then see if the current state needs updating,
+    // depending on the message receive
+    updateState();
 
-	compensateForSupplyVoltage();													// TODO: Really here?
-	compensateForThermalDrift();
+    compensateForSupplyVoltage();                                                    // TODO: Really here?
+    compensateForThermalDrift();
 
     // Finally do what's needed in the currentState
     switch (currentState){
         case STATE_GET_CONFIGURATION:
             getConfiguration();
             break;
-		case STATE_SET_SERIAL_NR:
+        case STATE_SET_SERIAL_NR:
             setSerialNr();
             break;
         case STATE_ERROR:
-        	handleErrors();
-        	break;
+            handleErrors();
+            break;
         case STATE_SET_DUTY_CYCLE:
-        	setDutyCycle();
-        	break;
+            setDutyCycle();
+            break;
         case STATE_SET_CURRENT:
-        	setCurrent();
-        	break;
+            setCurrent();
+            break;
         case STATE_MEASURE:
-        	measure();
-        	break;
+            measure();
+            break;
         case STATE_SET_TIME_CONSTANT:
-        	setTimeConstant();
-        	break;
+            setTimeConstant();
+            break;
         case STATE_SET_ENABLE_DYNAMIC:
-        	setEnableDynamic();
-        	break;
+            setEnableDynamic();
+            break;
         case STATE_SET_TRANSFORMATION_MATRIX:
-        	setTransformationMatrix();
-        	break;
+            setTransformationMatrix();
+            break;
         case STATE_SET_CALIBRATION_CURVE:
-        	setCalibrationCurve();
-        	break;
-	}
+            setCalibrationCurve();
+            break;
+    }
 
 
 
@@ -182,7 +182,7 @@ void loop()
 
 
 
-	/***
+    /***
     // shuntvoltage = coil_1.measurement.get_shunt_voltage();
     // current = coil_1.get_current();
     // temperature = coil_1.get_ambient_temperature();
@@ -202,7 +202,7 @@ void loop()
         // Serial.print(voltage);
         // Serial.println(" V");
     // #endif
-	***/
+    ***/
 
 
 
@@ -221,14 +221,14 @@ void loop()
 
 
 bool isAllowedCommand() {
-	/**
-	Check if the received command is among the commands the arduino can
-	process.
+    /**
+    Check if the received command is among the commands the arduino can
+    process.
 
-	Returns
+    Returns
     -------
     True if the message is acceptable
-	**/
+    **/
     // Check that it is one of the understandable commands
     switch(data_received[0]){
         case PC_CONFIGURATION: break;
@@ -246,13 +246,13 @@ bool isAllowedCommand() {
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
-	}
-    return true;																// TODO: check that the received command is one of the commands that initiates one of the defined states
+    }
+    return true;                                                                // TODO: check that the received command is one of the commands that initiates one of the defined states
 }
 
 
 void updateState() {
-	/**
+    /**
     If there is an unprocessed serial message, decide whether
     this requires us to change the state of the Arduino, and
     do some preparation that may be needed before entering
@@ -272,75 +272,82 @@ void updateState() {
     -------------
     May go anywhere
     **/
-	if (not newMessage) return; // No new message, therefore do not set state
+    if (not newMessage) return; // No new message, therefore do not set state
 
-	if (msgLength > 1) return; // We received data, not a command
+    if (msgLength > 1) return; // We received data, not a command
 
-	switch(data_received[0]){
-		case PC_CONFIGURATION:
-			initialTime = millis();
-			currentState = STATE_GET_CONFIGURATION;
-			break;
-		case PC_RESET:
+    switch(data_received[0]){
+        case PC_CONFIGURATION:
+            initialTime = millis();
+            currentState = STATE_GET_CONFIGURATION;
+            break;
+        case PC_RESET:
             encodeAndSend(PC_OK);
             reset();
             break;
-		case PC_SET_SERIAL_NR:
-			waitingForDataFromPC = true;
+        case PC_SET_SERIAL_NR:
+            waitingForDataFromPC = true;
             initialTime = millis();
-			currentState = STATE_SET_SERIAL_NR;
-			break;
-		case PC_STOP:
+            currentState = STATE_SET_SERIAL_NR;
+            break;
+        case PC_STOP:
             currentState = STATE_IDLE;
             encodeAndSend(PC_OK);
             break;
         case PC_SET_DUTY_CYCLE:
-        	waitingForDataFromPC = true;
-        	initialTime = millis();
-        	currentState = STATE_SET_DUTY_CYCLE;
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_SET_DUTY_CYCLE;
+            break;
         case PC_SET_CURRENT:
-        	waitingForDataFromPC = true;
-        	initialTime = millis();
-        	currentState = STATE_SET_CURRENT;
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_SET_CURRENT;
+            break;
         case PC_MEASURE:
-        	currentState = STATE_MEASURE;
+            currentState = STATE_MEASURE;
+            break;
         case PC_SET_TIME_CONSTANT:
-        	waitingForDataFromPC = true;
-        	initialTime = millis();
-        	currentState = STATE_SET_TIME_CONSTANT;
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_SET_TIME_CONSTANT;
+            break;
         case PC_SET_ENABLE_DYNAMIC:
-        	waitingForDataFromPC = true;
-        	initialTime = millis();
-        	currentState = STATE_SET_ENABLE_DYNAMIC;
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_SET_ENABLE_DYNAMIC;
+            break;
         case PC_SET_TRANSFORMATION_MATRIX:
-        	waitingForDataFromPC = true;
-        	initialTime = millis();
-        	currentState = STATE_SET_TRANSFORMATION_MATRIX;
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_SET_TRANSFORMATION_MATRIX;
+            break;
         case PC_SET_CALIBRATION_CURVE:
-        	waitingForDataFromPC = true;
-        	initialTime = millis();
-        	currentState = STATE_SET_CALIBRATION_CURVE;
-		/*case PC_:
-			currentState = STATE_;
-			break;*/
-	}
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_SET_CALIBRATION_CURVE;
+            break;
+        /*case PC_:
+            currentState = STATE_;
+            break;*/
+    }
 
-	newMessage = false;
+    newMessage = false;
 }
 
 
 void compensateForSupplyVoltage(){
-	/** Measure supply voltage and adjust duty cycle according to it. **/
-	// If target current:
-	// output_voltage = duty_cycle * supply_voltage
+    /** Measure supply voltage and adjust duty cycle according to it. **/
+    // If target current:
+    // output_voltage = duty_cycle * supply_voltage
 }
 
 
 void compensateForThermalDrift(){
-	/** Compensate for the increased resistance when coils heat up. **/
-	// If target current:
-	// Only if enough time has passed/not too much current change happened
-	// Is change small enough -> calculate resistance
+    /** Compensate for the increased resistance when coils heat up. **/
+    // If target current:
+    // Only if enough time has passed/not too much current change happened
+    // Is change small enough -> calculate resistance
 }
 
 
@@ -372,16 +379,16 @@ void getConfiguration(){
     // little-endian memory layout, i.e., LSB is
     // at lower memory index
 
-	byte serial_nr[4];
-	getSerialNumber(serial_nr);
+    byte serial_nr[4];
+    getSerialNumber(serial_nr);
     byte configuration[7] = {BOX_ID,
                              FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR};
-	int address = 0;
-	while(address <= 3){
-	  configuration[address + 3] = serial_nr[address];
-	  address += 1;
-	}
+    int address = 0;
+    while(address <= 3){
+      configuration[address + 3] = serial_nr[address];
+      address += 1;
+    }
     encodeAndSend(configuration, LENGTH(configuration));
     currentState = STATE_IDLE;
 }
@@ -511,9 +518,9 @@ void setSerialNr(){
         raise(ERROR_MSG_DATA_INVALID);
         return;
     }
-	
-	storeSerialNumber(data_received);
-	
+
+    storeSerialNumber(data_received);
+
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
 }
@@ -521,7 +528,7 @@ void setSerialNr(){
 
 /** Handler of STATE_SET_DUTY_CYCLE */
 void setDutyCycle(){
- 	/**
+     /**
     Wait until we get data from the PC and set a duty cycle for the respective coil.
 
     For each coil, we need 4 bytes from the data_received[] buffer.
@@ -535,12 +542,12 @@ void setDutyCycle(){
 
     Writes
     ------
-    newMessage, waitingForDataFromPC, dutyCycle, 
+    newMessage, waitingForDataFromPC, dutyCycle,
 
     Msg to PC
     ---------
     PC_OK, signaling that we're done setting the duty cycle
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
@@ -551,12 +558,12 @@ void setDutyCycle(){
     STATE_ERROR : ERROR_MSG_DATA_INVALID
         If we receive data, but it isn't exactly the amount
         we were expecting to get
-    STATE_IDLE  : 
-    	Successfully finished
-    
+    STATE_IDLE  :
+        Successfully finished
+
     **/
-	
-	 if (currentState != STATE_SET_DUTY_CYCLE){
+
+     if (currentState != STATE_SET_DUTY_CYCLE){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -566,7 +573,7 @@ void setDutyCycle(){
         checkIfTimedOut();
         return;
     }
-    
+
     if (newMessage and waitingForDataFromPC){ // Do this only once
         // Data has arrived
         waitingForDataFromPC = false;
@@ -574,22 +581,22 @@ void setDutyCycle(){
 
         // Check that it is the right amount of data
         // We need exactly 8 bytes, 4 bytes for each float representing one duty cycle
-        if (msgLength != 8){                                   
+        if (msgLength != 8){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
         for(int j=0; j<2;j++){
-        	for(int i = 0; i < 4 ;i++){
-        		dutyCycle[j].asBytes[4-i] = data_received[i+j*4];	
-			 }
+            for(int i = 0; i < 4 ;i++){
+                dutyCycle[j].asBytes[4-i] = data_received[i+j*4];
+             }
         }
-                                  									//TODO: catch errors from coils and report them
+                                                                      //TODO: catch errors from coils and report them
         coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1
         coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2
 
-		encodeAndSend(PC_OK);
-		currentState = STATE_IDLE;
-     }     
+        encodeAndSend(PC_OK);
+        currentState = STATE_IDLE;
+     }
 }
 
 
@@ -608,12 +615,12 @@ void setCurrent(){
 
     Writes
     ------
-    newMessage, waitingForDataFromPC, targetCurrent, 
+    newMessage, waitingForDataFromPC, targetCurrent,
 
     Msg to PC
     ---------
     PC_OK, signaling that we're done setting the current/duty cycle
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
@@ -624,12 +631,12 @@ void setCurrent(){
     STATE_ERROR : ERROR_MSG_DATA_INVALID
         If we receive data, but it isn't exactly the amount
         we were expecting to get
-    STATE_IDLE  : 
-    	Successfully finished
-    
+    STATE_IDLE  :
+        Successfully finished
+
     **/
-	
-	 if (currentState != STATE_SET_CURRENT){
+
+     if (currentState != STATE_SET_CURRENT){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -639,103 +646,103 @@ void setCurrent(){
         checkIfTimedOut();
         return;
     }
-    
+
     if (newMessage and waitingForDataFromPC){ // Do this only once
         // Data has arrived
         waitingForDataFromPC = false;
         newMessage = false;
-        
+
         // Check that it is the right amount of data
         // 2 floats -> msgLength is 8
-        if (msgLength != 8){                                   
+        if (msgLength != 8){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
         for(int j=0; j<2;j++){
-        	for(int i = 0; i < 4 ;i++){
-        		targetCurrent[j].asBytes[3-i] = data_received[i+j*4];
-			 }
+            for(int i = 0; i < 4 ;i++){
+                targetCurrent[j].asBytes[3-i] = data_received[i+j*4];
+             }
         }
-        
+
         //Function convertCurrentToDutyCycle() needs to be written
         convertCurrentToDutyCycle();
-                     									
+
         coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1 using the current
         coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2 using the current
 
-		encodeAndSend(PC_OK);
-		currentState = STATE_IDLE;
-     }      
+        encodeAndSend(PC_OK);
+        currentState = STATE_IDLE;
+     }
 }
 
 
 void convertCurrentToDutyCycle(){
-	//This function converts the target current given by the PC, to a duty cycle which will be set on the respective coils
-	float x = 0; 
-	dutyCycle[0].asFloat = targetCurrent[0].asFloat * x;        // TODO: implement
-	dutyCycle[1].asFloat = targetCurrent[1].asFloat * x;		// TODO: implement
+    //This function converts the target current given by the PC, to a duty cycle which will be set on the respective coils
+    float x = 0;
+    dutyCycle[0].asFloat = targetCurrent[0].asFloat * x;        // TODO: implement
+    dutyCycle[1].asFloat = targetCurrent[1].asFloat * x;        // TODO: implement
 }
 
 
 /** Handler of STATE_MEASURE */
 void measure(){
    /** We are measuring the current and the supply voltage.
-	
-	Reads
+
+    Reads
     -----
     currentState
 
     Writes
     ------
     voltage1, voltage2, current1, current2
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
         If this function is not called within STATE_MEASURE
-    STATE_IDLE  : 
-    	Successfully finished
-    
+    STATE_IDLE  :
+        Successfully finished
+
     **/
-	
-	 if (currentState != STATE_MEASURE){
+
+     if (currentState != STATE_MEASURE){
         raise(ERROR_RUNTIME);
         return;
     }
-    
-    floatOrBytes voltage1;  //TODO: make implementation of the returning data more efficient if this works
-	floatOrBytes voltage2;
-	floatOrBytes current1;
-	floatOrBytes current2;
 
-	//Measure the current of the respective coil
-	current1.asFloat = coil_1.get_current();
-	current2.asFloat = coil_2.get_current();
-	
-	//Measure the voltage at pin8 (motor driver's supply voltage) of the respective coil
-	voltage1.asFloat = coil_1.get_voltage();
-	voltage2.asFloat = coil_2.get_voltage();
-	
-	
-	sendFloatToPC(current1);
-	sendFloatToPC(current2);
-	sendFloatToPC(voltage1);
-	sendFloatToPC(voltage2);
-	
-	
-	
-	currentState = STATE_IDLE;     
+    floatOrBytes voltage1;  //TODO: make implementation of the returning data more efficient if this works
+    floatOrBytes voltage2;
+    floatOrBytes current1;
+    floatOrBytes current2;
+
+    //Measure the current of the respective coil
+    current1.asFloat = coil_1.get_current();
+    current2.asFloat = coil_2.get_current();
+
+    //Measure the voltage at pin8 (motor driver's supply voltage) of the respective coil
+    voltage1.asFloat = coil_1.get_voltage();
+    voltage2.asFloat = coil_2.get_voltage();
+
+
+    sendFloatToPC(current1);
+    sendFloatToPC(current2);
+    sendFloatToPC(voltage1);
+    sendFloatToPC(voltage2);
+
+
+
+    currentState = STATE_IDLE;
 }
 
 
 void sendFloatToPC(floatOrBytes value){
-	// Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout, we
+    // Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout, we
     // have flip the bytes over to maintain consistency of our messages, which
     // are in big-endian order
     byte littleToBigEndian[4];
-    
+
     for (int i = 0; i < 4; i++){
-    	littleToBigEndian[i] = value.asBytes[3-i];
+        littleToBigEndian[i] = value.asBytes[3-i];
     }
     encodeAndSend(littleToBigEndian, 4);
 }
@@ -756,12 +763,12 @@ void setTimeConstant(){
 
     Writes
     ------
-    newMessage, waitingForDataFromPC, timeConstant 
+    newMessage, waitingForDataFromPC, timeConstant
 
     Msg to PC
     ---------
     PC_OK, signaling that we're done
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
@@ -772,12 +779,12 @@ void setTimeConstant(){
     STATE_ERROR : ERROR_MSG_DATA_INVALID
         If we receive data, but it isn't exactly the amount
         we were expecting to get
-    STATE_IDLE  : 
-    	Successfully finished
-    
+    STATE_IDLE  :
+        Successfully finished
+
     **/
-	
-	 if (currentState != STATE_SET_TIME_CONSTANT){
+
+     if (currentState != STATE_SET_TIME_CONSTANT){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -787,28 +794,28 @@ void setTimeConstant(){
         checkIfTimedOut();
         return;
     }
-    
+
     if (newMessage and waitingForDataFromPC){ // Do this only once
         // Data has arrived
         waitingForDataFromPC = false;
         newMessage = false;
-        
+
         // Check that it is the right amount of data
         // 2 floats ->  msgLength is 8
-        if (msgLength != 8){                                   
+        if (msgLength != 8){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
-        
-		for(int j=0; j<2;j++){
-        	for(int i = 0; i < 4 ;i++){
-        		timeConstant[j].asBytes[3-i] = data_received[i+j*4];
-			 }
+
+        for(int j=0; j<2;j++){
+            for(int i = 0; i < 4 ;i++){
+                timeConstant[j].asBytes[3-i] = data_received[i+j*4];
+             }
         }
-        
-		encodeAndSend(PC_OK);
-		currentState = STATE_IDLE;
-     }      
+
+        encodeAndSend(PC_OK);
+        currentState = STATE_IDLE;
+     }
 }
 
 
@@ -832,7 +839,7 @@ void setEnableDynamic(){
     Msg to PC
     ---------
     PC_OK, signaling that we're done
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
@@ -843,12 +850,12 @@ void setEnableDynamic(){
     STATE_ERROR : ERROR_MSG_DATA_INVALID
         If we receive data, but it isn't exactly the amount
         we were expecting to get
-    STATE_IDLE  : 
-    	Successfully finished
-    
+    STATE_IDLE  :
+        Successfully finished
+
     **/
-	
-	 if (currentState != STATE_SET_ENABLE_DYNAMIC){
+
+     if (currentState != STATE_SET_ENABLE_DYNAMIC){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -858,35 +865,35 @@ void setEnableDynamic(){
         checkIfTimedOut();
         return;
     }
-    
+
     if (newMessage and waitingForDataFromPC){ // Do this only once
         // Data has arrived
         waitingForDataFromPC = false;
         newMessage = false;
-        
+
         // Check that it is the right amount of data
         // Our msgLength is 1 as we get one byte.
-        if (msgLength != 1){                                   
+        if (msgLength != 1){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
-     
-		if (data_received[0] == 1){
-			enableDynamic = true;
-		}
-     
-     	if (data_received[0] == 0){ 
-			enableDynamic = false;
-		}
-		
-		else{                                   
+
+        if (data_received[0] == 1){
+            enableDynamic = true;
+        }
+
+         if (data_received[0] == 0){
+            enableDynamic = false;
+        }
+
+        else{
             raise(ERROR_MSG_DATA_INVALID);
             return;
-		}
+        }
 
-		encodeAndSend(PC_OK);
-		currentState = STATE_IDLE;
-     }      
+        encodeAndSend(PC_OK);
+        currentState = STATE_IDLE;
+     }
 }
 
 
@@ -896,8 +903,8 @@ void setTransformationMatrix(){
 
     For each coil, we need ? bytes from the data_received[] buffer.
     Their meaning is:
-    - 
-    - 
+    -
+    -
 
     Reads
     -----
@@ -905,12 +912,12 @@ void setTransformationMatrix(){
 
     Writes
     ------
-    newMessage, waitingForDataFromPC, transformationMatrix 
+    newMessage, waitingForDataFromPC, transformationMatrix
 
     Msg to PC
     ---------
     PC_OK, signaling that we're done
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
@@ -921,12 +928,12 @@ void setTransformationMatrix(){
     STATE_ERROR : ERROR_MSG_DATA_INVALID
         If we receive data, but it isn't exactly the amount
         we were expecting to get
-    STATE_IDLE  : 
-    	Successfully finished
-    
+    STATE_IDLE  :
+        Successfully finished
+
     **/
-	
-	 if (currentState != STATE_SET_TRANSFORMATION_MATRIX){
+
+     if (currentState != STATE_SET_TRANSFORMATION_MATRIX){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -936,28 +943,28 @@ void setTransformationMatrix(){
         checkIfTimedOut();
         return;
     }
-    
+
     if (newMessage and waitingForDataFromPC){ // Do this only once
         // Data has arrived
         waitingForDataFromPC = false;
         newMessage = false;
-        
+
         // Check that it is the right amount of data
         // 6 floats in the matrix -> msgLength is 24
-        if (msgLength != 24){                                   
+        if (msgLength != 24){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
         for(int m=0; m<3;m++){
-        	for(int j=0; j<2;j++){
-        		for(int i = 0; i < 4 ;i++){
-        			transformationMatrix[m][j].asBytes[3-i] = data_received[i+j*4+m*8];
-				 }
-        	}
-		}
-		encodeAndSend(PC_OK);
-		currentState = STATE_IDLE;
-     }      
+            for(int j=0; j<2;j++){
+                for(int i = 0; i < 4 ;i++){
+                    transformationMatrix[m][j].asBytes[3-i] = data_received[i+j*4+m*8];
+                 }
+            }
+        }
+        encodeAndSend(PC_OK);
+        currentState = STATE_IDLE;
+     }
 }
 
 
@@ -967,8 +974,8 @@ void setCalibrationCurve(){
 
     For each coil, we need ? bytes from the data_received[] buffer.
     Their meaning is:
-    - 
-    - 
+    -
+    -
 
     Reads
     -----
@@ -976,12 +983,12 @@ void setCalibrationCurve(){
 
     Writes
     ------
-    newMessage, waitingForDataFromPC, calibrationCurve 
+    newMessage, waitingForDataFromPC, calibrationCurve
 
     Msg to PC
     ---------
-    PC_OK, signaling that we're done 
-    
+    PC_OK, signaling that we're done
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
@@ -992,12 +999,12 @@ void setCalibrationCurve(){
     STATE_ERROR : ERROR_MSG_DATA_INVALID
         If we receive data, but it isn't exactly the amount
         we were expecting to get
-    STATE_IDLE  : 
-    	Successfully finished
-    
+    STATE_IDLE  :
+        Successfully finished
+
     **/
-	
-	 if (currentState != STATE_SET_CALIBRATION_CURVE){
+
+     if (currentState != STATE_SET_CALIBRATION_CURVE){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -1007,24 +1014,24 @@ void setCalibrationCurve(){
         checkIfTimedOut();
         return;
     }
-    
+
     if (newMessage and waitingForDataFromPC){ // Do this only once
         // Data has arrived
         waitingForDataFromPC = false;
         newMessage = false;
-        
+
         // Check that it is the right amount of data
         // N bytes in the array -> msgLength is N
-        if (msgLength != N){                                   
+        if (msgLength != N){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
-        
+
         for(int j=0; j<N;j++){
-        	calibrationCurve[j] = data_received[j];
+            calibrationCurve[j] = data_received[j];
         }
-        
-		encodeAndSend(PC_OK);
-		currentState = STATE_IDLE;
-     }      
+
+        encodeAndSend(PC_OK);
+        currentState = STATE_IDLE;
+     }
 }
