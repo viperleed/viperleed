@@ -48,7 +48,8 @@ def _get_poscar_info(name):
 _POSCAR_INFO = {
     'Ag': _get_poscar_info('case_poscar_ag100'),
     'Ir': _get_poscar_info('Ir(100)-(2x1)-O'),
-    }
+    'PtRh': _get_poscar_info('POSCAR_Pt25Rh75(100)-p(3x1)-O'),
+}
 _READ = {
     'Ag': {'V0_IMAG': 5.0, 'THEO_ENERGIES': [50, 350, 3],
            'RUN': [0], 'LOG_LEVEL': 10, 'N_BULK_LAYERS': 1,
@@ -62,6 +63,14 @@ _READ = {
            'BULK_LIKE_BELOW': 0.35, 'T_DEBYE': 420, 'T_EXPERIMENT': 100,
            'SITE_DEF': {'Ir': {'surf': {3, 2}}, 'O': {'ads': {1}}},
            'VIBR_AMP_SCALE': ['*surf 1.3',], 'V0_IMAG': 5.0},
+    'PtRh': {'RUN': [0],
+           'THEO_ENERGIES': [49, 550, 3], 'ELEMENT_MIX': {'Me': ['Rh', 'Pt']},
+           'BULK_LIKE_BELOW': 0.45, 'T_DEBYE': 250, 'T_EXPERIMENT': 300,
+           'SITE_DEF': {
+               'O': {'surf': {1, 2}},
+               'Me': {'layer_1': {3, 4, 5}, 'layer_2': {6, 7, 8},
+                      'layer_3': {9, 10, 11}, 'layer_4': {12, 13, 14}}},
+           'VIBR_AMP_SCALE': ['*surf 1.3',]},
     'empty': {}, 'stop': {}, 'no_stop': {}, 'missing_equals': {},
     'left empty': {},
     }
@@ -78,6 +87,7 @@ _READ['fortran comp']['FORTRAN_COMP'] = ['gfortran',
 _PATHS = {
     'Ag': 'Ag(100)/initialization/PARAMETERS',
     'Ir': 'parameters/PARAMETERS_Ir(100)-(2x1)-O',
+    'PtRh': 'parameters/PARAMETERS_Pt25Rh75(100)-p(3x1)-O',
     'empty': 'parameters/PARAMETERS_empty',
     'fortran comp': 'parameters/PARAMETERS_fortran_comp',
     'stop': 'parameters/PARAMETERS_stop',
