@@ -185,7 +185,7 @@ class Rparams:
         self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
 
         # ViPErLEED JAX plugin parameters
-        self.VLJ_RECALC_TMATRICES = False
+        self.SEARCH_RECALC_TMATRICES = False
 
         # RUN VARIABLES
         self.timer = ExecutionTimer()
