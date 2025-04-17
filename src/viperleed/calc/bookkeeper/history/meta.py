@@ -80,18 +80,19 @@ class BookkeeperMetaFile:
         domains : dict
             Empty for single-domain calculations. Keys are strings,
             values are tuples. At most one key is ever present. Only
-            one of the following keys-value pairs may be present:
+            one of the following key-value pairs may be present:
             ('main', main_info)
                 Signals that this metadata file belongs to a history
-                folder of a subdomain. main_info is a DomainInfo named
-                tuple identifying the corresponding history subfolder
-                of the main root folder. main_info.path is a string
-                version of the full path to the root directory in which
-                the 'history' is contained, main_info.hash_ the hash of
-                the corresponding history subfolder.
+                folder of a subdomain. main_info is a DomainInfo
+                namedtuple identifying the corresponding history
+                subfolder of the main root folder. main_info.path
+                is a string version of the full path to the main
+                root directory in which the 'history' is contained,
+                main_info.hash_ the hash of the corresponding
+                history subfolder.
             ('domains', (domain_info_1, domain_info_2, ...))
                 Signals that this metadata file belongs to a history
-                folder of the main calculation. Each domain_info_1
+                folder of the main calculation. Each domain_info_*
                 is a DomainInfo namedtuple. domain_info_*.path is
                 a string version of the relative path to the root
                 of each subdomain, while domain_info_*.path the

@@ -39,9 +39,10 @@ def fixture_bookkeeper(mocker):
 def fixture_finder(bookkeeper):
     """Return a DomainFinder with a fake bookkeeper."""
     finder = DomainFinder(bookkeeper)
-    # The net one is just a convenience attribute so we don't need to
+    # The next one is just a convenience attribute so we don't need to
     # repeat over and over both the finder and the bookkeeper fixtures
-    # in the tests below.
+    # in the tests below, nor access the private _bookkeeper attribute
+    # of finder.
     finder.bookkeeper = bookkeeper
     return finder
 
