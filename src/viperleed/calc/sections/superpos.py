@@ -227,8 +227,8 @@ def _best_config_from_sdtl(rp):                                                 
     # check for an SD.TL file
     cwd = Path()
     sdtl_files = (
-        f for f in (cwd/"SD.TL", cwd/{DEFAULT_OUT}/"SD.TL") if f.is_file()
-        )
+        f for f in (cwd/"SD.TL", cwd/f"{DEFAULT_OUT}/SD.TL") if f.is_file()
+    )
     sdtl_file = next(sdtl_files, None)
     if not sdtl_file:
         logger.error("Superpos: Found no stored results from recent "
