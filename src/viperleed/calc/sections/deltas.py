@@ -18,6 +18,7 @@ import subprocess
 
 import numpy as np
 
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
@@ -356,11 +357,11 @@ def deltas(sl, rp, subdomain=False):
 
     # During normal operation we deltas should never be called with the
     # viperleed-jax backend, but for API compatibility we still check for it.
-    if rp.SEARCH_BACKEND == 'viperleed-jax':
+    if rp.SEARCH_BACKEND == SearchBackend.VLJ:
         raise RuntimeError(
             'Delta calculations are not supported with the viperleed-jax '
-            'backend. Please use the TensorCalculator.delta_amplitudes() method'
-            ' instead.')
+            'backend. Please use the TensorCalculator.delta_amplitudes() '
+            'method instead.')
 
     if rp.domainParams:
         deltas_domains(rp)

@@ -35,6 +35,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
@@ -1199,9 +1200,9 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         self._ensure_simple_assignment(assignment)
         value = assignment.value.lower()
         if value in ('tenserleed', 'tenser'):
-            self.rpars.SEARCH_BACKEND = 'TensErLEED'
+            self.rpars.SEARCH_BACKEND = SearchBackend.TENSERLEED
         elif value in ('viperleed', 'viperleed-jax', 'jax', 'vlj'):
-            self.rpars.SEARCH_BACKEND = 'VLJ'
+            self.rpars.SEARCH_BACKEND = SearchBackend.VLJ
         else:
             raise ParameterValueError(param, value)
 
