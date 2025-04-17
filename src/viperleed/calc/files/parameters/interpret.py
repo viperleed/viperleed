@@ -84,6 +84,7 @@ _SIMPLE_BOOL_PARAMS = {
     'PHASESHIFTS_CALC_OLD' : (),
     'PHASESHIFTS_OUT_OLD' : (),
     'R_FACTOR_LEGACY' : (),
+    'SEARCH_RECALC_TMATRICES' : (),
     'STOP': (),
     'SUPPRESS_EXECUTION' : (),
     'SYMMETRIZE_INPUT' : (),

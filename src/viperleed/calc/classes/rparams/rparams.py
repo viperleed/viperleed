@@ -184,6 +184,9 @@ class Rparams:
         self.VIBR_AMP_SCALE = []   # read as list of strings, interpret later
         self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
 
+        # ViPErLEED JAX plugin parameters
+        self.VLJ_RECALC_TMATRICES = False
+
         # RUN VARIABLES
         self.timer = ExecutionTimer()
         self.paths = _RunPaths()
