@@ -477,10 +477,11 @@ class Bookkeeper:
         finder = DomainFinder(self)
         finder.collect_info()
         try:
-            return finder.find_domains(mode)
+            domains = finder.find_domains(mode)
         except MetadataError as exc:
             LOGGER.error(str(exc))
             raise
+        return tuple(self.cwd/d for d in domains)
 
     def _make_and_copy_to_history(self):
         """Create new history subfolder and copy all files there.

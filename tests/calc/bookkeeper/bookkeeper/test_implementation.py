@@ -146,10 +146,19 @@ class TestBookkeeperDomains:
         assert exit_code is BookkeeperExitCode.FAIL
         assert expect_log in caplog.text
 
-    def test_find_domains_implementation(self, mocker):
+    def test_find_domains_implementation(self, tmp_path, mocker):
         """Check the inner calls in _find_domains."""
-        bookkeeper = Bookkeeper()
+        bookkeeper = Bookkeeper(tmp_path)
         mock_finder = mocker.MagicMock()
+
+        domain_rel_paths = Path('1'), Path('2')
+        # As of 2025, DomainFinder does not return absolute paths, but
+        # it's good to have the test support it in case we ever do.
+        domain_abs_paths = (Path('/some/absolute/path/to/a/domain').resolve(),)
+        mock_finder.find_domains.return_value = (
+            *domain_rel_paths,
+            *domain_abs_paths,
+            )
         mock_mode = mocker.MagicMock()
         mocks = {
             'update': mocker.patch.object(bookkeeper, 'update_from_cwd'),
@@ -167,7 +176,11 @@ class TestBookkeeperDomains:
         assert calls.keys() == mocks.keys()
         # pylint: disable-next=protected-access           # OK in tests
         result = bookkeeper._find_domains(mock_mode)
-        assert result is mock_finder.find_domains.return_value
+        expect = (
+            *(tmp_path/p for p in domain_rel_paths),
+            *domain_abs_paths,
+            )
+        assert result == expect
         for call_name, call in calls.items():
             mock = mocks[call_name]
             assert mock.mock_calls == [call]
