@@ -82,6 +82,7 @@ class DomainFinder:
     path = make_property('_bookkeeper.cwd')
 
     @property
+    @needs_update_for_attr('_domain_info', updater='collect_info')
     def is_subdomain(self):
         """Return whether self.path is a subdomain of a main one."""
         return _SUBDOMAIN_KEY in self._domain_info
