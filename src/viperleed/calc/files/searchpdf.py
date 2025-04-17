@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -157,6 +157,9 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
 
     # R-FACTOR AND GENERATION DELTA
     # create figure
+    # Pylint can't tell that we will not execute this,
+    # as per decorator, if we fail to import matplotlib
+    # pylint: disable-next=possibly-used-before-assignment
     fig, (rfp, dgp) = plt.subplots(2, 1, sharex=True, figsize=figsize)
     dgp.set_xlabel('Generations')
     rfp.set_ylabel('R-Factor')
@@ -231,7 +234,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     offsets = []
     rpToDo = [rp]
     if rp.domainParams:
-        rpToDo.extend([dp.rp for dp in rp.domainParams])
+        rpToDo.extend([dp.rpars for dp in rp.domainParams])
     for (k, crp) in enumerate(rpToDo):
         sps = [sp for sp in crp.searchpars if sp.el != "vac" and sp.steps > 1]
         if not rp.domainParams:
@@ -256,8 +259,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                 title = labels[mode]
                 addinfo = []
                 if mode != "dom" and rp.domainParams:
-                    addinfo.append("domain {}"
-                                   .format(rp.domainParams[k-1].name))
+                    addinfo.append(str(rp.domainParams[k-1]))
                 if len(crp.disp_blocks) > 1:
                     addinfo.append("search {}".format(searchname[:20]))
                 if addinfo:
@@ -277,6 +279,10 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                     vals = []
                     for (j, conf) in enumerate(lastconfig):
                         if mode != "dom":
+                            # Pylint can't tell that we will not
+                            # execute this, as per decorator, if we
+                            # fail to import matplotlib
+                            # pylint: disable-next=E0606
                             val = ((conf[confindex][1][crp.searchpars
                                                        .index(par)]-1)
                                    / (par.steps-1))
@@ -365,6 +371,9 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                     pltpoints[i] = (x, y, c, s)
                     i += 1
                 if predict:
+                    # Pylint can't tell that we will not execute this,
+                    # as per decorator, if we fail to import matplotlib
+                    # pylint: disable-next=E0606
                     m = MarkerStyle("D")
                     m._transform.scale(1.0, 0.5)
                     err_off = 0.08  # error bar offset
@@ -437,6 +446,9 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
         close_figures(plt, *rp.lastParScatterFigs[searchname])
     rp.lastParScatterFigs[searchname] = figs[1:]
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(outname)
         for fig in figs:
             pdf.savefig(fig)
@@ -460,7 +472,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
 
 
 @skip_without_matplotlib
-def writeSearchReportPdf(rp, outname="Search-report.pdf"):
+def writeSearchReportPdf(rp, outname="Search-report.pdf",
+                         csv_name="Search-report.csv"):
     """
     Writes a pdf file with reports on R-factor convergence and parameter
     scatter, collated over the entire run (i.e. potentially multiple searches).
@@ -471,6 +484,9 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
         The run parameters
     outname : str, optional
         The file name to write to. The default is "Search-report.pdf".
+    csv_name : str, optional
+        The file name of the csv file to write to. The default is
+        "Search-report.csv". If None, no CSV file is written.
 
     Returns
     -------
@@ -540,9 +556,9 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
 
     labelled = False
     scattermax = 0
-    for (allgens, psmean, psmax) in parScatterLines:
-        meanline, = msp.plot(allgens, psmean, '-', color="tab:blue")
-        maxline, = msp.plot(allgens, psmax, '-', color="black")
+    for (_generations, psmean, psmax) in parScatterLines:
+        (meanline,) = msp.plot(_generations, psmean, "-", color="tab:blue")
+        (maxline,) = msp.plot(_generations, psmax, "-", color="black")
         scattermax = max(scattermax, max(psmax))
         if not labelled:
             meanline.set_label('Mean parameter \u03C3')    # sigma
@@ -586,3 +602,20 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
         except Exception:
             pass
     close_figures(plt, fig)
+
+
+    # Output for Search-report.csv
+    if csv_name is None:
+        # No CSV output requested
+        return
+
+    report_csv_data = [allgens, allmin, allmax, allmean]
+    headers = 'Generation,R_min,R_max,R_mean'
+
+    np.savetxt(
+        csv_name,
+        np.array(report_csv_data).T,
+        delimiter=',',
+        header=headers,
+        )
+    logger.info(f'Written to {csv_name}.')

@@ -4,14 +4,12 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-03-18'
 __license__ = 'GPLv3+'
 
-import copy
 import logging
 import os
-from pathlib import Path
 
 from viperleed.calc.classes.r_error import R_Error
 from viperleed.calc.classes.searchpar import SearchPar
@@ -47,7 +45,7 @@ def errorcalc(sl, rp):
     if rp.search_index > 0 and rp.search_index >= len(rp.disp_blocks):
         # running after one or more searches; read the last DISPLACEMENTS block
         rp.search_index -= 1
-    seg_info = {"geo": "geometrical", "vib": "vibrational",
+    seg_info = {"geo": "geometric", "vib": "vibration",
                 "occ": "occupation"}
     for mode in "geo", "vib", "occ":
         sl.restoreOriState()  # reset positions, store any changes as offsets
@@ -151,21 +149,17 @@ def errorcalc(sl, rp):
         else:
             logger.info("Could not estimate var(R) for any error mode.")
 
-    save_path = rp.paths.work
-
     # Errors_summary.csv and Errors.zip
     (summary_csv_content,
      individual_files) = ioerrorcalc.generate_errors_csv(errors)
     ioerrorcalc.write_errors_archive(
         individual_files,
-        archive_path=save_path,
         compression_level=rp.ZIP_COMPRESSION_LEVEL,
-        archive_fname="Errors.zip"
+        archive_fname='Errors.zip',
         )
     ioerrorcalc.write_errors_summary_csv(summary_csv_content,
-                                         summary_path=save_path,
-                                         summary_fname="Errors_summary.csv")
+                                         summary_fname='Errors_summary.csv')
 
     # Errors.pdf
     errors_figs = ioerrorcalc.make_errors_figs(errors, formatting=rp.PLOT_IV)
-    ioerrorcalc.write_errors_pdf(errors_figs, filename = "Errors.pdf")
+    ioerrorcalc.write_errors_pdf(errors_figs, filename='Errors.pdf')

@@ -24,8 +24,8 @@ accepts (almost) arbitrary structure model and returns raw |IV| curves or
 the agreement (in terms of |R factor|) with an experimental set of beams.
 
 Surface structures passed to |calc| via the :term:`API` need to fulfill the
-same :ref:`conventions<conventions>` (e.g. vacuum side of surface towards
-+\ **z** direction) as applicable for :ref:`POSCAR` files.
+same :ref:`conventions<conventions>` (e.g., vacuum side of surface towards
++\ |z| direction) as applicable for :ref:`POSCAR` files.
 
 The ASE API provides a number of Python function that allow calling and
 starting |LEED-IV| calculations. For an example of how to use the ASE 
@@ -56,7 +56,7 @@ If the SITE_DEF parameter is not defined in a ViPErLEED run using the
 ASE interface, ViPErLEED will try to assign "surface" sites on its own.
 For this calculation, every atom is considered as a solid sphere with a
 radius proportional to the elements' covalent radius.
-Then, going from highest to lowest atom (:math:`z` position), ViPErLEED
+Then, going from highest to lowest atom (|z| position), ViPErLEED
 checks if an atom is "visible" from vacuum, or if the line of sight is
 blocked by higher-up atoms.
 Atoms that are "visible" are declared as surface atoms (site ``surf``),

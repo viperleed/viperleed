@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-22'
 __license__ = 'GPLv3+'
 
@@ -75,6 +75,7 @@ class TestLayerCutToken:
         """Check that an INVALID token is created."""
         token = Cut.from_string(string)
         assert token.type_ is CutType.INVALID
+        # pylint: disable-next=magic-value-comparison
         assert str(token) == 'INVALID'
 
     attrs_info = {'numeric': {'is_auto_cut': False,
@@ -307,6 +308,7 @@ class TestLayerCuts:
         for prop_getter, value, item in zip(properties, values, cuts):
             assert getattr(item, prop_getter)
             assert item.value == value
+        # pylint: disable=magic-value-comparison
         assert self._make_tokens_string(cuts) == '0.27 dc(1.54) 0.85 0.97'
         assert str(cuts) == '0.27 < dc(1.54) < 0.85 0.97'
         assert len(cuts) == 4

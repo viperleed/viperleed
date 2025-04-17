@@ -4,7 +4,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -22,8 +22,8 @@ from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.classes.rparams import LayerCuts
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import errors as err
@@ -679,7 +679,7 @@ class TestBulkUcell:
         slab, rpars, info = args
         with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
-        bulk_slab.ensure_minimal_c_vector(rpars)
+        bulk_slab.ensure_minimal_c_vector(rpars, z_periodic=False)
         c_vec = bulk_slab.c_vector
         bulk_info = info.bulk_properties
         with subtests.test('bulk unit-cell c'):
@@ -709,7 +709,7 @@ class TestBulkUcell:
         slab, rpars, *_ = args
         with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
-        bulk_slab.ensure_minimal_c_vector(rpars)
+        bulk_slab.ensure_minimal_c_vector(rpars, z_periodic=False)
         with pytest.raises(err.AlreadyMinimalError):
             bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS)
 

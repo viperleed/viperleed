@@ -4,12 +4,12 @@ VIBR_AMP_SCALE
 ==============
 
 VIBR_AMP_SCALE is used when
-:ref:`vibrational amplitudes are automatically generated<vibrocc_auto>`
+:ref:`vibration amplitudes are automatically generated<vibrocc_auto>`
 from the :ref:`T_EXPERIMENT` and :ref:`T_DEBYE` parameters.
-E.g., vibrational amplitudes of the surface atoms are normally larger than in
+E.g., vibration amplitudes of the surface atoms are normally larger than in
 the bulk, so one wants to scale the bulk vibration amplitudes.
 VIBR_AMP_SCALE will **never** be used if the VIBROCC file exists and defines
-a vibrational amplitude for the site in question.
+a vibration amplitude for the site in question.
 
 **Default:** 1.0 for every site
 
@@ -33,15 +33,15 @@ Asterisks ``*`` are treated as wildcard characters, so ``*surf`` in the example
 above will match both ``Fe_surf`` and ``O_surf``.
 (The same convention as in the VIBROCC file.)
 
-In the example above, if the vibrational amplitude for Fe has
-been calculated to be 0.1 Å, the vibrational amplitude for the
+In the example above, if the vibration amplitude for Fe has
+been calculated to be 0.1 Å, the vibration amplitude for the
 Fe_surf atoms will be set to 0.13 Å.
 
 .. note::
 
     The parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT` and VIBR_AMP_SCALE
     will normally be used only once, to calculate an initial guess for
-    vibrational amplitudes and generate a :ref:`VIBROCC` file. Afterwards, 
+    vibration amplitudes and generate a :ref:`VIBROCC` file. Afterwards, 
     all three parameters will automatically be commented out in the
     :ref:`PARAMETERS` file; the vibration amplitudes will be defined in the
     VIBROCC file instead. Even if the parameters were un-commented again, 

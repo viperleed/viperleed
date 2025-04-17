@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-09-07'
 __license__ = 'GPLv3+'
 
@@ -12,7 +12,7 @@ from copy import deepcopy
 import numpy as np
 from pytest_cases import case, parametrize
 
-from viperleed.calc.classes.rparams import LMax
+from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.files import parameters
 
 from ...poscar_slabs import CasePOSCARSlabs
@@ -71,6 +71,10 @@ _READ = {
                'Me': {'layer_1': {3, 4, 5}, 'layer_2': {6, 7, 8},
                       'layer_3': {9, 10, 11}, 'layer_4': {12, 13, 14}}},
            'VIBR_AMP_SCALE': ['*surf 1.3',]},
+    'domains': {'RUN': [4], 'LOG_LEVEL': 10, 'THEO_ENERGIES': [50, 152, 3],
+                'V0_IMAG': 5.0, 'LMAX': LMax(8, 12),
+                'DOMAIN': [('', 'silver'), ('Bi', 'bismuth')]},
+    'domains_identical': {},
     'empty': {}, 'stop': {}, 'no_stop': {}, 'missing_equals': {},
     'left empty': {},
     }
@@ -78,6 +82,8 @@ for key in ('stop', 'no_stop', 'left empty'):
     _READ[key].update(**_READ['Ir'])  # Copies of the Ir file
 _READ['missing_equals'].update(**_READ['Ag'])
 del _READ['missing_equals']['SUPERLATTICE']
+_READ['domains_identical'].update(**_READ['domains'])
+_READ['domains_identical']['DOMAIN'] = [('', 'silver'), ('', 'silver')]
 
 # FORTRAN_COMP added on a copy of the Ag(100) file
 _READ['fortran comp'] = deepcopy(_READ['Ag'])
@@ -88,6 +94,8 @@ _PATHS = {
     'Ag': 'Ag(100)/initialization/PARAMETERS',
     'Ir': 'parameters/PARAMETERS_Ir(100)-(2x1)-O',
     'PtRh': 'parameters/PARAMETERS_Pt25Rh75(100)-p(3x1)-O',
+    'domains': 'parameters/PARAMETERS_domains',
+    'domains_identical': 'parameters/PARAMETERS_domains_identical',
     'empty': 'parameters/PARAMETERS_empty',
     'fortran comp': 'parameters/PARAMETERS_fortran_comp',
     'stop': 'parameters/PARAMETERS_stop',
@@ -141,6 +149,16 @@ class CasesParametersFile:
     def case_parameters_file(self, info, data_path):
         """Return information regarding a PARAMETERS file."""
         return info, data_path/info.parameters.param_path
+
+    def case_domains(self, data_path):
+        """Return the main PARAMETERS file of a multi-domain calculation."""
+        info = _fill_test_info('domains')
+        return self.case_parameters_file(info, data_path)
+
+    def case_domains_identical(self, data_path):
+        """Return the main PARAMETERS file of a two-same-domain calculation."""
+        info = _fill_test_info('domains_identical')
+        return self.case_parameters_file(info, data_path)
 
     def case_stop(self, data_path):
         """Return one PARAMETERS file with a line without an '=' sign."""

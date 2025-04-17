@@ -43,15 +43,10 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-03'
 __license__ = 'GPLv3+'
 
 import logging
 
-DEFAULT_HISTORY = 'history'
-DEFAULT_WORK = 'work'
-DEFAULT_WORK_HISTORY = 'workhistory'
 LOGGER = logging.getLogger(__name__)
-LOG_PREFIX = 'viperleed-calc'
-ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'

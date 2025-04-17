@@ -11,9 +11,10 @@ How to run and directory organization
 
 In ViPErLEED, each set of calculations for one system must have its own
 directory. This is because the input and output files have **case sensitive**,
-fixed names, see :ref:`the list of files<list_input_files>`. A typical approach
-is to create one such directory for each experimental dataset and each time
-a new structural model (i.e., :ref:`POSCAR` file) is considered.
+fixed names (see :ref:`the list of files<list_input_files>`).
+A typical approach is to create one such directory for each experimental
+dataset and each time a new structural model (i.e., :ref:`POSCAR` file)
+is considered.
 
 :numref:`list_minimum_dir_inputs` shows an example directory tree
 with the files needed to start a |LEED-IV| calculation in ViPErLEED.
@@ -108,9 +109,11 @@ A typical call may look like this:
 
             viperleed calc -w %work_path% -t %tensorleed_path%
 
-The directory at ``work_path`` is the one where the calculation will be
+The directory at :file:`work_path` is the one where the calculation will be
 executed and all temporary files will be stored. It is created if it does not
-exist. The ``tensorleed_path`` is the path to the :ref:`install_tensorleed`.
+exist, and automatically deleted upon successful termination (unless the ``-k``
+command-line flag is specified).
+The ``tensorleed_path`` is the path to the :ref:`install_tensorleed`.
 If the ``-t`` option is not given, ViPErLEED looks for the TensErLEED source
 code under the path specified by the :envvar:`VIPERLEED_TENSORLEED`
 :term:`environment variable` (see also :ref:`set_envvar`).
@@ -163,7 +166,9 @@ a :ref:`manifest` file that lists the files and directories to be copied back.
 :numref:`list_organization_output` shows an example of the directory tree
 after a run. The :file:`my_work` directory may be on a different file-system
 path (including a different drive, a network path, or a remote server) or be
-a subfolder of :file:`my_surface`.
+a subfolder of :file:`my_surface`. It is shown mainly for illustration
+purposes, as the work directory is automatically deleted after a successful
+execution (unless the ``-k`` command-line flag is given).
 
 .. _list_organization_output:
 .. code-block:: console
@@ -173,11 +178,18 @@ a subfolder of :file:`my_surface`.
     ├── Deltas/
     │   ├── Deltas_001.zip
     │   └── ...
+    ├── history/
+    │   ├── t001.r001_<timestamp>/
+    │   │   └── ...
+    │   ├── ...
+    │   └── bookkeeper.log
     ├── OUT/
     │   ├── THEOBEAMS.csv
     │   ├── Rfactor_analysis_refcalc.pdf
     │   └── ...
     ├── SUPP/
+    │   ├── original_inputs/
+    │   │   └── ...
     │   ├── POSCAR_bulk
     │   ├── POSCAR_bulk_appended
     │   ├── POSCAR_oricell
@@ -185,45 +197,62 @@ a subfolder of :file:`my_surface`.
     ├── Tensors/
     │   ├── Tensors_001.zip
     │   └── ...
-    ├── workhistory/
-    │   └── ...
-    ├── calc-<timestamp>.log
+    ├── history.info
     ├── DISPLACEMENTS        <-- input
     ├── EXPBEAMS.csv         <-- input
     ├── IVBEAMS              <-- input, or created by calc
-    ├── PARAMETERS           <-- input, may be edited by calc
+    ├── PARAMETERS_ori       <-- input for the run that just finished
+    ├── PARAMETERS           <-- output, edited by calc
     ├── PHASESHIFTS          <-- input, or created by calc
-    ├── POSCAR               <-- input, may be edited by calc
-    ├── POSCAR_user          <-- input
-    └── VIBROCC              <-- input, or created by calc
+    ├── POSCAR_ori           <-- input for the run that just finished
+    ├── POSCAR               <-- output, edited by calc
+    ├── POSCAR_user          <-- input of the very first run
+    ├── VIBROCC_ori          <-- input for the run that just finished
+    ├── VIBROCC              <-- output, created or edited by calc
+    └── viperleed-calc-<timestamp>.log
 
-    my_work/
+    my_work/                 <-- deleted upon successful termination
     ├── manifest
     └── ...
-
-|calc| will create the additional input files :ref:`IVBEAMS`,
-:ref:`PHASESHIFTS`, and :ref:`VIBROCC` if not provided by the
-user; see the respective sections for details.
-
-During the very first run, the original :ref:`POSCAR` file is renamed to
-:file:`POSCAR_user`, while the new :file:`POSCAR` contains the structure
-as interpreted by |calc|. See the section on the :ref:`POSCAR` file for
-more details.
 
 Information about the progress of the calculation and about errors
 in the user input are printed to the terminal and recorded in the
 :ref:`log_files_calc` file. It is always a good idea to check the
 log file thoroughly for ``WARNING`` and ``ERROR`` messages.
 
-The ``OUT`` directory (created automatically) contains the results of the
+The |OUT| directory (created automatically) contains the results of the
 calculation, see the :ref:`list of output files<output_files>` for details.
 |calc| also produces some :ref:`supplementary files<supp_files>`, stored
-in the ``SUPP`` directory. These files contain intermediate results or may
-be of interest for debugging purposes. For example, the files
-:ref:`POSCAR_bulk, POSCAR_bulk_appended<poscar_bulk>` and 
-:ref:`POSCAR_oricell<poscar_oricell>` which are helpful to asses the
-correctness of the detected plane group and bulk structure will be stored in the
-``SUPP`` directory.
+in the |SUPP| directory. These files contain intermediate results or may
+be of interest for debugging purposes. For example, the |SUPP| directory
+collects files :ref:`POSCAR_bulk, POSCAR_bulk_appended<poscar_bulk>`, and
+:ref:`poscar_oricell`, which are helpful to asses the correctness of the
+detected plane group and bulk structure.
+
+During the very first run, the original :ref:`POSCAR` file is renamed to
+:file:`POSCAR_user`, while the new |POSCAR| contains the structure as
+interpreted by |calc|. At the end of each run, :file:`POSCAR_ori`
+contains the same input as given at the beginning of the run (this is
+identical to :file:`POSCAR_user` for the very first execution). A copy
+of the same file can be found in the :file:`SUPP/original_inputs/` folder.
+Instead, the |POSCAR| file in the root directory at the end of an execution
+is always the **output** of that run. Typically, this is the one resulting
+from a structural optimization. A copy of the same file can be found in the
+|OUT| directory. Both files are kept in the root directory at the end of a
+|calc| execution for easier comparison.
+
+Files |PARAMETERS| and |VIBROCC| follow the same convention as |POSCAR|:
+``*_ori``-suffixed files correspond to the inputs given for the
+|calc| run that just finished (copies are in :file:`SUPP/original_inputs/`),
+while those without a suffix are the **ouputs** of such a run (copies are in
+|OUT|). This renaming of files is such that |calc| will automatically use the
+**outputs** of a previous execution as inputs for the next one. You can
+manually invoke the :ref:`bookkeeper` utility after |calc| if you want
+a different behavior for a specific run.
+
+|calc| will create the additional input files :ref:`IVBEAMS`,
+:ref:`PHASESHIFTS`, and :ref:`VIBROCC` if not provided by the
+user; see the respective sections for details.
 
 If a :ref:`refercence calculation<ref-calc>` is run with
 :ref:`Tensor output<TENSOR_OUTPUT>`, a ``Tensors`` directory will
@@ -232,15 +261,27 @@ Similarly, if a :ref:`delta-amplitudes<sec_deltas>` calculation is run,
 a ``Deltas`` directory will be created that contains the resulting
 :ref:`delta files<deltaszip>`.
 
-In case of automated multiple-search runs (which can be specified in the
-:ref:`DISPLACEMENTS` file), |calc| creates a ``workhistory`` directory.
-It contains one subfolder for each intermediate run, storing input and
-output files that will be overwritten during subsequent runs.
+The results of each |calc| run are automatically collected into the
+:file:`history` folder. See the :ref:`bookkeeper` page for more details
+on how |calc| results are organized in :file:`history`.
+A plain-text :file:`history.info` file contains a summary of information
+about each such run. It can be used as an electronic logbook to keep track
+of which calculations were executed. See :ref:`this section <history_info>`
+for more information on the contents of the :file:`history.info` file.
+
+.. tip::
+    It is **very good practice** to add some comments to the ``Notes`` section
+    of each entry that :ref:`bookkeeper` adds to the :file:`history.info` file.
+    This allows you to quickly recall what was done without digging through
+    the subfolders of the :file:`history` directory.
+    Typical notes for a first run include information about which sample,
+    which raw data, and which initial structural model were used for the
+    calculation. Normally, entries for subsequent runs should be complemented
+    with notes concerning why the run was executed, some comments about the
+    outcome, and, potentially, a reasoning about how to proceed further.
 
 .. note::
     For :ref:`multi-domain calculations<domain_calculation>` the input structure
     will be different, as separate directories are used for the inputs of each
-    domain. See the :ref:`domain-calculation section<domain_calculation>` for 
+    domain. See the :ref:`domain-calculation section<domain_calculation>` for
     more details.
-
-.. todo:: Add also a few words about bookkeper here.

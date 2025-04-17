@@ -68,8 +68,8 @@ Input structure
   | **→** :ref:`SUPERLATTICE`        | The relationship between the surface and bulk unit cells                         |
   +----------------------------------+----------------------------------------------------------------------------------+
 
-Elements, vibrational amplitudes and element concentrations
-===========================================================
+Elements, vibration amplitudes and element concentrations
+=========================================================
 
 .. table::
   :width: 100%
@@ -82,7 +82,7 @@ Elements, vibrational amplitudes and element concentrations
   +----------------------------------+------------------------------------------------------------------------------------------------------+
   | :ref:`ELEMENT_RENAME`            | Declare that an element in the POSCAR file is actually a different chemical element                  |
   +----------------------------------+------------------------------------------------------------------------------------------------------+
-  | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibrational amplitude  |
+  | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibration amplitude    |
   +----------------------------------+------------------------------------------------------------------------------------------------------+
   | :ref:`T_DEBYE`                   | Debye temperature of the system (only for automatically generating :ref:`VIBROCC`)                   |
   +----------------------------------+------------------------------------------------------------------------------------------------------+

@@ -7,7 +7,7 @@ subclasses of EnergyRange.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-27'
 __license__ = 'GPLv3+'
 
@@ -17,11 +17,11 @@ import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.calc.classes.rparams import EnergyRange
-from viperleed.calc.classes.rparams import IVShiftRange
-from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.classes.rparams.defaults import NO_VALUE
 from viperleed.calc.classes.rparams.special.energy_range import EPS
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
+from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 
 
 # Makes no sense to complain about too many methods in a test class
@@ -269,6 +269,7 @@ class TestEnergyRange:
     def test_contains_ignore_step(self, key):
         """Check range inclusion ignoring steps."""
         out_args, in_args, result = self.contains_valid[key]
+        # pylint: disable-next=magic-value-comparison
         if key == 'diff step':
             result = True
         outer = self._class(*out_args)

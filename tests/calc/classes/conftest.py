@@ -14,7 +14,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-26'
 __license__ = 'GPLv3+'
 
@@ -22,7 +22,7 @@ import numpy as np
 from pytest_cases import fixture
 
 from viperleed.calc.classes.atom import Atom
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.slab import Slab
 
 

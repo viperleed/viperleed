@@ -117,7 +117,6 @@ latex_elements = {
     'preamble': r'''
 \usepackage{braket}
 \usepackage[overlay,absolute]{textpos}% for header in PDF screen version
-\usepackage{everypage}
 \usepackage{newunicodechar}
 \newunicodechar{α}{$\alpha$}
 \newunicodechar{Δ}{$\Delta$}

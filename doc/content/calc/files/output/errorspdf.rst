@@ -10,7 +10,7 @@ contains the results of the :ref:`Error calculation<error_calculation>`.
 Only one independent parameter is varied at a time, and the resulting
 |R factor|\ s are collected. If multiple atoms are linked (e.g., by symmetry),
 they will be varied together, and the entire group will be listed in labels.
-Note that for geometrical variations, the actual direction of the displacements
+Note that for geometric variations, the actual direction of the displacements
 may not be the same for the entire group.
 
 
@@ -35,7 +35,7 @@ information. The information given for each parameter is:
   curve reaches ``R_min + var(R)`` in the displacement range considered.
   See also :ref:`error_calculation`.).
 
-For geometrical displacements the column ``Direction`` lists the direction
+For geometric displacements the column ``Direction`` lists the direction
 requested in :ref:`DISPLACEMENTS`.
 
 The contents of ``Errors_summary.csv`` may look something like this:
@@ -56,11 +56,11 @@ Results for each individual parameter varied during the error calculation
 are collected and stored in the ZIP archive ``Errors.zip``. Files are named
 ``Errors_{mode}_atoms#{ids}.csv``, where ``{mode}`` is one of ``geo``, ``vib``,
 or ``occ`` and ``{ids}`` is the atom numbers (as in :ref:`POSCAR`).
-For geometrical displacements and vibrational amplitude changes, each file has
+For geometric displacements and vibration-amplitude changes, each file has
 two columns: the first column lists the displacement and the right column the
 corresponding |R factor|. For occupational errors, additional columns list the
-occupations by chemical element. Geometrical displacements and vibrational
-amplitude changes are given in units of Å, occupations in %.
+occupations by chemical element. Geometric displacements and
+vibration-amplitude changes are given in units of Å, occupations in %.
 
 
 .. _errorspdf:
@@ -70,8 +70,8 @@ Errors.pdf
 
 The same data contained in ``Errors_summary.csv`` and ``Errors.zip`` is plotted
 in the ``Errors.pdf`` file (all placed in ``OUT``). Parameter are split by
-geometry, vibrational amplitudes and site occupation. However, all parameters
-of the same type (e.g., all geometrical displacements) are grouped together in
+geometry, vibration amplitudes, and site occupation. However, all parameters
+of the same type (e.g., all geometric displacements) are grouped together in
 the ``Errors.pdf`` file, so if you calculate very different displacements in
 the same error calculation, these would nevertheless be plotted together.
 

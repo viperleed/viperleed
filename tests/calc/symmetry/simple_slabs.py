@@ -8,7 +8,7 @@ plane groups, including atoms at all Wyckoff positions.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-04-13'
 __license__ = 'GPLv3+'
 
@@ -18,7 +18,7 @@ import numpy as np
 from pytest_cases import case, parametrize
 
 from viperleed.calc.classes.atom import Atom
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.slab import Slab
 
 from ..tags import CaseTag as Tag

@@ -1,4 +1,4 @@
-"""Moule limits of viperleed.calc.classes.rparams.
+"""Module limits of viperleed.calc.classes.rparams.
 
 Defines the limiting values of 'simple' user PARAMETERS. Not-so-simple
 parameters, which are defined as their own classes in package special,
@@ -10,7 +10,7 @@ in Oct 2023.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-23'
 __license__ = 'GPLv3+'
 
