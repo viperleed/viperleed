@@ -24,8 +24,8 @@ class TestFromCodes:
     """Tests for the from_codes class method."""
 
     _valid = {
-        'all nothing': ((ExitCode.SUCCESS, ExitCode.FAIL), ExitCode.FAIL),
-        'all success': ((ExitCode.NOTHING_TO_DO,)*3, ExitCode.NOTHING_TO_DO),
+        'all nothing': ((ExitCode.NOTHING_TO_DO,)*3, ExitCode.NOTHING_TO_DO),
+        'all success': ((ExitCode.SUCCESS,)*5, ExitCode.SUCCESS),
         'one fail': ((ExitCode.SUCCESS, ExitCode.FAIL), ExitCode.FAIL),
         'one nothing': ((ExitCode.SUCCESS, ExitCode.NOTHING_TO_DO),
                         ExitCode.SUCCESS),
