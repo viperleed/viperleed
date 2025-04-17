@@ -204,7 +204,7 @@ class HistoryFolder(IncompleteHistoryFolder):
         """
         if len(domain_paths) != len(domain_folders):
             raise ValueError(
-                f'Inconsistent number of paths ({len(domain_paths)} '
+                f'Inconsistent number of paths ({len(domain_paths)}) '
                 f'and folders ({len(domain_folders)}).'
                 )
         # Keep only folders that are non-None
