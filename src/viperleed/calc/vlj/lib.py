@@ -9,11 +9,11 @@ import logging
 
 
 _VLJ_DEPENDENCIES = (
-    "viperleed_jax",
-    "anytree",
-    "jax",
-    "spbessax",
-    "tqdm",
+    'viperleed_jax',
+    'anytree',
+    'jax',
+    'spbessax',
+    'tqdm',
 )
 
 logger = logging.getLogger(__name__)
@@ -26,10 +26,10 @@ def check_vlj_dependencies():
             __import__(dependency)
         except ImportError as e:
             msg = (
-                f"Dependency {dependency} is required for use of the "
-                "viperleed_jax plugin. If you have installed it, please check "
-                "your PYTHONPATH."
+                f'Dependency {dependency} is required for use of the '
+                'viperleed_jax plugin. If you have installed it, please check '
+                'your PYTHONPATH.'
             )
             logger.error(msg)
             # raise ImportError with the original exception
-            raise ImportError(f"Missing dependency: {dependency}.") from e
+            raise ImportError(f‘Missing dependency: {dependency}.‘) from e
