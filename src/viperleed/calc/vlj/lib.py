@@ -32,4 +32,4 @@ def check_vlj_dependencies():
             )
             logger.error(msg)
             # raise ImportError with the original exception
-            raise ImportError(f‘Missing dependency: {dependency}.‘) from e
+            raise ImportError(f'Missing dependency: {dependency}.') from e
