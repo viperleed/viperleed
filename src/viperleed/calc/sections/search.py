@@ -31,6 +31,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
 from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iosearch
 from viperleed.calc.files import parameters
@@ -43,6 +44,7 @@ from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
 from viperleed.calc.lib.version import Version
+from viperleed.calc.vlj.lib import check_vlj_dependencies
 
 logger = logging.getLogger(__name__)
 
@@ -682,6 +684,15 @@ def search(sl, rp):
     None.
 
     """
+
+    if rp.SEARCH_BACKEND == SearchBackend.VLJ:
+        # check dependencies
+        check_vlj_dependencies()
+        # brach off to viperleed-jax
+
+        #TODO: do everything
+        return
+
 
     def kill_process(proc, default_pgid=None):
         """Cleanly kill the mpirun subprocess and its children. If the process
