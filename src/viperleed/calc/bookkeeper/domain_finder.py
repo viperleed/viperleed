@@ -12,8 +12,8 @@ from pathlib import Path
 
 from viperleed.calc.bookkeeper.constants import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
-from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
+from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
 from viperleed.calc.bookkeeper.utils import ask_user_confirmation
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.bookkeeper.utils import needs_update_for_attr
