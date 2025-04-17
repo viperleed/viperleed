@@ -45,6 +45,7 @@ from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
 from viperleed.calc.lib.version import Version
 from viperleed.calc.vlj.lib import check_vlj_dependencies
+from viperleed.calc.vlj.search import vlj_search
 
 logger = logging.getLogger(__name__)
 
@@ -685,12 +686,14 @@ def search(sl, rp):
 
     """
 
+    # brach off to viperleed-jax
     if rp.SEARCH_BACKEND == SearchBackend.VLJ:
         # check dependencies
         check_vlj_dependencies()
-        # brach off to viperleed-jax
 
-        #TODO: do everything
+        # initialize the TensorLEED calculator
+        vlj_search(sl, rp)
+
         return
 
 
