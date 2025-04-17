@@ -40,6 +40,16 @@ _MAIN_DOMAIN_KEY = 'domains'
 _SUBDOMAIN_KEY = 'main'
 
 
+# Names of folders that are never considered to be the root of
+# domain subfolders when searching potential ones.
+_NOT_A_DOMAIN_SUBFOLDER = {
+    DEFAULT_OUT,
+    DEFAULT_SUPP,
+    DEFAULT_HISTORY,
+    DEFAULT_WORK_HISTORY,
+    }
+
+
 class DomainFinderError(Exception):
     """Base class for errors in DomainFinder."""
 
@@ -93,15 +103,9 @@ class DomainFinder:
 
     def find_potential_domains(self):
         """Return paths to subfolders of self.path that may be domains."""
-        not_a_domain = {
-            DEFAULT_OUT,
-            DEFAULT_SUPP,
-            DEFAULT_HISTORY,
-            DEFAULT_WORK_HISTORY,
-            }
         subfolders = (d for d in self.path.iterdir()
                       if d.is_dir()
-                      and d.name not in not_a_domain)
+                      and d.name not in _NOT_A_DOMAIN_SUBFOLDER)
         return tuple(d for d in subfolders
                      if self._is_potential_domain_subfolder(d))
 
