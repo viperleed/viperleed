@@ -784,21 +784,21 @@ class TestDomainRootExplorer:
 
     def test_calc_timestamp_from_domain(self, domain, explorer, mocker):
         """Check pulling of the calc_timestamp property from root logs."""
-        most_recent_domain = mocker.MagicMock()
+        most_recent_log_in_domain = mocker.MagicMock()
         # pylint: disable-next=protected-access           # OK in tests
-        explorer._logs = mocker.MagicMock(most_recent=mocker.MagicMock())
+        explorer._logs = mocker.MagicMock(most_recent=None)
         # pylint: disable-next=protected-access           # OK in tests
-        domain._logs = mocker.MagicMock(most_recent=most_recent_domain)
-        assert domain.calc_timestamp is most_recent_domain.timestamp
+        domain._logs = mocker.MagicMock(most_recent=most_recent_log_in_domain)
+        assert domain.calc_timestamp is most_recent_log_in_domain.timestamp
 
     def test_calc_timestamp_from_main(self, domain, explorer, mocker):
         """Check pulling of the calc_timestamp property from main."""
-        most_recent = mocker.MagicMock()
+        most_recent_log_in_main = mocker.MagicMock()
         # pylint: disable-next=protected-access           # OK in tests
-        explorer._logs = mocker.MagicMock(most_recent=most_recent)
+        explorer._logs = mocker.MagicMock(most_recent=most_recent_log_in_main)
         # pylint: disable-next=protected-access           # OK in tests
         domain._logs = mocker.MagicMock(most_recent=None)
-        assert domain.calc_timestamp is most_recent.timestamp
+        assert domain.calc_timestamp is most_recent_log_in_main.timestamp
 
     def test_infer_run_info_from_domain(self, domain, explorer, mocker):
         """Check inferring run info from the log file in the domain folder."""

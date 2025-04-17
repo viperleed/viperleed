@@ -270,7 +270,7 @@ class TestHistoryFolderDomains:
                 # pylint: disable-next=protected-access,assigning-non-slot
                 folder.metadata._hash = domain_hash
             else:
-                folder = domain_hash
+                folder = None
             domain_paths.append(make_fake_path(domain_path))
             domain_folders.append(folder)
         main_path = make_fake_path()

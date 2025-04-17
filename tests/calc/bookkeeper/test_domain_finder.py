@@ -231,7 +231,7 @@ class TestDomainFinderFromMain:
         mocker.patch(f'{_MODULE}.ask_user_confirmation', return_value=False)
         with pytest.raises(MainPathNotFoundError):
             find()
-        assert check_info.call_count == 1  # Even if there's 2 folders
+        check_info.assert_called_once()  # Even if there's 2 folders
 
     def test_no_domain_history_folder(self, finder, find, caplog, mocker):
         """Check the expected result when the history folder is not found."""
@@ -302,17 +302,17 @@ class TestDomainFinderFromSubdomain:
     def test_success(self, finder, find, mocker):
         """Check that the expected domains are found."""
         main_path = 'some_path'
-        mock_folder = mocker.MagicMock()
+        mock_main_folder = mocker.MagicMock()
         all_domains = (
             DomainInfo('domain_1', 'hash_1'),
             DomainInfo('domain_2', 'hash_2'),
-            DomainInfo('this_domain', 'hash_this'),
+            DomainInfo('domain_3', 'hash_3'),
             DomainInfo('domain_4', 'hash_4'),
             )
-        mock_folder.metadata.domains = {'domains': all_domains}
+        mock_main_folder.metadata.domains = {'domains': all_domains}
         mocker.patch.object(finder,
                             '_get_history_folder',
-                            return_value=mock_folder)
+                            return_value=mock_main_folder)
         domains = find({'main': DomainInfo(main_path, 'main_hash')})
         assert domains
         assert len(domains) == len(all_domains)
