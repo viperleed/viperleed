@@ -62,7 +62,7 @@ def ensure_has_stream_handler():
 
 
 def remove_bookkeeper_logfile(at_path):
-    """Remove the FileHandler(s) at_path for LOGGER, if any."""
+    """Remove the FileHandler(s) `at_path` for LOGGER, if any."""
     handlers = get_handlers(LOGGER,
                             logging.FileHandler,
                             baseFilename=str(at_path/BOOKIE_LOGFILE))

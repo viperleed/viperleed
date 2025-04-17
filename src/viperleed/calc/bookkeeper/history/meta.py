@@ -73,7 +73,39 @@ class BookkeeperMetaFile:
 
     @property
     def domains(self):
-        """Return a dictionary of domain information."""
+        """Return a dictionary of domain information.
+
+        Returns
+        -------
+        domains : dict
+            Empty for single-domain calculations. Keys are strings,
+            values are tuples. At most one key is ever present. Only
+            one of the following keys-value pairs may be present:
+            ('main', main_info)
+                Signals that this metadata file belongs to a history
+                folder of a subdomain. main_info is a DomainInfo named
+                tuple identifying the corresponding history subfolder
+                of the main root folder. main_info.path is a string
+                version of the full path to the root directory in which
+                the 'history' is contained, main_info.hash_ the hash of
+                the corresponding history subfolder.
+            ('domains', (domain_info_1, domain_info_2, ...))
+                Signals that this metadata file belongs to a history
+                folder of the main calculation. Each domain_info_1
+                is a DomainInfo namedtuple. domain_info_*.path is
+                a string version of the relative path to the root
+                of each subdomain, while domain_info_*.path the
+                hash of the corresponding history subfolder.
+
+        Raises
+        ------
+        MetadataError
+            If the 'domains' section of this metadata file cannot
+            be parsed.
+        MetadataError
+            If both non-empty 'main' and 'domains' options are
+            found in the 'domains' section of this metadata file.
+        """
         domains = {}
         main = self._parser['domains']['main']
         subdomains = self._parser['domains']['domains']
@@ -164,7 +196,7 @@ class BookkeeperMetaFile:
         ----------
         domains : Sequence of tuples
             Items are tuples containing the path and the hash of
-            the main folder for each the subdomains that should
+            the main folder for each of the subdomains that should
             be registered. All items in the tuple must be strings.
 
         Returns

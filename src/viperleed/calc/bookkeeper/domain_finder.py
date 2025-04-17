@@ -58,7 +58,7 @@ class DomainPathNotFoundError(FolderNotFoundError):
 
 
 class MainPathNotFoundError(FolderNotFoundError):
-    """The main path of the calculation was not found from a subdomain."""
+    """The main path of the calculation was not found, or is mismatched."""
 
 
 class DomainFinder:
@@ -110,7 +110,8 @@ class DomainFinder:
         """Return domains found in self.path.
 
         Domain information is collected from the metadata files
-        found in the 'history' directory of self.path.
+        found in the most-recent subfolder of the 'history' directory
+        of self.path.
 
         Parameters
         ----------

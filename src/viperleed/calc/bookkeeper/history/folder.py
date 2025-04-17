@@ -196,9 +196,11 @@ class HistoryFolder(IncompleteHistoryFolder):
             should be HistoryFolder instances or None. Only those that
             are non-None are registered.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        ValueError
+            If `domain_paths` and `domain_folders` have different
+            lengths.
         """
         if len(domain_paths) != len(domain_folders):
             raise ValueError(

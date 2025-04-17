@@ -39,6 +39,9 @@ def fixture_bookkeeper(mocker):
 def fixture_finder(bookkeeper):
     """Return a DomainFinder with a fake bookkeeper."""
     finder = DomainFinder(bookkeeper)
+    # The net one is just a convenience attribute so we don't need to
+    # repeat over and over both the finder and the bookkeeper fixtures
+    # in the tests below.
     finder.bookkeeper = bookkeeper
     return finder
 
@@ -173,7 +176,7 @@ class TestDomainFinderFromMain:
 
     @fixture(name='find')
     def fixture_find(self, mock_finder_info, existing_domains):
-        """Return the domains found by `finder`."""
+        """Return the subdomains found."""
         def _find(info=None):
             if info is None:
                 info = {'domains': existing_domains}
@@ -199,7 +202,7 @@ class TestDomainFinderFromMain:
         assert caplog.text
 
     def test_main_path_mismatched(self, finder, find, caplog, mocker):
-        """Check result the main path stored in history is mismatched."""
+        """Check result when the main path stored in history is mismatched."""
         def _mock_get_history_folder(*_):
             """Return a fake history folder."""
             folder = mocker.MagicMock()
@@ -212,13 +215,10 @@ class TestDomainFinderFromMain:
                             _mock_get_history_folder)
         mock_ask_user = mocker.patch(f'{_MODULE}.ask_user_confirmation',
                                      return_value=True)
-        domains = find()
-        # Path to domain folder exists, even if the history folder
-        # is mismatched. This problem will bubble up at a later
-        # point, if it is critical to have a specific folder.
-        assert domains
+        assert find()
         assert caplog.text
-        # Ask user only once, even if there's 2 mismatched folders!
+        # Ask user only once, even if there's 2 mismatched
+        # folders (see fixture_existing_domains).
         mock_ask_user.assert_called_once()
 
     def test_main_path_mismatched_user_says_no(self, finder, find, mocker):
@@ -246,9 +246,6 @@ class TestDomainFinderFromMain:
             Path('existing_domain_path'),
             'hash_of_non_existing_history_folder',
             )
-        # Path to domain folder exists, even if the history folder
-        # is mismatched. This problem will bubble up at a later
-        # point, if it is critical to have a specific folder.
         assert domains
         assert caplog.text
 
@@ -303,7 +300,7 @@ class TestDomainFinderFromSubdomain:
         assert not find({'main': DomainInfo(main_path, 'main_hash')})
 
     def test_success(self, finder, find, mocker):
-        """Check complaints when the main path does not exist."""
+        """Check that the expected domains are found."""
         main_path = 'some_path'
         mock_folder = mocker.MagicMock()
         all_domains = (

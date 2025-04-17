@@ -78,7 +78,7 @@ class RootExplorer:
 
     @property
     def domains(self):
-        """Return one RootExplorer for each domain subfolder."""
+        """Return relative paths to each (potential) domain subfolder."""
         return self._domains
 
     @property
@@ -442,7 +442,8 @@ class RootExplorer:
             except OSError as exc:
                 LOGGER.error(
                     f'Failed to rename {self._relative_path(cwd_file)} '
-                    f'to {file_ori}.')
+                    f'to {file_ori}.'
+                    )
                 failed[file] = exc
         if failed:
             raise FileOperationFailedError(failed)
@@ -479,7 +480,7 @@ class DomainRootExplorer(RootExplorer):
     """A RootExplorer for a domain subfolder."""
 
     def __init__(self, path, bookkeeper, main):
-        """Initialize an root explorer for a domain subfolder.
+        """Initialize instance.
 
         Parameters
         ----------

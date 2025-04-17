@@ -235,7 +235,7 @@ class TestHistoryFolderDomains:
         return _make
 
     def test_mark_domain(self, make_fake_path, mocker):
-        """Check successful marking of a history folder as the main one."""
+        """Check successful marking of a history folder as a subdomain."""
         mocker.patch(f'{_MODULE}.BookkeeperMetaFile.compute_hash')
         main_folder = HistoryFolder(make_fake_path())
         # pylint: disable-next=protected-access,assigning-non-slot

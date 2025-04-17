@@ -168,11 +168,11 @@ class Bookkeeper:
                 return BookkeeperExitCode.FAIL
 
         # Store the RootExplorer instance BEFORE running on the main
-        # domain, as _run_on_domain will collect information from there
-        # and later on create a new instance (in _clean_state).
+        # domain, as _run_one_domain will collect information from
+        # there and later on create a new instance (in _clean_state).
         # However, we need up-to-date information for running in the
         # subdomains, BEFORE any deleting/archiving is done, as the
-        # log file may be moved.
+        # log file may be deleted too.
         main_root = self._root
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
@@ -667,8 +667,8 @@ class Bookkeeper:
 
         Parameters
         ----------
-        mode : str or BookkeeperMode
-            Which bookkeeper mode to use. See help(BookkeeperMode).
+        mode : BookkeeperMode
+            Which bookkeeper mode to use.
         requires_user_confirmation : bool, optional
             Whether user confirmation is necessary before proceeding
             with destructive actions. Only used in DISCARD_FULL mode.
@@ -719,7 +719,42 @@ class Bookkeeper:
         return exit_code, last_folder
 
     def _run_subdomains(self, domains, main_root, main_folder, mode, **kwargs):
-        """Execute bookkeeper in subdomains with the given `mode`."""
+        """Execute bookkeeper in `domains`.
+
+        Parameters
+        ----------
+        domains : Sequence of Path
+            Absolute path to each of the subdomain folders to be
+            processed.
+        main_root : RootExplorer
+            Handler of the **main** root folder of the multi-domain
+            calculation (i.e., where calc was originally invoked).
+        main_folder : HistoryFolder or None
+            The subfolder of `main_root`.path/'history' where the
+            results of the main calc execution were stored (i.e.,
+            not one of those coming from workhistory). Used for
+            storing metadata information about subdomains.
+        mode : BookkeeperMode
+            The mode in which to run in all `domains`.
+        **kwargs : object, optional
+            Other keyword arguments, passed unaltered to each of
+            the .run calls that execute in `domains`.
+
+        Yields
+        ------
+        domain_exit_code : BookkeeperExitCode
+            One exit code for each of the `domains` in which
+            bookkeeper was executed in `mode`.
+
+        Notes
+        -----
+        `main_folder` is only updated with domain information after all
+            the `domains` have been processed. This means that it is
+            necessary to **exhaust this generator function** before
+            `main_folder` contains domain-related metadata information.
+            Conversely, each of the `domains` subfolders contain
+            domain markings as soon as they have been processed.
+        """
         if not domains:
             return
         domain_rel_paths = []

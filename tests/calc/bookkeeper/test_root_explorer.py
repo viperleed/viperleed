@@ -366,7 +366,7 @@ class TestRootExplorerCopyStateFilesFrom:
 
     @fixture(name='oserror')
     def fixture_oserror(self):
-        """Return a OSError instance."""
+        """Return an OSError instance."""
         return OSError()
 
     @fixture(name='src')
