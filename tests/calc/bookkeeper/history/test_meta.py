@@ -224,25 +224,22 @@ class TestBookkeeperMetaFileRaises:
     """Tests for complaints raised by BookkeeperMetaFile."""
 
     _domains = {
-        'main and domains': (
-            {'main': '(\'p\', \'h\')',
-             'domains': '((\'p_1\', \'h_1\'), (\'p_2\', \'h_2\'))'},
-            MetadataError,
-            ),
-        'main misses end parenthesis': ({'main': '(\'p\', \'h\''},
-                                        MetadataError),
-        'domain misses end parenthesis': (
-            {'domains': '((\'p_1\', \'h_1\', (\'p_2\', \'h_2\'))'},
-            MetadataError,
-            ),
+        'main and domains': {
+            'main': '(\'p\', \'h\')',
+            'domains': '((\'p_1\', \'h_1\'), (\'p_2\', \'h_2\'))'
+            },
+        'main misses end parenthesis': {'main': '(\'p\', \'h\''},
+        'domain misses end parenthesis': {
+            'domains': '((\'p_1\', \'h_1\', (\'p_2\', \'h_2\'))'
+            },
         }
 
-    @parametrize('parser_contents,exc', _domains.values(), ids=_domains)
-    def test_domains_raises(self, parser_contents, exc, meta):
+    @parametrize(parser_contents=_domains.values(), ids=_domains)
+    def test_domains_raises(self, parser_contents, meta):
         """Check expected errors for a corrupt 'domains' section."""
         # pylint: disable-next=protected-access           # OK in tests
         meta._parser['domains'].update(parser_contents)
-        with pytest.raises(exc):
+        with pytest.raises(MetadataError):
             _ = meta.domains
 
     def test_hash_property_before_computation(self, meta):
