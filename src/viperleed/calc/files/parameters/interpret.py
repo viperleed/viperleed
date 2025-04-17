@@ -1426,7 +1426,10 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 raise ParameterValueError(assignment.parameter,
                                           message=str(exc)) from None
             site_def_dict[site_label] = atnums
-        self.rpars.SITE_DEF[site_element] = site_def_dict
+        if not site_element in self.rpars.SITE_DEF:
+            self.rpars.SITE_DEF[site_element] = site_def_dict
+        else:
+            self.rpars.SITE_DEF[site_element].update(site_def_dict)
 
     def _get_valid_sitedef_spec(self, param, site_element, label_and_specs):
         """Return a site label and atom selection specifications, or raise."""
