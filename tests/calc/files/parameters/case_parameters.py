@@ -63,7 +63,8 @@ _READ = {
            'BULK_LIKE_BELOW': 0.35, 'T_DEBYE': 420, 'T_EXPERIMENT': 100,
            'SITE_DEF': {'Ir': {'surf': {3, 2}}, 'O': {'ads': {1}}},
            'VIBR_AMP_SCALE': ['*surf 1.3',], 'V0_IMAG': 5.0},
-    'PtRh': {'RUN': [0],
+    'PtRh': {
+        'RUN': [0],
            'THEO_ENERGIES': [49, 550, 3], 'ELEMENT_MIX': {'Me': ['Rh', 'Pt']},
            'BULK_LIKE_BELOW': 0.45, 'T_DEBYE': 250, 'T_EXPERIMENT': 300,
            'SITE_DEF': {
