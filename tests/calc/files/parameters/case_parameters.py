@@ -69,7 +69,8 @@ _READ = {
            'SITE_DEF': {
                'O': {'surf': {1, 2}},
                'Me': {'layer_1': {3, 4, 5}, 'layer_2': {6, 7, 8},
-                      'layer_3': {9, 10, 11}, 'layer_4': {12, 13, 14}}},
+                      'layer_3': {9, 10, 11}, 'layer_4': {12, 13, 14}},
+               },
            'VIBR_AMP_SCALE': ['*surf 1.3',],
            },
     'domains': {'RUN': [4], 'LOG_LEVEL': 10, 'THEO_ENERGIES': [50, 152, 3],
