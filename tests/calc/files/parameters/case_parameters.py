@@ -49,7 +49,7 @@ _POSCAR_INFO = {
     'Ag': _get_poscar_info('case_poscar_ag100'),
     'Ir': _get_poscar_info('Ir(100)-(2x1)-O'),
     'PtRh': _get_poscar_info('POSCAR_Pt25Rh75(100)-p(3x1)-O'),
-}
+    }
 _READ = {
     'Ag': {'V0_IMAG': 5.0, 'THEO_ENERGIES': [50, 350, 3],
            'RUN': [0], 'LOG_LEVEL': 10, 'N_BULK_LAYERS': 1,
