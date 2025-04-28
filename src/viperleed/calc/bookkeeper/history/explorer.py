@@ -306,6 +306,7 @@ class HistoryExplorer:
         """Fix issues found in all history subfolders."""
         # Fix all folders: those that don't need a fix return empty
         folder_fix = {folder: folder.fix() for folder in self._subfolders}
+        fixed_anything = any(actions for actions in folder_fix.values())
 
         # Now all folders should have metadata. Those to which
         # metadata was added must also be correctly marked into
@@ -321,7 +322,7 @@ class HistoryExplorer:
         for action in sorted(folder_fix_actions, key=attrgetter('name')):
             if action.value:
                 LOGGER.info(action.value)
-        return any(folder_fix_actions)
+        return fixed_anything
 
     def _mark_subfolders_as_siblings(self, folders):
         """Infer relations between folders based on their timestamp."""
