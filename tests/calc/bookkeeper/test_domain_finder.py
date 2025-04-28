@@ -30,9 +30,9 @@ _MODULE = 'viperleed.calc.bookkeeper.domain_finder'
 
 
 @fixture(name='bookkeeper')
-def fixture_bookkeeper(mocker):
+def fixture_bookkeeper(mocker, tmp_path):
     """Return a fake bookkeeper."""
-    return mocker.MagicMock()
+    return mocker.MagicMock(cwd=tmp_path)
 
 
 @fixture(name='finder')
@@ -244,7 +244,7 @@ class TestDomainFinderFromMain:
                        'hash_of_non_existing_history_folder'),
             )})
         mock_get_history.assert_called_once_with(
-            Path('existing_domain_path'),
+            finder.path/'existing_domain_path',
             'hash_of_non_existing_history_folder',
             )
         assert domains

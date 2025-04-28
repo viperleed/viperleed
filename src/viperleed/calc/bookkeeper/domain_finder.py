@@ -154,9 +154,9 @@ class DomainFinder:
         """Main path is mismatched. Ask confirmation to proceed."""
         return already_confirmed or ask_user_confirmation()
 
-    def _check_subdomain_info_consistent(self, domain_path, domain_hash):
+    def _check_subdomain_info_consistent(self, domain_name, domain_hash):
         """Raise if domain information is not up to date."""
-        domain_path = Path(domain_path)
+        domain_path = self.path/domain_name
         try:
             folder = self._get_history_folder(domain_path, domain_hash)
         except FileNotFoundError:
@@ -165,12 +165,12 @@ class DomainFinder:
             raise DomainPathNotFoundError(domain_path) from None
         if not folder:  # No history folder with that hash
             err_msg = ('Could not find history folder with hash '
-                       f'{domain_hash} in domain {domain_path}.')
+                       f'{domain_hash} in domain {domain_name}.')
             LOGGER.warning(err_msg)
             raise MetadataMismatchError(err_msg)
         main_path, _ = folder.metadata.domains[_SUBDOMAIN_KEY]
         if Path(main_path) != self.path:
-            LOGGER.error(f'Domain {domain_path}: Inconsistent path to the '
+            LOGGER.error(f'Domain {domain_name}: Inconsistent path to the '
                          f'main folder of the domain calculation. Expected '
                          f'{main_path}, found {self.path} instead.')
             raise MainPathNotFoundError(main_path)
