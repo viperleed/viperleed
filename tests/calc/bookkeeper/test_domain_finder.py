@@ -202,6 +202,19 @@ class TestDomainFinderFromMain:
         assert not domains
         assert caplog.text
 
+    def test_domain_information_corrupt(self, finder, find, caplog, mocker):
+        """Check result when a domain subfolder has corrupted metadata."""
+        corrupt_folder = mocker.MagicMock()
+        corrupt_folder.metadata.domains = {}
+        mocker.patch.object(finder,
+                            '_get_history_folder',
+                            return_value=corrupt_folder)
+        domains = find({'domains': (
+            DomainInfo('corrupted_domain_info_path', 'hash_of_corrupted'),
+            )})
+        assert domains
+        assert caplog.text
+
     def test_main_path_mismatched(self, finder, find, caplog, mocker):
         """Check result when the main path stored in history is mismatched."""
         def _mock_get_history_folder(*_):

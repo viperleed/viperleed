@@ -168,7 +168,11 @@ class DomainFinder:
                        f'{domain_hash} in domain {domain_name}.')
             LOGGER.warning(err_msg)
             raise MetadataMismatchError(err_msg)
-        main_path, _ = folder.metadata.domains[_SUBDOMAIN_KEY]
+        try:
+            main_path, _ = folder.metadata.domains[_SUBDOMAIN_KEY]
+        except KeyError as exc:
+            LOGGER.warning(f'Domain {domain_name}: domain information missing')
+            raise MetadataMismatchError() from exc
         if Path(main_path) != self.path:
             LOGGER.error(f'Domain {domain_name}: Inconsistent path to the '
                          f'main folder of the domain calculation. Expected '
