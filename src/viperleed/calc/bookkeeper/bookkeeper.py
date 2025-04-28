@@ -169,13 +169,15 @@ class Bookkeeper:
                 LOGGER.info('')
                 return BookkeeperExitCode.FAIL
 
-        # Store the RootExplorer instance BEFORE running on the main
+        # Store a RootExplorer instance BEFORE running on the main
         # domain, as _run_one_domain will collect information from
         # there and later on create a new instance (in _clean_state).
         # However, we need up-to-date information for running in the
         # subdomains, BEFORE any deleting/archiving is done, as the
-        # log file may be deleted too.
-        main_root = self._root
+        # log file may be deleted too. Also, we can't use self._root,
+        # as clear_for_next_calc_run does internally re-collect info.
+        main_root = RootExplorer(self.cwd, self)
+        main_root.collect_info(silent=True)
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
             }
