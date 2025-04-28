@@ -472,7 +472,7 @@ class Bookkeeper:
         return True
 
     def _find_domains(self, mode):
-        """Identify domain subfolders in the current directory."""
+        """Return paths to domain subfolders of the current directory."""
         self.update_from_cwd(silent=True)  # Only the first log message
         finder = DomainFinder(self)
         finder.collect_info()
@@ -782,6 +782,9 @@ class Bookkeeper:
         if main_folder:
             main_folder.mark_as_domains_main(domain_rel_paths, domain_folders)
             main_folder.metadata.write()
+        LOGGER.info('Done processing domain folders %s',
+                    harvard_commas(*domain_rel_paths))
+        LOGGER.info('')
 
     def _user_confirmed(self):
         """Return whether the user wants to proceed with discarding."""

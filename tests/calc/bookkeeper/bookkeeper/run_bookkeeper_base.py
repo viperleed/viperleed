@@ -117,8 +117,13 @@ class _TestCheckers:
     def check_last_log_message(caplog, mode, exit_code):
         """Check that bookkeeper emits one meaningful last log message."""
         records = ((r, r.getMessage()) for r in reversed(caplog.records))
-        last_record, msg = next((r, m) for r, m in records
-                                if m and EDITED_SUFFIX not in m)
+        skip_msg_contents = (EDITED_SUFFIX, 'domain folders')
+        last_record, msg = next(
+            (r, m)
+            for r, m in records
+            if m
+            and not any(c in m for c in skip_msg_contents)
+            )
         expect_level = {
             BookkeeperExitCode.FAIL: logging.ERROR,
             BookkeeperExitCode.NOTHING_TO_DO: logging.INFO,
