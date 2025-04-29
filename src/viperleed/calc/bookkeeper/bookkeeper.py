@@ -190,7 +190,13 @@ class Bookkeeper:
                                   mode,
                                   **kwargs)
             ]
-        return BookkeeperExitCode.from_codes(exit_codes)
+        exit_code = BookkeeperExitCode.from_codes(exit_codes)
+        if exit_code is BookkeeperExitCode.FAIL and domains:
+            LOGGER.warning('Bookkeeper failed and may not have processed some '
+                           'domain directories. Make sure to invoke '
+                           f'\'bookkeeper {mode.long_flag}\' in the '
+                           'root folder and in all domain subfolders.')
+        return exit_code
 
     def update_from_cwd(self, silent=False):
         """Update timestamp, tensor number, log lines, etc. from root.

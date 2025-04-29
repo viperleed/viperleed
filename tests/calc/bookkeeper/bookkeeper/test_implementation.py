@@ -252,6 +252,29 @@ class TestBookkeeperDomains:
                          if line not in expect]
             assert not any(line in contents for line in not_there)
 
+    @parametrize(domain_paths=(None, ('path_1',)))
+    def test_run_domains_fails_and_logs(self,
+                                        domain_paths,
+                                        tmp_path,
+                                        caplog,
+                                        mocker):
+        """Check that failing to run in a domain tree emits log messages."""
+        bookkeeper = Bookkeeper(tmp_path)
+        mocker.patch.object(bookkeeper,
+                            '_find_domains',
+                            return_value=('path_1',))
+        mocker.patch.object(bookkeeper,
+                            '_run_one_domain',
+                            return_value=('exit', 'folder'))
+        mocker.patch.object(bookkeeper,
+                            '_run_subdomains',
+                            return_value=())
+        mocker.patch(f'{_MODULE}.BookkeeperExitCode.from_codes',
+                     return_value=BookkeeperExitCode.FAIL)
+        bookkeeper.run('archive', domains=domain_paths)
+        expect_log = 'not have processed some domain directories'
+        assert expect_log in caplog.text
+
 
 class TestWarnsInOldCalcTree:
     """Tests for the _warn_about_old_calc method."""
