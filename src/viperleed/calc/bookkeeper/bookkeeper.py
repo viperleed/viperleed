@@ -775,7 +775,7 @@ class Bookkeeper:
             except ValueError:
                 pass
             domain_rel_paths.append(path)
-        LOGGER.info('Running bookkeeper in domain folders %s',
+        LOGGER.info('Running bookkeeper in domain folders %s:',
                     harvard_commas(*domain_rel_paths))
         domain_folders = []    # Archived HistoryFolder for each domain
         for path in domains:
@@ -790,7 +790,7 @@ class Bookkeeper:
         if main_folder:
             main_folder.mark_as_domains_main(domain_rel_paths, domain_folders)
             main_folder.metadata.write()
-        LOGGER.info('Done processing domain folders %s',
+        LOGGER.info('Done processing domain folders %s.',
                     harvard_commas(*domain_rel_paths))
         LOGGER.info('')
 
