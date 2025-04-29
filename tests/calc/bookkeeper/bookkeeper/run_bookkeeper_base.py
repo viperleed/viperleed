@@ -303,9 +303,9 @@ class _TestBookkeeperRunBase(_TestCheckers):
         check_edited_files = mocker.patch.object(
             # pylint: disable-next=protected-access       # OK in tests
             bookkeeper._root,
-            '_complain_about_edited_files',
+            'complain_about_edited_files',
             # pylint: disable-next=protected-access       # OK in tests
-            wraps=bookkeeper._root._complain_about_edited_files
+            wraps=bookkeeper._root.complain_about_edited_files
             )
         self._run_bookkeeper(bookkeeper, kwargs, caplog)
         bookkeeper.update_from_cwd(silent=True)

@@ -121,6 +121,19 @@ class RootExplorer:
             self.history.collect_subfolders()
             self._find_potential_domain_subfolders()
 
+    def complain_about_edited_files(self):
+        """Log warnings if any _edited file is found in root."""
+        edited_files = tuple(f'{self._relative_path(f)}'
+                             for f in self.path.glob(f'*{EDITED_SUFFIX}*'))
+        if not edited_files:
+            return
+        edited = ', '.join(edited_files)
+        inputs = ', '.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
+        LOGGER.warning(f'Found user-edited files {edited}. Make sure to port '
+                       'any desired changes to the corresponding input files '
+                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
+                       'files.')
+
     def infer_run_info(self):
         """Return a dictionary of information read from the newest calc log."""
         return self.logs.infer_run_info()
@@ -203,7 +216,7 @@ class RootExplorer:
         except FileOperationFailedError as exc:
             errors.append(exc)
 
-        self._complain_about_edited_files()
+        self.complain_about_edited_files()
         if errors:
             raise OSError('\n'.join(str(e) for e in errors))
 
@@ -274,7 +287,7 @@ class RootExplorer:
         deleted_logs = self.logs.discard()
         deleted_out_supp = self._remove_out_and_supp()
         dealt_with_ori = deal_with_ori_files()
-        self._complain_about_edited_files()
+        self.complain_about_edited_files()
         # Let's not complain again about funny stuff. We have already
         # done so when collect_info was called the first time. Notice
         # that this must have happened, as this method relies on the
@@ -296,19 +309,6 @@ class RootExplorer:
             )
         self._files_to_archive = tuple(p for p in to_archive
                                        if p.is_file() or p.is_dir())
-
-    def _complain_about_edited_files(self):
-        """Log warnings if any _edited file is found in root."""
-        edited_files = tuple(f'{self._relative_path(f)}'
-                             for f in self.path.glob(f'*{EDITED_SUFFIX}*'))
-        if not edited_files:
-            return
-        edited = ', '.join(edited_files)
-        inputs = ', '.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
-        LOGGER.warning(f'Found user-edited files {edited}. Make sure to port '
-                       'any desired changes to the corresponding input files '
-                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
-                       'files.')
 
     def _copy_state_files_from(self, source, *name_fmts, only_files=None):
         """Copy input files from `source` to the root directory.

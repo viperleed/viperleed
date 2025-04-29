@@ -582,6 +582,7 @@ class Bookkeeper:
         # a history.info entry, mark edited input files...
         did_archive = self._do_prerun_archiving_and_mark_edited()
         if not did_archive:
+            self._root.complain_about_edited_files()
             return BookkeeperExitCode.NOTHING_TO_DO, None
 
         last_folder = self.history.last_folder

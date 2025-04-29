@@ -424,7 +424,7 @@ class TestRootExplorerNextCalc:
     called = (
         '_mark_state_files_as_ori',
         '_copy_state_files_from_out_or_original_inputs',
-        '_complain_about_edited_files',
+        'complain_about_edited_files',
         )
 
     def test_methods_called(self, explorer, mocker):
