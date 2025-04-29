@@ -105,7 +105,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         # Eventually, this will be an attribute of an energy generator,
         # and it is unclear whether we will actually need it.
-        fallback = 10
+        fallback = 0.5
         if not self.settings:
             return fallback
         try:
@@ -142,7 +142,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         # Eventually, this will be an attribute of an energy generator,
         # and it is unclear whether we will actually need it.
-        fallback = 10
+        fallback = 0.0
         if not self.settings:
             return fallback
         try:
@@ -379,7 +379,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
              '</nobr> a triggered, time-resolved measurement.')
             )
         for option_name, display_name, tip in info:
-            widget = CoercingSpinBox(soft_range=(0, 32767), suffix=' ms')
+            widget = CoercingSpinBox(soft_range=(0, 2147483647), suffix=' ms')
             handler.add_option(
                 'measurement_settings', option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip
@@ -388,7 +388,9 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         info = (
             ('is_continuous', 'Continuous measurement',
              '<nobr>If selected, the measurement will be a continuous,'
-             '</nobr> time-resolved measurement.'),
+             '</nobr> time-resolved measurement. Useful to perform '
+             'fast sampling of quantities. Non-continuous measurements '
+             'may be more suitable for longer measurements.'),
             ('endless', 'Endless measurement',
              '<nobr>If selected, the measurement will return to the start'
              '</nobr> energy after reaching the end and go on. This kind '
@@ -436,7 +438,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         self._data_stored = {}
         return settings_ok
 
-    def begin_next_energy_step(self):
+    def _begin_next_energy_step(self):
         """Set energy and measure.
 
         Set energy via the primary controller. Once this is done
@@ -447,7 +449,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         -------
         None.
         """
-        super().begin_next_energy_step()
+        super()._begin_next_energy_step()
         _continuous = self.is_continuous
         if _continuous:
             self._missing_data = dict.fromkeys(self._missing_data.keys(), 0)

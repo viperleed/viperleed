@@ -693,7 +693,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                     'The default settings are insufficient '
                     'to make a controller.'
                     )
-            if not ctrl.serial.is_open:
+            if not ctrl.connected:
                 # Port is already in use
                 continue
             threads.append(qtc.QThread())

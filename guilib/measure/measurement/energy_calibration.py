@@ -144,12 +144,6 @@ class MeasureEnergyCalibration(MeasurementABC):
         """
         if not super().are_runtime_settings_ok():
             return False
-        self._old_coefficients = self.primary_controller.settings.get(
-            'energy_calibration', 'coefficients', fallback=''
-            )
-
-        self.primary_controller.settings.set('energy_calibration',
-                                             'coefficients', '(0, 1)')
 
         if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
             self.emit_error(
@@ -159,6 +153,12 @@ class MeasureEnergyCalibration(MeasurementABC):
                 'controller measures the beam energy.'
                 )
             return False
+
+        self._old_coefficients = self.primary_controller.settings.get(
+            'energy_calibration', 'coefficients', fallback=''
+            )
+        self.primary_controller.settings.set('energy_calibration',
+                                             'coefficients', '(0, 1)')
 
         egy_range = self._end_energy - self.start_energy
         n_steps = 1 + round(egy_range/self._delta_energy)
@@ -186,7 +186,7 @@ class MeasureEnergyCalibration(MeasurementABC):
 
         return True
 
-    def begin_next_energy_step(self):
+    def _begin_next_energy_step(self):
         """Set energy and measure.
 
         Set energy via the primary controller. Once this is done
@@ -197,7 +197,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         -------
         None.
         """
-        super().begin_next_energy_step()
+        super()._begin_next_energy_step()
         for device in self.devices:
             # Make all controllers busy, so we do not risk going to the
             # next energy step too early: the secondary controllers may

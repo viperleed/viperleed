@@ -26,6 +26,7 @@ from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
 
+
 default = object()
 
 

@@ -46,6 +46,7 @@ from PyQt5 import QtWidgets as qtw
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
+from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
 
 # TODO: find a proper mechanism to make "invalid" values disable
 # "Apply" or "Ok" (but leave "Cancel" enabled). Probably equip
@@ -1038,7 +1039,7 @@ class SettingsDialog(qtw.QDialog):
         self._ctrls = {
             'accept': None, # Will be an 'Accept' button
             'apply': None,  # Will be an 'Apply' button
-            'advanced': qtw.QPushButton("Show less"),
+            'advanced': QNoDefaultPushButton("Show less"),
             }
         self._compose_and_connect()
 
@@ -1150,23 +1151,62 @@ class SettingsDialog(qtw.QDialog):
         self.handler.error_occurred.connect(self.error_occurred)
         self.handler.update_widgets()  # Fill widgets from settings
 
-        # Dialog buttons
+        buttons = self._compose_dialog_buttons()
+        columns = self._compose_columns()
+
+        columns_layout = qtw.QHBoxLayout()
+        for column in columns:
+            columns_layout.addLayout(column)
+
+        outer_layout = qtw.QVBoxLayout()
+        outer_layout.addLayout(columns_layout)
+        outer_layout.addWidget(buttons)
+        outer_layout.setSizeConstraint(outer_layout.SetMinimumSize)
+        self.setLayout(outer_layout)
+        outer_layout.setSpacing(round(outer_layout.spacing()*1.4))
+
+        _policy = self.sizePolicy()
+        self.setSizePolicy(_policy.Minimum, _policy.Minimum)
+
+        # Connect signals
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        self._ctrls['apply'].clicked.connect(self.__on_apply_pressed)
+        self.adv_button.toggled.connect(self.__on_show_advanced_toggled)
+        self.handler.settings_changed.connect(self.__update_apply_enabled)
+        self.handler.redraw_needed.connect(self.__update_advanced_btn)
+
+        self.__update_advanced_btn()
+
+    def _compose_dialog_buttons(self):
+        """Compose the buttons of the dialog.
+
+        Returns
+        -------
+        buttons : QNoDefaultDialogButtonBox
+            Contains the buttons necessary to handle the dialog.
+        """
         _bbox = QNoDefaultDialogButtonBox
         buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
 
-        self._ctrls['apply'] = apply_btn = buttons.buttons()[-1]
+        self._ctrls['apply'] = buttons.buttons()[-1]
         self._ctrls['accept'] = buttons.buttons()[0]
-        apply_btn.setEnabled(False)
-
-        self.adv_button.setDefault(False)
-        self.adv_button.setAutoDefault(False)
+        self._ctrls['apply'].setEnabled(False)
         self.adv_button.setCheckable(True)
 
         # Use a ResetRole to have the button placed in a
         # different spot than all others on every platform
         buttons.addButton(self.adv_button, _bbox.ResetRole)
-        # self.adv_button.setVisible(self.handler.has_advanced_options())
+        return buttons
 
+    def _compose_columns(self):
+        """Compose the columns of the layout and add widgets.
+
+        Returns
+        -------
+        columns : list
+            Contains columns of the dialog layout.
+        """
         columns = [qtw.QVBoxLayout(),]
         for widg in self.handler.widgets:
             if widg.has_tag(Tag.MEASUREMENT) and not widg.has_tag(Tag.REGULAR):
@@ -1187,30 +1227,7 @@ class SettingsDialog(qtw.QDialog):
             _form.addRow(*widg)
             columns[0].addLayout(_form)
         columns[0].addStretch(1)
-
-        section_layout = qtw.QHBoxLayout()
-        for column in columns:
-            section_layout.addLayout(column)
-
-        outer_layout = qtw.QVBoxLayout()
-        outer_layout.addLayout(section_layout)
-        outer_layout.addWidget(buttons)
-        outer_layout.setSizeConstraint(outer_layout.SetMinimumSize)
-        self.setLayout(outer_layout)
-        outer_layout.setSpacing(round(outer_layout.spacing()*1.4))
-
-        _policy = self.sizePolicy()
-        self.setSizePolicy(_policy.Minimum, _policy.Minimum)
-
-        # Connect signals
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        apply_btn.clicked.connect(self.__on_apply_pressed)
-        self.adv_button.toggled.connect(self.__on_show_advanced_toggled)
-        self.handler.settings_changed.connect(self.__update_apply_enabled)
-        self.handler.redraw_needed.connect(self.__update_advanced_btn)
-
-        self.__update_advanced_btn()
+        return columns
 
     @qtc.pyqtSlot(bool)
     def __on_apply_pressed(self, _=False):
@@ -1261,6 +1278,21 @@ class SettingsDialog(qtw.QDialog):
 class MeasurementSettingsDialog(SettingsDialog):
     """A dialog to display measurement settings."""
 
+    @qtc.pyqtSlot()
+    def accept(self):
+        """Store device settings, then notify if settings changed."""
+        for widget in self.handler.widgets:
+            try:
+                widget.store_lower_level_settings()
+            except AttributeError:
+                pass
+        super().accept()
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Check if the updated widgets have faulty settings."""
+        super().showEvent(event)
+        self._check_if_settings_ok()
+
     def _check_if_settings_ok(self):
         """Check if settings are ok and enable/disable accept button."""
         settings_ok = True
@@ -1285,21 +1317,6 @@ class MeasurementSettingsDialog(SettingsDialog):
                 widget.settings_ok_changed.connect(self._check_if_settings_ok)
             except AttributeError:
                 pass
-
-    @qtc.pyqtSlot()
-    def accept(self):
-        """Store device settings, then notify if settings changed."""
-        for widget in self.handler.widgets:
-            try:
-                widget.store_lower_level_settings()
-            except AttributeError:
-                pass
-        super().accept()
-
-    def showEvent(self, event):          # pylint: disable=invalid-name
-        """Check if the updated widgets have faulty settings."""
-        super().showEvent(event)
-        self._check_if_settings_ok()
 
 
 class StaticSettingsDialogOption(SettingsDialogOption):

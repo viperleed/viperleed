@@ -313,6 +313,7 @@ class QNoDefaultPushButton(qtw.QPushButton):
         """Initialise button."""
         super().__init__(*args, **kwargs)
         self.setAutoDefault(False)
+        self.setDefault(False)
 
 
 class QNoDefaultIconButton(QNoDefaultPushButton):

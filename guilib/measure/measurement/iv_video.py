@@ -85,7 +85,7 @@ class IVVideo(MeasurementABC):
                               / self._delta_energy))
         return len(str(num_meas))
 
-    # We don't have anything much to do in abort() that is not
+    # We don't have anything to do in abort() that is not
     # already done in the ABC, but abort is abstract.
     # pylint: disable-next=useless-super-delegation
     @qtc.pyqtSlot()
@@ -117,7 +117,7 @@ class IVVideo(MeasurementABC):
             return False
         return True
 
-    def begin_next_energy_step(self):
+    def _begin_next_energy_step(self):
         """Set energy and measure.
 
         Set energy via the primary controller. Once this is done
@@ -128,7 +128,7 @@ class IVVideo(MeasurementABC):
         -------
         None.
         """
-        super().begin_next_energy_step()
+        super()._begin_next_energy_step()
         for device in self.devices:
             # Make all controllers and cameras busy, so we do not risk
             # going to the next energy step too early: the secondary
@@ -171,6 +171,8 @@ class IVVideo(MeasurementABC):
             cam_time = camera_delay + cam.time_to_image_ready
             print(txt, f"{cam_time:>{30-len(txt)}.2f} ms")
 
+    # We don't have anything to do in get_settings_handler() that is not
+    # already done in the ABC, but get_settings_handler is abstract.
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
         handler = super().get_settings_handler()

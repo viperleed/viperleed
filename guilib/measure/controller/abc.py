@@ -59,7 +59,7 @@ def ensure_connected(method):
                 "Not an instance method of a ControllerABC subclass."
                 ) from None
         self.connect_()
-        if not self.serial or not self.serial.is_open:
+        if not self.connected:
             # DEVICE_NOT_FOUND error is emitted in connect_()
             return None
         try:
@@ -251,7 +251,7 @@ class ControllerABC(DeviceABC):
     @property
     def connected(self):
         """Return whether the controller hardware is connected."""
-        return self.serial.is_open
+        return self.serial and self.serial.is_open
 
     @property
     def energy_calibration_curve(self):
@@ -668,7 +668,7 @@ class ControllerABC(DeviceABC):
         if not self.serial:
             self.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             return
-        if self.serial.is_open:
+        if self.connected:
             return
         self.serial.connect_()
         if not self.connected:
@@ -746,7 +746,8 @@ class ControllerABC(DeviceABC):
             return handler
 
         handler.add_section('measurement_settings',
-                            tags=SettingsTag.MEASUREMENT)
+                            tags=SettingsTag.MEASUREMENT,
+                            display_name='Measurement Configuration')
         info = (
             ('i0_settle_time', 'I<sub>0</sub> settle time',
              '<nobr>The time interval required for the I<sub>0</sub> '
@@ -782,15 +783,15 @@ class ControllerABC(DeviceABC):
         This method must return a list of SettingsInfo instances. The
         SettingsInfo class is located in the classes.abc module. Each
         controller is represented by a single SettingsInfo instance.
-        The SettingsInfo object must contain a .unique_name, a boolean
-        which is true if the device has a hardware interface present,
-        and a dict holding .more information about the device.
-        .unique_name may contain the controller name and it's address to
-        make it unique. The information contained within a SettingsInfo
-        must be enough to determine a suitable settings file for the
-        device from it. Subclasses should raise a DefaultSettingsError
-        if they fail to create instances from the settings in the
-        DEFAULTS_PATH.
+        The SettingsInfo object must contain a .unique_name,
+        .has_hardware_interface which is true if the device has a
+        hardware interface present and a dict holding .more information
+        about the device. .unique_name may contain the controller name
+        and it's address to make it unique. The information contained
+        within a SettingsInfo must be enough to determine a suitable
+        settings file for the device from it. Subclasses should raise a
+        DefaultSettingsError if they fail to create instances from the
+        settings in the DEFAULTS_PATH.
 
         Returns
         -------
@@ -1254,7 +1255,8 @@ class MeasureControllerABC(ControllerABC):
         handler = super().get_settings_handler()
         if not handler.has_section('measurement_settings'):
             handler.add_section('measurement_settings',
-                                tags=SettingsTag.MEASUREMENT)
+                                tags=SettingsTag.MEASUREMENT,
+                                display_name='Measurement Configuration')
         widget = CoercingSpinBox(soft_range=(1, float('inf')))
         widget.setMinimum(0)
         tip = ("<nobr>The number of measurements the controller should"

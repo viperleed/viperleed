@@ -70,22 +70,26 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
         )
 
 
-class MeasurementIsRunningError(Exception):
+class MeasurementException(Exception):
+    """Base exception of instances of MeasurementABC."""
+
+
+class MeasurementIsRunningError(MeasurementException):
     """The same MeasurementABC was started again before it finished."""
 
 
-class MeasurementReusedError(Exception):
+class MeasurementReusedError(MeasurementException):
     """Raised if a measurement instance is used more than once."""
 
 
 # Progression:
-# Entry: .start_measurement()
+# Entry: .start()
 # * ._continue_preparation()
 # * ._check_preparation_finished()
-# * BEGIN MEASURING by auto-call to .begin_next_energy_step()
+# * BEGIN MEASURING by auto-call to ._begin_next_energy_step()
 # * END OF CURRENT STEP: _on_controller_data_ready/_on_camera_busy_changed,
 #   which call ._ready_for_next_measurement(). This decides to call
-# * .begin_next_energy_step() or ._prepare_finalization()
+# * ._begin_next_energy_step() or ._prepare_finalization()
 
 # too-many-instance-attributes
 class MeasurementABC(QObjectWithSettingsABC):                                   # TODO: doc about inner workings
@@ -267,7 +271,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """Set secondary controllers and move them to threads.
 
         Use the set_secondary_controllers method to set secondary
-        controllers from another thread.
+        controllers from another thread via a signal or via
+        invokeMethod.
 
         Parameters
         ----------
@@ -282,9 +287,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         Disconnect old secondary controllers and quit and clear their
         threads. After that, move new secondary controllers to newly
-        created threads and start them. Then set private
-        _secondary_controllers attribute to the new controllers and
-        connect their signals.
+        created threads, start them and connect their signals.
 
         Parameters
         ----------
@@ -793,8 +796,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
         type_display = qtw.QLabel()
         type_display.setText(type(self).__name__)
-        handler.add_static_option('measurement_settings', 'measurement_class',
-                                  type_display, display_name='Measurment type')
+        handler.add_static_option(
+            'measurement_settings', 'measurement_class',
+            type_display, display_name='Measurement type',
+            )
 
         info = (
             ('start_energy', 'Start energy',
@@ -978,7 +983,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         primary.about_to_trigger.emit()
 
     @qtc.pyqtSlot()
-    def start_measurement(self):
+    def start(self):
         """Check runtime settings and start measurement."""
         self._aborted = False
         if not self.are_runtime_settings_ok():
@@ -1002,7 +1007,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._begin_preparation()
 
     @abstractmethod
-    def begin_next_energy_step(self):
+    def _begin_next_energy_step(self):
         """Set next energy (if required) and measure.
 
         This method does not increment self.current_energy, as
@@ -1066,7 +1071,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         self.prepared.emit()           # Signal that we're done.
         self.current_energy = self.start_energy
-        self.begin_next_energy_step()  # And start the measurement loop
+        self._begin_next_energy_step()  # And start the measurement loop
 
     @qtc.pyqtSlot(bool)
     @qtc.pyqtSlot()
@@ -1674,7 +1679,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if self._is_finished():
             self._prepare_finalization()
         else:
-            self.begin_next_energy_step()
+            self._begin_next_energy_step()
 
     def stop_threads(self):
         """Quit all threads immediately."""
