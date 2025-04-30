@@ -163,11 +163,17 @@ class Bookkeeper:
 
         if domains is None:
             try:
-                domains = self._find_domains(mode)
+                domains, path_to_main = self._find_domains(mode)
             except (MetadataError, MainPathNotFoundError):
                 LOGGER.error('Please proceed manually.')
                 LOGGER.info('')
                 return BookkeeperExitCode.FAIL
+            if path_to_main:
+                # This is a subdomain. Make sure we pull
+                # information out of the main log file.
+                main_root = RootExplorer(path_to_main, self)
+                main_root.collect_info(silent=True)
+                self._root = DomainRootExplorer(self.cwd, self, main_root)
 
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
@@ -459,7 +465,28 @@ class Bookkeeper:
         return True
 
     def _find_domains(self, mode):
-        """Return paths to domain subfolders of the current directory."""
+        """Find registered domain subfolders of the current directory.
+
+        Only the last history entry in the current directory (as well
+        as the last one in each domain subfolder) is checked.
+
+        Parameters
+        ----------
+        mode : BookkeeperMode
+            The mode bookkeeper is running in. Only used for
+            error reporting.
+
+        Returns
+        -------
+        domain_paths : tuple
+            Absolute paths to the subfolders of the current
+            directory that are registered as domains.
+        main_root_path : str or None
+            Absolute path to the main root directory of the
+            multi-domain calculation. Non-None only if the
+            current directory is a registered domain subfolder
+            without a viperleed.calc log file.
+        """
         self.update_from_cwd(silent=True)  # Only the first log message
         finder = DomainFinder(self)
         finder.collect_info()
@@ -468,7 +495,12 @@ class Bookkeeper:
         except MetadataError as exc:
             LOGGER.error(str(exc))
             raise
-        return tuple(self.cwd/d for d in domains)
+        if finder.is_subdomain and self._root.logs.most_recent is None:
+            # We're running in a domain subfolder without a log file
+            main_root, _ = finder.domain_info
+        else:
+            main_root = None
+        return tuple(self.cwd/d for d in domains), main_root
 
     def _make_and_copy_to_history(self):
         """Create new history subfolder and copy all files there.

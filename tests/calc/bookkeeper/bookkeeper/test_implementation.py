@@ -149,7 +149,10 @@ class TestBookkeeperDomains:
     def test_find_domains_implementation(self, tmp_path, mocker):
         """Check the inner calls in _find_domains."""
         bookkeeper = Bookkeeper(tmp_path)
-        mock_finder = mocker.MagicMock()
+        mock_finder = mocker.MagicMock(
+            is_subdomain=False,
+            domain_info=('root/path', 'root_hash'),
+            )
 
         domain_rel_paths = Path('1'), Path('2')
         # As of 2025, DomainFinder does not return absolute paths, but
@@ -159,6 +162,50 @@ class TestBookkeeperDomains:
             *domain_rel_paths,
             *domain_abs_paths,
             )
+        mock_mode = mocker.MagicMock()
+        mocks = {
+            'update': mocker.patch.object(
+                bookkeeper,
+                'update_from_cwd',
+                wraps=bookkeeper.update_from_cwd,
+                ),
+            'finder': mocker.patch(f'{_MODULE}.DomainFinder',
+                                   return_value=mock_finder),
+            'collect_domain': mock_finder.collect_info,
+            'find_domains': mock_finder.find_domains,
+            }
+        calls = {
+            'update': mocker.call(silent=True),
+            'finder': mocker.call(bookkeeper),
+            'collect_domain': mocker.call(),
+            'find_domains': mocker.call(mock_mode),
+            }
+        assert calls.keys() == mocks.keys()
+        # pylint: disable-next=protected-access           # OK in tests
+        result = bookkeeper._find_domains(mock_mode)
+        expect_domains = (
+            *(tmp_path/p for p in domain_rel_paths),
+            *domain_abs_paths,
+            )
+        assert result == (expect_domains, None)
+        for call_name, call in calls.items():
+            mock = mocks[call_name]
+            assert mock.mock_calls == [call]
+
+    @parametrize(has_log=(True, False))
+    def test_find_domains_implementation_subdomain(self, has_log,
+                                                   tmp_path, mocker):
+        """Check the inner calls in _find_domains for a subdomain."""
+        bookkeeper = Bookkeeper(tmp_path)
+        mock_root_path = mocker.MagicMock()
+        mock_finder = mocker.MagicMock(
+            is_subdomain=True,
+            domain_info=(mock_root_path, 'root_hash'),
+            )
+        # pylint: disable-next=protected-access           # OK in tests
+        mock_logs = mocker.patch.object(bookkeeper._root, '_logs')
+        mock_logs.most_recent = None if not has_log else 'some stuff'
+        mock_finder.find_domains.return_value = ()
         mock_mode = mocker.MagicMock()
         mocks = {
             'update': mocker.patch.object(bookkeeper, 'update_from_cwd'),
@@ -176,10 +223,7 @@ class TestBookkeeperDomains:
         assert calls.keys() == mocks.keys()
         # pylint: disable-next=protected-access           # OK in tests
         result = bookkeeper._find_domains(mock_mode)
-        expect = (
-            *(tmp_path/p for p in domain_rel_paths),
-            *domain_abs_paths,
-            )
+        expect = (), None if has_log else mock_root_path
         assert result == expect
         for call_name, call in calls.items():
             mock = mocks[call_name]
@@ -241,6 +285,29 @@ class TestBookkeeperDomains:
         for mock in not_called:
             mock.assert_not_called()
 
+    @parametrize(domain_paths=(None, ('path_1',)))
+    def test_run_domains_fails_and_logs(self,
+                                        domain_paths,
+                                        tmp_path,
+                                        caplog,
+                                        mocker):
+        """Check that failing to run in a domain tree emits log messages."""
+        bookkeeper = Bookkeeper(tmp_path)
+        mocker.patch.object(bookkeeper,
+                            '_find_domains',
+                            return_value=(('path_1',), None))
+        mocker.patch.object(bookkeeper,
+                            '_run_one_domain',
+                            return_value=('exit', 'folder'))
+        mocker.patch.object(bookkeeper,
+                            '_run_subdomains',
+                            return_value=())
+        mocker.patch(f'{_MODULE}.BookkeeperExitCode.from_codes',
+                     return_value=BookkeeperExitCode.FAIL)
+        bookkeeper.run('archive', domains=domain_paths)
+        expect_log = 'not have processed some domain directories'
+        assert expect_log in caplog.text
+
     def test_run_domains_logging(self, tmp_path, mocker):
         """Check log messages are dispatched to the right files."""
         def _run_archive(bookie, *_, **__):
@@ -278,29 +345,6 @@ class TestBookkeeperDomains:
             not_there = [line for line in expect_lines[log_file]
                          if line not in expect]
             assert not any(line in contents for line in not_there)
-
-    @parametrize(domain_paths=(None, ('path_1',)))
-    def test_run_domains_fails_and_logs(self,
-                                        domain_paths,
-                                        tmp_path,
-                                        caplog,
-                                        mocker):
-        """Check that failing to run in a domain tree emits log messages."""
-        bookkeeper = Bookkeeper(tmp_path)
-        mocker.patch.object(bookkeeper,
-                            '_find_domains',
-                            return_value=('path_1',))
-        mocker.patch.object(bookkeeper,
-                            '_run_one_domain',
-                            return_value=('exit', 'folder'))
-        mocker.patch.object(bookkeeper,
-                            '_run_subdomains',
-                            return_value=())
-        mocker.patch(f'{_MODULE}.BookkeeperExitCode.from_codes',
-                     return_value=BookkeeperExitCode.FAIL)
-        bookkeeper.run('archive', domains=domain_paths)
-        expect_log = 'not have processed some domain directories'
-        assert expect_log in caplog.text
 
 
 class TestWarnsInOldCalcTree:
