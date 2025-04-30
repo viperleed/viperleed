@@ -200,8 +200,11 @@ class TestBookkeeperDomains:
             'requires_user_confirmation': mocker.MagicMock(),
             }
 
-        domains = [tmp_path/str(i) for i in range(5)]
-        main_bookie = Bookkeeper(tmp_path)
+        main_root = tmp_path/'main'
+        main_root.mkdir()
+        domains = [main_root/str(i) for i in range(5)]
+        domains.append(tmp_path/'other_location')
+        main_bookie = Bookkeeper(main_root)
         mock_find = mocker.patch.object(main_bookie, '_find_domains')
         exit_code = main_bookie.run(mode, **kwargs, domains=domains)
 
