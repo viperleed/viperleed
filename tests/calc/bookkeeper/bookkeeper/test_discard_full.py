@@ -11,25 +11,20 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
-from copy import deepcopy
-
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
-from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
-from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_HISTORY
-from viperleed.calc.constants import DEFAULT_OUT
-from viperleed.calc.constants import DEFAULT_SUPP
 
 from ....helpers import filesystem_to_dict
 from ..conftest import MOCK_WORKHISTORY
 from .run_bookkeeper_base import _TestBookkeeperRunBase
+from .test_discard import TestBookkeeperDiscard as _TestDiscard
 
 
 class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
@@ -114,24 +109,10 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         after_run = filesystem_to_dict(bookkeeper.cwd, skip=skip)
         assert after_run == before_run
 
-    def _get_discarded_tree_from_archived(self, archived):
+    @staticmethod
+    def get_tree_from_archived(archived):
         """Return a dict of the root after DISCARD from the ARCHIVE one."""
-        discarded = deepcopy(archived)
-        _deleted = (
-            DEFAULT_OUT,
-            DEFAULT_SUPP,
-            *(file for file in discarded if file.endswith('.log')),
-            )
-        for file in _deleted:
-            try:
-                del discarded[file]
-            except KeyError:
-                pass
-        for file in STATE_FILES:
-            try:
-                discarded[file] = discarded.pop(f'{file}{ORI_SUFFIX}')
-            except KeyError:
-                pass
+        discarded = _TestDiscard.get_tree_from_archived(archived)
         discarded[DEFAULT_HISTORY] = {}
         return discarded
 
@@ -149,7 +130,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         bookkeeper.run(mode=self.mode, requires_user_confirmation=False)
 
         # See viperleed/pull/198#issuecomment-2506549827
-        expect = self._get_discarded_tree_from_archived(archived)
+        expect = self.get_tree_from_archived(archived)
         assert self.collect_root_contents(bookkeeper) == expect
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):

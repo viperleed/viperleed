@@ -71,7 +71,7 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         """
         self.run_and_check_prerun_archiving(after_calc_execution, caplog)
 
-    def _get_cleared_tree_from_archived(self, archived):
+    def get_tree_from_archived(self, archived):
         """Return a dictionary of the root after CLEAR from the ARCHIVE one."""
         cleared = deepcopy(archived)
         _deleted = (
@@ -94,7 +94,7 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         bookkeeper, before, archived = after_calc_with_edited_file
         self._run_bookkeeper(bookkeeper, {}, caplog)
 
-        expect = self._get_cleared_tree_from_archived(archived)
+        expect = self.get_tree_from_archived(archived)
         # While the above is identical to the ARCHIVE-then-CLEAR
         # case, we DO NOT pull an _edited file from original_inputs,
         # as we want to avoid running with the "wrong" file.
@@ -121,7 +121,7 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         self._run_bookkeeper(bookkeeper, {}, caplog)
 
         # See viperleed/pull/198#issuecomment-2506549827
-        expect = self._get_cleared_tree_from_archived(archived)
+        expect = self.get_tree_from_archived(archived)
         assert self.collect_root_contents(bookkeeper) == expect
 
     def text_clear_twice(self, after_clear, caplog):

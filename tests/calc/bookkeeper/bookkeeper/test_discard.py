@@ -25,6 +25,7 @@ from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 
 from .run_bookkeeper_base import _TestBookkeeperRunBase
+from .test_clear import TestBookkeeperClear as _TestClear
 
 
 @fixture(name='after_discard')
@@ -124,7 +125,8 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         mock_discard.assert_not_called()
         self.check_complained_about_edited(caplog)
 
-    def _get_discarded_tree_from_archived(self, archived):
+    @staticmethod
+    def get_tree_from_archived(archived):
         """Return a dict of the root after DISCARD from the ARCHIVE one."""
         discarded = deepcopy(archived)
         _deleted = (
@@ -153,28 +155,15 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
 
         # See viperleed/pull/198#issuecomment-2508005204.
         # DISCARD reverts everything, except for adding a history entry
-        expect = self._get_discarded_tree_from_archived(archived)
         # However, we don't pull back original_inputs of _edited files.
         # This is the only difference from an ARCHIVE-then-DISCARD case
         del expect['POSCAR']
         assert self.collect_root_contents(bookkeeper) == expect
 
-    def test_discard_archived_with_edited(self,
-                                          after_calc_with_edited_file,
-                                          after_bookkeper_run,
-                                          caplog):
-        """Check root after DISCARDing an ARCHIVEd run with user edits."""
-        # Run in archive mode first to mimic the root structure
-        bookkeeper, _, archived = after_bookkeper_run(
-            after_calc_with_edited_file,
-            'archive',
-            )
-        caplog.clear()  # The ARCHIVE logs
-        self._run_bookkeeper(bookkeeper, {}, caplog)
+    test_discard_archived_with_edited = (
+        _TestClear.test_clear_archived_with_edited
+        )
 
-        # See viperleed/pull/198#issuecomment-2506549827
-        expect = self._get_discarded_tree_from_archived(archived)
-        assert self.collect_root_contents(bookkeeper) == expect
 
     @pytest.mark.usefixtures('with_dummy_edited_file')
     def test_discard_twice(self, after_discard, caplog):
