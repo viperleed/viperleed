@@ -644,7 +644,8 @@ class Bookkeeper:
                 return exit_code, None
         LOGGER.info('Successfully marked as discarded the '
                     f'last entry in {HISTORY_INFO_NAME}.')
-        return BookkeeperExitCode.SUCCESS, self.history.last_folder
+        last_folder = self.history.last_folder if did_archive else None
+        return BookkeeperExitCode.SUCCESS, last_folder
 
     def _run_fix_mode(self):
         """Fix format inconsistencies found in history and history.info."""
