@@ -202,9 +202,12 @@ class TestBookkeeperDomains:
             is_subdomain=True,
             domain_info=(mock_root_path, 'root_hash'),
             )
-        # pylint: disable-next=protected-access           # OK in tests
-        mock_logs = mocker.patch.object(bookkeeper._root, '_logs')
-        mock_logs.most_recent = None if not has_log else 'some stuff'
+        mocker.patch.object(
+            # pylint: disable-next=protected-access       # OK in tests
+            bookkeeper._root,
+            '_logs',
+            most_recent='some stuff' if has_log else None,
+            )
         mock_finder.find_domains.return_value = ()
         mock_mode = mocker.MagicMock()
         mocks = {
