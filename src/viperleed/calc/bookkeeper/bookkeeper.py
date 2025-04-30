@@ -196,6 +196,7 @@ class Bookkeeper:
                            'domain directories. Make sure to invoke '
                            f'\'bookkeeper {mode.long_flag}\' in the '
                            'root folder and in all domain subfolders.')
+            LOGGER.info('')
         return exit_code
 
     def update_from_cwd(self, silent=False):
@@ -542,7 +543,7 @@ class Bookkeeper:
         # Attach file handler for history/bookkeeper.log
         log.add_bookkeeper_logfile(self.history.path)
         LOGGER.info(  # Log only once per instance
-            '\n### Bookkeeper running at '
+            '### Bookkeeper running at '
             f'{DateTimeFormat.LOG_CONTENTS.now()} ###'
             )
         self._state_info['logger_prepared'] = True
