@@ -776,8 +776,7 @@ class Bookkeeper:
             Conversely, each of the `domains` subfolders contain
             domain markings as soon as they have been processed.
         """
-        if not domains:
-            return
+        assert domains
         domain_rel_paths = []
         for path in domains:
             try:
