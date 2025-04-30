@@ -37,27 +37,37 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
 
     mode = BookkeeperMode.DISCARD_FULL
 
-    def test_run_before_calc_exec(self, before_calc_execution, caplog):
-        """Check correct overwriting of input files in DISCARD_FULL mode.
+    @staticmethod
+    def check_workhistory_folders_deleted(history_path):
+        """Ensure "new" workhistory folders are not in `history_path`."""
+        for formerly_archived in MOCK_WORKHISTORY.values():
+            if not formerly_archived:
+                continue
+            assert not (history_path/formerly_archived).is_dir()
 
-        This should do the same as a normal DISCARD.
+    _consistency_check_fails = (
+        FileNotFoundError,
+        MetadataMismatchError,
+        CantRemoveEntryError,
+        )
 
-        Parameters
-        ----------
-        before_calc_execution: fixture
-        caplog: fixture
-
-        Returns
-        -------
-        None.
-        """
-        self.run_before_calc_exec_and_check(before_calc_execution,
-                                            caplog,
-                                            requires_user_confirmation=False)
-        self.check_no_warnings(
-            caplog,
-            exclude_msgs=('remove',)   # Catches two expected warnings
-            )
+    @parametrize(error=_consistency_check_fails)
+    def test_consistency_check_fails(self, error, tmp_path, mocker):
+        """Check failure if last-entry consistency checks fail."""
+        bookkeeper = Bookkeeper(tmp_path)
+        # Patch a few methods to be able to test the relevant piece
+        # of code. We update_from_cwd here as this creates the handler
+        # of history.info, patch its methods, then patch away them
+        # .prepare_info_file method to avoid replacing the patched one.
+        bookkeeper.update_from_cwd()
+        mocker.patch.object(bookkeeper.history.info, 'may_remove_last_entry')
+        mocker.patch.object(bookkeeper.history, 'prepare_info_file')
+        check = mocker.patch.object(bookkeeper.history,
+                                    'check_last_folder_consistent',
+                                    side_effect=error)
+        exit_code = bookkeeper.run(self.mode)
+        check.assert_called_once()
+        assert exit_code is not BookkeeperExitCode.SUCCESS
 
     def test_discard_full_after_archive(self, after_archive, caplog):
         """Check correct behavior of DISCARD_FULL on an ARCHIVEd calc run.
@@ -86,11 +96,7 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
 
         # "Sibling" folders that were archived from
         # workhistory should also have been removed.
-        history = bookkeeper.history.path
-        for formerly_archived in MOCK_WORKHISTORY.values():
-            if not formerly_archived:
-                continue
-            assert not (history/formerly_archived).is_dir()
+        self.check_workhistory_folders_deleted(bookkeeper.history.path)
 
     def test_discard_full_after_calc_exec(self, after_calc_execution):
         """Check that a non-ARCHIVEd calc run cannot be DISCARD_FULL-ed."""
@@ -146,29 +152,27 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         expect = self._get_discarded_tree_from_archived(archived)
         assert self.collect_root_contents(bookkeeper) == expect
 
-    _consistency_check_fails = (
-        FileNotFoundError,
-        MetadataMismatchError,
-        CantRemoveEntryError,
-        )
+    def test_run_before_calc_exec(self, before_calc_execution, caplog):
+        """Check correct overwriting of input files in DISCARD_FULL mode.
 
-    @parametrize(error=_consistency_check_fails)
-    def test_consistency_check_fails(self, error, tmp_path, mocker):
-        """Check failure if last-entry consistency checks fail."""
-        bookkeeper = Bookkeeper(tmp_path)
-        # Patch a few methods to be able to test the relevant piece
-        # of code. We update_from_cwd here as this creates the handler
-        # of history.info, patch its methods, then patch away them
-        # .prepare_info_file method to avoid replacing the patched one.
-        bookkeeper.update_from_cwd()
-        mocker.patch.object(bookkeeper.history.info, 'may_remove_last_entry')
-        mocker.patch.object(bookkeeper.history, 'prepare_info_file')
-        check = mocker.patch.object(bookkeeper.history,
-                                    'check_last_folder_consistent',
-                                    side_effect=error)
-        exit_code = bookkeeper.run(self.mode)
-        check.assert_called_once()
-        assert exit_code is not BookkeeperExitCode.SUCCESS
+        This should do the same as a normal DISCARD.
+
+        Parameters
+        ----------
+        before_calc_execution: fixture
+        caplog: fixture
+
+        Returns
+        -------
+        None.
+        """
+        self.run_before_calc_exec_and_check(before_calc_execution,
+                                            caplog,
+                                            requires_user_confirmation=False)
+        self.check_no_warnings(
+            caplog,
+            exclude_msgs=('remove',)   # Catches two expected warnings
+            )
 
     @parametrize(confirmed=(True, False))
     def test_user_confirmation(self, confirmed, after_archive, mocker):
