@@ -256,9 +256,8 @@ class DomainFinder:
 
     def _warn_running_in_subdomain(self, mode, main_path):
         """Emit warnings when calling find_domains in a subdomain."""
-        log_msg = (
-            f'Running bookkeeper in mode {mode.name} in a domain subfolder. '
-            )
+        log_msg = (f'Running bookkeeper in mode {mode.name} '
+                   f'in a domain subfolder ({self.path}).')
         try:
             domains = self._find_domains_from_subdomain()
         except MainPathNotFoundError:
