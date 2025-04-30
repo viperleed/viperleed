@@ -192,10 +192,10 @@ class Bookkeeper:
             ]
         exit_code = BookkeeperExitCode.from_codes(exit_codes)
         if exit_code is BookkeeperExitCode.FAIL and domains:
-            LOGGER.warning('Bookkeeper failed and may not have processed some '
-                           'domain directories. Make sure to invoke '
-                           f'\'bookkeeper {mode.long_flag}\' in the '
-                           'root folder and in all domain subfolders.')
+            LOGGER.warning('Bookkeeper failed and may not have processed '
+                           'some domain directories. Make sure to invoke '
+                           f'\'bookkeeper {mode.long_flag}\' in all domain '
+                           'subfolders or try again at this path.')
             LOGGER.info('')
         return exit_code
 
