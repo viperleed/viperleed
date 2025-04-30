@@ -133,6 +133,21 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         expect = self.get_tree_from_archived(archived)
         assert self.collect_root_contents(bookkeeper) == expect
 
+    def test_discard_full_domains(self, archived_domains, caplog):
+        """Check correct behavior of DISCARD_FULL on an ARCHIVEd domain run."""
+        *main_run, domains = archived_domains
+        *_, mocker = main_run
+        self.patch_for_domains(mocker)
+        self.test_discard_full_after_archive(main_run, caplog)
+
+        # And repeat checks also for the domain subfolders
+        for domain_path, domain_info in domains.items():
+            history_run_path = domain_info['history_run']
+            assert not history_run_path.is_dir()
+            mock_bookie = mocker.MagicMock(cwd=domain_path)
+            self.check_root_reverted_to_previous_calc_run(mock_bookie)
+            self.check_workhistory_folders_deleted(history_run_path.parent)
+
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in DISCARD_FULL mode.
 

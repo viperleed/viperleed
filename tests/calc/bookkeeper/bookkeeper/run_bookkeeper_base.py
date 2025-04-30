@@ -19,7 +19,10 @@ import re
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
+from viperleed.calc.bookkeeper.domain_finder import DomainFinder
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.info import HistoryInfoFile
+from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
@@ -38,6 +41,51 @@ from ..conftest import MOCK_WORKHISTORY
 
 class _TestCheckers:
     """Collection of useful methods for checking bookkeeper behavior."""
+
+    @staticmethod
+    def _check_domains_history_info(main_run, domains, skip=()):
+        """Ensure consistent information has been saved to history.info."""
+        main_bookie, *_ = main_run
+        entries = {}
+        for root_path in (main_bookie.cwd, *domains):
+            info = HistoryInfoFile(root_path)
+            info.read()
+            entries[root_path] = info.last_entry
+        assert all(entries.values())  # All should have a valid entry
+
+        identical_fields = ('run_info', 'timestamp', 'is_discarded')
+        for attr in identical_fields:
+            attr_values = {getattr(e, attr)
+                           for p, e in entries.items()
+                           if p not in skip}
+            assert len(attr_values) == 1, f'Found inconsistent {attr}'
+
+    @staticmethod
+    def _check_domains_registered(main_run, domains_info, skip):
+        """Ensure domain information has been registered in metadata."""
+        main_bookie, main_history_path, *_ = main_run
+        main_meta = BookkeeperMetaFile(main_history_path)
+        main_meta.read()
+
+        # Collect hashes of the history folders of the domains. While
+        # doing so, check that the main has been correctly registered.
+        # expect_domain_register = (str(main_bookie.cwd.as_posix()),
+        expect_domain_register = (str(main_bookie.cwd),
+                                  main_meta.hash_)
+        expect_main_register = []
+        for domain_path, domain_info in domains_info.items():
+            if domain_path in skip:
+                continue
+            domain_history_path = domain_info['history_run']
+            domain_meta = BookkeeperMetaFile(domain_history_path)
+            domain_meta.read()
+            registered_in_domain = domain_meta.domains['main']
+            assert registered_in_domain == expect_domain_register
+            expect_main_register.append((domain_path.name, domain_meta.hash_))
+
+        # Finally, check the registered info in the main
+        registered_in_main = main_meta.domains['domains']
+        assert registered_in_main == tuple(expect_main_register)
 
     @staticmethod
     def _check_file_contents(path, *expected_contents):
@@ -153,6 +201,12 @@ class _TestCheckers:
         assert len(set(messages)) == len(messages)
 
     @staticmethod
+    def check_no_edited_files(bookkeeper, *_):
+        """Ensure no _edited files exist in bookkeeper's cwd."""
+        assert not any((bookkeeper.cwd / f'{f}{EDITED_SUFFIX}').exists()
+                       for f in MOCK_STATE_FILES)
+
+    @staticmethod
     def check_no_warnings(caplog, exclude_msgs=()):
         """Check that there are no warnings or errors."""
         def _record_faulty(record):
@@ -266,6 +320,23 @@ class _TestBookkeeperRunBase(_TestCheckers):
 
     mode = None
 
+    def check_domains_archived(self, main_run, domains, skip=()):
+        """Check that all subdomains have also been archived correctly."""
+        *_, mocker = main_run
+        # We call the same methods as run_archive_after_calc_and_check
+        # does, but on all subdomain root paths.
+        for domain_root, domain_info in domains.items():
+            mock_run = (mocker.MagicMock(cwd=domain_root),
+                        domain_info['history_run'],
+                        mocker)
+            self.check_has_archived(mock_run, mode=self.mode)
+
+        # Make sure the domains have been correctly registered,
+        # and that the correct information has been written to
+        # history.info files.
+        self._check_domains_registered(main_run, domains, skip)
+        self._check_domains_history_info(main_run, domains, skip)
+
     def collect_root_contents(self, bookkeeper):
         """Return a dictionary of the current contents of bookkeeper's CWD."""
         skip = {  # Files whose contents are complex to keep track of
@@ -274,6 +345,16 @@ class _TestBookkeeperRunBase(_TestCheckers):
             _METADATA_NAME,
             }
         return filesystem_to_dict(bookkeeper.cwd, skip=skip)
+
+    def patch_for_domains(self, mocker):
+        """Exclude checks that are knowingly going to fail in DOMAINS."""
+        # Patch away checkers that we know will fail:
+        # _check_workhistory_archived: main has no workhistory folder,
+        #   while, for the subdomains, the target names of folders in
+        #   history differ from those in MOCK_WORKHISTORY.
+        mocker.patch.object(self, '_check_workhistory_archived')
+        # check_no_duplicate_logs: messages repeated for each domain
+        mocker.patch.object(self, 'check_no_duplicate_logs')
 
     def run_after_archive_and_check(self, after_archive, caplog, **kwargs):
         """Check that running bookkeeper after ARCHIVE does basic stuff."""
@@ -313,6 +394,14 @@ class _TestBookkeeperRunBase(_TestCheckers):
         self.check_has_archived(after_calc_execution, **kwargs)
         check_edited_files.assert_called()
 
+    @staticmethod
+    def _edit_input_file_contents(at_path):
+        """Modify the contents of inputs `at_path` with some sentinel text."""
+        sentinel_text = ('This is some other text to ensure file contents '
+                         'are not modified when running twice')
+        for file in MOCK_STATE_FILES:
+            (at_path / file).write_text(sentinel_text)
+
     def run_again_and_check_nothing_changed(self, run, caplog,
                                             acceptable_warnings=()):
         """Ensure running bookkeeper again with the same mode does nothing."""
@@ -324,11 +413,13 @@ class _TestBookkeeperRunBase(_TestCheckers):
 
         # To ensure the input files are not fiddled with, replace
         # their contents with some other text.
-        sentinel_text = ('This is some other text to ensure file contents '
-                         'are not modified when running twice')
         cwd = bookkeeper.cwd
-        for file in MOCK_STATE_FILES:
-            (cwd / file).write_text(sentinel_text)
+        self._edit_input_file_contents(cwd)
+
+        # Do the same for any domain
+        finder = DomainFinder(bookkeeper)
+        for domain in finder.find_potential_domains():
+            self._edit_input_file_contents(domain)
         before_run = filesystem_to_dict(cwd, skip=skip)
         exit_code = self._run_bookkeeper(bookkeeper, kwargs, caplog)
         after_run = filesystem_to_dict(cwd, skip=skip)
@@ -352,19 +443,43 @@ class _TestBookkeeperRunBase(_TestCheckers):
         self.check_root_inputs_untouched(*after_calc_execution)
 
         # There should be no file marked as _edited
-        bookkeeper, *_ = after_calc_execution
-        assert not any((bookkeeper.cwd / f'{f}{EDITED_SUFFIX}').exists()
-                       for f in MOCK_STATE_FILES)
+        self.check_no_edited_files(*after_calc_execution)
 
-    def run_archive_after_calc_and_check(self, after_calc_execution, caplog,
-                                         check_archiving_required=True):
+    def run_and_check_prerun_archiving_domains(self,
+                                               domains_after_calc_execution,
+                                               caplog,
+                                               exclude_warnings=(),
+                                               already_processed=()):
+        """Execute bookkeeper, and verify it has archived a domain run."""
+        *main_run, domains = domains_after_calc_execution
+        *_, mocker = main_run
+        self.patch_for_domains(mocker)
+        self.run_and_check_prerun_archiving(main_run,
+                                            caplog,
+                                            exclude_warnings=exclude_warnings)
+
+        # Repeat the same checks as in run_and_check_prerun_archiving
+        # for all subdomains.
+        self.check_domains_archived(main_run, domains, skip=already_processed)
+        for domain_path in domains:
+            if domain_path in already_processed:
+                continue
+            mock_bookie = mocker.MagicMock(cwd=domain_path)
+            self.check_root_is_clean(mock_bookie)
+            self.check_root_inputs_untouched(mock_bookie)
+            self.check_no_edited_files(mock_bookie)
+
+    def run_archive_after_calc_and_check(self, after_calc_execution,
+                                         caplog,
+                                         check_archiving_required=True,
+                                         **kwargs):
         """Check correct storage of history files in ARCHIVE mode."""
         # See if we have legacy _OUT-suffixed files:
         has_out_suffixed = self.has_out_suffixed(*after_calc_execution)
-        kwargs = {
+        kwargs.update({
             'check_archiving_required': check_archiving_required,
             'mode': 'archive',
-            }
+            })
         self.run_after_calc_exec_and_check(after_calc_execution,
                                            caplog,
                                            **kwargs)
