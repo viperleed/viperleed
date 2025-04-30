@@ -217,6 +217,30 @@ class TestBookkeeperDomains:
         assert 'Running bookkeeper in domain folders' in caplog.text
         mock_find.assert_not_called()  # We passed a domains kwarg
 
+    @parametrize(mode=Mode)
+    def test_run_domains_no_domain(self, mode, tmp_path, mocker, caplog):
+        """Check calls of run when executed with a given domains argument."""
+        caplog.set_level(0)  # All messages
+        not_called = [
+            mocker.patch.object(Bookkeeper, '_find_domains'),
+            mocker.patch.object(Bookkeeper, '_run_in_root_and_subdomains'),
+            mocker.patch.object(BookkeeperExitCode, 'from_codes'),
+            ]
+        mock_exit = mocker.MagicMock()
+        run_one = mocker.patch.object(Bookkeeper,
+                                      '_run_one_domain',
+                                      return_value=(mock_exit, None))
+        kwargs = {
+            'requires_user_confirmation': mocker.MagicMock(),
+            }
+        main_bookie = Bookkeeper(tmp_path)
+        exit_code = main_bookie.run(mode, **kwargs, domains=())
+        run_one.assert_called_once_with(mode, **kwargs)
+        assert exit_code is mock_exit
+        assert not caplog.text
+        for mock in not_called:
+            mock.assert_not_called()
+
     def test_run_domains_logging(self, tmp_path, mocker):
         """Check log messages are dispatched to the right files."""
         def _run_archive(bookie, *_, **__):
