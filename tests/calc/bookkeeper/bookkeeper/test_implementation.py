@@ -463,7 +463,7 @@ class TestBookkeeperOthers:
     def test_run_logs(self, mode, expect_records, tmp_path, caplog):
         """Check the emission of basic log messages upon .run()."""
         header_records = (
-            re.compile(r'\n### Bookkeeper running at.*###'),
+            re.compile(r'### Bookkeeper running at.*###'),
             re.compile(rf'Running bookkeeper in {mode.name} mode in .*\.'),
             )
         bookkeeper = Bookkeeper(tmp_path)
