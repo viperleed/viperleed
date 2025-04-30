@@ -169,34 +169,12 @@ class Bookkeeper:
                 LOGGER.info('')
                 return BookkeeperExitCode.FAIL
 
-        # Store a RootExplorer instance BEFORE running on the main
-        # domain, as _run_one_domain will collect information from
-        # there and later on create a new instance (in _clean_state).
-        # However, we need up-to-date information for running in the
-        # subdomains, BEFORE any deleting/archiving is done, as the
-        # log file may be deleted too. Also, we can't use self._root,
-        # as clear_for_next_calc_run does internally re-collect info.
-        main_root = RootExplorer(self.cwd, self)
-        main_root.collect_info(silent=True)
         kwargs = {
             'requires_user_confirmation': requires_user_confirmation,
             }
-        main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)
-        exit_codes = [
-            main_exit_code,
-            *self._run_subdomains(domains,
-                                  main_root,
-                                  main_folder,
-                                  mode,
-                                  **kwargs)
-            ]
-        exit_code = BookkeeperExitCode.from_codes(exit_codes)
-        if exit_code is BookkeeperExitCode.FAIL and domains:
-            LOGGER.warning('Bookkeeper failed and may not have processed '
-                           'some domain directories. Make sure to invoke '
-                           f'\'bookkeeper {mode.long_flag}\' in all domain '
-                           'subfolders or try again at this path.')
-            LOGGER.info('')
+        if domains:
+            return self._run_in_root_and_subdomains(domains, mode, **kwargs)
+        exit_code, _ = self._run_one_domain(mode, **kwargs)
         return exit_code
 
     def update_from_cwd(self, silent=False):
@@ -674,6 +652,35 @@ class Bookkeeper:
         exit_code = (BookkeeperExitCode.SUCCESS if did_fix
                      else BookkeeperExitCode.NOTHING_TO_DO)
         return exit_code, None
+
+    def _run_in_root_and_subdomains(self, domains, mode, **kwargs):
+        """Execute bookkeeper in its cwd as well as all subdomains."""
+        # Store a RootExplorer instance BEFORE running on the main
+        # domain, as _run_one_domain will collect information from
+        # there and later on create a new instance (in _clean_state).
+        # However, we need up-to-date information for running in the
+        # subdomains, BEFORE any deleting/archiving is done, as the
+        # log file may be deleted too. Also, we can't use self._root,
+        # as clear_for_next_calc_run does internally re-collect info.
+        main_root = RootExplorer(self.cwd, self)
+        main_root.collect_info(silent=True)
+        main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)      # TODO: check whether we can discard-full all domains before! Do we need checks for other modes too?
+        exit_codes = [
+            main_exit_code,
+            *self._run_subdomains(domains,
+                                  main_root,
+                                  main_folder,
+                                  mode,
+                                  **kwargs)
+            ]
+        exit_code = BookkeeperExitCode.from_codes(exit_codes)
+        if exit_code is BookkeeperExitCode.FAIL and domains:
+            LOGGER.warning('Bookkeeper failed and may not have processed '
+                           'some domain directories. Make sure to invoke '
+                           f'\'bookkeeper {mode.long_flag}\' in all domain '
+                           'subfolders or try again at this path.')
+            LOGGER.info('')
+        return exit_code
 
     def _run_one_domain(self, mode, requires_user_confirmation=True):
         """Execute Bookkeeper in `mode` for a single domain.
