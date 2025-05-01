@@ -203,22 +203,10 @@ class TestWriteFinalLogMessages:
 
     def test_domains(self, rpars_filled, check_log_records, caplog):
         """Check logging messages for a multi-domain calculation."""
-        caplog.set_level(0)  # All messages
         rpars_filled.domainParams.append(1.234)
-        _write_final_log_messages(rpars_filled)
-        expect = (
-            re.compile(r'\nFinishing execution at .*'
-                       r'\nTotal elapsed time: 1h 30m\n'),
-            'Executed segments: 1 2 3',
-            'Final R (refcalc): 0.5000 (0.4000 / 0.3000)',
-            re.compile(r'Domain.*bookkeeper.*--archive.\n'),
-            '',
-            '# The following issues should be checked before starting again:',
-            '- Check convergence',
-            '- Verify inputs',
-            '',
-            )
-        check_log_records(expect)
+        # Since #325, there is no difference in the log messages when
+        # running a multi-domain calculation vs. a single-domain one.
+        self.test_no_domains(rpars_filled, check_log_records, caplog)
 
     def test_no_checklist(self, rpars_filled, check_log_records, caplog):
         """Check that no checklist-related messages are emitted."""
