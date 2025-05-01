@@ -417,17 +417,6 @@ class TestWarnsInOldCalcTree:
 class TestBookkeeperOthers:
     """Collections of various tests for bits not covered by other tests."""
 
-    @staticmethod
-    def check_has_logs(caplog, expected):
-        """Ensure caplog has exactly the expected records."""
-        records = [r.getMessage() for r in caplog.records]
-        assert len(records) == len(expected)
-        for record, expect in zip(records, expected):
-            if isinstance(expect, str):
-                assert record == expect
-            else:
-                assert expect.fullmatch(record)
-
     def test_expected_cwd(self, tmp_path):
         """Check that Bookkeeper correctly identifies its cwd."""
         with execute_in_dir(tmp_path):
@@ -534,7 +523,9 @@ class TestBookkeeperOthers:
         }
 
     @parametrize('mode,expect_records', _basic_logs.items())
-    def test_run_logs(self, mode, expect_records, tmp_path, caplog):
+    # pylint: disable-next=too-many-arguments   # 3/6 fixtures
+    def test_run_logs(self, mode, expect_records,
+                      check_log_records, tmp_path, caplog):
         """Check the emission of basic log messages upon .run()."""
         header_records = (
             re.compile(r'### Bookkeeper running at.*###'),
@@ -543,7 +534,7 @@ class TestBookkeeperOthers:
         bookkeeper = Bookkeeper(tmp_path)
         caplog.set_level(logging.INFO)
         bookkeeper.run(mode)
-        self.check_has_logs(caplog, header_records+expect_records)
+        check_log_records(header_records+expect_records)
 
     @fixture(name='funky_files')
     def fixture_funky_files(self, tmp_path):

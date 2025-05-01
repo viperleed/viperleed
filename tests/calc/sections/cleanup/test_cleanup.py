@@ -178,17 +178,6 @@ class TestOrganizeAllWorkDirectories:
 class TestWriteFinalLogMessages:
     """Tests for the _write_final_log_messages function."""
 
-    @staticmethod
-    def check_has_records(caplog, records):
-        """Ensure `caplog` has only certain `records`."""
-        logged = tuple(r.getMessage() for r in caplog.records)
-        assert len(logged) == len(records)
-        for log, expect in zip(logged, records):
-            if isinstance(expect, str):
-                assert log == expect
-            else:
-                assert expect.match(log)
-
     @fixture(name='rpars_filled')
     def fixture_rpars_filled(self, rpars, mocker):
         """Return an Rparams with relevant attributes set."""
@@ -200,7 +189,7 @@ class TestWriteFinalLogMessages:
         rpars.checklist = ['Check convergence', 'Verify inputs']
         return rpars
 
-    def test_crashed_early(self, rpars, caplog):
+    def test_crashed_early(self, rpars, check_log_records, caplog):
         """Check logging messages when cleanup is called early."""
         caplog.set_level(0)  # All messages
         rpars.timer = None   # Like cleanup if called with None
@@ -210,9 +199,9 @@ class TestWriteFinalLogMessages:
                        r'\nTotal elapsed time: unknown\n'),
             '',
             )
-        self.check_has_records(caplog, expect)
+        check_log_records(expect)
 
-    def test_domains(self, rpars_filled, caplog):
+    def test_domains(self, rpars_filled, check_log_records, caplog):
         """Check logging messages for a multi-domain calculation."""
         caplog.set_level(0)  # All messages
         rpars_filled.domainParams.append(1.234)
@@ -222,16 +211,16 @@ class TestWriteFinalLogMessages:
                        r'\nTotal elapsed time: 1h 30m\n'),
             'Executed segments: 1 2 3',
             'Final R (refcalc): 0.5000 (0.4000 / 0.3000)',
-            re.compile(r'Domain.*bookkeeper.*--archive.'),
+            re.compile(r'Domain.*bookkeeper.*--archive.\n'),
             '',
             '# The following issues should be checked before starting again:',
             '- Check convergence',
             '- Verify inputs',
             '',
             )
-        self.check_has_records(caplog, expect)
+        check_log_records(expect)
 
-    def test_no_checklist(self, rpars_filled, caplog):
+    def test_no_checklist(self, rpars_filled, check_log_records, caplog):
         """Check that no checklist-related messages are emitted."""
         caplog.set_level(0)  # All messages
         rpars_filled.checklist = []
@@ -244,9 +233,9 @@ class TestWriteFinalLogMessages:
             'Final R (refcalc): 0.5000',
             '',
             )
-        self.check_has_records(caplog, expect)
+        check_log_records(expect)
 
-    def test_no_domains(self, rpars_filled, caplog):
+    def test_no_domains(self, rpars_filled, check_log_records, caplog):
         """Check logging messages for a single-domain calculation."""
         caplog.set_level(0)  # All messages
         _write_final_log_messages(rpars_filled)
@@ -261,7 +250,7 @@ class TestWriteFinalLogMessages:
             '- Verify inputs',
             '',
             )
-        self.check_has_records(caplog, expect)
+        check_log_records(expect)
 
 
 class TestWriteManifest:
