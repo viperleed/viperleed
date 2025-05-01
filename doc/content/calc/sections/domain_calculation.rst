@@ -162,23 +162,6 @@ explicitly to rerun reference calculations for all domains. However, as
 discussed above, it is recommended to run the reference calculations separately
 beforehand for better control.
 
-.. warning::
-    The :ref:`bookkeeper<bookkeeper>` functionality is only partially
-    implemented for domain calculations. Only the :file:`history` folder and
-    :file:`history.info` file for the root directory (\ :file:`my_domain_calc`
-    in :numref:`list_domains_outputs`) are handled automatically.
-    The domain-specific subfolders (i.e., :file:`my_domain_1` and
-    :file:`my_domain_2` in :numref:`list_domains_outputs`) will not be
-    processed. To preserve the domain-specific output files, you must manually
-    run the |bookkeeper| in each of the domain subfolders using the command
-    ``viperleed bookkeeper --archive``. Then, to clean the directories
-    and remove old ``*_ori`` and ``*.log`` files, run the |bookkeeper|
-    with the ``--clear`` flag in each of the domain subfolders. If you
-    do not run the |bookkeeper| (in ``--archive`` mode) in the subfolders,
-    the results of a structure optimization (especially, files |POSCAR| and
-    |VIBROCC|) **will be lost**: the next calculation will **start from the**
-    **same inputs as the previous one**.
-
 .. versionchanged:: 0.13.0
     In earlier versions of |calc|, the results of the calculations from each
     domain in a domain calculation would **not be copied back from the work**

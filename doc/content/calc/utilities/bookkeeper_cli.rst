@@ -47,6 +47,9 @@ If no new output is detected, it will simply exit without doing anything.
     executed with ``--clear``. See the :ref:`bookkeeper<bookkeeper>` page
     for more details.
 
+    |bookkeeper| automatically runs (in the same mode) in all domain
+    subfolders when executed in the root of a multi-domain calculation.
+
 .. versionremoved:: 0.13.0
     The ``--job-name``, ``--history-name``, and ``--work-history-name``
     command-line arguments.
