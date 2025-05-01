@@ -140,6 +140,7 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
                      'p3'),
     _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
     _get_poscar_info('POSCAR_SiC_H', 17, 'p3m1',),
+    _get_poscar_info('POSCAR_Pt25Rh75(100)-p(3x1)-O', 20, 'pmm',),
     )
 
 
