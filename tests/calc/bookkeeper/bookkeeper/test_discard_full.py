@@ -11,7 +11,10 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+import re
+
 from pytest_cases import parametrize
+from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
@@ -25,6 +28,59 @@ from ....helpers import filesystem_to_dict
 from ..conftest import MOCK_WORKHISTORY
 from .run_bookkeeper_base import _TestBookkeeperRunBase
 from .test_discard import TestBookkeeperDiscard as _TestDiscard
+
+
+class CasesDiscardFullDomainsFails:
+    """Test cases for failures to DISCARD_FULL a multi-domain run."""
+
+    # NB: none of the cases below have the "### Bookkeeper running"
+    # record as this is emitted at the setup stage, and is not visible
+    # to the caplog fixture inside tests.
+
+    def case_root_faulty(self, archived_domains):
+        """Prepare a tree where the root can't be removed."""
+        root_bookie, *_ = archived_domains
+        root_info = root_bookie.history.info.path
+        entry = root_info.read_text()
+        entry = re.sub(r'Notes:.*', r'Notes: some user notes', entry)
+        root_info.write_text(entry)
+        expect_records = (
+            re.compile('Checking .* DISCARD_FULL .* root directory.'),
+            re.compile('.* has user notes. .*'),
+            re.compile('Cannot safely run bookkeeper in mode DISCARD_FULL on '
+                       'all domains. Please proceed manually.'),
+            '',
+            )
+        return expect_records
+
+    def case_domain_faulty(self, archived_domains):
+        """Prepare a tree where a domain can't be removed."""
+        *_, domains = archived_domains
+        faulty_info = next(iter(domains))/'history.info'
+        entry = faulty_info.read_text()
+        entry = re.sub(r'# TIME(.*)', r'# TIME \1  # some comment', entry)
+        faulty_info.write_text(entry)
+        expect_records = (
+            re.compile('Checking .* DISCARD_FULL .* root directory.'),
+            re.compile('Checking .* DISCARD_FULL .* domain Domain_1.'),
+            re.compile('.* user comments. .*'),
+            re.compile('Cannot safely run bookkeeper in mode DISCARD_FULL on '
+                       'all domains. Please proceed manually.'),
+            '',
+            )
+        return expect_records
+
+
+@parametrize_with_cases('expect_records', cases=CasesDiscardFullDomainsFails)
+def test_discard_full_domains_fails(archived_domains,
+                                    expect_records,
+                                    check_log_records,
+                                    caplog):
+    """Check expected failure of DISCARD_FULL in a multi-domain tree."""
+    caplog.set_level(0)  # All messages
+    bookkeeper, *_ = archived_domains
+    bookkeeper.run('discard_full')
+    check_log_records(expect_records)
 
 
 class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):

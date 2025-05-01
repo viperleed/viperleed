@@ -401,6 +401,28 @@ class Bookkeeper:
                 )
             raise
 
+    def _check_may_discard_full_domains(self, domains):
+        """Ensure bookkeeper can run in DISCARD_FULL in all domains."""
+        msg = ('Checking whether it is possible to '
+               f'{BookkeeperMode.DISCARD_FULL.name} '
+               'the most-recent results %s.')
+        self.update_from_cwd(silent=True)  # Only first log message
+        LOGGER.info(msg, 'in the root directory')
+        self._check_may_discard_full()     # Raises if not possible
+
+        # If we manage to reach here, we should check that
+        # it is also possible to execute in all domains.
+        for domain in domains:
+            # Notice that here, differently from what we do in
+            # _run_in_root_and_subdomains, we can use self._root
+            # as we don't run anything in the root directory.
+            domain_bookie = DomainBookkeeper(self._root, cwd=domain)
+            with logging_silent():  # No logs from the domains
+                domain_bookie.update_from_cwd()
+                log.remove_bookkeeper_logfile(domain_bookie.history.path)
+            LOGGER.info(msg, f'of domain {domain.name}')
+            domain_bookie.check_may_discard_full()
+
     def _clean_state(self):
         """Rebuild (almost) the same state as after __init__.
 
@@ -688,6 +710,19 @@ class Bookkeeper:
 
     def _run_in_root_and_subdomains(self, domains, mode, **kwargs):
         """Execute bookkeeper in its cwd as well as all subdomains."""
+        if mode is BookkeeperMode.DISCARD_FULL:
+            try:
+                self._check_may_discard_full_domains(domains)
+            except (CantRemoveEntryError,
+                    FileNotFoundError,
+                    MetadataMismatchError,
+                    NoHistoryEntryError):
+                LOGGER.error('Cannot safely run bookkeeper in mode '
+                             f'{mode.name} on all domains. Please '
+                             'proceed manually.')
+                LOGGER.info('')
+                return BookkeeperExitCode.FAIL
+
         # Store a RootExplorer instance BEFORE running on the main
         # domain, as _run_one_domain will collect information from
         # there and later on create a new instance (in _clean_state).
@@ -884,6 +919,10 @@ class DomainBookkeeper(Bookkeeper):
         super().__init__(cwd)
         self._main_root = main_root
         self._root = DomainRootExplorer(self._root.path, self, main_root)
+
+    def check_may_discard_full(self):
+        """Log and raise unless DISCARD_FULL is possible."""
+        self._check_may_discard_full()
 
     def run_in_subdomain(self, *args, **kwargs):
         """Execute Bookkeeper in this subdomain."""

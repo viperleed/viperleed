@@ -237,6 +237,8 @@ class TestBookkeeperDomains:
         """Check calls of run when executed with a given domains argument."""
         caplog.set_level(0)  # All messages
         mock_exit = mocker.MagicMock()
+        if mode is Mode.DISCARD_FULL:
+            mocker.patch.object(Bookkeeper, '_check_may_discard_full_domains')
         run = mocker.patch.object(Bookkeeper,
                                   '_run_one_domain',
                                   return_value=(mock_exit, None))
