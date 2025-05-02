@@ -907,7 +907,10 @@ class DomainBookkeeper(Bookkeeper):
         ----------
         main_root : RootExplorer
             Information from the root folder of the main calculation
-            directory.
+            directory. It must already be up to date by calling
+            main_root.collect_info before any editing occurs in this
+            root directory. This instance will never collect_info
+            again on `main_root`.
         cwd : Pathlike, optional
             Path to the domain subfolder to be handled. If not given
             or None, take the current directory. Default is None.
@@ -917,11 +920,20 @@ class DomainBookkeeper(Bookkeeper):
         None.
         """
         super().__init__(cwd)
+        # IMPORTANT for developers: NEVER call collect_info on this
+        # _main_root RootExplorer in this class, as the root folder
+        # may have been modified by the main bookkeeper by that time.
+        # Similarly, DO NOT re-create this attribute from its .path.
+        # This means that properties such as _main_root.needs_archiving
+        # should NEVER be considered up to date.
         self._main_root = main_root
         self._root = DomainRootExplorer(self._root.path, self, main_root)
 
     def check_may_discard_full(self):
         """Log and raise unless DISCARD_FULL is possible."""
+        # This is just a wrapper around the private method in order
+        # to make it public for DomainBookkeeper (as opposed to
+        # Bookkeeper).
         self._check_may_discard_full()
 
     def run_in_subdomain(self, *args, **kwargs):
