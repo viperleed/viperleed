@@ -739,7 +739,7 @@ class Bookkeeper:
                                   main_root,
                                   main_folder,
                                   mode,
-                                  **kwargs)
+                                  **kwargs),
             ]
         exit_code = BookkeeperExitCode.from_codes(exit_codes)
         if exit_code is BookkeeperExitCode.FAIL and domains:
