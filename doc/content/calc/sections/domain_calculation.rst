@@ -193,9 +193,11 @@ calculations separately beforehand for better control.
 :file:`history` folder and :file:`history.info` file.\ [#fn_history_domains]_
 As for a single-domain calculation, it will also copy the appropriate
 :file:`OUT` files and rename the corresponding inputs with an ``_ori``
-suffix, as displayed in :numref:`list_domains_outputs`. This ensures
-that each following execution of |calc| will use the results from the
-previous one as inputs. See the :ref:`bookkeeper` page for more details.
+suffix, as displayed in :numref:`list_domains_outputs`.
+This ensures that each following execution of |calc| will use the results
+from the previous one as inputs (as long as each run ends with a reference
+calculation).
+See the :ref:`bookkeeper` page for more details.
 
 .. warning::
     Notice that, for folder :file:`my_domain_2`, the files that are given an
