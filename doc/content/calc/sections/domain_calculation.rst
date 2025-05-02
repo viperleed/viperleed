@@ -170,6 +170,22 @@ after the :ref:`super_pos`).
     └── viperleed-calc-<timestamp>.log
 
 To specify which segments should be run, either use the :ref:`RUN` parameter
+as usual, or set ``RUN = 4 1`` as a shorthand for a domain calculation, plus
+a final reference calculation for the result of the optimization. This will be
+interpreted as ``RUN = 2-3 1`` or ``RUN = 1-3 1``, depending on whether the
+input files are compatible :file:`Tensors.zip` files or whether a reference
+calculation is needed, respectively. For ``RUN = 4``, initial reference
+calculations will only be executed for the domains that need them. Specify
+``RUN = 1-3`` explicitly to rerun reference calculations for all domains.
+However, as discussed above, it is recommended to run the reference
+calculations separately beforehand for better control.
+
+.. warning::
+    It is important to execute an explicit reference calculation at the end
+    of a multi-domain optimization, especially if additional multi-domain
+    optimizations are planned. In fact, subsequent steps will always start
+    from the most recent :file:`Tensors` of each domain, i.e., the structure
+    at the most recent reference calculation.
 
 |bookkeeper| will automatically run both in the root directory (i.e.,
 :file:`my_domain_calc`) as well as in all the domain subfolders (i.e.,
