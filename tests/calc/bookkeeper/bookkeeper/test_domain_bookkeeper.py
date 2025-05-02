@@ -7,9 +7,11 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-04-11'
 __license__ = 'GPLv3+'
 
+from operator import attrgetter
 from pathlib import Path
 
 from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.bookkeeper import DomainBookkeeper
 
@@ -84,18 +86,44 @@ class TestDomainBookkeeper:
         assert domain_bookie._root is mock_domain_root_instance
         assert domain_bookie._main_root is main_root
 
-    def test_run_in_subdomain(self, tmp_path, mocker):
+    @parametrize(archives=(True, False))
+    def test_run_in_subdomain(self, archives, make_domain_bookie, mocker):
         """Check delegation to private methods of run_in_subdomain."""
-        mock_main_root = mocker.MagicMock()
-        domain_bookie = DomainBookkeeper(mock_main_root,
-                                         cwd=tmp_path)
-        mock_return = mocker.MagicMock()
-        run_one = mocker.patch.object(domain_bookie,
-                                      '_run_one_domain',
-                                      return_value=mock_return)
+        domain_bookie, mock_main_root, *_ = make_domain_bookie()
+        mock_return = (
+            mocker.MagicMock(),
+            mocker.MagicMock() if archives else None,
+            )
         mock_args = [mocker.MagicMock() for _ in range(10)]
         mock_kwargs = {f'kwarg_{k}': mocker.MagicMock() for k in range(10)}
-        result = domain_bookie.run_in_subdomain(*mock_args, **mock_kwargs)
 
-        assert result is mock_return
-        run_one.assert_called_once_with(*mock_args, **mock_kwargs)
+        mocks = {
+            'domain_folder': mock_return[1],
+            'main_folder': mocker.MagicMock(),
+            'run_one': mocker.patch.object(domain_bookie,
+                                           '_run_one_domain',
+                                           return_value=mock_return),
+            'log': mocker.patch(f'{_MODULE}.log.remove_bookkeeper_logfile'),
+            }
+        calls = {
+            'run_one': mocker.call(*mock_args, **mock_kwargs),
+            'log': mocker.call(domain_bookie.history.path),
+            }
+        if archives:
+            calls.update({
+            'domain_folder.mark_as_domain': mocker.call(
+                mock_main_root.path,
+                mocks['main_folder'],
+                ),
+            'domain_folder.metadata.write': mocker.call(),
+            })
+        result = domain_bookie.run_in_subdomain(mocks['main_folder'],
+                                                *mock_args,
+                                                **mock_kwargs)
+        assert result == mock_return
+        for callee, call in calls.items():
+            mock_name, *method = callee.split('.', maxsplit=1)
+            mock = mocks[mock_name]
+            if method:
+                mock = attrgetter(method[0])(mock)
+            assert mock.mock_calls == [call]

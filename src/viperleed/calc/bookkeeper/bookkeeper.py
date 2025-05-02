@@ -856,13 +856,11 @@ class Bookkeeper:
         domain_folders = []    # Archived HistoryFolder for each domain
         for path in domains:
             domain_bookie = DomainBookkeeper(main_root, cwd=path)
-            dom_exit, folder = domain_bookie.run_in_subdomain(mode, **kwargs)
-            if folder:
-                folder.mark_as_domain(self.cwd, main_folder)
-                folder.metadata.write()
+            dom_exit, folder = domain_bookie.run_in_subdomain(main_folder,
+                                                              mode,
+                                                              **kwargs)
             domain_folders.append(folder)
             yield dom_exit
-            log.remove_bookkeeper_logfile(domain_bookie.history.path)
         if main_folder:
             main_folder.mark_as_domains_main(domain_rel_paths, domain_folders)
             main_folder.metadata.write()
@@ -936,9 +934,38 @@ class DomainBookkeeper(Bookkeeper):
         # Bookkeeper).
         self._check_may_discard_full()
 
-    def run_in_subdomain(self, *args, **kwargs):
-        """Execute Bookkeeper in this subdomain."""
-        return self._run_one_domain(*args, **kwargs)
+    def run_in_subdomain(self, main_folder, *args, **kwargs):
+        """Execute Bookkeeper in this subdomain.
+
+        Parameters
+        ----------
+        main_folder : HistoryFolder
+            The main folder created in the history of the root
+            of the multi-domain calculation. Used for storing
+            metadata information in history folders that may
+            be created in this subdomain.
+        *args : object
+            Positional arguments, passed on unaltered to the
+            "run" call for this subdomain.
+        **kwargs : object, optional
+            Optional keyword arguments, passed on unaltered
+            to the "run" call for this subdomain.
+
+        Returns
+        -------
+        exit_code : BookkeeperExitCode
+            The exit code resulting from running bookkeeper
+            in this subdomain.
+        archived_folder : HistoryFolder or None
+            The "main" folder that was added to the history of
+            this subdomain as a result of running bookkeeper.
+        """
+        exit_code, archived_folder = self._run_one_domain(*args, **kwargs)
+        if archived_folder:
+            archived_folder.mark_as_domain(self._main_root.path, main_folder)
+            archived_folder.metadata.write()
+        log.remove_bookkeeper_logfile(self.history.path)
+        return exit_code, archived_folder
 
     # The next method needs to be overridden because the signature
     # of __init__ is changed compared to the one of Bookkeeper.
