@@ -10,6 +10,7 @@ __license__ = 'GPLv3+'
 from operator import attrgetter
 from pathlib import Path
 
+import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
@@ -127,3 +128,15 @@ class TestDomainBookkeeper:
             if method:
                 mock = attrgetter(method[0])(mock)
             assert mock.mock_calls == [call]
+
+    def test_run_in_subdomain_removes_log(self, make_domain_bookie, mocker):
+        """Check delegation to private methods of run_in_subdomain."""
+        domain_bookie, *_ = make_domain_bookie()
+        mocker.patch.object(domain_bookie,
+                            '_run_one_domain',
+                            side_effect=BaseException)
+        mock_log = mocker.patch(f'{_MODULE}.log.remove_bookkeeper_logfile')
+
+        with pytest.raises(BaseException):
+            domain_bookie.run_in_subdomain(None)
+        mock_log.assert_called_once()

@@ -960,11 +960,13 @@ class DomainBookkeeper(Bookkeeper):
             The "main" folder that was added to the history of
             this subdomain as a result of running bookkeeper.
         """
-        exit_code, archived_folder = self._run_one_domain(*args, **kwargs)
+        try:
+            exit_code, archived_folder = self._run_one_domain(*args, **kwargs)
+        finally:
+            log.remove_bookkeeper_logfile(self.history.path)
         if archived_folder:
             archived_folder.mark_as_domain(self._main_root.path, main_folder)
             archived_folder.metadata.write()
-        log.remove_bookkeeper_logfile(self.history.path)
         return exit_code, archived_folder
 
     # The next method needs to be overridden because the signature
