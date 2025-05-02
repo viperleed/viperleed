@@ -186,6 +186,7 @@ calculations separately beforehand for better control.
     optimizations are planned. In fact, subsequent steps will always start
     from the most recent :file:`Tensors` of each domain, i.e., the structure
     at the most recent reference calculation.
+    See also `Issue #337 <https://github.com/viperleed/viperleed/issues/337>`__.
 
 |bookkeeper| will automatically run both in the root directory (i.e.,
 :file:`my_domain_calc`) as well as in all the domain subfolders (i.e.,
@@ -193,10 +194,10 @@ calculations separately beforehand for better control.
 :file:`history` folder and :file:`history.info` file.\ [#fn_history_domains]_
 As for a single-domain calculation, it will also copy the appropriate
 :file:`OUT` files and rename the corresponding inputs with an ``_ori``
-suffix, as displayed in :numref:`list_domains_outputs`.
-This ensures that each following execution of |calc| will use the results
-from the previous one as inputs (as long as each run ends with a reference
-calculation).
+suffix, as displayed in :numref:`list_domains_outputs`. This ensures that each
+following execution of |calc| will use the results from the previous one as
+inputs (as long as each run ends with a reference calculation, see
+`Issue #337 <https://github.com/viperleed/viperleed/issues/337>`__\ ).
 See the :ref:`bookkeeper` page for more details.
 
 .. warning::
@@ -207,6 +208,7 @@ See the :ref:`bookkeeper` page for more details.
     These files are normally the same, as long as a reference calculation
     was executed in :file:`my_domain_2` as the last step before starting
     the multi-domain calculation.
+    See also `Issue #337 <https://github.com/viperleed/viperleed/issues/337>`__.
 
 
 .. versionchanged:: 0.13.0
