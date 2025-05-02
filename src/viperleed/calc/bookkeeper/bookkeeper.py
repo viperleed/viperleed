@@ -732,7 +732,7 @@ class Bookkeeper:
         # as clear_for_next_calc_run does internally re-collect info.
         main_root = RootExplorer(self.cwd, self)
         main_root.collect_info(silent=True)
-        main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)      # TODO: check whether we can discard-full all domains before! Do we need checks for other modes too?
+        main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)
         exit_codes = [
             main_exit_code,
             *self._run_subdomains(domains,
