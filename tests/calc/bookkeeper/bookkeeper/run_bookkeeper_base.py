@@ -69,9 +69,7 @@ class _TestCheckers:
 
         # Collect hashes of the history folders of the domains. While
         # doing so, check that the main has been correctly registered.
-        # expect_domain_register = (str(main_bookie.cwd.as_posix()),
-        expect_domain_register = (str(main_bookie.cwd),
-                                  main_meta.hash_)
+        expect_domain_register = (str(main_bookie.cwd), main_meta.hash_)
         expect_main_register = []
         for domain_path, domain_info in domains_info.items():
             if domain_path in skip:
