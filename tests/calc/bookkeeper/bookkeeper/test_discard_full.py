@@ -58,7 +58,7 @@ class CasesDiscardFullDomainsFails:
         *_, domains = archived_domains
         faulty_info = next(iter(domains))/'history.info'
         entry = faulty_info.read_text()
-        entry = re.sub(r'# TIME(.*)', r'# TIME \1  # some comment', entry)
+        entry = re.sub(r'# TIME (.*)', r'# TIME \1  # some comment', entry)
         faulty_info.write_text(entry)
         expect_records = (
             re.compile('Checking .* DISCARD_FULL .* root directory.'),
