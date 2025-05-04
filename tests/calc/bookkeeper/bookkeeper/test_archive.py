@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.constants import DEFAULT_HISTORY
 
 from .run_bookkeeper_base import _TestBookkeeperRunBase
 
@@ -35,8 +36,6 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         *main_run, domains = domains_after_calc_execution
         self.patch_for_domains(mocker)
         self.run_archive_after_calc_and_check(main_run, caplog)
-
-        # And also check all the subdomains.
         self.check_domains_archived(main_run, domains)
 
     def test_archive_twice(self, after_archive, caplog):
@@ -64,11 +63,10 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
                               mocker):
         """Check the result of archiving with explicit domain paths given."""
         *main_run, domains = domains_after_calc_execution
-        kwargs = {'domains': domains}
         self.patch_for_domains(mocker)
-        self.run_archive_after_calc_and_check(main_run, caplog, **kwargs)
-
-        # And also check all the subdomains.
+        self.run_archive_after_calc_and_check(main_run,
+                                              caplog,
+                                              domains=domains)
         self.check_domains_archived(main_run, domains)
 
     def test_domains_explicit_no_previous_metadata(
@@ -81,7 +79,7 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         main_bookie, *_, domains = domains_after_calc_execution
         # Remove all metadata files from the various history folders
         for root_path in (main_bookie.cwd, *domains):
-            history = root_path/'history'
+            history = root_path/DEFAULT_HISTORY
             for folder in history.glob('**'):
                 try:
                     (folder/_METADATA_NAME).unlink()

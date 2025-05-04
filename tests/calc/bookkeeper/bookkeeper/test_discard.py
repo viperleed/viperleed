@@ -55,21 +55,25 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
         """Ensure the root and all domains have been discarded."""
         *main_run, domains = domains_run
         *_, mocker = main_run
-        self.check_root_reverted_to_previous_calc_run(*main_run)
-        self.check_last_entry_discarded(*main_run)
+        self.check_root_discarded(*main_run)
         # Repeat the check for all subdomains
         for domain_path in domains:
             mock_bookie = mocker.MagicMock(cwd=domain_path)
             mock_bookie.history.info = info = HistoryInfoFile(domain_path)
             info.read()
-            self.check_root_reverted_to_previous_calc_run(mock_bookie)
-            self.check_last_entry_discarded(mock_bookie)
+            self.check_root_discarded(mock_bookie)
 
     def check_last_entry_discarded(self, bookkeeper, *_):
         """Ensure the last history.info entry has a DISCARDED tag."""
         info = bookkeeper.history.info
         assert info.last_entry_was_discarded
         assert _DISCARDED in info.path.read_text()
+
+    def check_root_discarded(self, bookkeeper, *_):
+        """Ensure the most recent run in bookkeeper.cwd is discarded."""
+        self.check_root_reverted_to_previous_calc_run(bookkeeper)
+        # A 'DISCARDED' note should be in history.info
+        self.check_last_entry_discarded(bookkeeper)
 
     @with_dummy_edited_file
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
@@ -88,10 +92,7 @@ class TestBookkeeperDiscard(_TestBookkeeperRunBase):
     def test_discard_after_archive(self, after_archive, caplog):
         """Check reverting of state when DISCARDing an ARCHIVEd calc run."""
         self.run_after_archive_and_check(after_archive, caplog)
-        self.check_root_reverted_to_previous_calc_run(*after_archive)
-
-        # A 'DISCARDED' note should be in history.info
-        self.check_last_entry_discarded(*after_archive)
+        self.check_root_discarded(*after_archive)
 
         # Some history.info fields are knowingly faulty,
         # but we can still DISCARD the entry.
