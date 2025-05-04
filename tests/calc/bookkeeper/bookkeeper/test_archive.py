@@ -83,7 +83,7 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
             for folder in history.glob('**'):
                 try:
                     (folder/_METADATA_NAME).unlink()
-                except OSError:
+                except FileNotFoundError:
                     pass
         self.test_domains_explicit(domains_after_calc_execution,
                                    caplog,
