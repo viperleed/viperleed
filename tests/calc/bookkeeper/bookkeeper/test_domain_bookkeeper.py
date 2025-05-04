@@ -130,7 +130,7 @@ class TestDomainBookkeeper:
             assert mock.mock_calls == [call]
 
     def test_run_in_subdomain_removes_log(self, make_domain_bookie, mocker):
-        """Check delegation to private methods of run_in_subdomain."""
+        """Check removal of log-file handler in case of failure."""
         domain_bookie, *_ = make_domain_bookie()
         mocker.patch.object(domain_bookie,
                             '_run_one_domain',

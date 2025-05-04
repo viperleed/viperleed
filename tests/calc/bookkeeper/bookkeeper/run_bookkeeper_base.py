@@ -319,7 +319,7 @@ class _TestBookkeeperRunBase(_TestCheckers):
     mode = None
 
     def check_domains_archived(self, main_run, domains, skip=()):
-        """Check that all subdomains have also been archived correctly."""
+        """Check that all subdomains have been archived correctly."""
         *_, mocker = main_run
         # We call the same methods as run_archive_after_calc_and_check
         # does, but on all subdomain root paths.

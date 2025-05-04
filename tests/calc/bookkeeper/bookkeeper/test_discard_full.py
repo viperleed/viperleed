@@ -108,8 +108,9 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         bookkeeper = Bookkeeper(tmp_path)
         # Patch a few methods to be able to test the relevant piece
         # of code. We update_from_cwd here as this creates the handler
-        # of history.info, patch its methods, then patch away them
-        # .prepare_info_file method to avoid replacing the patched one.
+        # of history.info, patch its methods, then patch away the
+        # history.prepare_info_file method to avoid replacing the
+        # patched info object.
         bookkeeper.update_from_cwd()
         mocker.patch.object(bookkeeper.history.info, 'may_remove_last_entry')
         mocker.patch.object(bookkeeper.history, 'prepare_info_file')
