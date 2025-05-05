@@ -663,14 +663,14 @@ class Bookkeeper:
         # Delete the history folders, stuff in workhistory,
         # and output files/folders in the root directory
         try:
-            self.history.discard_most_recent_run()
+            history_deleted = self.history.discard_most_recent_run()
         except OSError:
             return BookkeeperExitCode.FAIL, None
         self._workhistory.discard_workhistory_root()
         self._root.revert_to_previous_calc_run()
 
         # Tensors and deltas, if created during the last run
-        self._root.remove_tensors_and_deltas()
+        self._root.remove_tensors_and_deltas(history_deleted)
 
         # And the history entry from history.info
         self.history.info.remove_last_entry()

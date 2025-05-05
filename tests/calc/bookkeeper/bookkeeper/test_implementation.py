@@ -478,11 +478,11 @@ class TestBookkeeperOthers:
                 f'{DEFAULT_DELTAS}_003': {},   # Unzipped folder, stays
                 },
             # History information, needed for removal of Tensors
-            DEFAULT_HISTORY: {   # Dummy empty files for hashing
-                't003.r001_other_stuff_000000-000000': {'file': 'contents'},
-                't002.r001_first_run_000000-000000': {'file': 'contents'},
-                't002.r005_other_run_000000-000000': {'file': 'contents'},
-                't001.r001_first_tensor_000000-000000': {'file': 'contents'},
+            DEFAULT_HISTORY: {
+                't003.r001_to_discard_000000-000000': {},
+                't002.r001_first_run_000000-000000': {},
+                't002.r005_other_run_000000-000000': {},
+                't001.r001_first_tensor_000000-000000': {},
                 },
             }
         original_paths = filesystem_from_dict(root_tree, tmp_path)
@@ -490,9 +490,13 @@ class TestBookkeeperOthers:
                          for folder in (DEFAULT_TENSORS, DEFAULT_DELTAS)
                          for file, contents in root_tree[folder].items()
                          if contents is None}
+        removed_files.add(
+            tmp_path/DEFAULT_HISTORY/next(iter(root_tree[DEFAULT_HISTORY]))
+            )
         bookkeeper.update_from_cwd()
+        deleted_folders = bookkeeper.history.discard_most_recent_run()
         # pylint: disable-next=protected-access           # OK in tests
-        bookkeeper._root.remove_tensors_and_deltas()
+        bookkeeper._root.remove_tensors_and_deltas(deleted_folders)
         assert not any(f.exists() for f in removed_files)
         assert all(f.exists()
                    for f in original_paths
@@ -794,7 +798,7 @@ class TestBookkeeperRaises:
         'history.find_new_history_directory(None, None)',
         '_root.logs.discard',
         '_root.revert_to_previous_calc_run',
-        '_root.remove_tensors_and_deltas',
+        '_root.remove_tensors_and_deltas([])',
         '_run_archive_mode',
         '_run_clear_mode',
         '_run_discard_full_mode',

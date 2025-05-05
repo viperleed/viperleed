@@ -286,8 +286,10 @@ class TestRootExplorer:
     def test_remove_tensors_and_deltas(self, explorer, mocker):
         """Check delegation of calls in remove_tensors_and_deltas."""
         mock_discard = mocker.patch.object(explorer.tensors, 'discard')
-        explorer.remove_tensors_and_deltas()
-        mock_discard.assert_called_once_with(explorer.history)
+        mock_folders = mocker.MagicMock()
+        explorer.remove_tensors_and_deltas(mock_folders)
+        mock_discard.assert_called_once_with(explorer.history, mock_folders)
+
     def test_replace_state_files_from_ori_no_ori(self, explorer):
         """Check there are no complaints if an _ori file is not there."""
         with make_obj_raise('pathlib.Path.replace', FileNotFoundError):
@@ -780,7 +782,6 @@ class TestRootExplorerRaises:
         'infer_run_info',
         'list_paths_to_discard',
         'mark_edited_files',
-        'remove_tensors_and_deltas',
         'revert_to_previous_calc_run',
         '_collect_files_to_archive',
         )
@@ -937,7 +938,8 @@ class TestTensorsAndDeltasInfo:
         removed = tuple(tensors._root/f for f in removed)
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=True)
-        tensors.discard(simple_history)
+        tensors.discard(simple_history,
+                        simple_history.last_folder_and_siblings)
         mock_discard_files.assert_called_once_with(*removed)
 
     _attr_needs_update = (
