@@ -239,6 +239,14 @@ class TestLogFiles:
         logs._infer_calc_version()
         assert logs.version == expect
 
+    def test_infer_calc_version_no_log(self, logs, mocker):
+        """Test the result of the _infer_calc_version method."""
+        mocker.patch.object(logs, '_calc')
+        logs.most_recent = None
+        # pylint: disable-next=protected-access           # OK in tests
+        logs._infer_calc_version()
+        assert logs.version is None
+
     @pytest.mark.xfail(reason=('Bug in Version. Should be fixed '
                                'when merging measurement code.'))
     def test_infer_calc_version_malformed(self, logs, mocker):
