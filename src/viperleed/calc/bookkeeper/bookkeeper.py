@@ -17,8 +17,8 @@ from viperleed import __version__
 from viperleed.calc.bookkeeper import log
 from viperleed.calc.bookkeeper.domain_finder import DomainFinder
 from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
-from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode
 from viperleed.calc.bookkeeper.errors import _FileNotOlderError
+from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.errors import CantDiscardEntryError
