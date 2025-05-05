@@ -283,6 +283,11 @@ class TestRootExplorer:
         patched_path.read.assert_not_called()
         patched_path.write.assert_not_called()
 
+    def test_remove_tensors_and_deltas(self, explorer, mocker):
+        """Check delegation of calls in remove_tensors_and_deltas."""
+        mock_discard = mocker.patch.object(explorer.tensors, 'discard')
+        explorer.remove_tensors_and_deltas()
+        mock_discard.assert_called_once_with(explorer.history)
     def test_replace_state_files_from_ori_no_ori(self, explorer):
         """Check there are no complaints if an _ori file is not there."""
         with make_obj_raise('pathlib.Path.replace', FileNotFoundError):
@@ -415,6 +420,23 @@ class TestRootExplorerCopyStateFilesFrom:
                 pass
         if failures:
             assert exc_info.value.failures == failures
+
+    def test_log_failures_exception(self, explorer, caplog):
+        """Check logging emission when file copy raises exceptions."""
+        exc_txt = 'test exception'
+        failures = {'file': Exception(exc_txt)}
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._log_failures_when_copying_input_files(failures)
+        assert exc_txt in caplog.text
+
+    def test_log_failures_not_found(self, explorer, caplog):
+        """Check logging emission when file copy fails because not found."""
+        rel_paths = ['try_one', 'try_folder/try_file']
+        failures = {'file': [explorer.path/f for f in rel_paths]}
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._log_failures_when_copying_input_files(failures)
+        log = caplog.text
+        assert all(p in log for p in rel_paths)
 
 
 class TestRootExplorerNextCalc:
@@ -639,6 +661,13 @@ class TestRootExplorerMarkEditedFiles:
     def check_warns_edited(log_text, expected):
         """Check that all expected edited files are named in log_text."""
         assert all(f+EDITED_SUFFIX in log_text for f in expected)
+
+    def test_complain_edited(self, explorer, mocker, caplog):
+        """Check warnings when edited files are present."""
+        mocker.patch('pathlib.Path.glob',
+                     return_value=(explorer.path/f'file{EDITED_SUFFIX}',))
+        explorer.complain_about_edited_files()
+        assert caplog.text
 
     def test_no_log_file(self, explorer, make_calc_inputs):
         """Check that no files are _edited if there's no calc log file."""
