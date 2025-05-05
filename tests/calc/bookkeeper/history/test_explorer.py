@@ -45,6 +45,18 @@ def fixture_patched_folder(mocker):
 class TestHistoryExplorer:
     """Tests for the HistoryExplorer class (except collection)."""
 
+    @fixture(name='mock_last_and_siblings')
+    def fixture_mock_last_folder_and_siblings(self, history, mocker):
+        """Replace the last_folder_and_siblings property."""
+        mock_folders = [mocker.MagicMock() for _ in range(5)]
+        for i, folder in enumerate(mock_folders):
+            folder.path.name = i
+        mock_last = mocker.patch.object(type(history),
+                                        'last_folder_and_siblings',
+                                        new_callable=mocker.PropertyMock)
+        mock_last.return_value = mock_folders
+        return mock_folders
+
     def test_init(self, history, mock_path):
         """Test initialization of HistoryExplorer."""
         # pylint: disable=protected-access                # OK in tests
@@ -244,21 +256,29 @@ class TestHistoryExplorer:
                 assert parent_hash not in maps['main_hash_to_folders']
                 assert maps['hash_to_parent'][folder_hash] is folder
 
-    def test_discard_last(self, history, mocker):
+    def test_discard_last(self,
+                          history,
+                          mock_last_and_siblings,
+                          mocker,
+                          caplog):
         """Test the discard_most_recent_run method."""
         rmtree = mocker.patch('shutil.rmtree')
-        fake_paths = tuple(range(5))
-        mocker.patch.object(history,
-                            'list_paths_to_discard',
-                            return_value=fake_paths)
-        history.discard_most_recent_run()
-        rmtree.assert_has_calls(mocker.call(p) for p in fake_paths)
+        update_subfolders = mocker.patch.object(
+            history,
+            'collect_subfolders',
+            wraps=history.collect_subfolders
+            )
+        caplog.set_level(0)  # All messages
+        discarded = history.discard_most_recent_run()
+        rmtree.assert_has_calls(mocker.call(f.path)
+                                for f in mock_last_and_siblings)
+        update_subfolders.assert_called_once()
+        assert discarded == mock_last_and_siblings
+        assert not caplog.text
 
-    def test_discard_last_raises(self, history, mocker):
+    @pytest.mark.usefixtures('mock_last_and_siblings')
+    def test_discard_last_raises(self, history):
         """Check that exceptions while removing folders are propagated."""
-        mocker.patch.object(history,
-                            'list_paths_to_discard',
-                            return_value=(history.path/'some_subfolder',))
         with raises_exception('shutil.rmtree', OSError):
             history.discard_most_recent_run()
 

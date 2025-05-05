@@ -25,6 +25,7 @@ from viperleed.calc.bookkeeper.history.info import HistoryInfoFile
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.constants import DEFAULT_HISTORY
+from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.sections.cleanup import MOVED_LABEL
 
 
@@ -134,14 +135,17 @@ class HistoryExplorer:
 
     def discard_most_recent_run(self):
         """Delete all subfolders created during the last calc run."""
-        subfolders = self.list_paths_to_discard()
-        for folder_path in subfolders:
+        discarded = self.last_folder_and_siblings
+        for folder_path in self.list_paths_to_discard():
             try:
                 shutil.rmtree(folder_path)
             except OSError:
                 folder_name = folder_path.relative_to(self.root)
                 LOGGER.error(f'Error: Failed to delete {folder_name}.')
                 raise
+        with logging_silent():
+            self.collect_subfolders()
+        return discarded
 
     def find_new_history_directory(self, tensor_number, suffix):
         """Store information to create a history folder for a new calc run."""
