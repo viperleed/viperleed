@@ -193,17 +193,41 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
     def test_discard_full_domains(self, archived_domains, caplog):
         """Check correct behavior of DISCARD_FULL on an ARCHIVEd domain run."""
         *main_run, domains = archived_domains
-        *_, mocker = main_run
+        bookkeeper, *_, mocker = main_run
         self.patch_for_domains(mocker)
+
+        deleted_tensors = (
+            # These ones only have one "current" history
+            # run, and are thus removed in DISCARD_FULL.
+            'Domain_1/Tensors/Tensors_004.zip',
+            'Domain_two/Tensors/Tensors_004.zip',
+            'was_already_here/Tensors/Tensors_105.zip',
+            )
+        surviving_tensors = (
+            # These have previous history runs
+            'Domain_1/Tensors/Tensors_005.zip',
+            'Domain_two/Tensors/Tensors_006.zip',
+            'was_already_here/Tensors/Tensors_099.zip',
+            )
+        for tensor in (*deleted_tensors, *surviving_tensors):
+            assert (bookkeeper.cwd/tensor).is_file()
+
         self.test_discard_full_after_archive(main_run, caplog)
 
-        # And repeat checks also for the domain subfolders
+        # Do the same checks for the domain subfolders
         for domain_path, domain_info in domains.items():
             history_run_path = domain_info['history_run']
             assert not history_run_path.is_dir()
             mock_bookie = mocker.MagicMock(cwd=domain_path)
             self.check_root_reverted_to_previous_calc_run(mock_bookie)
             self.check_workhistory_folders_deleted(history_run_path.parent)
+
+        # Finally, check that the "new" Tensors have been removed...
+        for tensor in deleted_tensors:
+            assert not (bookkeeper.cwd/tensor).is_file()
+        # ...and that the others stay.
+        for tensor in surviving_tensors:
+            assert (bookkeeper.cwd/tensor).is_file()
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in DISCARD_FULL mode.
