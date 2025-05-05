@@ -88,6 +88,10 @@ class TestDomainBookkeeper:
         assert domain_bookie._main_root is main_root
 
     @parametrize(archives=(True, False))
+    # Indeed, there are quite a few local variables in the next test,
+    # but splitting it up into separate bits does not make much sense,
+    # as we would not really reuse them.
+    # pylint: disable-next=too-many-locals
     def test_run_in_subdomain(self, archives, make_domain_bookie, mocker):
         """Check delegation to private methods of run_in_subdomain."""
         domain_bookie, mock_main_root, *_ = make_domain_bookie()
