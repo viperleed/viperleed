@@ -4,14 +4,12 @@ Defines the BookkeeperExitCode enumeration for the result of
 calling Bookkeeper.run.
 """
 
-
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
-    'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
-__created__ = '2020-01-30'
+__created__ = '2025-05-05'  # Used to be in bookkeeper.py
 __license__ = 'GPLv3+'
 
 from enum import IntEnum
