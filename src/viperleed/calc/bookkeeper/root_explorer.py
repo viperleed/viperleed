@@ -535,7 +535,9 @@ class TensorAndDeltaInfo:
         ----------
         history : HistoryExplorer
             The handler of the history folder. Tensor/Delta files are
-            removed only if they have at most one history run left.
+            removed only if they have: (i) at most one history run left
+            for existing `history_folders`, or (ii) no run at all for
+            non-existing (i.e., typically already deleted) ones.
         history_folders : Sequence of HistoryFolder
             The history folders whose Tensor/Delta files may be
             removed. Only the files with Tensor indices included
