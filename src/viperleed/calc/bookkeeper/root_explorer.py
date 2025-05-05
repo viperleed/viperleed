@@ -56,7 +56,7 @@ class RootExplorer:
     def __init__(self, path, bookkeeper):
         """Initialize this explorer at `path` for a `bookkeeper`."""
         self._path = Path(path).resolve()
-        self._domains = ()      # Paths to potential domain subfolders
+        self._has_domains = False      # Is this the root of a DOMAINS?
         self._logs = None              # LogFiles, set in collect_info
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
@@ -76,16 +76,6 @@ class RootExplorer:
             return self.logs.most_recent.timestamp
         except AttributeError:
             return None
-
-    @property
-    def domains(self):
-        """Return relative paths to each (potential) domain subfolder."""
-        return self._domains
-
-    @property
-    def has_domains(self):
-        """Return whether this is the root of a DOMAINS calculation."""
-        return bool(self.domains)
 
     @property
     @_needs_collect('_files_to_archive')
@@ -341,7 +331,7 @@ class RootExplorer:
         name_fmts = name_fmts or ('{}',)
         if only_files is None:
             only_files = STATE_FILES
-        dont_complain = set(SKIP_IN_DOMAIN_MAIN if self.has_domains else ())
+        dont_complain = set(SKIP_IN_DOMAIN_MAIN if self._has_domains else ())
         for file in only_files:
             cwd_file = self.path / file
             patterns = [fmt.format(file) for fmt in name_fmts]
@@ -401,7 +391,7 @@ class RootExplorer:
     def _find_potential_domain_subfolders(self):
         """Find all subfolders of self.path that look like subdomains."""
         finder = DomainFinder(self.workhistory.bookkeeper)
-        self._domains = finder.find_potential_domains()
+        self._has_domains = any(finder.find_potential_domains())
 
     def _log_failures_when_copying_input_files(self, failed):
         """Emit logging errors about failures to pull input files.

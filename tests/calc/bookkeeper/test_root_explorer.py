@@ -206,16 +206,18 @@ class TestRootExplorer:
         to_archive = explorer._files_to_archive
         assert to_archive == tuple(explorer.path / f for f in expected_files)
 
-    def test_find_domains(self, explorer, mocker):
+    @parametrize(has_domains=(True, False))
+    def test_find_domains(self, has_domains, explorer, mocker):
         """Test the _find_potential_domain_subfolders method."""
         mock_finder = mocker.MagicMock()
-        mock_domains = mocker.MagicMock()
+        mock_domains = (mocker.MagicMock(),) if has_domains else ()
         mock_finder.find_potential_domains.return_value = mock_domains
         mocker.patch(f'{_MODULE}.DomainFinder', return_value=mock_finder)
         # pylint: disable-next=protected-access           # OK in tests
         explorer._find_potential_domain_subfolders()
         mock_finder.find_potential_domains.assert_called_once()
-        assert explorer.domains is mock_domains
+        # pylint: disable-next=protected-access           # OK in tests
+        assert explorer._has_domains == has_domains
 
     _remove_files = {
         '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
@@ -235,18 +237,6 @@ class TestRootExplorer:
         removed = (explorer.path / f for f in files)
         discard_files.assert_called_once_with(*removed)
         assert returned is expect
-
-    _has_domains = {
-        (): False,
-        ('domain_one',): True,
-        }
-
-    @parametrize('domains,expect', _has_domains.items())
-    def test_has_domains(self, domains, expect, explorer, mocker):
-        """Check the domains and has_domains properties."""
-        mocker.patch.object(explorer, '_domains', domains)
-        assert explorer.domains == domains
-        assert explorer.has_domains == expect
 
     def test_infer_run_info(self, explorer, mocker):
         """Check correct result of inferring info from log files."""
@@ -413,7 +403,8 @@ class TestRootExplorerCopyStateFilesFrom:
                                            call_copy,
                                            mocker):
         """Test the _copy_state_files_from method for the main domain root."""
-        mocker.patch.object(explorer, '_domains', ('a domain',))
+          # pylint: disable-next=protected-access         # OK in tests
+        explorer._has_domains = True
         failures, exc_info = call_copy(info.missing, info.fail, None)
         for file in info.no_complain:
             try:
