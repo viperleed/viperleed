@@ -10,7 +10,6 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from contextlib import nullcontext
-from enum import IntEnum
 import logging
 from pathlib import Path
 
@@ -18,6 +17,7 @@ from viperleed import __version__
 from viperleed.calc.bookkeeper import log
 from viperleed.calc.bookkeeper.domain_finder import DomainFinder
 from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
+from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode
 from viperleed.calc.bookkeeper.errors import _FileNotOlderError
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
@@ -62,24 +62,6 @@ viperleed (v%s). Please double-check that the correct files have been
 processed, as bookkeeper is not entirely backward compatible. See the
 documentation at https://viperleed.org/content/calc/sections/bookkeeper.html
 for details on the changes introduced in bookkeeper since v{_MIN_CALC_WARN}.'''
-
-
-class BookkeeperExitCode(IntEnum):
-    """Exit code of the bookkeeper."""
-    SUCCESS = 0
-    NOTHING_TO_DO = -1
-    FAIL = 1
-
-    @classmethod
-    def from_codes(cls, exit_codes):
-        """Return an overall exit code from multiple ones."""
-        if not exit_codes:
-            raise ValueError('At least one exit code needed.')
-        if any(c is cls.FAIL for c in exit_codes):
-            return cls.FAIL
-        if all(c is cls.NOTHING_TO_DO for c in exit_codes):
-            return cls.NOTHING_TO_DO
-        return cls.SUCCESS
 
 
 class Bookkeeper:
