@@ -233,6 +233,10 @@ class CollapsibleView(qtw.QWidget):
         self._adjust_bottom_space()
         self._adjust_button_icon(enable)
 
+    def is_enabled(self):
+        """Return whether the view is enabled."""
+        return self.button.isEnabled()
+
     def set_top_widget_geometry(self, widget, width=None, align=_ALIGN_CTR):
         """Set top widget geometry to the given parameters.
 

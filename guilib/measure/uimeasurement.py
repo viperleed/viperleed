@@ -495,6 +495,16 @@ class Measure(ViPErLEEDPluginBase):                                             
         else:
             self._on_sys_settings_triggered()
 
+    @qtc.pyqtSlot()
+    def _cleanup_measurement_settings_dialog(self):
+        """Remove settings dialog from dialogs and delete."""
+        try:
+            self._dialogs['measurement_settings'].deleteLater()
+        except AttributeError:
+            return  # No dialog yet
+        qtw.qApp.processEvents()
+        self._dialogs['measurement_settings'] = None
+
     def _compose(self):
         """Place children widgets and menus."""
         self.setStatusBar(qtw.QStatusBar())
@@ -569,7 +579,9 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _connect(self):
         """Connect signals to appropriate slots."""
         # CONTROLS
-        self._ctrls['measure'].clicked.connect(self._on_start_pressed)
+        self._ctrls['measure'].clicked.connect(
+            self._on_start_measurement_pressed
+            )
         self._ctrls['set_energy'].clicked.connect(self._on_set_energy)
 
         # DIALOGS
@@ -598,7 +610,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._on_measurement_settings_not_found
             )
         self._dialogs['measurement_selection'].rejected.connect(
-            self._measurement_cancelled
+            self._on_measurement_cancelled
             )
         # OTHERS
         self.error_occurred.connect(self._on_error_occurred)
@@ -638,6 +650,28 @@ class Measure(ViPErLEEDPluginBase):                                             
                 CameraViewer(camera, stop_on_close=False, roi_visible=False,
                              interactions_enabled=False)
                 )
+
+    @qtc.pyqtSlot(object, ViPErLEEDSettings)
+    def _create_measurement(self, measurement_class, settings):
+        """Create measurement object for use in a measurement."""
+        self.measurement = measurement_class(settings)
+        self.measurement.devices_disconnected.connect(
+            self._create_measurement_settings_dialog
+            )
+        self.measurement.disconnect_devices_and_notify()
+
+    @qtc.pyqtSlot()
+    def _create_measurement_settings_dialog(self):
+        """Create a new dialog for editing measurement settings."""
+        base.safe_disconnect(self.measurement.devices_disconnected,
+                             self._create_measurement_settings_dialog)
+        dialog = MeasurementSettingsDialog(self.measurement, parent=self)
+        dialog.rejected.connect(self._on_measurement_cancelled)
+        dialog.accepted.connect(self._on_settings_accepted)
+        dialog.error_occurred.connect(self._on_error_occurred)
+        dialog.setModal(True)
+        self._dialogs['measurement_settings'] = dialog
+        dialog.open()
 
     def _delete_outdated_ctrl_dialog(self, ctrl_name):
         """Remove controller dialogs for ctrl_name."""
@@ -860,38 +894,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         base.safe_disconnect(self._measurement_thread.started,
                              self._timers['start_measurement'].start)
 
-    @qtc.pyqtSlot()
-    def _cleanup_measurement_settings_dialog(self):
-        """Remove settings dialog from dialogs and delete."""
-        try:
-            self._dialogs['measurement_settings'].deleteLater()
-        except AttributeError:
-            return  # No dialog yet
-        qtw.qApp.processEvents()
-        self._dialogs['measurement_settings'] = None
-
-    @qtc.pyqtSlot(object, ViPErLEEDSettings)
-    def _create_measurement(self, measurement_class, settings):
-        """Create measurement object for use in a measurement."""
-        self.measurement = measurement_class(settings)
-        self.measurement.devices_disconnected.connect(
-            self._create_measurement_settings_dialog
-            )
-        self.measurement.disconnect_devices_and_notify()
-
-    @qtc.pyqtSlot()
-    def _create_measurement_settings_dialog(self):
-        """Create a new dialog for editing measurement settings."""
-        base.safe_disconnect(self.measurement.devices_disconnected,
-                             self._create_measurement_settings_dialog)
-        dialog = MeasurementSettingsDialog(self.measurement, parent=self)
-        dialog.rejected.connect(self._measurement_cancelled)
-        dialog.accepted.connect(self._on_settings_accepted)
-        dialog.error_occurred.connect(self._on_error_occurred)
-        dialog.setModal(True)
-        self._dialogs['measurement_settings'] = dialog
-        dialog.open()
-
     def _on_read_pressed(self, *_):
         """Read data from a measurement file."""
         fname, _ = qtw.QFileDialog.getOpenFileName(
@@ -922,7 +924,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Set energy on primary controller."""
                                                                                 # TODO: implement
 
-    def _on_start_pressed(self):
+    def _on_start_measurement_pressed(self):
         """Prepare to begin a measurement."""
         if self.measurement:
             self._on_measurement_finished()                                     # TODO: necessary?
@@ -946,7 +948,8 @@ class Measure(ViPErLEEDPluginBase):                                             
         settings_ok = self.measurement.set_settings(dialog.settings.last_file)
         # It is necessary to call deleteLater(), otherwise the measurement
         # object will remain alive and the next dialog may attempt to
-        # reuse a measurement object for another measurement.
+        # reuse a measurement object for another measurement. This call
+        # is done in _cleanup_measurement_settings_dialog().
         self._connect_measurement()
         self._cleanup_measurement_settings_dialog()
         if not settings_ok:
@@ -1122,7 +1125,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._glob['errors'] = []
 
     @qtc.pyqtSlot()
-    def _measurement_cancelled(self):
+    def _on_measurement_cancelled(self):
         """Handle measurement cancellation."""
         try:
             self.sender().handled_object.stop_threads()
