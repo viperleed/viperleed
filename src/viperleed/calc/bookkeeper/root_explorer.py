@@ -579,8 +579,10 @@ class TensorAndDeltaInfo:
         for folder in history_folders:
             tensors_to_folders[folder.tensor_num].append(folder)
 
-        # However, we should only discard those that have only one run,
-        # otherwise we may be loosing info from previous calculations.
+        # However, we should only discard the "new" ones, i.e., those
+        # created during the last calc execution. These will have only
+        # one run left (if the history folders have not been deleted
+        # yet) or zero (if they have been deleted already).
         max_run = history.max_run_per_tensor
         tensor_nums = [
             t
