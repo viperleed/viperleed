@@ -400,10 +400,9 @@ class TestRootExplorerCopyStateFilesFrom:
     def test_copy_state_files_from_domains(self,
                                            explorer,
                                            info,
-                                           call_copy,
-                                           mocker):
+                                           call_copy):
         """Test the _copy_state_files_from method for the main domain root."""
-          # pylint: disable-next=protected-access         # OK in tests
+        # pylint: disable-next=protected-access           # OK in tests
         explorer._has_domains = True
         failures, exc_info = call_copy(info.missing, info.fail, None)
         for file in info.no_complain:
