@@ -587,7 +587,7 @@ class Bookkeeper:
 
         # Finally, the history.info entry
         LOGGER.info('The following entry will be deleted '
-                    f'from {self.history.info.path.name}:'
+                    f'from {self.history.info.path.name}: '
                     f'{self.history.info.last_entry}'.rstrip())
         LOGGER.info('Calculation data will be lost irreversibly.')
 
