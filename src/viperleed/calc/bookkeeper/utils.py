@@ -26,9 +26,9 @@ def ask_user_confirmation(mode):
     """Request user input on an action when bookkeeper runs in `mode`."""
     if not sys.stdin.isatty():
         LOGGER.error('Bookkeeper needs to ask your confirmation, but '
-                     'this shell is not interactive. Please run again '
-                     f'\'bookkeeper {mode.long_flag}\' in an interactive '
-                     'shell.')
+                     'this shell is not interactive. Please run '
+                     f'\'bookkeeper {mode.long_flag}\' again in '
+                     'an interactive shell.')
         raise NotAnInteractiveShellError
     while True:
         reply = input('Are you sure you want to proceed (y/N)? ')
