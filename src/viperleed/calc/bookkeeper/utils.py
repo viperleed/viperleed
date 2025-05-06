@@ -15,12 +15,21 @@ from functools import wraps
 import logging
 from operator import attrgetter
 import shutil
+import sys
+
+from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
 
 LOGGER = logging.getLogger(__name__)
 
 
-def ask_user_confirmation():
-    """Request user input on an action."""
+def ask_user_confirmation(mode):
+    """Request user input on an action when bookkeeper runs in `mode`."""
+    if not sys.stdin.isatty():
+        LOGGER.error('Bookkeeper needs to ask your confirmation, but '
+                     'this shell is not interactive. Please run again '
+                     f'\'bookkeeper {mode.long_flag}\' in an interactive '
+                     'shell.')
+        raise NotAnInteractiveShellError
     while True:
         reply = input('Are you sure you want to proceed (y/N)? ')
         reply = reply.lower()

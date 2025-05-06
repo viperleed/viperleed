@@ -18,6 +18,7 @@ from pytest_cases import parametrize_with_cases
 
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
+from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
 from viperleed.calc.bookkeeper.log import BOOKIE_LOGFILE
@@ -269,3 +270,16 @@ class TestBookkeeperDiscardFull(_TestBookkeeperRunBase):
         expect = (BookkeeperExitCode.SUCCESS if confirmed
                   else BookkeeperExitCode.NOTHING_TO_DO)
         assert code is expect
+
+    def test_user_confirmation_not_interactive(self, tmp_path, mocker):
+        """Check failure when user cannot provide confirmation."""
+        bookkeeper = Bookkeeper(tmp_path)
+        mocker.patch.object(bookkeeper,
+                            '_user_confirmed',
+                            side_effect=NotAnInteractiveShellError)
+        # Patch away stuff that may prevent removal,
+        # as we only want to check the exit code
+        mocker.patch.object(bookkeeper, '_check_may_discard_full')
+
+        code = bookkeeper.run(mode=self.mode)
+        assert code is BookkeeperExitCode.FAIL

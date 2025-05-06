@@ -147,12 +147,12 @@ class DomainFinder:
             main_path, _ = domain_info
             self._warn_running_in_subdomain(mode, main_path)
             return tuple()
-        return self._find_domains_from_main()
+        return self._find_domains_from_main(mode)
 
     @staticmethod
-    def _ask_user_confirmation_on_main_path_mismatch(already_confirmed):
+    def _ask_user_confirmation_on_main_path_mismatch(already_confirmed, mode):
         """Main path is mismatched. Ask confirmation to proceed."""
-        return already_confirmed or ask_user_confirmation()
+        return already_confirmed or ask_user_confirmation(mode)
 
     def _check_subdomain_info_consistent(self, domain_name, domain_hash):
         """Raise if domain information is not up to date."""
@@ -179,7 +179,7 @@ class DomainFinder:
                          f'{main_path}, found {self.path} instead.')
             raise MainPathNotFoundError(main_path)
 
-    def _find_domains_from_main(self):
+    def _find_domains_from_main(self, mode):
         """Return paths to domain subfolders of the current directory."""
         domain_paths = []
         user_confirmed = False
@@ -199,6 +199,7 @@ class DomainFinder:
                 user_confirmed = (
                     self._ask_user_confirmation_on_main_path_mismatch(
                         user_confirmed,
+                        mode,
                         )
                     )
                 if not user_confirmed:

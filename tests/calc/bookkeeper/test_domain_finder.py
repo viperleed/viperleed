@@ -176,14 +176,15 @@ class TestDomainFinderFromMain:
     """Tests for the _find_domains_from_main method."""
 
     @fixture(name='find')
-    def fixture_find(self, mock_finder_info, existing_domains):
+    def fixture_find(self, mock_finder_info, existing_domains, mocker):
         """Return the subdomains found."""
         def _find(info=None):
             if info is None:
                 info = {'domains': existing_domains}
             finder = mock_finder_info(info)
+            mock_mode = mocker.MagicMock(long_flag='--mock-mode')
             # pylint: disable-next=protected-access       # OK in tests
-            return finder._find_domains_from_main()
+            return finder._find_domains_from_main(mock_mode)
         return _find
 
     @fixture(name='existing_domains')

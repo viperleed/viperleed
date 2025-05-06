@@ -18,6 +18,7 @@ from viperleed.calc.bookkeeper import log
 from viperleed.calc.bookkeeper.domain_finder import DomainFinder
 from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
 from viperleed.calc.bookkeeper.errors import _FileNotOlderError
+from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
 from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
@@ -146,6 +147,9 @@ class Bookkeeper:
         if domains is None:
             try:
                 domains, path_to_main = self._find_domains(mode)
+            except NotAnInteractiveShellError:
+                LOGGER.info('')
+                return BookkeeperExitCode.FAIL
             except (MetadataError, MainPathNotFoundError):
                 LOGGER.error('Please proceed manually.')
                 LOGGER.info('')
@@ -639,7 +643,12 @@ class Bookkeeper:
             return BookkeeperExitCode.FAIL, None
 
         self._print_discard_info()
-        if not self._user_confirmed():
+        try:
+            user_confirmed = self._user_confirmed()
+        except NotAnInteractiveShellError:
+            return BookkeeperExitCode.FAIL, None
+
+        if not user_confirmed:
             return BookkeeperExitCode.NOTHING_TO_DO, None
 
         # Delete the history folders, stuff in workhistory,
@@ -854,7 +863,7 @@ class Bookkeeper:
         """Return whether the user wants to proceed with discarding."""
         if not self._requires_user_confirmation:
             return True
-        return ask_user_confirmation()
+        return ask_user_confirmation(self._mode)
 
     def _warn_about_old_calc(self):
         """Emit warnings when this tree was created by an early calc."""

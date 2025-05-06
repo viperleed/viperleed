@@ -13,6 +13,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
 from viperleed.calc.bookkeeper.utils import ask_user_confirmation
 from viperleed.calc.bookkeeper.utils import discard_files
 from viperleed.calc.bookkeeper.utils import file_contents_identical
@@ -60,10 +61,6 @@ class MockInput:  # pylint: disable=too-few-public-methods
         return next(self._responses, 'yes')
 
 
-# About the disable: better to keep tests confined to classes.
-# Otherwise we'd need to make the cases a module global, which
-# is not ideal.
-# pylint: disable-next=too-few-public-methods
 class TestAskUserConfirmation:
     """Tests for the ask_user_confirmation function."""
 
@@ -87,7 +84,19 @@ class TestAskUserConfirmation:
         """Check the result of asking user confirmation to proceed."""
         *replies, expect = replies_and_expect
         mocker.patch('builtins.input', new=MockInput(*replies))
-        assert ask_user_confirmation() == expect
+        mock_stdin = mocker.patch('sys.stdin')
+        mock_stdin.isatty.return_value = True
+        assert ask_user_confirmation(mode=None) == expect
+
+    def test_not_interactive(self, mocker, caplog):
+        """Check complaints when sys.stdin is not an interactive shell."""
+        mock_stdin = mocker.patch('sys.stdin')
+        mock_stdin.isatty.return_value = False
+        mock_mode = mocker.MagicMock(long_flag='--mock-mode')
+        with pytest.raises(NotAnInteractiveShellError):
+            ask_user_confirmation(mock_mode)
+        # pylint: disable-next=magic-value-comparison
+        assert 'interactive' in caplog.text
 
 
 class TestDiscardFiles:

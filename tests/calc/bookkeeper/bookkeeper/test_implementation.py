@@ -33,6 +33,7 @@ from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.bookkeeper import LOGGER
 from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
+from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
 from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.constants import DEFAULT_DELTAS
@@ -136,15 +137,26 @@ class TestBookkeeperComplaints:
 class TestBookkeeperDomains:
     """Tests for running bookkeeper in subdomains."""
 
-    @parametrize(exc=(MetadataError, MainPathNotFoundError(None)))
-    def test_find_domains_fails(self, exc, tmp_path, caplog, mocker):
+    _fails = {
+        MetadataError: 'proceed manually',
+        MainPathNotFoundError(None): 'proceed manually',
+        NotAnInteractiveShellError: None,  # utils does the logging
+        }
+
+    @parametrize('exc,expect_log', _fails.items())
+    # pylint: disable-next=too-many-arguments  # 3/6 fixtures
+    def test_find_domains_fails(self, exc, expect_log,
+                                tmp_path, caplog, mocker):
         """Check failure to detect domains."""
         bookkeeper = Bookkeeper(tmp_path)
         mocker.patch.object(bookkeeper, '_find_domains', side_effect=exc)
-        expect_log = 'proceed manually'
         exit_code = bookkeeper.run('archive')
         assert exit_code is BookkeeperExitCode.FAIL
-        assert expect_log in caplog.text
+        if expect_log:
+            assert expect_log in caplog.text
+        else:
+            assert caplog.records
+            assert not caplog.records[-1].getMessage()  # Empty line
 
     def test_find_domains_implementation(self, tmp_path, mocker):
         """Check the inner calls in _find_domains."""
