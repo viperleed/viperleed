@@ -198,7 +198,9 @@ class TestBookkeeperDomains:
                 'update': mocker.patch.object(
                     bookkeeper,
                     'update_from_cwd',
-                    wraps=bookkeeper.update_from_cwd,
+                    # Avoid re-collection in subdomains,
+                    # as we patch away the logs.
+                    wraps=None if is_subdomain else bookkeeper.update_from_cwd,
                     ),
                 'finder': mocker.patch(f'{_MODULE}.DomainFinder',
                                        return_value=mock_finder),
@@ -231,13 +233,20 @@ class TestBookkeeperDomains:
 
     @parametrize(has_log=(True, False))
     def test_find_domains_implementation_subdomain(self, has_log,
-                                                   mock_implementation):
+                                                   mock_implementation,
+                                                   mocker):
         """Check the inner calls in _find_domains for a subdomain."""
         (bookkeeper,
          args,
          expect_result,
          mocks,
          calls) = mock_implementation(is_subdomain=True, has_log=has_log)
+        mocker.patch.object(
+            # pylint: disable-next=protected-access       # OK in tests
+            bookkeeper._root,
+            '_logs',
+            most_recent='some stuff' if has_log else None,
+            )
         # pylint: disable-next=protected-access           # OK in tests
         result = bookkeeper._find_domains(*args)
         assert result == expect_result
