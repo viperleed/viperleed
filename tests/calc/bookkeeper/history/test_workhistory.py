@@ -30,21 +30,25 @@ patch_rmtree = patch('shutil.rmtree')
 @fixture(name='mock_bookkeeper')
 def fixture_mock_bookkeeper(mocker):
     """Fixture to mock the bookkeeper."""
-    max_job_for_tensor= defaultdict(int)
-    max_job_for_tensor[1] = 5
-    max_job_for_tensor[2] = 3
-    bookkeeper = mocker.MagicMock(
-        history=mocker.MagicMock(path=Path('/mock/history')),
-        max_job_for_tensor=max_job_for_tensor,
-        timestamp='20231008',
-        )
+    bookkeeper = mocker.MagicMock(timestamp='20231008')
     return bookkeeper
 
 
+@fixture(name='mock_root')
+def fixture_mock_root(mock_path, mocker):
+    """Return a fake RootExplorer."""
+    max_job_for_tensor = defaultdict(int)
+    max_job_for_tensor[1] = 5
+    max_job_for_tensor[2] = 3
+    history = mocker.MagicMock(path=Path('/mock/history'),
+                               max_run_per_tensor=max_job_for_tensor)
+    return mocker.MagicMock(history=history, path=mock_path)
+
+
 @fixture(name='workhistory')
-def fixture_workhistory(mock_path, mock_bookkeeper):
+def fixture_workhistory(mock_root, mock_bookkeeper):
     """Fixture for WorkhistoryHandler instance."""
-    return WorkhistoryHandler(mock_path, mock_bookkeeper)
+    return WorkhistoryHandler(mock_root, mock_bookkeeper)
 
 
 @fixture(name='patched_path')
@@ -67,9 +71,9 @@ class TestWorkhistoryHandler:
         assert workhistory.path == mock_path / DEFAULT_WORK_HISTORY
         assert workhistory.bookkeeper is mock_bookkeeper
 
-    def test_history_property(self, workhistory, mock_bookkeeper):
+    def test_history_property(self, workhistory, mock_root):
         """Test history property."""
-        assert workhistory.history is mock_bookkeeper.history.path
+        assert workhistory.history is mock_root.history.path
 
     def test_timestamp_property(self, workhistory, mock_bookkeeper):
         """Test timestamp property."""

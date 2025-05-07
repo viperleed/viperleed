@@ -140,7 +140,6 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
                      'p3'),
     _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
     _get_poscar_info('POSCAR_SiC_H', 17, 'p3m1',),
-    _get_poscar_info('POSCAR_Pt25Rh75(100)-p(3x1)-O', 20, 'pmm',),
     )
 
 
@@ -411,6 +410,22 @@ class CasePOSCARSlabs:
             'SUPERLATTICE': np.array([[ 2,  1], [-1,  1]]),  # rt3
             }
         return self.case_poscar(info)
+
+    def case_poscar_ptrh_100_1x3_o(self):
+        """Return a Pt25Rh75(100)-p(1x3)O slab."""
+        info = _get_poscar_info('POSCAR_Pt25Rh75(100)-p(3x1)-O', 20, 'pmm')
+        slab, rpars, info = self.case_poscar(info)
+
+        # Assign mixed sites. Notice that, due to a bug in initSites,
+        # we have to clear the current atomic sites before making new
+        # ones. Otherwise we'd get an empty sitelist.
+        rpars.ELEMENT_MIX = {'Me': ['Pt', 'Rh']}
+        for atom in slab:
+            atom.site = None
+        slab.initSites(rpars)
+        metal_site = next(s for s in slab.sitelist if s.el == 'Me')
+        metal_site.occ = {'Pt': 0.25, 'Rh': 0.75}
+        return slab, rpars, info
 
     @case(tags=(Tag.NON_MINIMAL_CELL, Tag.VACUUM_GAP_SMALL))
     def case_poscar_sb_si_111(self):

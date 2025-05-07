@@ -45,6 +45,7 @@ from viperleed.calc.bookkeeper.constants import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_HISTORY
@@ -91,9 +92,9 @@ MOCK_WORKHISTORY = {  # name in workhistory: name in history
 @fixture(name='after_bookkeper_run')
 def factory_after_bookkeeper_run():
     """Prepare a directory like the one after `mode` was executed."""
-    def _make(before_this_run, mode):
+    def _make(before_this_run, mode, **kwargs):
         bookkeeper, *_ = before_this_run
-        bookkeeper.run(mode=mode)
+        bookkeeper.run(mode=mode, **kwargs)
         bookkeeper.update_from_cwd(silent=True)
         return before_this_run
     return _make
@@ -118,20 +119,24 @@ def factory_make_root_tree(tmp_path):
             },
 
         # Pre-existing (empty) history directories
-        f'{DEFAULT_HISTORY}/t001.r001_200101-111213/some_directory': {},
-        f'{DEFAULT_HISTORY}/t001.r002.001_DS_200212-141516/some_directory': {},
-        f'{DEFAULT_HISTORY}/t002.r002_200212-141516/some_directory': {},
+        DEFAULT_HISTORY: {'t001.r001_200101-111213/some_directory': {},
+                          't001.r002.001_DS_200212-141516/some_directory': {},
+                          't002.r002_200212-141516/some_directory': {}},
 
         # workhistory subfolders, with dummy files
-        **{f'{DEFAULT_WORK_HISTORY}/{f}': {'file': f}
-           for f in MOCK_WORKHISTORY},
+        DEFAULT_WORK_HISTORY: {f: {'file': f}
+                               for f in MOCK_WORKHISTORY},
         }
 
-    def _make(**kwargs):
+    def _make(skip=None, at_path=tmp_path, **kwargs):
+        if skip is None:
+            skip = set()
         def _populate_root():
-            root_contents = {**default_root_contents, **kwargs}
-            filesystem_from_dict(root_contents, tmp_path)
-            return tmp_path
+            root_contents = {f: c for f, c in default_root_contents.items()
+                             if f not in skip}
+            root_contents.update(kwargs)
+            filesystem_from_dict(root_contents, at_path)
+            return at_path
         return _populate_root
 
     return _make
@@ -327,6 +332,16 @@ def fixture_after_calc_with_edited(tmp_path):
     return bookkeeper, before, archived
 
 
+@fixture(name='archived_domains')
+def fixture_archived_domains(after_bookkeper_run,
+                             domains_after_calc_execution):
+    """Run ARCHIVE in a multi-domain root."""
+    *_, domains = domains_after_calc_execution
+    return after_bookkeper_run(domains_after_calc_execution,
+                               'archive',
+                               domains=domains)
+
+
 @fixture(name='before_calc_execution')
 def fixture_before_calc_execution(mock_tree_before_calc_execution):
     """Return a bookkeeper ready to run in a directory with calc inputs.
@@ -366,6 +381,108 @@ def fixture_check_methods_called(mock_attributes):
             method = attrgetter(called_attr or mocked_attr)(obj)
             method.assert_called_once()
     return check_methods_called
+
+
+@fixture(name='domains_after_calc_execution')
+def fixture_domains_after_calc_execution(_make_root_tree, mocker):
+    """Create a temporary tree with the results of a domain calculation."""
+    older_timestamp = '010203-040506'
+    root_kwargs = {
+        # No Deltas/Tensors folders in the root of a domains
+        # calculation. Skip workhistory because the default
+        # folder names are inconsistent.
+        'skip': {DEFAULT_DELTAS, DEFAULT_TENSORS,
+                 DEFAULT_WORK_HISTORY},
+        # Since no Tensors in the root, all history folders here have
+        # a t000 index.
+        DEFAULT_HISTORY: {f't000.r003_{older_timestamp}': {
+            _METADATA_NAME: '''
+[archived]
+hash = c36f643af62014636ed9d7cd0905b486
+
+[domains]
+domains = (('Domain_1', '6bb858254252e34861f400ca03ec4866'),
+           ('Domain_two', 'b9e631993d9da320902b52047547041d'),
+           ('was_already_here', 'f37f2f0bc6f3c7b2196e211614a72c24'))
+''',
+            }},
+        f'{LOG_PREFIX}_{MOCK_TIMESTAMP}.log': 'Executed segments: 0 1 2',
+        }
+    root_factory = _make_root_tree(**root_kwargs)
+    tmp_path = root_factory()
+    main_history_run = tmp_path/DEFAULT_HISTORY/f't000.r004_{MOCK_TIMESTAMP}'
+
+    # Now domains
+    domain_kwargs = {
+        # One domain with an auto-generated name and no user flag
+        'Domain_1': {
+            DEFAULT_TENSORS: {'Tensors_004.zip': None,
+                              'Tensors_005.zip': None},
+            DEFAULT_HISTORY: {f't005.r004_{older_timestamp}': {
+                _METADATA_NAME: f'''
+[archived]
+hash = 6bb858254252e34861f400ca03ec4866
+
+[domains]
+main = ('{tmp_path.as_posix()}', 'c36f643af62014636ed9d7cd0905b486')
+'''}},
+            'history_run': f't005.r005_{MOCK_TIMESTAMP}',
+            },
+        # One domain with an auto-generated name, and a user flag
+        'Domain_two': {
+            DEFAULT_TENSORS: {'Tensors_004.zip': None,
+                              'Tensors_006.zip': None},
+            DEFAULT_HISTORY: {f't006.r008_{older_timestamp}': {
+                _METADATA_NAME: f'''
+[archived]
+hash = b9e631993d9da320902b52047547041d
+
+[domains]
+main = ('{tmp_path.as_posix()}', 'c36f643af62014636ed9d7cd0905b486')
+'''}},
+            'history_run': f't006.r009_{MOCK_TIMESTAMP}',
+            },
+        # And one domain that was not pulled from somewhere else
+        'was_already_here': {
+            DEFAULT_TENSORS: {'Tensors_099.zip': None,
+                              'Tensors_105.zip': None},  # New
+            DEFAULT_HISTORY: {f't099.r001_{older_timestamp}': {
+            _METADATA_NAME: f'''
+[archived]
+hash = f37f2f0bc6f3c7b2196e211614a72c24
+
+[domains]
+main = ('{tmp_path.as_posix()}', 'c36f643af62014636ed9d7cd0905b486')
+'''}},
+            'history_run': f't105.r001_{MOCK_TIMESTAMP}',
+            },
+        }
+    domain_info = {}
+    for domain_folder, kwargs in domain_kwargs.items():
+        kwargs['at_path'] = domain_root = tmp_path/domain_folder
+        domain_info[domain_root] = {
+            'history_run': (
+                domain_root/DEFAULT_HISTORY/kwargs.pop('history_run')
+                ),
+            }
+        make_domain = _make_root_tree(**kwargs)
+        make_domain()
+
+    bookkeeper = Bookkeeper(tmp_path)
+    bookkeeper.update_from_cwd(silent=True)
+    return bookkeeper, main_history_run, mocker, domain_info
+
+
+@fixture(name='manual_run_one_domain')
+def fixture_manual_run_one_domain(domains_after_calc_execution):
+    """Produce a tree as after a user manually ran bookkeeper in one domain."""
+    def _run_one_domain(mode):
+        *_, domains = domains_after_calc_execution
+        manual_run = next(iter(domains))
+        bookkeeper = Bookkeeper(manual_run)
+        bookkeeper.run(mode)
+        return domains_after_calc_execution, manual_run
+    return _run_one_domain
 
 
 @fixture(name='mock_attributes')

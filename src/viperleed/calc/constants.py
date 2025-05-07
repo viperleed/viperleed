@@ -17,6 +17,7 @@ __license__ = 'GPLv3+'
 
 COMPILE_LOGS_DIRNAME = 'compile_logs'    # Save compilation logs here
 DEFAULT_DELTAS = 'Deltas'    # Where delta-amplitude files are stored
+DEFAULT_DOMAIN_FOLDER_PREFIX = 'Domain_'  # Auto-generated subfolders
 DEFAULT_HISTORY = 'history'
 DEFAULT_OUT = 'OUT'
 DEFAULT_SUPP = 'SUPP'
