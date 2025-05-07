@@ -175,6 +175,7 @@ class TestBookkeeperDomains:
             *domain_abs_paths,
             )
         mock_mode = mocker.MagicMock()
+        mock_requires_confirmation = mocker.MagicMock()
         mocks = {
             'update': mocker.patch.object(
                 bookkeeper,
@@ -188,13 +189,14 @@ class TestBookkeeperDomains:
             }
         calls = {
             'update': mocker.call(silent=True),
-            'finder': mocker.call(bookkeeper),
+            'finder': mocker.call(bookkeeper, mock_requires_confirmation),
             'collect_domain': mocker.call(),
             'find_domains': mocker.call(mock_mode),
             }
         assert calls.keys() == mocks.keys()
         # pylint: disable-next=protected-access           # OK in tests
-        result = bookkeeper._find_domains(mock_mode)
+        result = bookkeeper._find_domains(mock_mode,
+                                          mock_requires_confirmation)
         expect_domains = (
             *(tmp_path/p for p in domain_rel_paths),
             *domain_abs_paths,
@@ -222,6 +224,7 @@ class TestBookkeeperDomains:
             )
         mock_finder.find_domains.return_value = ()
         mock_mode = mocker.MagicMock()
+        mock_requires_confirmation = mocker.MagicMock()
         mocks = {
             'update': mocker.patch.object(bookkeeper, 'update_from_cwd'),
             'finder': mocker.patch(f'{_MODULE}.DomainFinder',
@@ -231,13 +234,14 @@ class TestBookkeeperDomains:
             }
         calls = {
             'update': mocker.call(silent=True),
-            'finder': mocker.call(bookkeeper),
+            'finder': mocker.call(bookkeeper, mock_requires_confirmation),
             'collect_domain': mocker.call(),
             'find_domains': mocker.call(mock_mode),
             }
         assert calls.keys() == mocks.keys()
         # pylint: disable-next=protected-access           # OK in tests
-        result = bookkeeper._find_domains(mock_mode)
+        result = bookkeeper._find_domains(mock_mode,
+                                          mock_requires_confirmation)
         expect = (), None if has_log else mock_root_path
         assert result == expect
         for call_name, call in calls.items():
@@ -296,7 +300,7 @@ class TestBookkeeperDomains:
             }
         main_bookie = Bookkeeper(tmp_path)
         exit_code = main_bookie.run(mode, **kwargs, domains=())
-        run_one.assert_called_once_with(mode, **kwargs)
+        run_one.assert_called_once_with(mode=mode, **kwargs)
         assert exit_code is mock_exit
         assert not caplog.text
         for mock in not_called:
@@ -708,7 +712,8 @@ class TestBookkeeperRaises:
                      side_effect=MetadataError(error_txt))
         with pytest.raises(MetadataError):
             # pylint: disable-next=protected-access       # OK in tests
-            bookkeeper._find_domains(Mode.ARCHIVE)
+            bookkeeper._find_domains(Mode.ARCHIVE,
+                                     requires_user_confirmation=True)
         assert error_txt in caplog.text
 
     def test_invalid_mode(self):

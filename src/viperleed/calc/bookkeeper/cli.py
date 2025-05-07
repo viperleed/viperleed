@@ -110,8 +110,8 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
             )
         parser.add_argument(
             '-y',
-            help=('Do not ask for confirmation when running in '
-                  f'{BookkeeperMode.DISCARD_FULL.long_flag} mode.'),
+            help=('In interactive shells, automatically reply "yes" '
+                  'to all requests for user confirmation.'),
             action='store_true',
             dest='skip_confirmation',
             )

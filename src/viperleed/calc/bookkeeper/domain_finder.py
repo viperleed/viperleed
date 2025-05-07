@@ -74,10 +74,26 @@ class MainPathNotFoundError(FolderNotFoundError):
 class DomainFinder:
     """A class for finding domain subfolders of a root directory."""
 
-    def __init__(self, bookkeeper):
-        """Initialize an instance from a `bookkeeper`."""
+    def __init__(self, bookkeeper, requires_user_confirmation=True):
+        """Initialize an instance from a `bookkeeper`.
+
+        Parameters
+        ----------
+        bookkeeper : Bookkeeper
+            The bookkeeper instance that wants to find domains.
+        requires_user_confirmation : bool, optional
+            Whether users are asked for confirmation in case
+            inconsistencies are found in the metadata files
+            stored in history. Only used when finding registered
+            domains and if the current shell is interactive.
+
+        Returns
+        -------
+        None.
+        """
         self._bookkeeper = bookkeeper
         self._domain_info = None
+        self._requires_user_confirmation = requires_user_confirmation
 
     path = make_property('_bookkeeper.cwd')
 
@@ -182,7 +198,7 @@ class DomainFinder:
     def _find_domains_from_main(self, mode):
         """Return paths to domain subfolders of the current directory."""
         domain_paths = []
-        user_confirmed = False
+        user_confirmed = not self._requires_user_confirmation
         for domain in self.domain_info:
             try:
                 self._check_subdomain_info_consistent(*domain)

@@ -29,6 +29,15 @@ from ...helpers import filesystem_from_dict
 _MODULE = 'viperleed.calc.bookkeeper.domain_finder'
 
 
+@fixture(name='make_finder')
+def factory_make_finder(bookkeeper):
+    """Return a DomainFinder with a fake bookkeeper."""
+    def _make(requires_user_confirmation=True):
+        finder = DomainFinder(bookkeeper, requires_user_confirmation)
+        return finder, bookkeeper
+    return _make
+
+
 @fixture(name='bookkeeper')
 def fixture_bookkeeper(mocker, tmp_path):
     """Return a fake bookkeeper."""
@@ -36,9 +45,9 @@ def fixture_bookkeeper(mocker, tmp_path):
 
 
 @fixture(name='finder')
-def fixture_finder(bookkeeper):
+def fixture_finder(make_finder):
     """Return a DomainFinder with a fake bookkeeper."""
-    finder = DomainFinder(bookkeeper)
+    finder, bookkeeper = make_finder()
     # The next one is just a convenience attribute so we don't need to
     # repeat over and over both the finder and the bookkeeper fixtures
     # in the tests below, nor access the private _bookkeeper attribute
@@ -50,20 +59,20 @@ def fixture_finder(bookkeeper):
 @fixture(name='mock_finder_info')
 def fixture_mock_finder_info(finder):
     """Set _domain_info to the given dict."""
-    def _mock(info):
+    def _mock(info, finder_to_patch=finder):
         # pylint: disable-next=protected-access           # OK in tests
-        finder._domain_info = info
-        return finder
+        finder_to_patch._domain_info = info
+        return finder_to_patch
     return _mock
 
 
 class TestDomainFinder:
     """Tests for the DomainFinder class."""
 
-    def test_collect_info_last_folder(self, finder, mocker):
+    def test_collect_info_last_folder(self, make_finder, mocker):
         """Check the collection of domain information with a history folder."""
+        finder, bookkeeper = make_finder()
         mock_info = {'main': mocker.MagicMock()}
-        bookkeeper = finder.bookkeeper
         bookkeeper.history.last_folder.metadata = mocker.MagicMock(
             domains=mock_info,
             )
@@ -71,9 +80,9 @@ class TestDomainFinder:
         bookkeeper.update_from_cwd.assert_called_once_with(silent=True)
         assert finder.domain_info is mock_info['main']
 
-    def test_collect_info_no_history(self, finder):
+    def test_collect_info_no_history(self, make_finder):
         """Check the collection of domain information without history."""
-        bookkeeper = finder.bookkeeper
+        finder, bookkeeper = make_finder()
         bookkeeper.history.last_folder = None
         finder.collect_info()
         bookkeeper.update_from_cwd.assert_called_once_with(silent=True)
@@ -110,7 +119,7 @@ class TestDomainFinder:
         assert result is mock_from_main.return_value
         mock_from_main.assert_called_once()
 
-    def test_find_potential_domains(self, finder, tmp_path, caplog):
+    def test_find_potential_domains(self, make_finder, tmp_path, caplog):
         """Test the find_potential_domains method."""
         caplog.set_level(0)  # All messages
         not_domains = {
@@ -149,7 +158,8 @@ class TestDomainFinder:
                 },
             }
         filesystem_from_dict({**not_domains, **domains}, tmp_path)
-        finder.bookkeeper.cwd = tmp_path
+        finder, bookkeeper = make_finder()
+        bookkeeper.cwd = tmp_path
         domains_found = finder.find_potential_domains()
         assert not caplog.text
         assert len(domains_found) == len(domains)
@@ -178,10 +188,11 @@ class TestDomainFinderFromMain:
     @fixture(name='find')
     def fixture_find(self, mock_finder_info, existing_domains, mocker):
         """Return the subdomains found."""
-        def _find(info=None):
+        def _find(info=None, finder=None):
             if info is None:
                 info = {'domains': existing_domains}
-            finder = mock_finder_info(info)
+            finder = (mock_finder_info(info) if finder is None
+                      else mock_finder_info(info, finder))
             mock_mode = mocker.MagicMock(long_flag='--mock-mode')
             # pylint: disable-next=protected-access       # OK in tests
             return finder._find_domains_from_main(mock_mode)
@@ -235,6 +246,26 @@ class TestDomainFinderFromMain:
         # Ask user only once, even if there's 2 mismatched
         # folders (see fixture_existing_domains).
         mock_ask_user.assert_called_once()
+
+    def test_main_path_mismatched_skip_confirmation(self, make_finder,
+                                                    find, caplog, mocker):
+        """Check result when the main path stored in history is mismatched."""
+        def _mock_get_history_folder(*_):
+            """Return a fake history folder."""
+            folder = mocker.MagicMock()
+            folder.metadata.domains = {'main': ('not-the-same-main-path',
+                                                'main_hash')}
+            return folder
+
+        finder, _ = make_finder(requires_user_confirmation=False)
+        mocker.patch.object(finder,
+                            '_get_history_folder',
+                            _mock_get_history_folder)
+        mock_ask_user = mocker.patch(f'{_MODULE}.ask_user_confirmation',
+                                     return_value=True)
+        assert find(finder=finder)
+        assert caplog.text
+        mock_ask_user.assert_not_called()
 
     def test_main_path_mismatched_user_says_no(self, finder, find, mocker):
         """Check behavior when users don't want to proceed."""

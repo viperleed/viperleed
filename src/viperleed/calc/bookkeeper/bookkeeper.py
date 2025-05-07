@@ -114,9 +114,13 @@ class Bookkeeper:
         mode : str or BookkeeperMode
             Which bookkeeper mode to use. See help(BookkeeperMode).
         requires_user_confirmation : bool, optional
-            Whether user confirmation is necessary before proceeding
-            with destructive actions. Only used in DISCARD_FULL mode.
-            Default is True.
+            Whether user confirmation is necessary before proceeding.
+            Only used if the current shell is interactive. If not, the
+            automatic action is the same as if the user replied "no".
+            Used in DISCARD_FULL mode before performing destructive
+            actions and in domain runs in case any inconsistencies
+            are found in the information stored in history. Default
+            is True.
         domains : Sequence or None, optional
             Paths to domain folders in which bookkeeper is executed
             in addition to self.cwd. The same `mode` is used for all.
@@ -144,9 +148,13 @@ class Bookkeeper:
         except ValueError as exc:
             raise ValueError(f'Unknown mode {mode}') from exc
 
+        kwargs = {
+            'mode': mode,
+            'requires_user_confirmation': requires_user_confirmation,
+            }
         if domains is None:
             try:
-                domains, path_to_main = self._find_domains(mode)
+                domains, path_to_main = self._find_domains(**kwargs)
             except NotAnInteractiveShellError:
                 LOGGER.info('')
                 return BookkeeperExitCode.FAIL
@@ -161,12 +169,9 @@ class Bookkeeper:
                 main_root.collect_info(silent=True)
                 self._root = DomainRootExplorer(self.cwd, self, main_root)
 
-        kwargs = {
-            'requires_user_confirmation': requires_user_confirmation,
-            }
         if domains:
-            return self._run_in_root_and_subdomains(domains, mode, **kwargs)
-        exit_code, _ = self._run_one_domain(mode, **kwargs)
+            return self._run_in_root_and_subdomains(domains, **kwargs)
+        exit_code, _ = self._run_one_domain(**kwargs)
         return exit_code
 
     def update_from_cwd(self, silent=False):
@@ -472,7 +477,7 @@ class Bookkeeper:
         self._root.mark_edited_files()
         return True
 
-    def _find_domains(self, mode):
+    def _find_domains(self, mode, requires_user_confirmation):
         """Find registered domain subfolders of the current directory.
 
         Only the last history entry in the current directory (as well
@@ -483,6 +488,10 @@ class Bookkeeper:
         mode : BookkeeperMode
             The mode bookkeeper is running in. Only used for
             error reporting.
+        requires_user_confirmation : bool
+            Whether users will be asked to confirm in case any
+            inconsistencies are found in the metadata stored
+            in history.
 
         Returns
         -------
@@ -496,7 +505,7 @@ class Bookkeeper:
             without a viperleed.calc log file.
         """
         self.update_from_cwd(silent=True)  # Only the first log message
-        finder = DomainFinder(self)
+        finder = DomainFinder(self, requires_user_confirmation)
         finder.collect_info()
         try:
             domains = finder.find_domains(mode)
