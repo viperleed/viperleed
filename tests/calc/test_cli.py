@@ -94,6 +94,23 @@ class TestCalcCliCall:
         assert bool(result)    # Should fake an error condition
         mocks['rmtree'].assert_not_called()  # work should stay
 
+    def test_forwards_y_cli_arg(self, tmp_path, mock_implementation, mocker):
+        """Check forwarding of -y CLI argument to bookkeeper."""
+        cli = ViPErLEEDCalcCLI()
+        mocks = mock_implementation(exit_code=0)
+        with execute_in_dir(tmp_path):
+            error = cli(['-y'])
+        assert not error
+        # Check bookkeeper calls
+        bookkeeper = mocks['bookie'].return_value
+        assert bookkeeper.run.mock_calls == [
+            mocker.call(mode=BookkeeperMode.CLEAR,
+                        requires_user_confirmation=False),
+            mocker.call(mode=BookkeeperMode.ARCHIVE,
+                        requires_user_confirmation=False,
+                        domains=mocks['manifest'].return_value),
+            ]
+
     def test_keep_workdir(self, tmp_path, mock_implementation):
         """Check that work is not deleted if requested."""
         cli = ViPErLEEDCalcCLI()
@@ -104,7 +121,7 @@ class TestCalcCliCall:
         mocks['rmtree'].assert_not_called()
 
     def test_success(self, tmp_path, mock_implementation, mocker):
-        """Check the successful call to ViPErLEEDCalcCLI."""
+        """Check the successful call to ViPErLEEDCalcCLI with default args."""
         cli = ViPErLEEDCalcCLI()
         mocks = mock_implementation(exit_code=0)
         with execute_in_dir(tmp_path):
@@ -115,8 +132,10 @@ class TestCalcCliCall:
         mocks['bookie'].assert_called_once()  # Made instance
         bookkeeper = mocks['bookie'].return_value
         assert bookkeeper.run.mock_calls == [
-            mocker.call(mode=BookkeeperMode.CLEAR),
+            mocker.call(mode=BookkeeperMode.CLEAR,
+                        requires_user_confirmation=True),
             mocker.call(mode=BookkeeperMode.ARCHIVE,
+                        requires_user_confirmation=True,
                         domains=mocks['manifest'].return_value),
             ]
         # As well as calls to other functions. Don't bother specifying

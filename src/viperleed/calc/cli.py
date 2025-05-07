@@ -52,7 +52,8 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         _verbosity_to_log_level(args, presets)
 
         bookkeeper = Bookkeeper()
-        bookkeeper.run(mode=BookkeeperMode.CLEAR)
+        bookkeeper.run(mode=BookkeeperMode.CLEAR,
+                       requires_user_confirmation=not args.skip_confirmation)
 
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
         _copy_input_files_to_work(work_path)
@@ -72,7 +73,9 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
 
         # Run bookkeeper in archive mode,
         # propagating to domains if needed
-        bookkeeper.run(mode=BookkeeperMode.ARCHIVE, domains=domains)
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE,
+                       requires_user_confirmation=not args.skip_confirmation,
+                       domains=domains)
 
         # Finally clean up work if requested
         keep_workdir = args.keep_workdir or exit_code
@@ -131,8 +134,17 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             '--keep-workdir', '-k',
             help=('do not delete the work directory after execution. By '
                   'default, the work directory is also not deleted in '
-                  'case of errors.'),
+                  'case of errors'),
             action='store_true',
+            )
+
+        # OTHERS
+        parser.add_argument(
+            '-y',
+            help=('in interactive shells, automatically reply '
+                 '"yes" to all requests for user confirmation'),
+            action='store_true',
+            dest='skip_confirmation',
             )
 
 
