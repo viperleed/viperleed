@@ -158,92 +158,88 @@ class TestBookkeeperDomains:
             assert caplog.records
             assert not caplog.records[-1].getMessage()  # Empty line
 
-    def test_find_domains_implementation(self, tmp_path, mocker):
-        """Check the inner calls in _find_domains."""
-        bookkeeper = Bookkeeper(tmp_path)
-        mock_finder = mocker.MagicMock(
-            is_subdomain=False,
-            domain_info=('root/path', 'root_hash'),
-            )
-
-        domain_rel_paths = Path('1'), Path('2')
-        # As of 2025, DomainFinder does not return absolute paths, but
-        # it's good to have the test support it in case we ever do.
-        domain_abs_paths = (Path('/some/absolute/path/to/a/domain').resolve(),)
-        mock_finder.find_domains.return_value = (
-            *domain_rel_paths,
-            *domain_abs_paths,
-            )
+    @fixture(name='mock_implementation')
+    def fixture_mock_implementation(self, tmp_path, mocker):
+        """Replace implementation details with mocks."""
         mock_mode = mocker.MagicMock()
         mock_requires_confirmation = mocker.MagicMock()
-        mocks = {
-            'update': mocker.patch.object(
-                bookkeeper,
-                'update_from_cwd',
-                wraps=bookkeeper.update_from_cwd,
-                ),
-            'finder': mocker.patch(f'{_MODULE}.DomainFinder',
-                                   return_value=mock_finder),
-            'collect_domain': mock_finder.collect_info,
-            'find_domains': mock_finder.find_domains,
-            }
-        calls = {
-            'update': mocker.call(silent=True),
-            'finder': mocker.call(bookkeeper, mock_requires_confirmation),
-            'collect_domain': mocker.call(),
-            'find_domains': mocker.call(mock_mode),
-            }
-        assert calls.keys() == mocks.keys()
+
+        mock_args = (mock_mode, mock_requires_confirmation)
+
+        def _get_expected_domain_paths(is_subdomain):
+            if is_subdomain:
+                return ()
+            domain_rel_paths = Path('1'), Path('2')
+            # As of 2025, DomainFinder does not return absolute paths, but
+            # it's good to have the test support it in case we ever do.
+            domain_abs_paths = (
+                Path('/some/absolute/path/to/a/domain').resolve(),
+                )
+            return (*(tmp_path/p for p in domain_rel_paths),
+                    *domain_abs_paths)
+
+        def _mock_find(is_subdomain, has_log):
+            mock_root_path = mocker.MagicMock()
+            mock_finder = mocker.MagicMock(
+                is_subdomain=is_subdomain,
+                domain_info=(mock_root_path, 'some_hash'),
+                )
+            expect_domains = _get_expected_domain_paths(is_subdomain)
+            expect_main_path = (None if not is_subdomain
+                                else None if has_log else mock_root_path)
+            mock_finder.find_domains.return_value = expect_domains
+            expect_result = (expect_domains, expect_main_path)
+            return mock_finder, expect_result
+
+        def _mock(is_subdomain, has_log=True):
+            mock_finder, expect_result = _mock_find(is_subdomain, has_log)
+            bookkeeper = Bookkeeper(tmp_path)
+            mocks = {
+                'update': mocker.patch.object(
+                    bookkeeper,
+                    'update_from_cwd',
+                    wraps=bookkeeper.update_from_cwd,
+                    ),
+                'finder': mocker.patch(f'{_MODULE}.DomainFinder',
+                                       return_value=mock_finder),
+                'collect_domain': mock_finder.collect_info,
+                'find_domains': mock_finder.find_domains,
+                }
+            calls = {
+                'update': mocker.call(silent=True),
+                'finder': mocker.call(bookkeeper, mock_requires_confirmation),
+                'collect_domain': mocker.call(),
+                'find_domains': mocker.call(mock_mode),
+                }
+            assert calls.keys() == mocks.keys()
+            return bookkeeper, mock_args, expect_result, mocks, calls
+
+    def test_find_domains_implementation(self, mock_implementation):
+        """Check the inner calls in _find_domains."""
+        (bookkeeper,
+         args,
+         expect_result,
+         mocks,
+         calls) = mock_implementation(is_subdomain=False)
         # pylint: disable-next=protected-access           # OK in tests
-        result = bookkeeper._find_domains(mock_mode,
-                                          mock_requires_confirmation)
-        expect_domains = (
-            *(tmp_path/p for p in domain_rel_paths),
-            *domain_abs_paths,
-            )
-        assert result == (expect_domains, None)
+        result = bookkeeper._find_domains(*args)
+        assert result == expect_result
         for call_name, call in calls.items():
             mock = mocks[call_name]
             assert mock.mock_calls == [call]
 
     @parametrize(has_log=(True, False))
     def test_find_domains_implementation_subdomain(self, has_log,
-                                                   tmp_path, mocker):
+                                                   mock_implementation):
         """Check the inner calls in _find_domains for a subdomain."""
-        bookkeeper = Bookkeeper(tmp_path)
-        mock_root_path = mocker.MagicMock()
-        mock_finder = mocker.MagicMock(
-            is_subdomain=True,
-            domain_info=(mock_root_path, 'root_hash'),
-            )
-        mocker.patch.object(
-            # pylint: disable-next=protected-access       # OK in tests
-            bookkeeper._root,
-            '_logs',
-            most_recent='some stuff' if has_log else None,
-            )
-        mock_finder.find_domains.return_value = ()
-        mock_mode = mocker.MagicMock()
-        mock_requires_confirmation = mocker.MagicMock()
-        mocks = {
-            'update': mocker.patch.object(bookkeeper, 'update_from_cwd'),
-            'finder': mocker.patch(f'{_MODULE}.DomainFinder',
-                                   return_value=mock_finder),
-            'collect_domain': mock_finder.collect_info,
-            'find_domains': mock_finder.find_domains,
-            }
-        calls = {
-            'update': mocker.call(silent=True),
-            'finder': mocker.call(bookkeeper, mock_requires_confirmation),
-            'collect_domain': mocker.call(),
-            'find_domains': mocker.call(mock_mode),
-            }
-        assert calls.keys() == mocks.keys()
+        (bookkeeper,
+         args,
+         expect_result,
+         mocks,
+         calls) = mock_implementation(is_subdomain=True, has_log=has_log)
         # pylint: disable-next=protected-access           # OK in tests
-        result = bookkeeper._find_domains(mock_mode,
-                                          mock_requires_confirmation)
-        expect = (), None if has_log else mock_root_path
-        assert result == expect
+        result = bookkeeper._find_domains(*args)
+        assert result == expect_result
         for call_name, call in calls.items():
             mock = mocks[call_name]
             assert mock.mock_calls == [call]
