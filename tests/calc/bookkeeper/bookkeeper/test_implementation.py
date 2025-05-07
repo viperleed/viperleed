@@ -213,6 +213,7 @@ class TestBookkeeperDomains:
                 }
             assert calls.keys() == mocks.keys()
             return bookkeeper, mock_args, expect_result, mocks, calls
+        return _mock
 
     def test_find_domains_implementation(self, mock_implementation):
         """Check the inner calls in _find_domains."""
