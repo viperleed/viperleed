@@ -141,8 +141,8 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         # OTHERS
         parser.add_argument(
             '-y',
-            help=('in interactive shells, automatically reply '
-                 '"yes" to all requests for user confirmation'),
+            help=('automatically reply "yes" to all '
+                  'requests for user confirmation'),
             action='store_true',
             dest='skip_confirmation',
             )

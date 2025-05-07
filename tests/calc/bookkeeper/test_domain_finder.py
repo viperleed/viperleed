@@ -17,6 +17,7 @@ from pytest_cases import parametrize
 from viperleed.calc.bookkeeper.domain_finder import DomainFinder
 from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
 from viperleed.calc.bookkeeper.history.meta import DomainInfo
+from viperleed.calc.bookkeeper.utils import ask_user_confirmation
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
@@ -247,8 +248,11 @@ class TestDomainFinderFromMain:
         # folders (see fixture_existing_domains).
         mock_ask_user.assert_called_once()
 
-    def test_main_path_mismatched_skip_confirmation(self, make_finder,
-                                                    find, caplog, mocker):
+    @parametrize(interactive=(True, False))
+    # pylint: disable-next=too-many-arguments  # 4/6 fixtures
+    def test_main_path_mismatched_skip_confirmation(self, interactive,
+                                                    make_finder, find,
+                                                    caplog, mocker):
         """Check no user confirmation is requested if asked to not do so."""
         def _mock_get_history_folder(*_):
             """Return a fake history folder."""
@@ -261,11 +265,12 @@ class TestDomainFinderFromMain:
         mocker.patch.object(finder,
                             '_get_history_folder',
                             _mock_get_history_folder)
-        mock_ask_user = mocker.patch(f'{_MODULE}.ask_user_confirmation',
-                                     return_value=True)
+        mocker.patch('sys.stdin.isatty', return_value=interactive)
+        ask_user = mocker.patch(f'{_MODULE}.ask_user_confirmation',
+                                wraps=ask_user_confirmation)
         assert find(finder=finder)
         assert caplog.text
-        mock_ask_user.assert_not_called()
+        ask_user.assert_not_called()
 
     def test_main_path_mismatched_user_says_no(self, finder, find, mocker):
         """Check behavior when users don't want to proceed."""

@@ -36,6 +36,7 @@ from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
 from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
 from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
+from viperleed.calc.bookkeeper.utils import ask_user_confirmation
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_OUT
@@ -662,6 +663,21 @@ class TestBookkeeperOthers:
         mocker.patch(f'{_MODULE}.ask_user_confirmation', return_value=reply)
         # pylint: disable-next=protected-access           # OK in tests
         assert bookkeeper._user_confirmed() is reply
+
+    @parametrize(interactive=(True, False))
+    def test_user_confirmed_override(self, interactive, mock_path, mocker):
+        """Check that overriding via -y does not ask for user confirmation."""
+        bookkeeper = Bookkeeper(mock_path)
+        # pylint: disable-next=protected-access           # OK in tests
+        bookkeeper._requires_user_confirmation = False
+
+        mocker.patch('sys.stdin.isatty', return_value=interactive)
+        ask_user = mocker.patch(f'{_MODULE}.ask_user_confirmation',
+                                wraps=ask_user_confirmation)
+        # pylint: disable-next=protected-access           # OK in tests
+        reply = bookkeeper._user_confirmed()
+        assert reply
+        ask_user.assert_not_called()
 
 
 class TestBookkeeperRaises:

@@ -115,8 +115,7 @@ class Bookkeeper:
             Which bookkeeper mode to use. See help(BookkeeperMode).
         requires_user_confirmation : bool, optional
             Whether user confirmation is necessary before proceeding.
-            Only used if the current shell is interactive. If not, the
-            automatic action is the same as if the user replied "no".
+            If False, the behavior is as if the user replied "yes".
             Used in DISCARD_FULL mode before performing destructive
             actions and in domain runs in case any inconsistencies
             are found in the information stored in history. Default

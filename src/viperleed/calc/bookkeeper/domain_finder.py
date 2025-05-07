@@ -85,7 +85,8 @@ class DomainFinder:
             Whether users are asked for confirmation in case
             inconsistencies are found in the metadata files
             stored in history. Only used when finding registered
-            domains and if the current shell is interactive.
+            domains. If False, the behavior is the same as if the
+            user replied "yes". Default is True.
 
         Returns
         -------
