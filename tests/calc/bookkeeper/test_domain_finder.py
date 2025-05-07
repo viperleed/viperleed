@@ -249,7 +249,7 @@ class TestDomainFinderFromMain:
 
     def test_main_path_mismatched_skip_confirmation(self, make_finder,
                                                     find, caplog, mocker):
-        """Check result when the main path stored in history is mismatched."""
+        """Check no user confirmation is requested if asked to not do so."""
         def _mock_get_history_folder(*_):
             """Return a fake history folder."""
             folder = mocker.MagicMock()
