@@ -25,5 +25,9 @@ class FileOperationFailedError(BookkeeperError):
         super().__init__('\n'.join(msgs))
 
 
+class NotAnInteractiveShellError(BookkeeperError):
+    """Tried to prompt the user in a non-interactive shell."""
+
+
 class _FileNotOlderError(BookkeeperError):
     """Exception used internally for file-age checks."""

@@ -4,6 +4,8 @@ Defines fixtures and fixture factories used in multiple tests.
 
 Fixtures
 --------
+check_log_records (factory)
+    Raise unless caplog records are exactly as expected.
 data_path
     Path to the top-level folder containing test data.
 re_match (factory)
@@ -23,6 +25,20 @@ import re
 from pytest_cases import fixture
 
 from .helpers import TEST_DATA
+
+
+@fixture
+def check_log_records(caplog):
+    """Raise unless log records are exactly as expected."""
+    def _check(expected_records):
+        logged = tuple(r.getMessage() for r in caplog.records)
+        assert len(logged) == len(expected_records)
+        for log, expect in zip(logged, expected_records):
+            if isinstance(expect, str):
+                assert log == expect
+            else:
+                assert expect.fullmatch(log)
+    return _check
 
 
 @fixture(scope='session')

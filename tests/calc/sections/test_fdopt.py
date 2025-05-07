@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-03-25'
 __license__ = 'GPLv3+'
 
+import logging
 
 import pytest
 from pytest_cases import fixture
@@ -42,7 +43,7 @@ class TestGetFdR:
     def test_success(self, mock_args, mocks, tmp_path, caplog):
         """Check results of a successful call."""
         slab, rpars, workdir = mock_args
-        with execute_in_dir(tmp_path):
+        with execute_in_dir(tmp_path), caplog.at_level(logging.WARNING):
             rfactor, rfactor_per_beam = get_fd_r(*mock_args)
         assert rfactor is rpars.last_R
         assert rfactor_per_beam is mocks['r_factor'].return_value

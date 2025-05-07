@@ -25,6 +25,7 @@ from viperleed.calc.bookkeeper.history.info import HistoryInfoFile
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.bookkeeper.utils import needs_update_for_attr
 from viperleed.calc.constants import DEFAULT_HISTORY
+from viperleed.calc.lib.log_utils import logging_silent
 from viperleed.calc.sections.cleanup import MOVED_LABEL
 
 
@@ -134,14 +135,17 @@ class HistoryExplorer:
 
     def discard_most_recent_run(self):
         """Delete all subfolders created during the last calc run."""
-        subfolders = self.list_paths_to_discard()
-        for folder_path in subfolders:
+        discarded = self.last_folder_and_siblings
+        for folder_path in self.list_paths_to_discard():
             try:
                 shutil.rmtree(folder_path)
             except OSError:
                 folder_name = folder_path.relative_to(self.root)
                 LOGGER.error(f'Error: Failed to delete {folder_name}.')
                 raise
+        with logging_silent():
+            self.collect_subfolders()
+        return discarded
 
     def find_new_history_directory(self, tensor_number, suffix):
         """Store information to create a history folder for a new calc run."""
@@ -186,6 +190,28 @@ class HistoryExplorer:
                                                 insert_sorted=True)
         self._update_maps()
         return appended
+
+    @needs_update_for_attr('_maps[hash_to_parent]', updater=_updater)
+    def subfolder_from_hash(self, hash_):
+        """Return the subfolder with a given `hash_`.
+
+        Parameters
+        ----------
+        hash_ : str
+            Hash value of the folder to be returned.
+
+        Returns
+        -------
+        main_folder : HistoryFolder or None
+            The "main" folder added by bookkeeper in history
+            together with the one whose hash equals `hash_`.
+            None if no subfolder with such hash exists.
+        """
+        try:
+            # pylint: disable-next=unsubscriptable-object   # Inference
+            return self._maps['hash_to_parent'][hash_]
+        except (KeyError, TypeError):
+            return None
 
     def _append_existing_folder(self, path_to_folder, insert_sorted=True):
         """Register a new folder, without updating the parent mapping.
@@ -284,6 +310,7 @@ class HistoryExplorer:
         """Fix issues found in all history subfolders."""
         # Fix all folders: those that don't need a fix return empty
         folder_fix = {folder: folder.fix() for folder in self._subfolders}
+        fixed_anything = any(actions for actions in folder_fix.values())
 
         # Now all folders should have metadata. Those to which
         # metadata was added must also be correctly marked into
@@ -299,7 +326,7 @@ class HistoryExplorer:
         for action in sorted(folder_fix_actions, key=attrgetter('name')):
             if action.value:
                 LOGGER.info(action.value)
-        return any(folder_fix_actions)
+        return fixed_anything
 
     def _mark_subfolders_as_siblings(self, folders):
         """Infer relations between folders based on their timestamp."""

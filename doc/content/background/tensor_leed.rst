@@ -30,10 +30,10 @@ intensities, via :math:`I = |A|^2`) of all diffracted beams :math:`\mathbf{g}`
 that are of interest for the requested structure.
 
 As discussed in more detailed elsewhere
-:cite:p:`heinzElectronBasedMethods2013,viperleedCalc`, the full-dynamic
-calculation is computationally demanding. However, it is possible to obtain
-accurate diffraction amplitudes for small deviations from the reference
-structure by using a first-order-perturbation approach
+:cite:p:`heinzElectronBasedMethods2013,kraushoferViPErLEEDPackageCalculation2025`,
+the full-dynamic calculation is computationally demanding. However, it
+is possible to obtain accurate diffraction amplitudes for small deviations
+from the reference structure by using a first-order-perturbation approach
 :cite:p:`rousTensorLEEDTechnique1986`. The deviations from the
 reference structure may be geometric (i.e., altered atom positions),
 changes to atomic vibration amplitudes, or chemical substitutions

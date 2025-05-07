@@ -28,6 +28,7 @@ from viperleed.calc.classes.slab import NoVacuumError
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
+from viperleed.calc.constants import DEFAULT_DOMAIN_FOLDER_PREFIX
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
@@ -154,8 +155,9 @@ def initialization(sl, rp, subdomain=False):
                 )
             parameters.modify(rp, 'LAYER_CUTS')
             parameters.modify(rp, 'N_BULK_LAYERS')
-            logger.info('Detected bulk repeat vector: %s',
-                        bulk_repeat.fmt_value)
+            logger.info(
+                f'Detected bulk repeat vector: {bulk_repeat.fmt_value}'
+                )
         parameters.comment_out(rp, 'BULK_LIKE_BELOW')
 
     # create bulk slab:
@@ -742,7 +744,8 @@ def _make_domain_workdir(name, src, calc_started_at, must_use_auto_name):
        and src.is_dir()
        and src.parent == calc_started_at
        )
-    workdir = Path(src.name if should_use_src else f'Domain_{name}')
+    workdir = Path(src.name if should_use_src
+                   else f'{DEFAULT_DOMAIN_FOLDER_PREFIX}{name}')
     try:
         workdir.mkdir()
     except FileExistsError:

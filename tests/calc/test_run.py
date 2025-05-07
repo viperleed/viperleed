@@ -14,8 +14,10 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc import LOGGER as calc_logger
 from viperleed.calc.files import parameters
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.run import LOGGER as run_logger
 from viperleed.calc.run import _finalize_on_early_exit
 from viperleed.calc.run import _make_rpars_and_slab
 from viperleed.calc.run import _interpret_parameters
@@ -74,6 +76,10 @@ class TestRunCalc:
             'shutdown': mocker.patch(f'{_MODULE}.logging.shutdown'),
             }
         return mocks
+
+    def test_logger_is_from_main_calc(self):
+        """Ensure that the LOGGER in the run module is the one of calc."""
+        assert run_logger is calc_logger
 
     _user_args = (
         {'system_name': 'some name'},

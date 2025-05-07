@@ -127,11 +127,11 @@ For the delta-amplitudes calculation and the structure optimization
 (:ref:`RUN = 1-3<run>`), we will start out with a very rough grid of
 geometric optimizations (:ref:`DISPLACEMENTS` file). Refer
 to :numref:`list_cu-te_diplacements_rough`. As is generally recommended,
-we start with optimizations normal to the surface (:math:`z`). Immediately
+we start with optimizations normal to the surface (|z|). Immediately
 following that comes an in-plane optimization. Due to the complex structure,
 one in-plane direction is not sufficient: we need to run an optimization
-along both :math:`x` *and* :math:`y` directions. For details on the syntax
-used, see the entry on the :ref:`DISPLACEMENTS` file.
+along both |x| *and* |y| directions. For details on the syntax used, see
+the entry on the :ref:`DISPLACEMENTS` file.
 
 .. _list_cu-te_diplacements_rough:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_1
@@ -291,7 +291,7 @@ for the refined structure optimization.
    :caption: DISPLACEMENTS (0.5 pm step) for |CuTe|.
 
 You may want to finish up with a last "fine tuning" of the vibration
-amplitudes and (\ :math:`z`) positions. See, for instance,
+amplitudes and (|z|) positions. See, for instance,
 ``DISPLACEMENTS_fine_2`` in the input files, but feel free to play around
 with the setting yourself, to get a feeling for the available options.
 Altogether, this should bring us to a Pendry |R factor|
@@ -311,24 +311,24 @@ the requested steps.
 
 .. only:: html
 
-   :numref:`list_cu-te_errors_x` shows an example for displacements along the
-   :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
-   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibration
-   amplitudes are provided in the
+   :numref:`list_cu-te_errors_x` shows an example for displacements along
+   the |x| direction (i.e., parallel to the |a| unit-cell vector for the
+   POSCAR file used here). Examples for |y|, |z|, and vibration amplitudes
+   are provided in the
    :download:`input files</_static/example_systems/Cu(111)-Te/input_files.zip>`.
 
 .. only:: not html
 
    :numref:`list_cu-te_errors_x` shows an example for displacements along the
-   :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
-   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibration
-   amplitudes are provided in the input files available in the online version
-   of the documentation at `viperleed.org <viperleed.org>`__.
+   |x| direction (i.e., parallel to the |a| unit-cell vector for the POSCAR
+   file used here). Examples for |y|, |z|, and vibration amplitudes are
+   provided in the input files available in the online version of the
+   documentation at `viperleed.org <viperleed.org>`__.
 
 .. _list_cu-te_errors_x:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_errors_x
    :language: console
-   :caption: DISPLACEMENTS for error calculation in :math:`x` direction.
+   :caption: DISPLACEMENTS for error calculation in |x| direction.
 
 The results are plotted in the :ref:`errorspdf` file, shown in
 :numref:`fig_cu-te_errors`. We see that displacements for atoms in all
@@ -341,5 +341,5 @@ structure.
    :width: 100%
    :align: center
 
-   Page 1 of file ``Errors.pdf`` for (left) displacements in :math:`x`
+   Page 1 of file ``Errors.pdf`` for (left) displacements in |x|
    direction and (right) changes of vibration amplitudes.

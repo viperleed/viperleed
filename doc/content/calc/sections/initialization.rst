@@ -24,32 +24,31 @@ specifying ``RUN = 0``.
 A large number of tasks and checks are performed during initialization.
 The major steps are listed below in order of execution.
 
-1.  If found, read an :ref:`EXPBEAMS.csv or EXBEAMS<expbeams>` file containing
+1.  Create the :file:`SUPP/original_inputs` directory in which all files used
+    to start the calculation are stored. This way it is possible to look up
+    the used settings, even if, for example, the PARAMETERS file was altered
+    by the user during the run. (Notice that all potential input files are
+    copied to :file:`SUPP/original_inputs`, whether they will be used for
+    the calculation or not.)
+2.  If found, read an :ref:`EXPBEAMS.csv or EXBEAMS<expbeams>` file containing
     experimental data. If :ref:`theo_energies` is not defined explicitly, pick
     a slightly expanded version of the energy range of the experimental data
     for use in all calculations.
-2.  Check whether the calculation involves
+3.  Check whether the calculation involves
     :ref:`multiple structural domains<domain_calculation>`. If so, perform
     steps 4–9 separately for each domain.
-3.  For a domain calculation, read the individual :ref:`PARAMETERS` and
+4.  For a domain calculation, read the individual :ref:`PARAMETERS` and
     :ref:`POSCAR` files for each domain.
-4.  If necessary, determine the symmetry and minimal unit cell of the
+5.  If necessary, determine the symmetry and minimal unit cell of the
     input structure.
-5.  Generate a new :ref:`POSCAR` file with the symmetry applied.
+6.  Generate a new :ref:`POSCAR` file with the symmetry applied.
     Write the original structure to :ref:`poscar_oricell`.
-6.  If not specified, try to determine the
+7.  If not specified, try to determine the
     :ref:`bulk repeat vector<BULK_REPEAT>` and the
     :ref:`bulk plane group<symmetrybulk>`. Write :ref:`poscar_bulk`
     and :ref:`POSCAR_bulk_appended<poscar_bulk>`.
-7.  Check whether a :ref:`PHASESHIFTS` file is present and
+8.  Check whether a :ref:`PHASESHIFTS` file is present and
     consistent with the structure and settings. If not, and a phase-shifts
     calculation utility is available, generate new phase shifts automatically.
-8.  Generate the :ref:`BEAMLIST`, :ref:`patterninfo`, and, if not provided by 
+9.  Generate the :ref:`BEAMLIST`, :ref:`patterninfo`, and, if not provided by 
     the user, :ref:`IVBEAMS` files.
-9.  Create the :file:`original_inputs` directory in which all files used to
-    start the calculation are stored. This way it is possible to look up the
-    used settings, even if, for example, the PARAMETERS file was altered by
-    the user during the run.
-
-
-.. todo:: edit #9 in bookkeper-dev

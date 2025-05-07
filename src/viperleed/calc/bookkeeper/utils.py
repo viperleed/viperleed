@@ -15,8 +15,28 @@ from functools import wraps
 import logging
 from operator import attrgetter
 import shutil
+import sys
+
+from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
 
 LOGGER = logging.getLogger(__name__)
+
+
+def ask_user_confirmation(mode):
+    """Request user input on an action when bookkeeper runs in `mode`."""
+    if not sys.stdin.isatty():
+        LOGGER.error('Bookkeeper needs to ask your confirmation, but '
+                     'this shell is not interactive. Please run '
+                     f'\'bookkeeper {mode.long_flag}\' again in '
+                     'an interactive shell.')
+        raise NotAnInteractiveShellError
+    while True:
+        reply = input('Are you sure you want to proceed (y/N)? ')
+        reply = reply.lower()
+        if not reply or reply.startswith('n'):
+            return False
+        if reply.startswith('y'):
+            return True
 
 
 def discard_files(*file_paths):

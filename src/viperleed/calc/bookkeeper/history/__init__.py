@@ -6,7 +6,7 @@ and its contents, including reading/writing and editing formats.
 Modules
 -------
 constants
-    Collects constants that are use by the submodules/packages.
+    Collects constants that are used by the submodules/packages.
     It is intended exclusively to prevent cyclic-import issues.
 errors
     Defines the HistoryInfoError and its subclasses, signaling

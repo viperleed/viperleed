@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _superlattice:
 
 SUPERLATTICE
@@ -37,21 +39,21 @@ warn and stop. If required, halting can be suppressed using the
 
    -  For Wood notation, use only positive float values. The separator
       in the brackets should be the letter 'x', as in the examples.
-   -  In matrix notation use the convention ``'M = m11 m12, m21 m22``', with
-      **a**\ :sub:`surf` = m\ :sub:`11`\ ·\ **a**\ :sub:`bulk`
-      + m\ :sub:`12`\ ·\ **b**\ :sub:`bulk`,
-      and **b**\ :sub:`surf` = m\ :sub:`21`\ ·\ **a**\ :sub:`bulk`
-      + m\ :sub:`22`\ ·\ **b**\ :sub:`bulk`, i.e., the bulk row vectors
-      **a**\ :sub:`bulk` and **b**\ :sub:`bulk` get multiplied with **M**
-      from the left to obtain the surface row vectors **a**\ :sub:`surf`
-      and **b**\ :sub:`surf` respectively. In matrix notation all elements
+   -  In matrix notation, use the convention ``M = m11 m12, m21 m22``,
+      with |a|\ :sub:`surf` = m\ :sub:`11`\ ·\ |a|\ :sub:`bulk`
+      + m\ :sub:`12`\ ·\ |b|\ :sub:`bulk`,
+      and |b|\ :sub:`surf` = m\ :sub:`21`\ ·\ |a|\ :sub:`bulk`
+      + m\ :sub:`22`\ ·\ |b|\ :sub:`bulk`, i.e., the bulk row vectors
+      |a|\ :sub:`bulk` and |b|\ :sub:`bulk` get multiplied with **M**
+      from the left to obtain the surface row vectors |a|\ :sub:`surf`
+      and |b|\ :sub:`surf` respectively. In matrix notation all elements
       should be signed **integers** (floats will also be accepted, but this
       is not recommended).
 
 .. note::
    Make sure to get the relation between the structure in the :ref:`POSCAR`
    file and the superlattice right. For example, in c(4x8)  "4" must refer
-   to the **a** and "8" to the **b** lattice vector of the POSCAR, not reverse,
+   to the |a| and "8" to the |b| lattice vector of the POSCAR, not reverse,
    unless :ref:`SYMMETRY_CELL_TRANSFORM` specifies that the superstructure cell
    differs from the cell given in the POSCAR file.
 

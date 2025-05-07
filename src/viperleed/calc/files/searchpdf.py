@@ -472,7 +472,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
 
 
 @skip_without_matplotlib
-def writeSearchReportPdf(rp, outname="Search-report.pdf"):
+def writeSearchReportPdf(rp, outname="Search-report.pdf",
+                         csv_name="Search-report.csv"):
     """
     Writes a pdf file with reports on R-factor convergence and parameter
     scatter, collated over the entire run (i.e. potentially multiple searches).
@@ -483,6 +484,9 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
         The run parameters
     outname : str, optional
         The file name to write to. The default is "Search-report.pdf".
+    csv_name : str, optional
+        The file name of the csv file to write to. The default is
+        "Search-report.csv". If None, no CSV file is written.
 
     Returns
     -------
@@ -552,9 +556,9 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
 
     labelled = False
     scattermax = 0
-    for (allgens, psmean, psmax) in parScatterLines:
-        meanline, = msp.plot(allgens, psmean, '-', color="tab:blue")
-        maxline, = msp.plot(allgens, psmax, '-', color="black")
+    for (_generations, psmean, psmax) in parScatterLines:
+        (meanline,) = msp.plot(_generations, psmean, "-", color="tab:blue")
+        (maxline,) = msp.plot(_generations, psmax, "-", color="black")
         scattermax = max(scattermax, max(psmax))
         if not labelled:
             meanline.set_label('Mean parameter \u03C3')    # sigma
@@ -598,3 +602,20 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
         except Exception:
             pass
     close_figures(plt, fig)
+
+
+    # Output for Search-report.csv
+    if csv_name is None:
+        # No CSV output requested
+        return
+
+    report_csv_data = [allgens, allmin, allmax, allmean]
+    headers = 'Generation,R_min,R_max,R_mean'
+
+    np.savetxt(
+        csv_name,
+        np.array(report_csv_data).T,
+        delimiter=',',
+        header=headers,
+        )
+    logger.info(f'Written to {csv_name}.')

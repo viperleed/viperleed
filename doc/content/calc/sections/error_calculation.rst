@@ -57,7 +57,7 @@ also meaningful for other |R-factor| :ref:`definitions<r-factor_calculation>`.
    also that what is "far away" depends on how strongly the atom scatters
    (i.e., on the chemical species and on the depth within the solid), and
    in some cases may be as small as 0.1 Å, e.g., for displacements
-   along the surface-normal, :math:`z` direction of a surface atom.
+   along the surface-normal, |z| direction of a surface atom.
 -  Hydrogen is a very weak electron scatterer: the |R factor| depends only
    weakly on its position.
 
@@ -95,8 +95,8 @@ all in the same :ref:`DISPLACEMENTS` file is allowed, but the different
 variations are split up, so the result is the same as executing multiple
 error calculations. This means that you cannot have simultaneous error
 calculations for multiple geometric-displacement directions (e.g.,
-:math:`x` *and* :math:`z`) for the same atom, since this would
-require multiple consecutive blocks in the DISPLACEMENTS file.
+|x| *and* |z|) for the same atom, since this would require multiple
+consecutive blocks in the DISPLACEMENTS file.
 
 .. todo::
     The next note used to say "Simultaneous geometric AND vibration..."
@@ -120,7 +120,7 @@ geometric and vibration variations into separate delta files to
 reduce computational cost.
 
 The results of the error calculation consists of the :ref:`errorspdf_header`
-files, stored in the :file:`OUT` directory.
+files, stored in the |OUT| directory.
 
 If the Pendry |R factor| is used, the value of |R+varR| is calculated
 for each error type and drawn as a horizontal line in :ref:`errorspdf`.

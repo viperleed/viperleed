@@ -29,6 +29,7 @@ from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.log_utils import prepare_calc_logger
+from viperleed.calc.lib.string_utils import parent_name
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.cleanup import cleanup
 from viperleed.calc.sections.cleanup import prerun_clean
@@ -38,8 +39,11 @@ from viperleed.calc.sections.initialization import (
     )
 from viperleed.calc.sections.run_sections import section_loop
 
-
-LOGGER = logging.getLogger(__name__)
+# It is VERY IMPORTANT to ensure that the LOGGER of this module is the
+# one of calc, not the one for the "run.py" module. Otherwise, all log
+# messages produced during running (which rely on the parent-child
+# relationship between loggers) would NOT be emitted.
+LOGGER = logging.getLogger(parent_name(__name__))
 
 
 def run_calc(
@@ -337,6 +341,6 @@ def _set_system_name(rpars, system_name):
     """Assign a system name to `rpars` from `system_name` or the CWD."""
     if system_name is None:
         system_name = Path.cwd().parent.name
-        LOGGER.info('No system name specified. Using name of'
+        LOGGER.info('No system name specified. Using name of '
                     f'the parent directory: {system_name}.')
     rpars.systemName = system_name

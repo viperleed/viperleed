@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _bulk_repeat:
 
 BULK_REPEAT
@@ -6,7 +8,7 @@ BULK_REPEAT
 BULK_REPEAT defines how the bulk layers (as defined by :ref:`LAYER_CUTS`
 and :ref:`N_BULK_LAYERS`) are repeated after reaching the bottom of the
 :ref:`POSCAR` file.
-If the **c** vector of the POSCAR is oriented parallel to a bulk repeat
+If the |c| vector of the POSCAR is oriented parallel to a bulk repeat
 vector, BULK_REPEAT can be defined simply as a bulk "layer thickness"
 (which may be equivalent to step height).
 Note that the :ref:`BULK_LIKE_BELOW` parameter offers an
@@ -24,9 +26,9 @@ vector and the layers.
 :ref:`N_BULK_LAYERS`: If as many non-bulk layers as bulk
 layers are "bulk-like" (i.e. unrelaxed), automatically detects the minimal
 repeat vector. Otherwise, assumes that the bulk repeat vector is parallel
-to **c** and defines BULK_REPEAT as a bulk layer thickness. This is done by
-detecting the cartesian distance in z direction between bottom atom in bottom
-bulk layer and bottom atom in bottom non-bulk layer.
+to |c| and defines BULK_REPEAT as a bulk layer thickness. This is done by
+detecting the cartesian distance in |z| direction between bottom atom in
+bottom bulk layer and bottom atom in bottom non-bulk layer.
 
 **Allowed values:** positive float, or any three float values if vector
 
@@ -50,14 +52,14 @@ Depending on your initial POSCAR file, three cases can be distinguished:
    safely be left undefined. It will be detected automatically by finding the
    shortest repeat vector which translates the bottom-most non-bulk layers such
    that they match the bulk layers.
--  If there are too few unrelaxed layers above the bulk, but the **c**
+-  If there are too few unrelaxed layers above the bulk, but the |c|
    unit-cell vector of the :ref:`POSCAR` file is oriented as a
    bulk repeat vector, BULK_REPEAT can also be left undefined, as long as
    at least the bottom-most non-bulk atom is still sufficiently "bulk-like".
    In this case, BULK_REPEAT will be calculated simply by assuming that the
-   bulk layers should repeat along **c** with the same spacing as in the
+   bulk layers should repeat along |c| with the same spacing as in the
    :ref:`POSCAR`.
--  The only case where BULK_REPEAT *must* be defined manually is when the **c**
+-  The only case where BULK_REPEAT *must* be defined manually is when the |c|
    unit-cell vector is not parallel to a bulk repeat vector, and there are too
    few bulk-like layers to detect a repeat vector automatically.
 
@@ -73,7 +75,7 @@ When BULK_REPEAT is defined in vector form, the vector does not have to be
 parallel to c. The given repeat vector defines how each individual atom should
 be displaced to get the repeat unit.
 The vector can point either up or down, but note that it is defined in
-coordinates as in the :ref:`POSCAR` file, that is with **c**
+coordinates as in the :ref:`POSCAR` file, that is with |c|
 *pointing out of the surface*.
 
 **Note:** If BULK_REPEAT is not defined, the calculated value will be written
