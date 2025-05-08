@@ -25,7 +25,6 @@ from viperleed.guilib.measure.controller.abc import NO_HARDWARE_INTERFACE
 from viperleed.guilib.measure.hardwarebase import class_from_name
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import get_devices
-from viperleed.guilib.measure.hardwarebase import safe_connect
 from viperleed.guilib.measure.hardwarebase import safe_disconnect
 from viperleed.guilib.measure.widgets.collapsibleviews import (
     CollapsibleCameraView, CollapsibleControllerView, CollapsibleDeviceView,
@@ -33,8 +32,8 @@ from viperleed.guilib.measure.widgets.collapsibleviews import (
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
 from viperleed.guilib.widgets.basewidgets import QUncheckableButtonGroup
-from viperleed.guilib.widgets.basewidgets import remove_spacing_and_margins
 from viperleed.guilib.widgets.basewidgets import _PIXEL_SPACING
+from viperleed.guilib.widgetslib import remove_spacing_and_margins
 
 
 class CollapsibleList(qtw.QScrollArea):
@@ -223,7 +222,7 @@ class CollapsibleDeviceList(CollapsibleList):
         for view in self.views:
             if not view.is_enabled():
                 continue
-            if view.is_dummy_device():
+            if not view.has_hardware_interface:
                 # The selected device is not connected.
                 reason = (f'At least one of the selected {self._device_label}s'
                           ' is not connected.')
@@ -408,7 +407,7 @@ class CollapsibleCameraList(CollapsibleDeviceList):
         None.
         """
         super()._add_top_widgets_to_view(view)
-        self._checkbox(view).stateChanged.connect(view.enable_view)
+        self._checkbox(view).stateChanged.connect(view.set_expanded_state)
         self._checkbox(view).stateChanged.connect(
             self._emit_and_update_settings
             )
@@ -481,9 +480,9 @@ class CollapsibleCameraList(CollapsibleDeviceList):
                         self._emit_and_update_settings)
         correct_view.original_settings = settings.last_file
         self._checkbox(correct_view).setChecked(True)
-        safe_connect(self._checkbox(correct_view).stateChanged,
-                     self._emit_and_update_settings,
-                     type=qtc.Qt.UniqueConnection)
+        self._checkbox(correct_view).stateChanged.connect(
+            self._emit_and_update_settings, type=qtc.Qt.UniqueConnection
+            )
 
     def _update_stored_settings(self):
         """Update the internally stored camera settings."""
@@ -572,7 +571,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         None.
         """
         super()._add_top_widgets_to_view(view)
-        self._checkbox(view).stateChanged.connect(view.enable_view)
+        self._checkbox(view).stateChanged.connect(view.set_expanded_state)
         self._checkbox(view).stateChanged.connect(self._set_a_primary)
         self._checkbox(view).stateChanged.connect(
             self._emit_and_update_settings
@@ -705,12 +704,12 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         correct_view.original_settings = settings.last_file
         self._checkbox(correct_view).setChecked(True)
         correct_view.set_quantities(quantities)
-        safe_connect(self._checkbox(correct_view).stateChanged,
-                     self._emit_and_update_settings,
-                     type=qtc.Qt.UniqueConnection)
-        safe_connect(self.views[correct_view][1].toggled,
-                     self._emit_and_update_settings,
-                     type=qtc.Qt.UniqueConnection)
+        self._checkbox(correct_view).stateChanged.connect(
+            self._emit_and_update_settings, type=qtc.Qt.UniqueConnection
+            )
+        self.views[correct_view][1].toggled.connect(
+            self._emit_and_update_settings, type=qtc.Qt.UniqueConnection
+            )
 
     def _set_primary_from_settings(self):
         """Attempt to select the primary controller from settings."""

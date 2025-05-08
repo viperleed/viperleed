@@ -65,7 +65,10 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
             The number of decimal places. If not given or None,
             use the default decimal places. Default is None.
         soft_range : tuple, optional
-            The soft minimum and maximum.
+            The soft minimum and maximum. While it is not impossible
+            to set values below and above these respectively, the input
+            will be set to either the minimum and maximum value after
+            editing is finished.
         step : int or float, optional
             The increment of the SpinBox value. Default is 1.
         suffix : str, optional
@@ -86,7 +89,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
             self.soft_range = soft_range
         if suffix:
             self.setSuffix(suffix)
-        self.editingFinished.connect(self._adjust_value)
+        self.editingFinished.connect(self._coerce_value)
 
     @property
     def soft_minimum(self):
@@ -126,20 +129,17 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
         self._soft_max = new_maximum
         self._soft_min = new_minimum
 
-    @qtc.pyqtSlot()
-    def _adjust_value(self):
-        """Check if value is whithin the limits and adjust it if necessary."""
-        value = self.value()
-        if value > self.soft_maximum:
-            self.setValue(self.soft_maximum)
-        if value < self.soft_minimum:
-            self.setValue(self.soft_minimum)
-
     @qtc.pyqtSlot(int)
     def stepBy(self, steps):    # pylint: disable=invalid-name
         """Adjust set value through steps according to soft limits."""
-        _, value, _ = sorted((self.soft_minimum, self.soft_maximum,
+        _, value, _ = sorted((*self.soft_range,
                               self.value() + steps*self.singleStep()))
+        self.setValue(value)
+
+    @qtc.pyqtSlot()
+    def _coerce_value(self):
+        """Check if value is whithin the limits and adjust it if necessary."""
+        _, value, _ = sorted((self.value(), *self.soft_range))
         self.setValue(value)
 
 

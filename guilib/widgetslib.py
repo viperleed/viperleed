@@ -374,6 +374,12 @@ def raise_on_qt_messages():
     qtc.qInstallMessageHandler(__handler)
 
 
+def remove_spacing_and_margins(layout):
+    """Remove spacing and margins from a layout."""
+    layout.setSpacing(0)
+    layout.setContentsMargins(0, 0, 0, 0)
+
+
 def retain_size_when_hidden(widget):
     """Retain widget size when widget is not visible."""
     policy = widget.sizePolicy()
