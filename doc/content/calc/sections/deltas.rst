@@ -29,7 +29,7 @@ ViPErLEED then determines for which atoms delta amplitudes need to be
 produced. If it is found that a previously generated delta file (stored
 in the :file:`Deltas` directory) already contains some of the requested
 amplitudes, their computation is skipped and a message is written in the
-:file:`calc-<timestamp>.log` :ref:`log file<log_files>` accordingly.
+:ref:`log_files_calc` log file accordingly.
 
 As for the :ref:`reference calculation<ref-calc>`, ViPErLEED then moves the
 needed TensErLEED source files to a temporary subfolder of the work directory

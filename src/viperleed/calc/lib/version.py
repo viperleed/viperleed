@@ -150,7 +150,7 @@ class Version:
         """Return a representation of self."""
         return f"{self.__class__.__name__}({self})"
 
-    def __from_string(self, _as_string):
+    def __from_string(self, _as_string):                                        # TODO: complain if _as_string has more then three dotted fields
         """Return major, minor, patch from a string."""
         _name = self.__class__.__name__
         if not _as_string:

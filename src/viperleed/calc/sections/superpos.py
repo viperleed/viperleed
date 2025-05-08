@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michael Riva (@michele-riva)'
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -15,6 +15,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
+from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.files import iosuperpos
 from viperleed.calc.files.beams import averageBeams
 from viperleed.calc.files.beams import writeFdOut
@@ -25,6 +26,7 @@ from viperleed.calc.files.iosearch import readSDTL_blocks
 from viperleed.calc.files.iosearch import readSDTL_end
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.context import execute_in_dir
 
 logger = logging.getLogger(__name__)
 
@@ -191,26 +193,23 @@ def superpos_domains(rp, configs):
             logger.error("Error getting search parameters. Superpos will "
                          "stop.")
             return
-    home = os.getcwd()
     percentages = []
     for (percent, params), dp in zip(configs, rp.domainParams):
         percentages.append(percent)
-        dp.rp.searchResultConfig = [[(100, params)]]
-        logger.info(f"Running superpos calculation for domain {dp.name}")
-        try:
-            os.chdir(dp.workdir)
-            superpos(dp.sl, dp.rp, subdomain=True)
-        except Exception:
-            logger.error("Error while running superpos "
-                         f"calculation for domain {dp.name}")
-            raise
-        finally:
-            os.chdir(home)
+        dp.rpars.searchResultConfig = [[(100, params)]]
+        logger.info(f'Running superpos calculation for {dp}')
+        with execute_in_dir(dp.workdir):
+            try:
+                superpos(dp.slab, dp.rpars, subdomain=True)
+            except Exception:
+                logger.error('Error while running superpos '
+                             f'calculation for {dp}')
+                raise
 
     logger.info("Getting weighted average over domain beams...")
     rp.theobeams["superpos"] = averageBeams(
-        [dp.rp.theobeams["superpos"] for dp in rp.domainParams],
-        weights=percentages
+        [dp.rpars.theobeams["superpos"] for dp in rp.domainParams],
+        weights=percentages,
         )
     _write_fitbeams(rp)
 
@@ -227,7 +226,9 @@ def _best_config_from_sdtl(rp):                                                 
     """Return the best configuration from the most recent search."""
     # check for an SD.TL file
     cwd = Path()
-    sdtl_files = (f for f in (cwd/"SD.TL", cwd/"OUT"/"SD.TL") if f.is_file())
+    sdtl_files = (
+        f for f in (cwd/"SD.TL", cwd/f"{DEFAULT_OUT}/SD.TL") if f.is_file()
+        )
     sdtl_file = next(sdtl_files, None)
     if not sdtl_file:
         logger.error("Superpos: Found no stored results from recent "

@@ -21,7 +21,7 @@ In the example, the element A should be an element defined in the :ref:`POSCAR`
 file as the element for a list of sites, while La and Sr are the elements that
 actually occupying these sites. In the :ref:`POSCAR` file, an atom in a given
 site can only belong to one element. ELEMENT_MIX allows assigning a site to
-multiple elements, which can have different properties (e.g., vibrational
+multiple elements, which can have different properties (e.g., vibration
 amplitudes), and read different phase-shift files during the LEED calculation.
 The elements on the right-hand side should be actual chemical elements, with
 the two-letter abbreviation as it is found in the periodic table. ELEMENT_MIX

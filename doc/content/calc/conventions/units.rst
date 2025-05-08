@@ -5,7 +5,7 @@
 Units
 -----
 
-ViPErLEED uses units of ångström (Å) for all distances and vibrational
+ViPErLEED uses units of ångström (Å) for all distances and vibration
 amplitudes in inputs and outputs. Some plots may display picometres
 (1 pm = 0.01 Å), but this will **always** be clearly labeled.
 

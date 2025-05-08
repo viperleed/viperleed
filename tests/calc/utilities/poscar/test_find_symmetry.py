@@ -4,11 +4,9 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-11-20'
 __license__ = 'GPLv3+'
-
-from io import StringIO
 
 from pytest_cases import parametrize_with_cases
 
@@ -27,13 +25,11 @@ class TestFindSymmetry:
     """Tests for the find_symmetry utility."""
 
     @with_info
-    def test_pipe_poscar(self, test_case, capsys, mocker):
+    def test_pipe_poscar(self, test_case, capsys, poscar_stream):
         """Check correct reading of a POSCAR file from stdin."""
         *_, info = test_case
-        poscar_path = POSCAR_PATH/info.poscar.name
         expected_plane_group = info.symmetry.hermann
-        mock_stdin = StringIO(poscar_path.read_text())
-        mocker.patch('sys.stdin', mock_stdin)
+        poscar_stream(info.poscar.name)
         find_symmetry_cli = FindSymmetryCLI()
         find_symmetry_cli([])
         captured = capsys.readouterr()

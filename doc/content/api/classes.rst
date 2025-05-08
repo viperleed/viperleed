@@ -20,8 +20,8 @@ data, parameters and the results of |LEED-IV| calculations.
     beam.Beam
     layer.Layer
     r_error.R_Error
-    rparams.DomainParameters
-    rparams.Rparams
+    rparams.domain_params.DomainParameters
+    rparams.rparams.Rparams
     searchpar.SearchPar
     sitetype.Sitetype
     sitetype.Atom_type

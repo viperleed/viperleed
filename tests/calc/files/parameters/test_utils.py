@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-15'
 __license__ = 'GPLv3+'
 
@@ -190,14 +190,18 @@ class TestAssignment:
 
     def test_flag(self):
         """Check correct interpretation of the first flag."""
-        assignment = Assignment(values_str='value', parameter='PARAM',
+        assignment = Assignment(values_str='value',
+                                parameter='PARAM',
                                 flags_str='--flag1 --flag2')
         assert assignment.flag == '--flag1'
 
     def test_other_flags(self):
         """Check correct interpretation of flags beyond the first one."""
-        assignment = Assignment(values_str='value', parameter='PARAM',
-                                flags_str=('--flag1', '--flag2', '--flag3'))
+        assignment = Assignment(
+            values_str='value',
+            parameter='PARAM',
+            flags_str=('--flag1', '--flag2', '--flag3'),
+            )
         assert assignment.other_flags == ('--flag2', '--flag3')
 
     def test_other_values(self):

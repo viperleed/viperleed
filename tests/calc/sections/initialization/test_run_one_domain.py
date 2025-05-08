@@ -1,4 +1,4 @@
-"""Tests for section initialization."""
+"""Tests for a single-domain execution of section initialization."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
@@ -9,12 +9,17 @@ __created__ = '2023-07-19'
 __license__ = 'GPLv3+'
 
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.classes.slab import Slab
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.files import poscar
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.initialization import initialization
 
-from ...helpers import execute_in_dir, raises_test_exception
+from ....helpers import raises_test_exception
 
 
 class TestSetup:
@@ -45,17 +50,50 @@ class TestInitialization:                                                       
 
     _expected_files = 'IVBEAMS', 'BEAMLIST', 'VIBROCC', 'PARAMETERS'
 
-    @pytest.mark.parametrize('expected_file', _expected_files)
+    @parametrize(expected_file=_expected_files)
     def test_init_files_present(self, init_files, expected_file):
         """Ensure the expected files are present after initialization."""
         assert init_files.expected_file_exists(expected_file)
 
     def test_parameters_was_updated(self, init_files):
         """Check that PARAMETERS file was updated."""
-        parameters = init_files.work_path / 'PARAMETERS'
-        with parameters.open('r', encoding='utf-8') as param_file:
+        parameters_path = init_files.work_path / 'PARAMETERS'
+        with parameters_path.open('r', encoding='utf-8') as param_file:
             param_content = param_file.read()
+        # pylint: disable-next=magic-value-comparison
         assert 'line commented out automatically' in param_content
+
+    def test_does_not_write_out_suffixed(self, init_files):
+        """Check that no _OUT-suffixed file is generated."""
+        out_suffixed = init_files.work_path.rglob('*_OUT*')
+        assert not any(out_suffixed)
+
+    def test_vibrocc_generated(self, init_files):
+        """Check that VIBROCC_generated is written if needed."""
+        had_vibrocc_input = any(any(p.glob('VIBROCC'))
+                                for p in init_files.input_files_paths)
+        work = init_files.work_path
+        for_supp = work/'VIBROCC_generated'
+        for_out = work/'VIBROCC'
+        in_supp = work/DEFAULT_SUPP/'VIBROCC_generated'
+        in_out = work/DEFAULT_OUT/'VIBROCC'
+        in_original_inputs = (
+            work/DEFAULT_SUPP/ORIGINAL_INPUTS_DIR_NAME/'VIBROCC'
+            )
+        if had_vibrocc_input:
+            assert not for_supp.exists()
+            assert not in_supp.exists()
+            assert not in_out.exists()
+            assert in_original_inputs.is_file()
+        else:
+            assert for_supp.is_file()
+            assert for_supp.read_text() == for_out.read_text()
+            assert in_supp.is_file()
+            assert in_out.is_file()
+            assert not in_original_inputs.exists()
+            # If it has generated a VIBROCC, it also should have
+            # modified PARAMETERS, which should now be in OUT
+            assert (work/DEFAULT_OUT/'PARAMETERS').is_file()
 
 
 class TestInitializationRaises:
@@ -65,7 +103,7 @@ class TestInitializationRaises:
     def fixture_ag100_init(self, ag100, make_section_tempdir, tensorleed_path):
         """Yield slab and rpars ready to execute in a temporary directory."""
         slab, rpars, *_ = ag100
-        rpars.source_dir = tensorleed_path
+        rpars.paths.tensorleed = tensorleed_path
         tmp = make_section_tempdir('Ag(100)', 'init')
         with execute_in_dir(tmp):  # Not to spam with files
             yield slab, rpars
@@ -80,6 +118,7 @@ class TestInitializationRaises:
         # be swallowed) and once when generating PHASESHIFTS. Not
         # checking the logging messages would make this test succeed
         # because the exception is raised while making PHASESHIFTS.
+        # pylint: disable=magic-value-comparison
         messages = (m for m in caplog.messages if 'exception' in m.lower())
         messages = (m for m in messages if 'bulk_appended' in m)
         log_bulk_appended = next(messages, '')

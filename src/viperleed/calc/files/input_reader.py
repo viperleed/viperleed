@@ -12,7 +12,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-03'
 __license__ = 'GPLv3+'
 
@@ -61,8 +61,9 @@ class InputReader(Iterator):
                 return self._read_one_line(line)
             except ShouldSkipLineError:
                 if self.noisy:
+                    line = line.rstrip('\n')
                     _LOGGER.debug(f'Skipping line {self._current_line} '
-                                  f'in input file: "{line}".')
+                                  f'in input file: {line!r}.')
                 continue
         raise StopIteration
 

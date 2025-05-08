@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _n_bulk_layers:
 
 N_BULK_LAYERS
@@ -46,7 +48,7 @@ and ``N_BULK_LAYERS = 2``.
 By default, as many layers *above* the bulk as are present *within* the bulk 
 are used to determine the bulk repeat vector, see :ref:`BULK_REPEAT`. If not 
 enough bulk-like layers are found, :ref:`BULK_REPEAT` will instead be defined 
-as parallel to the POSCAR **c** vector, using only the z position of the 
+as parallel to the POSCAR |c| vector, using only the |z| position of the 
 bottommost non-bulk atom. See the page on the :ref:`BULK_REPEAT` parameter 
 for more complicated cases.
 

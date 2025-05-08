@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-12-11'
 __license__ = 'GPLv3+'
 
@@ -12,7 +12,7 @@ import operator
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.calc.classes.rparams import SymmetryEps
+from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 
 
 @fixture(name='value_and_z')
@@ -105,6 +105,7 @@ class TestSymmetryEps:
     def test_repr(self):
         """Check correct result of repr(eps)."""
         eps = SymmetryEps(0.1, 0.3)
+        # pylint: disable=magic-value-comparison
         assert 'z=' in repr(eps)
 
 

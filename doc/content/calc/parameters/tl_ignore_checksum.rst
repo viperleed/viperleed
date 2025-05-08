@@ -19,12 +19,18 @@ checksums stored in |calc| (calc/lib/_checksums.dat) were not tampered with.
 Users may want to disable checksum validation for the purposes of custom
 modifications to TensErLEED code or for high-throughput calculations.
 
-**Default:** True (for testing, will be set to False in a future release)
+**Default:** False
 
 **Allowed values:** True/False
 
-**Syntax:**
+.. admonition:: Syntax
 
-::
+   ::
 
-   TL_IGNORE_CHECKSUM = False
+      TL_IGNORE_CHECKSUM = True
+
+Changelog
+---------
+
+.. versionchanged:: 0.11.0
+   Changed the default value from True to False.

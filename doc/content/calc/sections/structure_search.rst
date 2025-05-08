@@ -26,7 +26,7 @@ yielding the smallest possible |R factor|.
 The behavior of the structure-optimization algorithm is affected by multiple
 parameters (see :ref:`search behaviour<search_settings>`). See the section
 describing the :ref:`DISPLACEMENTS` file for details on the available options
-for geometric, vibrational, and occupation displacements. There are some
+for geometric, vibration, and occupation displacements. There are some
 caveats to the structure optimization in tensor LEED in general, and to
 the implementation in TensErLEED in particular.
 See :ref:`the section on structure search in tensor LEED<tensor_leed_search>`
@@ -85,7 +85,7 @@ are performed before the actual calculation starts:
 #.  The TensErLEED input files :file:`rf.info`, :file:`PARAM`, and
     :file:`search.steu` are prepared based on the slab and on the
     :ref:`EXPBEAMS file<expbeams>`. (They are available for inspection among
-    the :ref:`supplementary files<supp_files>` in the :file:`SUPP` directory.)
+    the :ref:`supplementary files<supp_files>` in the |SUPP| directory.)
 #.  Based on the slab symmetry and the
     :ref:`symmetry settings<symmetry_settings>`, symmetry-linked parameters
     are identified. The :file:`control.chem` input file for TensErLEED is
@@ -126,11 +126,8 @@ section. ViPErLEED proceeds by first executing a :ref:`super_pos`, then
 continuing to the next segment as defined in the  :ref:`RUN` parameter
 (or it stops if there is none).
 
-.. warning::
-  **Remember** to call the :ref:`bookkeeper utility<bookkeeper>` with
-  the ``-c`` flag after a ViPErLEED run containing a structure search,
-  if you want to continue from the found best-fit structure.
-  **Otherwise the progress will be discarded** and following runs will
-  start again from the reference structure, unless :ref:`POSCAR` and
-  :ref:`VIBROCC` are manually copied from the ``OUT`` directory.
-
+.. tip::
+  If the results of a structure optimization (or any other |calc|
+  execution) are unsatisfactory, you can discard them by calling
+  the :ref:`bookkeeper utility<bookkeeper>` with the ``--discard``
+  flag.

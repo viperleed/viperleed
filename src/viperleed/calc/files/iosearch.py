@@ -8,7 +8,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -23,6 +23,7 @@ import time
 import fortranformat as ff
 import numpy as np
 
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.iorfactor import largest_nr_grid_points
@@ -329,7 +330,7 @@ def readDataChem(rp, source, cutoff=0, max_configs=0):
             dp_vals = pars[-len(rp.domainParams):]
             percent = getPercent(rp.DOMAIN_STEP, dp_vals)
             dpars = []
-            for v in [len(dp.rp.searchpars) for dp in rp.domainParams]:
+            for v in [len(dp.rpars.searchpars) for dp in rp.domainParams]:
                 dpars.append(tuple(pars[:v]))
                 pars = pars[v:]
             returnList.append((rfac, tuple(zip(percent, dpars))))
@@ -349,9 +350,8 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         equivalent beams.
     rp : Rparams
         Run parameters.
-    file_path : pathlike or str
-        Pathlike to or name of the output file. If str uses
-        rp.workdir /filename. The default is "rf.info".
+    file_path : pathlike
+        Path to the output file. The default is "rf.info".
 
     Returns
     -------
@@ -419,17 +419,13 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
                                    version=rp.TL_VERSION)
     output += auxexpbeams
 
-    if isinstance(file_path, str):
-        _file_path = rp.workdir / file_path
-    else:
-        _file_path = file_path
     try:
-        with open(_file_path, 'w') as wf:
+        with open(file_path, 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error(f"Failed to write {_file_path}")
+        logger.error(f"Failed to write {file_path}")
         raise
-    logger.debug(f"Wrote to {_file_path} successfully")
+    logger.debug(f"Wrote to {file_path} successfully")
     return output
 
 
@@ -486,10 +482,10 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
 
     # merge offsets with displacement lists
     if rp.domainParams:
-        attodo = [at for dp in rp.domainParams for at in dp.rp.search_atlist]
+        attodo = [at for d in rp.domainParams for at in d.rpars.search_atlist]
         ndom = len(rp.domainParams)
         astep = rp.DOMAIN_STEP
-        nplaces = max([len(dp.rp.search_atlist) for dp in rp.domainParams])
+        nplaces = max([len(dp.rpars.search_atlist) for dp in rp.domainParams])
     else:
         attodo = rp.search_atlist
         ndom = 1
@@ -805,10 +801,10 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         controlpath = ""
         if os.path.isfile("control.chem"):
             controlpath = "control.chem"
-        elif os.path.isfile(os.path.join("SUPP", "control.chem")):
-            controlpath = os.path.join("SUPP", "control.chem")
+        elif os.path.isfile(os.path.join(DEFAULT_SUPP, "control.chem")):
+            controlpath = os.path.join(DEFAULT_SUPP, "control.chem")
             logger.warning("No control.chem file found in working folder, "
-                           "using SUPP/control.chem")
+                           f"using {DEFAULT_SUPP}/control.chem")
             rp.setHaltingLevel(1)
         else:
             logger.warning("No control.chem file found. Defaulting to random "
@@ -1059,7 +1055,7 @@ def _read_control_chem(control_chem_path,
 def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     """
     Modifies data in sl and rp to reflect the search result given by
-    parinds, then writes POSCAR_OUT and VIBROCC_OUT.
+    parinds, then writes POSCAR and VIBROCC.
 
     Parameters
     ----------
@@ -1075,7 +1071,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     silent : bool, optional
         Suppresses output to log. The default is False.
     suffix : str, optional
-        String to be appended to the POSCAR_OUT and VIBROCC_OUT file names.
+        String to be appended to the POSCAR and VIBROCC file names.
 
     Returns
     -------
@@ -1197,29 +1193,35 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                     at.offset_occ[el] -= offset_occ
                 if el in at.offset_vib:
                     at.offset_vib[el] -= offset_vib
-    fn = "POSCAR_OUT" + suffix + "_" + rp.timestamp
+    poscar_fn = f'POSCAR{suffix}'
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
-        poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
+        poscar.write(tmpslab, filename=poscar_fn, comments="all", silent=silent)
     except OSError:
-        logger.error("Exception occurred while writing POSCAR_OUT" + suffix,
+        logger.error(f'Exception occurred while writing {poscar_fn}',
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
+    else:
+        rp.files_to_out.add(poscar_fn)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.make_subcell(rp, rp.SYMMETRY_CELL_TRANSFORM)
-        fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
+        poscar_mincell_fn = f'POSCAR_mincell{suffix}'
         try:
-            poscar.write(tmpslab, filename=fn, silent=silent)
+            poscar.write(tmpslab, filename=poscar_mincell_fn, silent=silent)
         except OSError:
             logger.warning(
-                "Exception occurred while writing POSCAR_OUT_mincell" + suffix,
-                exc_info=rp.is_debug_mode)
-    fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
+                f'Exception occurred while writing {poscar_mincell_fn}',
+                exc_info=rp.is_debug_mode,
+                )
+        else:
+            rp.files_to_out.add(poscar_mincell_fn)
+    vibrocc_fn = f'VIBROCC{suffix}'
     try:
-        writeVIBROCC(sl, rp, filename=fn, silent=silent)
+        writeVIBROCC(sl, filename=vibrocc_fn, silent=silent)
     except Exception:
-        logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
+        logger.error(f'Exception occured while writing {vibrocc_fn}',
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
-    return
+    else:
+        rp.files_to_out.add(vibrocc_fn)

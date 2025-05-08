@@ -8,7 +8,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-01'
 __license__ = 'GPLv3+'
 
@@ -28,7 +28,7 @@ class ViPErLEEDMain(ViPErLEEDCLI, cli_name='viperleed'):
             # "python viperleed gui" thinks it is in command-line
             # mode, while "python viperleed.gui" works fine.
             'viperleed.gui',                                                    # TODO: gui arguments
-            'viperleed.calc.bookkeeper',
+            'viperleed.calc.bookkeeper.cli',
             'viperleed.calc.cli',
             'viperleed.utilities.cli',
             'viperleed.utilities.poscar.cli',

@@ -5,11 +5,11 @@
 V0_Z_ONSET
 ==========
 
-V0_Z_ONSET (original Fortran parameter ASE) defines the *z* position (in
+V0_Z_ONSET (original Fortran parameter ASE) defines the |z| position (in
 Ångström) of the onset of the inner potential of the solid, i.e., the plane
 that separates "vacuum" from the "material". Notice that, in this case,
 POSITIVE values will move the plane AWAY from the solid. ``V0_Z_ONSET = 0``
-corresponds to the *z* coordinate of the topmost atom.
+corresponds to the |z| coordinate of the topmost atom.
 
 **Default**: V0_Z_ONSET = 1.0
 
