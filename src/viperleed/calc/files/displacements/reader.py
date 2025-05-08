@@ -65,6 +65,9 @@ class DisplacementsReader(InputFileReader):
         if not stripped_line:
             return None
 
+        # check for invalid or deprecated syntax
+        _check_line_generally_valid(stripped_line)
+
         # check for loop markers
         if LOOP_START_PATTERN.match(stripped_line):
             self.current_section = None
@@ -167,3 +170,16 @@ class DisplacementsReader(InputFileReader):
 
         constraint_type, targets, direction, value = match
         return ConstraintLine(constraint_type, targets, direction, value, line=line)
+
+
+def _check_line_generally_valid(line):
+    """Check the line for invalid or deprecated syntax."""
+    # check if the line contains at least one '='
+    if '=' not in line:
+        msg = f"Could not parse line '{line}'."
+        raise InvalidDisplacementsSyntaxError(msg)
+
+    if 'sym_delta' in line.lower():
+        msg = ('The SYM_DELTA Tag has been deprecated. Use the SYMMETRY_FIX '
+               'parameter instead to manually lower the system symmetry.')
+        raise InvalidDisplacementsSyntaxError(msg)
