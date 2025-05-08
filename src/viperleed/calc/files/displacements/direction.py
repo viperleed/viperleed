@@ -8,6 +8,8 @@ import re
 import numpy as np
 
 DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
+SIMPLE_DIRECTIONS = ('x', 'y', 'z')
+
 
 class UnsupportedDirectionError(Exception):
     """Exception raised for unsupported direction formats."""
@@ -52,9 +54,8 @@ class Direction:
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
 
-        dir_labels = 'xyz'
-
-        if '[' in direction_str:  # Vector case
+        # Vector direction like 'xyz[1 2 3]'
+        if '[' in direction_str:
             match = re.match(DIRECTION_PATTERN, direction_str)
             if not match:
                 msg = f'Invalid direction format: {direction_str}'
@@ -68,7 +69,7 @@ class Direction:
             vec = self._embed_vector(dirs, vecs)
             return (np.array([self._normalize(vec)]), 1)
         # Basis directions like 'x', 'xy', etc.
-        if not all(c in dir_labels for c in direction_str):
+        if not all(c in SIMPLE_DIRECTIONS for c in direction_str):
             msg = f'Invalid direction: {direction_str}'
             raise ValueError(msg)
         vecs = [self._get_basis_vector(c) for c in direction_str]
