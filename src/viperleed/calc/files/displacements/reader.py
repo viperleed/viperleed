@@ -94,10 +94,11 @@ class DisplacementsReader(InputFileReader):
         try:
             return self._parse_line(line)
         except (ValueError, IndexError) as err:
-            raise InvalidDisplacementsSyntaxError(
+            msg = (
                 f'Cannot parse line "{line}" in section '
                 f'"{self.current_section}".'
-            ) from err
+            )
+            raise InvalidDisplacementsSyntaxError(msg) from err
 
     def _parse_line(self, line):
         """Get content from line."""
@@ -113,17 +114,16 @@ class DisplacementsReader(InputFileReader):
             return self._read_occ_delta_line(line)
         if section is DisplacementFileSections.CONSTRAIN:
             return self._read_constraints_line(line)
-        raise ValueError(
-            f"Cannot parse line '{line}' without a section header."
-        )
+        # If no section is set, raise an error
+        msg = f'Cannot parse line "{line}" without a section header.'
+        raise ValueError(msg)
 
     def _read_offsets_line(self, line):
         """Parse a line in the OFFSETS section."""
         match = match_offsets_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' in OFFSETS section."
-            )
+            msg = f"Cannot parse line '{line}' in OFFSETS section."
+            raise InvalidDisplacementsSyntaxError(msg)
         offset_type, targets, direction, value = match
         return OffsetsLine(offset_type, targets, direction, value, line=line)
 
@@ -131,9 +131,8 @@ class DisplacementsReader(InputFileReader):
         """Parse a line in the GEO_DELTA section."""
         match = match_geo_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' in GEO_DELTA section."
-            )
+            msg = f"Cannot parse line '{line}' in GEO_DELTA section."
+            raise InvalidDisplacementsSyntaxError(msg)
 
         label, which, direction, start, stop, step = match
         return GeoDeltaLine(label, which, direction, start, stop, step, line=line)
