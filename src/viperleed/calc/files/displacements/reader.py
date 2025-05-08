@@ -141,9 +141,8 @@ class DisplacementsReader(InputFileReader):
         """Parse a line in the VIB_DELTA section."""
         match = match_vib_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' in VIB_DELTA section."
-            )
+            msg = f"Cannot parse line '{line}' in VIB_DELTA section."
+            raise InvalidDisplacementsSyntaxError(msg)
 
         label, which, start, stop, step = match
         return VibDeltaLine(label, which, start, stop, step, line=line)
@@ -152,9 +151,8 @@ class DisplacementsReader(InputFileReader):
         """Parse a line in the OCC_DELTA section."""
         match = match_occ_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' in OCC_DELTA section."
-            )
+            msg = f"Cannot parse line '{line}' in OCC_DELTA section."
+            raise InvalidDisplacementsSyntaxError(msg)
 
         label, which, chem_blocks = match
         return OccDeltaLine(label, which, chem_blocks, line=line)
@@ -163,12 +161,12 @@ class DisplacementsReader(InputFileReader):
         """Parse a line in the CONSTRAIN section."""
         match = match_constrain_line(line)
         if match is None:
-            raise InvalidDisplacementsSyntaxError(
-                f"Cannot parse line '{line}' in CONSTRAIN section."
-            )
+            msg = f"Cannot parse line '{line}' in CONSTRAIN section."
+            raise InvalidDisplacementsSyntaxError(msg)
 
         constraint_type, targets, direction, value = match
-        return ConstraintLine(constraint_type, targets, direction, value, line=line)
+        return ConstraintLine(constraint_type, targets, direction,
+                              value, line=line)
 
 
 def _check_line_generally_valid(line):
