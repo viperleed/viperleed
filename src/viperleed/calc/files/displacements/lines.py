@@ -10,7 +10,7 @@ from viperleed_jax.perturbation_type import PerturbationType
 
 from .direction import Direction
 from .range import DisplacementsRange
-from .targeting import BSTarget
+from .targeting import Targets
 
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
 SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
@@ -26,21 +26,21 @@ class ParsedLine(ABC):
     initialized with a line string and will parse it into its components.
     """
 
-    def __init__(self, line):
+    def __init__(self, line: str):
         """Perform basic parsing and checking of the line format."""
         # strip surplus whitespace
-        self._raw_line = ' '.join(line.strip().split())
+        self.raw_line = ' '.join(line.strip().split())
 
         # if not exactly one '=' is present, raise an error
-        if self._raw_line.count('=') != 1:
+        if self.raw_line.count('=') != 1:
             msg = (
-                f'Invalid DISPLACEMENTS line format: "{self._raw_line}". '
+                f'Invalid DISPLACEMENTS line format: "{self.raw_line}". '
                 'Expected format: "<labels> = <values>".'
             )
             raise ValueError(msg)
 
         # split the line into raw left and right hand sides
-        self._lhs, self._rhs = self._raw_line.split('=')
+        self._lhs, self._rhs = self.raw_line.split('=')
 
 
     @abstractmethod
@@ -56,41 +56,38 @@ class GeoDeltaLine(ParsedLine):
     `BSTarget`, `Direction`, and `DisplacementsRange` classes, respectively.
     """
 
-    def __init__(self, line):
+    def __init__(self, line: str):
         super().__init__(line)
 
         # Left hand side
         # split off last element of the left hand side
         lhs_parts = self._lhs.split()
+        if len(lhs_parts) < 2:
+            msg = (
+                f'Invalid GEO_DELTA line format: "{self._lhs}". '
+                'Expected format: "<targets> <direction> = <range>".'
+            )
+            raise ValueError(msg)
         # check if the last part is a direction
         try:
             self.direction = Direction(lhs_parts[-1])
         except ValueError as err:
             msg = ('Unable to parse direction information from line in '
-                   f'GEO_DELTA block: {self.line}')
+                   f'GEO_DELTA block: {self.raw_line}')
             raise ValueError(msg) from err
 
         # parse the rest of the left hand side into targets
-        # TODO
+        self.targets = Targets(' '.join(lhs_parts[:-1]))
 
-        # parse right hand side to a range
+        # Right hand side
+        _check_moire_tag(self._rhs)
+        # parse to a range
         self.range = DisplacementsRange(self._rhs)
 
 
     def __repr__(self):
         """Return the string representation of the line."""
-        if self._line is None:
-            line = f'{self.label} {self.which}'
-            if self.direction is not None:
-                line += f' {self.direction}'
-            line += f' = {self.range.start}'
-            if self.range.stop is not None:
-                line += f' {self.range.stop}'
-            if self.range.step is not None:
-                line += f' {self.range.step}'
-        else:
-            line = self._line
-        return line
+        return f'{self.targets} {self.direction} = {self.range}'
 
 
 def _get_target(label, which):
