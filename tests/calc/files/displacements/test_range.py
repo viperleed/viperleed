@@ -66,6 +66,12 @@ def test_init_non_numeric():
     assert 'Non-numeric value' in str(excinfo.value)
 
 
+def test_negative_step():
+    with pytest.raises(ValueError) as excinfo:
+        DisplacementsRange('-0.2 0.2 -0.05')
+    assert 'Step must be positive' in str(excinfo.value)
+
+
 def test_from_floats():
     dr = DisplacementsRange.from_floats(0, 5)
     assert isinstance(dr, DisplacementsRange)

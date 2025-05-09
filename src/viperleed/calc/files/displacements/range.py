@@ -39,6 +39,9 @@ class DisplacementsRange:
             msg = f'Non-numeric value in range: "{range_str}"'
             raise ValueError(msg) from err
 
+        # check that step is valid
+        _check_step(step)
+
         self.start = start
         self.stop = stop
         self.step = step
@@ -49,6 +52,7 @@ class DisplacementsRange:
         cls, start: float, stop: float, step=None
     ) -> 'DisplacementsRange':
         """Alternate constructor using numeric values directly."""
+        _check_step(step)
         inst = cls.__new__(cls)
         inst.start = start
         inst.stop = stop
@@ -81,3 +85,9 @@ class DisplacementsRange:
             return (f'DisplacementsRange(start={self.start}, stop={self.stop}, '
                     f'step={self.step})')
         return f'DisplacementsRange(start={self.start}, stop={self.stop})'
+
+def _check_step(step):
+    """Check if the step is positive."""
+    if step is not None and step <= 0:
+        msg = f'Step must be positive: "{step}"'
+        raise ValueError(msg)
