@@ -3,9 +3,11 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-04'
 
+import re
 from abc import ABC, abstractmethod
 from collections import namedtuple
 
+from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
 from viperleed_jax.perturbation_type import PerturbationType
 
 from .direction import Direction
@@ -18,6 +20,10 @@ SectionHeaderLine = namedtuple('SectionHeaderLine', ['section'])
 
 _BELOW_DEBUG = 2
 
+# precompiled direction-at-end regex for separating out the direction token
+_DIR_AT_END = re.compile(
+    rf'(?P<dir>{DIRECTION_PATTERN})\s*$'
+)
 
 class ParsedLine(ABC):
     """Base class for parsing of non-header lines in the DISPLACEMENTS file.
@@ -61,8 +67,8 @@ class GeoDeltaLine(ParsedLine):
 
         # Left hand side
         # split off last element of the left hand side
-        lhs_parts = self._lhs.split()
-        if len(lhs_parts) < 2:
+        targets_str, dir_str = separate_direction_from_targets(self._lhs)
+        if not targets_str or not dir_str:
             msg = (
                 f'Invalid GEO_DELTA line format: "{self._lhs}". '
                 'Expected format: "<targets> <direction> = <range>".'
@@ -70,14 +76,14 @@ class GeoDeltaLine(ParsedLine):
             raise ValueError(msg)
         # check if the last part is a direction
         try:
-            self.direction = Direction(lhs_parts[-1])
+            self.direction = Direction(dir_str)
         except ValueError as err:
             msg = ('Unable to parse direction information from line in '
                    f'GEO_DELTA block: {self.raw_line}')
             raise ValueError(msg) from err
 
         # parse the rest of the left hand side into targets
-        self.targets = Targets(' '.join(lhs_parts[:-1]))
+        self.targets = Targets(targets_str)
 
         # Right hand side
         _check_moire_tag(self._rhs)
@@ -228,6 +234,33 @@ class OffsetsLine:
         else:
             line = self._line
         return line
+
+
+def separate_direction_from_targets(targets_and_direction: str):
+    """Separate a string into targets and direction.
+
+    Uses a regex pattern to identify and extract an optional direction token at
+    the end of the string. The rest of the string is considered the targets.
+
+    Parameters
+    ----------
+    targets_and_direction : str
+        The string to be separated.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the targets string and the direction string. Either
+        string may be empty if the corresponding part was not found.
+    """
+    match = _DIR_AT_END.search(targets_and_direction)
+    if not match:
+        # no direction found
+        return targets_and_direction.strip(), ''
+
+    dir_str = match.group('dir')
+    # everything before the direction is the targets
+    return targets_and_direction[: match.start()].strip(), dir_str.strip()
 
 
 def _check_moire_tag(line_rhs):
