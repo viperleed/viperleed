@@ -226,6 +226,13 @@ class ConstraintLine:
         return line
 
 
+def _check_moire_tag(line_rhs):
+    """Check if the right hand side of the line contains a moire tag."""
+    if 'moire' in line_rhs.lower():
+        msg = ('Moiré structures are not yet supported.')
+        raise NotImplementedError(msg)
+
+
 class OffsetsLine:
     def __init__(self, offset_type, targets, direction, value, line=None):
         self._line= line
