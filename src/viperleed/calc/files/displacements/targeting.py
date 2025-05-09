@@ -11,21 +11,33 @@ class TargetingError(ValueError):
     """Base class for errors in the targeting module."""
 
 
-def generate_label_match_regex(label):
-    """Generate a regex pattern to match variations of the given label,
-    with '*' acting as a wildcard for word characters, and matching prefixes.
-    """
-    # Escape any special characters in the label, except for '*'
-    escaped_label = re.escape(label).replace(r'\*', r'\w*')
 
-    # Append `\w*` at the end to match strings starting with the pattern
-    pattern = rf'^{escaped_label}\w*'
+class Targets:
+    """Class to handle multiple subtargets."""
 
-    # Compile the final regex pattern
-    return re.compile(pattern)
+    def __init__(self, target_str):
+        self.target_str = target_str
+        self.subtargets = []
+        self._parse_target(target_str)
+
+    def _parse_target(self, target_str):
+        """Parse multiple subtargets separated by commas."""
+        subtarget_strs = target_str.split(',')
+        self.subtargets = [Subtarget(sub.strip()) for sub in subtarget_strs]
+
+    def select(self, atom_basis):
+        """Take the 'or' of all subtargets, combining masks."""
+        combined_mask = np.full(len(atom_basis), False)
+        for subtarget in self.subtargets:
+            combined_mask = combined_mask | subtarget.select(atom_basis)
+        return combined_mask
+
+    def __repr__(self):
+        """Return the string representation of the target."""
+        return f'Target({self.target_str})'
 
 
-class BSSubtarget:
+class Subtarget:
     def __init__(self, target_str):
         self.target_str = target_str
         self.nums = None
@@ -36,9 +48,9 @@ class BSSubtarget:
         """Parse the site, and optional nums or layers from the target string."""
         parts = self.target_str.split()
         if not parts:
-            raise ValueError('Subtarget string is empty')
+            raise ValueError('Target string is empty')
         site_str = parts[0]
-        self.regex = generate_label_match_regex(site_str)
+        self.regex = _generate_label_match_regex(site_str)
 
         if len(parts) == 1:
             # only site is specified, no nums or layers
@@ -66,7 +78,7 @@ class BSSubtarget:
                 self.nums = list(map(int, parts[1:]))
 
     def select(self, atom_basis):
-        """Select base scatterers that match the subtarget specification."""
+        """Select base scatterers that match the target specification."""
         mask = np.full(len(atom_basis), True)
 
         # mask based on the site
@@ -82,14 +94,14 @@ class BSSubtarget:
         if self.nums is not None:
             # check range for nums
             if any(num < 1 or num > len(atom_basis) for num in self.nums):
-                msg = f'Invalid atom number for subtarget: {self.target_str}'
+                msg = f'Invalid atom number for target: {self.target_str}'
                 raise TargetingError(msg)
             num_mask = np.array([bs.num in self.nums for bs in atom_basis])
             # check if any of the given nums have the wrong label
             wrong_label = np.logical_and(num_mask, ~label_mask)
             if np.any(wrong_label):
                 msg = (
-                    'Atom numbers do not match label for subtarget: '
+                    'Atom numbers do not match label for target: '
                     f'{self.target_str}'
                 )
                 raise TargetingError(msg)
@@ -111,38 +123,23 @@ class BSSubtarget:
     def __eq__(self, other):
         # Technically, different strings could refer to the same targets due to
         # implicit symmetry, but we'll ignore that for now
-        if not isinstance(other, BSSubtarget):
+        if not isinstance(other, Subtarget):
             return False
         return not self.target_str != other.target_str
 
 
-class BSTarget:
-    def __init__(self, target_str):
-        self.target_str = target_str
-        self.subtargets = []
-        self._parse_target(target_str)
+def _generate_label_match_regex(label):
+    """Generate a regex pattern to match variations of the given label.
 
-    def _parse_target(self, target_str):
-        """Parse multiple subtargets separated by commas."""
-        subtarget_strs = target_str.split(',')
-        self.subtargets = [BSSubtarget(sub.strip()) for sub in subtarget_strs]
+    The label can contain wildcards, where '*' matches any number of characters,
+    including none
+    with '*' acting as a wildcard for word characters, and matching prefixes.
+    """
+    # Escape any special characters in the label, except for '*'
+    escaped_label = re.escape(label).replace(r'\*', r'\w*')
 
-    def select(self, atom_basis):
-        """Take the 'or' of all subtargets, combining masks."""
-        combined_mask = np.full(len(atom_basis), False)
-        for subtarget in self.subtargets:
-            combined_mask = combined_mask | subtarget.select(atom_basis)
-        return combined_mask
+    # Append `\w*` at the end to match strings starting with the pattern
+    pattern = rf'^{escaped_label}\w*'
 
-    def __eq__(self, other):
-        if not isinstance(other, BSTarget):
-            return False
-        if len(self.subtargets) != len(other.subtargets):
-            return False
-        for sub1, sub2 in zip(self.subtargets, other.subtargets):
-            if sub1 != sub2:
-                return False
-        return True
-
-    def __repr__(self):
-        return f'BSTarget({self.target_str})'
+    # Compile the final regex pattern
+    return re.compile(pattern)

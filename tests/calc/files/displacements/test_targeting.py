@@ -3,7 +3,7 @@ import pytest
 from pytest_cases import case, parametrize_with_cases
 
 from viperleed_jax.atom_basis import AtomBasis
-from viperleed_jax.files.displacements.targeting import BSTarget
+from viperleed_jax.files.displacements.targeting import Targets
 
 # Test cases for valid target with the expected mask
 CU_111_VALID_TARGETS = {
@@ -57,7 +57,7 @@ class InvalidTargets:
     'atom_basis,target_str,expected_mask', cases=ValidTargets
 )
 def test_target_lexing(atom_basis, target_str, expected_mask):
-    target = BSTarget(target_str)
+    target = Targets(target_str)
     assert target.target_str == target_str
 
 
@@ -65,13 +65,13 @@ def test_target_lexing(atom_basis, target_str, expected_mask):
     'atom_basis,target_str,expected_mask', cases=ValidTargets
 )
 def test_target_selection(atom_basis, target_str, expected_mask):
-    target = BSTarget(target_str)
+    target = Targets(target_str)
     mask = target.select(atom_basis)
     assert np.all(mask == expected_mask)
 
 
 @parametrize_with_cases('atom_basis,target_str', cases=InvalidTargets)
 def test_invalid_target(atom_basis, target_str):
-    target = BSTarget(target_str)
+    target = Targets(target_str)
     with pytest.raises(ValueError):
         target.select(atom_basis)
