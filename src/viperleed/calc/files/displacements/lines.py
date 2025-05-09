@@ -40,13 +40,57 @@ class ParsedLine(ABC):
             raise ValueError(msg)
 
         # split the line into raw left and right hand sides
-        self.lhs, self.rhs = self._raw_line.split('=')
+        self._lhs, self._rhs = self._raw_line.split('=')
 
 
     @abstractmethod
     def __repr__(self):
         """Return the string representation of the line."""
 
+class GeoDeltaLine(ParsedLine):
+    """Class to parse lines in the GEO_DELTA block of DISPLACEMENTS.
+
+    Lines in the GEO_DELTA block are of the form:
+        <target> [, <target>] <direction> = <range>
+    where <target>, <direction>, and <range> are tokes that are parsed by the
+    `BSTarget`, `Direction`, and `DisplacementsRange` classes, respectively.
+    """
+
+    def __init__(self, line):
+        super().__init__(line)
+
+        # Left hand side
+        # split off last element of the left hand side
+        lhs_parts = self._lhs.split()
+        # check if the last part is a direction
+        try:
+            self.direction = Direction(lhs_parts[-1])
+        except ValueError as err:
+            msg = ('Unable to parse direction information from line in '
+                   f'GEO_DELTA block: {self.line}')
+            raise ValueError(msg) from err
+
+        # parse the rest of the left hand side into targets
+        # TODO
+
+        # parse right hand side to a range
+        self.range = DisplacementsRange(self._rhs)
+
+
+    def __repr__(self):
+        """Return the string representation of the line."""
+        if self._line is None:
+            line = f'{self.label} {self.which}'
+            if self.direction is not None:
+                line += f' {self.direction}'
+            line += f' = {self.range.start}'
+            if self.range.stop is not None:
+                line += f' {self.range.stop}'
+            if self.range.step is not None:
+                line += f' {self.range.step}'
+        else:
+            line = self._line
+        return line
 
 
 def _get_target(label, which):
