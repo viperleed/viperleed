@@ -9,41 +9,79 @@ import pytest
 from viperleed_jax.files.displacements.range import DisplacementsRange
 
 
-def test_equal_ranges_with_step():
-    r1 = DisplacementsRange(0.0, 1.0, 0.1)
-    r2 = DisplacementsRange(0.0, 1.0, 0.1)
-    assert r1 == r2
+def test_init_from_string_minimum():
+    dr = DisplacementsRange('1 2')
+    assert dr.start == 1.0
+    assert dr.stop == 2.0
+    assert dr.step is None
+    assert dr.has_step is False
 
 
-def test_equal_ranges_with_step_within_eps():
-    r1 = DisplacementsRange(0.0, 1.0, 0.1)
-    r2 = DisplacementsRange(0.0 + 1e-7, 1.0 - 1e-7, 0.1 + 1e-7)
-    assert r1 == r2
+def test_init_from_string_with_step():
+    dr = DisplacementsRange('-1.5 3.0 0.5')
+    assert dr.start == -1.5
+    assert dr.stop == 3.0
+    assert dr.step == 0.5
+    assert dr.has_step is True
 
 
-def test_ranges_with_step_and_without_step_not_equal():
-    r1 = DisplacementsRange(0.0, 1.0, 0.1)
-    r2 = DisplacementsRange(0.0, 1.0)
-    assert r1 != r2
+def test_init_stripping_whitespace():
+    dr = DisplacementsRange('  0   10   2  ')
+    assert (dr.start, dr.stop, dr.step) == (0.0, 10.0, 2.0)
 
 
-def test_equal_ranges_without_step():
-    r1 = DisplacementsRange(0.0, 1.0)
-    r2 = DisplacementsRange(0.0, 1.0)
-    assert r1 == r2
+def test_init_invalid_number_of_parts():
+    with pytest.raises(ValueError) as excinfo:
+        DisplacementsRange('42')
+    assert 'Expected format' in str(excinfo.value)
+
+    with pytest.raises(ValueError):
+        DisplacementsRange('1 2 3 4')
 
 
-def test_ranges_without_step_not_equal_different_stop():
-    r1 = DisplacementsRange(0.0, 1.0)
-    r2 = DisplacementsRange(0.0, 2.0)
-    assert r1 != r2
+def test_init_non_numeric():
+    with pytest.raises(ValueError) as excinfo:
+        DisplacementsRange('a b c')
+    assert 'Non-numeric value' in str(excinfo.value)
 
 
-def test_repr_with_step():
-    r = DisplacementsRange(0.1, 0.9, 0.2)
-    assert repr(r) == '(start=0.1, stop=0.9, step=0.2)'
+def test_from_floats():
+    dr = DisplacementsRange.from_floats(0, 5)
+    assert isinstance(dr, DisplacementsRange)
+    assert dr.start == 0.0
+    assert dr.stop == 5.0
+    assert dr.step is None
+    assert dr.has_step is False
+
+    dr2 = DisplacementsRange.from_floats(1, 4, 0.5)
+    assert dr2.step == 0.5
+    assert dr2.has_step is True
 
 
-def test_repr_without_step():
-    r = DisplacementsRange(-1.0, 1.0)
-    assert repr(r) == '(start=-1.0, stop=1.0)'
+def test_equality_and_epsilon():
+    dr1 = DisplacementsRange('0 1 0.1')
+    dr2 = DisplacementsRange.from_floats(0 + 1e-7, 1 - 1e-7, 0.1 + 1e-7)
+    assert dr1 == dr2
+
+    dr3 = DisplacementsRange.from_floats(0, 1, 0.1001)
+    assert not (dr1 == dr3)
+
+    # Without step
+    dr4 = DisplacementsRange('2 3')
+    dr5 = DisplacementsRange.from_floats(2 + 1e-7, 3 - 1e-7)
+    assert dr4 == dr5
+
+    # Mismatch of has_step
+    dr6 = DisplacementsRange('2 3 1')
+    assert dr6 != dr4
+
+    # Comparing with non-instance
+    assert not (dr1 == (0, 1, 0.1))
+
+
+def test_repr():
+    dr = DisplacementsRange('1 2')
+    assert repr(dr) == 'DisplacementsRange(start=1.0, stop=2.0)'
+
+    drs = DisplacementsRange('1 2 0.25')
+    assert repr(drs) == 'DisplacementsRange(start=1.0, stop=2.0, step=0.25)'
