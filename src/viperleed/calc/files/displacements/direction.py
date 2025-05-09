@@ -45,6 +45,15 @@ class Direction:
     vectors : tuple of np.ndarray
         A tuple of one, two or three orthonormal vectors spanning the direction
         space.
+
+    Raises
+    ------
+    ValueError
+        If the direction string is invalid or if the number of components does
+        not match the number of directions.
+    UnsupportedDirectionError
+        If the direction string contains unsupported components like azimuthal
+        or radial directions.
     """
 
     def __init__(self, direction_str):
