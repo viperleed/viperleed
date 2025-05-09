@@ -132,8 +132,7 @@ def _generate_label_match_regex(label):
     """Generate a regex pattern to match variations of the given label.
 
     The label can contain wildcards, where '*' matches any number of characters,
-    including none
-    with '*' acting as a wildcard for word characters, and matching prefixes.
+    including none.
     """
     # Escape any special characters in the label, except for '*'
     escaped_label = re.escape(label).replace(r'\*', r'\w*')
