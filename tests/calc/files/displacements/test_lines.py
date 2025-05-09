@@ -22,6 +22,13 @@ from viperleed_jax.files.displacements.targeting import TargetingError, Targets
             id='single-target-no-step',
         ),
         pytest.param(
+            'Fe xy[1 1] = -0.2 0.2',
+            ['Fe'],
+            Direction('xy[1 1]'),
+            DisplacementsRange.from_floats(-0.2, 0.2),
+            id='single-target-no-step',
+        ),
+        pytest.param(
             'Fe 1 2, Cu_surf xy = -1.5 3.0 0.5',
             ['Fe 1 2', 'Cu_surf'],
             Direction('xy'),
