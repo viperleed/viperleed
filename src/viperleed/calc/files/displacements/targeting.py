@@ -120,13 +120,6 @@ class Subtarget:
 
         return mask
 
-    def __eq__(self, other):
-        # Technically, different strings could refer to the same targets due to
-        # implicit symmetry, but we'll ignore that for now
-        if not isinstance(other, Subtarget):
-            return False
-        return not self.target_str != other.target_str
-
 
 def _generate_label_match_regex(label):
     """Generate a regex pattern to match variations of the given label.
