@@ -89,7 +89,12 @@ class GeoDeltaLine(ParsedLine):
         # Right hand side
         _check_moire_tag(self._rhs)
         # parse to a range
-        self.range = DisplacementsRange(self._rhs)
+        try:
+            self.range = DisplacementsRange(self._rhs)
+        except ValueError as err:
+            msg = ('Unable to parse range information from line in '
+                   f'GEO_DELTA block: {self.raw_line}')
+            raise InvalidDisplacementsSyntaxError(msg) from err
 
 
     def __repr__(self):
