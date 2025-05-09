@@ -96,41 +96,6 @@ def _get_target(label, which):
     return BSTarget(f'{label} {which}')
 
 
-class GeoDeltaLine:
-    def __init__(self, label, which, direction, start, stop, step,
-                 line=None):
-        self._line= line
-        self.label = label
-        self.which = which
-        self.targets = _get_target(label, which)
-        self.direction = Direction(direction)
-        self.range = DisplacementsRange(start, stop, step)
-
-    def __eq__(self, other):
-        if isinstance(other, GeoDeltaLine):
-            return (
-                self.targets == other.targets
-                and self.direction == other.direction
-                and self.range == other.range
-            )
-        return False
-
-    def __repr__(self):
-        """Return the string representation of the line."""
-        if self._line is None:
-            line = f'{self.label} {self.which}'
-            if self.direction is not None:
-                line += f' {self.direction}'
-            line += f' = {self.range.start}'
-            if self.range.stop is not None:
-                line += f' {self.range.stop}'
-            if self.range.step is not None:
-                line += f' {self.range.step}'
-        else:
-            line = self._line
-        return line
-
-
 class VibDeltaLine:
     def __init__(self, label, which, start, stop, step, line=None):
         self._line = line
@@ -226,13 +191,6 @@ class ConstraintLine:
         return line
 
 
-def _check_moire_tag(line_rhs):
-    """Check if the right hand side of the line contains a moire tag."""
-    if 'moire' in line_rhs.lower():
-        msg = ('Moiré structures are not yet supported.')
-        raise NotImplementedError(msg)
-
-
 class OffsetsLine:
     def __init__(self, offset_type, targets, direction, value, line=None):
         self._line= line
@@ -270,3 +228,10 @@ class OffsetsLine:
         else:
             line = self._line
         return line
+
+
+def _check_moire_tag(line_rhs):
+    """Check if the right hand side of the line contains a moire tag."""
+    if 'moire' in line_rhs.lower():
+        msg = ('Moiré structures are not yet supported.')
+        raise NotImplementedError(msg)
