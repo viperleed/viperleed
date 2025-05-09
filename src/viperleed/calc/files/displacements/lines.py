@@ -3,6 +3,7 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-04'
 
+from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from viperleed_jax.perturbation_type import PerturbationType
@@ -14,6 +15,38 @@ from .targeting import BSTarget
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
 SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
 SectionHeaderLine = namedtuple('SectionHeaderLine', ['section'])
+
+_BELOW_DEBUG = 2
+
+
+class ParsedLine(ABC):
+    """Base class for parsing of non-header lines in the DISPLACEMENTS file.
+
+    The class is used to parse lines in the displacements file. It can be
+    initialized with a line string and will parse it into its components.
+    """
+
+    def __init__(self, line):
+        """Perform basic parsing and checking of the line format."""
+        # strip surplus whitespace
+        self._raw_line = ' '.join(line.strip().split())
+
+        # if not exactly one '=' is present, raise an error
+        if self._raw_line.count('=') != 1:
+            msg = (
+                f'Invalid DISPLACEMENTS line format: "{self._raw_line}". '
+                'Expected format: "<labels> = <values>".'
+            )
+            raise ValueError(msg)
+
+        # split the line into raw left and right hand sides
+        self.lhs, self.rhs = self._raw_line.split('=')
+
+
+    @abstractmethod
+    def __repr__(self):
+        """Return the string representation of the line."""
+
 
 
 def _get_target(label, which):
