@@ -6,7 +6,7 @@ __created__ = '2025-04-10'
 import pytest
 
 from viperleed_jax.files.displacements.direction import Direction
-from viperleed_jax.files.displacements.lines import GeoDeltaLine
+from viperleed_jax.files.displacements.lines import GeoDeltaLine, separate_direction_from_targets
 from viperleed_jax.files.displacements.range import DisplacementsRange
 from viperleed_jax.files.displacements.targeting import TargetingError, Targets
 
@@ -107,3 +107,36 @@ def test_geodelta_parametrized(line, exp_subtargets, exp_direction, exp_range):
 #     with pytest.raises(ValueError) as excinfo:
 #         GeoDeltaLine('A x = 0 1')
 #     assert 'Bad range' in str(excinfo.value)
+
+
+
+@pytest.mark.parametrize(
+    'input_str, exp_targets, exp_direction',
+    [
+        # No direction at all
+        ('A1 B2', 'A1 B2', ''),
+        # Single-letter direction
+        ('A x', 'A', 'x'),
+        # Multi-letter direction
+        ('Label xy', 'Label', 'xy'),
+        # Bracketed vector direction
+        ('T1 xy[1 0]', 'T1', 'xy[1 0]'),
+        # 3D vector
+        ('T2 xyz[1 2 -1]', 'T2', 'xyz[1 2 -1]'),
+        # azi(...) form
+        ('Foo azi(ab[1 2])', 'Foo', 'azi(ab[1 2])'),
+        # r(...) form
+        ('Bar r([1 0])', 'Bar', 'r([1 0])'),
+        # Extra whitespace
+        ('  A1,B2   x  ', 'A1,B2', 'x'),
+        # Only direction, no targets
+        ('xy', '', 'xy'),
+        ('[1 0]', '', '[1 0]'),
+        # Empty input
+        ('', '', ''),
+    ],
+)
+def test_separate_direction(input_str, exp_targets, exp_direction):
+    targets, direction = separate_direction_from_targets(input_str)
+    assert targets == exp_targets
+    assert direction == exp_direction
