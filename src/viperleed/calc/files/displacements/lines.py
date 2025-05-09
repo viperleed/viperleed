@@ -11,6 +11,7 @@ from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
 from viperleed_jax.perturbation_type import PerturbationType
 
 from .direction import Direction
+from .errors import InvalidDisplacementsSyntaxError
 from .range import DisplacementsRange
 from .targeting import Targets
 
@@ -43,7 +44,7 @@ class ParsedLine(ABC):
                 f'Invalid DISPLACEMENTS line format: "{self.raw_line}". '
                 'Expected format: "<labels> = <values>".'
             )
-            raise ValueError(msg)
+            raise InvalidDisplacementsSyntaxError(msg)
 
         # split the line into raw left and right hand sides
         self._lhs, self._rhs = self.raw_line.split('=')
@@ -73,14 +74,14 @@ class GeoDeltaLine(ParsedLine):
                 f'Invalid GEO_DELTA line format: "{self._lhs}". '
                 'Expected format: "<targets> <direction> = <range>".'
             )
-            raise ValueError(msg)
+            raise InvalidDisplacementsSyntaxError(msg)
         # check if the last part is a direction
         try:
             self.direction = Direction(dir_str)
-        except ValueError as err:
+        except InvalidDisplacementsSyntaxError as err:
             msg = ('Unable to parse direction information from line in '
                    f'GEO_DELTA block: {self.raw_line}')
-            raise ValueError(msg) from err
+            raise InvalidDisplacementsSyntaxError(msg) from err
 
         # parse the rest of the left hand side into targets
         self.targets = Targets(targets_str)
