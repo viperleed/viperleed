@@ -23,14 +23,19 @@ WHICH_PATTERN = r'(?P<which>L\(\d+(-\d+)?\)|\d+(-\d+)?(\s+\d+(-\d+)?)*)?'
 
 DIRECTION_PATTERN = (
     r'(?P<direction>('
-    r'[abcxyz]'  # 1D single-letter shorthand
-    r'|ab|xy'    # 2D multi-letter in-plane shorthand
-    r'|abc|xyz'  # 3D multi-letter shorthand directions
-    r'|\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'  # [1 0] or [1.0 -2]
-    r'|ab\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'  # ab[1 2]
-    r'|xy\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'  # xy[0 1]
-    r'|azi\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'  # azi(ab[1 2])
-    r'|r\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'  # r([1.0 -1])
+    # longer, more specific first:
+    r'azi\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'
+    r'|r\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'
+    # 3-letter shorthands *with* optional bracket
+    r'|xyz(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    r'|abc(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    # 2-letter shorthands *with* optional bracket
+    r'|xy(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    r'|ab(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    # bare bracketed vector
+    r'|\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'
+    # single-letter shorthands
+    r'|[xyzabc]'
     r'))'
 )
 
