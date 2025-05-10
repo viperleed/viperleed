@@ -205,6 +205,33 @@ class OccDeltaLine:
         """Return the string representation of the line."""
         # TODO
 
+
+class ConstraintLine:
+    """Class to parse lines in the DISPLACEMENTS block of DISPLACEMENTS.
+
+    Lines in the OCC_DELTA block are either of the form:
+        <type> <target> [, <target> ...] = [<operation>] <target>
+    where <target>, ... are tokes that are parsed by the # TODO
+
+    or:
+        <type> <target>, <target> [, <target> ...] = linked
+    The latter syntax is a shorthand for direct linking of all targets on the
+    left hand side. The 'linked' assignment will raise an
+    InvalidDisplacementsSyntaxError if only one target is specified on the left
+    hand side.
+
+    """
+    def __init__(self, line: str):
+        super().__init__(line)
+
+        # check for deprecated 'offset' tag
+        if 'offset' in self._rhs.lower:
+            msg = ('Offset assignment in the CONSTRAIN block is deprecated. '
+                   'Use the OFFSETS block instead.')
+            raise InvalidDisplacementsSyntaxError(msg)
+
+
+
 class ConstraintLine:
     def __init__(self, constraint_type, targets, direction, value, line=None):
         self._line = line
