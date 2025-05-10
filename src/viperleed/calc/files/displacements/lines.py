@@ -13,7 +13,7 @@ from viperleed_jax.perturbation_type import PerturbationType
 from .direction import Direction
 from .errors import InvalidDisplacementsSyntaxError
 from .range import DisplacementsRange
-from .targeting import Targets
+from .targeting import Targets, TargetingError
 
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
 SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
@@ -54,6 +54,40 @@ class ParsedLine(ABC):
     def __repr__(self):
         """Return the string representation of the line."""
 
+    @abstractmethod
+    def block_name(self):
+        """Name of the Block in the DISPLACEMENTS file."""
+
+    def _parse_targets(self, targets_str):
+        try:
+            return  Targets(targets_str)
+        except TargetingError as err:
+            msg = (
+                'Unable to parse target information from line in '
+                f'{self.block_name} block: {self.raw_line}.'
+            )
+            raise InvalidDisplacementsSyntaxError(msg) from err
+
+    def _parse_direction(self, dir_str):
+        try:
+            return Direction(dir_str)
+        except InvalidDisplacementsSyntaxError as err:
+            msg = (
+                'Unable to parse direction information from line in '
+                f'{self.block_name} block: {self.raw_line}.'
+            )
+            raise InvalidDisplacementsSyntaxError(msg) from err
+
+    def _parse_range(self, range_str):
+        try:
+            return DisplacementsRange(range_str)
+        except ValueError as err:
+            msg = (
+                'Unable to parse range information from line in '
+                f'{self.block_name} block: {self.raw_line}.'
+            )
+            raise InvalidDisplacementsSyntaxError(msg) from err
+
 class GeoDeltaLine(ParsedLine):
     """Class to parse lines in the GEO_DELTA block of DISPLACEMENTS.
 
@@ -63,11 +97,13 @@ class GeoDeltaLine(ParsedLine):
     `BSTarget`, `Direction`, and `DisplacementsRange` classes, respectively.
     """
 
+    block_name = 'GEO_DELTA'
+
     def __init__(self, line: str):
         super().__init__(line)
 
         # Left hand side
-        # split off last element of the left hand side
+        # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if not targets_str or not dir_str:
             msg = (
@@ -75,27 +111,15 @@ class GeoDeltaLine(ParsedLine):
                 'Expected format: "<targets> <direction> = <range>".'
             )
             raise InvalidDisplacementsSyntaxError(msg)
-        # check if the last part is a direction
-        try:
-            self.direction = Direction(dir_str)
-        except InvalidDisplacementsSyntaxError as err:
-            msg = ('Unable to parse direction information from line in '
-                   f'GEO_DELTA block: {self.raw_line}')
-            raise InvalidDisplacementsSyntaxError(msg) from err
 
-        # parse the rest of the left hand side into targets
-        self.targets = Targets(targets_str)
+        # parse the into targets and direction
+        self.targets = self._parse_targets(targets_str)
+        self.direction = self._parse_direction(dir_str)
 
         # Right hand side
         _check_moire_tag(self._rhs)
         # parse to a range
-        try:
-            self.range = DisplacementsRange(self._rhs)
-        except ValueError as err:
-            msg = ('Unable to parse range information from line in '
-                   f'GEO_DELTA block: {self.raw_line}')
-            raise InvalidDisplacementsSyntaxError(msg) from err
-
+        self.range = self._parse_range(self._rhs)
 
     def __repr__(self):
         """Return the string representation of the line."""
