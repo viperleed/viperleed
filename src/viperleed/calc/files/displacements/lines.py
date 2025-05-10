@@ -126,40 +126,48 @@ class GeoDeltaLine(ParsedLine):
         return f'{self.targets} {self.direction} = {self.range}'
 
 
+class VibDeltaLine(ParsedLine):
+    """Class to parse lines in the VIB_DELTA block of DISPLACEMENTS.
+
+    Lines in the VIB_DELTA block are of the form:
+        <target> [, <target>] = <range>
+    where <target>, and <range> are tokes that are parsed by the
+    `Targets`, `Direction`, and `DisplacementsRange` classes, respectively.
+    """
+
+    block_name = 'VIB_DELTA'
+
+    def __init__(self, line: str):
+        super().__init__(line)
+
+        # Left hand side
+        # check if the last part is a direction
+        targets_str, dir_str = separate_direction_from_targets(self._lhs)
+        if dir_str:
+            msg = (
+                f'Invalid VIB_DELTA line format: "{self._raw_line}". '
+                'Expected format: "<targets> = <range>".'
+            )
+            raise InvalidDisplacementsSyntaxError(msg)
+
+        # parse the into targets and direction
+        self.targets = self._parse_targets(targets_str)
+
+        # Right hand side
+        _check_moire_tag(self._rhs)
+        # parse to a range
+        self.range = self._parse_range(self._rhs)
+
+    def __repr__(self):
+        """Return the string representation of the line."""
+        return f'{self.targets} = {self.range}'
+
+
 def _get_target(label, which):
     if which is None:
         return BSTarget(label)
     return BSTarget(f'{label} {which}')
 
-
-class VibDeltaLine:
-    def __init__(self, label, which, start, stop, step, line=None):
-        self._line = line
-        self.label = label
-        self.which = which
-        self.targets = _get_target(label, which)
-        self.range = DisplacementsRange(start, stop, step)
-
-    def __eq__(self, other):
-        if isinstance(other, VibDeltaLine):
-            return (
-                self.targets == other.targets
-                and self.range == other.range
-            )
-        return False
-
-    def __repr__(self):
-        """Return the string representation of the line."""
-        if self._line is None:
-            line = f'{self.label} {self.which}'
-            line += f' = {self.range.start}'
-            if self.range.stop is not None:
-                line += f' {self.range.stop}'
-            if self.range.step is not None:
-                line += f' {self.range.step}'
-        else:
-            line = self._line
-        return line
 
 
 class OccDeltaLine:
