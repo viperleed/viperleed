@@ -94,7 +94,7 @@ class GeoDeltaLine(ParsedLine):
     Lines in the GEO_DELTA block are of the form:
         <target> [, <target>] <direction> = <range>
     where <target>, <direction>, and <range> are tokes that are parsed by the
-    `BSTarget`, `Direction`, and `DisplacementsRange` classes, respectively.
+    `Targets`, `Direction`, and `DisplacementsRange` classes, respectively.
     """
 
     block_name = 'GEO_DELTA'
