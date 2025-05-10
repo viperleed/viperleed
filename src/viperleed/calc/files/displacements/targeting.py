@@ -48,7 +48,7 @@ class Subtarget:
         """Parse the site, and optional nums or layers from the target string."""
         parts = self.target_str.split()
         if not parts:
-            raise ValueError('Target string is empty')
+            raise TargetingError('Target string is empty')
         site_str = parts[0]
         self.regex = _generate_label_match_regex(site_str)
 
