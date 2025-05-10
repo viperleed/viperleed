@@ -220,6 +220,8 @@ class ConstraintLine:
     InvalidDisplacementsSyntaxError if only one target is specified on the left
     hand side.
 
+    block_type = 'CONSTRAIN'
+
     """
     def __init__(self, line: str):
         super().__init__(line)
@@ -232,82 +234,20 @@ class ConstraintLine:
 
 
 
-class ConstraintLine:
-    def __init__(self, constraint_type, targets, direction, value, line=None):
-        self._line = line
-        self.constraint_type = PerturbationType.from_string(constraint_type)
-        self.direction = None
-        if self.constraint_type == PerturbationType.GEO and direction is not None:
-            self.direction = Direction(direction)
-        elif self.constraint_type != PerturbationType.GEO and direction is not None:
-            msg = (
-                f'A direction is not allowed for {self.constraint_type} '
-                f'constraints.'
-            )
-            raise ValueError(msg)
-        self.targets = BSTarget(targets)
-        self.value = value
-
-    def __eq__(self, other):
-        if isinstance(other, ConstraintLine):
-            return (
-                self.constraint_type == other.constraint_type
-                and self.targets == other.targets
-                and self.value == other.value
-                and (self.direction == other.direction
-                     if self.direction is not None else other.direction is None)
-            )
-        return False
-
-    def __repr__(self):
-        """Return the string representation of the line."""
-        if self._line is None:
-            line = f'{self.constraint_type} {self.targets}'
-            if self.direction is not None:
-                line += f' {self.direction}'
-            line += f' = {self.value}'
-        else:
-            line = self._line
-        return line
-
-
 class OffsetsLine:
-    def __init__(self, offset_type, targets, direction, value, line=None):
-        self._line= line
-        self.offset_type = offset_type
-        self.targets = BSTarget(targets)
-        self.value = value
-        if self.offset_type == 'geo':
-            if direction is not None:
-                self.direction = Direction(direction)
-            else:
-                self.direction = None
-        elif self.offset_type != 'geo' and direction is not None:
-            msg = (
-                f'A direction is not allowed for {self.offset_type} '
-                f'offsets.'
-            )
-            raise ValueError(msg)
+    """Class to parse lines in the OFFSETS block of DISPLACEMENTS.
 
-    def __eq__(self, other):
-        if isinstance(other, ConstraintLine):
-            return (
-                self.offset_type == other.constraint_type
-                and self.parameters == other.parameters
-                and self.value == other.value
-            )
-        return False
+    Lines in the OFFSETS block are of the form:
+        <type> <target> [, <target> ...] = <offset>
+    where <target>, ... are tokes that are parsed by the # TODO
+    """
 
-    def __repr__(self):
-        """Return the string representation of the line."""
-        if self._line is None:
-            line = f'{self.offset_type} {self.targets}'
-            if self.direction is not None:
-                line += f' {self.direction}'
-            line += f' = {self.value}'
-        else:
-            line = self._line
-        return line
+    block_type = 'OFFSET'
+
+    def __init__(self, line):
+        super().__init__(line)
+        # TODO
+
 
 
 def separate_direction_from_targets(targets_and_direction: str):
