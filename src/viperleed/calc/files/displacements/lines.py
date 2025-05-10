@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
-from viperleed_jax.perturbation_type import PerturbationType
+from viperleed_jax.perturbation_type import PerturbationType, PerturbationTypeError
 
 from .direction import Direction
 from .errors import InvalidDisplacementsSyntaxError
@@ -172,30 +172,38 @@ def _get_target(label, which):
 
 
 class OccDeltaLine:
-    def __init__(self, label, which, chem_blocks, line=None):
-        self._line = line
-        self.label = label
-        self.which = which
-        self.targets = _get_target(label, which)
-        self.chem_blocks = chem_blocks
+    """Class to parse lines in the OCC_DELTA block of DISPLACEMENTS.
 
-    def __eq__(self, other):
-        if isinstance(other, OccDeltaLine):
-            return (
-                self.targets == other.targets
-                and self.chem_blocks == other.chem_blocks
+    Lines in the OCC_DELTA block are of the form:
+        <target> [, <target>] = <element> <range> [, <element> <range> ...]
+    where <target>, <element> and <range> are tokes that are parsed by the
+    `Targets`, `Element` and `DisplacementsRange` classes, respectively.
+    """ # TODO: Element class?
+
+    block_type = 'OCC_DELTA'
+
+    def __init__(self, line: str):
+        super().__init__(line)
+
+        # Left hand side
+        # check if the last part is a direction
+        targets_str, dir_str = separate_direction_from_targets(self._lhs)
+        if dir_str:
+            msg = (
+                f'Invalid OCC_DELTA line format: "{self._raw_line}". '
+                'Expected format: "<targets> [, <target>] = <range>".'
             )
-        return False
+            raise InvalidDisplacementsSyntaxError(msg)
+
+        # parse the into targets and direction
+        self.targets = self._parse_targets(targets_str)
+
+        # TODO RHS parsing
+
 
     def __repr__(self):
         """Return the string representation of the line."""
-        if self._line is None:
-            line = f'{self.label} {self.which}'
-            line += f' = {self.chem_blocks}'
-        else:
-            line = self._line
-        return line
-
+        # TODO
 
 class ConstraintLine:
     def __init__(self, constraint_type, targets, direction, value, line=None):
