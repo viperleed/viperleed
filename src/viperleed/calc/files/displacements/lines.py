@@ -108,7 +108,8 @@ class GeoDeltaLine(ParsedLine):
         if not targets_str or not dir_str:
             msg = (
                 f'Invalid GEO_DELTA line format: "{self._lhs}". '
-                'Expected format: "<targets> <direction> = <range>".'
+                'Expected format: "<targets> [, <target>] <direction> = '
+                '<range>".'
             )
             raise InvalidDisplacementsSyntaxError(msg)
 
@@ -146,7 +147,7 @@ class VibDeltaLine(ParsedLine):
         if dir_str:
             msg = (
                 f'Invalid VIB_DELTA line format: "{self._raw_line}". '
-                'Expected format: "<targets> = <range>".'
+                'Expected format: "<targets> [, <target>] = <range>".'
             )
             raise InvalidDisplacementsSyntaxError(msg)
 
