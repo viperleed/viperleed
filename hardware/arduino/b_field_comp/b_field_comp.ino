@@ -266,7 +266,7 @@ void updateState() {
 
     Writes
     ------
-    initialTime, currentState, waitingForDataFromPC, calibrationGain
+    initialTime, currentState, waitingForDataFromPC
 
     Goes to state
     -------------
@@ -453,7 +453,8 @@ void reset(){                                      //TODO: add reset settings fo
     Writes
     ------
     numBytesRead, msgLength, readingFromSerial, newMessage,
-    waitingForDataFromPC,
+    waitingForDataFromPC, dutyCycle, targetCurrent, timeConstant,
+    enableDynamic, transformationMatrix, calibrationCurve
 
     Goes to state
     -------------
@@ -463,6 +464,25 @@ void reset(){                                      //TODO: add reset settings fo
     msgLength = 0;
     readingFromSerial = false;
     newMessage = false;
+    dutyCycle[0].asFloat = 0.0;
+    dutyCycle[1].asFloat = 0.0;
+    targetCurrent[0].asFloat = 0.0;
+    targetCurrent[1].asFloat = 0.0;
+    timeConstant[0].asFloat = 0.0;
+    timeConstant[1].asFloat = 0.0;
+    enableDynamic = false;
+    
+    for(int i = 0;  i < 3; i++)
+    {	for(int j = 0;  j < 2; j++)
+    	{
+    		transformationMatrix[i][j].asFloat = 0.0;
+    	}
+    }
+    
+    for(int i = 0;  i < N; i++)
+    {	
+    	calibrationCurve[i] = 0;
+	}
 
     currentState = STATE_IDLE;
     waitingForDataFromPC = false;
@@ -477,7 +497,7 @@ void setSerialNr(){
 
     Reads
     -----
-    data_received
+    data_received, newMessage, msgLength
 
     Msg to PC
     ---------
@@ -542,7 +562,7 @@ void setDutyCycle(){
 
     Writes
     ------
-    newMessage, waitingForDataFromPC, dutyCycle,
+    newMessage, waitingForDataFromPC, dutyCycle
 
     Msg to PC
     ---------
@@ -594,6 +614,9 @@ void setDutyCycle(){
         coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1
         coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2
 
+        encodeAndSend(dutyCycle[0].asBytes, 5);			// 5 bytes because the first byte is the position of the float in the array.
+        encodeAndSend(dutyCycle[1].asBytes, 5);
+
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
      }
@@ -615,7 +638,7 @@ void setCurrent(){
 
     Writes
     ------
-    newMessage, waitingForDataFromPC, targetCurrent,
+    newMessage, waitingForDataFromPC, targetCurrent
 
     Msg to PC
     ---------
@@ -710,10 +733,11 @@ void measure(){
         return;
     }
 
-    floatOrBytes voltage1;  //TODO: make implementation of the returning data more efficient if this works
+    floatOrBytes voltage1;		//TODO: make implementation of the returning data more efficient in case this works
     floatOrBytes voltage2;
     floatOrBytes current1;
     floatOrBytes current2;
+
 
     //Measure the current of the respective coil
     current1.asFloat = coil_1.get_current();
@@ -724,12 +748,10 @@ void measure(){
     voltage2.asFloat = coil_2.get_voltage();
 
 
-    sendFloatToPC(current1);
-    sendFloatToPC(current2);
     sendFloatToPC(voltage1);
     sendFloatToPC(voltage2);
-
-
+    sendFloatToPC(current1);
+    sendFloatToPC(current2);
 
     currentState = STATE_IDLE;
 }
@@ -752,10 +774,10 @@ void sendFloatToPC(floatOrBytes value){
 void setTimeConstant(){
    /** Wait until we get data (time constant) from the PC, convert the received data
 
-    For each coil, we need 4 bytes from the data_received[] buffer. ???
+    For each coil, we need 4 bytes from the data_received[] buffer.
     Their meaning is:
-    - ...
-    - ...
+    - Time constant for coil 1
+    - Time constant for coil 2
 
     Reads
     -----
@@ -823,11 +845,6 @@ void setTimeConstant(){
 void setEnableDynamic(){
    /** Wait until we get data from the PC, convert the received data
 
-    For each coil, we need 4 bytes from the data_received[] buffer.  ???
-    Their meaning is:
-    - ...
-    - ...
-
     Reads
     -----
     currentState, newMessage, waitingForDataFromPC, data_received, msgLength
@@ -872,8 +889,9 @@ void setEnableDynamic(){
         newMessage = false;
 
         // Check that it is the right amount of data
-        // Our msgLength is 1 as we get one byte.
-        if (msgLength != 1){
+        // Our msgLength is 2.
+        // We only get two bytes here, so that there is no conflict with the commands, as all one byte messages are considered commands.
+        if (msgLength != 2){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
@@ -882,8 +900,8 @@ void setEnableDynamic(){
             enableDynamic = true;
         }
 
-         if (data_received[0] == 0){
-            enableDynamic = false;
+        else if (data_received[0] == 0){
+        	enableDynamic = false;
         }
 
         else{
@@ -899,12 +917,7 @@ void setEnableDynamic(){
 
 /** Handler of STATE_SET_TRANSFORMATION_MATRIX */
 void setTransformationMatrix(){
-   /** Wait until we get data from the PC (what data?), convert the received data in order to set a transformation matrix
-
-    For each coil, we need ? bytes from the data_received[] buffer.
-    Their meaning is:
-    -
-    -
+   /** Wait until we get data from the PC (what data?), convert the received data in order to set a transformation matrix.
 
     Reads
     -----
@@ -962,6 +975,7 @@ void setTransformationMatrix(){
                  }
             }
         }
+
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
      }
@@ -970,12 +984,7 @@ void setTransformationMatrix(){
 
 /** Handler of STATE_SET_CALIBRATION_CURVE */
 void setCalibrationCurve(){
-   /** Wait until we get data from the PC (what data?), convert the received data in order to set a calibration curve
-
-    For each coil, we need ? bytes from the data_received[] buffer.
-    Their meaning is:
-    -
-    -
+   /** Wait until we get data from the PC (what data?), convert the received data in order to set a calibration curve.
 
     Reads
     -----
