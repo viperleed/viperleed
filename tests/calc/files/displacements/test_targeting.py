@@ -3,7 +3,7 @@ import pytest
 from pytest_cases import case, parametrize_with_cases
 
 from viperleed_jax.atom_basis import AtomBasis
-from viperleed_jax.files.displacements.targeting import Targets, Subtarget, TargetingError
+from viperleed_jax.files.displacements.tokens.targeting import Targets, TargetToken, TargetingError
 
 
 # Minimal fake scatterer for tests
@@ -103,13 +103,13 @@ def test_no_matches_raises():
 def test_empty_and_bad_inputs():
     # Empty subtarget string
     with pytest.raises(ValueError):
-        Subtarget('').select(atom_basis)
+        TargetToken('').select(atom_basis)
     # Bad layer syntax
     with pytest.raises(ValueError):
-        Subtarget('A L()')
+        TargetToken('A L()')
     # Non-integer num token
     with pytest.raises(ValueError):
-        Subtarget('A one').select(atom_basis)
+        TargetToken('A one').select(atom_basis)
 
 
 def test_repr():

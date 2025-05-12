@@ -7,7 +7,9 @@ import re
 
 import numpy as np
 
-class TargetingError(ValueError):
+from .base import DisplacementsFileToken, TokenParserError
+
+class TargetingError(TokenParserError):
     """Base class for errors in the targeting module."""
 
 
@@ -23,7 +25,7 @@ class Targets:
     def _parse_target(self, target_str):
         """Parse multiple subtargets separated by commas."""
         subtarget_strs = target_str.split(',')
-        self.subtargets = [Subtarget(sub.strip()) for sub in subtarget_strs]
+        self.subtargets = [TargetToken(sub.strip()) for sub in subtarget_strs]
 
     def select(self, atom_basis):
         """Take the 'or' of all subtargets, combining masks."""
@@ -37,7 +39,9 @@ class Targets:
         return f'Target({self.target_str})'
 
 
-class Subtarget:
+class TargetToken(DisplacementsFileToken):
+    """Class to handle the <target> token in the DISPLACEMENTS file."""
+
     def __init__(self, target_str):
         self.target_str = target_str
         self.nums = None
