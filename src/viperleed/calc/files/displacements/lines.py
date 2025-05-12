@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
-from viperleed_jax.perturbation_type import (
+from viperleed_jax.files.displacements.tokens.perturbation_type import (
     PerturbationType,
     PerturbationTypeError,
 )
@@ -19,6 +19,7 @@ from .tokens.base import TokenParserError
 from .tokens.direction import DirectionToken
 from .tokens.offset import OffsetToken
 from .tokens.range import RangeToken
+from .tokens.perturbation_type import TypeToken, PerturbationType
 
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
 SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
@@ -63,6 +64,10 @@ class ParsedLine(ABC):
     def block_name(self):
         """Name of the Block in the DISPLACEMENTS file."""
 
+    @abstractmethod
+    def expected_format(self):
+        """Name of the Block in the DISPLACEMENTS file."""
+
     def _parse_targets(self, targets_str):
         try:
             return  Targets(targets_str)
@@ -92,6 +97,24 @@ class ParsedLine(ABC):
                 f'{self.block_name} block: {self.raw_line}.'
             )
             raise InvalidDisplacementsSyntaxError(msg) from err
+
+    def _parse_type(self, type_str):
+        try:
+            return TypeToken(type_str)
+        except TokenParserError as err:
+            msg = (
+                'Unable to parse type information from line in '
+                f'{self.block_name} block: {self.raw_line}.'
+            )
+            raise InvalidDisplacementsSyntaxError from err
+
+    def invalid_format_msg(self):
+        """Return a string with a general invalid format error message."""
+        return (
+            f'Invalid {self.block_name} line format: "{self._raw_line}". '
+            f'Expected format: "{self.expected_format}".'
+        )
+
 
 class GeoDeltaLine(ParsedLine):
     """Class to parse lines in the GEO_DELTA block of DISPLACEMENTS.
@@ -239,33 +262,54 @@ class ConstraintLine:
 
 
 
-class OffsetsLine:
+class OffsetsLine(ParsedLine):
     """Class to parse lines in the OFFSETS block of DISPLACEMENTS.
 
     Lines in the OFFSETS block are of the form:
-        <type> <target> [, <target> ...] = <offset>
+        <type> <target> [, <target> ...] [<direction>] = <offset>
     where <target>, ... are tokes that are parsed by the OffsetToken class.
+    A direction token must be specified if and only if the type of the offset
+    is geometric.
     """
 
     block_type = 'OFFSET'
+    expected_format = ('<type> <target> [, <target> ...] [<direction>] '
+                       '= <offset>')
 
     def __init__(self, line):
         super().__init__(line)
+        self.direction = None
 
-        # parser LHS into targets
-        self.targets = self._parse_targets(self._lhs)
+        # parse LHS
+
+        parts = self._lhs.split()
+        if len(parts) < 2:  # at least type and one target
+            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+
+        self.type = self._parse_type(parts[0])
+        targets_str, dir_str = separate_direction_from_targets(
+            parts[1:].join(' '))
+
+        # parse targets
+        self.targets = self._parse_targets(targets_str)
+
+        if self.type.type is PerturbationType.GEO:
+            # expect and parse direction specifier
+            # will raise if no direction is given
+            self.direction = self._parse_direction(dir_str)
+
+        if self.type.type is not PerturbationType.GEO and dir_str:
+            raise InvalidDisplacementsSyntaxError(
+                'Direction tokens in the OFFSETS block are only allowed for '
+                'geometric offsets.'
+            )
 
         # parse RHS into offset
         try:
             self.offset = OffsetToken(self._rhs)
         except TokenParserError as err:
-            msg = (
-                f'Invalid OFFSET line format: "{self._raw_line}". '
-                'Expected format: "<target> [, <target>] = <offset>".'
-            )
-            raise InvalidDisplacementsSyntaxError(msg) from err
-        # TODO
-
+            raise InvalidDisplacementsSyntaxError(
+                self.invalid_format_msg) from err
 
 
 def separate_direction_from_targets(targets_and_direction: str):
