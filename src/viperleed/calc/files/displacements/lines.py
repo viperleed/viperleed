@@ -12,7 +12,7 @@ from viperleed_jax.perturbation_type import PerturbationType, PerturbationTypeEr
 
 from .direction import Direction
 from .errors import InvalidDisplacementsSyntaxError
-from .range import DisplacementsRange
+from .range import RangeToken
 from .targeting import Targets, TargetingError
 
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
@@ -94,7 +94,7 @@ class GeoDeltaLine(ParsedLine):
     Lines in the GEO_DELTA block are of the form:
         <target> [, <target>] <direction> = <range>
     where <target>, <direction>, and <range> are tokes that are parsed by the
-    `Targets`, `Direction`, and `DisplacementsRange` classes, respectively.
+    `Targets`, `Direction`, and `RangeToken` classes, respectively.
     """
 
     block_name = 'GEO_DELTA'
@@ -133,7 +133,7 @@ class VibDeltaLine(ParsedLine):
     Lines in the VIB_DELTA block are of the form:
         <target> [, <target>] = <range>
     where <target>, and <range> are tokes that are parsed by the
-    `Targets`, `Direction`, and `DisplacementsRange` classes, respectively.
+    `Targets`, `Direction`, and `RangeToken` classes, respectively.
     """
 
     block_name = 'VIB_DELTA'

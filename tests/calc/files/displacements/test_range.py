@@ -108,7 +108,7 @@ def test_equality_and_epsilon():
 
 def test_repr():
     dr = RangeToken('1 2')
-    assert repr(dr) == 'DisplacementsRange(start=1.0, stop=2.0)'
+    assert repr(dr) == 'RangeToken(start=1.0, stop=2.0)'
 
     drs = RangeToken('1 2 0.25')
-    assert repr(drs) == 'DisplacementsRange(start=1.0, stop=2.0, step=0.25)'
+    assert repr(drs) == 'RangeToken(start=1.0, stop=2.0, step=0.25)'

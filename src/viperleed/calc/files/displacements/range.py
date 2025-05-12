@@ -22,7 +22,7 @@ class RangeToken:
     _EPS = 1e-6
 
     def __init__(self, range_str: str):
-        """Construct a DisplacementsRange from a string."""
+        """Construct a RangeToken from a string."""
         parts = range_str.strip().split()
         if len(parts) < 2 or len(parts) > 3:
             msg = (
@@ -61,7 +61,7 @@ class RangeToken:
         return inst
 
     def __eq__(self, other):
-        """Compare two DisplacementsRange objects for equality."""
+        """Compare two RangeToken objects for equality."""
         if not isinstance(other, RangeToken):
             return False
         if self.has_step != other.has_step:
@@ -80,11 +80,11 @@ class RangeToken:
         )
 
     def __repr__(self):
-        """Return a string representation of the DisplacementsRange object."""
+        """Return a string representation of the RangeToken object."""
         if self.has_step:
-            return (f'DisplacementsRange(start={self.start}, stop={self.stop}, '
+            return (f'RangeToken(start={self.start}, stop={self.stop}, '
                     f'step={self.step})')
-        return f'DisplacementsRange(start={self.start}, stop={self.stop})'
+        return f'RangeToken(start={self.start}, stop={self.stop})'
 
 def _check_step(step):
     """Check if the step is positive."""
