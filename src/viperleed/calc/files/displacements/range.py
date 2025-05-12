@@ -3,6 +3,11 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-15'
 
+from .tokens.base import TokenParserError
+
+
+class RangeTokenParserError(TokenParserError):
+    """Class for parsing Errors in the RangeToken."""
 
 class RangeToken:
     """Class to parse and represent displacement ranges.
@@ -29,7 +34,7 @@ class RangeToken:
                 f'Invalid range format: "{range_str}". Expected format: '
                 '"<start> <stop> [<step>]".'
             )
-            raise ValueError(msg)
+            raise RangeTokenParserError(msg)
 
         try:
             start = float(parts[0])
@@ -37,7 +42,7 @@ class RangeToken:
             step = float(parts[2]) if len(parts) == 3 else None
         except ValueError as err:
             msg = f'Non-numeric value in range: "{range_str}"'
-            raise ValueError(msg) from err
+            raise RangeTokenParserError(msg) from err
 
         # check that step is valid
         _check_step(step)
@@ -90,4 +95,4 @@ def _check_step(step):
     """Check if the step is positive."""
     if step is not None and step <= 0:
         msg = f'Step must be positive: "{step}"'
-        raise ValueError(msg)
+        raise RangeTokenParserError(msg)

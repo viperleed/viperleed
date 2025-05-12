@@ -6,7 +6,9 @@ __created__ = '2025-04-11'
 
 import pytest
 
-from viperleed_jax.files.displacements.range import RangeToken
+from viperleed_jax.files.displacements.range import (
+    RangeToken, RangeTokenParserError
+)
 
 
 @pytest.mark.parametrize(
@@ -52,22 +54,22 @@ def test_init_stripping_whitespace():
 
 
 def test_init_invalid_number_of_parts():
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(RangeTokenParserError) as excinfo:
         RangeToken('42')
     assert 'Expected format' in str(excinfo.value)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(RangeTokenParserError):
         RangeToken('1 2 3 4')
 
 
 def test_init_non_numeric():
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(RangeTokenParserError) as excinfo:
         RangeToken('a b c')
     assert 'Non-numeric value' in str(excinfo.value)
 
 
 def test_negative_step():
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(RangeTokenParserError) as excinfo:
         RangeToken('-0.2 0.2 -0.05')
     assert 'Step must be positive' in str(excinfo.value)
 
@@ -91,7 +93,7 @@ def test_equality_and_epsilon():
     assert dr1 == dr2
 
     dr3 = RangeToken.from_floats(0, 1, 0.1001)
-    assert not (dr1 == dr3)
+    assert dr1 != dr3
 
     # Without step
     dr4 = RangeToken('2 3')
@@ -103,7 +105,7 @@ def test_equality_and_epsilon():
     assert dr6 != dr4
 
     # Comparing with non-instance
-    assert not (dr1 == (0, 1, 0.1))
+    assert dr1 != (0, 1, 0.1)
 
 
 def test_repr():
