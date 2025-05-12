@@ -3,7 +3,7 @@ import pytest
 from pytest_cases import case, parametrize_with_cases
 
 from viperleed_jax.atom_basis import AtomBasis
-from viperleed_jax.files.displacements.tokens.targeting import Targets, TargetToken, TargetingError
+from viperleed_jax.files.displacements.tokens.target import Targets, TargetToken, TargetingError
 
 
 # Minimal fake scatterer for tests
