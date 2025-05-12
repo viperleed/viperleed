@@ -14,7 +14,7 @@ from viperleed_jax.perturbation_type import (
 )
 
 from .errors import InvalidDisplacementsSyntaxError
-from .targeting import TargetingError, Targets
+from .tokens.target import TargetingError, Targets
 from .tokens.base import TokenParserError
 from .tokens.direction import DirectionToken
 from .tokens.offset import OffsetToken
