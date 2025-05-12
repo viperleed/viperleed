@@ -241,13 +241,23 @@ class OffsetsLine:
 
     Lines in the OFFSETS block are of the form:
         <type> <target> [, <target> ...] = <offset>
-    where <target>, ... are tokes that are parsed by the # TODO
+    where <target>, ... are tokes that are parsed by the OffsetToken class.
     """
 
     block_type = 'OFFSET'
 
     def __init__(self, line):
         super().__init__(line)
+
+        # parse RHS into offset
+        try:
+            self.offset = OffsetToken(self._rhs)
+        except TokenParserError as err:
+            msg = (
+                f'Invalid OFFSET line format: "{self._raw_line}". '
+                'Expected format: "<target> [, <target>] = <offset>".'
+            )
+            raise InvalidDisplacementsSyntaxError(msg) from err
         # TODO
 
 
