@@ -18,13 +18,13 @@ class UnsupportedDirectionError(Exception):
         super().__init__(message)
         self.message = message
 
-class Direction:
+class DirectionToken:
     """Class to parse direction specifiers in 3D space.
 
-    Direction specifiers are used to declare the allowed directions of movements
-    or constraints for geometric displacements. They can specify one, two, or
-    three dimensions of movements. The direction specifier can be given as one
-    of:
+    DirectionToken specifiers are used to declare the allowed directions of
+    movements or constraints for geometric displacements. They can specify one,
+    two, or three dimensions of movements. The direction specifier can be given
+    as one of:
     - 'xyz'
         Full 3D space.
     - 'xy', 'yz', 'xz'
@@ -106,16 +106,16 @@ class Direction:
         return vec / norm
 
     def __eq__(self, other):
-        """Compare two Direction objects for equality."""
-        if not isinstance(other, Direction):
+        """Compare two DirectionToken objects for equality."""
+        if not isinstance(other, DirectionToken):
             return False
         return self.dof == other.dof and np.allclose(
             self.vectors, other.vectors
         )
 
     def __repr__(self):
-        """Return a string representation of the Direction object."""
-        return f'Direction(vectors={self.vectors}, dof={self.dof})'
+        """Return a string representation of the DirectionToken object."""
+        return f'DirectionToken(vectors={self.vectors}, dof={self.dof})'
 
 
 def _check_unsupported_directions(direction_str):

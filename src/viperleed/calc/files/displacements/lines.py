@@ -10,7 +10,7 @@ from collections import namedtuple
 from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
 from viperleed_jax.perturbation_type import PerturbationType, PerturbationTypeError
 
-from .direction import Direction
+from .direction import DirectionToken
 from .errors import InvalidDisplacementsSyntaxError
 from .range import RangeToken
 from .targeting import Targets, TargetingError
@@ -70,7 +70,7 @@ class ParsedLine(ABC):
 
     def _parse_direction(self, dir_str):
         try:
-            return Direction(dir_str)
+            return DirectionToken(dir_str)
         except InvalidDisplacementsSyntaxError as err:
             msg = (
                 'Unable to parse direction information from line in '
