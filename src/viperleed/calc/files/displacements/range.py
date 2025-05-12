@@ -4,7 +4,7 @@ __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-15'
 
 
-class DisplacementsRange:
+class RangeToken:
     """Class to parse and represent displacement ranges.
 
     Ranges are specified in the form of strings like:
@@ -50,7 +50,7 @@ class DisplacementsRange:
     @classmethod
     def from_floats(
         cls, start: float, stop: float, step=None
-    ) -> 'DisplacementsRange':
+    ) -> 'RangeToken':
         """Alternate constructor using numeric values directly."""
         _check_step(step)
         inst = cls.__new__(cls)
@@ -62,7 +62,7 @@ class DisplacementsRange:
 
     def __eq__(self, other):
         """Compare two DisplacementsRange objects for equality."""
-        if not isinstance(other, DisplacementsRange):
+        if not isinstance(other, RangeToken):
             return False
         if self.has_step != other.has_step:
             return False
