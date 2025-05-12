@@ -124,6 +124,24 @@ class TargetToken(DisplacementsFileToken):
 
         return mask
 
+    def __repr__(self):
+        """Return a string representation of the TargetToken object."""
+        return f'TargetToken(target_str={self.target_str})'
+
+    def __eq__(self, other):
+        """Compare self to other TargetToken object.
+
+        Note this check may not be reliable. Comparison of TargetToken objects
+        should be made using a selection of Atoms.
+        """
+        if not isinstance(other, TargetToken):
+            return False
+        return (
+            (other.nums == self.nums if self.nums is not None else True)
+            and (other.nums == self.layers if self.layers is not None else True)
+            and (other.regex == self.regex)
+        )
+
 
 def _generate_label_match_regex(label):
     """Generate a regex pattern to match variations of the given label.
