@@ -252,6 +252,9 @@ class OffsetsLine:
     def __init__(self, line):
         super().__init__(line)
 
+        # parser LHS into targets
+        self.targets = self._parse_targets(self._lhs)
+
         # parse RHS into offset
         try:
             self.offset = OffsetToken(self._rhs)

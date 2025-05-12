@@ -81,7 +81,7 @@ class TargetToken(DisplacementsFileToken):
                 # It's a list of numbers
                 self.nums = list(map(int, parts[1:]))
 
-    def select(self, atom_basis):
+    def select(self, atom_basis):  # TODO move outside this object
         """Select base scatterers that match the target specification."""
         mask = np.full(len(atom_basis), True)
 
