@@ -35,6 +35,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
@@ -83,6 +84,7 @@ _SIMPLE_BOOL_PARAMS = {
     'PHASESHIFTS_CALC_OLD' : (),
     'PHASESHIFTS_OUT_OLD' : (),
     'R_FACTOR_LEGACY' : (),
+    'SEARCH_RECALC_TMATRICES' : (),
     'STOP': (),
     'SUPPRESS_EXECUTION' : (),
     'SYMMETRIZE_INPUT' : (),
@@ -1192,6 +1194,18 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         if segments[0] is not Section.INITIALIZATION:
             segments.insert(0, Section.INITIALIZATION)
         self.rpars.RUN = [s.value for s in segments]                            # TODO: replace with "segments" to keep Section objects
+
+    def interpret_search_backend(self, assignment):
+        """Assign parameter SEARCH_BACKEND."""
+        param = 'SEARCH_BACKEND'
+        self._ensure_simple_assignment(assignment)
+        value = assignment.value.lower()
+        if value in ('tenserleed', 'tenser'):
+            self.rpars.SEARCH_BACKEND = SearchBackend.TENSERLEED
+        elif value in ('viperleed', 'viperleed-jax', 'jax', 'vlj'):
+            self.rpars.SEARCH_BACKEND = SearchBackend.VLJ
+        else:
+            raise ParameterValueError(param, value)
 
     def interpret_search_beams(self, assignment):
         """Assign parameter SEARCH_BEAMS."""

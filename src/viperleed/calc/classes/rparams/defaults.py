@@ -17,6 +17,7 @@ __license__ = 'GPLv3+'
 
 import logging
 
+from viperleed.calc.classes.search_backends import SearchBackend
 
 # The name we expect for folders containing TensErLEED Fortran code
 TENSERLEED_FOLDER_NAME = 'TensErLEED'
@@ -78,4 +79,9 @@ DEFAULTS = {
     'SYMMETRY_EPS': 0.1,  # z always equal to in-plane
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
     'THEO_ENERGIES - no experiments': (20, 800, 3),
+
+    # Parameters for ViPErLEED JAX plugin
+    'SEARCH_BACKEND': SearchBackend.TENSERLEED,
+    'SEARCH_RECALC_TMATRICES': False,
+
     }
