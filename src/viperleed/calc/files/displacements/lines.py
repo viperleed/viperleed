@@ -179,7 +179,7 @@ class OccDeltaLine:
     Lines in the OCC_DELTA block are of the form:
         <target> [, <target>] = <element> <range> [, <element> <range> ...]
     where <target>, <element> and <range> are tokes that are parsed by the
-    `Targets`, `Element` and `DisplacementsRange` classes, respectively.
+    `Targets`, `Element` and `RangeToken` classes, respectively.
     """ # TODO: Element class?
 
     block_type = 'OCC_DELTA'
