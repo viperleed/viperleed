@@ -293,6 +293,5 @@ bool enableDynamic;
 // Transformation matrix which converts external field to field on sample.
 floatOrBytes transformationMatrix[3][2];
 // Calibration curve for converting PWM duty cycles to currents.
-#define N  6														//TODO: Replace N and use proper calibration curve values.
-byte calibrationCurve[N];
+floatOrBytes calibrationCurve[2][12];
 #endif  // _VIPERLEED_B_FIELD_COMP

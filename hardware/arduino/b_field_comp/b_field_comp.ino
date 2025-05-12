@@ -479,10 +479,12 @@ void reset(){                                      //TODO: add reset settings fo
     	}
     }
     
-    for(int i = 0;  i < N; i++)
-    {	
-    	calibrationCurve[i] = 0;
-	}
+    for(int i = 0;  i < 2; i++)
+    {	for(int j = 0;  j < 12; j++)
+    	{
+    		calibrationCurve[i][j].asFloat = 0.0;
+    	}
+    }
 
     currentState = STATE_IDLE;
     waitingForDataFromPC = false;
@@ -917,7 +919,7 @@ void setEnableDynamic(){
 
 /** Handler of STATE_SET_TRANSFORMATION_MATRIX */
 void setTransformationMatrix(){
-   /** Wait until we get data from the PC (what data?), convert the received data in order to set a transformation matrix.
+   /** Wait until we get data from the PC, convert the received data in order to set a transformation matrix.
 
     Reads
     -----
@@ -984,7 +986,22 @@ void setTransformationMatrix(){
 
 /** Handler of STATE_SET_CALIBRATION_CURVE */
 void setCalibrationCurve(){
-   /** Wait until we get data from the PC (what data?), convert the received data in order to set a calibration curve.
+   /** Wait until we get data from the PC, convert the received data in order to set a calibration curve.
+   
+   For each coil, we need 48 bytes (12 floats * 4) from the data_received[] buffer and we send these in packages of 6 floats.
+   This is due to serial buffer limitations because the serial buffer can only contain 63 bytes reliably.
+	
+	The two first bytes of each message contain at what coil we are working and in which region (negative or positive).
+	
+	First byte of the message: 0 -> coil 0
+							   1 -> coil 1
+							   
+	Second byte of the message: 0 -> negative region
+							    1 -> positive region
+							    
+	Write the third to the 26th byte into calibrationCurve, which corresponds to 6 floats.
+	calibrationCurve contains two times 12 floats for each coil, and 6 floats per region per coil.
+
 
     Reads
     -----
@@ -1030,14 +1047,62 @@ void setCalibrationCurve(){
         newMessage = false;
 
         // Check that it is the right amount of data
-        // N bytes in the array -> msgLength is N
-        if (msgLength != N){
+        // 26 bytes in the array -> msgLength is 26, 1 byte for which coil, 1 byte for which region and 24 bytes for 6 floats.
+        if (msgLength != 26){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
+        
+        // We work with coil 0
+        if (data_received[0] == 0){  
+        	// We work with coil 0 in the negative region
+            if (data_received[1] == 0){
 
-        for(int j=0; j<N;j++){
-            calibrationCurve[j] = data_received[j];
+            	for(int j=0; j<6;j++){
+            		for(int i = 0; i < 4 ;i++){
+                		calibrationCurve[0][j].asBytes[3-i] = data_received[2 + i + j*4];
+             		}
+        		}  
+            
+            }
+            
+            // We work with coil 0 in the positive region
+            else if (data_received[1] == 1){
+            
+            	for(int j=0; j<6;j++){
+                	for(int i = 0; i < 4 ;i++){
+                    	calibrationCurve[0][j+6].asBytes[3-i] = data_received[2 + i + j*4];
+                 	}
+            	}
+            }          
+        }
+
+		// We work with coil 1
+        else if (data_received[0] == 1){
+        	// We work with coil 1 in the negative region
+            if (data_received[1] == 0){
+            
+            	for(int j=0; j<6;j++){
+            		for(int i = 0; i < 4 ;i++){
+                		calibrationCurve[1][j].asBytes[3-i] = data_received[2 + i + j*4];
+             		}
+        		}
+            }
+            
+            // We work with coil 1 in the positive region
+            else if (data_received[1] == 1){
+            
+            	for(int j=0; j<6;j++){
+                	for(int i = 0; i < 4 ;i++){
+                    	calibrationCurve[1][j+6].asBytes[3-i] = data_received[2 + i + j*4];
+                 	}
+            	}
+        	}
+        }
+
+        else{
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
         }
 
         encodeAndSend(PC_OK);
