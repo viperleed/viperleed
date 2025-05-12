@@ -15,7 +15,7 @@ class TargetingError(TokenParserError):
 
 
 class Targets:
-    """Class to handle multiple subtargets."""
+    """Class to handle multiple <target> tokens."""
 
     def __init__(self, target_str):
         self.target_str = target_str
