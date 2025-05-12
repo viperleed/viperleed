@@ -6,7 +6,7 @@ __created__ = '2025-04-11'
 
 import pytest
 
-from viperleed_jax.files.displacements.range import (
+from viperleed_jax.files.displacements.tokens.range import (
     RangeToken, RangeTokenParserError
 )
 
