@@ -3,13 +3,14 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-15'
 
-from .base import TokenParserError
+from .base import DisplacementsFileToken, TokenParserError
 
 
 class RangeTokenParserError(TokenParserError):
     """Class for parsing Errors in the RangeToken."""
 
-class RangeToken:
+
+class RangeToken(DisplacementsFileToken):
     """Class to parse and represent displacement ranges.
 
     Ranges are specified in the form of strings like:

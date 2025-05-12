@@ -7,7 +7,7 @@ import re
 
 import numpy as np
 
-from .base import TokenParserError
+from .base import DisplacementsFileToken, TokenParserError
 
 DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
@@ -20,7 +20,8 @@ class DirectionTokenParserError(TokenParserError):
         super().__init__(message)
         self.message = message
 
-class DirectionToken:
+
+class DirectionToken(DisplacementsFileToken):
     """Class to parse direction specifiers in 3D space.
 
     DirectionToken specifiers are used to declare the allowed directions of

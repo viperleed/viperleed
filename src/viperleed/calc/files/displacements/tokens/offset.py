@@ -3,14 +3,14 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-12'
 
-from .base import TokenParserError
+from .base import DisplacementsFileToken, TokenParserError
 
 
 class OffsetTokenParserError(TokenParserError):
     """Class raised by OffsetToken."""
 
 
-class OffsetToken:
+class OffsetToken(DisplacementsFileToken):
     """Class to parse and represent offsets in the DISPLACEMENTS file.
 
     Ranges are provided by the user as strings containing a single float.
