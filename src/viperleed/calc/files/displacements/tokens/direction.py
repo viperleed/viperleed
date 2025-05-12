@@ -7,11 +7,13 @@ import re
 
 import numpy as np
 
+from .base import TokenParserError
+
 DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
 
 
-class UnsupportedDirectionError(Exception):
+class DirectionTokenParserError(TokenParserError):
     """Exception raised for unsupported direction formats."""
 
     def __init__(self, message):
@@ -51,7 +53,7 @@ class DirectionToken:
     ValueError
         If the direction string is invalid or if the number of components does
         not match the number of directions.
-    UnsupportedDirectionError
+    DirectionTokenParserError
         If the direction string contains unsupported components like azimuthal
         or radial directions.
     """
@@ -126,7 +128,7 @@ def _check_unsupported_directions(direction_str):
             'Azimuthal and radial directions are currently not supported. '
             f'Invalid direction: {direction_str}'
         )
-        raise UnsupportedDirectionError(msg)
+        raise DirectionTokenParserError(msg)
 
     # Fractional directions are currently not supported
     fractional_labels = ['a', 'b', 'c']
@@ -135,4 +137,4 @@ def _check_unsupported_directions(direction_str):
             'Fractional directions are currently not supported. '
             f'Invalid direction: {direction_str}'
         )
-        raise UnsupportedDirectionError(msg)
+        raise DirectionTokenParserError(msg)

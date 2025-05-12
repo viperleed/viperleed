@@ -8,14 +8,17 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
-from viperleed_jax.perturbation_type import PerturbationType, PerturbationTypeError
+from viperleed_jax.perturbation_type import (
+    PerturbationType,
+    PerturbationTypeError,
+)
 
-from .direction import DirectionToken
 from .errors import InvalidDisplacementsSyntaxError
-from .tokens.range import RangeToken
-from .targeting import Targets, TargetingError
-from .tokens.offset import OffsetToken
+from .targeting import TargetingError, Targets
 from .tokens.base import TokenParserError
+from .tokens.direction import DirectionToken
+from .tokens.offset import OffsetToken
+from .tokens.range import RangeToken
 
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
 SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])

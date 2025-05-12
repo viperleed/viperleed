@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-from viperleed_jax.files.displacements.direction import (
+from viperleed_jax.files.displacements.tokens.direction import (
     DirectionToken,
-    UnsupportedDirectionError,
+    DirectionTokenParserError,
 )
 
 
@@ -66,7 +66,7 @@ def test_zero_vector():
 )
 def test_invalid_fractional(direction_str):
     """Test that fractional directions are not accepted."""
-    with pytest.raises(UnsupportedDirectionError):
+    with pytest.raises(DirectionTokenParserError):
         DirectionToken(direction_str)
 
 @pytest.mark.parametrize(
@@ -80,5 +80,5 @@ def test_invalid_fractional(direction_str):
 )
 def test_invalid_radial_azimuthal(direction_str):
     """Test that the old radial and azimuthal directions are not accepted."""
-    with pytest.raises(UnsupportedDirectionError):
+    with pytest.raises(DirectionTokenParserError):
         DirectionToken(direction_str)
