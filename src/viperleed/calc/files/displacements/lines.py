@@ -12,8 +12,10 @@ from viperleed_jax.perturbation_type import PerturbationType, PerturbationTypeEr
 
 from .direction import DirectionToken
 from .errors import InvalidDisplacementsSyntaxError
-from .range import RangeToken
+from .tokens.range import RangeToken
 from .targeting import Targets, TargetingError
+from .tokens.offset import OffsetToken
+from .tokens.base import TokenParserError
 
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
 SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
@@ -80,7 +82,7 @@ class ParsedLine(ABC):
 
     def _parse_range(self, range_str):
         try:
-            return DisplacementsRange(range_str)
+            return RangeToken(range_str)
         except ValueError as err:
             msg = (
                 'Unable to parse range information from line in '
