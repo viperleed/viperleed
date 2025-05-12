@@ -13,7 +13,6 @@ class TargetingError(TokenParserError):
     """Base class for errors in the targeting module."""
 
 
-
 class Targets:
     """Class to handle multiple <target> tokens."""
 
@@ -81,48 +80,7 @@ class TargetToken(DisplacementsFileToken):
                 # It's a list of numbers
                 self.nums = list(map(int, parts[1:]))
 
-    def select(self, atom_basis):  # TODO move outside this object
-        """Select base scatterers that match the target specification."""
-        mask = np.full(len(atom_basis), True)
 
-        # mask based on the site
-        matches = np.array(
-            [self.regex.match(bs.site) is not None for bs in atom_basis]
-        )
-        mask = mask & matches
-
-        # mask based on the labels
-        label_mask = mask.copy()
-
-        # If nums are specified, apply the selection based on nums
-        if self.nums is not None:
-            # check range for nums
-            if any(num < 1 or num > len(atom_basis) for num in self.nums):
-                msg = f'Invalid atom number for target: {self.target_str}'
-                raise TargetingError(msg)
-            num_mask = np.array([bs.num in self.nums for bs in atom_basis])
-            # check if any of the given nums have the wrong label
-            wrong_label = np.logical_and(num_mask, ~label_mask)
-            if np.any(wrong_label):
-                msg = (
-                    'Atom numbers do not match label for target: '
-                    f'{self.target_str}'
-                )
-                raise TargetingError(msg)
-            mask = mask & num_mask
-
-        # If layers are specified, apply the selection based on layers
-        if self.layers is not None:
-            mask = mask & np.array(
-                # TODO: layer counting from 1; can we unify this somewhere?
-                [bs.layer+1 in self.layers for bs in atom_basis]
-            )
-
-        if mask.sum() == 0:
-            msg = f'No atoms selected for subtarget: {self.target_str}'
-            raise TargetingError(msg)
-
-        return mask
 
     def __repr__(self):
         """Return a string representation of the TargetToken object."""
