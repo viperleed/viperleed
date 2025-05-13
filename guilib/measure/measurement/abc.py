@@ -368,238 +368,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             values = tuple()
         return values
 
-    def disconnect_devices_and_notify(self):
-        """Disconnect devices and emit devices_disconnected."""
-        for device in self.devices:
-            base.safe_connect(device.connection_changed,
-                              self._check_if_all_devices_disconnected,
-                              type=_UNIQUE | qtc.Qt.QueuedConnection)
-        self._disconnect_devices()
-        if not any(device.connected for device in self.devices):
-            self.devices_disconnected.emit()
-
-    @classmethod
-    def is_matching_default_settings(cls, obj_info, config, match_exactly):
-        """Determine if the default `config` file is for a measurement.
-
-        Parameters
-        ----------
-        obj_info : SettingsInfo or None
-            The information that should be used to check `config`.
-        config : ConfigParser
-            The settings to check.
-        match_exactly : bool
-            Whether obj_info should be matched exactly.
-
-        Returns
-        -------
-        sorting_info : tuple
-            A tuple that can be used to sort the detected settings.
-            Larger values in the tuple indicate a higher degree of
-            conformity. The order of the items in the tuple is the
-            order of their significance. This return value is used
-            to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies that
-            `config` does not match the requirements.
-        """
-        return (1,)
-
-    @classmethod
-    def is_matching_user_settings(cls, obj_info, config, match_exactly):
-        """Determine if the `config` file is for a measurement.
-
-        Parameters
-        ----------
-        obj_info : SettingsInfo
-            The information that should be used to check `config`.
-        config : ConfigParser
-            The settings to check.
-        match_exactly : bool
-            Whether obj_info should be matched exactly.
-
-        Returns
-        -------
-        sorting_info : tuple
-            A tuple that can be used to sort the detected settings.
-            Larger values in the tuple indicate a higher degree of
-            conformity. The order of the items in the tuple is the
-            order of their significance. This return value is used
-            to determine the best-matching settings files when
-            multiple files are found. An empty tuple signifies that
-            `config` does not match the requirements.
-        """
-        return (1,)
-
-    @classmethod
-    def is_settings_for_this_class(cls, config):
-        """Determine if the `config` file is for this measurement.
-
-        Parameters
-        ----------
-        config : ConfigParser
-            The settings to check.
-
-        Returns
-        -------
-        is_suitable : bool
-            True if the settings file is for this measurement.
-        """
-        meas_class = config.get('measurement_settings', 'measurement_class',
-                                fallback=None)
-        return cls.__name__ == meas_class
-
-    @qtc.pyqtSlot(object)
-    def set_settings(self, new_settings):
-        """Change settings of the measurement.
-
-        Settings are loaded only if they are valid. Otherwise
-        the previous settings stay in effect. If the settings
-        have been accepted, controller and camera objects as
-        specified in the settings will be instantiated, told
-        what they will be measuring, moved to their respective
-        properties and connected to all necessary signals.
-
-        In order to prevent attempting to connect to already
-        connected devices, it is only possible to set settings
-        after all devices have been disconnected. This means
-        disconnect_devices_and_notify has to be executed and the
-        devices_disconnected signal has to be received before
-        calling set_settings on a measurement object that was
-        used before.
-
-        Parameters
-        ----------
-        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
-            Configuration of the measurement.
-
-        Returns
-        -------
-        settings_valid : bool
-            True if the new settings given were accepted.
-
-        Raises
-        ------
-        RuntimeError
-            If any devices are still connected while attempting to
-            set new settings. Call disconnect_devices_and_notify
-            and wait for emission of devices_disconnected to
-            prevent this error.
-        TypeError
-            If new_settings is neither a dict, ConfigParser, string
-            or path and if an element of the mandatory_settings is
-            None or has a length greater than 3.
-
-        Emits
-        -----
-        QObjectSettingsErrors.MISSING_SETTINGS
-            If new_settings is missing.
-        QObjectSettingsErrors.INVALID_SETTINGS
-            If any element of the new_settings does not fit the
-            mandatory_settings.
-        """
-        if any(device.connected for device in self.devices):
-            raise RuntimeError('Setting settings is only allowed after all '
-                               'devices have been disconnected. Make sure to '
-                               'disconnect them before attempting to set new '
-                               'settings. See help(measurement.set_settings).')
-
-        self._aborted = False  # Set False in case of abort through settings
-
-        # Notice that we clear data even if the settings are not accepted.
-        # When the primary controller is set in the primary_controller
-        # setter it is handed to self.data_points. This happens in
-        # _make_primary_ctrl below.
-        self.data_points = DataPoints(parent=self)
-        self.data_points.error_occurred.connect(self.error_occurred)
-
-        if not super().set_settings(new_settings):
-            return False
-
-        if not self._make_primary_ctrl():
-            # Something went wrong (already reported in _make_primary).
-            # TODO: probably good to clean up secondaries and cameras!
-            return False
-
-        self._make_secondary_ctrls()
-        self._make_cameras()
-        self._make_tmp_directory_tree()
-
-        self._missing_data = {c: 1
-                              for c in self.controllers
-                              if c.measures()}
-        for camera in self.cameras:
-            self._missing_data[camera] = 1
-        return True
-
-    def _step_profile_from_strings(self, profile):
-        """Return a tuple of energies and times from strings."""
-        delta = self.current_energy - self._previous_energy
-        if abs(delta) < 1e-4:
-            return tuple()
-
-        energies_times = [0]*len(profile)
-        for i, fraction in enumerate(profile[::2]):
-            energies_times[2*i] = float(fraction)*delta + self.current_energy
-        for i, time_ in enumerate(profile[1::2]):
-            time_ = int(time_)
-            if time_ < 0:
-                self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                                'measurement_settings/step_profile',
-                                '\nInfo: Time intervals must be non-negative')
-                return tuple()
-            energies_times[2*i+1] = time_
-        return tuple(energies_times)
-
-    def _get_linear_step(self, *params):
-        """Return energies and times for a simple linear step."""
-        if len(params) != 2:
-            # Too many/too few
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/step_profile',
-                            'Too many/few parameters for linear profile. '
-                            f'Expected 2, found {len(params)}')
-            return tuple()
-
-        try:
-            n_steps, tot_time = (int(p) for p in params)
-        except (TypeError, ValueError):
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/step_profile',
-                            'Could not convert to integer the '
-                            'parameters for linear profile')
-            return tuple()
-
-        if n_steps <= 0 or tot_time < 0:
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/step_profile',
-                            'Linear-step parameters should be '
-                            'positive integers')
-            return tuple()
-
-        delta_t = tot_time // n_steps
-        delta_e = self.current_energy - self._previous_energy
-        if not delta_t or abs(delta_e) < 1e-4:
-            return tuple()
-
-        # Make a line of the form f(t) = t/tot_time, with t == 0
-        # the time at which self.current_energy is set, and choose
-        # an (almost) equally-spaced time grid, with the first
-        # interval compensating for non integer-divisibility
-        times = [-tot_time,
-                 *(-(i-1)*delta_t for i in range(n_steps, 0, -1))]
-        intervals = (tj - ti for ti, tj in zip(times, times[1:]))
-
-        # The best way to approximate a function with a piecewise
-        # constant signal is to have values fk equal to the average
-        # of f over the k-th interval. For our line, this means
-        # f[k] = (t[k] + t[k+1]) / (2*tot_time)
-        slope = delta_e / (2 * tot_time)
-        energies = (slope*(ti + tj) + self.current_energy
-                    for ti, tj in zip(times, times[1:]))
-
-        # Finally interleave energies and times
-        return tuple(v for tup in zip(energies, intervals) for v in tup)
-
     @abstractmethod
     @qtc.pyqtSlot()
     def abort(self):
@@ -676,79 +444,15 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             )
         return [(invalid,) for invalid in invalid_settings]
 
-    def _begin_preparation(self):
-        """Start preparation for measurements.
-
-        Prepare the controllers and cameras for a measurement.
-
-        This method triggers the first part (i.e., everything that is
-        done before the starting energy is set), then automatically
-        moves on to the second part. Finally, the actual measurement
-        loop is triggered. Users can detect when the whole preparation
-        is over by connecting to the .prepared() signal.
-
-        Emits
-        -----
-        _preparation_started
-            Starts the measurement preparation and carries
-            a tuple of energies and times with it.
-        """
-        self.current_energy = self.start_energy
-
-        primary = self.primary_controller
-        about_to_trigger = primary.about_to_trigger
-        for ctrl in self.controllers:
-            # Make sure no controller can be triggered for
-            # measurement during the whole preparation
-            try:
-                base.safe_disconnect(about_to_trigger, ctrl.measure_now)
-            except AttributeError:
-                pass
-            # Measurements that may still be delivered during
-            # preparation should be discarded:
-            base.safe_disconnect(ctrl.data_ready,
-                                 self._on_controller_data_ready)
-
-            # When controllers will turn "not busy" at the end of
-            # this first preparation segment, go to second segment
-            ctrl.busy_changed.connect(self._continue_preparation)
-
-        # Disconnect the camera.busy_changed signal here, and reconnect
-        # it later in ._check_preparation_finished(). This prevents
-        # early calls to _on_camera_busy_changed.
-        for camera in self.cameras:
-            base.safe_disconnect(camera.busy_changed,
-                                 self._on_camera_busy_changed)
-
-        # Notice that we have to handle only controllers:
-        # ._preparation_started is already connected to camera.start
-        self._preparation_started.emit(
-            (self.start_energy, primary.long_settle_time)
-            )
-
-    @qtc.pyqtSlot(bool)
-    def _check_if_all_devices_disconnected(self, device_connected):
-        """Check and notify when all devices are disconnected.
-
-        Emits
-        -----
-        devices_disconnected
-            After all devices have been disconnected.
-        """
-        device = self.sender()
-        if device_connected or device.connected:
-            return
-        base.safe_disconnect(self.sender().connection_changed,
-                             self._check_if_all_devices_disconnected)
-        if any(device.connected for device in self.devices):
-            return
-        self.devices_disconnected.emit()
-
-    def _disconnect_devices(self):
-        """Disconnect all connected devices but keep them alive."""
-        self._disconnect_secondary_controllers()
-        self._disconnect_cameras()
-        self._disconnect_primary_controller()
+    def disconnect_devices_and_notify(self):
+        """Disconnect devices and emit devices_disconnected."""
+        for device in self.devices:
+            base.safe_connect(device.connection_changed,
+                              self._check_if_all_devices_disconnected,
+                              type=_UNIQUE | qtc.Qt.QueuedConnection)
+        self._disconnect_devices()
+        if not any(device.connected for device in self.devices):
+            self.devices_disconnected.emit()
 
     @abstractmethod
     def get_settings_handler(self):
@@ -839,6 +543,76 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         return handler
 
+    @classmethod
+    def is_matching_default_settings(cls, obj_info, config, match_exactly):
+        """Determine if the default `config` file is for a measurement.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo or None
+            The information that should be used to check `config`.
+        config : ConfigParser
+            The settings to check.
+        match_exactly : bool
+            Whether obj_info should be matched exactly.
+
+        Returns
+        -------
+        sorting_info : tuple
+            A tuple that can be used to sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the items in the tuple is the
+            order of their significance. This return value is used
+            to determine the best-matching settings files when
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
+        """
+        return (1,)
+
+    @classmethod
+    def is_matching_user_settings(cls, obj_info, config, match_exactly):
+        """Determine if the `config` file is for a measurement.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo
+            The information that should be used to check `config`.
+        config : ConfigParser
+            The settings to check.
+        match_exactly : bool
+            Whether obj_info should be matched exactly.
+
+        Returns
+        -------
+        sorting_info : tuple
+            A tuple that can be used to sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the items in the tuple is the
+            order of their significance. This return value is used
+            to determine the best-matching settings files when
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
+        """
+        return (1,)
+
+    @classmethod
+    def is_settings_for_this_class(cls, config):
+        """Determine if the `config` file is for this measurement.
+
+        Parameters
+        ----------
+        config : ConfigParser
+            The settings to check.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is for this measurement.
+        """
+        meas_class = config.get('measurement_settings', 'measurement_class',
+                                fallback=None)
+        return cls.__name__ == meas_class
+
     def moveToThread(self, thread):  # pylint: disable=invalid-name
         """Move self and primary controller to a new thread."""
         # Notice that this explicit extension is necessary as
@@ -848,81 +622,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         super().moveToThread(thread)
         if self.primary_controller:
             self.primary_controller.moveToThread(thread)
-
-    # too-many-locals, too-complex
-    def _save_data(self):                                                       # TODO: clean up after testing zip
-        """Save data."""
-        if not self._temp_dir:
-            return
-
-        tmp_path = self._temp_dir
-        base_path = tmp_path.parent
-        tag = self.settings.get('measurement_info', 'tag', fallback='')
-        name_tag = (' ' + tag) if tag else ''
-        current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-        self.settings.set('measurement_info', 'ended', current_time)
-        final_path = base_path / (current_time + name_tag)
-        move_to_archive = []
-
-        if self.data_points:
-            fname = tmp_path / 'measurement.csv'
-            self.data_points.save_data(fname)
-            move_to_archive.append(fname)
-
-        ctrl_locations = []
-        for ctrl in self.controllers:
-            fname = "controller_" + ctrl.name_clean + ".ini"
-            with open(tmp_path / fname, 'w', encoding='utf-8') as fproxy:
-                ctrl.settings.write(fproxy)
-            move_to_archive.append(tmp_path / fname)
-            ctrl_locations.append("./" + fname)
-
-        cam_locations = []
-        for camera in self.cameras:
-            fname = "camera_" + camera.name_clean + ".ini"
-            with open(tmp_path / fname, 'w', encoding='utf-8') as fproxy:
-                camera.settings.write(fproxy)
-            move_to_archive.append(tmp_path / fname)
-            cam_locations.append("./" + fname)
-
-        if cam_locations:                                                       # TODO: do the same for all controllers (without editing the measured stuff!)
-            self.settings.set("devices", "cameras", str(tuple(cam_locations)))
-
-        file_name = tmp_path / "measurement.ini"
-        move_to_archive.append(file_name)
-        with open(file_name, 'w', encoding='utf-8') as configfile:
-            self.settings.write(configfile)
-
-        arch_name = tmp_path.with_suffix('.zip')
-        with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
-                     compresslevel=2) as archive:
-            for fname in move_to_archive:
-                archive.write(fname, fname.relative_to(tmp_path))
-
-        # Move all files by renaming the archive and temp folder
-        try:
-            arch_name.rename(arch_name.with_name(final_path.name + '.zip'))
-        except OSError as err:
-            self.emit_error(MeasurementErrors.RUNTIME_ERROR, err)
-        try:
-            tmp_path.rename(final_path)
-        except OSError as err:
-            self.emit_error(MeasurementErrors.RUNTIME_ERROR, err)
-
-        self._temp_dir = None  # Prevents re-saving
-
-        return  # TODO: remove
-
-        for fname in move_to_archive:
-            fname.unlink()
-        for fname in tuple(final_path.glob('*')):                               # TODO: not sure I want to do this cleanup. Maybe just remove camera folders higher up?
-            if fname.is_file():
-                fname.unlink()
-                continue
-            try:
-                fname.rmdir()
-            except OSError:
-                pass
 
     def set_leed_energy(self, energy, settle_time, *more_steps,
                         trigger_meas=True):
@@ -982,6 +681,89 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         primary.about_to_trigger.emit()
 
+    @qtc.pyqtSlot(object)
+    def set_settings(self, new_settings):
+        """Change settings of the measurement.
+
+        Settings are loaded only if they are valid. Otherwise
+        the previous settings stay in effect. If the settings
+        have been accepted, controller and camera objects as
+        specified in the settings will be instantiated, told
+        what they will be measuring, moved to their respective
+        properties and connected to all necessary signals.
+
+        In order to prevent attempting to connect to already
+        connected devices, it is only possible to set settings
+        after all devices have been disconnected. This means
+        disconnect_devices_and_notify has to be executed and the
+        devices_disconnected signal has to be received before
+        calling set_settings on a measurement object that was
+        used before.
+
+        Parameters
+        ----------
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
+            Configuration of the measurement.
+
+        Returns
+        -------
+        settings_valid : bool
+            True if the new settings given were accepted.
+
+        Raises
+        ------
+        RuntimeError
+            If any devices are still connected while attempting to
+            set new settings. Call disconnect_devices_and_notify
+            and wait for emission of devices_disconnected to
+            prevent this error.
+        TypeError
+            If new_settings is neither a dict, ConfigParser, string
+            or path and if an element of the mandatory_settings is
+            None or has a length greater than 3.
+
+        Emits
+        -----
+        QObjectSettingsErrors.MISSING_SETTINGS
+            If new_settings is missing.
+        QObjectSettingsErrors.INVALID_SETTINGS
+            If any element of the new_settings does not fit the
+            mandatory_settings.
+        """
+        if any(device.connected for device in self.devices):
+            raise RuntimeError('Setting settings is only allowed after all '
+                               'devices have been disconnected. Make sure to '
+                               'disconnect them before attempting to set new '
+                               'settings. See help(measurement.set_settings).')
+
+        self._aborted = False  # Set False in case of abort through settings
+
+        # Notice that we clear data even if the settings are not accepted.
+        # When the primary controller is set in the primary_controller
+        # setter it is handed to self.data_points. This happens in
+        # _make_primary_ctrl below.
+        self.data_points = DataPoints(parent=self)
+        self.data_points.error_occurred.connect(self.error_occurred)
+
+        if not super().set_settings(new_settings):
+            return False
+
+        if not self._make_primary_ctrl():
+            # Something went wrong (already reported in _make_primary).
+            # TODO: probably good to clean up secondaries and cameras!
+            return False
+
+        self._make_secondary_ctrls()
+        self._make_cameras()
+        self._make_tmp_directory_tree()
+
+        self._missing_data = {c: 1
+                              for c in self.controllers
+                              if c.measures()}
+        for camera in self.cameras:
+            self._missing_data[camera] = 1
+        return True
+
     @qtc.pyqtSlot()
     def start(self):
         """Check runtime settings and start measurement."""
@@ -1005,6 +787,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                           time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
         self.running = True
         self._begin_preparation()
+
+    def stop_threads(self):
+        """Quit all threads immediately."""
+        for thread in self.threads:
+            thread.quit()
 
     @abstractmethod
     def _begin_next_energy_step(self):
@@ -1033,12 +820,73 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             camera.process_info.filename = image_name
             camera.process_info.energy = self.current_energy
 
-    @property
-    def _n_digits(self):
-        """Return the appropriate number of digits for padding image names."""
-        # With 4 digits we can store 9999 images with the same prefix           # TODO: nicer implementation: ask n_steps to the generator and use a large value for _n_digits if < 0 (i.e., unknown no. steps)
-        # size. More images will have longer file names.
-        return 4
+    def _begin_preparation(self):
+        """Start preparation for measurements.
+
+        Prepare the controllers and cameras for a measurement.
+
+        This method triggers the first part (i.e., everything that is
+        done before the starting energy is set), then automatically
+        moves on to the second part. Finally, the actual measurement
+        loop is triggered. Users can detect when the whole preparation
+        is over by connecting to the .prepared() signal.
+
+        Emits
+        -----
+        _preparation_started
+            Starts the measurement preparation and carries
+            a tuple of energies and times with it.
+        """
+        self.current_energy = self.start_energy
+
+        primary = self.primary_controller
+        about_to_trigger = primary.about_to_trigger
+        for ctrl in self.controllers:
+            # Make sure no controller can be triggered for
+            # measurement during the whole preparation
+            try:
+                base.safe_disconnect(about_to_trigger, ctrl.measure_now)
+            except AttributeError:
+                pass
+            # Measurements that may still be delivered during
+            # preparation should be discarded:
+            base.safe_disconnect(ctrl.data_ready,
+                                 self._on_controller_data_ready)
+
+            # When controllers will turn "not busy" at the end of
+            # this first preparation segment, go to second segment
+            ctrl.busy_changed.connect(self._continue_preparation)
+
+        # Disconnect the camera.busy_changed signal here, and reconnect
+        # it later in ._check_preparation_finished(). This prevents
+        # early calls to _on_camera_busy_changed.
+        for camera in self.cameras:
+            base.safe_disconnect(camera.busy_changed,
+                                 self._on_camera_busy_changed)
+
+        # Notice that we have to handle only controllers:
+        # ._preparation_started is already connected to camera.start
+        self._preparation_started.emit(
+            (self.start_energy, primary.long_settle_time)
+            )
+
+    @qtc.pyqtSlot(bool)
+    def _check_if_all_devices_disconnected(self, device_connected):
+        """Check and notify when all devices are disconnected.
+
+        Emits
+        -----
+        devices_disconnected
+            After all devices have been disconnected.
+        """
+        device = self.sender()
+        if device_connected or device.connected:
+            return
+        base.safe_disconnect(self.sender().connection_changed,
+                             self._check_if_all_devices_disconnected)
+        if any(device.connected for device in self.devices):
+            return
+        self.devices_disconnected.emit()
 
     @qtc.pyqtSlot(bool)
     def _check_preparation_finished(self, _):
@@ -1196,6 +1044,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         for slot in busy_slots:
             disconnect(ctrl.busy_changed, slot)
 
+    def _disconnect_devices(self):
+        """Disconnect all connected devices but keep them alive."""
+        self._disconnect_secondary_controllers()
+        self._disconnect_cameras()
+        self._disconnect_primary_controller()
+
     def _disconnect_primary_controller(self):
         """Disconnect serial and signals of the primary controller."""
         primary = self.primary_controller
@@ -1250,6 +1104,113 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             primary.busy_changed.connect(self._cleanup_and_end, type=_UNIQUE)
             self.current_energy = 0
             self.set_leed_energy(self.current_energy, 50, trigger_meas=False)
+
+    def _get_device_settings(self, configname):
+        """Return a ViPErLEEDSettings for a device given its path.
+
+        This method reads the correct settings, distinguishing
+        the two cases in which self.settings was read from an
+        actual file or from within an archive.
+
+        Returns
+        -------
+        device_settings : ViPErLEEDSettings
+            The loaded settings
+
+        Raises
+        ------
+        RuntimeError
+            In case any error occurs while loading the settings.
+        """
+        configname = configname.strip()
+        device_cfg = ViPErLEEDSettings()
+
+        # Treat now different cases:
+        # (1) configname does not begin with './' --> read file
+        if not configname.startswith('./'):
+            try:
+                device_cfg = device_cfg.from_settings(configname)
+            except (ValueError, NoSettingsError):
+                raise RuntimeError() from None
+            return device_cfg
+
+        # (2) configname begins with './' --> has to be replaced
+        configname = configname[2:]
+
+        # (2.1) self.settings was read from an archive
+        # --> attempt reading config from the same archive
+        if self.settings.base_dir.endswith('.zip'):
+            with ZipFile(self.settings.base_dir, 'r') as arch:
+                try:
+                    cfg_lines = arch.read(configname).decode()
+                except KeyError:
+                    raise RuntimeError(
+                        f"No config file '{configname}' in "
+                        f"archive {self.settings.base_dir}"
+                        ) from None
+            device_cfg.read_string(cfg_lines)
+            device_cfg.base_dir = self.settings.base_dir
+            return device_cfg
+
+        # (2.2) self.settings was read from a folder
+        # --> attempt reading config from the same folder
+        configname = Path(self.settings.base_dir) / configname
+        try:
+            device_cfg = device_cfg.from_settings(configname)
+        except (ValueError, NoSettingsError):
+            raise RuntimeError(f"No config file '{configname}' in "
+                               f"folder {self.settings.base_dir}") from None
+        return device_cfg
+
+    def _get_linear_step(self, *params):
+        """Return energies and times for a simple linear step."""
+        if len(params) != 2:
+            # Too many/too few
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/step_profile',
+                            'Too many/few parameters for linear profile. '
+                            f'Expected 2, found {len(params)}')
+            return tuple()
+
+        try:
+            n_steps, tot_time = (int(p) for p in params)
+        except (TypeError, ValueError):
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/step_profile',
+                            'Could not convert to integer the '
+                            'parameters for linear profile')
+            return tuple()
+
+        if n_steps <= 0 or tot_time < 0:
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/step_profile',
+                            'Linear-step parameters should be '
+                            'positive integers')
+            return tuple()
+
+        delta_t = tot_time // n_steps
+        delta_e = self.current_energy - self._previous_energy
+        if not delta_t or abs(delta_e) < 1e-4:
+            return tuple()
+
+        # Make a line of the form f(t) = t/tot_time, with t == 0
+        # the time at which self.current_energy is set, and choose
+        # an (almost) equally-spaced time grid, with the first
+        # interval compensating for non integer-divisibility
+        times = [-tot_time,
+                 *(-(i-1)*delta_t for i in range(n_steps, 0, -1))]
+        intervals = (tj - ti for ti, tj in zip(times, times[1:]))
+
+        # The best way to approximate a function with a piecewise
+        # constant signal is to have values fk equal to the average
+        # of f over the k-th interval. For our line, this means
+        # f[k] = (t[k] + t[k+1]) / (2*tot_time)
+        slope = delta_e / (2 * tot_time)
+        energies = (slope*(ti + tj) + self.current_energy
+                    for ti, tj in zip(times, times[1:]))
+
+        # Finally interleave energies and times
+        return tuple(v for tup in zip(energies, intervals) for v in tup)
 
     @abstractmethod
     def _is_finished(self):
@@ -1535,6 +1496,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         with ZipFile(self._temp_dir.parent / '__tmp__.zip', 'w'):
             pass
 
+    @property
+    def _n_digits(self):
+        """Return the appropriate number of digits for padding image names."""
+        # With 4 digits we can store 9999 images with the same prefix           # TODO: nicer implementation: ask n_steps to the generator and use a large value for _n_digits if < 0 (i.e., unknown no. steps)
+        # size. More images will have longer file names.
+        return 4
+
     @qtc.pyqtSlot(bool)
     def _on_camera_busy_changed(self, busy):
         """Receive not busy signal from camera.
@@ -1681,64 +1649,96 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         else:
             self._begin_next_energy_step()
 
-    def stop_threads(self):
-        """Quit all threads immediately."""
-        for thread in self.threads:
-            thread.quit()
+    # too-many-locals, too-complex
+    def _save_data(self):                                                       # TODO: clean up after testing zip
+        """Save data."""
+        if not self._temp_dir:
+            return
 
-    def _get_device_settings(self, configname):
-        """Return a ViPErLEEDSettings for a device given its path.
+        tmp_path = self._temp_dir
+        base_path = tmp_path.parent
+        tag = self.settings.get('measurement_info', 'tag', fallback='')
+        name_tag = (' ' + tag) if tag else ''
+        current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+        self.settings.set('measurement_info', 'ended', current_time)
+        final_path = base_path / (current_time + name_tag)
+        move_to_archive = []
 
-        This method reads the correct settings, distinguishing
-        the two cases in which self.settings was read from an
-        actual file or from within an archive.
+        if self.data_points:
+            fname = tmp_path / 'measurement.csv'
+            self.data_points.save_data(fname)
+            move_to_archive.append(fname)
 
-        Returns
-        -------
-        device_settings : ViPErLEEDSettings
-            The loaded settings
+        ctrl_locations = []
+        for ctrl in self.controllers:
+            fname = "controller_" + ctrl.name_clean + ".ini"
+            with open(tmp_path / fname, 'w', encoding='utf-8') as fproxy:
+                ctrl.settings.write(fproxy)
+            move_to_archive.append(tmp_path / fname)
+            ctrl_locations.append("./" + fname)
 
-        Raises
-        ------
-        RuntimeError
-            In case any error occurs while loading the settings.
-        """
-        configname = configname.strip()
-        device_cfg = ViPErLEEDSettings()
+        cam_locations = []
+        for camera in self.cameras:
+            fname = "camera_" + camera.name_clean + ".ini"
+            with open(tmp_path / fname, 'w', encoding='utf-8') as fproxy:
+                camera.settings.write(fproxy)
+            move_to_archive.append(tmp_path / fname)
+            cam_locations.append("./" + fname)
 
-        # Treat now different cases:
-        # (1) configname does not begin with './' --> read file
-        if not configname.startswith('./'):
-            try:
-                device_cfg = device_cfg.from_settings(configname)
-            except (ValueError, NoSettingsError):
-                raise RuntimeError() from None
-            return device_cfg
+        if cam_locations:                                                       # TODO: do the same for all controllers (without editing the measured stuff!)
+            self.settings.set("devices", "cameras", str(tuple(cam_locations)))
 
-        # (2) configname begins with './' --> has to be replaced
-        configname = configname[2:]
+        file_name = tmp_path / "measurement.ini"
+        move_to_archive.append(file_name)
+        with open(file_name, 'w', encoding='utf-8') as configfile:
+            self.settings.write(configfile)
 
-        # (2.1) self.settings was read from an archive
-        # --> attempt reading config from the same archive
-        if self.settings.base_dir.endswith('.zip'):
-            with ZipFile(self.settings.base_dir, 'r') as arch:
-                try:
-                    cfg_lines = arch.read(configname).decode()
-                except KeyError:
-                    raise RuntimeError(
-                        f"No config file '{configname}' in "
-                        f"archive {self.settings.base_dir}"
-                        ) from None
-            device_cfg.read_string(cfg_lines)
-            device_cfg.base_dir = self.settings.base_dir
-            return device_cfg
+        arch_name = tmp_path.with_suffix('.zip')
+        with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
+                     compresslevel=2) as archive:
+            for fname in move_to_archive:
+                archive.write(fname, fname.relative_to(tmp_path))
 
-        # (2.2) self.settings was read from a folder
-        # --> attempt reading config from the same folder
-        configname = Path(self.settings.base_dir) / configname
+        # Move all files by renaming the archive and temp folder
         try:
-            device_cfg = device_cfg.from_settings(configname)
-        except (ValueError, NoSettingsError):
-            raise RuntimeError(f"No config file '{configname}' in "
-                               f"folder {self.settings.base_dir}") from None
-        return device_cfg
+            arch_name.rename(arch_name.with_name(final_path.name + '.zip'))
+        except OSError as err:
+            self.emit_error(MeasurementErrors.RUNTIME_ERROR, err)
+        try:
+            tmp_path.rename(final_path)
+        except OSError as err:
+            self.emit_error(MeasurementErrors.RUNTIME_ERROR, err)
+
+        self._temp_dir = None  # Prevents re-saving
+
+        return  # TODO: remove
+
+        for fname in move_to_archive:
+            fname.unlink()
+        for fname in tuple(final_path.glob('*')):                               # TODO: not sure I want to do this cleanup. Maybe just remove camera folders higher up?
+            if fname.is_file():
+                fname.unlink()
+                continue
+            try:
+                fname.rmdir()
+            except OSError:
+                pass
+
+    def _step_profile_from_strings(self, profile):
+        """Return a tuple of energies and times from strings."""
+        delta = self.current_energy - self._previous_energy
+        if abs(delta) < 1e-4:
+            return tuple()
+
+        energies_times = [0]*len(profile)
+        for i, fraction in enumerate(profile[::2]):
+            energies_times[2*i] = float(fraction)*delta + self.current_energy
+        for i, time_ in enumerate(profile[1::2]):
+            time_ = int(time_)
+            if time_ < 0:
+                self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                                'measurement_settings/step_profile',
+                                '\nInfo: Time intervals must be non-negative')
+                return tuple()
+            energies_times[2*i+1] = time_
+        return tuple(energies_times)
