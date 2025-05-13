@@ -1,9 +1,13 @@
-import numpy as np
-import pytest
-from pytest_cases import case, parametrize_with_cases
+# test_target_token.py
+import re
 
-from viperleed_jax.atom_basis import AtomBasis
-from viperleed_jax.files.displacements.tokens.target import Targets, TargetToken, TargetingError
+import pytest
+
+from viperleed_jax.files.displacements.tokens.target import (
+    TargetingError,
+    TargetToken,
+    _generate_label_match_regex,
+)
 
 
 # Minimal fake scatterer for tests
