@@ -5,46 +5,6 @@ __created__ = '2025-04-10'
 
 import pytest
 
-
-@pytest.mark.parametrize(
-    'line, exp_subtargets, exp_direction, exp_range',
-    [
-        pytest.param(
-            'Fe z = -0.2 0.2',
-            ['Fe'],
-            DirectionToken('z'),
-            RangeToken.from_floats(-0.2, 0.2),
-            id='single-target-no-step',
-        ),
-        pytest.param(
-            'Fe xy[1 1] = -0.2 0.2',
-            ['Fe'],
-            DirectionToken('xy[1 1]'),
-            RangeToken.from_floats(-0.2, 0.2),
-            id='single-target-no-step',
-        ),
-        pytest.param(
-            'Fe 1 2, Cu_surf xy = -1.5 3.0 0.5',
-            ['Fe 1 2', 'Cu_surf'],
-            DirectionToken('xy'),
-            RangeToken.from_floats(-1.5, 3.0, 0.5),
-            id='multi-target-with-step',
-        ),
-        pytest.param(
-            '  Fe_*    xyz=   0.    2E+1   0.25  ',
-            ['Fe_*'],
-            DirectionToken('xyz'),
-            RangeToken.from_floats(0.0, 20.0, 0.25),
-            id='whitespace-scientific',
-        ),
-        pytest.param(
-            'Fe L(1-3), Ni_sub L(2) z = -0.5 0.5',
-            ['Fe L(1-3)', 'Ni_sub L(2)'],
-            DirectionToken('z'),
-            RangeToken.from_floats(-0.5, 0.5),
-            id='layer-selector',
-        ),
-    ],
 from viperleed_jax.files.displacements.errors import (
     InvalidDisplacementsSyntaxError,
 )
@@ -57,41 +17,88 @@ from viperleed_jax.files.displacements.tokens import (
     TokenParserError,
     TypeToken,
 )
-def test_geodelta_parametrized(line, exp_subtargets, exp_direction, exp_range):
-    geo = GeoDeltaLine(line)
-    # targets
-    actual_targets = [st.target_str for st in geo.targets.subtargets]
-    assert actual_targets == exp_subtargets
-    # direction
-    assert isinstance(geo.direction, DirectionToken)
-    assert geo.direction == exp_direction
-    # range
-    assert isinstance(geo.range, RangeToken)
-    assert geo.range == exp_range
 
-
-
-
-@pytest.mark.parametrize(
-    'bad_line, exp_error',
-    [
-        pytest.param('A =', InvalidDisplacementsSyntaxError, id='missing RHS'),
-        pytest.param(
-            'x = 0 1', InvalidDisplacementsSyntaxError, id='missing target'
-        ),
-        pytest.param(
-            'A x 0 1', InvalidDisplacementsSyntaxError, id='not equal sign'
-        ),
-        pytest.param(
-            'A y = foo bar',
-            InvalidDisplacementsSyntaxError,
-            id='non-numeric RHS',
-        ),
-    ],
+from viperleed_jax.files.displacements.tokens.direction import DirectionToken
+from viperleed_jax.files.displacements.lines import (
+    GeoDeltaLine,
+    separate_direction_from_targets
 )
-def test_invalid_format_raises(bad_line, exp_error):
-    with pytest.raises(exp_error):
-        GeoDeltaLine(bad_line)
+
+class TestGeoDeltaLine:
+    @pytest.mark.parametrize(
+        'line, exp_targets, exp_direction, exp_range',
+        [
+            pytest.param(
+                'Fe z = -0.2 0.2',
+                [TargetToken('Fe')],
+                DirectionToken('z'),
+                RangeToken.from_floats(-0.2, 0.2),
+                id='single-target-no-step',
+            ),
+            pytest.param(
+                'Fe xy[1 1] = -0.2 0.2',
+                [TargetToken('Fe')],
+                DirectionToken('xy[1 1]'),
+                RangeToken.from_floats(-0.2, 0.2),
+                id='single-target-no-step',
+            ),
+            pytest.param(
+                'Fe 1 2, Cu_surf xy = -1.5 3.0 0.5',
+                [TargetToken('Fe 1 2'), TargetToken('Cu_surf')],
+                DirectionToken('xy'),
+                RangeToken.from_floats(-1.5, 3.0, 0.5),
+                id='multi-target-with-step',
+            ),
+            pytest.param(
+                '  Fe_*    xyz=   0.    2E+1   0.25  ',
+                [TargetToken('Fe_*')],
+                DirectionToken('xyz'),
+                RangeToken.from_floats(0.0, 20.0, 0.25),
+                id='whitespace-scientific',
+            ),
+            pytest.param(
+                'Fe L(1-3), Ni_sub L(2) z = -0.5 0.5',
+                [TargetToken('Fe L(1-3)'), TargetToken('Ni_sub L(2)')],
+                DirectionToken('z'),
+                RangeToken.from_floats(-0.5, 0.5),
+                id='layer-selector',
+            ),
+        ],
+    )
+    def test_geodelta_parametrized(
+        self, line,exp_targets, exp_direction, exp_range):
+        geo = GeoDeltaLine(line)
+        # targets
+        assert len(geo.targets) == len(exp_targets)
+        for target, exp_target in zip(geo.targets, exp_targets):
+            assert target == exp_target
+        # direction
+        assert isinstance(geo.direction, DirectionToken)
+        assert geo.direction == exp_direction
+        # range
+        assert isinstance(geo.range, RangeToken)
+        assert geo.range == exp_range
+
+    @pytest.mark.parametrize(
+        'bad_line, exp_error',
+        [
+            pytest.param('A =', InvalidDisplacementsSyntaxError, id='missing RHS'),
+            pytest.param(
+                'x = 0 1', InvalidDisplacementsSyntaxError, id='missing target'
+            ),
+            pytest.param(
+                'A x 0 1', InvalidDisplacementsSyntaxError, id='not equal sign'
+            ),
+            pytest.param(
+                'A y = foo bar',
+                InvalidDisplacementsSyntaxError,
+                id='non-numeric RHS',
+            ),
+        ],
+    )
+    def test_invalid_format_raises(self, bad_line, exp_error):
+        with pytest.raises(exp_error):
+            GeoDeltaLine(bad_line)
 
 
 # def test_invalid_direction_raises(monkeypatch):
