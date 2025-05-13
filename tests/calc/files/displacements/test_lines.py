@@ -5,12 +5,6 @@ __created__ = '2025-04-10'
 
 import pytest
 
-from viperleed_jax.files.displacements.tokens.direction import DirectionToken
-from viperleed_jax.files.displacements.lines import GeoDeltaLine, separate_direction_from_targets
-from viperleed_jax.files.displacements.tokens.range import RangeToken
-from viperleed_jax.files.displacements.tokens.target import TargetingError, Targets
-from viperleed_jax.files.displacements.errors import InvalidDisplacementsSyntaxError
-
 
 @pytest.mark.parametrize(
     'line, exp_subtargets, exp_direction, exp_range',
@@ -51,6 +45,17 @@ from viperleed_jax.files.displacements.errors import InvalidDisplacementsSyntaxE
             id='layer-selector',
         ),
     ],
+from viperleed_jax.files.displacements.errors import (
+    InvalidDisplacementsSyntaxError,
+)
+from viperleed_jax.files.displacements.tokens import (
+    DirectionToken,
+    ElementToken,
+    OffsetToken,
+    RangeToken,
+    TargetToken,
+    TokenParserError,
+    TypeToken,
 )
 def test_geodelta_parametrized(line, exp_subtargets, exp_direction, exp_range):
     geo = GeoDeltaLine(line)
