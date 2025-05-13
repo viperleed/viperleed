@@ -5,10 +5,10 @@ __created__ = '2025-04-10'
 
 import pytest
 
-from viperleed_jax.files.displacements.direction import DirectionToken
+from viperleed_jax.files.displacements.tokens.direction import DirectionToken
 from viperleed_jax.files.displacements.lines import GeoDeltaLine, separate_direction_from_targets
 from viperleed_jax.files.displacements.tokens.range import RangeToken
-from viperleed_jax.files.displacements.targeting import TargetingError, Targets
+from viperleed_jax.files.displacements.tokens.target import TargetingError, Targets
 from viperleed_jax.files.displacements.errors import InvalidDisplacementsSyntaxError
 
 
