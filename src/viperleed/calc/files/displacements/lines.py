@@ -283,7 +283,7 @@ class OffsetsLine(ParsedLine):
 
         self.type = self._parse_type(parts[0])
         targets_str, dir_str = separate_direction_from_targets(
-            parts[1:].join(' '))
+            ''.join(parts[1:]))
 
         # parse targets
         self.targets = self._parse_targets(targets_str)
