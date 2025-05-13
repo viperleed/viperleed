@@ -115,7 +115,7 @@ class ParsedLine(ABC):
     def invalid_format_msg(self):
         """Return a string with a general invalid format error message."""
         return (
-            f'Invalid {self.block_name} line format: "{self._raw_line}". '
+            f'Invalid {self.block_name} line format: "{self.raw_line}". '
             f'Expected format: "{self.expected_format}".'
         )
 
