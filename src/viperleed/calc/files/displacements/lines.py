@@ -243,7 +243,7 @@ class ConstraintLine:
     InvalidDisplacementsSyntaxError if only one target is specified on the left
     hand side.
 
-    block_type = 'CONSTRAIN'
+    block_name = 'CONSTRAIN'
 
     """
     def __init__(self, line: str):
@@ -267,7 +267,7 @@ class OffsetsLine(ParsedLine):
     is geometric.
     """
 
-    block_type = 'OFFSET'
+    block_name = 'OFFSET'
     expected_format = ('<type> <target> [, <target> ...] [<direction>] '
                        '= <offset>')
 
