@@ -4,7 +4,7 @@ __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-04-10'
 
 import pytest
-from viperleed_jax.perturbation_type import PerturbationType
+from viperleed_jax.files.displacements.perturbation_type import PerturbationType
 
 
 @pytest.mark.parametrize(

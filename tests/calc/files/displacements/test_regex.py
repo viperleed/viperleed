@@ -12,7 +12,7 @@ from viperleed_jax.files.displacements.regex import (
     match_offsets_line,
     match_vib_line,
 )
-from viperleed_jax.perturbation_type import PerturbationType
+from viperleed_jax.files.displacements.tokens.type import PerturbationType
 
 # Test cases for SECTION_HEADER_PATTERN
 TEST_LINES_SECTION = {
