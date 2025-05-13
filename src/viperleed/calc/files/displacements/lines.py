@@ -195,16 +195,19 @@ class VibDeltaLine(ParsedLine):
 
 
 
-class OccDeltaLine:
+class OccDeltaLine(ParsedLine):
     """Class to parse lines in the OCC_DELTA block of DISPLACEMENTS.
 
     Lines in the OCC_DELTA block are of the form:
         <target> [, <target>] = <element> <range> [, <element> <range> ...]
     where <target>, <element> and <range> are tokes that are parsed by the
     `Targets`, `Element` and `RangeToken` classes, respectively.
-    """ # TODO: Element class?
+    """
 
-    block_type = 'OCC_DELTA'
+    block_name = 'OCC_DELTA'
+    expected_format = (
+        '<target> [, <target>] = <element> <range> [, <element> <range> ...]'
+    )
 
     def __init__(self, line: str):
         super().__init__(line)
@@ -213,21 +216,34 @@ class OccDeltaLine:
         # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if dir_str:
-            msg = (
-                f'Invalid OCC_DELTA line format: "{self._raw_line}". '
-                'Expected format: "<targets> [, <target>] = <range>".'
-            )
-            raise InvalidDisplacementsSyntaxError(msg)
+            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
 
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
 
-        # TODO RHS parsing
+        # Right hand side
+        # consists of one or more <element> <range> combinations
+        elem_ranges_strs = self._rhs.split(',')
+        # iterate over all
+        element_ranges = []
+        for er in elem_ranges_strs:
+            elem_str, range_str = er.strip().split(' ', maxsplit=1)
+            element_ranges.append((ElementToken(elem_str), RangeToken(range_str)))
+        if len(element_ranges) < 1:
+            # must contain at least one pair
+            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+        self.element_ranges = tuple(element_ranges)
 
 
     def __repr__(self):
         """Return the string representation of the line."""
-        # TODO
+        txt = f'{self.targets[0]}'
+        for target in self.targets[1:]:
+            txt += f', {target}'
+        txt += f' = {self.element_ranges[0]}'
+        for er in self.element_ranges[1:]:
+            txt += f', {er}'
+        return txt
 
 
 class ConstraintLine:
