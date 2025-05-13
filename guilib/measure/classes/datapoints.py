@@ -17,13 +17,10 @@ from collections.abc import MutableSequence, Sequence
 from collections import defaultdict
 import enum
 
-from PyQt5 import QtCore as qtc
-
 # ViPErLEED modules
 from viperleed.guilib.measure.classes.abc import QMetaABC
 from viperleed.guilib.measure.classes.abc import QObjectWithError
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.guilib.measure.hardwarebase import emit_error
 
 
 _ALIASES = {
@@ -367,10 +364,16 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
     def __deepcopy__(self, memo):
         """Return a deep copy of self."""
         cls = self.__class__
-        result = cls.__new__(cls)  # pylint: disable=E1120  # bug?
-        memo[id(self)] = result
-        for key, value in self.__dict__.items():
-            setattr(result, key, deepcopy(value, memo))
+        # The primary controller object is passed on because it is used
+        # for indexing and its times are used as a reference for other
+        # controllers in time-resolved measurements.
+        kwargs = {'primary_controller' : self.primary_controller,
+                  'time_resolved' : self.__time_resolved,
+                  'continuous' : self.__continuous,
+                  'parent' : self.parent(),}
+        result = cls(*deepcopy(self.__list, memo), **kwargs)
+        result.nr_steps_done = self.nr_steps_done
+        result.nr_steps_total = self.nr_steps_total
         return result
 
     def __str__(self):
@@ -441,7 +444,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
                 )
         for quantity, values in new_data.items():
             if quantity not in self[-1]:
-                emit_error(self, DataErrors.INVALID_MEASUREMENT)
+                self.emit_error(DataErrors.INVALID_MEASUREMENT)
                 continue
             # In continuous-time-resolved mode, store only the first
             # timestamp (it is strictly needed only for the primary)
@@ -486,8 +489,8 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
                 # duration is so small that a controller did not yet
                 # return any measurement.
                 if complain:
-                    emit_error(self, DataErrors.NO_DATA_FOR_CONTROLLER,
-                               ctrl.address)
+                    self.emit_error(DataErrors.NO_DATA_FOR_CONTROLLER,
+                                    ctrl.address)
                 continue
 
             if self.continuous:
@@ -757,8 +760,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
          invalid) = self.__make_column_header_map(first_row)
 
         if invalid:
-            emit_error(self, DataErrors.UNKNOWN_QUANTITIES,
-                       ", ".join(invalid))
+            self.emit_error(DataErrors.UNKNOWN_QUANTITIES, ", ".join(invalid))
 
         _egy = QuantityInfo.ENERGY
         # Prepare a dummy data point dictionary
@@ -871,7 +873,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         #            for the first step, and is the same value since.
         #            Otherwise, we just take the last time of the
         #            previous step and go from there.
-        is_first_step = (len(self) == 1)
+        is_first_step = len(self) == 1
         if ctrl == self.primary_controller or is_first_step:
             first_time = timestamps[0] - start
             first_time += ctrl.initial_delay / 1000
