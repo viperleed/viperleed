@@ -111,6 +111,17 @@ class ParsedLine(ABC):
             )
             raise InvalidDisplacementsSyntaxError(msg) from err
 
+    def _parse_element(self, element_str):
+        try:
+            return ElementToken(element_str)
+        except TokenParserError as err:
+            msg = (
+                'Unable to parse <element> information from line in '
+                f'{self.block_name} block: {self.raw_line}.'
+            )
+            raise InvalidDisplacementsSyntaxError(msg) from err
+
+
     @property
     def invalid_format_msg(self):
         """Return a string with a general invalid format error message."""
