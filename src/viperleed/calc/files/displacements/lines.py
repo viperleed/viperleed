@@ -255,6 +255,7 @@ class OccDeltaLine(ParsedLine):
         if len(element_ranges) < 1:
             # must contain at least one pair
             raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+        self.element_ranges = tuple(element_ranges)
 
     def __repr__(self):
         """Return the string representation of the line."""
