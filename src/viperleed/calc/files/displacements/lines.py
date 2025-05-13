@@ -169,6 +169,7 @@ class VibDeltaLine(ParsedLine):
     """
 
     block_name = 'VIB_DELTA'
+    expected_format = '<targets> [, <target>] = <range>'
 
     def __init__(self, line: str):
         super().__init__(line)
@@ -177,11 +178,7 @@ class VibDeltaLine(ParsedLine):
         # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if dir_str:
-            msg = (
-                f'Invalid VIB_DELTA line format: "{self._raw_line}". '
-                'Expected format: "<targets> [, <target>] = <range>".'
-            )
-            raise InvalidDisplacementsSyntaxError(msg)
+            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
 
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
