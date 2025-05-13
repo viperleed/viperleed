@@ -288,12 +288,45 @@ class ConstraintLine(ParsedLine):
 
     def __init__(self, line: str):
         super().__init__(line)
+        self.is_simple_link = False
+
+        # Left hand side
+        lhs_parts = self._lhs.split()
+        if len(lhs_parts) < 2:  # at least type and one target
+            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+
+        self.type = self._parse_type(lhs_parts[0])
+        targets_str, dir_str = separate_direction_from_targets(
+            ''.join(lhs_parts[1:])
+        )
+
+        # parse targets
+        self.targets = self._parse_targets(targets_str)
+
+        if self.type.type is PerturbationType.GEO:
+            # expect and parse direction specifier
+            # will raise if no direction is given
+            self.direction = self._parse_direction(dir_str)
+
+        if self.type.type is not PerturbationType.GEO and dir_str:
+            raise InvalidDisplacementsSyntaxError(
+                'Direction tokens in the OFFSETS block are only allowed for '
+                'geometric offsets.'
+            )
+
+        # Right hand side
 
         # check for deprecated 'offset' tag
         if 'offset' in self._rhs.lower:
-            msg = ('Offset assignment in the CONSTRAIN block is deprecated. '
-                   'Use the OFFSETS block instead.')
+            msg = (
+                'Offset assignment in the CONSTRAIN block is deprecated. '
+                'Use the OFFSETS block instead.'
+            )
             raise InvalidDisplacementsSyntaxError(msg)
+
+        # check for 'linked' tag
+
+        # TODO
 
 
 
