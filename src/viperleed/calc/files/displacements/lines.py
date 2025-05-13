@@ -192,12 +192,6 @@ class VibDeltaLine(ParsedLine):
         return f'{self.targets} = {self.range}'
 
 
-def _get_target(label, which):
-    if which is None:
-        return BSTarget(label)
-    return BSTarget(f'{label} {which}')
-
-
 
 class OccDeltaLine:
     """Class to parse lines in the OCC_DELTA block of DISPLACEMENTS.
