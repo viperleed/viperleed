@@ -70,7 +70,7 @@ class TargetToken(DisplacementsFileToken):
             return False
         return (
             (other.nums == self.nums if self.nums is not None else True)
-            and (other.nums == self.layers if self.layers is not None else True)
+            and (other.layers == self.layers if self.layers is not None else True)
             and (other.regex == self.regex)
         )
 
