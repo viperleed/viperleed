@@ -72,6 +72,12 @@ def test_eq_same_and_different():
     assert not (a == 'A 1-2')
 
 
+def test_eq_layer_specifier():
+    # regression test for bug
+    a = TargetToken('Fe L(1-3)')
+    b = TargetToken('Fe L(1-3)')
+    assert a == b
+
 def test_selection_regex_matching():
     # test that regex actually matches sites correctly
     tok = TargetToken('A*')
