@@ -30,11 +30,12 @@ class ElementToken(DisplacementsFileToken):
 
     def __init__(self, element_str: str):
         """Construct an ElementToken from a string."""
+        _element_str = element_str.strip()
         # first get atomic number
         try:
-            self.atomic_number = periodic_table.get_atomic_number(element_str)
+            self.atomic_number = periodic_table.get_atomic_number(_element_str)
         except ValueError as err:
-            msg = f'Could not parse chemical element "{element_str}".'
+            msg = f'Could not parse chemical element "{_element_str}".'
             raise ElementTokenParserError(msg) from err
         # also get symbol
         self.symbol = periodic_table.get_element_symbol(self.atomic_number)
@@ -47,5 +48,5 @@ class ElementToken(DisplacementsFileToken):
 
     def __repr__(self):
         """Return a string representation of the ElementToken object."""
-        return f'ElementToken(element={self.element})'
+        return f'ElementToken(element={self.symbol})'
 
