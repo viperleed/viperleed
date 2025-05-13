@@ -22,6 +22,7 @@ from viperleed_jax.files.displacements.tokens.direction import DirectionToken
 from viperleed_jax.files.displacements.lines import (
     GeoDeltaLine,
     VibDeltaLine,
+    OccDeltaLine,
     OffsetsLine,
     separate_direction_from_targets
 )
@@ -232,6 +233,96 @@ class TestOffsetLine:
     def test_offsets_invalid(self, bad_line, exp_error):
         with pytest.raises(exp_error):
             OffsetsLine(bad_line)
+
+
+
+@pytest.mark.parametrize(
+    'line, exp_targets, exp_elem_ranges',
+    [
+        # single target, single element-range
+        (
+            'A = H 0.0 1.0',
+            [TargetToken('A')],
+            [(ElementToken('H'), RangeToken.from_floats(0.0, 1.0))],
+        ),
+        # multiple targets
+        (
+            'A,B = Ni 0 1',
+            [TargetToken('A'), TargetToken('B')],
+            [(ElementToken('Ni'), RangeToken.from_floats(0.0, 1.0))],
+        ),
+        # two element-range pairs
+        (
+            'X = O 0.1 1, N 0 0.5',
+            [TargetToken('X')],
+            [
+                (ElementToken('O'), RangeToken.from_floats(0.1, 1.0)),
+                (ElementToken('N'), RangeToken.from_floats(0.0, 0.5)),
+            ],
+        ),
+        # multiple targets and multiple pairs with step
+        (
+            'A_surf, B_def L(2-3) = Pt 0.1 0.2, Au 0.1 1 0.1',
+            [TargetToken('A_surf'), TargetToken('B_def L(2-3)')],
+            [
+                (ElementToken('Pt'), RangeToken.from_floats(0.1, 0.2)),
+                (ElementToken('Au'), RangeToken.from_floats(0.1, 1.0, 0.1)),
+            ],
+        ),
+        # whitespace tolerance
+        (
+            '  D   =   Li  0.5 1.0  ,  Be 0.3 0.5 ',
+            [TargetToken('D')],
+            [
+                (ElementToken('Li'), RangeToken.from_floats(0.5, 1.0)),
+                (ElementToken('Be'), RangeToken.from_floats(0.3, 0.5)),
+            ],
+        ),
+    ],
+)
+def test_occ_delta_valid(line, exp_targets, exp_elem_ranges):
+    occ = OccDeltaLine(line)
+    # check targets
+    for target, exp_target in zip(occ.targets, exp_targets):
+        assert target == exp_target
+    # check element_ranges length and content
+    assert hasattr(occ, 'element_ranges')
+    assert len(occ.element_ranges) == len(exp_elem_ranges)
+    for (act_e, act_r), (exp_e, exp_r) in zip(
+        occ.element_ranges, exp_elem_ranges
+    ):
+        assert isinstance(act_e, ElementToken)
+        assert act_e.atomic_number == exp_e.atomic_number
+        assert isinstance(act_r, RangeToken)
+        assert act_r == exp_r
+
+
+@pytest.mark.parametrize(
+    'bad_line',
+    [
+        '',  # empty line
+        'A H 1 2',  # missing '='
+        'A x = H 1 2',  # direction on LHS
+        'A =',  # missing RHS
+        'A = H',  # missing range
+        'A = H1 2',  # no space between element and range
+        'A = H foo bar',  # non-numeric range
+        'A = H 1 2 = N 0 1',  # multiple '='
+        'A = Xx 0 1',  # invalid element
+    ],
+)
+def test_occ_delta_invalid(bad_line):
+    with pytest.raises(InvalidDisplacementsSyntaxError):
+        OccDeltaLine(bad_line)
+
+
+def test_repr_contains_elements_and_ranges():
+    line = 'A,B = Fe 0.0 1.0, Ni 0.0 0.2'
+    occ = OccDeltaLine(line)
+    rep = repr(occ)
+    assert 'A' in rep and 'Fe' in rep and '0.0' in rep
+    assert 'B' in rep and 'Ni' in rep and '0.2' in rep
+    assert '=' in rep
 
 
 
