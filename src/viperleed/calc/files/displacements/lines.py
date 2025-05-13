@@ -7,19 +7,18 @@ import re
 from abc import ABC, abstractmethod
 from collections import namedtuple
 
-from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
-from viperleed_jax.files.displacements.tokens.perturbation_type import (
+from viperleed_jax.files.displacements.perturbation_type import (
     PerturbationType,
-    PerturbationTypeError,
 )
+from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
 
 from .errors import InvalidDisplacementsSyntaxError
-from .tokens.target import TargetingError, Targets
 from .tokens.base import TokenParserError
 from .tokens.direction import DirectionToken
 from .tokens.offset import OffsetToken
 from .tokens.range import RangeToken
-from .tokens.perturbation_type import TypeToken, PerturbationType
+from .tokens.target import TargetToken
+from .tokens.type import PerturbationType, TypeToken
 
 LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
 SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
@@ -69,11 +68,12 @@ class ParsedLine(ABC):
         """Name of the Block in the DISPLACEMENTS file."""
 
     def _parse_targets(self, targets_str):
+        target_parts = targets_str.split(',')
         try:
-            return  Targets(targets_str)
-        except TargetingError as err:
+            return tuple(TargetToken(part) for part in target_parts)
+        except TokenParserError as err:
             msg = (
-                'Unable to parse target information from line in '
+                'Unable to parse <target> tokens from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
             raise InvalidDisplacementsSyntaxError(msg) from err
@@ -81,9 +81,9 @@ class ParsedLine(ABC):
     def _parse_direction(self, dir_str):
         try:
             return DirectionToken(dir_str)
-        except InvalidDisplacementsSyntaxError as err:
+        except TokenParserError as err:
             msg = (
-                'Unable to parse direction information from line in '
+                'Unable to parse <direction> token from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
             raise InvalidDisplacementsSyntaxError(msg) from err
@@ -91,9 +91,9 @@ class ParsedLine(ABC):
     def _parse_range(self, range_str):
         try:
             return RangeToken(range_str)
-        except ValueError as err:
+        except TokenParserError as err:
             msg = (
-                'Unable to parse range information from line in '
+                'Unable to parse <range> token from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
             raise InvalidDisplacementsSyntaxError(msg) from err
@@ -103,10 +103,10 @@ class ParsedLine(ABC):
             return TypeToken(type_str)
         except TokenParserError as err:
             msg = (
-                'Unable to parse type information from line in '
+                'Unable to parse <type> information from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
-            raise InvalidDisplacementsSyntaxError from err
+            raise InvalidDisplacementsSyntaxError(msg) from err
 
     def invalid_format_msg(self):
         """Return a string with a general invalid format error message."""
