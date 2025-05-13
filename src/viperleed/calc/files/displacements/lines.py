@@ -239,7 +239,10 @@ class OccDeltaLine(ParsedLine):
         element_ranges = []
         for er in elem_ranges_strs:
             elem_str, range_str = er.strip().split(' ', maxsplit=1)
-            element_ranges.append((ElementToken(elem_str), RangeToken(range_str)))
+            element_ranges.append((
+                self._parse_element(elem_str),
+                self._parse_range(range_str),
+            ))
         if len(element_ranges) < 1:
             # must contain at least one pair
             raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
@@ -274,6 +277,7 @@ class ConstraintLine(ParsedLine):
     block_name = 'CONSTRAIN'
 
     """
+
     def __init__(self, line: str):
         super().__init__(line)
 
