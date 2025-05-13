@@ -306,6 +306,16 @@ class OffsetsLine(ParsedLine):
             raise InvalidDisplacementsSyntaxError(
                 self.invalid_format_msg) from err
 
+    def __repr__(self):
+        """Return the string representation of the line."""
+        txt = f'{self.type} {self.targets[0]}'
+        for target in self.targets[1:]:
+            txt += f', {target}'
+        if self.type.type is PerturbationType.GEO:
+            txt += f', {self.direction}'
+        txt += f' = {self.offset}'
+        return txt
+
 
 def separate_direction_from_targets(targets_and_direction: str):
     """Separate a string into targets and direction.
