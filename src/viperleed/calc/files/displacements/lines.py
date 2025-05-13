@@ -121,7 +121,6 @@ class ParsedLine(ABC):
             )
             raise InvalidDisplacementsSyntaxError(msg) from err
 
-
     @property
     def invalid_format_msg(self):
         """Return a string with a general invalid format error message."""
@@ -238,16 +237,24 @@ class OccDeltaLine(ParsedLine):
         # iterate over all
         element_ranges = []
         for er in elem_ranges_strs:
-            elem_str, range_str = er.strip().split(' ', maxsplit=1)
-            element_ranges.append((
-                self._parse_element(elem_str),
-                self._parse_range(range_str),
-            ))
+            try:
+                # may raise ValueError if Element or range is missing
+                elem_str, range_str = er.strip().split(' ', maxsplit=1)
+            except ValueError as err:
+                msg = (
+                    'Unable to parse chemical ranges from line in '
+                    f'{self.block_name} block: {self.raw_line}.'
+                )
+                raise InvalidDisplacementsSyntaxError(msg) from err
+            element_ranges.append(
+                (
+                    self._parse_element(elem_str),
+                    self._parse_range(range_str),
+                )
+            )
         if len(element_ranges) < 1:
             # must contain at least one pair
             raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
-        self.element_ranges = tuple(element_ranges)
-
 
     def __repr__(self):
         """Return the string representation of the line."""
