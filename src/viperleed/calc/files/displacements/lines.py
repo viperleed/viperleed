@@ -129,6 +129,7 @@ class GeoDeltaLine(ParsedLine):
     """
 
     block_name = 'GEO_DELTA'
+    expected_format = '<target> [, <target>] <direction> = <range>'
 
     def __init__(self, line: str):
         super().__init__(line)
