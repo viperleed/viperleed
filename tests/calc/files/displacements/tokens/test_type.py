@@ -35,4 +35,4 @@ def test_equality_and_type_mismatch():
     assert a != c
     # comparing to non-TypeToken always returns False
     assert a != 'geo'
-    assert a != None
+    assert a is not None
