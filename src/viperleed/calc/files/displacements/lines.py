@@ -246,7 +246,7 @@ class OccDeltaLine(ParsedLine):
         return txt
 
 
-class ConstraintLine:
+class ConstraintLine(ParsedLine):
     """Class to parse lines in the DISPLACEMENTS block of DISPLACEMENTS.
 
     Lines in the OCC_DELTA block are either of the form:
