@@ -111,6 +111,7 @@ class ParsedLine(ABC):
             )
             raise InvalidDisplacementsSyntaxError(msg) from err
 
+    @property
     def invalid_format_msg(self):
         """Return a string with a general invalid format error message."""
         return (
