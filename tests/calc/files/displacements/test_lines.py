@@ -22,6 +22,7 @@ from viperleed_jax.files.displacements.tokens.direction import DirectionToken
 from viperleed_jax.files.displacements.lines import (
     GeoDeltaLine,
     VibDeltaLine,
+    OffsetsLine,
     separate_direction_from_targets
 )
 
@@ -153,6 +154,84 @@ class TestVibDeltaLine:
         assert "=" in rep
         assert "RangeToken" in rep
 
+
+class TestOffsetLine:
+
+    @pytest.mark.parametrize(
+        'line, exp_type, exp_targets, exp_direction, exp_offset',
+        [
+            # geometric offset with direction
+            pytest.param(
+                'geo A x = 1.23',
+                'geo',
+                ['A'],
+                'x',
+                1.23,
+                id='geo-with-direction',
+            ),
+            # vib offset, no direction
+            pytest.param(
+                'vib B = 2.0',
+                'vib',
+                ['B'],
+                None,
+                2.0,
+                id='vib-no-direction',
+            ),
+            # # occ offset, multiple targets, no direction
+            # pytest.param(
+            #     'occ C1, D2 = -0.5',
+            #     'occ',
+            #     ['C1', 'D2'],
+            #     None,
+            #     -0.5,
+            #     id='occ-multiple-targets',
+            # ),
+        ],
+    )
+    def test_offsets_valid(self, line, exp_type, exp_targets, exp_direction, exp_offset):
+        off = OffsetsLine(line)
+        # type
+        assert isinstance(off.type, TypeToken)
+        assert off.type == TypeToken(exp_type)
+        # targets
+        assert len(off.targets) == len(exp_targets)
+        for tok, exp in zip(off.targets, exp_targets):
+            assert isinstance(tok, TargetToken)
+            assert tok.target_str == exp
+        # direction
+        if exp_direction is None:
+            assert off.direction is None
+        else:
+            assert isinstance(off.direction, DirectionToken)
+            assert off.direction == DirectionToken(exp_direction)
+        # offset
+        assert isinstance(off.offset, OffsetToken)
+        assert off.offset == OffsetToken.from_floats(exp_offset)
+
+
+    @pytest.mark.parametrize(
+        'bad_line, exp_error',
+        [
+            # Missing direction for geo
+            ('geo A = 1.0', InvalidDisplacementsSyntaxError),
+            # Direction not allowed for non-geo
+            ('vib A x = 2.0', InvalidDisplacementsSyntaxError),
+            # Missing type and target
+            ('A = 1.0', InvalidDisplacementsSyntaxError),
+            # No equals sign
+            ('geo A x 1.0', InvalidDisplacementsSyntaxError),
+            # Non-numeric offset
+            ('geo A x = foo', InvalidDisplacementsSyntaxError),
+            # Multiple offset tokens
+            ('geo A x = 1 2', InvalidDisplacementsSyntaxError),
+            # Multiple '=' signs
+            ('geo A x = 1.0 = 2.0', InvalidDisplacementsSyntaxError),
+        ],
+    )
+    def test_offsets_invalid(self, bad_line, exp_error):
+        with pytest.raises(exp_error):
+            OffsetsLine(bad_line)
 
 
 
