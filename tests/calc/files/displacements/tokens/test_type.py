@@ -1,7 +1,7 @@
-"""Tests for module perturbation_type."""
+"""Tests for <type> token of DISPLACEMENTS file."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
-__created__ = '2025-04-10'
+__created__ = '2025-05-13'
 
 import pytest
 
