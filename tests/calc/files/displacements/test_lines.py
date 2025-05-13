@@ -21,6 +21,7 @@ from viperleed_jax.files.displacements.tokens import (
 from viperleed_jax.files.displacements.tokens.direction import DirectionToken
 from viperleed_jax.files.displacements.lines import (
     GeoDeltaLine,
+    VibDeltaLine,
     separate_direction_from_targets
 )
 
@@ -100,33 +101,58 @@ class TestGeoDeltaLine:
         with pytest.raises(exp_error):
             GeoDeltaLine(bad_line)
 
+class TestVibDeltaLine:
 
-# def test_invalid_direction_raises(monkeypatch):
-#     # simulate Direction throwing
-#     from displacements.direction import Direction as RealDirection
+    @pytest.mark.parametrize(
+        "line, exp_targets, exp_range",
+        [
+            # single target, no step
+            ("A = 0 1",
+             [TargetToken("A")],
+             RangeToken.from_floats(0.0, 1.0)
+            ),
+            # multiple targets comma separated, with step
+            ("A1, B2 = -1.5 3.0 0.5",
+             [TargetToken("A1"), TargetToken("B2")],
+             RangeToken.from_floats(-1.5, 3.0, 0.5)
+            ),
+        ],
+    )
+    def test_valid(self, line, exp_targets, exp_range):
+        vib = VibDeltaLine(line)
+        # targets
+        assert len(vib.targets) == len(exp_targets)
+        for actual, expected in zip(vib.targets, exp_targets):
+            assert actual == expected
+        # no direction allowed
+        assert not hasattr(vib, "direction")
+        # range
+        assert isinstance(vib.range, RangeToken)
+        assert vib.range == exp_range
 
-#     def fake_init(self, s):
-#         raise ValueError('bad dir')
 
-#     monkeypatch.setattr('displacements.lines.Direction.__init__', fake_init)
-#     with pytest.raises(ValueError) as excinfo:
-#         GeoDeltaLine('A foo = 0 1')
-#     assert 'Unable to parse direction' in str(excinfo.value)
+    @pytest.mark.parametrize(
+        "bad_line, exp_error",
+        [
+            ("A x = 0 1", InvalidDisplacementsSyntaxError),
+            ("A =", InvalidDisplacementsSyntaxError),
+            ("A 0 1", InvalidDisplacementsSyntaxError),
+            ("A = foo bar", InvalidDisplacementsSyntaxError),
+            ("A = 0 1 = 2", InvalidDisplacementsSyntaxError),
+        ],
+    )
+    def test_invalid(self, bad_line, exp_error):
+        with pytest.raises(exp_error):
+            VibDeltaLine(bad_line)
 
+    def test_repr_shows_targets_and_range(self):
+        line = "X,Y = 2 4 1"
+        vib = VibDeltaLine(line)
+        rep = repr(vib)
+        assert "TargetToken" in rep
+        assert "=" in rep
+        assert "RangeToken" in rep
 
-# def test_invalid_range_raises(monkeypatch):
-#     # simulate RangeToken throwing
-#     from displacements.range import RangeToken as RealRange
-
-#     def fake_init(self, s):
-#         raise ValueError('bad range')
-
-#     monkeypatch.setattr(
-#         'displacements.lines.RangeToken.__init__', fake_init
-#     )
-#     with pytest.raises(ValueError) as excinfo:
-#         GeoDeltaLine('A x = 0 1')
-#     assert 'Bad range' in str(excinfo.value)
 
 
 
