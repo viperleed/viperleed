@@ -29,6 +29,8 @@ class TypeToken(DisplacementsFileToken):
 
     def __eq__(self, other):
         """Compare self to other TypeToken."""
+        if not isinstance(other, TypeToken):
+            return False
         return self.type is other.type
 
     def __repr__(self):
