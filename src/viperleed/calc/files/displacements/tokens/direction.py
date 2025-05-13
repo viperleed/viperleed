@@ -60,8 +60,11 @@ class DirectionToken(DisplacementsFileToken):
     """
 
     def __init__(self, direction_str):
-        self.direction_str = direction_str
-        self.vectors, self.dof = self._parse_direction(direction_str)
+        _dir_str = direction_str.strip()
+        if not _dir_str:
+            raise DirectionTokenParserError('Empty direction token.')
+        self.direction_str = _dir_str
+        self.vectors, self.dof = self._parse_direction(_dir_str)
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
