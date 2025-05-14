@@ -130,7 +130,7 @@ class ParsedLine(ABC):
 
     def _parse_linear_operation(self, operation_str):
         try:
-            self.linear_operation = LinearOperationToken(operation_str)
+            return LinearOperationToken(operation_str)
         except TokenParserError as err:
             msg = (
                 'Unable to parse <linear_operation> token from line in '
