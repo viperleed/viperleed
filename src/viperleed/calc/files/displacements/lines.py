@@ -341,6 +341,10 @@ class ConstraintLine(ParsedLine):
             raise InvalidDisplacementsSyntaxError(
                 'Direction tokens are not allowed in CONSTRAIN block.'
             )
+            # TODO, may be implemented in a future version: Do we want this?
+            # It would be generally possible (e.g. link only z, but not xy for
+            # some atoms, reducing DOF from 6 to 5), but I'm not sure if one
+            # would realistically use this.
 
         # parse targets
         self.targets = self._parse_targets(targets_str)
