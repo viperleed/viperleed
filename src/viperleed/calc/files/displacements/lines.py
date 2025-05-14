@@ -7,6 +7,8 @@ import re
 from abc import ABC, abstractmethod
 from collections import namedtuple
 
+import numpy as np
+
 from viperleed_jax.files.displacements.perturbation_type import (
     PerturbationType,
 )
@@ -16,6 +18,7 @@ from .errors import InvalidDisplacementsSyntaxError
 from .tokens import (
     DirectionToken,
     ElementToken,
+    LinearOperationToken,
     OffsetToken,
     RangeToken,
     TargetToken,
