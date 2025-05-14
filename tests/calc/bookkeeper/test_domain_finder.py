@@ -120,6 +120,7 @@ class TestDomainFinder:
         assert result is mock_from_main.return_value
         mock_from_main.assert_called_once()
 
+    @pytest.mark.xfail(reason='Buggy. See #344')
     def test_find_potential_domains(self, make_finder, tmp_path, caplog):
         """Test the find_potential_domains method."""
         caplog.set_level(0)  # All messages

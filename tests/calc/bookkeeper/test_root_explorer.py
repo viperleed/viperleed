@@ -216,8 +216,7 @@ class TestRootExplorer:
         # pylint: disable-next=protected-access           # OK in tests
         explorer._find_potential_domain_subfolders()
         mock_finder.find_potential_domains.assert_called_once()
-        # pylint: disable-next=protected-access           # OK in tests
-        assert explorer._has_domains == has_domains
+        assert explorer.has_domains == has_domains
 
     _remove_files = {
         '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
@@ -402,8 +401,7 @@ class TestRootExplorerCopyStateFilesFrom:
                                            info,
                                            call_copy):
         """Test the _copy_state_files_from method for the main domain root."""
-        # pylint: disable-next=protected-access           # OK in tests
-        explorer._has_domains = True
+        explorer.has_domains = True
         failures, exc_info = call_copy(info.missing, info.fail, None)
         for file in info.no_complain:
             try:
