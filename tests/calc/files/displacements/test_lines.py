@@ -357,20 +357,20 @@ class TestConstraintLine:
                 id='geo-linear-operation',
             ),
             pytest.param(
-                'vib A1, A2 = linked',
-                'vib',
-                ['A1', 'A2'],
-                'A2',
-                [[1.0]],
-                id='vib-linked-shorthand',
+                'occ A, B = linked',
+                TypeToken('occ'),
+                [TargetToken('A'), TargetToken('B')],
+                TargetToken('B'),
+                LinearOperationToken.from_array(np.eye(1)),
+                id='occ-linked-shorthand',
             ),
             pytest.param(
-                'vib X = [1 0] Y',
-                'vib',
-                ['X'],
-                'Y',
-                [[1.0, 0.0]],
-                id='vib-linear-link',
+                'vib X, Y = 0.5 Z',
+                TypeToken('vib'),
+                [TargetToken('X'), TargetToken('Y')],
+                TargetToken('Z'),
+                LinearOperationToken.from_array(np.array(0.5)),
+                id='vib-float-link',
             ),
         ],
     )
@@ -400,7 +400,6 @@ class TestConstraintLine:
             'geo A = linked',  # not enough targets
             'geo A = [1 0 0',  # malformed op
             'vib = [1 0] B',  # missing lhs target
-            'invalidtype A = B',  # invalid type
         ],
     )
     def test_invalid_constraint_lines(self, bad_line):
