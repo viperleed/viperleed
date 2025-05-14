@@ -288,16 +288,15 @@ class OccDeltaLine(ParsedLine):
 class ConstraintLine(ParsedLine):
     """Class to parse lines in the CONSTRAIN block of DISPLACEMENTS.
 
-    Lines in the OCC_DELTA block are given in the form of :
+    Lines in the CONSTRAIN block are given in the form of :
         <type> <target> [, <target> ...] = [<linear_operation>] <target>
     Alternatively, for geometric, vibrational or occupational parameters the
     syntax
         <type> <target_1> [, <target_2> ...], <target_n> = linked
-    an allowed shorthand notation for direct links and requires at least two
+    is an allowed shorthand notation for direct links and requires at least two
     targets to be specified on the left hand side. It will be treated as
-    equivalently to
+    equivalent to
         <target_1> [, <target_2> ...], <target_{n-1}> = <target_n>
-    .
     """
 
     block_name = 'CONSTRAIN'
