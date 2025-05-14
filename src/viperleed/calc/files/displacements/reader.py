@@ -105,69 +105,18 @@ class DisplacementsReader(InputFileReader):
         # Decide based on the current section
         section = DisplacementFileSections[self.current_section]
         if section is DisplacementFileSections.OFFSETS:
-            return self._read_offsets_line(line)
+            return OffsetsLine(line)
         if section is DisplacementFileSections.GEO_DELTA:
-            return self._read_geo_delta_line(line)
+            return GeoDeltaLine(line)
         if section is DisplacementFileSections.VIB_DELTA:
-            return self._read_vib_delta_line(line)
+            return VibDeltaLine(line)
         if section is DisplacementFileSections.OCC_DELTA:
-            return self._read_occ_delta_line(line)
+            return OccDeltaLine(line)
         if section is DisplacementFileSections.CONSTRAIN:
-            return self._read_constraints_line(line)
+            return ConstraintLine(line)
         # If no section is set, raise an error
         msg = f'Cannot parse line "{line}" without a section header.'
-        raise ValueError(msg)
-
-    def _read_offsets_line(self, line):
-        """Parse a line in the OFFSETS section."""
-        match = match_offsets_line(line)
-        if match is None:
-            msg = f"Cannot parse line '{line}' in OFFSETS section."
-            raise InvalidDisplacementsSyntaxError(msg)
-        offset_type, targets, direction, value = match
-        return OffsetsLine(offset_type, targets, direction, value, line=line)
-
-    def _read_geo_delta_line(self, line):
-        """Parse a line in the GEO_DELTA section."""
-        match = match_geo_line(line)
-        if match is None:
-            msg = f"Cannot parse line '{line}' in GEO_DELTA section."
-            raise InvalidDisplacementsSyntaxError(msg)
-
-        label, which, direction, start, stop, step = match
-        return GeoDeltaLine(label, which, direction, start, stop, step, line=line)
-
-    def _read_vib_delta_line(self, line):
-        """Parse a line in the VIB_DELTA section."""
-        match = match_vib_line(line)
-        if match is None:
-            msg = f"Cannot parse line '{line}' in VIB_DELTA section."
-            raise InvalidDisplacementsSyntaxError(msg)
-
-        label, which, start, stop, step = match
-        return VibDeltaLine(label, which, start, stop, step, line=line)
-
-    def _read_occ_delta_line(self, line):
-        """Parse a line in the OCC_DELTA section."""
-        match = match_occ_line(line)
-        if match is None:
-            msg = f"Cannot parse line '{line}' in OCC_DELTA section."
-            raise InvalidDisplacementsSyntaxError(msg)
-
-        label, which, chem_blocks = match
-        return OccDeltaLine(label, which, chem_blocks, line=line)
-
-    def _read_constraints_line(self, line):
-        """Parse a line in the CONSTRAIN section."""
-        match = match_constrain_line(line)
-        if match is None:
-            msg = f"Cannot parse line '{line}' in CONSTRAIN section."
-            raise InvalidDisplacementsSyntaxError(msg)
-
-        constraint_type, targets, direction, value = match
-        return ConstraintLine(constraint_type, targets, direction,
-                              value, line=line)
-
+        raise InvalidDisplacementsSyntaxError(msg)
 
 def _check_line_generally_valid(line):
     """Check the line for invalid or deprecated syntax."""
