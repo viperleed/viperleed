@@ -301,12 +301,10 @@ class ConstraintLine(ParsedLine):
     """
 
     block_name = 'CONSTRAIN'
-
-    """
+    expected_format = '<type> <target> [, <target>] = [<linear_operation>] <target>'
 
     def __init__(self, line: str):
         super().__init__(line)
-        self.is_simple_link = False
 
         # Left hand side
         lhs_parts = self._lhs.split()
@@ -324,7 +322,7 @@ class ConstraintLine(ParsedLine):
         # Right hand side
 
         # check for deprecated 'offset' tag
-        if 'offset' in self._rhs.lower:
+        if 'offset' in self._rhs.lower():
             msg = (
                 'Offset assignment in the CONSTRAIN block is deprecated. '
                 'Use the OFFSETS block instead.'
@@ -332,9 +330,47 @@ class ConstraintLine(ParsedLine):
             raise InvalidDisplacementsSyntaxError(msg)
 
         # check for 'linked' tag
+        if self._rhs.lower().strip() == 'linked':
+            logger.log(_BELOW_DEBUG, 'Detected "linked" tag.')
+            if len(self.targets) < 2:
+                raise InvalidDisplacementsSyntaxError(
+                    'Direct link assignment using the "linked" tag requires '
+                    'specifying at least two targets.'
+                )
+            # "move" the last target to the rhs
+            self.link_target = self.targets[-1]
+            self.targets = self.targets[:-1]
+            # treat as if array is identity
+            self.linear_operation = LinearOperationToken.from_array(np.eye(1))
+            return
 
-        # TODO
+        # The default case is to treat it as <linear_operation> and <target>.
+        # It's not immediately obvious where to split the tokens since both
+        # token types may contain spaces. Instead we iterate over white-space
+        # split parts from the right (since the <linear_operation> is optional)
+        # and try to parse the target.
+        rhs_parts = self._rhs.split('')
+        for i in range(1, len(rhs_parts) + 1):
+            # Try treating the last i parts as the target
+            op_part = ' '.join(rhs_parts[:-i]) if i < len(rhs_parts) else ''
+            target_part = ' '.join(rhs_parts[-i:])
+            try:
+                link_target = self._parse_targets(target_part)
+                break
+            except InvalidDisplacementsSyntaxError:
+                continue
+        else:
+            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
 
+        # If we reach here, we have a valid target part
+        self.link_target = link_target
+
+        # if the operation part is empty, default to identity
+        if not op_part:
+            self.linear_operation = LinearOperationToken.from_array(np.eye(1))
+            return
+
+        self.linear_operation = self._parse_linear_operation(op_part)
 
 
 class OffsetsLine(ParsedLine):
