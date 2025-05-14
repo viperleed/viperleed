@@ -272,18 +272,19 @@ class OccDeltaLine(ParsedLine):
 
 
 class ConstraintLine(ParsedLine):
-    """Class to parse lines in the DISPLACEMENTS block of DISPLACEMENTS.
+    """Class to parse lines in the CONSTRAIN block of DISPLACEMENTS.
 
-    Lines in the OCC_DELTA block are either of the form:
-        <type> <target> [, <target> ...] = [<operation>] <target>
-    where <target>, ... are tokes that are parsed by the # TODO
-
-    or:
-        <type> <target>, <target> [, <target> ...] = linked
-    The latter syntax is a shorthand for direct linking of all targets on the
-    left hand side. The 'linked' assignment will raise an
-    InvalidDisplacementsSyntaxError if only one target is specified on the left
-    hand side.
+    Lines in the OCC_DELTA block are given in the form of :
+        <type> <target> [, <target> ...] = [<linear_operation>] <target>
+    Alternatively, for geometric, vibrational or occupational parameters the
+    syntax
+        <type> <target_1> [, <target_2> ...], <target_n> = linked
+    an allowed shorthand notation for direct links and requires at least two
+    targets to be specified on the left hand side. It will be treated as
+    equivalently to
+        <target_1> [, <target_2> ...], <target_{n-1}> = <target_n>
+    .
+    """
 
     block_name = 'CONSTRAIN'
 
