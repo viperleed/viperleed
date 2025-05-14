@@ -306,17 +306,6 @@ class ConstraintLine(ParsedLine):
         # parse targets
         self.targets = self._parse_targets(targets_str)
 
-        if self.type.type is PerturbationType.GEO:
-            # expect and parse direction specifier
-            # will raise if no direction is given
-            self.direction = self._parse_direction(dir_str)
-
-        if self.type.type is not PerturbationType.GEO and dir_str:
-            raise InvalidDisplacementsSyntaxError(
-                'Direction tokens in the OFFSETS block are only allowed for '
-                'geometric offsets.'
-            )
-
         # Right hand side
 
         # check for deprecated 'offset' tag
