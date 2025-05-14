@@ -312,6 +312,13 @@ class ConstraintLine(ParsedLine):
             raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
 
         self.type = self._parse_type(lhs_parts[0])
+
+        # TODO: Implement Domains here
+        if self.type.type is PerturbationType.DOMAIN:
+            raise NotImplementedError(
+                'Domain constraints are not yet supported.'
+            )
+
         targets_str, dir_str = separate_direction_from_targets(
             ''.join(lhs_parts[1:])
         )
