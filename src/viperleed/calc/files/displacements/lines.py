@@ -3,6 +3,7 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-04'
 
+import logging
 import re
 from abc import ABC, abstractmethod
 from collections import namedtuple
@@ -32,6 +33,8 @@ SectionHeaderLine = namedtuple('SectionHeaderLine', ['section'])
 
 _BELOW_DEBUG = 2
 
+logger = logging.getLogger(__name__)
+
 # precompiled direction-at-end regex for separating out the direction token
 _DIR_AT_END = re.compile(
     rf'(?P<dir>{DIRECTION_PATTERN})\s*$'
@@ -46,6 +49,7 @@ class ParsedLine(ABC):
 
     def __init__(self, line: str):
         """Perform basic parsing and checking of the line format."""
+        logger.log(_BELOW_DEBUG, f'Parsing DISPLACEMENTS: {line}')
         # strip surplus whitespace
         self.raw_line = ' '.join(line.strip().split())
 
