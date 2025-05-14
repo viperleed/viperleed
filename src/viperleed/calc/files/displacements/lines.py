@@ -13,7 +13,6 @@ import numpy as np
 from viperleed_jax.files.displacements.perturbation_type import (
     PerturbationType,
 )
-from viperleed_jax.files.displacements.regex import DIRECTION_PATTERN
 
 from .errors import InvalidDisplacementsSyntaxError
 from .tokens import (
@@ -36,6 +35,23 @@ _BELOW_DEBUG = 2
 logger = logging.getLogger(__name__)
 
 # precompiled direction-at-end regex for separating out the direction token
+DIRECTION_PATTERN = (
+    r'(?P<direction>('
+    # longer, more specific first:
+    r'azi\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'
+    r'|r\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'
+    # 3-letter shorthands *with* optional bracket
+    r'|xyz(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    r'|abc(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    # 2-letter shorthands *with* optional bracket
+    r'|xy(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    r'|ab(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    # bare bracketed vector
+    r'|\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'
+    # single-letter shorthands
+    r'|[xyzabc]'
+    r'))'
+)
 _DIR_AT_END = re.compile(
     rf'(?P<dir>{DIRECTION_PATTERN})\s*$'
 )
