@@ -36,9 +36,7 @@ DisplacementFileSections = Enum(
 
 LoopMarker = Enum('LoopMarker', ['LOOP_START', 'LOOP_END'])
 
-from viperleed.calc.files.input_reader import InputFileReader
-from viperleed.calc.lib.string_utils import strip_comments
-
+logger = logging.getLogger(__name__)
 
 class DisplacementsReader(InputFileReader):
     """Reader/Parser for the DISPLACEMENTS file based on InputFileReader.
