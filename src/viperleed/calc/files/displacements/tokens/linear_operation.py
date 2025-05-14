@@ -42,10 +42,11 @@ class LinearOperationToken(DisplacementsFileToken):
         # parse to expression
         try:
             parsed = ast.literal_eval(cleaned)
-        except ValueError as err:
+            arr = np.array(parsed, dtype=float)
+        except (ValueError, SyntaxError) as err:
             msg = f'Could not parse linear operation "{op_str.strip()}".'
             raise LinearOperationTokenParserError(msg) from err
-        self.arr = np.array(parsed, dtype=float)
+        self.arr = arr
 
     @classmethod
     def from_array(cls, arr) -> 'LinearOperationToken':
