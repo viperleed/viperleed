@@ -313,14 +313,18 @@ class ConstraintLine(ParsedLine):
         self.type = self._parse_type(lhs_parts[0])
 
         # TODO: Implement Domains here
-        if self.type.type is PerturbationType.DOMAIN:
+        if self.type.type is PerturbationType.DOM:
             raise NotImplementedError(
                 'Domain constraints are not yet supported.'
             )
 
         targets_str, dir_str = separate_direction_from_targets(
-            ''.join(lhs_parts[1:])
+            ' '.join(lhs_parts[1:])
         )
+        if dir_str:
+            raise InvalidDisplacementsSyntaxError(
+                'Direction tokens are not allowed in CONSTRAIN block.'
+            )
 
         # parse targets
         self.targets = self._parse_targets(targets_str)
@@ -350,11 +354,11 @@ class ConstraintLine(ParsedLine):
             self.linear_operation = LinearOperationToken.from_array(np.eye(1))
             return
 
-        # The default case is to treat it as <linear_operation> and <target>.
+        # The default case is to treat it as [<linear_operation>] <target>
         # It's not immediately obvious where to split the tokens since both
-        # token types may contain spaces. Instead we iterate over white-space
-        # split parts from the right (since the <linear_operation> is optional)
-        # and try to parse the target.
+        # token types may contain spaces.
+        # Split by whitespace, parse from the right: find the last complete
+        # target token and treat everything before it as the operation
         rhs_parts = self._rhs.split('')
         for i in range(1, len(rhs_parts) + 1):
             # Try treating the last i parts as the target
