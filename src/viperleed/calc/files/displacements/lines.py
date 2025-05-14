@@ -365,15 +365,21 @@ class ConstraintLine(ParsedLine):
             op_part = ' '.join(rhs_parts[:-i]) if i < len(rhs_parts) else ''
             target_part = ' '.join(rhs_parts[-i:])
             try:
-                link_target = self._parse_targets(target_part)
+                link_targets = self._parse_targets(target_part)
                 break
             except InvalidDisplacementsSyntaxError:
                 continue
         else:
             raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
 
+        if len(link_targets) != 1:
+            raise InvalidDisplacementsSyntaxError(
+                'The target part of the CONSTRAIN line must contain exactly '
+                'one target.'
+            )
+
         # If we reach here, we have a valid target part
-        self.link_target = link_target
+        self.link_target = link_targets[0]
 
         # if the operation part is empty, default to identity
         if not op_part:
