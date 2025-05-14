@@ -3,8 +3,12 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-04'
 
+import logging
 import re
 from enum import Enum
+
+from viperleed.calc.files.input_reader import InputFileReader
+from viperleed.calc.lib.string_utils import strip_comments
 
 from .errors import InvalidDisplacementsSyntaxError
 from .lines import (
@@ -17,17 +21,13 @@ from .lines import (
     SectionHeaderLine,
     VibDeltaLine,
 )
-from .regex import (
-    LOOP_END_PATTERN,
-    LOOP_START_PATTERN,
-    SEARCH_HEADER_PATTERN,
-    SECTION_HEADER_PATTERN,
-    match_constrain_line,
-    match_geo_line,
-    match_occ_line,
-    match_offsets_line,
-    match_vib_line,
+
+SEARCH_HEADER_PATTERN = re.compile(r'^=+\s+(?i:search)\s+(.*)$')
+SECTION_HEADER_PATTERN = re.compile(
+    r'^=+\s*(OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
 )
+LOOP_START_PATTERN = re.compile(r'<loop>')
+LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
 
 DisplacementFileSections = Enum(
     'DisplacementFileSections',
