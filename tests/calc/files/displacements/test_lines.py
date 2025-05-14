@@ -326,6 +326,83 @@ class TestOccDeltaLine:
         assert '=' in rep
 
 
+class TestConstraintLine:
+    @pytest.mark.parametrize(
+        'line, exp_type, exp_targets, exp_link_target, exp_arr',
+        [
+            pytest.param(
+                'geo A1 A2 = linked',
+                'geo',
+                ['A1', 'A2'],
+                'A2',
+                [[1.0]],
+                id='geo-linked-shorthand',
+            ),
+            pytest.param(
+                'geo A = B',
+                'geo',
+                ['A'],
+                'B',
+                [[1.0]],
+                id='geo-direct-link',
+            ),
+            pytest.param(
+                'geo A = [1 0 0] B',
+                'geo',
+                ['A'],
+                'B',
+                [[1.0, 0.0, 0.0]],
+                id='geo-linear-operation',
+            ),
+            pytest.param(
+                'vib A1, A2 = linked',
+                'vib',
+                ['A1', 'A2'],
+                'A2',
+                [[1.0]],
+                id='vib-linked-shorthand',
+            ),
+            pytest.param(
+                'vib X = [1 0] Y',
+                'vib',
+                ['X'],
+                'Y',
+                [[1.0, 0.0]],
+                id='vib-linear-link',
+            ),
+        ],
+    )
+    def test_valid_constraint_lines(
+        self, line, exp_type, exp_targets, exp_link_target, exp_arr
+    ):
+        con = ConstraintLine(line)
+        # Type
+        assert con.type == TypeToken(exp_type)
+        # Targets
+        if 'linked' in line:
+            assert [t.target_str for t in con.targets] == exp_targets[:-1]
+        else:
+            assert [t.target_str for t in con.targets] == exp_targets
+        # Link target
+        assert con.link_target.target_str == exp_link_target
+        # Array
+        np.testing.assert_allclose(con.linear_operation.arr, exp_arr)
+
+    @pytest.mark.parametrize(
+        'bad_line',
+        [
+            'geo = linked',  # no targets
+            'vib A =',  # empty rhs
+            'geo A = linked',  # not enough targets
+            'geo A = [1 0 0',  # malformed op
+            'vib = [1 0] B',  # missing lhs target
+            'invalidtype A = B',  # invalid type
+        ],
+    )
+    def test_invalid_constraint_lines(self, bad_line):
+        with pytest.raises(InvalidDisplacementsSyntaxError):
+            ConstraintLine(bad_line)
+
 
 @pytest.mark.parametrize(
     'input_str, exp_targets, exp_direction',

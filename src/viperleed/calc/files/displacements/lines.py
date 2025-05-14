@@ -379,6 +379,16 @@ class ConstraintLine(ParsedLine):
 
         self.linear_operation = self._parse_linear_operation(op_part)
 
+    def __repr__(self):
+        """Return the string representation of the line."""
+        txt = f'ConstraintLine({self.targets[0]}'
+        for target in self.targets[1:]:
+            txt += f', {target}'
+        txt += f' = {self.linear_operation}'
+        txt += f' = {self.element_ranges[0]}'
+        txt += f'{self.link_target})'
+        return txt
+
 
 class OffsetsLine(ParsedLine):
     """Class to parse lines in the OFFSETS block of DISPLACEMENTS.
