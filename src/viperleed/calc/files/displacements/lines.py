@@ -308,11 +308,11 @@ class ConstraintLine(ParsedLine):
         <type> <target> [, <target> ...] = [<linear_operation>] <target>
     Alternatively, for geometric, vibrational or occupational parameters the
     syntax
-        <type> <target_1> [, <target_2> ...], <target_n> = linked
-    is an allowed shorthand notation for direct links and requires at least two
-    targets to be specified on the left hand side. It will be treated as
-    equivalent to
-        <target_1> [, <target_2> ...], <target_{n-1}> = <target_n>
+        <type> <target_1> [, <target_2> ...] = linked
+    is an allowed shorthand notation to easily create direct link.
+    It will be treated as equivalent to
+        <type> <target_1> [, <target_2> ...] = <target_1>
+    where the linear operation implicitly is the identity matrix.
     """
 
     block_name = 'CONSTRAIN'
@@ -362,14 +362,8 @@ class ConstraintLine(ParsedLine):
         # check for 'linked' tag
         if self._rhs.lower().strip() == 'linked':
             logger.log(_BELOW_DEBUG, 'Detected "linked" tag.')
-            if len(self.targets) < 2:
-                raise InvalidDisplacementsSyntaxError(
-                    'Direct link assignment using the "linked" tag requires '
-                    'specifying at least two targets.'
-                )
-            # "move" the last target to the rhs
-            self.link_target = self.targets[-1]
-            self.targets = self.targets[:-1]
+            # "copy" the last target to the rhs
+            self.link_target = self.targets[0]
             # treat as if array is identity
             self.linear_operation = LinearOperationToken.from_array(np.eye(1))
             return
