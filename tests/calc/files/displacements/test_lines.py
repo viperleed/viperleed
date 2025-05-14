@@ -3,30 +3,32 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-04-10'
 
+import numpy as np
 import pytest
 
 from viperleed_jax.files.displacements.errors import (
     InvalidDisplacementsSyntaxError,
 )
+from viperleed_jax.files.displacements.lines import (
+    ConstraintLine,
+    GeoDeltaLine,
+    OccDeltaLine,
+    OffsetsLine,
+    VibDeltaLine,
+    separate_direction_from_targets,
+)
 from viperleed_jax.files.displacements.tokens import (
     DirectionToken,
     ElementToken,
+    LinearOperationToken,
     OffsetToken,
     RangeToken,
     TargetToken,
     TokenParserError,
     TypeToken,
 )
-
 from viperleed_jax.files.displacements.tokens.direction import DirectionToken
-from viperleed_jax.files.displacements.lines import (
-    GeoDeltaLine,
-    VibDeltaLine,
-    OccDeltaLine,
-    OffsetsLine,
-    ConstraintLine,
-    separate_direction_from_targets
-)
+
 
 class TestGeoDeltaLine:
     @pytest.mark.parametrize(
@@ -328,30 +330,30 @@ class TestOccDeltaLine:
 
 class TestConstraintLine:
     @pytest.mark.parametrize(
-        'line, exp_type, exp_targets, exp_link_target, exp_arr',
+        'line, exp_type, exp_targets, exp_link_target, exp_op',
         [
             pytest.param(
-                'geo A1 A2 = linked',
-                'geo',
-                ['A1', 'A2'],
-                'A2',
-                [[1.0]],
+                'geo A_surf, A_def = linked',
+                TypeToken('geo'),
+                [TargetToken('A_surf'), TargetToken('A_def')],
+                TargetToken('A_def'),
+                LinearOperationToken.from_array(np.eye(1)),
                 id='geo-linked-shorthand',
             ),
             pytest.param(
                 'geo A = B',
-                'geo',
-                ['A'],
-                'B',
-                [[1.0]],
+                TypeToken('geo'),
+                [TargetToken('A')],
+                TargetToken('B'),
+                LinearOperationToken.from_array(np.eye(1)),
                 id='geo-direct-link',
             ),
             pytest.param(
                 'geo A = [1 0 0] B',
-                'geo',
-                ['A'],
-                'B',
-                [[1.0, 0.0, 0.0]],
+                TypeToken('geo'),
+                [TargetToken('A')],
+                TargetToken('B'),
+                LinearOperationToken('[1 0 0]'),
                 id='geo-linear-operation',
             ),
             pytest.param(
@@ -373,20 +375,22 @@ class TestConstraintLine:
         ],
     )
     def test_valid_constraint_lines(
-        self, line, exp_type, exp_targets, exp_link_target, exp_arr
+        self, line, exp_type, exp_targets, exp_link_target, exp_op
     ):
         con = ConstraintLine(line)
         # Type
-        assert con.type == TypeToken(exp_type)
+        assert con.type == exp_type
         # Targets
         if 'linked' in line:
-            assert [t.target_str for t in con.targets] == exp_targets[:-1]
+            for target, exp_target in zip(con.targets[:-1], exp_targets):
+                assert target == exp_target
         else:
-            assert [t.target_str for t in con.targets] == exp_targets
+            for target, exp_target in zip(con.targets, exp_targets):
+                assert target == exp_target
         # Link target
-        assert con.link_target.target_str == exp_link_target
+        assert con.link_target == exp_link_target
         # Array
-        np.testing.assert_allclose(con.linear_operation.arr, exp_arr)
+        assert con.linear_operation == exp_op
 
     @pytest.mark.parametrize(
         'bad_line',

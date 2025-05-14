@@ -359,7 +359,7 @@ class ConstraintLine(ParsedLine):
         # token types may contain spaces.
         # Split by whitespace, parse from the right: find the last complete
         # target token and treat everything before it as the operation
-        rhs_parts = self._rhs.split('')
+        rhs_parts = self._rhs.split(' ')
         for i in range(1, len(rhs_parts) + 1):
             # Try treating the last i parts as the target
             op_part = ' '.join(rhs_parts[:-i]) if i < len(rhs_parts) else ''
@@ -419,7 +419,7 @@ class OffsetsLine(ParsedLine):
 
         self.type = self._parse_type(parts[0])
         targets_str, dir_str = separate_direction_from_targets(
-            ''.join(parts[1:]))
+            ' '.join(parts[1:]))
 
         # parse targets
         self.targets = self._parse_targets(targets_str)
