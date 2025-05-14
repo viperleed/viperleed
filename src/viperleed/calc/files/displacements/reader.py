@@ -41,7 +41,19 @@ from viperleed.calc.lib.string_utils import strip_comments
 
 
 class DisplacementsReader(InputFileReader):
-    """Reader for the DISPLACEMENTS file based on InputFileReader."""
+    """Reader/Parser for the DISPLACEMENTS file based on InputFileReader.
+
+    This class reads the DISPLACEMENTS file and parses its content into
+    structured data. It handles different sections of the file, including
+    headers, loop markers, constraints and delta sections (ranges and
+    implicit constraints).
+    Individual lines are parsed into specific line objects, which are organized
+    into sections and search blocks.
+
+    Note that this class only performs the reading and parsing of the file, but
+    no interpretation. It does not perform any cross-checking and validation of
+    the user input vs. the structure.
+    """
 
     def __init__(self, filename, noisy=True):
         """Initialize instance."""
