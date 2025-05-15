@@ -6,10 +6,22 @@
 DISPLACEMENTS
 =============
 
-The DISPLACEMENTS file defines the variations of geometry, vibration
-amplitudes, and element concentrations that should be considered in the
-search. In other words, the DISPLACEMENTS file defines the parameter
-space for the search.
+The DISPLACEMENTS file defines the types and ranges of of geometry, vibration
+amplitudes, and element concentrations that are varied in the search, error
+calculation and superpos calculation.
+In other words, the DISPLACEMENTS file defines the parameter
+space that can be sampled in tensor-LEED based calculations.
+
+The file can contain multiple 
+
+If multiple search blocks are provided,
+Any subsequent search will use the result of the previous block as a starting
+point for the 
+
+Additionally, an initial offset from the reference calculation structure can be
+specified using an `== OFFSETS` block at the top of the file.
+This offset will be applied before the first search block and will serve as the
+starting point for the first optimization.
 
 The file is split into three main blocks: Geometry, Vibrations, and
 Occupations. The blocks are delimited by lines starting with an equals
