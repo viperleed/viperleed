@@ -309,6 +309,7 @@ def section_loop(rp, sl):
                     # At least one loop ends at the index we're at now.
                     #  Decide whether to exit or repeat:
                     if (searchLoopLevel == 0
+                            or searchLoopR is None
                             or searchLoopR > rp.last_R
                             or exceeds_tl_limit):
                         # repeat the highest-level (deepest) loop
@@ -344,6 +345,7 @@ def section_loop(rp, sl):
                         dp.slab.restoreOriState()
                         dp.rpars.resetSearchConv()
                     if exceeds_tl_limit:
+                        searchLoopR = None  # ignore previous best R
                         # TODO: DISTINGUISH CASES - SO FAR ONLY CONTINUE
                         if rp.RUN[:3] != [1, 2, 3]:
                             rp.RUN = [1, 2, 3] + rp.RUN
