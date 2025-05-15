@@ -78,7 +78,10 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
         """Assign values to an action. Also interprets the requested time
         if the action is 'continue'."""
         self.action = values[0]
-        if values[0] == 'continue' and len(values) > 1:
+        if values[0] == 'continue' and len(values) == 1:
+            # disable checking for reference calculation time
+            self.max_duration = NO_VALUE
+        elif values[0] == 'continue' and len(values) > 1:
             time_str = values[-1].lower()
             multiplier = 1
             if time_str[-1] in {'h', 'm', 's'}:
