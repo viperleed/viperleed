@@ -302,16 +302,23 @@ def section_loop(rp, sl):
             elif sec == 12 and not rp.STOP:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
                 if loops:
+                    # At least one loop ends at the index we're at now.
+                    #  Decide whether to exit or repeat:
                     if searchLoopLevel == 0 or searchLoopR > rp.last_R:
+                        # continue at highest-level (deepest) loop
                         searchLoopR = rp.last_R
                         searchLoopLevel = len(loops)
                     elif searchLoopR <= rp.last_R:
+                        # exit the current loop
                         searchLoopLevel -= 1
                     if searchLoopLevel != 0:
+                        # if we're not back at ground level, this means we
+                        #  loop back now
                         rp.search_index = sorted(loops)[searchLoopLevel-1][0]
                         logger.info("Search loop: repeating at block "
                                     + rp.disp_blocks[rp.search_index][1])
                     else:
+                        # loops done, proceed to the next block
                         rp.search_index += 1
                         o = "Search loop ends."
                         if len(rp.disp_blocks) > rp.search_index:
