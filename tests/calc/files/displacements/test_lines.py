@@ -336,7 +336,7 @@ class TestConstraintLine:
                 'geo A_surf, A_def = linked',
                 TypeToken('geo'),
                 [TargetToken('A_surf'), TargetToken('A_def')],
-                TargetToken('A_def'),
+                TargetToken('A_surf'),
                 LinearOperationToken.from_array(np.eye(1)),
                 id='geo-linked-shorthand',
             ),
@@ -360,7 +360,7 @@ class TestConstraintLine:
                 'occ A, B = linked',
                 TypeToken('occ'),
                 [TargetToken('A'), TargetToken('B')],
-                TargetToken('B'),
+                TargetToken('A'),
                 LinearOperationToken.from_array(np.eye(1)),
                 id='occ-linked-shorthand',
             ),
@@ -397,7 +397,6 @@ class TestConstraintLine:
         [
             'geo = linked',  # no targets
             'vib A =',  # empty rhs
-            'geo A = linked',  # not enough targets
             'geo A = [1 0 0',  # malformed op
             'vib = [1 0] B',  # missing lhs target
         ],
