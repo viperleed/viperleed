@@ -18,6 +18,7 @@ from pytest_cases import fixture
 from pytest_cases import fixture_ref
 from pytest_cases import parametrize
 
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.log_utils import at_level
 from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.log_utils import debug_or_lower
@@ -399,3 +400,15 @@ def test_prepare_calc_logger(console, handler_names, make_logger, monkeypatch):
         assert len(logger.handlers) == len(handler_names)
         assert all(isinstance(h, MockHandler) for h in logger.handlers)
         assert logger.level == logging.INFO
+
+
+def test_calc_log_file_is_utf8(tmp_path):
+    """Ensure that the calc log file is UTF-8 encoded."""
+    logger = logging.getLogger('module')
+    log_name = 'log'
+    with execute_in_dir(tmp_path):
+        prepare_calc_logger(logger, log_name, with_console=False)
+        logger.info('A character that may be not encoded in utf-8: Å')
+        with not_raises(UnicodeDecodeError):
+            with open(log_name, 'r', encoding='utf-8') as log_file:
+                assert log_file.readlines()

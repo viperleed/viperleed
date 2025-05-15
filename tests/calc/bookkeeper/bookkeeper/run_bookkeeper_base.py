@@ -120,10 +120,10 @@ class _TestCheckers:
             assert archived_input.is_file()
             self._check_file_contents(archived_input, MOCK_ORIG_CONTENT)
 
-    def _check_out_files_in_history(self, *run, out_suffixed=False):
+    def _check_out_files_in_history(self, *run, **kwargs):
         """Check that the expected state files are stored in 'OUT'."""
         *_, history_run_path, _ = run
-        self.check_out_files_at_path(history_run_path, out_suffixed)
+        self.check_out_files_at_path(history_run_path, **kwargs)
 
     @staticmethod
     def check_complained_about_edited(caplog):
@@ -136,13 +136,15 @@ class _TestCheckers:
         """Make sure bookkeeper exited with a non-failure condition."""
         assert exit_code is not BookkeeperExitCode.FAIL
 
-    def check_has_archived(self, run, has_out_suffixed=False, **kwargs):
+    def check_has_archived(self, run, **kwargs):
         """Check that the root directory has been archived to history."""
         self._check_history_exists(*run)
-        self._check_out_files_in_history(*run, out_suffixed=has_out_suffixed)
+        kwargs['out_suffixed'] = kwargs.pop('has_out_suffixed', False)
+        kwargs['missing'] = kwargs.get('missing_out_files', {})
+        self._check_out_files_in_history(*run, **kwargs)
         self._check_input_files_in_history(*run)
         if kwargs['mode'] is Mode.ARCHIVE:
-            self.check_root_after_archive(*run, out_suffixed=has_out_suffixed)
+            self.check_root_after_archive(*run, **kwargs)
         else:
             self.check_root_is_clean(*run)
         # Check that the workhistory directories are
@@ -216,12 +218,19 @@ class _TestCheckers:
         faulty = [rec for rec in caplog.records if _record_faulty(rec)]
         assert not any(faulty), f'Found: {faulty[0].getMessage()!r}'
 
-    def check_out_files_at_path(self, path, out_suffixed=False):
+    def check_out_files_at_path(self,
+                                path,
+                                out_suffixed=False,
+                                missing=(),
+                                **_):
         """Check that all output files are found at `path`/DEFAULT_OUT."""
         expected_contents = (MOCK_OUT_SUFFIXED_CONTENT if out_suffixed
                              else MOCK_OUT_CONTENT)
         out_path = path / DEFAULT_OUT
         for file in MOCK_STATE_FILES:
+            if file in missing:
+                assert not (out_path/file).exists()
+                continue
             try:
                 out_suffixed_file = next(out_path.glob(f'{file}_OUT_*'))
             except StopIteration:
@@ -238,15 +247,20 @@ class _TestCheckers:
             # Only one between _OUT-suffixed and non-suffixed
             assert not other_file.is_file()
 
-    def check_out_files_untouched(self, bookkeeper, *_, out_suffixed=False):
+    def check_out_files_untouched(self, bookkeeper, *_, **kwargs):
         """Ensure all expected files are found in OUT."""
-        self.check_out_files_at_path(bookkeeper.cwd, out_suffixed)
+        self.check_out_files_at_path(bookkeeper.cwd, **kwargs)
 
-    def check_root_after_archive(self, *after_archive, out_suffixed=False):
+    def check_root_after_archive(self,
+                                 *after_archive,
+                                 out_suffixed=False,
+                                 missing_out_files=(),
+                                 **_):
         """Make sure the root is structured as expected after archiving."""
         self.check_root_inputs_renamed_to_ori(*after_archive)
         self.check_out_files_untouched(*after_archive,
-                                       out_suffixed=out_suffixed)
+                                       out_suffixed=out_suffixed,
+                                       missing=missing_out_files)
         self.check_root_inputs_replaced_by_out_or_ori(
             *after_archive,
             out_suffixed=out_suffixed,
@@ -370,6 +384,7 @@ class _TestBookkeeperRunBase(_TestCheckers):
                                       after_calc_execution,
                                       caplog,
                                       check_archiving_required=True,
+                                      missing_out_files=(),
                                       **kwargs):
         """Check that running bookkeeper after calc does some basic stuff."""
         bookkeeper, *_, mocker = after_calc_execution
@@ -389,6 +404,7 @@ class _TestBookkeeperRunBase(_TestCheckers):
         self._run_bookkeeper(bookkeeper, kwargs, caplog)
         bookkeeper.update_from_cwd(silent=True)
         kwargs['has_out_suffixed'] = has_out_suffixed
+        kwargs['missing_out_files'] = missing_out_files
         self.check_has_archived(after_calc_execution, **kwargs)
         check_edited_files.assert_called()
 
@@ -416,7 +432,14 @@ class _TestBookkeeperRunBase(_TestCheckers):
 
         # Do the same for any domain
         finder = DomainFinder(bookkeeper)
-        for domain in finder.find_potential_domains():
+        # About the disable: the public find_potential_domains method
+        # raises NotImplementedError since the fix for #344. However,
+        # here it is still OK to use the version that is problematic
+        # with respect to the work folder, as we do not have a work
+        # folder.
+        # pylint: disable-next=protected-access
+        domains = finder._find_potential_domains_buggy()
+        for domain in domains:
             self._edit_input_file_contents(domain)
         before_run = filesystem_to_dict(cwd, skip=skip)
         exit_code = self._run_bookkeeper(bookkeeper, kwargs, caplog)
@@ -481,8 +504,8 @@ class _TestBookkeeperRunBase(_TestCheckers):
         self.run_after_calc_exec_and_check(after_calc_execution,
                                            caplog,
                                            **kwargs)
-        self.check_root_after_archive(*after_calc_execution,
-                                      out_suffixed=has_out_suffixed)
+        kwargs['out_suffixed'] = has_out_suffixed
+        self.check_root_after_archive(*after_calc_execution, **kwargs)
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
     def run_before_calc_exec_and_check(self,
