@@ -18,6 +18,7 @@ import os
 import shutil
 
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
+from viperleed.calc.classes.parameters.defaults import NO_VALUE
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
@@ -224,6 +225,8 @@ def run_section(index, sl, rp):
         f'Finishing section at {DateTimeFormat.TIME.now()}. '
         f'Section took {since_section_started.how_long(as_string=True)}.'
         )
+    if index == 1:
+        rp.last_refcalc_time = since_section_started.how_long()
 
 
 def section_loop(rp, sl):
@@ -336,7 +339,30 @@ def section_loop(rp, sl):
                     rp.search_index += 1
                 for dp in rp.domainParams:
                     dp.rpars.search_index = rp.search_index
-                if len(rp.disp_blocks) > rp.search_index:
+                if len(rp.disp_blocks) > rp.search_index and exceeds_tl_limit:
+                    stop_search = False
+                    if rp.MAX_TL_DISPLACEMENT.action == 'none':
+                        logger.warn(
+                            'Displacements exceed MAX_TL_DISPLACEMENT, but '
+                            'actions are disabled. Calculation will '
+                            'proceed, please check results carefully.')
+                    elif rp.MAX_TL_DISPLACEMENT.action == 'stop':
+                        logger.info(
+                            'Displacements exceed MAX_TL_DISPLACEMENT. '
+                            'Search will stop.')
+                        stop_search = True
+                    elif rp.MAX_TL_DISPLACEMENT.action == 'continue':
+                        maxtime = rp.MAX_TL_DISPLACEMENT.max_duration
+                        if (maxtime != NO_VALUE
+                                and rp.last_refcalc_time is not None):
+                            if rp.last_refcalc_time > maxtime:
+                                logger.info(
+                                    'Displacements exceed '
+                                    'MAX_TL_DISPLACEMENT, and reference '
+                                    'calculations take longer than the '
+                                    'specified limit time. Search will stop.')
+                                stop_search = True
+                if len(rp.disp_blocks) > rp.search_index and not stop_search:
                     # there are more disp_blocks to do; append another search
                     if not rp.domainParams:
                         sl.restoreOriState()
@@ -344,11 +370,14 @@ def section_loop(rp, sl):
                     for dp in rp.domainParams:
                         dp.slab.restoreOriState()
                         dp.rpars.resetSearchConv()
-                    if exceeds_tl_limit:
+                    if (exceeds_tl_limit
+                            and rp.MAX_TL_DISPLACEMENT.action == 'continue'):
+                        logger.info(
+                            'Displacements exceed MAX_TL_DISPLACEMENT. '
+                            'A new reference calculation will be performed '
+                            'before the next search block.')
                         searchLoopR = None  # ignore previous best R
-                        # TODO: DISTINGUISH CASES - SO FAR ONLY CONTINUE
-                        if rp.RUN[:3] != [1, 2, 3]:
-                            rp.RUN = [1, 2, 3] + rp.RUN
+                        rp.RUN = [1, 2, 3] + rp.RUN
                     else:
                         if rp.RUN[:2] != [2, 3]:
                             rp.RUN = [2, 3] + rp.RUN
@@ -357,6 +386,8 @@ def section_loop(rp, sl):
                     # in DISPLACEMENTS have been handled. However, we may want
                     # to do another search later (e.g. 'RUN = 1-3 1-3 1').
                     rp.search_index = 0
+                    for dp in rp.domainParams:
+                        dp.rpars.search_index = 0
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")

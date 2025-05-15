@@ -212,6 +212,7 @@ class Rparams:
         self.ivbeams_sorted = False
         self.last_R = None
         self.stored_R = {'refcalc': None, 'superpos': None}
+        self.last_refcalc_time = None    # duration of last refcalc in seconds
         self.checklist = []  # output strings of things to check at program end
 
         # domains
