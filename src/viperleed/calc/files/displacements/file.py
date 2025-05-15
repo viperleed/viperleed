@@ -234,8 +234,8 @@ class DisplacementsFile:
                 continue
             if replacement is None:
                 raise ValueError(
-                    f'Tensor LEED backend {tl_backend.name }cannot handle '
-                    f'search block  {block.label}.'
+                    f'Tensor LEED backend {tl_backend.name } cannot handle '
+                    f'search block {block.label}.'
                 )
             # replace the block with the replacement blocks
             new_blocks.extend(replacement)
