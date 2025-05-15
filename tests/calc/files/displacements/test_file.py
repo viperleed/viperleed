@@ -27,7 +27,7 @@ from viperleed_jax.files.displacements.reader import (
 )
 
 
-# Mocks for test lines
+# Mock backend
 class DummyBackend:
     def __init__(self, name='Dummy'):
         self.name = name
