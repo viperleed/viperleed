@@ -50,7 +50,10 @@ def add_bookkeeper_logfile(at_path):
                            logging.FileHandler,
                            baseFilename=str(bookkeeper_log))
     if not any(has_log):
-        LOGGER.addHandler(logging.FileHandler(bookkeeper_log, mode='a'))
+        log_handler = logging.FileHandler(bookkeeper_log,
+                                          mode='a',
+                                          encoding='utf-8')
+        LOGGER.addHandler(log_handler)
 
 
 def ensure_has_stream_handler():
