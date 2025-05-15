@@ -121,6 +121,16 @@ class DomainFinder:
 
     def find_potential_domains(self):
         """Return paths to subfolders of self.path that may be domains."""
+        raise NotImplementedError(
+            'The current implementation of find_potential_domains is faulty '
+            'as it will not treat correctly the work directory nor any other '
+            'subfolder in which temporary calculations may have been run. '
+            'See also https://github.com/viperleed/viperleed/issues/344.'
+            )
+        return self._find_potential_domains_buggy()
+
+    def _find_potential_domains_buggy(self):
+        """Return paths to subfolders of self.path that may be domains."""
         subfolders = (d for d in self.path.iterdir()
                       if d.is_dir()
                       and d.name not in _NOT_A_DOMAIN_SUBFOLDER)
