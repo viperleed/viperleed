@@ -179,8 +179,12 @@ class LogFiles:
 
         timestamp = most_recent_log.name[-17:-4]
         last_log_lines = ()
+        open_kwargs = {
+            'encoding': 'utf-8',
+            'errors': 'replace',
+            }
         try:  # pylint: disable=too-many-try-statements
-            with most_recent_log.open('r', encoding='utf-8') as log_file:
+            with most_recent_log.open('r', **open_kwargs) as log_file:
                 last_log_lines = tuple(log_file.readlines())
         except OSError:
             pass
