@@ -338,6 +338,11 @@ def section_loop(rp, sl):
                         dp.rpars.resetSearchConv()
                     if rp.RUN[:2] != [2, 3]:
                         rp.RUN = [2, 3] + rp.RUN
+                else:
+                    # The current instance of 'RUN = 2, 3' is done, all blocks
+                    # in DISPLACEMENTS have been handled. However, we may want
+                    # to do another search later (e.g. 'RUN = 1-3 1-3 1').
+                    rp.search_index = 0
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")

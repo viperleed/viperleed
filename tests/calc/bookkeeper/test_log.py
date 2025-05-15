@@ -12,6 +12,7 @@ from itertools import permutations
 import logging
 from operator import attrgetter
 from pathlib import Path
+import shutil
 
 import pytest
 from pytest_cases import fixture
@@ -321,6 +322,16 @@ class TestLogFiles:
                 # pylint: disable-next=protected-access   # OK in tests
                 logs._read_most_recent()
             assert logs.most_recent == (expect_time, ())
+
+    def test_most_recent_no_decode_errors(self, logs, data_path, tmp_path):
+        """Ensure Unicode decoding errors are gracefully handled."""
+        utf8_error = tmp_path/'viperleed-calc_123456-123456.log'
+        shutil.copy2(data_path/'bookkeeper'/'utf8_encode_error.log',
+                     utf8_error)
+        # pylint: disable=protected-access                # OK in tests
+        logs._calc = (utf8_error,)
+        logs._read_most_recent()
+        assert logs.most_recent
 
     _attr_needs_update = (
         'files',

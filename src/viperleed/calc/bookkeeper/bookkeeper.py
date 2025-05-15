@@ -731,6 +731,14 @@ class Bookkeeper:
         # as clear_for_next_calc_run does internally re-collect info.
         main_root = RootExplorer(self.cwd, self)
         main_root.collect_info(silent=True)
+
+        # Store information in the root explorers about the presence
+        # of domains. This has impact on which input files we may store
+        # in history as well as which ones will be kept as non-suffixed
+        # in the root directory. We should not rely on DomainFinder,
+        # whose find_potential_domains is bugged. See also #344.
+        self._root.has_domains = True
+        main_root.has_domains = True
         main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)
         exit_codes = [
             main_exit_code,
