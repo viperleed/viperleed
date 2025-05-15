@@ -927,20 +927,81 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         self.rpars.LOG_LEVEL = log_level
 
     def interpret_max_tl_displacement(self, assignment):
-        """Assign parameter MAX_TL_DISPLACEMENT."""
+        """Assign parameter MAX_TL_DISPLACEMENT.
+
+        Parameters
+        ----------
+        assignment : Assignment
+            The assignment line, containing details of the
+            flags and values to be interpreted.
+
+        Raises
+        ------
+        ParameterHasNoValueError
+            If assignment carries no values.
+        ParameterNumberOfInputsError
+            If the number of values is not the one expected for the flag.
+        ParameterUnknownFlagError
+            If a flag is given, but not 'geo', 'vib', or 'action'.
+        ParameterFloatConversionError
+            If numeric values cannot be converted to float.
+        ParameterRangeError
+            If any of the numeric values are negative.
+        ParameterParseError
+            If the first value for the 'action' flag is 'continue' and the
+            remaining values cannot be parsed.
+        """
         param = 'MAX_TL_DISPLACEMENT'
         _max_displ = self.rpars.MAX_TL_DISPLACEMENT
-        if len(assignment.values) not in {1, 2}:
-            raise ParameterNumberOfInputsError(parameter=param)
-        try:
-            self.rpars.MAX_TL_DISPLACEMENT = _max_displ.from_value(
-                assignment.values
-                )
-        except TypeError as exc:
-            raise ParameterFloatConversionError(param,
-                                                message=str(exc)) from exc
-        except ValueError as exc:
-            raise ParameterRangeError(param, message=str(exc)) from None
+        if not assignment.values:
+            raise ParameterHasNoValueError(param)
+        if not assignment.flag:    # vib and geo
+            if len(assignment.values) not in {1, 2}:
+                raise ParameterNumberOfInputsError(parameter=param)
+            try:
+                _max_displ.assign_float_values(assignment.values)
+            except TypeError as exc:
+                raise ParameterFloatConversionError(param,
+                                                    message=str(exc)) from exc
+            except ValueError as exc:
+                raise ParameterRangeError(param, message=str(exc)) from None
+        else:
+            flag = assignment.flag.lower()
+            if flag not in {'geo', 'vib', 'action'}:
+                raise ParameterUnknownFlagError(param, f'{flag!r}')
+            if flag in {'geo', 'vib'}:
+                if len(assignment.values) != 1:
+                    raise ParameterNumberOfInputsError(parameter=param)
+                try:
+                    _max_displ.assign_single_value(flag, assignment.values[0])
+                except TypeError as exc:
+                    raise ParameterFloatConversionError(
+                        param, message=str(exc)) from exc
+                except ValueError as exc:
+                    raise ParameterRangeError(param,
+                                              message=str(exc)) from None
+            else:
+                # interpret action
+                action = assignment.values[0].lower()
+                if action not in {'stop', 'continue', 'none'}:
+                    raise ParameterValueError(f'Invalid value {action} for '
+                                              'flag {which}.')
+                if action != 'continue' and len(assignment.values) != 1:
+                    raise ParameterNumberOfInputsError(parameter=param)
+                if action == 'continue':
+                    if len(assignment.values) not in {1, 2, 3}:
+                        raise ParameterNumberOfInputsError(parameter=param)
+                    if (len(assignment.values) == 3
+                            and assignment.values[1] != '<'):
+                        raise ParameterParseError(parameter=param)
+                try:
+                    _max_displ.assign_action(assignment.values)
+                except TypeError as exc:
+                    raise ParameterParseError(param,
+                                              message=str(exc)) from exc
+                except ValueError as exc:
+                    raise ParameterRangeError(param,
+                                              message=str(exc)) from None
 
     def interpret_optimize(self, assignment):
         """Assign parameter OPTIMIZE."""
