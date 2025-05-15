@@ -300,12 +300,18 @@ def section_loop(rp, sl):
                 if next_section != 12:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
             elif sec == 12 and not rp.STOP:
+                # check for max. displacement condition:
+                exceeds_tl_limit = any(
+                    rp.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in sl)
+                # check for loops:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
                 if loops:
                     # At least one loop ends at the index we're at now.
                     #  Decide whether to exit or repeat:
-                    if searchLoopLevel == 0 or searchLoopR > rp.last_R:
-                        # continue at highest-level (deepest) loop
+                    if (searchLoopLevel == 0
+                            or searchLoopR > rp.last_R
+                            or exceeds_tl_limit):
+                        # repeat the highest-level (deepest) loop
                         searchLoopR = rp.last_R
                         searchLoopLevel = len(loops)
                     elif searchLoopR <= rp.last_R:
@@ -330,14 +336,20 @@ def section_loop(rp, sl):
                 for dp in rp.domainParams:
                     dp.rpars.search_index = rp.search_index
                 if len(rp.disp_blocks) > rp.search_index:
+                    # there are more disp_blocks to do; append another search
                     if not rp.domainParams:
                         sl.restoreOriState()
                     rp.resetSearchConv()
                     for dp in rp.domainParams:
                         dp.slab.restoreOriState()
                         dp.rpars.resetSearchConv()
-                    if rp.RUN[:2] != [2, 3]:
-                        rp.RUN = [2, 3] + rp.RUN
+                    if exceeds_tl_limit:
+                        # TODO: DISTINGUISH CASES - SO FAR ONLY CONTINUE
+                        if rp.RUN[:3] != [1, 2, 3]:
+                            rp.RUN = [1, 2, 3] + rp.RUN
+                    else:
+                        if rp.RUN[:2] != [2, 3]:
+                            rp.RUN = [2, 3] + rp.RUN
                 else:
                     # The current instance of 'RUN = 2, 3' is done, all blocks
                     # in DISPLACEMENTS have been handled. However, we may want

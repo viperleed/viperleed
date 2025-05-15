@@ -926,6 +926,22 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterValueError(param, assignment.values_str) from exc
         self.rpars.LOG_LEVEL = log_level
 
+    def interpret_max_tl_displacement(self, assignment):
+        """Assign parameter MAX_TL_DISPLACEMENT."""
+        param = 'MAX_TL_DISPLACEMENT'
+        _max_displ = self.rpars.MAX_TL_DISPLACEMENT
+        if len(assignment.values) not in {1, 2}:
+            raise ParameterNumberOfInputsError(parameter=param)
+        try:
+            self.rpars.MAX_TL_DISPLACEMENT = _max_displ.from_value(
+                assignment.values
+                )
+        except TypeError as exc:
+            raise ParameterFloatConversionError(param,
+                                                message=str(exc)) from exc
+        except ValueError as exc:
+            raise ParameterRangeError(param, message=str(exc)) from None
+
     def interpret_optimize(self, assignment):
         """Assign parameter OPTIMIZE."""
         param = 'OPTIMIZE'
