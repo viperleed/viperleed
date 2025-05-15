@@ -18,7 +18,7 @@ import os
 import shutil
 
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
-from viperleed.calc.classes.parameters.defaults import NO_VALUE
+from viperleed.calc.classes.rparams.defaults import NO_VALUE
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
