@@ -117,23 +117,33 @@ def mock_displacements():
     return path, expected_lines
 
 
-# @fixture
-# def mock_displacements_simple():
-#     path = _CU_111_SIMPLE_PATH
-#     expected_lines = [
-#         SearchHeaderLine('test'),
-#         SectionHeaderLine('GEO_DELTA'),
-#         GeoDeltaLine('Cu_surf', None, 'z', -0.1, 0.1, 0.05,
-#                      'Cu_surf z = -0.1 0.1 0.05'),
-#         SectionHeaderLine('VIB_DELTA'),
-#         VibDeltaLine('Cu_surf', None, -0.1, 0.1, 0.05,
-#                      'Cu_surf = -0.1 0.1 0.05'),
-#     ]
-#     return path, expected_lines
+@fixture
+def mock_displacements_cu_111_realistic():
+    path = _CU_111_SIMPLE_PATH
+    expected_lines = [
+        (SearchHeaderLine, {'label': 'test'}),
+        (SectionHeaderLine, {'section': 'GEO_DELTA'}),
+        (
+            GeoDeltaLine,
+            {
+                'targets': (TargetToken('Cu_surf'),),
+                'direction': DirectionToken('z'),
+                'range': RangeToken('-0.1 0.1 0.05'),
+            },
+        ),
+        (SectionHeaderLine, {'section': 'VIB_DELTA'}),
+        (
+            VibDeltaLine,
+            {
+                'targets': (TargetToken('Cu_surf'),),
+                'range': RangeToken('-0.1 0.1 0.05'),
+            },
+        ),
+    ]
+    return path, expected_lines
 
 
-def test_displacements_reader(mock_displacements):
-    path, expected_lines = mock_displacements
+def _compare_lines(path, expected_lines):
     with DisplacementsReader(path) as reader:
         parsed_lines = list(reader)
     assert len(parsed_lines) == len(expected_lines)
@@ -145,10 +155,11 @@ def test_displacements_reader(mock_displacements):
             assert getattr(parsed, attr) == value
 
 
-# def test_displacements_reader_simple(mock_displacements_simple):
-#     path, expected_lines = mock_displacements_simple
-#     with DisplacementsReader(path) as reader:
-#         parsed_lines = list(reader)
-#     assert len(parsed_lines) == len(expected_lines)
-#     for parsed, expected in zip(parsed_lines, expected_lines):
-#         assert parsed == expected
+def test_displacements_reader(mock_displacements):
+    path, expected_lines = mock_displacements
+    _compare_lines(path, expected_lines)
+
+
+def test_displacements_reader_simple(mock_displacements_cu_111_realistic):
+    path, expected_lines = mock_displacements_cu_111_realistic
+    _compare_lines(path, expected_lines)
