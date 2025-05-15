@@ -24,7 +24,7 @@ For installation instructions see
 For a documentation of the `viperleed` Python API see
 <https://viperleed.org/content/api.html>
 
-[![Documentation Status](https://readthedocs.org/projects/viperleed/badge/?version=latest)](https://viperleed.readthedocs.io/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/viperleed/badge/?version=stable)](https://viperleed.readthedocs.io/stable/?badge=stable)
 
 
 #### Reporting bugs
