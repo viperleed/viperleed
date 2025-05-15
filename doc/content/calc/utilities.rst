@@ -17,7 +17,7 @@ followed by the utility name.
 -  :ref:`rearrange_phaseshifts<rearrange_phaseshifts>`: A simple utility for
    taking an existing :ref:`PHASESHIFTS` file and duplicating
    or re-arranging blocks.
--  :ref:`aux_to_exp`: Transforms :ref:`AUXEXPBEAMS` format files (input for 
+-  :ref:`aux_to_exp`: Transforms :ref:`AUXEXPBEAMS` format files (input for
    TensErLEED) to :ref:`EXPBEAMS.csv<EXPBEAMS>`  format.
 
 .. tip::
@@ -26,9 +26,9 @@ followed by the utility name.
 
 
 .. seealso::
-   :ref:`Bookkeeper<bookkeeper>`: A helper utility built into |calc| that sorts
-   files from previous runs into a "history" folder, and keeps track in the
-   history.info file.
+   :ref:`bookkeeper`: A helper utility built into |calc| that stores files
+   from previous runs into a :file:`history` folder, and keeps track of
+   executions in the :file:`history.info` file.
 
 .. toctree::
 

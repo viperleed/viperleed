@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-18'
 __license__ = 'GPLv3+'
 
@@ -33,4 +33,18 @@ def factory_read_parameters(tmp_path_factory):
 def read_one_param_file(data_path, read_parameters):
     """Read one example PARAMETERS file."""
     args = CasesParametersFile().case_stop(data_path)
+    return read_parameters(args)
+
+
+@fixture
+def read_domains_file(data_path, read_parameters):
+    """Read an example main PARAMETERS file for a multi-domain calculation."""
+    args = CasesParametersFile().case_domains(data_path)
+    return read_parameters(args)
+
+
+@fixture
+def read_identical_domains(data_path, read_parameters):
+    """Read the main PARAMETERS file for a two-same-domain calculation."""
+    args = CasesParametersFile().case_domains_identical(data_path)
     return read_parameters(args)

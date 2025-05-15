@@ -3,14 +3,15 @@
 __authors__ = (
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-12-11'
 __license__ = 'GPLv3+'
 
 import pytest
 from pytest_cases import fixture
 
-from viperleed.calc.classes.rparams import Rparams, TheoEnergies
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.files import beams
 from viperleed.calc.files import iorfactor
 

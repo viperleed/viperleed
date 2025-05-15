@@ -7,7 +7,7 @@ or running tests.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-02-28'
 __license__ = 'GPLv3+'
 
@@ -16,12 +16,16 @@ import copy
 from dataclasses import dataclass, fields
 import functools
 import inspect
-import os
 from pathlib import Path
 
 import pytest
+from pytest_cases import case as case_decorator
 from pytest_cases import fixture
-from pytest_cases.filters import get_case_tags
+from pytest_cases.case_funcs import CASE_FIELD
+from pytest_cases.case_funcs import get_case_tags
+from pytest_cases.case_funcs import is_case_class
+from pytest_cases.case_funcs import is_case_function
+from pytest_cases.filters import CaseFilter
 
 
 # Think about a decorator for injecting fixtures.
@@ -77,10 +81,8 @@ def fixture_factory(*args, **fixture_kwargs):                                   
         # We need an extra layer of wrapping because pytest will call
         # the fixture and pass its return value(s) to tests using it:
         # The one that will be called by pytest is _fixture.
-        if 'scope' not in fixture_kwargs:
-            fixture_kwargs['scope'] = 'session'
-        if 'name' not in fixture_kwargs:
-            fixture_kwargs['name'] = f'make_{func.__name__}'
+        fixture_kwargs.setdefault('scope', 'session')
+        fixture_kwargs.setdefault('name', f'make_{func.__name__}')
 
         @fixture(**fixture_kwargs)
         @functools.wraps(func)
@@ -99,6 +101,33 @@ def fixture_factory(*args, **fixture_kwargs):                                   
         return _fixture_wrapper(args[0])
     # Decorated as @fixture_factory(**kwargs)
     return _fixture_wrapper
+
+
+def with_case_tags(*tags):
+    """Attach `tags` to all cases defined in the decorated class."""
+    def _decorator(cls):
+        if is_case_function(cls):
+            raise ValueError(
+                'Cannot use with_case_tags on a case '
+                'function. Use the @case decorator instead'
+                )
+        if not is_case_class(cls):
+            raise ValueError('with_case_tags can only be applied to classes '
+                             'defining a collection of cases')
+        for case_name in dir(cls):
+            case_ = getattr(cls, case_name)
+            if not is_case_function(case_):  # Not a case
+                continue
+            try:
+                case_info = getattr(case_, CASE_FIELD)
+            except AttributeError:
+                # Not explicitly decorated with @case. Do so now.
+                case_ = case_decorator(case_)
+                case_info = getattr(case_, CASE_FIELD)
+            tags_to_add = tuple(t for t in tags if t not in case_info.tags)
+            case_info.add_tags(tags_to_add)
+        return cls
+    return _decorator
 
 
 # ##############################   FUNCTIONS   ################################
@@ -134,6 +163,75 @@ def inject_fixture(factory, *args, **kwargs):
     return name, fixture_func
 
 
+def filesystem_from_dict(as_dict, root):
+    """Create files and directories from a dictionary version of a tree.
+
+    Parameters
+    ----------
+    as_dict : dict
+        A dictionary representation of a file-system tree. Directories
+        are dictionaries, whose keys are (relative) paths. File
+        contents are dictionary values: they may be strings or
+        None. In the latter case empty files are created.
+    root : Path
+        The path to the real file-system root directory where `as_dict`
+        contents should be created.
+
+    Returns
+    -------
+    created : set of Path
+        Paths to all files/folders created.
+    """
+    created = set()
+    for entry, contents in as_dict.items():
+        path = root / entry
+        created.add(path)
+        # Directory:
+        if isinstance(contents, dict):
+            path.mkdir(parents=True, exist_ok=True)
+            sub_paths = filesystem_from_dict(contents, path)
+            created.update(sub_paths)
+            continue
+        # File:
+        if contents is None:
+            path.touch()
+        else:
+            path.write_text(contents, encoding='utf-8')
+    return created
+
+
+def filesystem_to_dict(root, skip=None):
+    """Return a dictionary of the contents of the `root` directory.
+
+    Parameters
+    ----------
+    root : Path
+        The path to the file-system directory to be converted.
+    skip : Sequence or None, optional
+        Names of files/folders to be excluded from the collection.
+
+    Returns
+    -------
+    contents : dict
+        Keys are names (as strings) of the (relative) paths to the
+        contents of `root`, values are dictionaries for folders,
+        and strings containing the contents for files.
+    """
+    contents = {}
+    for path in root.iterdir():
+        if skip and path.name in skip:
+            continue
+        if path.is_file():
+            try:
+                file_contents = path.read_text(encoding='utf-8')
+            except UnicodeDecodeError:  # A binary file
+                file_contents = f'{path.name} is a binary file'
+            contents[path.name] = file_contents
+        elif path.is_dir():
+            contents[path.name] = filesystem_to_dict(path, skip=skip)
+    return contents
+
+
 def flat_fixture(func, **fixture_args):                                         # TODO: better name. Only usable for parameter-less functions
     """Turn a function into a fixture with fixture_args.
 
@@ -155,27 +253,7 @@ def flat_fixture(func, **fixture_args):                                         
     return _decorator(func)
 
 
-def exclude_tags(*tags):
-    """Return a filter that excludes cases with given tags."""
-    def _filter(case):
-        """Return False if case has any of the tags."""
-        case_tags = get_case_tags(case)
-        return not any(tag in case_tags for tag in tags)
-    return _filter
-
-
 # ######################   CONTEXT MANAGERS   #########################
-
-@contextmanager
-def execute_in_dir(path):
-    """Safely execute code in a specific directory."""
-    home = Path().resolve()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(home)
-
 
 @contextmanager
 def not_raises(exc):
@@ -217,6 +295,8 @@ def make_obj_raise(obj_or_dotted_name, exc, attr=None):
         obj_name = obj_or_dotted_name.__name__
     elif isinstance(obj_or_dotted_name, str):  # Likely a dotted name
         obj_name = obj_or_dotted_name
+    elif inspect.isclass(obj_or_dotted_name):
+        obj_name = obj_or_dotted_name.__name__
     else:
         obj_name = type(obj_or_dotted_name).__name__
 
@@ -235,7 +315,7 @@ def make_obj_raise(obj_or_dotted_name, exc, attr=None):
     def _replaced(*args, **kwargs):
         patched = f'Replaced {obj_name}'
         if attr is not None:
-            patched += attr
+            patched += f'.{attr}'
         raise exc(f'{patched} was called with args={args}, kwargs={kwargs}')
 
     monkeypatch = pytest.MonkeyPatch
@@ -310,7 +390,29 @@ def raises_test_exception(obj_or_dotted_name, attr=None):
         yield context
 
 
-# ###############################   CLASSES   #################################
+# ###########################   FILTERS   #############################
+
+def exclude_tags(*tags):
+    """Return a filter that excludes cases with given tags."""
+    def _filter(case):
+        """Return False if case has any of the tags."""
+        case_tags = get_case_tags(case)
+        return not any(tag in case_tags for tag in tags)
+    return CaseFilter(_filter)
+
+
+def has_any_tag(*tags):
+    """Return a filter selecting cases with at least one of these tags."""
+    def _filter(case):
+        case_tags = set(get_case_tags(case))
+        return any(t in case_tags for t in tags)
+
+    if not tags:
+        raise ValueError('Must select at least one tag')
+    return CaseFilter(_filter)
+
+
+# ###########################   CLASSES   #############################
 
 @dataclass
 class InfoBase:

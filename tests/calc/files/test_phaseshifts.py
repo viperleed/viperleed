@@ -4,7 +4,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
@@ -28,16 +28,17 @@ def test_phaseshifts_firstline_len(run_phaseshift):
 
 def test_phaseshift_log_exists(run_phaseshift):
     """Ensure a log file is successfully written to disk."""
-    rpars, *_ = run_phaseshift
-    assert any(rpars.workdir.glob('phaseshift*.log'))
+    _, _, work_path, *_ = run_phaseshift
+    assert any(work_path.glob('phaseshift*.log'))
 
 
 def test_write_phaseshifts(run_phaseshift):
     """Ensure a PHASESHIFTS file is successfully written to disk."""
-    rpars, _, firstline, phaseshift = run_phaseshift
-    phaseshifts.writePHASESHIFTS(firstline, phaseshift,
-                                 file_path=rpars.workdir/'PHASESHIFTS')
-    assert any(rpars.workdir.glob('PHASESHIFTS'))
+    *_, work_path, firstline, phaseshift = run_phaseshift
+    phaseshifts.writePHASESHIFTS(firstline,
+                                 phaseshift,
+                                 file_path=work_path/'PHASESHIFTS')
+    assert any(work_path.glob('PHASESHIFTS'))
 
 
 def test_phaseshifts_not_empty(run_phaseshift):
@@ -48,7 +49,7 @@ def test_phaseshifts_not_empty(run_phaseshift):
 
 def test_check_consistency_element_order_no_false_positives(run_phaseshift):
     """Check that no example system produces false positives for elements."""
-    rpars, slab, _, phaseshift = run_phaseshift
+    rpars, slab, *_, phaseshift = run_phaseshift
     _check = phaseshifts.__check_consistency_element_order
     inconsistencies = _check(rpars, slab, phaseshift)
     assert not inconsistencies

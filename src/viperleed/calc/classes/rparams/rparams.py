@@ -12,12 +12,13 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
 from collections import defaultdict
 import copy
+from dataclasses import dataclass
 import logging
 import os
 from pathlib import Path
@@ -27,14 +28,17 @@ import shutil
 import numpy as np
 
 from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.constants import COMPILE_LOGS_DIRNAME
+from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
+from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.lib import fortran_utils
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
-from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
-from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
@@ -44,7 +48,8 @@ from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
-from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
+from .defaults import DEFAULTS
+from .defaults import NO_VALUE
 from .limits import PARAM_LIMITS
 from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
@@ -54,6 +59,37 @@ _LOGGER = logging.getLogger(parent_name(__name__))
 if CAN_PLOT:
     from matplotlib import pyplot as plt
     use_calc_style()
+
+
+@dataclass
+class _RunPaths:
+    """A container for paths to directories relevant for execution.
+
+    All paths are assumed to be absolute.
+
+    Attributes
+    ----------
+    home : Path
+        The directory in which viperleed.calc was originally called.
+    tensorleed : Path
+        The directory in which the TensErLEED and EEASiSSS code can
+        be found.
+
+    Read-only attributes
+    --------------------
+    compile_logs : Path
+        Where log files generated during compilation of the Fortran
+        code are stored.
+    """
+
+    # !!! Add new attributes in ALPHABETIC ORDER !!!
+    home: Path = None
+    tensorleed: Path = None
+
+    @property
+    def compile_logs(self):
+        """Return the path where Fortran-compilation log files are saved."""
+        return Path(COMPILE_LOGS_DIRNAME).resolve()
 
 
 class Rparams:
@@ -70,8 +106,8 @@ class Rparams:
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
         self.BULK_REPEAT = None
-        self.DOMAINS = {}         # {name: path_to_tensors_zip_or_dir}
-        self.DOMAIN_STEP = 1      # area step in percent for domain search
+        self.DOMAINS = {}      # {name: (source_path, user_assignment)}
+        self.DOMAIN_STEP = 1   # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
         self.FILAMENT_WF = DEFAULTS['FILAMENT_WF']['lab6']   # work function of emitting cathode
@@ -149,10 +185,7 @@ class Rparams:
 
         # RUN VARIABLES
         self.timer = ExecutionTimer()
-        self.source_dir = None  # where to find 'tensorleed'
-        # .workdir is the MAIN WORK DIRECTORY; where to find input
-        self.workdir = Path.cwd().resolve()
-        self.compile_logs_dir = None
+        self.paths = _RunPaths()
         self.searchConvInit = {
             'gaussian': None, 'dgen': {'all': None, 'best': None, 'dec': None}}
         self.searchEvalTime = DEFAULTS['SEARCH_EVAL_TIME']  # time interval for reading SD.TL
@@ -164,7 +197,8 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = ['SUPP', 'OUT']
+        self.manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT)
+        self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
             'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,
@@ -309,6 +343,32 @@ class Rparams:
             value = self._to_simple_or_special_param(param_name, param_value)
             setattr(self, param_name, value)
 
+    def inherit_from(self, other, *attributes, override=False):
+        """Copy attributes from another Rparams.
+
+        Parameters
+        ----------
+        other : Rparams
+            The instance from which attributes should be copied.
+        *attributes : str
+            Names of attributes to be deep-copied from `other`.
+        override : bool, optional
+            Whether the copy should be unconditional, irrespective
+            of whether the user gave some values for any attribute.
+
+        Raises
+        ------
+        TypeError
+            If `other` is not an Rparams.
+        """
+        if not isinstance(other, Rparams):
+            raise TypeError(f'{type(self).__name__}.inherit_from requires an '
+                            f'Rparams object. Found {type(other).__name__!r}.')
+        for attr in attributes:
+            if attr in self.readParams and not override:
+                continue
+            setattr(self, attr, copy.deepcopy(getattr(other, attr)))
+
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
         theory. Note that this may change if experimental beams are dropped."""
@@ -343,10 +403,10 @@ class Rparams:
                 self.rfacscatter.append(p)
                 pg = p[0]
 
-    def get_tenserleed_directory(self, wanted_version=None):                           # TODO: replace the default for TL_VERSION with Version('unknown')
+    def get_tenserleed_directory(self, wanted_version=None):                    # TODO: replace the default for TL_VERSION with Version('unknown')
         """Return the Path to a TensErLEED directory.
 
-        The directory is looked up in Rparams.source_dir.
+        The directory is looked up in Rparams.paths.tensorleed.
 
         Parameters
         ----------
@@ -364,21 +424,23 @@ class Rparams:
         Raises
         ------
         RuntimeError
-            If this method is called before `Rparams.source_dir` is set
+            If this method is called before `Rparams.paths.tensorleed`
+            is set
         FileNotFoundError
-            If `Rparams.source_dir` has no 'TensErLEED' subdirectories
+            If `Rparams.paths.tensorleed` has no 'TensErLEED'
+            subdirectories
         FileNotFoundError
             If `version` is given, but the corresponding directory
             was not found
         """
-        if not self.source_dir:
+        if not self.paths.tensorleed:
             raise RuntimeError(
                 f'{type(self).__name__}.get_tenserleed_directory: '
-                'source_dir is not set'
+                'TensErLEED source directory is not set'
                 )
-        source_tree = self.source_dir.resolve()
-        wanted_version = (Version(wanted_version) if wanted_version else
-                          self.TL_VERSION)
+        source_tree = self.paths.tensorleed
+        wanted_version = (Version(wanted_version) if wanted_version
+                          else self.TL_VERSION)
         sources = get_tenserleed_sources(source_tree)
         # sort sources by .version attribute
         sources = sorted(sources, key=lambda x: x.version)
@@ -409,7 +471,7 @@ class Rparams:
         if self.TENSOR_INDEX is None:
             self.TENSOR_INDEX = leedbase.getMaxTensorIndex()
         # TL_VERSION:
-        if self.source_dir is None:
+        if self.paths.tensorleed is None:
             raise RuntimeError('Cannot determine highest TensErLEED version '
                                'without specifying a source directory')
         if self.TL_VERSION is None:
@@ -867,6 +929,9 @@ class Rparams:
         None.
         """
         for figures in self.lastParScatterFigs.values():
+            # Pylint can't tell that we will not execute this,
+            # as per decorator, if we fail to import matplotlib
+            # pylint: disable-next=possibly-used-before-assignment
             close_figures(plt, *figures)
 
     def generateSearchPars(self, sl, subdomain=False):
@@ -1134,28 +1199,24 @@ class Rparams:
         """Call generateSearchPars for every domain and collate results."""
         self.searchpars = []
         self.indyPars = len(self.domainParams) - 1
-        home = os.getcwd()
         for dp in self.domainParams:
-            try:
-                os.chdir(dp.workdir)
-                dp.rp.generateSearchPars(dp.sl, subdomain=True)
-            except Exception:
-                _LOGGER.error('Error while creating delta '
-                              f'input for domain {dp.name}')
-                raise
-            finally:
-                os.chdir(home)
-            for sp in dp.rp.searchpars:
+            with execute_in_dir(dp.workdir):
+                try:
+                    dp.rpars.generateSearchPars(dp.slab, subdomain=True)
+                except Exception:
+                    _LOGGER.error(f'Error while creating delta input for {dp}')
+                    raise
+            for sp in dp.rpars.searchpars:
                 if not isinstance(sp.restrictTo, int):
                     continue
                 sp.restrictTo += len(self.searchpars)
-            self.searchpars.extend(dp.rp.searchpars)
-            self.indyPars += dp.rp.indyPars
+            self.searchpars.extend(dp.rpars.searchpars)
+            self.indyPars += dp.rpars.indyPars
         for dp in self.domainParams:
             self.searchpars.append(SearchPar(None, 'dom', '', ''))
             self.searchpars[-1].steps = int(100 / self.DOMAIN_STEP) + 1
-        self.search_maxfiles = max(dp.rp.search_maxfiles
+        self.search_maxfiles = max(dp.rpars.search_maxfiles
                                    for dp in self.domainParams)
-        self.search_maxconc = max(dp.rp.search_maxconc
+        self.search_maxconc = max(dp.rpars.search_maxconc
                                   for dp in self.domainParams)
-        self.mncstep = max(dp.rp.mncstep for dp in self.domainParams)
+        self.mncstep = max(dp.rpars.mncstep for dp in self.domainParams)

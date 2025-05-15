@@ -19,7 +19,8 @@ SUPERLATTICE = (1x1)
 V0_IMAG = 5.0
 LMAX = 8-12
 
-T_DEBYE = 330                      ! create VIBROCC
-T_EXPERIMENT = 100                 ! create VIBROCC
-VIBR_AMP_SCALE = *surf 1.3         ! create VIBROCC
-
+# The following lines should be commented out automatically
+# since we have a VIBROCC file in the inputs
+T_DEBYE = 330
+T_EXPERIMENT = 100
+VIBR_AMP_SCALE = *surf 1.3

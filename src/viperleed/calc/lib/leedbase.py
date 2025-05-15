@@ -5,7 +5,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
@@ -20,6 +20,8 @@ from zipfile import ZipFile
 import numpy as np
 from quicktions import Fraction
 
+from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.math_utils import cosvec
 from viperleed.calc.lib.math_utils import lcm
 from viperleed.calc.lib.matrix import SingularMatrixError
@@ -142,66 +144,130 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def getMaxTensorIndex(home=".", zip_only=False):
-    """
-    Checks the Tensors folder for the highest Tensor index there,
-    returns that value, or zero if there is no Tensors folder or no valid
-    Tensors zip file. zip_only looks only for zip files, ignoring directories.
-    """
-    tensor_dir = (Path(home) / "Tensors").resolve()
-    if not tensor_dir.is_dir():
-        return 0
-    indlist = []
-    rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-    for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-              if (os.path.isfile(os.path.join(home, "Tensors", f))
-                  and rgx.match(f))]:
-        m = rgx.match(f)
-        if m.span()[1] == 15:  # exact match
-            indlist.append(int(m.group(0)[-7:-4]))
-    if not zip_only:
-        rgx = re.compile(r'Tensors_[0-9]{3}')
-        for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-                  if ((tensor_dir / f).is_dir() and rgx.match(f))]:
-            m = rgx.match(f)
-            if m.span()[1] == 11:  # exact match
-                indlist.append(int(m.group(0)[-3:]))
-    if indlist:
-        return max(indlist)
-    return 0
+# TODO: move to iotensors?
+def get_tensor_indices(home='', zip_only=False):
+    """Yield the indices of all the Tensor files/folders in `home`/Tensors.
 
+    Parameters
+    ----------
+    home : str or Path
+        The base directory, in which a Tensors folder should
+        be present. Only files/folders in <home/Tensors> will
+        be looked up.
+    zip_only : bool, optional
+        Search only for (.zip) archives, skipping directories.
+        Default is False.
 
-def getDeltas(index, basedir=".", targetdir=".", required=True):
-    """Fetches Delta files from Deltas or archive with specified tensor index.
-    If required is set True, an error will be printed if no Delta files are
-    found.
-    basedir is the directory in which the Delta directory is based.
-    targetdir is the directory to which the Tensor files should be moved."""
-    dn = "Deltas_"+str(index).zfill(3)
-    _basedir, _targetdir = Path(basedir).resolve(), Path(targetdir).resolve()
-    zip_path=(_basedir / "Deltas" / dn).with_suffix(".zip")
-    if os.path.isdir(_basedir / "Deltas" / dn):
-        for f in [f for f in os.listdir(_basedir / "Deltas" / dn)
-                  if (os.path.isfile(_basedir / "Deltas" / dn / f)
-                      and f.startswith("DEL_"))]:
-            try:
-                shutil.copy2(_basedir / "Deltas" / dn / f, targetdir)
-            except Exception:
-                logger.error("Could not copy existing delta files to "
-                             "work directory")
-                raise
-    elif os.path.isfile(zip_path):
-        logger.info(f"Unpacking {dn}.zip...")
+    Yields
+    ------
+    indices : int
+        The unique indices of Tensor files found. Notice that
+        sorting of the indices is not guaranteed.
+    """
+    def get_index(fpath):
+        """Return the tensor index from a file path."""
+        exists = fpath.is_file() or (None if zip_only else fpath.is_dir())
+        if not exists:
+            return -1
+        *_, ind = fpath.stem.split('_', maxsplit=1)
         try:
-            with ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(_targetdir)                                  # TODO: maybe it would be nicer to read directly from the zip file
-        except Exception:
-            logger.error(f"Failed to unpack {dn}.zip")
+            return int(ind)
+        except ValueError:
+            return -1
+
+    tensors = Path(home, DEFAULT_TENSORS).resolve()
+    if not tensors.is_dir():
+        return
+
+    _base_pattern = f'{DEFAULT_TENSORS}_[0-9][0-9][0-9]*'
+    patterns = (f'{_base_pattern}.zip',)
+    if not zip_only:
+        patterns += (_base_pattern,)
+
+    likely_files = {f for p in patterns for f in tensors.glob(p)}
+    indices = (get_index(f) for f in likely_files)
+    yield from (ind for ind in indices if ind > 0)
+
+
+# TODO: move to iotensors?
+def getMaxTensorIndex(home='', zip_only=False):
+    """Return the highest index of tensor files/folders in `home`/Tensors.
+
+    Parameters
+    ----------
+    home : str or Path
+        The base directory, in which a Tensors folder should
+        be present. Only files/folders in <home/Tensors> will
+        be looked up.
+    zip_only : bool, optional
+        Search only for (.zip) archives, skipping directories.
+        Default is False.
+
+    Returns
+    -------
+    max_index : int
+        The largest among the indices found. Zero if no tensor
+        file/directories are present.
+    """
+    try:
+        return max(get_tensor_indices(home, zip_only))
+    except ValueError:  # No files
+        return 0
+
+
+def getDeltas(index, basedir='', targetdir='', required=True):                  # TODO: some similarities with code in iotensors
+    """Fetch delta files with a given `index` from a folder or an archive.
+
+    Parameters
+    ----------
+    index : int
+        The progressive index of the delta-amplitudes file to be
+        retrieved. This is identical to the index of the Tensors
+        with which the delta-amplitude calculation was performed.
+    basedir : str or Path, optional
+        The folder from which Deltas should be retrieved. It should
+        be the path containing the 'Deltas' folder. Default is the
+        current directory.
+    targetdir : str or Path, optional
+        The path to the directory in which the delta files
+        should be placed. Default is the current directory.
+    required : bool, optional
+        Whether the Deltas_`index` file/folder must be present at
+        `basedir`/'Deltas'. Raise RuntimeError if True and the
+        file/folder is not found. Default is True.
+
+    Raises
+    ------
+    RuntimeError
+        When no delta file is found for `index`.
+    OSError
+        If any copying/extraction fails.
+    """
+    basedir, targetdir = Path(basedir).resolve(), Path(targetdir).resolve()
+    delta_folder = basedir / DEFAULT_DELTAS / f'{DEFAULT_DELTAS}_{index:03d}'
+    delta_zip = delta_folder.with_suffix('.zip')
+    if delta_folder.is_dir():                                                   # TODO: why not copytree? Does it matter that we copy non-files or anything that is non DEL_*?
+        for delta_file in delta_folder.glob('DEL_*'):
+            if not delta_file.is_file():
+                continue
+            try:
+                shutil.copy2(delta_file, targetdir)
+            except OSError:
+                logger.error('Could not copy existing delta files to '
+                             f'{targetdir.name} directory')
+                raise
+    elif delta_zip.is_file():
+        logger.info(f'Unpacking {delta_zip.name}...')
+        try:
+            with ZipFile(delta_zip, 'r') as archive:
+                archive.extractall(targetdir)                                   # TODO: maybe it would be nicer to read directly from the zip file
+        except OSError:
+            logger.error(f'Failed to unpack {delta_zip.name}')
             raise
     elif required:
-        logger.error("Deltas not found")
-        raise RuntimeError("Deltas not found")
-    return None
+        logger.error(f'{DEFAULT_DELTAS} not found')
+        raise RuntimeError(f'No {DEFAULT_DELTAS} folder/zip file '              # TODO: FileNotFoundError
+                           f'for index {index} in {basedir}')
 
 
 def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):
@@ -565,7 +631,7 @@ def getSymEqBeams(sl, rp):
     if not rp.domainParams:
         d = [getLEEDdict(sl, rp)]
     else:
-        d = [getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+        d = [getLEEDdict(dp.slab, dp.rpars) for dp in rp.domainParams]
     if any([v is None for v in d]):
         logger.error("Failed to get beam equivalence list")
         return []
@@ -662,26 +728,26 @@ def getBeamCorrespondence(sl, rp):
     return beamcorr_list
 
 # TODO: can eventually become part of compileTask class
-def copy_compile_log(rp, logfile, log_name="fortran-compile"):
+def copy_compile_log(rp, logfile, save_as='fortran-compile'):
     """Copy compilation log file to compile_logs (will be moved to SUPP later).
 
     Parameters
     ----------
-    rp : RunParameters
+    rp : Rparams
         rp object of the calculation.
     logfile : pathlike or str
-        Path to the logfile that should be copied.
-    log_name : str, optional
-        Name to be used to identify logfile, eg. "refcalc". Default: "fortran-compile"
+        Path to the log file that should be copied.
+    save_as : str, optional
+        Name under which `logfile` should be copied,
+        e.g. 'refcalc'. Default is 'fortran-compile'.
+
+    Returns
+    -------
+    None.
     """
-    _logfile = Path(logfile)
-    if rp.compile_logs_dir is None:
-        # Compile directory not set. Cannot copy. Do not bother complaining.
-        return
-    target_path = (rp.compile_logs_dir / log_name).with_suffix(".log")
+    target_path = (rp.paths.compile_logs / save_as).with_suffix('.log')
     try:
-        shutil.copy2(_logfile, target_path)
-    except OSError as err:
-        logger.warning(
-            f"Unable to copy compilation log file {str(_logfile)}. Info: {err}"
-        )
+        shutil.copy2(logfile, target_path)
+    except OSError as exc:
+        logger.warning('Unable to copy compilation log '
+                       f'file {logfile}. Info: {exc}')

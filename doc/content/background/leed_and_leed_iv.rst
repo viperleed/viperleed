@@ -12,7 +12,7 @@ patterns as a function of the energy of the electron beam — usually
 referred to as "LEED videos" or "LEED movies". The intensity of each "spot"
 is then :ref:`extracted<imagej_plugins>` to obtain so-called |IV| curves —
 sometimes also referred to as spectra. Such |IV| curves are exceptionally
-sensitive to the precise position, vibrational amplitude, and chemical element
+sensitive to the precise position, vibration amplitude, and chemical element
 of each atom in the surface unit cell.
 |IV| curves can also be :ref:`calculated<viperleed_calc>` based on a test
 structural model of the surface. Comparing calculated and experimental |IV|
@@ -38,5 +38,5 @@ a structure optimization (see :ref:`sec_search`)
 using the :ref:`tensor-LEED approach<tensor_leed>`.
 
 For computational details, have a look at the relevant ViPErLEED paper
-:cite:p:`viperleedCalc` and at the original work describing TensErLEED
+:cite:p:`kraushoferViPErLEEDPackageCalculation2025` and at the original work describing TensErLEED
 by :cite:t:`blumFastLEEDIntensity2001a`.
