@@ -137,8 +137,7 @@ def run_calc(
     rpars.updateDerivedParams()
     LOGGER.info(f'ViPErLEED is using TensErLEED version {rpars.TL_VERSION}.')
 
-    prerun_clean(rpars, log_name)
-    preserve_original_inputs(rpars)  # Store inputs BEFORE any edit!
+    _preprocess_work(rpars, log_name)  # Store inputs BEFORE any edit!
     exit_code, state_recorder = section_loop(rpars, slab)
 
     # Prevent other sub-loggers from producing more
@@ -251,6 +250,28 @@ def _interpret_parameters(rpars, slab, preset_params):
 
     _set_log_level(rpars, preset_params)
     LOGGER.debug('PARAMETERS file was read successfully.')
+
+
+def _preprocess_work(rpars, log_name):
+    """Do preliminary cleanup of the work directory.
+    
+    The following actions are taken:
+    - store away previous calc results that may be present in work.
+    - save input files to SUPP/original_inputs.
+    
+    Parameters
+    ----------
+    rpars : Rparams
+        The current run parameters.
+    log_name : str
+        Name of the current log file.
+    
+    Returns
+    -------
+    None.
+    """
+    prerun_clean(rpars, log_name)
+    preserve_original_inputs(rpars)
 
 
 def _read_parameters_file(preset_params):
