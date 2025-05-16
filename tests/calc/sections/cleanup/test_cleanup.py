@@ -48,11 +48,6 @@ class TestCleanup:
         return {f: mocker.patch(f'{_MODULE}.{f}')
                 for f in (*self.mocked, *self.not_called)}
 
-    @fixture(name='manifest')
-    def mock_manifest(self):
-        """Return the contents of a sample manifest file."""
-        return ManifestFile('file1.txt', 'file2.txt', 'dir1')
-
     def test_no_rpars(self, manifest, mock_implementation, mocker):
         """Check calls when no Rparams is passed."""
         # Create a "singleton" that we can use to check that

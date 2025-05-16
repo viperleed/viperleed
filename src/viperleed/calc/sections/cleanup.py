@@ -601,6 +601,37 @@ def cleanup(rpars_or_manifest):
     None.
     """
     _LOGGER.info('\nStarting cleanup...')
+    rpars = get_rpars_from_manifest(rpars_or_manifest)
+
+    _organize_all_work_directories(rpars)
+    _write_manifest_file(rpars)
+    _write_final_log_messages(rpars)
+
+
+def get_rpars_from_manifest(rpars_or_manifest):
+    """Return an Rparams object, potentially from a ManifestFile.
+
+    Parameters
+    ----------
+    rpars_or_manifest : Rparams or ManifestFile
+        The run parameters, or information about the files and
+        directories that should be preserved from the work folder.
+        If a ManifestFile, it is assumed that the run crashed
+        before an Rparams object existed.
+
+    Returns
+    -------
+    rpars : Rparams
+        An Rparams object created from `rpars_or_manifest`. It
+        is the same object as `rpars_or_manifest` if an Rparams
+        object was given, a dummy Rparams with its manifest set
+        to `rpars_or_manifest` otherwise.
+
+    Raises
+    ------
+    TypeError
+        If `rpars_or_manifest` is neither an Rparams not a ManifestFile
+    """
     try:
         rpars_or_manifest.add_manifest
     except AttributeError:      # Not a ManifestFile
@@ -611,16 +642,13 @@ def cleanup(rpars_or_manifest):
                 'Expected Rparams or ManifestFile, got '
                 f'{type(rpars_or_manifest).__name__!r} instead.'
                 ) from None
-        rpars = rpars_or_manifest
-    else:
-        # Make a dummy, essentially empty Rparams
-        rpars = Rparams()
-        rpars.manifest = rpars_or_manifest
-        rpars.timer.stop()  # To print the correct final message
+        return rpars_or_manifest
 
-    _organize_all_work_directories(rpars)
-    _write_manifest_file(rpars)
-    _write_final_log_messages(rpars)
+    # Make a dummy, essentially empty Rparams
+    rpars = Rparams()
+    rpars.manifest = rpars_or_manifest
+    rpars.timer.stop()  # To print the correct final message
+    return rpars
 
 
 def preserve_original_inputs(rpars):
