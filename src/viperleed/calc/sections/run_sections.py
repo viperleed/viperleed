@@ -364,11 +364,8 @@ def section_loop(rp, sl):
                                 stop_search = True
                 if len(rp.disp_blocks) > rp.search_index and not stop_search:
                     # there are more disp_blocks to do; append another search
-                    if not rp.domainParams:
-                        sl.restoreOriState()
                     rp.resetSearchConv()
                     for dp in rp.domainParams:
-                        dp.slab.restoreOriState()
                         dp.rpars.resetSearchConv()
                     if (exceeds_tl_limit
                             and rp.MAX_TL_DISPLACEMENT.action == 'refcalc'):
@@ -381,6 +378,13 @@ def section_loop(rp, sl):
                     else:
                         if rp.RUN[:2] != [2, 3]:
                             rp.RUN = [2, 3] + rp.RUN
+                        # call restoreOriState *only* if we don't insert a
+                        #  refcalc; otherwise the refcalc would run at the
+                        #  original position!
+                        if not rp.domainParams:
+                            sl.restoreOriState()
+                        for dp in rp.domainParams:
+                            dp.slab.restoreOriState()
                 else:
                     # The current instance of 'RUN = 2, 3' is done, all blocks
                     # in DISPLACEMENTS have been handled. However, we may want
