@@ -25,7 +25,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
 
     geo: float
     _vib: float = NO_VALUE
-    action: str = 'continue'
+    action: str = 'refcalc'
     max_duration: float = 1800   # max. refcalc duration for 'continue' in s
 
     def __post_init__(self):
@@ -76,12 +76,12 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
 
     def assign_action(self, values):
         """Assign values to an action. Also interprets the requested time
-        if the action is 'continue'."""
+        if the action is 'refcalc'."""
         self.action = values[0]
-        if values[0] == 'continue' and len(values) == 1:
+        if values[0] == 'refcalc' and len(values) == 1:
             # disable checking for reference calculation time
             self.max_duration = NO_VALUE
-        elif values[0] == 'continue' and len(values) > 1:
+        elif values[0] == 'refcalc' and len(values) > 1:
             time_str = values[-1].lower()
             multiplier = 1
             if time_str[-1] in {'h', 'm', 's'}:

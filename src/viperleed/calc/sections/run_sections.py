@@ -341,7 +341,7 @@ def section_loop(rp, sl):
                     dp.rpars.search_index = rp.search_index
                 if len(rp.disp_blocks) > rp.search_index and exceeds_tl_limit:
                     stop_search = False
-                    if rp.MAX_TL_DISPLACEMENT.action == 'none':
+                    if rp.MAX_TL_DISPLACEMENT.action == 'ignore':
                         logger.warn(
                             'Displacements exceed MAX_TL_DISPLACEMENT, but '
                             'actions are disabled. Calculation will '
@@ -351,7 +351,7 @@ def section_loop(rp, sl):
                             'Displacements exceed MAX_TL_DISPLACEMENT. '
                             'Search will stop.')
                         stop_search = True
-                    elif rp.MAX_TL_DISPLACEMENT.action == 'continue':
+                    elif rp.MAX_TL_DISPLACEMENT.action == 'refcalc':
                         maxtime = rp.MAX_TL_DISPLACEMENT.max_duration
                         if (maxtime != NO_VALUE
                                 and rp.last_refcalc_time is not None):
@@ -371,7 +371,7 @@ def section_loop(rp, sl):
                         dp.slab.restoreOriState()
                         dp.rpars.resetSearchConv()
                     if (exceeds_tl_limit
-                            and rp.MAX_TL_DISPLACEMENT.action == 'continue'):
+                            and rp.MAX_TL_DISPLACEMENT.action == 'refcalc'):
                         logger.info(
                             'Displacements exceed MAX_TL_DISPLACEMENT. '
                             'A new reference calculation will be performed '

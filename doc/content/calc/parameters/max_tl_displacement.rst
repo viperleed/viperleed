@@ -7,7 +7,7 @@ MAX_TL_DISPLACEMENT defines a maximum displacement which is acceptable for conse
 
 By default, the same threshold is used for geometric and vibration amplitude displacements. A distinct value for vibration amplitudes can be given if required.
 
-Set ``MAX_TL_DISPLACEMENT action = none`` to disable this parameter. This may be useful for testing, but is otherwise **not** recommended.
+Set ``MAX_TL_DISPLACEMENT action = ignore`` to disable this parameter. This may be useful for testing, but is otherwise **not** recommended.
 
 **Default**: MAX_TL_DISPLACEMENT = 0.15 (i.e., 0.15 Angstrom)
 
@@ -26,13 +26,13 @@ The default action is to perform a new reference calculation and continue if the
    MAX_TL_DISPLACEMENT vib = 0.01  ! re-define the vibration threshold, leaving geo unchanged
    
    ! define the action:
-   MAX_TL_DISPLACEMENT action = stop      ! Always stop when a total displacement becomes too large
-   MAX_TL_DISPLACEMENT action = none      ! Ignore large displacements, only print warnings
-   MAX_TL_DISPLACEMENT action = continue 30m    ! The default. Perform a reference calculation and continue, but
-                                                !   only if the last reference calculation took less than 30 minutes
-   MAX_TL_DISPLACEMENT action = continue < 30m  ! Same as above, more explicit
-   MAX_TL_DISPLACEMENT action = continue 2h     ! Perform new reference calculations if they take less than 2 hours.
-   MAX_TL_DISPLACEMENT action = continue        ! Perform new reference calculations and continue, no matter how long it takes
+   MAX_TL_DISPLACEMENT action = stop        ! Always stop when a total displacement becomes too large
+   MAX_TL_DISPLACEMENT action = ignore      ! Ignore large displacements, only print warnings
+   MAX_TL_DISPLACEMENT action = refcalc 30m    ! The default. Perform a reference calculation and continue, but
+                                               !   only if the last reference calculation took less than 30 minutes
+   MAX_TL_DISPLACEMENT action = refcalc < 30m  ! Same as above, more explicit
+   MAX_TL_DISPLACEMENT action = refcalc 2h     ! Perform new reference calculations if they take less than 2 hours.
+   MAX_TL_DISPLACEMENT action = refcalc        ! Perform new reference calculations and continue, no matter how long it takes
 
 **Acceptable values:** One or two positive floats if no flags are given.
 One positive float for flags ``geo`` and ``vib``. 
@@ -40,5 +40,5 @@ One positive float for flags ``geo`` and ``vib``.
 Acceptable values for the ``action`` flag are:
 
 - ``stop``: Stop the run and discard all remaining blocks in :ref:`DISPLACEMENTS`. If there are more entries in :ref:`RUN` after the search (e.g. another reference calculation), these will still be executed.
-- ``none``: Proceed without a new reference calculation. A warning will be printed.
-- ``continue``: Perform a reference calculation, then continue with the next block in :ref:`DISPLACEMENTS`. If a second (positive float) value is passed, this is interpreted as a time and compared to the time taken by the previous reference calculation. If the reference calculation took longer than this value, the action will be to ``stop`` instead. Values are interpreted as seconds by default, or as hours or minutes if ``h`` or ``m`` is appended to indicate the unit.
+- ``ignore``: Proceed without a new reference calculation. A warning will be printed.
+- ``refcalc``: Perform a reference calculation, then continue with the next block in :ref:`DISPLACEMENTS`. If a second (positive float) value is passed, this is interpreted as a time and compared to the time taken by the previous reference calculation. If the reference calculation took longer than this value, the action will be to ``stop`` instead. Values are interpreted as seconds by default, or as hours or minutes if ``h`` or ``m`` is appended to indicate the unit.

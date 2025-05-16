@@ -983,12 +983,12 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             else:
                 # interpret action
                 action = assignment.values[0].lower()
-                if action not in {'stop', 'continue', 'none'}:
+                if action not in {'stop', 'refcalc', 'ignore'}:
                     raise ParameterValueError(f'Invalid value {action} for '
                                               'flag {which}.')
-                if action != 'continue' and len(assignment.values) != 1:
+                if action != 'refcalc' and len(assignment.values) != 1:
                     raise ParameterNumberOfInputsError(parameter=param)
-                if action == 'continue':
+                if action == 'refcalc':
                     if len(assignment.values) not in {1, 2, 3}:
                         raise ParameterNumberOfInputsError(parameter=param)
                     if (len(assignment.values) == 3
