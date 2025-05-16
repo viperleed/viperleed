@@ -616,7 +616,7 @@ def cleanup(rpars_or_manifest):
         # Make a dummy, essentially empty Rparams
         rpars = Rparams()
         rpars.manifest = rpars_or_manifest
-        rpars.timer = None  # To print the correct final message
+        rpars.timer.stop()  # To print the correct final message
 
     _organize_all_work_directories(rpars)
     _write_manifest_file(rpars)
@@ -774,11 +774,9 @@ def _silently_remove_files(*files):
 
 def _write_final_log_messages(rpars):
     """Emit the last logging messages concerning the calculation."""
-    elapsed = ('unknown' if not rpars.timer
-               else rpars.timer.how_long(as_string=True))
     _LOGGER.info(
         f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
-        f'\nTotal elapsed time: {elapsed}\n'
+        f'\nTotal elapsed time: {rpars.timer.how_long(as_string=True)}\n'
         )
 
     # Write information about executed sections
