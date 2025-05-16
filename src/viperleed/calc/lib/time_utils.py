@@ -86,6 +86,9 @@ class DateTimeFormat(Enum):
         return now_(self.value, use_gmt=use_gmt)
 
 
+_INTERVAL_ON_STOPPED = 'unknown'
+
+
 class ExecutionTimer:
     """A class that keeps track of how long passes."""
 
@@ -94,6 +97,7 @@ class ExecutionTimer:
     def __init__(self, started_at=None):
         """Initialize instance."""
         self._start = 0
+        self._stopped = False
         self.restart(started_at=started_at)
 
     @property
@@ -118,13 +122,22 @@ class ExecutionTimer:
                 - "H:MM hours"     if interval is longer than 1 h
                 - "M:SS minutes"   if interval is between 1 and 60 min
                 - "S.mm seconds"   if interval is shorter than 1 min
+            If the timer was stop()ped at any time, the return value
+            is 'unknown' (if `as_string`), or 0.0.
         """
+        if self._stopped:
+            return _INTERVAL_ON_STOPPED if as_string else 0.0
         interval = self.now() - self.started_at
         return _elapsed_time_as_str(interval) if as_string else float(interval)
 
     def restart(self, started_at=None):
         """Start this timer again."""
         self._start = self.now() if started_at is None else started_at
+        self._stopped = False
+
+    def stop(self):
+        """Render this timer inactive."""
+        self._stopped = True
 
     def synchronize_with(self, other):
         """Set this timer's start moment identical to the one of other."""

@@ -10,7 +10,7 @@ __license__ = 'GPLv3+'
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode as ExitCode
+from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode as ExitCode
 
 
 def test_value():
