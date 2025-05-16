@@ -37,6 +37,7 @@ def _make_arithmetic(operation, allow_eps):
     _reverse : callable
         Returns operation(other, eps)
     """
+
     def _direct(self, other):
         if not allow_eps and isinstance(other, SymmetryEps):
             return NotImplemented

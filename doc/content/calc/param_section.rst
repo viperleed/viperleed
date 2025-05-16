@@ -191,6 +191,8 @@ The most relevant parameters are:
   +----------------------------------+----------------------------------------------------------------------------------------------------+
   | :ref:`LOG_SEARCH`                | Output the search log file (may be very large, mostly for debugging)                               |
   +----------------------------------+----------------------------------------------------------------------------------------------------+
+  | :ref:`MAX_TL_DISPLACEMENT`       | Whether to automatically re-do reference calculations when displacements get too large             |
+  +----------------------------------+----------------------------------------------------------------------------------------------------+
   | **→** :ref:`NCORES`              | The number of CPUs to use                                                                          |
   +----------------------------------+----------------------------------------------------------------------------------------------------+
   | :ref:`RFACTORTYPE`               | Which definition of the |R factor| to use                                                          |
