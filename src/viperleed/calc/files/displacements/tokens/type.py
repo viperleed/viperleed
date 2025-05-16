@@ -5,7 +5,7 @@ __created__ = '2025-04-10'
 
 
 
-from viperleed_jax.files.displacements.perturbation_type import (
+from viperleed_jax.perturbation_type import (
     PerturbationType,
     PerturbationTypeError,
 )
