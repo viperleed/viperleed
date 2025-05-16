@@ -15,8 +15,8 @@ import numpy as np
 
 from dataclasses import dataclass
 
-from ._base import SpecialParameter
-from .._defaults import NO_VALUE
+from .base import SpecialParameter
+from ..defaults import NO_VALUE
 
 
 @dataclass
@@ -26,7 +26,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
     geo: float
     _vib: float = NO_VALUE
     action: str = 'refcalc'
-    max_duration: float = 1800   # max. refcalc duration for 'continue' in s
+    max_duration: float = 1800   # max. refcalc duration for 'refcalc' in s
 
     def __post_init__(self):
         """Convert non-float inputs and check their range."""
@@ -92,7 +92,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
                     multiplier = 60
                 time_str = time_str[:-1]
             float_v = self._check_float_value(time_str,
-                                              extra_msg='(flag "continue") ')
+                                              extra_msg='(flag "refcalc") ')
             self.max_duration = float_v*multiplier
 
     def is_too_far(self, atom):
