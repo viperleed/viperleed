@@ -612,6 +612,7 @@ class TestSyntaxErrorLogger:
         }
 
     @parametrize('field,reason,expect', _fix_log.values(), ids=_fix_log)
+    # pylint: disable-next=too-many-arguments  # 2/6 fixtures
     def test_fixable_log_message(self, field, reason, expect, logger, caplog):
         """Check the contents of a fixable log message."""
         with logger(for_field=field):
@@ -649,6 +650,7 @@ class TestSyntaxErrorLogger:
         }
 
     @parametrize('field,reason,expect', _nofix_log.values(), ids=_nofix_log)
+    # pylint: disable-next=too-many-arguments  # 2/6 fixtures
     def test_unfixable_log_message(self, field, reason, expect, logger, caplog):
         """Check the contents of an unfixable log message."""
         with logger(for_field=field):
