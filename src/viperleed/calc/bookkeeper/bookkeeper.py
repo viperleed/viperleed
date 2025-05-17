@@ -185,20 +185,7 @@ class Bookkeeper:
             exit_code = self._run_in_root_and_subdomains(domains, **kwargs)
         else:
             exit_code, _ = self._run_one_domain(**kwargs)
-        if exit_code is BookkeeperExitCode.MISSING_UNLABELED_FILES:
-            err_msg = (
-                'Some input files that have been renamed to *_ori do not have '
-                'a corresponding unlabeled version. This is most likely a bug '
-                'in bookkeeper. Please report this to the ViPErLEED team by '
-                'opening an issue under '
-                'https://github.com/viperleed/viperleed/issues attaching the '
-                'contents of the most recent history folder'
-                )
-            if domains:
-                err_msg += ' of both the main as well as all domain subfolders'
-            err_msg += '.'
-            LOGGER.error(err_msg)
-            raise BookkeeperUnexpectedError(err_msg)
+        self._check_exit_code(exit_code, domains)
         return exit_code
 
     def update_from_cwd(self, silent=False):
@@ -381,6 +368,23 @@ class Bookkeeper:
         self._add_history_info_entry(tensor_nums)
         LOGGER.info('Done archiving the current directory '
                     f'to {self.history.path.name}.')
+
+    def _check_exit_code(self, exit_code, domains):
+        """Raise if exit_code signals bugs in bookkeeper."""
+        if exit_code is BookkeeperExitCode.MISSING_UNLABELED_FILES:
+            err_msg = (
+                'Some input files that have been renamed to *_ori do not have '
+                'a corresponding unlabeled version. This is most likely a bug '
+                'in bookkeeper. Please report this to the ViPErLEED team by '
+                'opening an issue under '
+                'https://github.com/viperleed/viperleed/issues attaching the '
+                'contents of the most recent history folder'
+                )
+            if domains:
+                err_msg += ' of both the main as well as all domain subfolders'
+            err_msg += '.'
+            LOGGER.error(err_msg)
+            raise BookkeeperUnexpectedError(err_msg)
 
     def _check_may_discard_full(self):
         """Log and raise if it is not possible to DISCARD_FULL."""
