@@ -16,6 +16,7 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.lib.dataclass_utils import frozen
+from viperleed.calc.lib.time_utils import _INTERVAL_ON_STOPPED
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
@@ -135,6 +136,21 @@ class TestExecutionTimer:
             mock.sleep(sleep_second)
             timer.restart()
             assert timer.started_at == start + sleep_first + sleep_second
+
+    def test_restart_after_stop(self):
+        """Ensure restarting a timer makes it non-stopped."""
+        timer = self.make_timer()
+        timer.stop()
+        timer.restart()
+        # pylint: disable-next=protected-access           # OK in tests
+        assert not timer._stopped
+
+    def test_stop(self):
+        """Ensure the correct interval is returned for a stopped timer."""
+        timer = self.make_timer()
+        timer.stop()
+        assert not timer.how_long()
+        assert timer.how_long(as_string=True) == _INTERVAL_ON_STOPPED
 
     _other_timer = {
         ExecutionTimer: 'TestExecutionTimer',

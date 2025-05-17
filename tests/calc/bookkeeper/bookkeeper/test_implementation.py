@@ -30,10 +30,10 @@ from pytest_cases import parametrize
 from viperleed.calc.bookkeeper.bookkeeper import _FROM_ROOT
 from viperleed.calc.bookkeeper.bookkeeper import _MIN_CALC_WARN
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
-from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode
 from viperleed.calc.bookkeeper.bookkeeper import LOGGER
 from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
 from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
+from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.bookkeeper.utils import ask_user_confirmation

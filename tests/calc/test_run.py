@@ -158,7 +158,7 @@ class TestRunCalc:
                                       None,   # preset_params
                                       None,   # slab
                                       None),  # home
-            'finalize': mocker.call(mocks['manifest'].return_value),
+            'finalize': mocker.call(mocks['manifest'].return_value, log_name),
             }
         not_called = (
             'set_src',
@@ -197,7 +197,7 @@ class TestRunCalc:
                                       None),  # home
             'set_src': mocker.call(rpars, None),
             'set_name': mocker.call(rpars, None),
-            'finalize': mocker.call(rpars),
+            'finalize': mocker.call(rpars, log_name),
             }
         not_called = (
             'find_tl_version',
@@ -216,20 +216,31 @@ class TestFinalizeOnEarlyExit:
     @fixture(name='mocks')
     def fixture_mock_implementation(self, mocker):
         """Replace implementation details with mocks."""
+        rpars = mocker.MagicMock()
         return {
             'logger': mocker.patch(f'{_MODULE}.LOGGER'),
+            'rpars': rpars,
+            'get_rpars': mocker.patch(f'{_MODULE}.get_rpars_from_manifest',
+                                      return_value=rpars),
+            'prerun': mocker.patch(f'{_MODULE}.prerun_clean'),
+            'preserve': mocker.patch(f'{_MODULE}.preserve_original_inputs'),
             'cleanup': mocker.patch(f'{_MODULE}.cleanup'),
             'handlers': mocker.patch(f'{_MODULE}.close_all_handlers'),
             }
 
     def test_success(self, mocks, mocker):
         """Check the outcome of a successful execution."""
-        arg = mocker.MagicMock()
+        rpars_or_manifest = mocker.MagicMock()
+        log_name = mocker.MagicMock()
+        rpars = mocks['rpars']
         expect_calls = {
-            'cleanup': mocker.call(arg),
+            'get_rpars': mocker.call(rpars_or_manifest),
+            'prerun': mocker.call(rpars, log_name),
+            'preserve': mocker.call(rpars),
+            'cleanup': mocker.call(rpars),
             'handlers': mocker.call(mocks['logger']),
             }
-        _finalize_on_early_exit(arg)
+        _finalize_on_early_exit(rpars_or_manifest, log_name)
         for mock_name, call in expect_calls.items():
             mocks[mock_name].mock_calls = [call]
 

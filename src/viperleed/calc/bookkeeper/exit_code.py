@@ -20,12 +20,15 @@ class BookkeeperExitCode(IntEnum):
     SUCCESS = 0
     NOTHING_TO_DO = -1
     FAIL = 1
+    MISSING_UNLABELED_FILES = 2  # See #353
 
     @classmethod
     def from_codes(cls, exit_codes):
         """Return an overall exit code from multiple ones."""
         if not exit_codes:
             raise ValueError('At least one exit code needed.')
+        if any(c is cls.MISSING_UNLABELED_FILES for c in exit_codes):
+            return cls.MISSING_UNLABELED_FILES
         if any(c is cls.FAIL for c in exit_codes):
             return cls.FAIL
         if all(c is cls.NOTHING_TO_DO for c in exit_codes):

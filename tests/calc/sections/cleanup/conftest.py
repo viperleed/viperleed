@@ -2,6 +2,8 @@
 
 Fixtures
 --------
+manifest
+    A sample ManifestFile.
 rpars
     An empty Rparams object.
 workdir
@@ -18,8 +20,15 @@ __license__ = 'GPLv3+'
 from pytest_cases import fixture
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.files.manifest import ManifestFile
 
 _MODULE = 'viperleed.calc.sections.cleanup'
+
+
+@fixture(name='manifest')
+def fixture_manifest():
+    """Return the contents of a sample manifest file."""
+    return ManifestFile('file1.txt', 'file2.txt', 'dir1')
 
 
 @fixture(name='rpars')
