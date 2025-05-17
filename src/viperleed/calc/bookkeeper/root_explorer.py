@@ -154,7 +154,7 @@ class RootExplorer:
             except OSError as exc:
                 LOGGER.error(f'Could not create file '
                              f'{self._relative_path(unlabeled_file)} '
-                             f'from its *{ORI_SUFFIX} version.')
+                             f'from its *{ORI_SUFFIX} version: {exc}')
         return any_missing
 
     def infer_run_info(self):
