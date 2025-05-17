@@ -11,9 +11,11 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
+from viperleed.calc.bookkeeper.errors import BookkeeperUnexpectedError
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_OUT
@@ -134,3 +136,32 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
                                           caplog,
                                           missing_out_files={'VIBROCC'})
         self._check_file_contents(cwd/'VIBROCC', MOCK_ORIG_CONTENT)
+
+    def test_raises_on_missing_state_files(self, after_calc_execution, mocker):
+        """Check that missing state files after a run cause exceptions."""
+        has_out_suffixed = self.has_out_suffixed(*after_calc_execution)
+        bookkeeper, *_ = after_calc_execution
+        # pylint: disable-next=protected-access           # OK in tests
+        mocker.patch.object(bookkeeper._root,
+                            'ensure_has_unlabled_inputs',
+                            return_value=True)
+        with pytest.raises(BookkeeperUnexpectedError):
+            bookkeeper.run(self.mode)
+        # While the above raises, it should happen only at the end:
+        # the rest of the archiving and handling of the root folder
+        # should proceed as for a "good" run.
+        # Perform the same checks as run_archive_after_calc_and_check
+        self.check_has_archived(after_calc_execution,
+                                has_out_suffixed=has_out_suffixed,
+                                mode=self.mode)
+        self.check_root_after_archive(*after_calc_execution,
+                                      out_suffixed=has_out_suffixed)
+
+    def test_raises_on_missing_state_files_domains(self,
+                                                   domains_after_calc_execution,
+                                                   mocker):
+        """Check that missing state files after a run cause exceptions."""
+        *main_run, domains = domains_after_calc_execution
+        self.patch_for_domains(mocker)
+        self.test_raises_on_missing_state_files(main_run, mocker)
+        self.check_domains_archived(main_run, domains)
