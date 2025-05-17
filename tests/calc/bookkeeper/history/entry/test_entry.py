@@ -27,7 +27,9 @@ from viperleed.calc.bookkeeper.history.entry.enums import FieldTag
 from viperleed.calc.bookkeeper.history.entry.field import FieldBase
 from viperleed.calc.bookkeeper.history.entry.field import UnknownField
 from viperleed.calc.bookkeeper.history.entry.field_collection import FieldList
+from viperleed.calc.bookkeeper.history.entry.string_field import FolderField
 from viperleed.calc.bookkeeper.history.entry.time_field import TimestampFormat
+from viperleed.calc.bookkeeper.history.errors import EntrySyntaxError
 from viperleed.calc.bookkeeper.history.errors import FieldsScrambledError
 from viperleed.calc.bookkeeper.history.errors import FixableSyntaxError
 from viperleed.calc.bookkeeper.history.errors import HistoryInfoError
@@ -559,3 +561,98 @@ class TestSyntaxErrorLogger:
         reason = 'custom'
         with pytest.raises(CustomTestException, match=reason), logger():
             raise CustomTestException(reason)
+
+    _fix_log = {
+        'no field, no full stop': (
+            None,
+            'error  ',
+            'history.info: error. Consider running \'bookkeeper --fix\'.\n',
+            ),
+        'no field, full stop': (
+            None,
+            'error. ',
+            'history.info: error. Consider running \'bookkeeper --fix\'.\n',
+            ),
+        'field, no tag, no full stop': (
+            UnknownField('abc'),
+            'error ',
+            'history.info: Found entry with error. '
+            'Consider running \'bookkeeper --fix\'.\n',
+            ),
+        'field, no tag, full stop': (
+            UnknownField('abc'),
+            'error. ',
+            'history.info: Found entry with error. '
+            'Consider running \'bookkeeper --fix\'.\n',
+            ),
+        'field, tag, no full stop, no tag in msg': (
+            FolderField('t123.r456_010203-040506'),
+            'error  ',
+            'history.info: Found entry with error. Field: FOLDER. '
+            'Consider running \'bookkeeper --fix\'.\n',
+            ),
+        'field, tag, full stop, no tag in msg': (
+            FolderField('t123.r456_010203-040506'),
+            'error.  ',
+            'history.info: Found entry with error. Field: FOLDER. '
+            'Consider running \'bookkeeper --fix\'.\n',
+            ),
+        'field, tag, no full stop, tag in msg': (
+            FolderField('t123.r456_010203-040506'),
+            'faulty FOLDER  ',
+            'history.info: Found entry with faulty FOLDER. '
+            'Consider running \'bookkeeper --fix\'.\n',
+            ),
+        'field, tag, full stop, tag in msg': (
+            FolderField('t123.r456_010203-040506'),
+            'faulty FOLDER.  ',
+            'history.info: Found entry with faulty FOLDER. '
+            'Consider running \'bookkeeper --fix\'.\n',
+            ),
+        }
+
+    @parametrize('field,reason,expect', _fix_log.values(), ids=_fix_log)
+    # pylint: disable-next=too-many-arguments  # 2/6 fixtures
+    def test_fixable_log_message(self, field, reason, expect, logger, caplog):
+        """Check the contents of a fixable log message."""
+        with logger(for_field=field):
+            raise FixableSyntaxError(reason)
+        assert caplog.text.endswith(expect)
+
+    _nofix_log = {
+        'no field': (
+            None,
+            'error.',
+            'history.info: Could not understand entry. Reason: error.\n'
+            ),
+        'missing field': (
+            FolderField(),
+            'exc.',
+            'history.info: Could not understand FOLDER field. Reason: exc.\n',
+            ),
+        'empty field, no tag': (
+            UnknownField(),
+            'exc.',
+            'history.info: Could not understand field. Reason: exc.\n',
+            ),
+        'field with value, tag': (
+            FolderField('t123.r456_010203-040506'),
+            'exc.',
+            'history.info: Could not understand FOLDER field with value '
+            '\'t123.r456_010203-040506\'. Reason: exc.\n',
+            ),
+        'field with value, no tag': (
+            UnknownField('stuff'),
+            'exc.',
+            'history.info: Could not understand field with value '
+            '\'stuff\'. Reason: exc.\n',
+            ),
+        }
+
+    @parametrize('field,reason,expect', _nofix_log.values(), ids=_nofix_log)
+    # pylint: disable-next=too-many-arguments  # 2/6 fixtures
+    def test_unfixable_log_message(self, field, reason, expect, logger, caplog):
+        """Check the contents of an unfixable log message."""
+        with logger(for_field=field):
+            raise EntrySyntaxError(reason)
+        assert caplog.text.endswith(expect)
