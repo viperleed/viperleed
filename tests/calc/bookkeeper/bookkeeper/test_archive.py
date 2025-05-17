@@ -141,6 +141,7 @@ class TestBookkeeperArchive(_TestBookkeeperRunBase):
         """Check that missing state files after a run cause exceptions."""
         has_out_suffixed = self.has_out_suffixed(*after_calc_execution)
         bookkeeper, *_ = after_calc_execution
+        # pylint: disable-next=protected-access           # OK in tests
         mocker.patch.object(bookkeeper._root,
                             'ensure_has_unlabled_inputs',
                             return_value=True)
