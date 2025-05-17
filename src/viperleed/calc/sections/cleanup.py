@@ -104,6 +104,7 @@ _OUT_FILES = (
     'refcalc-fd.out',
     'Search-progress.csv',
     'Search-progress.pdf',
+    'Search-report.csv',
     'Search-report.pdf',
     'superpos-spec.out',
     'THEOBEAMS_norm.csv',
@@ -584,9 +585,8 @@ def cleanup(rpars_or_manifest):
       to the original folder where calc was started.
     - Final messages are written to the log, including information
       about duration of the overall calculation, the segments that
-      were executed, and the final R factors. Warnings concerning
-      the bookkeeper and a checklist of items for users are also
-      logged.
+      were executed, and the final R factors. A checklist of items
+      for users is also logged.
 
     Parameters
     ----------
@@ -601,6 +601,37 @@ def cleanup(rpars_or_manifest):
     None.
     """
     _LOGGER.info('\nStarting cleanup...')
+    rpars = get_rpars_from_manifest(rpars_or_manifest)
+
+    _organize_all_work_directories(rpars)
+    _write_manifest_file(rpars)
+    _write_final_log_messages(rpars)
+
+
+def get_rpars_from_manifest(rpars_or_manifest):
+    """Return an Rparams object, potentially from a ManifestFile.
+
+    Parameters
+    ----------
+    rpars_or_manifest : Rparams or ManifestFile
+        The run parameters, or information about the files and
+        directories that should be preserved from the work folder.
+        If a ManifestFile, it is assumed that the run crashed
+        before an Rparams object existed.
+
+    Returns
+    -------
+    rpars : Rparams
+        An Rparams object created from `rpars_or_manifest`. It
+        is the same object as `rpars_or_manifest` if an Rparams
+        object was given, a dummy Rparams with its manifest set
+        to `rpars_or_manifest` otherwise.
+
+    Raises
+    ------
+    TypeError
+        If `rpars_or_manifest` is neither an Rparams not a ManifestFile
+    """
     try:
         rpars_or_manifest.add_manifest
     except AttributeError:      # Not a ManifestFile
@@ -611,16 +642,13 @@ def cleanup(rpars_or_manifest):
                 'Expected Rparams or ManifestFile, got '
                 f'{type(rpars_or_manifest).__name__!r} instead.'
                 ) from None
-        rpars = rpars_or_manifest
-    else:
-        # Make a dummy, essentially empty Rparams
-        rpars = Rparams()
-        rpars.manifest = rpars_or_manifest
-        rpars.timer = None  # To print the correct final message
+        return rpars_or_manifest
 
-    _organize_all_work_directories(rpars)
-    _write_manifest_file(rpars)
-    _write_final_log_messages(rpars)
+    # Make a dummy, essentially empty Rparams
+    rpars = Rparams()
+    rpars.manifest = rpars_or_manifest
+    rpars.timer.stop()  # To print the correct final message
+    return rpars
 
 
 def preserve_original_inputs(rpars):
@@ -774,11 +802,9 @@ def _silently_remove_files(*files):
 
 def _write_final_log_messages(rpars):
     """Emit the last logging messages concerning the calculation."""
-    elapsed = ('unknown' if not rpars.timer
-               else rpars.timer.how_long(as_string=True))
     _LOGGER.info(
         f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
-        f'\nTotal elapsed time: {elapsed}\n'
+        f'\nTotal elapsed time: {rpars.timer.how_long(as_string=True)}\n'
         )
 
     # Write information about executed sections
@@ -795,16 +821,6 @@ def _write_final_log_messages(rpars):
         if integer > 0 and fractional > 0:
             msg += f' ({integer:.4f} / {fractional:.4f})'
         _LOGGER.info(msg)
-
-    # Warn about manually running bookkeeper for domain calculations
-    if rpars.domainParams:
-        _LOGGER.info(
-            'Domain calculations have been run. Note that the bookkeeper will '
-            'only run automatically in the top-level calculation directory. '
-            'To preserve optimizations for individual domains, please run '
-            'bookkeeper manually in the respective domain directories. '
-            'The command is: viperleed bookkeeper --archive.\n'
-            )
 
     if rpars.checklist:
         _LOGGER.info('')

@@ -41,9 +41,10 @@ class WorkhistoryHandler:
 
         Parameters
         ----------
-        root : Path
-            The path to the folder containing the 'workhistory'
-            directory that this instance will work on.
+        root : RootExplorer
+            The handler of the root folder that contains the
+            'workhistory' directory on which this instance
+            will work.
         bookkeeper : Bookkeeper
             The Bookkeeper instance associated
             with this WorkhistoryHandler.
@@ -52,16 +53,17 @@ class WorkhistoryHandler:
         -------
         None.
         """
-        self._path = root / DEFAULT_WORK_HISTORY
+        self._root = root
+        self._path = root.path / DEFAULT_WORK_HISTORY
         self.bookkeeper = bookkeeper
 
     path = make_property('_path')
-    root = make_property('path.parent')
+    root = make_property('_root.path')
 
     @property
     def history(self):
         """Return the path to the 'history' directory."""
-        return self.bookkeeper.history.path
+        return self._root.history.path
 
     @property
     def timestamp(self):
@@ -201,7 +203,7 @@ class WorkhistoryHandler:
         # NB: it is important to create the tensor-to-job map before
         # we start adding more history folders: all of those added
         # at the same time must have the same job_num.
-        max_job_for_tensor = self.bookkeeper.max_job_for_tensor
+        max_job_for_tensor = self._root.history.max_run_per_tensor
         directories = self.find_current_directories(contains=self.timestamp)
         # Workhistory directories have the following naming convention
         # [see cleanup.move_oldruns(rpars, prerun=False)]:
@@ -252,5 +254,5 @@ class WorkhistoryHandler:
             # And register the folder in history. Notice that we need
             # the metadata file to already be written to successfully
             # register a folder.
-            self.bookkeeper.history.register_folder(target)
+            self._root.history.register_folder(target)
         return tensor_nums

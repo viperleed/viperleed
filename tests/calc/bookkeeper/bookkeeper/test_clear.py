@@ -14,10 +14,11 @@ __license__ = 'GPLv3+'
 from copy import deepcopy
 
 from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.constants import STATE_FILES
-from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.bookkeeper.mode import BookkeeperMode as Mode
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 
@@ -27,13 +28,13 @@ from .run_bookkeeper_base import _TestBookkeeperRunBase
 @fixture(name='after_clear')
 def fixture_after_clear(after_archive, after_bookkeper_run):
     """Prepare a directory like the one after CLEAR was executed."""
-    return after_bookkeper_run(after_archive, BookkeeperMode.CLEAR)
+    return after_bookkeper_run(after_archive, Mode.CLEAR)
 
 
 class TestBookkeeperClear(_TestBookkeeperRunBase):
     """Tests for correct behavior of CLEAR bookkeeper runs."""
 
-    mode = BookkeeperMode.CLEAR
+    mode = Mode.CLEAR
 
     def test_run_before_calc_exec(self, before_calc_execution, caplog):
         """Check correct overwriting of input files in CLEAR mode."""
@@ -48,6 +49,19 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
             *after_archive,
             out_suffixed=has_out_suffixed,
             )
+        self.check_no_warnings(caplog, exclude_msgs=('metadata',))
+
+    def test_clear_after_archive_domains(self, archived_domains, caplog):
+        """Check behavior of CLEAR after ARCHIVE (e.g., manual call)."""
+        *main_run, domains = archived_domains
+        *_, mocker = main_run
+        self.patch_for_domains(mocker)
+        self.run_after_archive_and_check(main_run, caplog)
+        self.check_root_inputs_replaced_by_out_or_ori(*main_run)
+        # Repeat the check for all subdomains
+        for domain_path in domains:
+            mock_bookie = mocker.MagicMock(cwd=domain_path)
+            self.check_root_inputs_replaced_by_out_or_ori(mock_bookie)
         self.check_no_warnings(caplog, exclude_msgs=('metadata',))
 
     def test_clear_after_calc_exec(self, after_calc_execution, caplog):
@@ -71,7 +85,7 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         """
         self.run_and_check_prerun_archiving(after_calc_execution, caplog)
 
-    def _get_cleared_tree_from_archived(self, archived):
+    def get_tree_from_archived(self, archived):
         """Return a dictionary of the root after CLEAR from the ARCHIVE one."""
         cleared = deepcopy(archived)
         _deleted = (
@@ -94,7 +108,7 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         bookkeeper, before, archived = after_calc_with_edited_file
         self._run_bookkeeper(bookkeeper, {}, caplog)
 
-        expect = self._get_cleared_tree_from_archived(archived)
+        expect = self.get_tree_from_archived(archived)
         # While the above is identical to the ARCHIVE-then-CLEAR
         # case, we DO NOT pull an _edited file from original_inputs,
         # as we want to avoid running with the "wrong" file.
@@ -121,11 +135,57 @@ class TestBookkeeperClear(_TestBookkeeperRunBase):
         self._run_bookkeeper(bookkeeper, {}, caplog)
 
         # See viperleed/pull/198#issuecomment-2506549827
-        expect = self._get_cleared_tree_from_archived(archived)
+        expect = self.get_tree_from_archived(archived)
         assert self.collect_root_contents(bookkeeper) == expect
 
-    def text_clear_twice(self, after_clear, caplog):
+    def test_clear_domains(self, domains_after_calc_execution, caplog):
+        """Check behavior of CLEAR after a non-ARCHIVEd domain run."""
+        self.run_and_check_prerun_archiving_domains(
+            domains_after_calc_execution,
+            caplog,
+            )
+
+    @parametrize(mode=(Mode.ARCHIVE, Mode.CLEAR, Mode.DISCARD))
+    def test_one_domain_already_processed(self,
+                                          mode,
+                                          manual_run_one_domain,
+                                          caplog):
+        """Check CLEAR when one domain subfolder was manually processed."""
+        domain_run, already_processed = manual_run_one_domain(mode)
+        pre_archived = mode is Mode.ARCHIVE
+        *_, mocker, _ = domain_run
+        caplog.clear()
+        self.run_and_check_prerun_archiving_domains(
+            domain_run,
+            caplog,
+            already_processed=(already_processed,),
+            )
+        # Check also the one that was manually processed.
+        mock_bookie = mocker.MagicMock(cwd=already_processed)
+        # The root folder should be free of calc results, irrespective
+        # of whether the domain was processed or not (since we run in
+        # clear mode in the root).
+        self.check_root_is_clean(mock_bookie)
+        check_inputs = (
+            self.check_root_inputs_replaced_by_out_or_ori if pre_archived
+            else self.check_root_inputs_untouched
+            )
+        check_inputs(mock_bookie)
+        self.check_no_edited_files(mock_bookie)
+
+    def test_twice(self, after_clear, caplog):
         """Ensure running CLEAR twice does nothing."""
         warnings = ('metadata',)
         self.run_again_and_check_nothing_changed(after_clear, caplog,
                                                  acceptable_warnings=warnings)
+
+    def test_twice_domains(self,
+                           archived_domains,
+                           after_bookkeper_run,
+                           caplog,
+                           mocker):
+        """Ensure running CLEAR twice does nothing."""
+        after_clear = after_bookkeper_run(archived_domains, self.mode)
+        caplog.clear()
+        self.patch_for_domains(mocker)
+        self.test_twice(after_clear, caplog)

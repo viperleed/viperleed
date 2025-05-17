@@ -84,10 +84,19 @@ or whether to delete the ``*_edited`` files.
 See :ref:`other_bookie_modes` for the description of non-archiving-related
 |bookkeeper| modes.
 
+When |bookkeeper| is executed in the root directory of a multi-domain
+calculation, all the domain subfolders are processed in the same mode,
+except for those subfolders in which |bookkeeper| was manually invoked
+explicitly.
+
 .. versionchanged:: 0.13.0
     The |bookkeeper| behavior was overhauled and the names of the modes were
     changed. See :ref:`old_bookkeeper` for details concerning differences
     with respect to earlier versions.
+
+.. versionchanged:: 0.13.0
+    |bookkeeper| automatically propagates to domain subfolders when executed
+    in the root of a multi-domain calculation.
 
 .. [#1] Before removal, results are archived to |history| if
         no |history| directory exists for the run to be cleared.

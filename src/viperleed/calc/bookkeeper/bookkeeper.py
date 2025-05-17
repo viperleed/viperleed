@@ -10,27 +10,34 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from contextlib import nullcontext
-from enum import IntEnum
 import logging
 from pathlib import Path
 
 from viperleed import __version__
 from viperleed.calc.bookkeeper import log
+from viperleed.calc.bookkeeper.domain_finder import DomainFinder
+from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
 from viperleed.calc.bookkeeper.errors import _FileNotOlderError
+from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
+from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history.entry.entry import HistoryInfoEntry
 from viperleed.calc.bookkeeper.history.errors import CantDiscardEntryError
 from viperleed.calc.bookkeeper.history.errors import CantRemoveEntryError
+from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.bookkeeper.history.errors import MetadataMismatchError
 from viperleed.calc.bookkeeper.history.errors import NoHistoryEntryError
 from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
+from viperleed.calc.bookkeeper.root_explorer import DomainRootExplorer
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
+from viperleed.calc.bookkeeper.utils import ask_user_confirmation
 from viperleed.calc.bookkeeper.utils import file_contents_identical
 from viperleed.calc.bookkeeper.utils import make_property
 from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.lib.log_utils import logging_silent
+from viperleed.calc.lib.string_utils import harvard_commas
 from viperleed.calc.lib.time_utils import DateTimeFormat
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import MOVED_LABEL
@@ -56,13 +63,6 @@ viperleed (v%s). Please double-check that the correct files have been
 processed, as bookkeeper is not entirely backward compatible. See the
 documentation at https://viperleed.org/content/calc/sections/bookkeeper.html
 for details on the changes introduced in bookkeeper since v{_MIN_CALC_WARN}.'''
-
-
-class BookkeeperExitCode(IntEnum):
-    """Exit code of the bookkeeper."""
-    SUCCESS = 0
-    NOTHING_TO_DO = -1
-    FAIL = 1
 
 
 class Bookkeeper:
@@ -106,7 +106,7 @@ class Bookkeeper:
         return (tensor_number if tensor_number is not None
                 else self._root.tensors.most_recent)
 
-    def run(self, mode, requires_user_confirmation=True):
+    def run(self, mode, requires_user_confirmation=True, domains=None):
         """Run the bookkeeper in the given mode.
 
         Parameters
@@ -114,9 +114,18 @@ class Bookkeeper:
         mode : str or BookkeeperMode
             Which bookkeeper mode to use. See help(BookkeeperMode).
         requires_user_confirmation : bool, optional
-            Whether user confirmation is necessary before proceeding
-            with destructive actions. Only used in DISCARD_FULL mode.
-            Default is True.
+            Whether user confirmation is necessary before proceeding.
+            If False, the behavior is as if the user replied "yes".
+            Used in DISCARD_FULL mode before performing destructive
+            actions and in domain runs in case any inconsistencies
+            are found in the information stored in history. Default
+            is True.
+        domains : Sequence or None, optional
+            Paths to domain folders in which bookkeeper is executed
+            in addition to self.cwd. The same `mode` is used for all.
+            If not given or None, domain subfolders are searched in
+            self.cwd, based on the metadata stored in the last history
+            folder in self.cwd. Default is None.
 
         Returns
         -------
@@ -138,32 +147,30 @@ class Bookkeeper:
         except ValueError as exc:
             raise ValueError(f'Unknown mode {mode}') from exc
 
-        try:
-            runner = getattr(self, f'_run_{mode.name.lower()}_mode')
-        except AttributeError as exc:
-            raise NotImplementedError from exc
+        kwargs = {
+            'mode': mode,
+            'requires_user_confirmation': requires_user_confirmation,
+            }
+        if domains is None:
+            try:
+                domains, path_to_main = self._find_domains(**kwargs)
+            except NotAnInteractiveShellError:
+                LOGGER.info('')
+                return BookkeeperExitCode.FAIL
+            except (MetadataError, MainPathNotFoundError):
+                LOGGER.error('Please proceed manually.')
+                LOGGER.info('')
+                return BookkeeperExitCode.FAIL
+            if path_to_main:
+                # This is a subdomain. Make sure we pull
+                # information out of the main log file.
+                main_root = RootExplorer(path_to_main, self)
+                main_root.collect_info(silent=True)
+                self._root = DomainRootExplorer(self.cwd, self, main_root)
 
-        self._mode = mode
-        self._requires_user_confirmation = requires_user_confirmation
-        # Do not bother logging messages when the user asked to
-        # --fix: some warnings will be fixed anyway. Others will
-        # re-appear at the next run.
-        self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
-        LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
-        self._warn_about_old_calc()
-        try:
-            exit_code = runner()
-        finally:
-            # Clean up all the state attributes so we
-            # don't risk giving the wrong information.
-            self._clean_state()
-        found_nothing = (
-           exit_code is BookkeeperExitCode.NOTHING_TO_DO
-           and mode not in (BookkeeperMode.ARCHIVE,)  # logs already
-           )
-        if found_nothing:
-            LOGGER.info('Found nothing to do. Exiting...')
-        LOGGER.info('')
+        if domains:
+            return self._run_in_root_and_subdomains(domains, **kwargs)
+        exit_code, _ = self._run_one_domain(**kwargs)
         return exit_code
 
     def update_from_cwd(self, silent=False):
@@ -384,6 +391,28 @@ class Bookkeeper:
                 )
             raise
 
+    def _check_may_discard_full_domains(self, domains):
+        """Ensure bookkeeper can run in DISCARD_FULL in all domains."""
+        msg = ('Checking whether it is possible to '
+               f'{BookkeeperMode.DISCARD_FULL.name} '
+               'the most-recent results %s.')
+        self.update_from_cwd(silent=True)  # Only first log message
+        LOGGER.info(msg, 'in the root directory')
+        self._check_may_discard_full()     # Raises if not possible
+
+        # If we manage to reach here, we should check that
+        # it is also possible to execute in all domains.
+        for domain in domains:
+            # Notice that here, differently from what we do in
+            # _run_in_root_and_subdomains, we can use self._root
+            # as we don't run anything in the root directory.
+            domain_bookie = DomainBookkeeper(self._root, cwd=domain)
+            with logging_silent():  # No logs from the domains
+                domain_bookie.update_from_cwd()
+                log.remove_bookkeeper_logfile(domain_bookie.history.path)
+            LOGGER.info(msg, f'of domain {domain.name}')
+            domain_bookie.check_may_discard_full()
+
     def _clean_state(self):
         """Rebuild (almost) the same state as after __init__.
 
@@ -447,6 +476,48 @@ class Bookkeeper:
         self._root.mark_edited_files()
         return True
 
+    def _find_domains(self, mode, requires_user_confirmation):
+        """Find registered domain subfolders of the current directory.
+
+        Only the last history entry in the current directory (as well
+        as the last one in each domain subfolder) is checked.
+
+        Parameters
+        ----------
+        mode : BookkeeperMode
+            The mode bookkeeper is running in. Only used for
+            error reporting.
+        requires_user_confirmation : bool
+            Whether users will be asked to confirm in case any
+            inconsistencies are found in the metadata stored
+            in history.
+
+        Returns
+        -------
+        domain_paths : tuple
+            Absolute paths to the subfolders of the current
+            directory that are registered as domains.
+        main_root_path : str or None
+            Absolute path to the main root directory of the
+            multi-domain calculation. Non-None only if the
+            current directory is a registered domain subfolder
+            without a viperleed.calc log file.
+        """
+        self.update_from_cwd(silent=True)  # Only the first log message
+        finder = DomainFinder(self, requires_user_confirmation)
+        finder.collect_info()
+        try:
+            domains = finder.find_domains(mode)
+        except MetadataError as exc:
+            LOGGER.error(str(exc))
+            raise
+        if finder.is_subdomain and self._root.logs.most_recent is None:
+            # We're running in a domain subfolder without a log file
+            main_root, _ = finder.domain_info
+        else:
+            main_root = None
+        return tuple(self.cwd/d for d in domains), main_root
+
     def _make_and_copy_to_history(self):
         """Create new history subfolder and copy all files there.
 
@@ -498,7 +569,7 @@ class Bookkeeper:
         # Attach file handler for history/bookkeeper.log
         log.add_bookkeeper_logfile(self.history.path)
         LOGGER.info(  # Log only once per instance
-            '\n### Bookkeeper running at '
+            '### Bookkeeper running at '
             f'{DateTimeFormat.LOG_CONTENTS.now()} ###'
             )
         self._state_info['logger_prepared'] = True
@@ -528,7 +599,7 @@ class Bookkeeper:
 
         # Finally, the history.info entry
         LOGGER.info('The following entry will be deleted '
-                    f'from {self.history.info.path.name}:'
+                    f'from {self.history.info.path.name}: '
                     f'{self.history.info.last_entry}'.rstrip())
         LOGGER.info('Calculation data will be lost irreversibly.')
 
@@ -538,15 +609,17 @@ class Bookkeeper:
         # a history.info entry, mark edited input files...
         did_archive = self._do_prerun_archiving_and_mark_edited()
         if not did_archive:
-            return BookkeeperExitCode.NOTHING_TO_DO
+            self._root.complain_about_edited_files()
+            return BookkeeperExitCode.NOTHING_TO_DO, None
 
+        last_folder = self.history.last_folder
         # ...mark non-edited inputs as _ori, and prepare inputs for
         # the next execution of calc (from OUT or original_inputs)
         try:
             self._root.prepare_for_next_calc_run()
         except OSError:
-            return BookkeeperExitCode.FAIL
-        return BookkeeperExitCode.SUCCESS
+            return BookkeeperExitCode.FAIL, last_folder
+        return BookkeeperExitCode.SUCCESS, last_folder
 
     def _run_clear_mode(self):
         """Execute bookkeeper in CLEAR mode."""
@@ -556,8 +629,10 @@ class Bookkeeper:
         if did_clear_root:
             LOGGER.info('Successfully prepared the current directory '
                         'for the next run of viperleed.calc.')
-        return (BookkeeperExitCode.SUCCESS if did_anything
-                else BookkeeperExitCode.NOTHING_TO_DO)
+        exit_code = (BookkeeperExitCode.SUCCESS if did_anything
+                     else BookkeeperExitCode.NOTHING_TO_DO)
+        last_folder = self.history.last_folder if did_archive else None
+        return exit_code, last_folder
 
     # TODO: how to handle the TENSOR_INDEX case? Currently we attempt
     # removal of the MAXIMUM tensor number, not the LAST one that ran.
@@ -569,33 +644,38 @@ class Bookkeeper:
         try:
             self._check_may_discard_full()
         except NoHistoryEntryError:
-            return BookkeeperExitCode.NOTHING_TO_DO
+            return BookkeeperExitCode.NOTHING_TO_DO, None
         except (CantRemoveEntryError,
                 FileNotFoundError,
                 MetadataMismatchError):
-            return BookkeeperExitCode.FAIL
+            return BookkeeperExitCode.FAIL, None
 
         self._print_discard_info()
-        if not self._user_confirmed():
-            return BookkeeperExitCode.NOTHING_TO_DO
+        try:
+            user_confirmed = self._user_confirmed()
+        except NotAnInteractiveShellError:
+            return BookkeeperExitCode.FAIL, None
+
+        if not user_confirmed:
+            return BookkeeperExitCode.NOTHING_TO_DO, None
 
         # Delete the history folders, stuff in workhistory,
         # and output files/folders in the root directory
         try:
-            self.history.discard_most_recent_run()
+            history_deleted = self.history.discard_most_recent_run()
         except OSError:
-            return BookkeeperExitCode.FAIL
+            return BookkeeperExitCode.FAIL, None
         self._workhistory.discard_workhistory_root()
         self._root.revert_to_previous_calc_run()
 
         # Tensors and deltas, if created during the last run
-        self._root.remove_tensors_and_deltas()
+        self._root.remove_tensors_and_deltas(history_deleted)
 
         # And the history entry from history.info
         self.history.info.remove_last_entry()
         LOGGER.info('Successfully deleted the results of '
                     'the last viperleed.calc execution.')
-        return BookkeeperExitCode.SUCCESS
+        return BookkeeperExitCode.SUCCESS, None
 
     def _run_discard_mode(self):
         """Execute bookkeeper in DISCARD mode."""
@@ -612,29 +692,194 @@ class Bookkeeper:
                 emit_log = LOGGER.warning if no_entry else LOGGER.error
                 emit_log('Failed to mark as discarded the last '
                          f'entry in {HISTORY_INFO_NAME}: {exc}')
-                return (BookkeeperExitCode.NOTHING_TO_DO if no_entry
-                        else BookkeeperExitCode.FAIL)
+                exit_code = (BookkeeperExitCode.NOTHING_TO_DO if no_entry
+                             else BookkeeperExitCode.FAIL)
+                return exit_code, None
         LOGGER.info('Successfully marked as discarded the '
                     f'last entry in {HISTORY_INFO_NAME}.')
-        return BookkeeperExitCode.SUCCESS
+        last_folder = self.history.last_folder if did_archive else None
+        return BookkeeperExitCode.SUCCESS, last_folder
 
     def _run_fix_mode(self):
         """Fix format inconsistencies found in history and history.info."""
         did_fix = self.history.fix()
-        return (BookkeeperExitCode.SUCCESS if did_fix
-                else BookkeeperExitCode.NOTHING_TO_DO)
+        exit_code = (BookkeeperExitCode.SUCCESS if did_fix
+                     else BookkeeperExitCode.NOTHING_TO_DO)
+        return exit_code, None
+
+    def _run_in_root_and_subdomains(self, domains, mode, **kwargs):
+        """Execute bookkeeper in its cwd as well as all subdomains."""
+        if mode is BookkeeperMode.DISCARD_FULL:
+            try:
+                self._check_may_discard_full_domains(domains)
+            except (CantRemoveEntryError,
+                    FileNotFoundError,
+                    MetadataMismatchError,
+                    NoHistoryEntryError):
+                LOGGER.error('Cannot safely run bookkeeper in mode '
+                             f'{mode.name} on all domains. Please '
+                             'proceed manually.')
+                LOGGER.info('')
+                return BookkeeperExitCode.FAIL
+
+        # Store a RootExplorer instance BEFORE running on the main
+        # domain, as _run_one_domain will collect information from
+        # there and later on create a new instance (in _clean_state).
+        # However, we need up-to-date information for running in the
+        # subdomains, BEFORE any deleting/archiving is done, as the
+        # log file may be deleted too. Also, we can't use self._root,
+        # as clear_for_next_calc_run does internally re-collect info.
+        main_root = RootExplorer(self.cwd, self)
+        main_root.collect_info(silent=True)
+
+        # Store information in the root explorers about the presence
+        # of domains. This has impact on which input files we may store
+        # in history as well as which ones will be kept as non-suffixed
+        # in the root directory. We should not rely on DomainFinder,
+        # whose find_potential_domains is bugged. See also #344.
+        self._root.has_domains = True
+        main_root.has_domains = True
+        main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)
+        exit_codes = [
+            main_exit_code,
+            *self._run_subdomains(domains,
+                                  main_root,
+                                  main_folder,
+                                  mode,
+                                  **kwargs),
+            ]
+        exit_code = BookkeeperExitCode.from_codes(exit_codes)
+        if exit_code is BookkeeperExitCode.FAIL and domains:
+            LOGGER.warning('Bookkeeper failed and may not have processed '
+                           'some domain directories. Make sure to invoke '
+                           f'\'bookkeeper {mode.long_flag}\' in all domain '
+                           'subfolders or try again at this path.')
+            LOGGER.info('')
+        return exit_code
+
+    def _run_one_domain(self, mode, requires_user_confirmation=True):
+        """Execute Bookkeeper in `mode` for a single domain.
+
+        Parameters
+        ----------
+        mode : BookkeeperMode
+            Which bookkeeper mode to use.
+        requires_user_confirmation : bool, optional
+            Whether user confirmation is necessary before proceeding
+            with destructive actions. Only used in DISCARD_FULL mode.
+            Default is True.
+
+        Returns
+        -------
+        exit_code : BookkeeperExitCode
+            The result of executing Bookkeeper in `mode`.
+        last_folder : HistoryFolder or None
+            The last folder that was archived, if any. None otherwise.
+
+        Raises
+        ------
+        NotImplementedError
+            If `mode` is a valid bookkeeper mode, but
+            there is no method named _run_<mode>_mode.
+        OSError
+            If creation of the history folder or any of the subfolders
+            where results are to be stored fails.
+        """
+        try:
+            runner = getattr(self, f'_run_{mode.name.lower()}_mode')
+        except AttributeError as exc:
+            raise NotImplementedError from exc
+
+        self._mode = mode
+        self._requires_user_confirmation = requires_user_confirmation
+        # Do not bother logging messages when the user asked to
+        # --fix: some warnings will be fixed anyway. Others will
+        # re-appear at the next run.
+        self.update_from_cwd(silent=mode is BookkeeperMode.FIX)
+        LOGGER.info(f'Running bookkeeper in {mode.name} mode in {self.cwd}.')
+        self._warn_about_old_calc()
+        try:
+            exit_code, last_folder = runner()
+        finally:
+            # Clean up all the state attributes so we
+            # don't risk giving the wrong information.
+            self._clean_state()
+        found_nothing = (
+           exit_code is BookkeeperExitCode.NOTHING_TO_DO
+           and mode not in (BookkeeperMode.ARCHIVE,)  # logs already
+           )
+        if found_nothing:
+            LOGGER.info('Found nothing to do. Exiting...')
+        LOGGER.info('')
+        return exit_code, last_folder
+
+    def _run_subdomains(self, domains, main_root, main_folder, mode, **kwargs):
+        """Execute bookkeeper in `domains`.
+
+        Parameters
+        ----------
+        domains : Sequence of Path
+            Absolute path to each of the subdomain folders to be
+            processed.
+        main_root : RootExplorer
+            Handler of the **main** root folder of the multi-domain
+            calculation (i.e., where calc was originally invoked).
+        main_folder : HistoryFolder or None
+            The subfolder of `main_root`.path/'history' where the
+            results of the main calc execution were stored (i.e.,
+            not one of those coming from workhistory). Used for
+            storing metadata information about subdomains.
+        mode : BookkeeperMode
+            The mode in which to run in all `domains`.
+        **kwargs : object, optional
+            Other keyword arguments, passed unaltered to each of
+            the .run calls that execute in `domains`.
+
+        Yields
+        ------
+        domain_exit_code : BookkeeperExitCode
+            One exit code for each of the `domains` in which
+            bookkeeper was executed in `mode`.
+
+        Notes
+        -----
+        `main_folder` is only updated with domain information after all
+            the `domains` have been processed. This means that it is
+            necessary to **exhaust this generator function** before
+            `main_folder` contains domain-related metadata information.
+            Conversely, each of the `domains` subfolders contain
+            domain markings as soon as they have been processed.
+        """
+        assert domains
+        domain_rel_paths = []
+        for path in domains:
+            try:
+                path = path.relative_to(self.cwd).as_posix()
+            except ValueError:
+                pass
+            domain_rel_paths.append(path)
+        LOGGER.info('Running bookkeeper in domain folders %s:',
+                    harvard_commas(*domain_rel_paths))
+        domain_folders = []    # Archived HistoryFolder for each domain
+        for path in domains:
+            domain_bookie = DomainBookkeeper(main_root, cwd=path)
+            dom_exit, folder = domain_bookie.run_in_subdomain(main_folder,
+                                                              mode,
+                                                              **kwargs)
+            domain_folders.append(folder)
+            yield dom_exit
+        if main_folder:
+            main_folder.mark_as_domains_main(domain_rel_paths, domain_folders)
+            main_folder.metadata.write()
+        LOGGER.info('Done processing domain folders %s.',
+                    harvard_commas(*domain_rel_paths))
+        LOGGER.info('')
 
     def _user_confirmed(self):
         """Return whether the user wants to proceed with discarding."""
         if not self._requires_user_confirmation:
             return True
-        while True:
-            reply = input('Are you sure you want to proceed (y/N)? ')
-            reply = reply.lower()
-            if not reply or reply.startswith('n'):
-                return False
-            if reply.startswith('y'):
-                return True
+        return ask_user_confirmation(self._mode)
 
     def _warn_about_old_calc(self):
         """Emit warnings when this tree was created by an early calc."""
@@ -649,6 +894,112 @@ class Bookkeeper:
             version = self.history.last_folder.logs.version
         if version and version < _MIN_CALC_WARN:
             LOGGER.warning(_WARN_OLD_CALC, version)
+
+
+class DomainBookkeeper(Bookkeeper):
+    """A Bookkeeper for handling a domain subfolder.
+
+    The primary reason for having an explicit class for this is that
+    domain subfolders do not contain a log file. Hence information
+    derived from the log file should be taken from the root folder
+    of the main calculation.
+    """
+
+    def __init__(self, main_root, cwd=None):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        main_root : RootExplorer
+            Information from the root folder of the main calculation
+            directory. It must already be up to date by calling
+            main_root.collect_info before any editing occurs in this
+            root directory. This instance will never collect_info
+            again on `main_root`.
+        cwd : Pathlike, optional
+            Path to the domain subfolder to be handled. If not given
+            or None, take the current directory. Default is None.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(cwd)
+        # IMPORTANT for developers: NEVER call collect_info on this
+        # _main_root RootExplorer in this class, as the root folder
+        # may have been modified by the main bookkeeper by that time.
+        # Similarly, DO NOT re-create this attribute from its .path.
+        # This means that properties such as _main_root.needs_archiving
+        # should NEVER be considered up to date.
+        self._main_root = main_root
+        self._root = DomainRootExplorer(self._root.path, self, main_root)
+
+    def check_may_discard_full(self):
+        """Log and raise unless DISCARD_FULL is possible."""
+        # This is just a wrapper around the private method in order
+        # to make it public for DomainBookkeeper (as opposed to
+        # Bookkeeper).
+        self._check_may_discard_full()
+
+    def run_in_subdomain(self, main_folder, *args, **kwargs):
+        """Execute Bookkeeper in this subdomain.
+
+        Parameters
+        ----------
+        main_folder : HistoryFolder
+            The main folder created in the history of the root
+            of the multi-domain calculation. Used for storing
+            metadata information in history folders that may
+            be created in this subdomain.
+        *args : object
+            Positional arguments, passed on unaltered to the
+            "run" call for this subdomain.
+        **kwargs : object, optional
+            Optional keyword arguments, passed on unaltered
+            to the "run" call for this subdomain.
+
+        Returns
+        -------
+        exit_code : BookkeeperExitCode
+            The exit code resulting from running bookkeeper
+            in this subdomain.
+        archived_folder : HistoryFolder or None
+            The "main" folder that was added to the history of
+            this subdomain as a result of running bookkeeper.
+        """
+        try:
+            exit_code, archived_folder = self._run_one_domain(*args, **kwargs)
+        finally:
+            log.remove_bookkeeper_logfile(self.history.path)
+        if archived_folder:
+            archived_folder.mark_as_domain(self._main_root.path, main_folder)
+            archived_folder.metadata.write()
+        return exit_code, archived_folder
+
+    # The next method needs to be overridden because the signature
+    # of __init__ is changed compared to the one of Bookkeeper.
+    def _clean_state(self):
+        """Rebuild (almost) the same state as after __init__.
+
+        The only surviving attributes are the ones given
+        at __init__ and the state that concerns logging.
+
+        Returns
+        -------
+        None.
+        """
+        logger_prepared = self._state_info['logger_prepared']
+
+        # Note on the disable: while it is indeed not very elegant to
+        # call __init__ again, it is the simplest way to (i) make it
+        # clear in __init__ which attributes we have, and (ii) avoid
+        # code repetition here. The alternative would be to set all
+        # attributes and keys to None in __init__, and call another
+        # method both in __init__ and here. This seems a lot of
+        # complication just to reset (almost) everything to None.
+        # pylint: disable-next=unnecessary-dunder-call
+        self.__init__(self._main_root, cwd=self.cwd)
+        self._state_info['logger_prepared'] = logger_prepared
 
 
 def _check_newer(older, newer):
