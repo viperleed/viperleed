@@ -15,6 +15,10 @@ class BookkeeperError(Exception):
     """Base class of all bookkeeper-related errors."""
 
 
+class BookkeeperUnexpectedError(BookkeeperError):
+    """Something went wrong. Probably a bug in bookkeeper."""
+
+
 class FileOperationFailedError(BookkeeperError):
     """Something went wrong when moving/copying files."""
 

@@ -130,6 +130,33 @@ class RootExplorer:
                        f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
                        'files.')
 
+    def ensure_has_unlabled_inputs(self):
+        """Make sure there is always unlabeled versions of any _ori file.
+
+        The unlabeled versions are created as copies of the _ori-suffixed
+        ones (unless there is also an _edited version).
+
+        Returns
+        -------
+        any_missing : bool
+            Whether any unlabeled file was added.
+        """
+        any_missing = False
+        for ori_file in self.path.glob(f'*{ORI_SUFFIX}'):
+            unlabeled = ori_file.name.replace(ORI_SUFFIX, '')
+            unlabeled_file = ori_file.with_name(unlabeled)
+            edited_file = ori_file.with_name(f'{unlabeled}{EDITED_SUFFIX}')
+            if edited_file.is_file() or unlabeled_file.is_file():
+                continue
+            any_missing = True
+            try:
+                shutil.copy2(ori_file, unlabeled_file)
+            except OSError as exc:
+                LOGGER.error(f'Could not create file '
+                             f'{self._relative_path(unlabeled_file)} '
+                             f'from its *{ORI_SUFFIX} version.')
+        return any_missing
+
     def infer_run_info(self):
         """Return a dictionary of information read from the newest calc log."""
         return self.logs.infer_run_info()
