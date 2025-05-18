@@ -10,7 +10,7 @@ __license__ = 'GPLv3+'
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.bookkeeper.bookkeeper import BookkeeperExitCode as ExitCode
+from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode as ExitCode
 
 
 def test_value():
@@ -18,6 +18,7 @@ def test_value():
     assert not ExitCode.SUCCESS.value
     assert ExitCode.NOTHING_TO_DO.value < 0
     assert ExitCode.FAIL.value > 0
+    assert ExitCode.MISSING_UNLABELED_FILES > 0
 
 
 class TestFromCodes:
@@ -29,6 +30,8 @@ class TestFromCodes:
         'one fail': ((ExitCode.SUCCESS, ExitCode.FAIL), ExitCode.FAIL),
         'one nothing': ((ExitCode.SUCCESS, ExitCode.NOTHING_TO_DO),
                         ExitCode.SUCCESS),
+        'one missing': ((ExitCode.MISSING_UNLABELED_FILES, ExitCode.SUCCESS),
+                        ExitCode.MISSING_UNLABELED_FILES),
         }
     @parametrize('codes,expect', _valid.values(), ids=_valid)
     def test_valid(self, codes, expect):
