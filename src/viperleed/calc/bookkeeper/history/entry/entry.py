@@ -59,7 +59,7 @@ LOGGER = logging.getLogger(__name__)
 
 # Format string for FixableSyntaxError raised because issues
 # are found in the whole entry when it is read from_string
-_FIX_RAW_MSG = 'Found {faulty} lines in entry'
+_FIX_RAW_MSG = 'Found {faulty} lines in entry.'
 
 
 # !! IMPORTANT !!
@@ -811,12 +811,15 @@ class SyntaxErrorLogger(AbstractContextManager):
 
     def _get_fixable_log_msg(self, problem):
         """Return a message for the logger for a fixable problem."""
+        problem = problem.rstrip()
+        if not problem.endswith('.'):
+            problem += '.'
         if not self.field:
             return problem
-        msg = f'Found entry with {problem}.'
+        msg = f'Found entry with {problem}'
         if self.tag not in msg:
             msg += f' Field: {self.tag}.'
-        return msg + ' '
+        return msg
 
     def _get_unfixable_log_msg(self):
         """Return a message for the logger for an unfixable problem."""
@@ -824,13 +827,13 @@ class SyntaxErrorLogger(AbstractContextManager):
             return 'entry'
         value_msg = ('' if self.field.is_missing or self.field.is_empty
                      else f' with value {self.field.value!r}')
-        return f'{self.tag} field{value_msg}'
+        return (f'{self.tag} ' if self.tag else '') + f'field{value_msg}'
 
     def _handle_fixable(self, exc):
         """Update TODOs, then log a message for a fixable problem."""
         self._add_fixable_todo(exc.action)
         LOGGER.warning(
-            f'{HISTORY_INFO_NAME}: {self._get_fixable_log_msg(exc.reason)}'
+            f'{HISTORY_INFO_NAME}: {self._get_fixable_log_msg(exc.reason)} '
             f'Consider running \'bookkeeper {Mode.FIX.long_flag}\'.'
             )
 
