@@ -417,6 +417,6 @@ def section_loop(rp, sl):
 
     logger.debug("End of section loop.")
     disp_ranges_str = '\n\t'.join(str(at.disp_ranges) for at in sl)
-    logger.debug(f'Total ranges of all displacements:\n{disp_ranges_str}')
+    logger.log(1, f'Total ranges of all displacements:\n{disp_ranges_str}')     # TODO: Consider deleting, it's not even really true - outside of the loop, this is only the *final* displacement ranges.
     cleanup(rp)
     return 0, state_recorder
