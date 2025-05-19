@@ -408,7 +408,6 @@ class ConstraintLine(ParsedLine):
         for target in self.targets[1:]:
             txt += f', {target}'
         txt += f' = {self.linear_operation}'
-        txt += f' = {self.element_ranges[0]}'
         txt += f'{self.link_target})'
         return txt
 
