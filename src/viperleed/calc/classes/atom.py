@@ -652,7 +652,7 @@ class Atom:                                                                     
         """
         if isinstance(cartpos, Atom):
             cartpos = cartpos.cartpos
-        releps = (1, 1, int(include_c_replicas))
+        releps = (1.01, 1.01, 1.01 if include_c_replicas else 0)
         complist, _ = add_edges_and_corners([self.cartpos], (self.pos,),
                                             releps, self.slab.ucell.T)
         return min(np.linalg.norm(cartpos - complist, axis=1))
