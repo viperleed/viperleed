@@ -17,7 +17,7 @@ from dataclasses import field
 import logging
 from typing import Dict
 
-
+import itertools
 import numpy as np
 
 from viperleed.calc.lib.coordinates import add_edges_and_corners
@@ -633,7 +633,7 @@ class Atom:                                                                     
     def distance(self, cartpos, include_c_replicas=False):
         """Return the distance of this atom from a cartpos.
 
-        2D or 3D replicas of this atom in other unit cells are also 
+        2D or 3D replicas of this atom in other unit cells are also
         considered, and the minimum distance is returned.
 
         Parameters
@@ -642,7 +642,7 @@ class Atom:                                                                     
             3D Cartesian coordinates to check against the position
             of this atom. If an Atom, its Cartesian position is used.
         include_c_replicas : bool
-            Whether replicas in the out-of-plane directions should be 
+            Whether replicas in the out-of-plane directions should be
             considered. The default is False (2D-replicas only).
 
         Returns
@@ -652,9 +652,11 @@ class Atom:                                                                     
         """
         if isinstance(cartpos, Atom):
             cartpos = cartpos.cartpos
-        releps = (1.01, 1.01, 1.01 if include_c_replicas else 0)
-        complist, _ = add_edges_and_corners([self.cartpos], (self.pos,),
-                                            releps, self.slab.ucell.T)
+        offsets = itertools.product((-1, 0, 1),
+                                    repeat=3 if include_c_replicas else 2)
+        ucell = (self.slab.ucell.T if include_c_replicas
+                 else self.slab.ab_cell.T)
+        complist = [self.cartpos + np.dot(v, ucell) for v in offsets]
         return min(np.linalg.norm(cartpos - complist, axis=1))
 
     def mergeDisp(self, el):
