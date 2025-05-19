@@ -73,6 +73,8 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
 class MeasurementException(Exception):
     """Base exception of instances of MeasurementABC."""
 
+class MeasurementDevicesConnectedError(MeasurementException):
+    """Raised if measurement devices are connected while setting settings."""
 
 class MeasurementIsRunningError(MeasurementException):
     """The same MeasurementABC was started again before it finished."""
@@ -258,7 +260,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         self._disconnect_primary_controller()
         self._primary_controller = new_controller
-        self.data_points.primary_controller = self.primary_controller
         self._connect_primary_controller()
 
     @property
@@ -400,8 +401,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """Return whether runtime settings are ok.
 
         This method is used to check if the runtime settings that result
-        from the given settings are enough to run a measurement. The base
-        implementation returns False if no primary controller exists.
+        from the given settings are enough to run a measurement. The
+        base implementation returns False if no primary controller
+        exists.
 
         Returns
         -------
@@ -486,20 +488,17 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         settings_path = sys_config.paths['configuration']
 
         handler.add_section('measurement_info', tags=SettingsTag.REGULAR)
-        line_edit = qtw.QLineEdit()
+        tip = '<nobr>This string will be appended</nobr> to the folder name.'
         handler.add_option('measurement_info', 'tag',
-                           handler_widget=line_edit,
+                           handler_widget=qtw.QLineEdit,
                            display_name='File suffix',
-                           )
-        text_field = qtw.QTextEdit()
+                           tooltip=tip,)
         handler.add_option('measurement_info', 'info',
-                           handler_widget=text_field,
-                           display_name='Comments',
-                           )
+                           handler_widget=qtw.QTextEdit,
+                           display_name='Comments',)
 
         handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
-        type_display = qtw.QLabel()
-        type_display.setText(type(self).__name__)
+        type_display = qtw.QLabel(type(self).__name__)
         handler.add_static_option(
             'measurement_settings', 'measurement_class',
             type_display, display_name='Measurement type',
@@ -531,13 +530,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                'a step from one energy to another.')
         handler.add_option('measurement_settings', 'step_profile',
                            handler_widget=widget, display_name='Step profile',
-                           tooltip=tip
-                           )
+                           tooltip=tip)
 
-        column_info = SettingsSectionColumnInfo(1)
+        second_column = SettingsSectionColumnInfo(position=1)
         device_section = _settings.DeviceEditor(
             self.settings, default_folder=settings_path,
-            may_have_cameras=True, column_info=column_info,
+            may_have_cameras=True, column_info=second_column,
             )
         handler.add_complex_section(device_section)
 
@@ -712,7 +710,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         Raises
         ------
-        RuntimeError
+        MeasurementDevicesConnectedError
             If any devices are still connected while attempting to
             set new settings. Call disconnect_devices_and_notify
             and wait for emission of devices_disconnected to
@@ -731,10 +729,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             mandatory_settings.
         """
         if any(device.connected for device in self.devices):
-            raise RuntimeError('Setting settings is only allowed after all '
-                               'devices have been disconnected. Make sure to '
-                               'disconnect them before attempting to set new '
-                               'settings. See help(measurement.set_settings).')
+            raise MeasurementDevicesConnectedError(
+                'Setting settings is only allowed after all devices '
+                'have been disconnected. Make sure to disconnect them '
+                'before attempting to set new settings. See '
+                'help(measurement.set_settings).'
+                )
 
         self._aborted = False  # Set False in case of abort through settings
 
@@ -750,9 +750,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         if not self._make_primary_ctrl():
             # Something went wrong (already reported in _make_primary).
-            # TODO: probably good to clean up secondaries and cameras!
+            self.primary_controller = None                                      # TODO: probably good to clean up secondaries and cameras!
             return False
-
+        self.data_points.primary_controller = self.primary_controller
         self._make_secondary_ctrls()
         self._make_cameras()
         self._make_tmp_directory_tree()
@@ -1428,7 +1428,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if len(info) != 2:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/primary_controller', '')
-            self.primary_controller = None
             return False
 
         try:
@@ -1436,7 +1435,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         except RuntimeError:
             # Something went wrong with instantiating, and is
             # already reported by emitting in _make_controller.
-            self.primary_controller = None
             return False
 
         self.primary_controller = ctrl

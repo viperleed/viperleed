@@ -30,107 +30,11 @@ from viperleed.guilib.measure.widgets.collapsibleviews import (
     CollapsibleCameraView, CollapsibleControllerView, CollapsibleDeviceView,
     )
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
+from viperleed.guilib.widgets.basewidgets import CollapsibleList
 from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
 from viperleed.guilib.widgets.basewidgets import QUncheckableButtonGroup
 from viperleed.guilib.widgets.basewidgets import _PIXEL_SPACING
 from viperleed.guilib.widgetslib import remove_spacing_and_margins
-
-
-class CollapsibleList(qtw.QScrollArea):
-    """Base class for CollapsibleLists."""
-
-    def __init__(self, parent=None):
-        """Initialise widget.
-
-        Parameters
-        ----------
-        parent : QObject
-            The parent QObject of this widget.
-
-        Returns
-        -------
-        None.
-        """
-        super().__init__(parent=parent)
-        # The _views dict contains the displayed CollapsibleViews as
-        # keys and the corresponding values are lists of the widgets
-        # that are displayed right next to each CollapsibleView in the
-        # CollapsibleList.
-        self._views = {}
-        self._widths = {}
-        self._top_widget_types = []
-        self._layout = None
-        self.setWidgetResizable(True)
-        self.clear()
-        self.setFrameStyle(self.Panel | self.Sunken)
-
-    @property
-    def views(self):
-        """Return views."""
-        return self._views
-
-    def clear(self):
-        """Clear all views in the list and delete references to them."""
-        self._views = {}
-        self._layout = qtw.QVBoxLayout()
-        self._layout.setSpacing(0)
-        self._make_scroll_area()
-
-    def insert_view(self, view):
-        """Insert new view at the bottom of the list.
-
-        Parameters
-        ----------
-        view : CollapsibleDeviceView
-            The view that is to be inserted into the
-            CollapsibleList.
-
-        Returns
-        -------
-        None.
-        """
-        self._add_top_widgets_to_view(view)
-        self._layout.insertWidget(self._layout.count()-1, view)
-
-    def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsibleView.
-
-        Parameters
-        ----------
-        view : CollapsibleView
-            The CollapsibleView to which the widgets will be attached.
-
-        Returns
-        -------
-        None.
-        """
-        self.views[view] = []
-        for widget_type in self._top_widget_types:
-            widget = widget_type()
-            view.add_top_widget(widget)
-            self.views[view].append(widget)
-
-    def _add_top_widget_types(self, *widg_types):
-        """Extend the list of widgets to add.
-
-        Parameters
-        ----------
-        *widg_types : type(QWidget)
-            A widget type of which an instance should be added
-            next to the button of each CollapsibleView.
-
-        Returns
-        -------
-        None.
-        """
-        self._top_widget_types.extend(widg_types)
-
-    def _make_scroll_area(self):
-        """Compose QScrollArea."""
-        widget = qtw.QWidget(parent=self)
-        self._layout.addStretch(1)
-        widget.setLayout(self._layout)
-        self.setWidget(widget)
 
 
 class CollapsibleDeviceList(CollapsibleList):

@@ -1134,7 +1134,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._cleanup_measurement_settings_dialog()
         self._switch_button_enable(True)
 
-    @qtc.pyqtSlot(Path, Exception)
+    @qtc.pyqtSlot(Path, str)
     def _on_measurement_settings_not_found(self, path, err):
         """Emit an error in response to no settings being detected."""
         base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR, path, err)

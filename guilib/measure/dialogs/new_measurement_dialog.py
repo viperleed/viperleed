@@ -34,7 +34,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
     """Dialog that handles selecting measurements."""
 
     measurement_selected = qtc.pyqtSignal(object, ViPErLEEDSettings)
-    settings_not_found = qtc.pyqtSignal(Path, Exception)
+    settings_not_found = qtc.pyqtSignal(Path, str)
 
     def __init__(self, parent=None, **kwargs):
         """Initialize dialog."""
@@ -75,20 +75,22 @@ class SelectNewMeasurementDialog(qtw.QDialog):
 
     def _compose_and_connect(self):
         """Place children widgets and connect signals."""
-        layout = qtw.QVBoxLayout()
+        # layout = qtw.QVBoxLayout()
+        layout = qtw.QFormLayout()
         for name, cls in ALL_MEASUREMENTS.items():
             self._ctrls['type_selection'].addItem(name, userData=cls)
         _bbox = QNoDefaultDialogButtonBox
         buttons = _bbox(_bbox.Ok | _bbox.Cancel)
-
-        layout.addWidget(self._ctrls['type_selection'])
-        layout.addWidget(self._ctrls['settings_folder'])
-        layout.addWidget(self._ctrls['settings_file'])
         self._ctrls['clone_settings'].setText('Create new settings'
-                                              ' from old settings.')
+                                              ' from old settings')
         self._ctrls['clone_settings'].setLayoutDirection(qtc.Qt.RightToLeft)
-        layout.addWidget(self._ctrls['clone_settings'])
-        layout.addWidget(buttons)
+
+        layout.addRow('Measurement type:', self._ctrls['type_selection'])
+        layout.addRow('Settings location:', self._ctrls['settings_folder'])
+        layout.addRow('Settings file:', self._ctrls['settings_file'])
+        layout.addRow(self._ctrls['clone_settings'])
+        layout.addRow(buttons)
+
         self._ctrls['settings_folder'].path_changed.connect(
             self._find_appropriate_settings
             )
@@ -176,7 +178,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         try:
             config.read(settings_path)
         except MissingSettingsFileError as err:
-            self.settings_not_found.emit(settings_path, err)
+            self.settings_not_found.emit(settings_path, str(err))
             super().reject()
             return
 

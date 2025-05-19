@@ -173,7 +173,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
     @property
     def has_hardware_interface(self):
         """Returns whether the view has a hardware interface or not."""
-        return self._device_info.has_hardware_interface
+        return self.device_info and self.device_info.has_hardware_interface
 
     @property
     def original_settings(self):
