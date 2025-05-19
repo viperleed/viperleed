@@ -102,7 +102,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
         if dist > self.geo:
             _LOGGER.debug(
                 f'MAX_TL_DISPLACEMENT: geometry: {atom} displaced by '
-                f'{dist} A (> {self.geo} A)')
+                f'{dist:.3f} A (> {self.geo} A)')
             return True
         vib_diff = {el: np.abs(atom.site.vibamp[el]
                                - atom.site.oriState.vibamp[el])
