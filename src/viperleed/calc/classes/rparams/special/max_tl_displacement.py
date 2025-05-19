@@ -12,12 +12,13 @@ __created__ = '2025-05-15'
 __license__ = 'GPLv3+'
 
 import numpy as np
-
+import logging
 from dataclasses import dataclass
 
 from .base import SpecialParameter
 from ..defaults import NO_VALUE
 
+_LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
@@ -97,9 +98,20 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
 
     def is_too_far(self, atom):
         """Return whether `atom` was displaced too much."""
-        if atom.distance(atom.oriState) > self.geo:
+        dist = atom.distance(atom.oriState)
+        if dist > self.geo:
+            _LOGGER.debug(
+                f'MAX_TL_DISPLACEMENT: geometry: {atom} displaced by '
+                f'{dist} A (> {self.geo} A)')
             return True
-        if any(np.abs(atom.site.vibamp[el] - atom.site.oriState.vibamp[el])
-               > self.vib for el in atom.site.vibamp):
+        vib_diff = {el: np.abs(atom.site.vibamp[el]
+                               - atom.site.oriState.vibamp[el])
+                    for el in atom.site.vibamp}
+        if any(v > self.vib for v in vib_diff.values()):
+            max_dist_el = max(vib_diff, key=vib_diff.get)
+            _LOGGER.debug(
+                f'MAX_TL_DISPLACEMENT: vibration: {atom} displaced by '
+                f'{vib_diff[max_dist_el]} A for element {max_dist_el} '
+                f'(> {self.vib} A)')
             return True
         return False
