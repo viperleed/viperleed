@@ -339,8 +339,8 @@ def section_loop(rp, sl):
                     rp.search_index += 1
                 for dp in rp.domainParams:
                     dp.rpars.search_index = rp.search_index
+                stop_search = False
                 if len(rp.disp_blocks) > rp.search_index and exceeds_tl_limit:
-                    stop_search = False
                     if rp.MAX_TL_DISPLACEMENT.action == 'ignore':
                         logger.warn(
                             'Displacements exceed MAX_TL_DISPLACEMENT, but '
