@@ -654,8 +654,11 @@ class Atom:                                                                     
             cartpos = cartpos.cartpos
         offsets = itertools.product((-1, 0, 1),
                                     repeat=3 if include_c_replicas else 2)
+        ucell = self.slab.ucell.T
+        if not include_c_replicas:
+            ucell = ucell[:2]
         ucell = (self.slab.ucell.T if include_c_replicas
-                 else self.slab.ab_cell.T)
+                 else self.slab.ucell.T)
         complist = [self.cartpos + np.dot(v, ucell) for v in offsets]
         return min(np.linalg.norm(cartpos - complist, axis=1))
 
