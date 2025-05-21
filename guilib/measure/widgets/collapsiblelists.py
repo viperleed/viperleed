@@ -143,6 +143,13 @@ class CollapsibleDeviceList(CollapsibleList):
             return True, ''
         return False , f'At least one {self._device_label} must be selected.'
 
+    def event(self, event):
+        """Extend event to match QScrollArea width to required width."""
+        width = self.widget().sizeHint().width()+10 if self.widget() else 10
+        if width > self.minimumWidth():
+            self.setMinimumWidth(width)
+        return super().event(event)
+
     def store_settings(self):
         """Store the settings of the selected devices."""
         for view in self.views:
