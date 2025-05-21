@@ -13,8 +13,11 @@ name = 'viperleed'
 description = 'Tools for quantitative low-energy electron diffraction'
 requires-python = '>=3.7'
 dynamic = ['version']
-license = 'GPL-3.0-or-later'
-license-files = ['LICENSE.md']
+license = {file = 'LICENSE.md'}
+# TODO: the next lines will be needed in 2026 when setuptools will
+# raise exceptions instead of issuing warnings. See also #364.
+# license = 'GPL-3.0-or-later'
+# license-files = ['LICENSE.md']
 readme = 'README.md'
 dependencies = [
     'fortranformat',
