@@ -585,33 +585,26 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._ctrls['set_energy'].clicked.connect(self._on_set_energy)
 
         # DIALOGS
-        self._dialogs['sys_settings'].settings_changed.connect(
-            self._on_sys_settings_changed
+        connect_dialogs = (
+            ('sys_settings', 'settings_changed',
+             self._on_sys_settings_changed),
+            ('sys_settings', 'finished', self._check_sys_settings_ok),
+            ('bad_px_finder', 'finished',
+             functools.partial(self._switch_button_enable, True)),
+            ('error_box', 'finished', self._report_errors),
+            ('firmware_upgrade', 'error_occurred', self._on_error_occurred),
+            ('bad_px_finder', 'error_occurred', self._on_error_occurred),
+            ('measurement_selection', 'measurement_selected',
+             self._create_measurement),
+            ('measurement_selection', 'settings_not_found',
+             self._on_measurement_settings_not_found),
+            ('measurement_selection', 'rejected',
+             self._on_measurement_cancelled),
             )
-        self._dialogs['sys_settings'].finished.connect(
-            self._check_sys_settings_ok
-            )
-        self._dialogs['bad_px_finder'].finished.connect(
-            functools.partial(self._switch_button_enable, True)
-            )
-        self._dialogs['error_box'].finished.connect(
-            self._report_errors
-            )
-        self._dialogs['firmware_upgrade'].error_occurred.connect(
-            self._on_error_occurred
-            )
-        self._dialogs['bad_px_finder'].error_occurred.connect(
-            self._on_error_occurred
-            )
-        self._dialogs['measurement_selection'].measurement_selected.connect(
-            self._create_measurement
-            )
-        self._dialogs['measurement_selection'].settings_not_found.connect(
-            self._on_measurement_settings_not_found
-            )
-        self._dialogs['measurement_selection'].rejected.connect(
-            self._on_measurement_cancelled
-            )
+        for dialog_name, signal_name, slot in connect_dialogs:
+            dialog = self._dialogs[dialog_name]
+            signal = getattr(dialog, signal_name)
+            signal.connect(slot)
         # OTHERS
         self.error_occurred.connect(self._on_error_occurred)
         self._measurement_thread.finished.connect(self._switch_button_enable)

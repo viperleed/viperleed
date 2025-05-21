@@ -12,12 +12,14 @@ This module defines widgets used in the settings dialog for
 MeasurementABC and subclass instances.
 """
 
+from abc import abstractmethod
 from ast import literal_eval
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.classes.abc import QMetaABC
 from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
     SettingsTag,
@@ -246,7 +248,7 @@ class StepProfileEditor(qtw.QDialog):                                           
         self.pick_profile = qtw.QComboBox()
         self._profile_editors = {
             name: cls()
-            for name, cls in ProfileEditorBase().subclasses.items()
+            for name, cls in ProfileStepEditorBase().subclasses.items()
             }
         self._populate_profile_options()
         self.setWindowTitle('Edit energy-step profile')
@@ -322,7 +324,7 @@ class StepProfileEditor(qtw.QDialog):                                           
         super().accept()
 
 
-class ProfileEditorBase(qtw.QWidget):
+class ProfileStepEditorBase(qtw.QWidget):#, metaclass=QMetaABC):
     """Base class for step profiles."""
 
     _subclasses = {}
@@ -340,8 +342,27 @@ class ProfileEditorBase(qtw.QWidget):
     def subclasses(self):
         return self._subclasses.copy()
 
+    # @abstractmethod
+    def set_profile(self, profile=None):
+        """Set displayed profile.
 
-class AbruptStepEditor(ProfileEditorBase):
+        Parameters
+        ----------
+        profile : object, optional
+            An object that describes the profile that should be set.
+
+        Returns
+        -------
+        None.
+        """
+
+    # @abstractmethod
+    def update_profile(self):
+        """Set the profile to the selected values."""
+        # Set self.profile to the selected values.
+
+
+class AbruptStepEditor(ProfileStepEditorBase):
     """Abrupt step."""
 
     name = 'abrupt'
@@ -361,7 +382,7 @@ class AbruptStepEditor(ProfileEditorBase):
         """Do nothing."""
 
 
-class LinearStepEditor(ProfileEditorBase):
+class LinearStepEditor(ProfileStepEditorBase):
     """Editor for selecting settings of a linear energy profile."""
 
     name = 'linear'
@@ -437,7 +458,7 @@ class LinearStepEditor(ProfileEditorBase):
             self.profile = ('abrupt',)
 
 
-class FractionalStepEditor(ProfileEditorBase):
+class FractionalStepEditor(ProfileStepEditorBase):
     """Editor for the settings of an energy profile with custom steps."""
 
     name = 'custom'
