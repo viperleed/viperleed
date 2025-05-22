@@ -10,7 +10,10 @@ STOP
 
 ! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
 
-BULK_LIKE_BELOW = 0.35
+BULK_LIKE_BELOW = 0.32
+BULK_LIKE_BELOW = 0.33  ! Multiple assignments
+BULK_LIKE_BELOW = 0.34  ! Multiple assignments
+BULK_LIKE_BELOW = 0.35  ! Multiple assignments
 
 SITE_DEF Ir = surf top(2)
 SITE_DEF O = ads top(1)

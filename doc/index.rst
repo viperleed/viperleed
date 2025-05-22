@@ -2,12 +2,12 @@
 
 .. raw:: latex
 
+   % Modify color of links to conform with those in html
    \def\Hy@colorlink#1{\begingroup\fontshape{\default}\selectfont}%
    \begingroup
    \sphinxsetup{%
-      InnerLinkColor={rgb}{0,0.120,0.204},
-      OuterLinkColor={rgb}{0,0.120,0.204}
-
+      InnerLinkColor={RGB}{41,128,185},
+      OuterLinkColor={RGB}{41,128,185}
    }
 
    % use heavy boxes for note, hint, important & tip
@@ -19,17 +19,6 @@
       {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
    \renewenvironment{sphinxtip}[1]
       {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
-
-   % add shortcuts to top of page
-   \AddEverypageHook{
-        \settowidth{\chapterNameLength}{\leftmark}%
-        \begin{textblock}{1}(0,0)%first argument {1} is number of blocks horiz
-        \vspace{0.1cm}
-        \,\ \hyperlink{link_content}{$\rightarrow$Contents}%
-        \,\ \ \ \Acrobatmenu{GoBack}{$\leftarrow$Back}%
-        \,\ \Acrobatmenu{GoForward}{Forward$\rightarrow$}%
-        \end{textblock}%
-    }%end AddEverypageHook
 
    % renew table of contents to include link
    \renewcommand{\sphinxtableofcontents}{%
@@ -45,34 +34,45 @@
    \pagenumbering{arabic}%
    }
 
+.. include:: /substitutions.rst
+
+=======================
 ViPErLEED documentation
 =======================
 
+Welcome to the documentation of :term:`ViPErLEED` and of the ``viperleed``
+:term:`Python` package.
+The ViPErLEED project comprises a set of :ref:`open-source<license>` tools that
+aims at drastically reducing the effort for quantitative low-energy electron
+diffraction [i.e., |LEED-IV|] on both experimental and computational fronts.
 
-Welcome to the manual for :term:`ViPErLEED` and the :term:`Python` package :term:`tleedm`.
-See the :ref:`Getting Started page<getting_started>`.
+The ViPErLEED source code is hosted on
+GitHub at `<https://github.com/viperleed>`__.
 
-The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims at drastically reducing the effort for a intensity [LEED-:math:`I(V)`] analysis, both on the computational and on the experimental side.
+.. todo::
+    See also the ViPErLEED publication series (LINKS).
 
-The package consists of:
+:numref:`toc_figure` shows an overview of the tools provided by the ViPErLEED
+project:
 
+-  The :ref:`ViPErLEED hardware<hardware>`
+      A set of hardware, firmware and control software for the easy
+      acquisition of |LEED-IV| data with pre-existing LEED systems
+      :cite:p:`viperleedMeasure`.
+-  The :ref:`imagej_plugins`
+      Software for extracting |IV| curves from the experimental data
+      ("movies") :cite:p:`schmidViPErLEEDPackageII2025`.
+-  The :ref:`viperleed.calc package<viperleed_calc>`
+      A Python package for the calculation of |IV| curves, quantitative
+      analysis of :term:`LEED` data, and surface-structure optimization
+      :cite:p:`kraushoferViPErLEEDPackageCalculation2025`.
 
-    i.  Hardware and software for data acquisition.
-    #.  Software for extracting :math:`I(V)` curves from the experimental data ("movies").
-    #.  Software for calculation of :math:`I(V)` curves for a given structure and structure optimization, by minimizing the difference between the calculated and experimental :math:`I(V)` data.
+.. _toc_figure:
+.. figure:: /_static/paper_figures/ViPErLEED-overview_embedded.svg
+   :width: 70%
+   :align: center
 
-For details please see the ViPErLEED publication series (**TODO**).
-This manual primarily deals with part **iii**.
-
-The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-dependent electron-scattering amplitudes and intensities of diffracted beams.
-These intensity curves, taken as a function of the primary beam energy, [often referred to as :math:`I(V)` curves or spectra] are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
-For more details consult works that cover the basics of :term:`LEED` and :term:`LEED-I(V)`, e.g.
-Chapter 4 in :cite:t:`fausterSurfacePhysicsFundamentals2020,fausterOberflachenphysikGrundlagenUnd2013` or the overview by :cite:t:`heinzElectronBasedMethods2013`.
-In ViPErLEED, these calculations are performed by the TensErLEED manager :term:`tleedm`.
-tleedm is a Python package that acts as a comprehensive wrapper and feature extension to the :term:`TensErLEED` program package.
-
-TensErLEED is used for the calculation of diffraction intensities of surface slabs (see also :ref:`reference calculation<ref-calc>`) and structure optimization using the :ref:`tensor LEED approach<tensor_leed>`.
-For computational details please have a look at the ViPErLEED paper (**TODO**) and the original work describing TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`.
+   Overview of the parts of the ViPErLEED project.
 
 
 .. Table of contents in LaTeX pdf called Contents
@@ -82,53 +82,70 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
    .. toctree::
       :caption: Contents
 
-.. toctree:: 
+.. toctree::
+    :maxdepth: 2
+    :caption: Getting started
 
-   Getting started<content/getting_started>
-   ViPErLEED segments<content/work_segments>
-   ASE Interface<content/aseapi>
+    content/installation
+    content/command_line_tools
+    content/background
 
-.. toctree:: 
-   :maxdepth: 2
-   :caption: Files
+.. toctree::
+    :maxdepth: 2
+    :caption: viperleed.calc
 
-   Input files<content/input_files>
-   Output files<content/output_files>
-   Supplementary files<content/supp_files>
+    viperleed calc<content/viperleed_calc>
 
+.. toctree::
+    :maxdepth: 2
+    :caption: ViPErLEED ImageJ plugins
 
-.. only:: html
+    content/imagej_plugins
 
-   .. toctree:: 
-      :maxdepth: 1
-      :caption: Parameters
+.. toctree::
+    :maxdepth: 2
+    :caption: Hardware and measurements
 
-      Overview by Name<content/files/input/params_by/param_name>
-      Overview by Section<content/files/input/params_by/param_section>
-      Overview by Topic<content/files/input/params_by/param_topics>
+    Hardware<content/hardware>
 
+.. toctree::
+    :maxdepth: 1
+    :caption: ViPErLEED Python API
 
-.. toctree:: 
-   :hidden:
-
-   content/param_toc
-
-
-.. toctree:: 
-   :maxdepth: 1
-   :caption: Utilities
-
-   Utilities<content/utilities>
+    content/api
 
 
+..
+    HANDLING OF APPENDICES
+    The next part is a bit ugly. Its purpose is to make only one \part
+    in LaTeX named "Appendix" (see content/appendix.rst) and have its
+    contents be "chapters". Using for latex the same definition as
+    for the non-latex case would make each chapter of "Appendix" a
+    part by itself, which is ugly. On the other hand, we really want
+    the contents of the appendix to appear at the top level in the
+    navigation bar in HTML.
 
-.. toctree:: 
-   :maxdepth: 1
-   :caption: References
 
-   References<references>
-   Glossary<content/glossary>
-   License<content/license>
+.. only:: latex
+
+    .. toctree::
+
+        content/appendix
+
+.. only:: not latex
+
+    .. toctree::
+        :maxdepth: 1
+        :caption: Appendix
+
+        content/appendix/citing
+        content/appendix/references
+        content/appendix/glossary
+        License<content/appendix/license>
+        content/appendix/notes_for_developers
+
+   A PDF version of this documentation is available for download in the
+   version-selection menu in the bottom-right corner of this page.
 
 .. raw:: latex
 
