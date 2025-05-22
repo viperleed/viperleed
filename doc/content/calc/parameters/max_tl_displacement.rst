@@ -42,3 +42,6 @@ Acceptable values for the ``action`` flag are:
 - ``stop``: Stop the run and discard all remaining blocks in :ref:`DISPLACEMENTS`. If there are more entries in :ref:`RUN` after the search (e.g. another reference calculation), these will still be executed.
 - ``ignore``: Proceed without a new reference calculation. A warning will be printed.
 - ``refcalc``: Perform a reference calculation, then continue with the next block in :ref:`DISPLACEMENTS`. If a second (positive float) value is passed, this is interpreted as a time and compared to the time taken by the previous reference calculation. If the reference calculation took longer than this value, the action will be to ``stop`` instead. Values are interpreted as seconds by default, or as hours or minutes if ``h`` or ``m`` is appended to indicate the unit.
+
+.. versionadded:: 0.14.0
+    This parameter is not available in versions <0.14.0. All earlier versions effectively behave like `MAX_TL_DISPLACEMENT action = ignore`.
