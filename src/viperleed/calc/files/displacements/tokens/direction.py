@@ -47,7 +47,7 @@ class DirectionToken(DisplacementsFileToken):
         The number of degrees of freedom (DOF), either 1, 2, or 3.
     vectors : tuple of np.ndarray
         A tuple of one, two or three orthonormal vectors spanning the direction
-        space.
+        space. Note, the vectors are in the zxy convention (LEED convention).
 
     Raises
     ------
@@ -64,7 +64,8 @@ class DirectionToken(DisplacementsFileToken):
         if not _dir_str:
             raise DirectionTokenParserError('Empty direction token.')
         self.direction_str = _dir_str
-        self.vectors, self.dof = self._parse_direction(_dir_str)
+        vecs, self.dof = self._parse_direction(_dir_str)
+        self.vectors = _to_zxy(vecs)
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
@@ -89,7 +90,7 @@ class DirectionToken(DisplacementsFileToken):
             raise ValueError(msg)
         vecs = [self._get_basis_vector(c) for c in direction_str]
         return (np.array(vecs), len(vecs))
-
+   
     def _get_basis_vector(self, label):
         return {
             'x': np.array([1, 0, 0]),
@@ -142,3 +143,8 @@ def _check_unsupported_directions(direction_str):
             f'Invalid direction: {direction_str}'
         )
         raise DirectionTokenParserError(msg)
+
+def _to_zxy(vecs):
+    """Convert from xyz to zxy axis (LEED) convention."""
+    # Apply axis permutation: x→y, y→z, z→x
+    return vecs[:, [2, 0, 1]]  # roll last axis backward
