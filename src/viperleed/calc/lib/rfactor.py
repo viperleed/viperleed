@@ -136,7 +136,7 @@ def R_1(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
     ) / nansum_trapezoid(theo_intensity, energy_step, axis=0)
 
     numerators = nansum_trapezoid(
-        abs((exp_intensity - beam_normalization * theo_intensity)),
+        abs(exp_intensity - beam_normalization * theo_intensity),
         energy_step,
         axis=0,
     )
