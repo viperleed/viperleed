@@ -953,56 +953,64 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             remaining values cannot be parsed.
         """
         param = 'MAX_TL_DISPLACEMENT'
-        _max_displ = self.rpars.MAX_TL_DISPLACEMENT
         if not assignment.values:
             raise ParameterHasNoValueError(param)
         if not assignment.flag:    # vib and geo
-            if len(assignment.values) not in {1, 2}:
-                raise ParameterNumberOfInputsError(parameter=param)
-            try:
-                _max_displ.assign_float_values(assignment.values)
-            except TypeError as exc:
-                raise ParameterFloatConversionError(param,
-                                                    message=str(exc)) from exc
-            except ValueError as exc:
-                raise ParameterRangeError(param, message=str(exc)) from None
+            self._interpret_max_tl_displacement_no_flag(
+                param, assignment.values)
         else:
             flag = assignment.flag.lower()
             if flag not in {'geo', 'vib', 'action'}:
                 raise ParameterUnknownFlagError(param, f'{flag!r}')
             if flag in {'geo', 'vib'}:
-                if len(assignment.values) != 1:
-                    raise ParameterNumberOfInputsError(parameter=param)
-                try:
-                    _max_displ.assign_single_value(flag, assignment.values[0])
-                except TypeError as exc:
-                    raise ParameterFloatConversionError(
-                        param, message=str(exc)) from exc
-                except ValueError as exc:
-                    raise ParameterRangeError(param,
-                                              message=str(exc)) from None
+                self._interpret_max_tl_displacement_named_geo_vib(
+                    param, flag, assignment.values)
             else:
-                # interpret action
-                action = assignment.values[0].lower()
-                if action not in {'stop', 'refcalc', 'ignore'}:
-                    raise ParameterValueError(f'Invalid value {action} for '
-                                              f'flag {flag}.')
-                if action != 'refcalc' and len(assignment.values) != 1:
-                    raise ParameterNumberOfInputsError(parameter=param)
-                if action == 'refcalc':
-                    if len(assignment.values) not in {1, 2, 3}:
-                        raise ParameterNumberOfInputsError(parameter=param)
-                    if (len(assignment.values) == 3
-                            and assignment.values[1] != '<'):
-                        raise ParameterParseError(parameter=param)
-                try:
-                    _max_displ.assign_action(assignment.values)
-                except TypeError as exc:
-                    raise ParameterParseError(param,
-                                              message=str(exc)) from exc
-                except ValueError as exc:
-                    raise ParameterRangeError(param,
-                                              message=str(exc)) from None
+                self._interpret_max_tl_displacement_action(
+                    param, assignment.values)
+
+    def _interpret_max_tl_displacement_no_flag(self, param, values):
+        if len(values) not in {1, 2}:
+            raise ParameterNumberOfInputsError(parameter=param)
+        try:
+            self.rpars.MAX_TL_DISPLACEMENT.assign_float_values(values)
+        except TypeError as exc:
+            raise ParameterFloatConversionError(param,
+                                                message=str(exc)) from exc
+        except ValueError as exc:
+            raise ParameterRangeError(param, message=str(exc)) from None
+
+    def _interpret_max_tl_displacement_named_geo_vib(self, param,
+                                                     flag, values):
+        if len(values) != 1:
+            raise ParameterNumberOfInputsError(parameter=param)
+        try:
+            self.rpars.MAX_TL_DISPLACEMENT.assign_single_value(
+                flag, values[0])
+        except TypeError as exc:
+            raise ParameterFloatConversionError(
+                param, message=str(exc)) from exc
+        except ValueError as exc:
+            raise ParameterRangeError(param,
+                                      message=str(exc)) from None
+
+    def _interpret_max_tl_displacement_action(self, param, values):
+        action = values[0].lower()
+        if action not in {'stop', 'refcalc', 'ignore'}:
+            raise ParameterValueError(f'Invalid value {action} for action.')
+        if action != 'refcalc' and len(values) != 1:
+            raise ParameterNumberOfInputsError(parameter=param)
+        if action == 'refcalc':
+            if len(values) not in {1, 2, 3}:
+                raise ParameterNumberOfInputsError(parameter=param)
+            if (len(values) == 3 and values[1] != '<'):
+                raise ParameterParseError(parameter=param)
+        try:
+            self.rpars.MAX_TL_DISPLACEMENT.assign_action(values)
+        except TypeError as exc:
+            raise ParameterParseError(param, message=str(exc)) from exc
+        except ValueError as exc:
+            raise ParameterRangeError(param, message=str(exc)) from None
 
     def interpret_optimize(self, assignment):
         """Assign parameter OPTIMIZE."""
