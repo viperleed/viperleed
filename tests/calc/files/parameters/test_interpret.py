@@ -3,6 +3,7 @@
 __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
+    'Florian Kraushofer (@fkraushofer)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-06-09'
