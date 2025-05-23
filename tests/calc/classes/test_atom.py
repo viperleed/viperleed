@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 import numpy as np
 import pytest
 from pytest import approx, mark
+from pytest_cases import parametrize
 
 
 # TODO: would need more extensive testing
@@ -103,3 +104,38 @@ class TestDisplacementRanges:
         assert self.diff(ranges.geo['Ag']).sum() == approx(0.1)
         assert self.diff(ranges.vib['Ag']) == approx(0.2)
         assert self.diff(ranges.occ['Ag']) == approx(0.3)
+
+
+class TestDistance:
+    """Tests for the distance function."""
+
+    distance_zero = {
+        'trivial': ((0, 0, 0), False),
+        '1D in a': ((1, 0, 0), False),
+        '1D in c': ((0, 0, 1), True),
+        '2D corner': ((1, 1, 0), False),
+        '3D corner': ((1, 1, 1), True),
+        }
+
+    @parametrize('vec,include_c', distance_zero.values(), ids=distance_zero)
+    def test_distance_zero(self, manually_displaced_atom, vec, include_c):
+        """Checks cases in which the atom matches a replica exactly."""
+        atom = manually_displaced_atom
+        ucell = atom.slab.ucell.T
+        assert atom.distance(atom.cartpos + np.dot(vec, ucell),
+                             include_c_replicas=include_c) == approx(0)
+
+    def test_distance_non_zero(self, manually_displaced_atom):
+        """Checks cases in which the distance is not zero."""
+        atom = manually_displaced_atom
+        ucell = atom.slab.ucell.T
+        abs_dist = np.linalg.norm(ucell[2])
+        assert atom.distance(atom.cartpos + ucell[2],
+                             include_c_replicas=False) == approx(abs_dist)
+        cartpos = atom.cartpos + ucell[0]*0.75
+        assert atom.distance(cartpos) <= 0.2501 * np.linalg.norm(ucell[0])
+
+    def test_atom_as_cartpos(self, manually_displaced_atom):
+        """Tests that atoms are interpreted as their cartpos."""
+        atom = manually_displaced_atom
+        assert atom.distance(atom) == approx(0)
