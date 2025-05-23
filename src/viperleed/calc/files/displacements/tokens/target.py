@@ -23,10 +23,18 @@ class TargetToken(DisplacementsFileToken):
 
     def _parse_target(self):
         """Parse the site, and optional nums or layers from the target string."""
-        parts = self.target_str.split()
+        parts = self.target_str.split(maxsplit=1)
         if not parts:
             raise TargetingError('Target string is empty')
         site_str = parts[0]
+
+        # do not allow numeric or layer-only targets
+        if site_str[0].isdigit() or 'L(' in site_str:
+            msg = (
+                f'Target must start with a non-numeric label, got: "{site_str}"'
+            )
+            raise TargetingError(msg)
+
         self.regex = _generate_label_match_regex(site_str)
 
         if len(parts) == 1:
@@ -43,6 +51,10 @@ class TargetToken(DisplacementsFileToken):
                 else start_layer
             )
             self.layers = list(range(start_layer, end_layer + 1))
+            # make sure there is nothing else after the layer
+            if len(parts[1].split()) > 1:
+                msg = f'Invalid target layer specification: "{parts[1]}".'
+                raise TargetingError(msg)
         else:
             # Check for a range like "1-4"
             range_match = re.match(r'(\d+)-(\d+)', parts[1])
@@ -52,7 +64,7 @@ class TargetToken(DisplacementsFileToken):
                 self.nums = list(range(start_num, end_num + 1))
             else:
                 # It's a list of numbers
-                self.nums = list(map(int, parts[1:]))
+                self.nums = list(map(int, parts[1].split()))
 
 
 
