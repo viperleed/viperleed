@@ -227,7 +227,7 @@ class TestAverageBeams(_TestInterpretBase):
     param = 'AVERAGE_BEAMS'
     valid = {'off': ('off', False),
              'all': ('all', (0.0, 0.0)),
-             'custom': ('45.0 60', (45.0, 60.0)),}
+             'custom': ('45.0 60', (45.0, 60.0)), }
     invalid = {
         'invalid input': ('invalid input', err.ParameterFloatConversionError),
         }
@@ -271,7 +271,7 @@ class TestBeamIncidence(_TestInterpretBase):
         'repeated': ('PHI 130, PHI 28, THETA 30', '',
                      err.ParameterNumberOfInputsError),
         'non float angle': ('PHI abcd, THETA 30', '',
-                     err.ParameterFloatConversionError),
+                            err.ParameterFloatConversionError),
         }
 
     @parametrize('val,expect', valid.values(), ids=valid)
@@ -422,7 +422,7 @@ class TestDomainStep(_TestInterpretBase):
     """Tests for interpreting DOMAIN_STEP."""
 
     param = 'DOMAIN_STEP'
-    valid = {'value': ('10', 10),}
+    valid = {'value': ('10', 10), }
     invalid = {
         'value': ('200', err.ParameterRangeError),
         'out of range low': ('-5', err.ParameterRangeError),
@@ -490,7 +490,8 @@ class TestElementMix(_TestSlabNotEmpty):
     @parametrize('poscar_el,mix,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, poscar_el, mix, expect, ag100_interpreter):
         """Check correct interpretation of valid FILAMENT_WF."""
-        self.check_assigned(ag100_interpreter, mix, expect, flags_str=poscar_el)
+        self.check_assigned(ag100_interpreter, mix, expect,
+                            flags_str=poscar_el)
 
     @parametrize('poscar_el,mix,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, poscar_el, mix, exc, ag100_interpreter):
@@ -527,7 +528,7 @@ class TestFilamentWF(_TestInterpretBase):
 
     param = 'FILAMENT_WF'
     valid = {'lab6': ('LaB6', 2.65),
-             'custom': ('1.0', 1.0),}
+             'custom': ('1.0', 1.0), }
     invalid = {
         'invalid_float': ('invalid', '', err.ParameterFloatConversionError),
         'flag': ('1.5', 'test', err.ParameterUnknownFlagError),
@@ -903,7 +904,7 @@ class TestPhaseshiftEps(_TestInterpretBase):
 
     param = 'PHASESHIFT_EPS'
     valid = {'float': ('0.1', 0.1),
-             'tag': ('fine', 0.01),}
+             'tag': ('fine', 0.01), }
     invalid = {
         'float': ('invalid', '', err.ParameterFloatConversionError),
         'negative': ('-1.0', '', err.ParameterRangeError),
@@ -1045,8 +1046,8 @@ class TestSearchConvergence(_TestInterpretBase):
 
     param = 'SEARCH_CONVERGENCE'
     valid_gauss = {'scaling': ('0.01 0.9', (0.01, 0.9)),
-                   'no scaling': ('0.01', (0.01, 0.5)),}
-    valid_dgen = {'positive': ('1 1.5', (1, 1.5)),}
+                   'no scaling': ('0.01', (0.01, 0.5)), }
+    valid_dgen = {'positive': ('1 1.5', (1, 1.5)), }
     invalid = {
         'gaussian no values': ('', 'gaussian', err.ParameterHasNoValueError),
         'dgen no values': ('', 'dgen', err.ParameterHasNoValueError),
@@ -1299,7 +1300,7 @@ class TestSymmetryEps(_TestInterpretBase):
     def test_interpret_invalid_number_of_inputs(self, interpreter):
         """Ensure more than two values raises exceptions."""
         self.check_raises(interpreter, '0.1 0.2 0.3',
-                           err.ParameterNumberOfInputsError)
+                          err.ParameterNumberOfInputsError)
 
     def test_large_values_log(self, interpreter, caplog, re_match):
         """Check correct interpretation of EPS and EPS.z values."""
@@ -1316,10 +1317,10 @@ class TestSymmetryFix(_TestInterpretBase):
 
     valid = {'auto': ('t', _default),
              'p1': ('p1', 'p1'),
-             'direction': ('cm[1 1]', 'cm[1 1]'),}
+             'direction': ('cm[1 1]', 'cm[1 1]'), }
     invalid = {'group': ('invalid', err.ParameterParseError),
                'direction_missing': ('cm', err.ParameterParseError),
-               'direction_wrong': ('pmt [0 x]', err.ParameterParseError),}
+               'direction_wrong': ('pmt [0 x]', err.ParameterParseError), }
 
     @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
@@ -1343,7 +1344,7 @@ class TestTensorOutput(_TestInterpretBase):
     param = 'TENSOR_OUTPUT'
     valid = {'single': ('False', [0]),
              'multiple': ('0 1 1 0', [0, 1, 1, 0]),
-             'repeated': ('2*1 2*0 1', [1, 1, 0, 0, 1]),}
+             'repeated': ('2*1 2*0 1', [1, 1, 0, 0, 1]), }
     invalid = ('2', '5*5 0 0 1')
 
     @parametrize('val,expect', valid.values(), ids=valid)
