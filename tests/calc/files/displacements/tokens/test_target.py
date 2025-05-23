@@ -47,8 +47,10 @@ def test_parse_valid_targets(
         # numberic without label
         '1 2 3',
         '2',
+        '[1 0 0'
         # layer without label
         'L(1)',
+        # wrongly formatted layer
     ])
 def test_invalid_target_raises(raw):
     with pytest.raises(TargetingError) as exc:

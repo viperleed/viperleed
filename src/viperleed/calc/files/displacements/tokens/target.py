@@ -29,7 +29,7 @@ class TargetToken(DisplacementsFileToken):
         site_str = parts[0]
 
         # do not allow numeric or layer-only targets
-        if site_str[0].isdigit() or 'L(' in site_str:
+        if site_str[0].isdigit() or 'L(' in site_str or '[' in site_str:
             msg = (
                 f'Target must start with a non-numeric label, got: "{site_str}"'
             )
@@ -55,16 +55,24 @@ class TargetToken(DisplacementsFileToken):
             if len(parts[1].split()) > 1:
                 msg = f'Invalid target layer specification: "{parts[1]}".'
                 raise TargetingError(msg)
-        else:
-            # Check for a range like "1-4"
-            range_match = re.match(r'(\d+)-(\d+)', parts[1])
-            if range_match:
-                start_num = int(range_match.group(1))
-                end_num = int(range_match.group(2))
-                self.nums = list(range(start_num, end_num + 1))
-            else:
-                # It's a list of numbers
-                self.nums = list(map(int, parts[1].split()))
+            return
+
+        # Check for a range like "1-4"
+        range_match = re.match(r'(\d+)-(\d+)', parts[1])
+        if range_match:
+            start_num = int(range_match.group(1))
+            end_num = int(range_match.group(2))
+            self.nums = list(range(start_num, end_num + 1))
+            return
+
+        # Check for a list of numbers
+        try:
+            self.nums = list(map(int, parts[1].split()))
+        except ValueError as err:
+            msg = (
+                f'Invalid target specification: "{parts[1]}".'
+            )
+            raise TargetingError(msg) from err
 
 
 
