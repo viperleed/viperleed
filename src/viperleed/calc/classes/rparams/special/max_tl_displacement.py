@@ -20,6 +20,7 @@ from ..defaults import NO_VALUE
 
 _LOGGER = logging.getLogger(__name__)
 
+
 @dataclass
 class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
     """Maximum geometric and vibrational displacements relative to refcalc."""

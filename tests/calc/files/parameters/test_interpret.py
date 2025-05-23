@@ -22,6 +22,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutTokenType as CutType
     )
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
+from viperleed.calc.classes.rparams.special.max_tl_displacement import MaxTLDisplacement
 from viperleed.calc.files import parameters
 from viperleed.calc.files.parameters import errors as err
 from viperleed.calc.files.parameters.checker import ParametersChecker
@@ -794,6 +795,57 @@ class TestLogLevel(_TestInterpretBase):
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Check correct interpretation of a default string LOG_LEVEL."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
+
+
+class TestMaxTLDisplacement(_TestInterpretBase):
+    """Tests for interpreting MAX_TL_DISPLACEMENT."""
+    param = 'MAX_TL_DISPLACEMENT'
+    _default = Rparams.get_default(param)
+    print(_default)
+    valid = {'one float': ('0.5', '', MaxTLDisplacement(0.5)),
+             'two floats': ('0.5 1.0', '', MaxTLDisplacement(0.5, 1.0)),
+             'geo': ('0.8', 'geo', MaxTLDisplacement(0.8)),
+             'vib': ('0.9', 'vib', MaxTLDisplacement(_default.geo, 0.9)),
+             'ignore': ('ignore', 'action', MaxTLDisplacement(
+                 _default.geo, action='ignore')),
+             'stop': ('stop', 'action', MaxTLDisplacement(
+                 _default.geo, action='stop')),
+             'refcalc': ('refcalc', 'action', MaxTLDisplacement(
+                 _default.geo, action='refcalc', max_duration=None)),
+             'refcalc time': ('refcalc 15m', 'action', MaxTLDisplacement(
+                 _default.geo, action='refcalc', max_duration=60*15)),
+             'refcalc < time': ('refcalc < 30', 'action', MaxTLDisplacement(
+                 _default.geo, action='refcalc', max_duration=30)),
+             }
+    invalid = {
+        'no value': ('', '', err.ParameterHasNoValueError),
+        'flag': ('0.5', 'invalid', err.ParameterUnknownFlagError),
+        'no flag+too many': ('1 2 3', '', err.ParameterNumberOfInputsError),
+        'flag+too many': ('1 2', 'geo', err.ParameterNumberOfInputsError),
+        'action': ('invalid', 'action', err.ParameterValueError),
+        'action+too many': ('ignore 1', 'action',
+                            err.ParameterNumberOfInputsError),
+        'refcalc+too many': ('refcalc 10 11 12', 'action',
+                             err.ParameterNumberOfInputsError),
+        'refcalc parse': ('refcalc > 10', 'action', err.ParameterParseError),
+        'not float': ('a', '', err.ParameterFloatConversionError),
+        'not float, named': ('a', 'geo', err.ParameterFloatConversionError),
+        'negative': ('-1', '', err.ParameterRangeError),
+        'negative, named': ('-1', 'vib', err.ParameterRangeError),
+        'refcalc, not float': ('refcalc a', 'action',
+                               err.ParameterParseError),
+        'refcalc, negative': ('refcalc -1', 'action', err.ParameterRangeError),
+        }
+
+    @parametrize('val,flag,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, flag, expect, interpreter):
+        """Check correct interpretation of valid MAX_TL_DISPLACEMENT."""
+        self.check_assigned(interpreter, val, expect, flags_str=flag)
+
+    @parametrize('val,flag,expect', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, flag, expect, interpreter):
+        """Ensure invalid MAX_TL_DISPLACEMENT raises exceptions."""
+        self.check_raises(interpreter, val, expect, flags_str=flag)
 
 
 class TestOptimize(_TestInterpretBase):
