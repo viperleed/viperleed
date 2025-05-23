@@ -349,11 +349,27 @@ class TestConstraintLine:
                 id='geo-direct-link',
             ),
             pytest.param(
+                'geo Fe 1 = Fe 2',
+                TypeToken('geo'),
+                [TargetToken('Fe 1')],
+                TargetToken('Fe 2'),
+                LinearOperationToken.from_array(np.eye(1)),
+                id='geo-single-target-link',
+            ),
+            pytest.param(
                 'geo A = [1 0 0] B',
                 TypeToken('geo'),
                 [TargetToken('A')],
                 TargetToken('B'),
                 LinearOperationToken('[1 0 0]'),
+                id='geo-linear-operation',
+            ),
+            pytest.param(
+                'geo Fe_surf, O_surf = [[1 0 0] [0 0 1] [0 1 0]] Fe_surf',
+                TypeToken('geo'),
+                [TargetToken('Fe_surf'), TargetToken('O_surf')],
+                TargetToken('Fe_surf'),
+                LinearOperationToken('[[1 0 0] [0 0 1] [0 1 0]]'),
                 id='geo-linear-operation',
             ),
             pytest.param(
