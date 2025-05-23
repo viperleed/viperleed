@@ -10,12 +10,6 @@ from viperleed_jax.files.displacements.tokens.target import (
 )
 
 
-# Minimal fake scatterer for regex testing
-class FakeScatterer:
-    def __init__(self, site):
-        self.site = site
-
-
 @pytest.mark.parametrize(
     'raw, expected_regex, expected_nums, expected_layers',
     [
@@ -43,6 +37,22 @@ def test_parse_valid_targets(
     # nums and layers
     assert tok.nums == expected_nums
     assert tok.layers == expected_layers
+
+
+@pytest.mark.parametrize(
+    'raw',
+    [
+        # combined layer and number
+        'A L(1-2) 3',
+        # numberic without label
+        '1 2 3',
+        '2',
+        # layer without label
+        'L(1)',
+    ])
+def test_invalid_target_raises(raw):
+    with pytest.raises(TargetingError) as exc:
+        TargetToken(raw)
 
 
 def test_empty_string_raises():
