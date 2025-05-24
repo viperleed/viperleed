@@ -516,7 +516,7 @@ class TextBoxWithButtons(qtw.QWidget):
                                        self.text.sizeHint().width())
 
         self.smallButtonDims = int(self.textBoxWidth/5)                         # TODO: was .label.width()/6
-        print(f"{self.textBoxWidth=}, {self.smallButtonDims=}")
+        # print(f"{self.textBoxWidth=}, {self.smallButtonDims=}")
 
         # setBuddy allows to use shortcuts if there's a single & prepended
         # to a letter in the text of the QLabel

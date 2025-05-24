@@ -130,8 +130,8 @@ def check_dll_return(success='int', include_errors=tuple(),
         return ge_checker
     if success.startswith('>'):
         return gt_checker
-    raise ValueError(f"Invalid {success=!r}. Should be 'int', 'pointer', "
-                     "'>NUMBER', or '>=NUMBER'")
+    raise ValueError(f"Invalid success={success!r}. Should be 'int', "
+                     "'pointer', '>NUMBER', or '>=NUMBER'")
 
 
 class DLLReturns(tuple, Enum):

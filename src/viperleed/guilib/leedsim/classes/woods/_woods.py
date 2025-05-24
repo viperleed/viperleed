@@ -337,7 +337,7 @@ class Woods:
         gammas = (Woods.__parse_and_check_gamma(match[key])
                   for key in ('gamma1', 'gamma2'))
         alpha = float(match['alpha']) if match['alpha'] else 0.
-        return prefix, *gammas, alpha
+        return (prefix, *gammas, alpha)
 
     @staticmethod
     def __parse_and_check_gamma(gamma_str):

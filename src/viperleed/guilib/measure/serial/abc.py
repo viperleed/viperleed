@@ -687,7 +687,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         *other_messages_out : object
             should have one of the types acceptable for encode()
         """
-        return message, *other_messages
+        return (message, *other_messages)
     # pylint: enable=no-self-use
 
     @abstractmethod
