@@ -29,7 +29,7 @@ TIMEOUT = 30000  # milliseconds
 
 CONFIG = ConfigParser()
 CONFIG.read(
-    Path(__file__).parent  # The main viperleed directory
+    Path(__file__).resolve().parents[2]  # The main viperleed directory
     / 'src/viperleed/guilib/measure/configuration/viperleed_hardware.ini'
     )
 
