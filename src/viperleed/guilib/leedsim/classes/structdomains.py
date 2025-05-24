@@ -25,8 +25,12 @@ import re
 
 import numpy as np
 
-from viperleed import guilib as gl
 from viperleed.guilib.helpers import conventional_angles
+from viperleed.guilib.leedsim.classes.equivalent_beams import (
+    LEEDEquivalentBeams,
+    )
+from viperleed.guilib.leedsim.classes.leedparameters import LEEDParametersList
+from viperleed.guilib.leedsim.classes.symdomains import LEEDSymmetryDomains
 
 from viperleed.guilib import decorators as dev_
 
@@ -79,8 +83,8 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
         -------
         None.
         """
-        self.__parameters = gl.LEEDParametersList(params, keep_duplicates)
-        self.__list = [gl.LEEDSymmetryDomains(p) for p in self.parameters]
+        self.__parameters = LEEDParametersList(params, keep_duplicates)
+        self.__list = [LEEDSymmetryDomains(p) for p in self.parameters]
 
         # __last_eq is a reference to the last LEEDEquivalentBeams
         # instance used to combine all structural and symmetry domains.
@@ -172,7 +176,7 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
                                                            self.parameters))
                         if new != old]
         for i in replaced_idx:
-            self.__list[i] = gl.LEEDSymmetryDomains(self.parameters[i])
+            self.__list[i] = LEEDSymmetryDomains(self.parameters[i])
 
         # Now decide whether we have to fix the LEEDEquivalentBeams:
         # - if any of those removed has the same name and superlattice
@@ -492,10 +496,10 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
             denominators = [self.denominators[struct_id]
                             for struct_id in struct_ids]
 
-        self.__last_eq = gl.LEEDEquivalentBeams(eq_beams,
-                                                domain_ids=combined_ids,
-                                                denominators=denominators,
-                                                caller=self)
+        self.__last_eq = LEEDEquivalentBeams(eq_beams,
+                                             domain_ids=combined_ids,
+                                             denominators=denominators,
+                                             caller=self)
         if not self.eq_beams_last_config.was_cached:
             self.__correct_beam_index()
         elif len(combined_ids) == 1:
@@ -603,7 +607,7 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
             Fixed list of domain indices
         structures : list
             Which structures were requested. Each element is a
-            gl.LEEDSymmetryDomains instance
+            LEEDSymmetryDomains instance
         ids : list
             Which of the ids correspond to the structures
 

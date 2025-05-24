@@ -22,7 +22,6 @@ import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
-# import guilib as gl
 
 if gl.BACKEND == 'mplcairo':
     try:
@@ -44,6 +43,9 @@ else:  # 'agg'
 from matplotlib.figure import Figure
 
 from viperleed.guilib.widgetdecorators import receive_mouse_broadcast
+from viperleed.guilib.widgetslib import AllGUIFonts
+from viperleed.guilib.widgetslib import drawText
+from viperleed.guilib.widgetslib import editStyleSheet
 
 
 @receive_mouse_broadcast
@@ -252,7 +254,7 @@ class MPLFigureCanvas(FigureCanvas):
             if 'titleFontSize' in kwargs.keys():
                 self.titleFont.setPointSize(kwargs['titleFontSize'])
         else:
-            self.titleFont = gl.AllGUIFonts().plotTitleFont
+            self.titleFont = AllGUIFonts().plotTitleFont
 
         self.setTitle(kwargs.get('title', ''))
 
@@ -354,10 +356,10 @@ class MPLFigureCanvas(FigureCanvas):
 
     def set_transparent_background(self, transparent):
         if transparent:
-            gl.editStyleSheet(self, "background-color:transparent;")
+            editStyleSheet(self, "background-color:transparent;")
             self.figure.patch.set_alpha(0)
         else:
-            gl.editStyleSheet(self, "background-color:white;")
+            editStyleSheet(self, "background-color:white;")
             self.figure.patch.set_alpha(1)
 
     def show_ticks(self, show):
@@ -531,10 +533,10 @@ class TextBoxWithButtons(qtw.QWidget):
         self.text.textModified.connect(self.on_textModified)
 
     def setFonts(self):
-        self.label.setFont(gl.AllGUIFonts().labelFont)
-        self.text.setFont(gl.AllGUIFonts().labelFont)
+        self.label.setFont(AllGUIFonts().labelFont)
+        self.text.setFont(AllGUIFonts().labelFont)
         for but in [self.topBut,self.botBut]:
-            but.setFont(gl.AllGUIFonts().buttonFont)
+            but.setFont(AllGUIFonts().buttonFont)
         self.ensurePolished()
 
     def setTips(self, **kwargs):
@@ -687,9 +689,9 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
         self.color = color
 
         #----- set up the font -----#
-        font = gl.AllGUIFonts().mathFont
+        font = AllGUIFonts().mathFont
         if fs is None:
-            fs = gl.AllGUIFonts().mathFont.pointSize()
+            fs = AllGUIFonts().mathFont.pointSize()
         font.setPointSize(fs)
         self.setFont(font)
 
@@ -900,8 +902,8 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
         self.paintElements(painter)
 
         #-- Then draw the parentheses (with correct translation/scaling)
-        gl.drawText(painter, '(', self.lParTransform, combine = True)
-        gl.drawText(painter, ')', self.rParTransform, combine = True)
+        drawText(painter, '(', self.lParTransform, combine = True)
+        drawText(painter, ')', self.rParTransform, combine = True)
 
         painter.end()
 
@@ -916,7 +918,7 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
                 painter.save()   # save each element
                 dx = w - self.textWidth(el)
                 painter.translate(dx, 0)
-                gl.drawText(painter, el)
+                drawText(painter, el)
                 painter.restore()  # restore to go back to the left side
                 painter.translate(self.colSep() + w, 0)  # and go to the
                                                          # next column

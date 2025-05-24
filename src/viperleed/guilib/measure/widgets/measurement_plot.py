@@ -18,10 +18,10 @@ import numpy as np
 from matplotlib.cm import get_cmap
 from matplotlib.lines import Line2D
 
-from viperleed import guilib as gl
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Canvas
 from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
 from viperleed.guilib.measure.widgets.checkcombobox import CheckComboBox
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 
 
@@ -161,10 +161,10 @@ class MeasurementPlot(qtw.QWidget):
         """Prepare widget."""
         layout = qtw.QGridLayout()
         self._ctrls['quantities'].addItems(QuantityInfo.get_axis_labels('y'))
-        self._ctrls['quantities'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['quantities'].setFont(AllGUIFonts().buttonFont)
         self._ctrls['quantities'].ensurePolished()
 
-        self._ctrls['no_data'].setFont(gl.AllGUIFonts().labelFont)
+        self._ctrls['no_data'].setFont(AllGUIFonts().labelFont)
         self._ctrls['no_data'].ensurePolished()
 
         layout.addWidget(self._ctrls['quantities'], 0, 0)

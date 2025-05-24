@@ -16,7 +16,10 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
+from viperleed.guilib.classes.lattice2d import Lattice2D as Lattice
+from viperleed.guilib.leedsim.classes.woods import Woods                        # TODO: maybe the old one?
+from viperleed.guilib.leedsim.dialogs.dialogbulk3dsym import Bulk3DSymDialog
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 angstrom = ' \u212b'
 degrees = '\u00b0'
@@ -37,8 +40,8 @@ class NewFileDialog(qtw.QDialog):
         self.setWindowTitle('Create new LEED input')
         
         self.compose()
-        self.woodL = gl.Woods()
-        self.bulk_3d_sym_dialog = gl.Bulk3DSymDialog(self)
+        self.woodL = Woods()
+        self.bulk_3d_sym_dialog = Bulk3DSymDialog(self)
         self.open(oldParams)
     
     def open(self, params=dict()):
@@ -66,18 +69,18 @@ class NewFileDialog(qtw.QDialog):
         
         bulkBasis = np.dot(np.linalg.inv(self.supMatrix), surfBasis)
         
-        self.surfLatt = gl.Lattice(surfBasis, group=surfGroup)
-        self.bulkLatt = gl.Lattice(bulkBasis, group=bulkGroup)
+        self.surfLatt = Lattice(surfBasis, group=surfGroup)
+        self.bulkLatt = Lattice(bulkBasis, group=bulkGroup)
         
         if self.oldParams:
             self.bulkLatt.group.screws_glides = (self.oldParams['bulk3Dsym'],
                                                  self.bulkLatt.cell_shape)
 
     def compose(self):
-        labFont = gl.AllGUIFonts().labelFont
-        bigLabFont = qtg.QFont(gl.AllGUIFonts().largeTextFont)
+        labFont = AllGUIFonts().labelFont
+        bigLabFont = qtg.QFont(AllGUIFonts().largeTextFont)
         bigLabFont.setPointSize(11)
-        smallText = gl.AllGUIFonts().smallTextFont
+        smallText = AllGUIFonts().smallTextFont
         
         #-------- Initialize the widgets --------#
         # here only the immutable values are set #
@@ -152,7 +155,7 @@ class NewFileDialog(qtw.QDialog):
         
         # Button to input extra symmetry operations for bulk
         self.bulk_3d_sym = qtw.QPushButton('Extra bulk\nsymmetry')
-        self.bulk_3d_sym.setFont(gl.AllGUIFonts().buttonFont)
+        self.bulk_3d_sym.setFont(AllGUIFonts().buttonFont)
         self.bulk_3d_sym.setSizePolicy(qtw.QSizePolicy.Fixed,
                                            qtw.QSizePolicy.Preferred)
         self.bulk_3d_sym.setMinimumWidth(self.aB.width())
@@ -216,7 +219,7 @@ class NewFileDialog(qtw.QDialog):
         self.doneBut = qtw.QPushButton('&Done')
         self.cancelBut = qtw.QPushButton('&Cancel')
         for but in [self.doneBut, self.cancelBut]:
-            but.setFont(gl.AllGUIFonts().buttonFont)
+            but.setFont(AllGUIFonts().buttonFont)
             but.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
         allWidgs.extend([self.doneBut, self.cancelBut])
         
@@ -592,7 +595,7 @@ class NewFileDialog(qtw.QDialog):
         self.updateWoods()
     
     def updateWoods(self):
-        woods = gl.Woods().matrixToWoods(self.supMatrix, self.bulkLatt.basis)
+        woods = Woods().matrixToWoods(self.supMatrix, self.bulkLatt.basis)
         if woods is None:
             woods = 'None'
         idx = self.woods.findText(woods, flags = qtc.Qt.MatchExactly)

@@ -13,9 +13,9 @@ Author: Michele Riva
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 
-from viperleed import guilib as gl   # TODO: remove?
-from viperleed.guilib.leedsim.widgets import LatticeInput
-from viperleed.guilib.leedsim.dialogs import Bulk3DSymDialog
+from viperleed.guilib.leedsim.widgets.latticeinput import LatticeInput
+from viperleed.guilib.leedsim.dialogs.dialogbulk3dsym import Bulk3DSymDialog
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 from viperleed.guilib import decorators as dev_
 
@@ -65,7 +65,7 @@ class BulkInput(LatticeInput):
 
         # Extra control for the bulk 3D symmetry
         self._ctrls['3d_sym'] = qtw.QPushButton('Add bulk sym.\noperations')
-        self._ctrls['3d_sym'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['3d_sym'].setFont(AllGUIFonts().buttonFont)
         self._ctrls['3d_sym'].setSizePolicy(qtw.QSizePolicy.Fixed,
                                              qtw.QSizePolicy.Preferred)
         self._ctrls['3d_sym'].setMinimumWidth(self._ctrls['a'].width())

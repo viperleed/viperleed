@@ -15,7 +15,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
+from viperleed.guilib.base import check_type
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 
 class HoverAnnot(qtw.QWidget):
@@ -55,7 +56,7 @@ class HoverAnnot(qtw.QWidget):
                             | qtc.Qt.FramelessWindowHint
                             | qtc.Qt.WindowDoesNotAcceptFocus)
 
-        self.setFont(gl.AllGUIFonts().labelFont)
+        self.setFont(AllGUIFonts().labelFont)
 
         # Global position of the point that, together with the arrow head_pos
         # defines the direction of the arrow (from head_pos to center)
@@ -85,7 +86,7 @@ class HoverAnnot(qtw.QWidget):
         Set the global position of the point towards which the arrow points to
         ctr
         """
-        if (not gl.check_type(ctr, 'arraylike')
+        if (not check_type(ctr, 'arraylike')
             and not isinstance(ctr, (qtc.QPoint, qtc.QPointF))):
             raise TypeError("head_pos must be array-like, QPoint or QPointF."
                             f"Found {type(ctr)} instead.")
@@ -125,7 +126,7 @@ class HoverAnnot(qtw.QWidget):
         """
         Set the global position of the arrowhead to pos
         """
-        if (not gl.check_type(pos, 'arraylike')
+        if (not check_type(pos, 'arraylike')
             and not isinstance(pos, (qtc.QPoint, qtc.QPointF))):
             raise TypeError("head_pos must be array-like, QPoint or QPointF."
                             f"Found {type(pos)} instead.")

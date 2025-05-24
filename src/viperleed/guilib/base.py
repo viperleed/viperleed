@@ -18,10 +18,9 @@ from collections import defaultdict
 
 import numpy as np
 
-# from viperleed.guilib.leedsim.classes import LEEDPattern
-# from guilib.leedsim.classes import LEEDPattern
-# from guilib import profile_lines, profile_calls
-from viperleed import guilib as gl
+from viperleed.guilib.classes.beamindex import BeamIndex
+from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.leedsim.classes.oldleedpatterns import LEEDPattern
 
 
 ###############################################################################
@@ -544,7 +543,7 @@ def check_multi_leed_params(leed_parameters):                                   
 
     - consistent_leed_parameters: list of dictionaries with eMax and
                                   ScreenApertures equal for all
-    - leed_patterns: list of gl.LEEDPattern
+    - leed_patterns: list of LEEDPattern
                      patterns generated from consistent_leed_parameters
     """
 
@@ -566,7 +565,7 @@ def check_multi_leed_params(leed_parameters):                                   
         params['eMax'] = emax
         if aperture > 0:
             params['screenAperture'] = aperture
-        leed_patterns.append(gl.LEEDPattern(params))
+        leed_patterns.append(LEEDPattern(params))
 
     # check consistency of bulk
     bulk = leed_patterns[0].reciprocal_lattices['bulk']
@@ -655,103 +654,6 @@ def check_py_version(version_to_check, check_what='earlier'):
     return py_version == version_to_check
 
 
-def string_matrix_to_numpy(str_matrix, dtype=float, needs_shape=tuple()):
-    """
-    Takes a string representing a matrix with float values and parses it into a
-    numpy array of the right shape. It can also check if the string represents
-    a matrix of a specific shape.
-
-    Parameters
-    ----------
-    - str_matrix: str
-                  String to be parsed to extract a matrix. It needs to be
-                  formatted as an array-like input acceptable for numpy
-    - dtype: data type; default float
-             Data type that the numpy array returned will have
-    - needs_shape: array-like; default = tuple()
-                   if this keyword argument is given, the function checks that
-                   the shape of the parsed matrix matches the input
-
-    Returns
-    -------
-    np.array or None
-
-    If needs_shape is given, the function returns None in case the shapes do not
-    match. Otherwise always returns a numpy array.
-    """
-    if not check_type(str_matrix, 'str'):
-        raise TypeError("string_matrix_to_numpy: str_matrix should be string. "
-                        f"Found {type(str_matrix).__name__!r} instead")
-    if not check_type(needs_shape, 'arraylike'):
-        raise TypeError("string_matrix_to_numpy: needs_shape should be an "
-                        f"array-like. Found {type(needs_shape).__name__!r} "
-                        "instead")
-    try:
-        matrix = np.asarray(ast.literal_eval(str_matrix), dtype=float)
-    except SyntaxError as err:
-        raise RuntimeError("Could not extract a matrix from string "
-                           f"{str_matrix}. Most likely a bracket or "
-                           "a comma is missing") from err
-
-    # if dtype=int, round first, then typecast
-    if dtype == int:
-        matrix = matrix.round().astype(int)
-
-    if len(needs_shape) > 0 and matrix.shape != tuple(needs_shape):
-        raise RuntimeError("string_matrix_to_numpy: matrix has the wrong "
-                           f"shape. Expected {tuple(needs_shape)}, found "
-                           f"{matrix.shape}")
-    return matrix
-
-
-def format_floats(format_specs, *numbers):
-    """
-    Formats floats to have them all aligned to the point, and according to
-    format_spec. format_spec is in the form
-
-    [[fill]align][sign][#][0][minimumwidth][.precision][type]
-
-    - fill and align will be used to pad the overall resulting string
-    - sign, #, 0 are discarded
-    - minimumwidth is the minimum number of characters used to represent the
-      integer parts. Defaults to the minimum number necessary to have all
-      numbers aligned to the decimal point
-    - precision is the number of decimal digits. Defaults to 5.
-    """
-    int_len = integer_part_length(*numbers)
-
-    # standard pattern for format_specs
-    pattern = (r"^(?P<align>[<>=^]\d+)?"
-               r"[\+\- ]?"
-               r"[#]?"
-               r"[0]?"
-               r"(?P<minwidth>\d*)"
-               r"([.](?P<prec>\d+))?"
-               r"[bdcoxXneEfFgG\%]?$")
-    m = re.match(pattern, format_specs)
-    if m is None:
-        raise TypeError("Incorrect format specifier for type f.")
-    # process the format specifications:
-    # (1) Number of decimal digits
-    prec = int(m['prec'] or '5')
-    # (2) Minimum width of integer part
-    #    (will left-pad with spaces if needed)
-    min_w = int(m['minwidth'] or 0) or int_len
-    tot_w = max(min_w + prec, int_len + prec) + 1  # +1 for decimal point
-
-    format = f">{tot_w}.{prec}f"
-    raw = ','.join(f"{float(number):{format}}" for number in numbers)
-    align = ''
-    if m.group('align'):
-        align = f"{m.group('align')}"
-
-    return f"{raw:{align}}"
-
-
-def integer_part_length(*numbers):
-    return max(len(f"{int(number)}") for number in numbers)
-
-
 def parallel(v1, v2):
     """
     Check whether vectors v1 and v2 (of arbitrary number of components) are
@@ -815,28 +717,3 @@ def orientation(vector, zero_pi=True, precision=4):
     if not zero_pi:
         return angle
     return angle % 180
-
-
-def screen_radius(energy, aperture):                                          # WILL BE MOVED, renamed, and docstring needs work
-    """
-    Returns the radius of the projection of a LEED screen with a given
-    aperture that contains LEED spots with 'energy'
-
-    Parameters
-    ----------
-    energy : float
-        primary energy of the electrons
-    aperture: float, default=110.0
-              degrees of aperture of the solid angle captured by the
-              LEED screen. The current (2020-08-17) default value is taken
-              from the dimensions of the screen of the ErLEED optics. The
-              MCP SpectaLEED from Omicron appears to have an equivalent
-              aperture of ~80°
-    """
-    electron_mass = 9.109e-31  # kg
-    electron_charge = 1.60218e-19   # C
-    hbar = 1.05457e-34  # J*s
-    # The next one is the prefactor in AA^-1 eV^(-1/2)
-    rt2me_hbar = np.sqrt(2*electron_mass*electron_charge) / hbar*1e-10
-
-    return rt2me_hbar*np.sqrt(energy)*np.sin(np.radians(aperture)/2)

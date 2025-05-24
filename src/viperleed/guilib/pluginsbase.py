@@ -19,7 +19,7 @@ from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc,
                    QtGui as qtg)
 
-from viperleed.gui import resources_path
+from viperleed.guilib.helpers import resources_path
 from viperleed.guilib.widgetslib import AllGUIFonts
 
 

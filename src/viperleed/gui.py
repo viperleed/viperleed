@@ -25,8 +25,12 @@ else:
     import PyQt5.QtWidgets as qtw
     GLOBALS['USE_GUI'] = True
 
-from viperleed import guilib as gl
 from viperleed.cli_base import ViPErLEEDCLI
+from viperleed.guilib import BACKEND
+from viperleed.guilib.base import catch_gui_crash
+from viperleed.guilib.helpers import resources_path
+from viperleed.guilib.pluginsbase import LOGO
+from viperleed.guilib.selectplugin import ViPErLEEDSelectPlugin
 
 
 class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
@@ -48,7 +52,7 @@ def is_commandline_mode():
     command line argument.
     """
     needs_commandline = not GLOBALS['USE_GUI']
-    needs_commandline |= gl.BACKEND is None
+    needs_commandline |= BACKEND is None
     needs_commandline |= '--nogui' in sys.argv
     return needs_commandline
 
@@ -62,46 +66,19 @@ def commandline_main():
     print('Not implemented yet.', flush=True)
 
 
-def resources_path(dir_name):
-    """Return the correct path to dir_name.
-
-    This is useful when building an executable from pyinstaller.
-    When built from pyinstaller, it takes the path relative to the
-    temporary path in which the "exe" is extracted during execution.
-
-    Parameters
-    ----------
-    dir_name : str
-        Path relative to the one from which resources_path is called.
-
-    Returns
-    -------
-    str
-        Modified path, only if the GUI is running from a pyinstaller
-        'executable', otherwise returns dir_name unchanged.
-    """
-    # EVENTUALLY IT IS PROBABLY BETTER TO INCLUDE THE WHOLE /fonts FOLDER from
-    # '/guilib' IN THE CORRECT PLACE, AND HAVE resources_path RETURN ITS BASE
-    # PATH (i.e., the top-level folder in which the exe is) IF PYINSTALLER IS
-    # USED
-    if hasattr(sys, '_MEIPASS'):
-        return str(Path(sys._MEIPASS, dir_name).resolve())
-    return dir_name
-
-
 def gui_main():
     """Body of the GUI when running with graphics capability.
 
     Body of the functionality that invokes the ViPErLEED
     Graphical User Interface.
     """
-    gl.catch_gui_crash()
+    catch_gui_crash()
 
     print('Loading GUI...', flush=True, end='')
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_UseHighDpiPixmaps)
     app = qtw.QApplication(sys.argv)
-    app.setWindowIcon(qtg.QIcon(gl.pluginsbase.LOGO))
+    app.setWindowIcon(qtg.QIcon(LOGO))
 
     # Import some fonts from ./fonts folder
     font_path = resources_path('guilib/fonts')
@@ -114,7 +91,7 @@ def gui_main():
         str(Path(font_path, 'cmunrm.otf').resolve())
         )
 
-    plugin_selector_window = gl.ViPErLEEDSelectPlugin()
+    plugin_selector_window = ViPErLEEDSelectPlugin()
     plugin_selector_window.show()
 
     ########## TODO: stuff from master to deactivate GUI

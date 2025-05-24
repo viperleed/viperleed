@@ -22,7 +22,7 @@ from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import averageBeams
 from viperleed.calc.files.beams import writeOUTBEAMS
 from viperleed.cli_base import ViPErLEEDCLI
-from viperleed.guilib.base import BeamIndex
+from viperleed.guilib.classes.beamindex import BeamIndex
 from viperleed.utilities.beams import EXPBEAMS_DEFAULT
 
 logger = logging.getLogger(__name__)

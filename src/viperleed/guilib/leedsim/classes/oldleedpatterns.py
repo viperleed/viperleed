@@ -19,16 +19,21 @@ from scipy import spatial as sp
 from matplotlib import cm  # color maps
 from matplotlib import colors as mpl_colors
 
-from viperleed import guilib as gl
+from viperleed.guilib.classes import planegroup
+from viperleed.guilib.classes.lattice2d import Lattice2D as Lattice
+from viperleed.guilib.leedsim.classes.leedparameters import LEEDParameters
+from viperleed.guilib.leedsim.utils import screen_radius
+
+# from viperleed.guilib import decorators as _dev
 
 
 class LEEDPattern:
-    # @gl.profile_calls(print_args=[30])
+    # @_dev.profile_calls(print_args=[30])
     def __init__(self, leed_parameters):
-        # run leed_parameters through gl.LEEDParameters, so that all
+        # run leed_parameters through LEEDParameters, so that all
         # parameters are correctly interpreted, and missing optional values
         # are set to their default
-        self.__parameters = gl.LEEDParameters(leed_parameters)
+        self.__parameters = LEEDParameters(leed_parameters)
 
         # The following attributes are set by __build_lattices() and
         # __build_LEEDPattern()
@@ -97,7 +102,7 @@ class LEEDPattern:
         superlattice = self.__parameters['SUPERLATTICE']
         operations = self.domains['operations']
         if operations is None:
-            operations = [gl.PlaneGroup.E]  # identity matrix
+            operations = [planegroup.E]  # identity matrix
         # return np.asarray([np.dot(superlattice, operation)
                            # for operation in operations])
         return np.einsum('ij,mjk->mik', superlattice, operations)
@@ -131,17 +136,17 @@ class LEEDPattern:
 
     def __build_lattices(self):                                                 # Not even sure if we really need both lattices anymore. Probably bulk + domains are enough
         # Create dummy surface lattice just to get the reciprocal basis
-        surf = gl.Lattice(self.__parameters['surfBasis'])
+        surf = Lattice(self.__parameters['surfBasis'])
 
         # and get the maximum screen radius
         max_radius = self.screen_radius(self.max_energy)
 
         # Now make the reciprocal lattices:
-        self.reciprocal_lattices['surf'] = gl.Lattice(
+        self.reciprocal_lattices['surf'] = Lattice(
             surf.reciprocal_basis, space='reciprocal',
             group=self.__parameters['surfGroup'], limit=max_radius
             )
-        self.reciprocal_lattices['bulk'] = gl.Lattice(
+        self.reciprocal_lattices['bulk'] = Lattice(
             self.bulk_basis, space='reciprocal',
             group=self.__parameters['bulkGroup'], limit=max_radius
             )
@@ -150,7 +155,7 @@ class LEEDPattern:
             self.reciprocal_lattices['bulk'].cell_shape
             )
 
-    # @gl.profile_lines
+    # @_dev.profile_lines
     def __build_LEEDPattern(self):                                                ## bottleneck!
 
         # 1) get the (bulk) operations that generate symmetry-equivalent domains
@@ -192,7 +197,7 @@ class LEEDPattern:
         tree = sp.cKDTree(self.surfLEED)
         return np.array(tree.query_ball_point(x=self.surfLEED, r=1e-8))
 
-    # @gl.profile_calls(print_args=[30])
+    # @_dev.profile_calls(print_args=[30])
     def get_beamGrouping(self, domains=None):                                     ## TO RETHINK FOR NON-NORMAL INCIDENCE  ## BOTTLENECK for __build_subpatterns
         # this is wrong for non-normal incidence!
         # all domains should be treated separately, rather than using the
@@ -332,7 +337,7 @@ class LEEDPattern:
         g_norm = np.linalg.norm(np.dot(beam, self.bulk_basis)).round(7)
         return (g_norm, *self.beamsSortCriterion(beamlist[0]))
 
-    # @gl.profile_lines
+    # @_dev.profile_lines
     def __build_subpatterns(self):
         # Now sort the sub-patterns:
         # - There will always be a firstLEED and a domsLEED
@@ -424,7 +429,7 @@ class LEEDPattern:
                                        sizeScale=glideScale))
 
     def screen_radius(self, en):
-        return gl.screen_radius(en, self.__parameters['screenAperture'])
+        return screen_radius(en, self.__parameters['screenAperture'])
 
     def get_FirstDomainSymmetry(self):
         """

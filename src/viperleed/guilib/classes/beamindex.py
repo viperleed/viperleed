@@ -15,7 +15,7 @@ import re
 
 from quicktions import Fraction  # Faster than standard Fraction
 
-from viperleed.guilib.base import format_floats
+from viperleed.guilib.helpers import format_floats
 
 
 _SEPARATORS = ',|'

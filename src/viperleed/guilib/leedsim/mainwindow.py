@@ -27,8 +27,23 @@ import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
+from viperleed import __version__
+from viperleed.guilib.leedsim.classes.leedparameters import LEEDParametersList
+from viperleed.guilib.leedsim.classes.leedparser import LEEDParser
+from viperleed.guilib.leedsim.classes.leedpattern import LEEDPattern
+from viperleed.guilib.leedsim.classes.realspace import RealSpace
+from viperleed.guilib.leedsim.dialogs.errorbox import ErrorBox
+from viperleed.guilib.leedsim.dialogs.exportcsvdialog import ExportCSVDialog
+from viperleed.guilib.leedsim.dialogs.newfiledialog import NewFileDialog
+from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
+from viperleed.guilib.leedsim.widgets.energyblock import EnergyBlock
+from viperleed.guilib.leedsim.widgets.hoverannot import HoverAnnot
+from viperleed.guilib.leedsim.widgets.leedcanvas import LEEDCanvas
+from viperleed.guilib.leedsim.widgets.realcanvas import RealCanvas
+from viperleed.guilib.leedsim.widgets.rotationblock import RotationBlock
+from viperleed.guilib.pluginsbase import ViPErLEEDPluginBase
 from viperleed.guilib.widgetdecorators import broadcast_mouse
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 
 DEFAULT_INPUT_FILE_EXTENSION = '*.tlm'
@@ -127,7 +142,7 @@ def show_use_betatest_version_popup():
     """Show a pop-up dialog hinting at using the betatest version."""
     _betatest = 'https://github.com/viperleed/viperleed-betatest'
     txt = (
-        f'The ViPErLEED graphical user interface for v{gl.GLOBALS["version"]} '
+        f'The ViPErLEED graphical user interface for v{__version__} '
         'is currently under development.<p>'
         'Please use the pre-packed version available from the <a href='
         f'{_betatest}/releases/latest>viperleed-betatest'
@@ -142,7 +157,7 @@ def show_use_betatest_version_popup():
 # TODO: remember last directories, also across sessions
 
 @broadcast_mouse
-class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
+class LEEDPatternSimulator(ViPErLEEDPluginBase):
     """A class that allows simulating LEED Patterns."""
 
     def __init__(self, parent=None):
@@ -155,13 +170,13 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
             # menus in the menu bar to have them show up.
             'file_menu': qtw.QMenu("&File"),
             # Real-space and LEED pattern plotting canvases
-            'lattices_canvas': gl.RealCanvas(title='Real-Space Lattices'),      # TODO: was self.realSpace
-            'leed_canvas': gl.LEEDCanvas(title='LEED Pattern'),                 # TODO: was self.recSpace
+            'lattices_canvas': RealCanvas(title='Real-Space Lattices'),         # TODO: was self.realSpace
+            'leed_canvas': LEEDCanvas(title='LEED Pattern'),                    # TODO: was self.recSpace
             # Rotation, just as a view, i.e., not the azimuthal
             # angle of incidence of the primary beam
-            'rotation': gl.RotationBlock(),                                     # TODO: was self.rotWidg
+            'rotation': RotationBlock(),                                        # TODO: was self.rotWidg
             # Current primary electron energy
-            'energy': gl.EnergyBlock(),                                         # TODO: was self.enWidg
+            'energy': EnergyBlock(),                                            # TODO: was self.enWidg
             # Domains selector
             'domains': qtw.QPushButton('Select domains')
             }
@@ -173,11 +188,11 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
             if k not in ('file_menu',)
             ]
 
-        self._dialogs = {'file_new': gl.NewFileDialog(self),}
+        self._dialogs = {'file_new': NewFileDialog(self),}
         self._glob = {
             # parameters holds the LEED parameters currently
             # used for plotting the lattices and LEED pattern
-            'parameters': gl.LEEDParametersList(),
+            'parameters': LEEDParametersList(),
             # is_saved keeps track of whether the structure
             # input is saved to disk. Used to keep track of
             # whether the saved file is up to date
@@ -254,7 +269,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
             # No need to recalculate if things are unchanged
             print("same")
             return
-        self._glob['parameters'] = gl.LEEDParametersList(new_parameters)
+        self._glob['parameters'] = LEEDParametersList(new_parameters)
         self.enable_ctrls(True)
         # self.initRealAndLEED(True)                                            # TODO: call appropriate method after reimplementation
 
@@ -415,7 +430,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
 
     def save_input(self):
         """Save the current input to file."""
-        gl.LEEDParser.write_structures(self.parameters, self.filename)
+        LEEDParser.write_structures(self.parameters, self.filename)
 
     def sizeHint(self):                                                         # TODO: consider if it makes sense to: (1) also reimplement minimumSizeHint(); (2) move this to base
         """Reimplement sizeHint to scale with the current screen."""
@@ -426,8 +441,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         # Create a dialog to select which domains should be exported
         # and to process the data to export
         if not hasattr(self, 'exportDialog'):
-            self.exportDialog = gl.ExportCSVDialog(self.leed,
-                                                   parent=self)
+            self.exportDialog = ExportCSVDialog(self.leed, parent=self)
             self.exportDialog.exportSelected.connect(self.exportCSV)
         else:
             self.exportDialog.open()
@@ -552,7 +566,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
 
         # (3) Button that opens the domain selector
         domains = self._ctrls['domains']
-        domains.setFont(gl.AllGUIFonts().labelFont)
+        domains.setFont(AllGUIFonts().labelFont)
         domains.ensurePolished()
         domains.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
 
@@ -660,9 +674,9 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         # set up the other parameters needed for export_pattern_csv
         if self.filename:
             params['source'] = self.filename
-        params['version'] = gl.GLOBALS['version']
+        params['version'] = __version__
 
-        gl.export_pattern_csv(fname[0], (self.leed,), **params)
+        export_pattern_csv(fname[0], (self.leed,), **params)
 
     def unsavedPopup(self):                                                     # TODO: fix & doc
         reply = qtw.QMessageBox.question(self, 'Edits unsaved',
@@ -677,8 +691,8 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         if active:
             # An acceptable LEED input has been loaded.
             # Update all controls with the correct stuff
-            self.real = gl.RealSpace(self.leedParams)
-            self.leed = gl.LEEDPattern(self.leedParams)
+            self.real = RealSpace(self.leedParams)
+            self.leed = LEEDPattern(self.leedParams)
             for ctrl in self.allCtrls:
                 self.updateCtrlAfterFileLoad(ctrl)
             self._ctrls['domains'].initPopup()
@@ -797,9 +811,9 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
             controls. leed_parameters is an empty list if fnames
             are an invalid input.
         """
-        error_msg = gl.ErrorBox(error_while="opening LEED pattern input",
-                                parent=self, silent=silent)
-        parser = gl.LEEDParser()
+        error_msg = ErrorBox(error_while="opening LEED pattern input",
+                             parent=self, silent=silent)
+        parser = LEEDParser()
 
         # Use a context manager to catch DeprecationWarning, which
         # is 'raised' for old-style files (without section headers)
@@ -814,21 +828,21 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
                     )
 
         try:
-            params = gl.LEEDParametersList(parser)
+            params = LEEDParametersList(parser)
         except NameError as err:
             # Missing parameters
             self.statusBar().showMessage(
                 f"Invalid LEED input file(s): {err.args[0]}.", 5000
                 )
             error_msg.exec_(self.statusBar().currentMessage())
-            return gl.LEEDParametersList()
+            return LEEDParametersList()
         except (ValueError, RuntimeError) as err:
             # Invalid data
             self.statusBar().showMessage(
                 f"Invalid LEED input file(s): {err.args[0]}", 5000
                 )
             error_msg.exec_(self.statusBar().currentMessage())
-            return gl.LEEDParametersList()
+            return LEEDParametersList()
 
         if not params:
             try:
@@ -836,7 +850,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
             except EOFError as err:
                 self.statusBar().showMessage("File(s) are empty", 5000)
                 error_msg.exec_(f"Invalid LEED input file: {err.args[0]}")
-                return gl.LEEDParametersList()
+                return LEEDParametersList()
         return params
 
     def __zz_test_annots_compose(self):                                        # TODO: remove
@@ -847,7 +861,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
               # ctmp, self.recSpace.parentWidget()==winWidg, '\n')
         tmpC = np.array([500, 500])#np.array([530.5, 500.5])
         # print("\ncreating")
-        self.tmps = [gl.HoverAnnot(winWidg) for i in range(12)]
+        self.tmps = [HoverAnnot(winWidg) for i in range(12)]
         deltas = [np.array([np.cos(x), np.sin(x)]) for x in np.linspace(0, 2*np.pi, num=len(self.tmps), endpoint=False)]
         # print("assign deltas")
         for (tmp, delta) in zip(self.tmps, deltas):

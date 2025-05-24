@@ -13,10 +13,10 @@ Blah blah TODO
 import numpy as np
 from matplotlib import colors as mpl_colors
 
-from viperleed import guilib as gl
+from viperleed.guilib.basewidgets import MPLFigureCanvas
 
 
-class RealCanvas(gl.MPLFigureCanvas):
+class RealCanvas(MPLFigureCanvas):
 
     def plotLattices(self):
         self.ax.cla()

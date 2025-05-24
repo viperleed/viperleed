@@ -13,24 +13,26 @@ Blah blah TODO
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
+from viperleed.guilib.basewidgets import PainterMatrix
+from viperleed.guilib.widgetslib import AllGUIFonts
+from viperleed.guilib.widgetslib import editStyleSheet
 
 
 class MatricesPopup(qtw.QWidget):
     def __init__(self, matrices, colors,
-                 fs=gl.AllGUIFonts().mathFont.pointSize(),
+                 fs=AllGUIFonts().mathFont.pointSize(),
                  parent=None):
         self.parent = parent
         super().__init__()
 
         if colors is not None:  # there's more than one domain
-            self.matrices = [gl.PainterMatrix(matrix, color=color, fs=fs)
+            self.matrices = [PainterMatrix(matrix, color=color, fs=fs)
                              for (matrix, color) in zip(matrices, colors)]
             # add one matrix to be displayed in black when the user toggles
             # the visibility of the domains
-            self.firstDomMatrix = gl.PainterMatrix(matrices[0], fs=fs)
+            self.firstDomMatrix = PainterMatrix(matrices[0], fs=fs)
         elif len(matrices) == 1:
-            self.matrices = [gl.PainterMatrix(matrices[0], fs=fs)]
+            self.matrices = [PainterMatrix(matrices[0], fs=fs)]
         else:  # some input error: colors are missing
             raise
 
@@ -59,7 +61,7 @@ class MatricesPopup(qtw.QWidget):
         self.setWindowFlags(qtc.Qt.Tool
                             | qtc.Qt.CustomizeWindowHint
                             | qtc.Qt.WindowDoesNotAcceptFocus)
-        gl.editStyleSheet(self, 'background-color: white;')
+        editStyleSheet(self, 'background-color: white;')
 
         # The next attribute is used in the mousePressEvent and
         # mouseMoveEvent for dragging the window around

@@ -15,8 +15,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
 from viperleed.guilib.classes import planegroup
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 PlaneGroup = planegroup.PlaneGroup
 
@@ -87,13 +87,13 @@ class Bulk3DSymDialog(qtw.QDialog):
                             "terrace to the next [e.g., Fe3O4(001) or Si(001)]."
                             "\n")
         description.setWordWrap(True)
-        description.setFont(gl.AllGUIFonts().labelFont)
+        description.setFont(AllGUIFonts().labelFont)
 
         widgets = [description]
 
         sym_conserve = self.__all_widgets['conserve_sym']
         sym_conserve.setText("Constrain symmetry to bulk cell")
-        sym_conserve.setFont(gl.AllGUIFonts().labelFont)
+        sym_conserve.setFont(AllGUIFonts().labelFont)
         sym_conserve.setChecked(True)
         widgets.append(sym_conserve)
 

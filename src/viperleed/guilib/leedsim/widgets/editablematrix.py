@@ -16,7 +16,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 from viperleed.guilib import decorators as dev_
 
@@ -180,7 +180,7 @@ class EditableMatrix(qtw.QWidget):
         None.
         """
         # Fonts
-        label_font = gl.AllGUIFonts().labelFont
+        label_font = AllGUIFonts().labelFont
         bracket_font = qtg.QFont(label_font)
         bracket_font.setPointSize(30)
         # The bracket_font size is not great. It is currently OK

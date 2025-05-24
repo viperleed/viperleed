@@ -17,9 +17,9 @@ import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
 from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.widgetslib import AllGUIFonts
 from viperleed.guilib.widgetslib import change_control_text_color
 
 from viperleed.guilib import decorators as dev_
@@ -346,7 +346,7 @@ class LatticeInput(qtw.QWidget):
         None.
         """
         # Fonts
-        label_font = gl.AllGUIFonts().labelFont
+        label_font = AllGUIFonts().labelFont
 
         # Title
         title = qtw.QLabel(self.title)
@@ -404,7 +404,7 @@ class LatticeInput(qtw.QWidget):
     def _compose_ctrl_a_b_alpha(self):
         """Set up controls of lattice parameters."""
         for key in ('a', 'b', 'alpha'):
-            self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
+            self._ctrls[key].setFont(AllGUIFonts().labelFont)
             self._ctrls[key].setSizePolicy(qtw.QSizePolicy.Fixed,
                                            qtw.QSizePolicy.Fixed)
             self._ctrls[key].setMaximumWidth(self._ctrls['shape'].width())
@@ -416,7 +416,7 @@ class LatticeInput(qtw.QWidget):
         """Set up control for plane group selection."""
         ctrl = self._ctrls['group']
 
-        ctrl.setFont(gl.AllGUIFonts().smallTextFont)
+        ctrl.setFont(AllGUIFonts().smallTextFont)
         ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
         ctrl.setMinimumWidth(self._ctrls['a'].width())
         ctrl.ensurePolished()
@@ -426,7 +426,7 @@ class LatticeInput(qtw.QWidget):
         ctrl = self._ctrls['hi_sym']
 
         ctrl.setText('Make high\nsymmetry')
-        ctrl.setFont(gl.AllGUIFonts().buttonFont)
+        ctrl.setFont(AllGUIFonts().buttonFont)
         ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
         ctrl.setMinimumWidth(self._ctrls['shape'].width())
         ctrl.ensurePolished()
@@ -438,7 +438,7 @@ class LatticeInput(qtw.QWidget):
         """Set up 'shape' control."""
         ctrl = self._ctrls['shape']
 
-        ctrl.setFont(gl.AllGUIFonts().smallTextFont)
+        ctrl.setFont(AllGUIFonts().smallTextFont)
         ctrl.addItems(['Oblique', 'Rectangular', 'Square',
                        'Rhombic', 'Hexagonal'])
 

@@ -13,8 +13,9 @@ Blah blah TODO
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
-from viperleed.guilib.leedsim.widgets import ToggleButton
+from viperleed.guilib.leedsim.widgets.matricespopup import MatricesPopup
+from viperleed.guilib.leedsim.widgets.togglebutton import ToggleButton
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 
 class DomsBlock(qtw.QWidget):
@@ -49,8 +50,8 @@ class DomsBlock(qtw.QWidget):
 
     def compose(self):
         #set fonts
-        self.text.setFont(gl.AllGUIFonts().labelFont)
-        self.toggle.setFont(gl.AllGUIFonts().buttonFont)
+        self.text.setFont(AllGUIFonts().labelFont)
+        self.toggle.setFont(AllGUIFonts().buttonFont)
 
         #set sizes
         self.toggle.setSizePolicy(qtw.QSizePolicy.Minimum,

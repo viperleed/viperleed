@@ -13,10 +13,11 @@ Blah blah TODO
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl  # TODO: remove
+from viperleed.guilib.basewidgets import TextBoxWithButtons
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 
-class EnergyBlock(gl.TextBoxWithButtons):
+class EnergyBlock(TextBoxWithButtons):
     def __init__(self, parent=None):
         params = {'labelText': '&Energy (eV)',
                   'textBoxText': '\u2014',
@@ -41,7 +42,7 @@ class EnergyBlock(gl.TextBoxWithButtons):
 
         # for reasons unknown the down arrow is typeset weirdly
         # (larger than it should) -> use smaller size
-        self.enDown.setFont(gl.AllGUIFonts().smallButtonFont)
+        self.enDown.setFont(AllGUIFonts().smallButtonFont)
 
         self.makeBottomWidget()
 
@@ -50,7 +51,7 @@ class EnergyBlock(gl.TextBoxWithButtons):
         # two text lines that state the minimum and maximum energy
         #
         self.limits = qtw.QLabel('Min = 10 eV\nMax = \u2014')
-        self.limits.setFont(gl.AllGUIFonts().smallTextFont)
+        self.limits.setFont(AllGUIFonts().smallTextFont)
         self.limits.adjustSize()
 
         bwLay = qtw.QHBoxLayout()

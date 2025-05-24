@@ -13,8 +13,8 @@ Created: 2021-03-13
 
 import numpy as np
 
-from viperleed import guilib as gl
 from viperleed.guilib.classes.lattice2d import Lattice2D
+from viperleed.guilib.leedsim.classes.leedparameters import LEEDParameters
 
 
 class RealSpace():
@@ -33,7 +33,7 @@ class RealSpace():
         -------
         None.
         """
-        params = gl.LEEDParameters(params)
+        params = LEEDParameters(params)
 
         self.superlattice = params['SUPERLATTICE']
 

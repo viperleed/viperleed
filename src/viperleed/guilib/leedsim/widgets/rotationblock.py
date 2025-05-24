@@ -14,10 +14,11 @@ import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
+from viperleed.guilib.basewidgets import TextBoxWithButtons
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 
-class RotationBlock(gl.TextBoxWithButtons):
+class RotationBlock(TextBoxWithButtons):
     def __init__(self, parent=None):
         params = {
             'labelText': '&Rotation (\u00b0)',
@@ -74,9 +75,9 @@ class RotationBlock(gl.TextBoxWithButtons):
                              *np.ravel(horVerButs)])
 
         # set fonts
-        [lab.setFont(gl.AllGUIFonts().smallTextFont)
+        [lab.setFont(AllGUIFonts().smallTextFont)
          for lab in [rotBulkLab,oneZeroLab,zeroOneLab]]
-        [but.setFont(gl.AllGUIFonts().smallButtonFont)
+        [but.setFont(AllGUIFonts().smallButtonFont)
          for but in np.ravel(horVerButs)]
 
         # set size policies and adjust the sizes to account for the new font

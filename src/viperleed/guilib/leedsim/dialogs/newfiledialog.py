@@ -17,12 +17,13 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
-from viperleed.gui import resources_path
 from viperleed.guilib.classes.lattice2d import Lattice2D
-from viperleed.guilib.leedsim import LEEDParametersList
+from viperleed.guilib.helpers import resources_path
+from viperleed.guilib.leedsim.classes.leedparameters import LEEDParametersList
+from viperleed.guilib.leedsim.widgets.bulkinput import BulkInput
+from viperleed.guilib.leedsim.widgets.surfaceinput import SurfaceStructureInput
+from viperleed.guilib.widgetslib import AllGUIFonts
 from viperleed.guilib.widgetslib import change_control_text_color
-# from viperleed.guilib.leedsim.widgets import BulkInput
 
 from viperleed.guilib import decorators as dev_
 
@@ -74,7 +75,7 @@ class NewFileDialog(qtw.QDialog):
             self.__startup_parameters = LEEDParametersList(DEFAULT_STARTUP)
         self.__lattices = []  # List of Lattice2D
         self._ctrls = {       # Control widgets
-            'bulk': gl.BulkInput(),
+            'bulk': BulkInput(),
             'surfaces': qtw.QTabWidget(),
             'e_max': qtw.QLineEdit(),
             'status_bar': qtw.QStatusBar(),
@@ -231,7 +232,7 @@ class NewFileDialog(qtw.QDialog):
         if not name:
             name = f"S{surf_tabs.count() + 1}"
 
-        surf = gl.SurfaceStructureInput(bulk_lattice=self.bulk_lattice)
+        surf = SurfaceStructureInput(bulk_lattice=self.bulk_lattice)
         surf.lattice = lattice
         surf.update_controls()
 
@@ -299,7 +300,7 @@ class NewFileDialog(qtw.QDialog):
         """Place children widgets."""
         # (1) Initialize the widgets
         # (1.1) surfaces tab widget
-        self._ctrls['surfaces'].setFont(gl.AllGUIFonts().smallTextFont)
+        self._ctrls['surfaces'].setFont(AllGUIFonts().smallTextFont)
         self._ctrls['surfaces'].setTabsClosable(True)
 
         # Change default behavior, such that we never
@@ -329,18 +330,18 @@ class NewFileDialog(qtw.QDialog):
         for ctrl in [emax_label, self._ctrls['e_max']]:
             ctrl.setSizePolicy(qtw.QSizePolicy.Fixed,
                                qtw.QSizePolicy.Preferred)
-            ctrl.setFont(gl.AllGUIFonts().labelFont)
+            ctrl.setFont(AllGUIFonts().labelFont)
         self._ctrls['e_max'].setMaximumWidth(70)
         to_be_polished = [emax_label, self._ctrls['e_max']]
 
         # (1.3) Live-view mode check-box
         self._ctrls['live_view'].setChecked(qtc.Qt.Checked)
-        self._ctrls['live_view'].setFont(gl.AllGUIFonts().labelFont)
+        self._ctrls['live_view'].setFont(AllGUIFonts().labelFont)
         to_be_polished.append(self._ctrls['live_view'])
 
         # (1.4) 'Done' and 'Cancel' buttons
         for key in ('done', 'cancel'):
-            self._ctrls[key].setFont(gl.AllGUIFonts().buttonFont)
+            self._ctrls[key].setFont(AllGUIFonts().buttonFont)
             self._ctrls[key].setSizePolicy(qtw.QSizePolicy.Fixed,
                                            qtw.QSizePolicy.Fixed)
             to_be_polished.append(self._ctrls[key])
@@ -380,7 +381,7 @@ class NewFileDialog(qtw.QDialog):
         self.setLayout(dialog_layout)
 
         # (4) Take care of widgets that do not belong to a layout
-        self._ctrls['edit_surf_name'].setFont(gl.AllGUIFonts().smallTextFont)
+        self._ctrls['edit_surf_name'].setFont(AllGUIFonts().smallTextFont)
         self._ctrls['edit_surf_name'].setAlignment(qtc.Qt.AlignCenter)
         self._ctrls['edit_surf_name'].hide()
 
@@ -880,14 +881,14 @@ class BulkHighSymReductionDialog(qtw.QDialog):
                    qtw.QPushButton("Constant\nsuperlattice\nmatrix")]
         btn_layout = qtw.QHBoxLayout()
         for button in buttons:
-            button.setFont(gl.AllGUIFonts().buttonFont)
+            button.setFont(AllGUIFonts().buttonFont)
             button.ensurePolished()
             btn_layout.addWidget(button)
         buttons[0].clicked.connect(self.accept)
         buttons[1].clicked.connect(self.reject)
 
         txt = qtw.QLabel("Pick how to transform surface structures")
-        txt.setFont(gl.AllGUIFonts().labelFont)
+        txt.setFont(AllGUIFonts().labelFont)
 
         layout = qtw.QVBoxLayout()
         layout.addWidget(txt)

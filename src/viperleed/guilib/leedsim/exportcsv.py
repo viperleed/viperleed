@@ -14,8 +14,11 @@ as input for the ViPErLEED ImageJ plug-ins
 import numpy as np
 
 from viperleed import GLOBALS
-from viperleed import guilib as gl
 from viperleed.guilib.classes.beamindex import BeamIndex
+from viperleed.guilib.helpers import format_floats
+from viperleed.guilib.helpers import integer_part_length
+from viperleed.guilib.leedsim.classes.leedpattern import LEEDPattern            # TODO: maybe the old one?
+from viperleed.guilib.leedsim.classes.leedparameters import LEEDParameters
 
 
 def export_pattern_csv(fnames, leeds, **kwargs):
@@ -81,15 +84,15 @@ def export_pattern_csv(fnames, leeds, **kwargs):
                          f"LEED patterns ({len(leeds)}).")
     # TODO: the whole block that follows will be done with a single
     #       call to the new LEEDPattern
-    if any(not isinstance(leed, (dict, gl.LEEDPattern, gl.LEEDParameters))
+    if any(not isinstance(leed, (dict, LEEDPattern, LEEDParameters))
            for leed in leeds):
         raise TypeError("exportcsv: each of the LEED parameters passed must "
                         "be either a leed_parameters dictionary or a "
                         "viperleed.LEEDPattern")
     for i, leed in enumerate(leeds):
-        if isinstance(leed, (dict, gl.LEEDParameters)):
+        if isinstance(leed, (dict, LEEDParameters)):
             # replace the dictionary entry with a LEEDPattern
-            leeds[i] = gl.LEEDPattern(leed)
+            leeds[i] = LEEDPattern(leed)
         # and check that the bulk bases are consistent
         if not np.allclose(leed.bulk_basis, leeds[0].bulk_basis):
             raise ValueError("exportcsv: Incompatible bulk bases found among "
@@ -142,7 +145,7 @@ def _format_beams_(leed, **kwargs):
     """
 
     # Check parameters
-    if not isinstance(leed, gl.LEEDPattern):                                   # This will not be a LEEDPattern, but rather a LEEDSymmetryDomains
+    if not isinstance(leed, LEEDPattern):                                       # This will not be a LEEDPattern, but rather a LEEDSymmetryDomains
         raise TypeError("exportcsv: leed must be a "
                         "viperleed.guilib.LEEDPattern instance")
 
@@ -175,10 +178,10 @@ def _format_beams_(leed, **kwargs):
         lengths['denominator'].append(den)
 
         # 2) float representation of beam indices
-        lengths['hk_integer'].append(gl.integer_part_length(*beam))
+        lengths['hk_integer'].append(integer_part_length(*beam))
 
         # 3) and reciprocal-space vector
-        lengths['g_integer'].append(gl.integer_part_length(*g))
+        lengths['g_integer'].append(integer_part_length(*g))
 
     # construct the list of overlapping domains
     for (overlap, extinct) in zip(overlaps, extinct_domains):
@@ -206,7 +209,7 @@ def _format_beams_(leed, **kwargs):
         line = (    # list of entries for each column:
             f"{beam:({n},{d})s},"                              # fractional hk
             + f"{beam:{lengths['hk_integer']}f}"[1:-1] + ','   # floating hk
-            + gl.format_floats(f"{lengths['g_integer']}f", *g) + ','  # gx, gy
+            + format_floats(f"{lengths['g_integer']}f", *g) + ','  # gx, gy
             + f"{group:>{lengths['group']}},"                  # group index
             + f"{doms:>{lengths['domains']}},"                 # domains overlap
             )
@@ -268,7 +271,7 @@ def _format_header_(lengths, leed, **kwargs):                                   
     # * finally an uncommented header line for the columns
 
     # check mandatory parameters
-    if not isinstance(leed, gl.LEEDPattern):
+    if not isinstance(leed, LEEDPattern):
         raise TypeError("exportcsv: leed must be a "
                         "viperleed.guilib.LEEDPattern instance")
     needed_keys = ('numerator', 'denominator', 'hk_integer', 'g_integer',

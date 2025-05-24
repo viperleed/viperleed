@@ -15,7 +15,6 @@ import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
 from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.classes.planegroup import PlaneGroup
 from viperleed.guilib.leedsim.classes.woods import Woods
@@ -23,7 +22,9 @@ from viperleed.guilib.leedsim.classes.woods import WoodsSyntaxError
 from viperleed.guilib.leedsim.classes.woods import MatrixIncommensurateError
 from viperleed.guilib.leedsim.classes.woods import WoodsInvalidForBasisError
 from viperleed.guilib.leedsim.classes.woods import WoodsNotRepresentableError
-from viperleed.guilib.leedsim.widgets import EditableMatrix, LatticeInput
+from viperleed.guilib.leedsim.widgets.editablematrix import EditableMatrix
+from viperleed.guilib.leedsim.widgets.latticeinput import LatticeInput
+from viperleed.guilib.widgetslib import AllGUIFonts
 from viperleed.guilib.widgetslib import change_control_text_color
 
 from viperleed.guilib import decorators as dev_
@@ -443,8 +444,8 @@ class SurfaceStructureInput(qtw.QWidget):
     def _compose(self):
         """Place children widgets."""
         # Fonts
-        small_txt_font = gl.AllGUIFonts().smallTextFont
-        label_font = gl.AllGUIFonts().labelFont
+        small_txt_font = AllGUIFonts().smallTextFont
+        label_font = AllGUIFonts().labelFont
 
         # (1) Labels
         labels = {'title': qtw.QLabel('Reconstruction periodicity'),

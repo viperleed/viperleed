@@ -11,9 +11,139 @@ Author: Michele Riva
 This module collects helper functions used in various places in the GUI
 """
 
+import ast
 import itertools
+from pathlib import Path
+import re
+import sys
 
 import numpy as np
+
+
+def integer_part_length(*numbers):
+    return max(len(f"{int(number)}") for number in numbers)
+
+
+def format_floats(format_specs, *numbers):
+    """
+    Formats floats to have them all aligned to the point, and according to
+    format_spec. format_spec is in the form
+
+    [[fill]align][sign][#][0][minimumwidth][.precision][type]
+
+    - fill and align will be used to pad the overall resulting string
+    - sign, #, 0 are discarded
+    - minimumwidth is the minimum number of characters used to represent the
+      integer parts. Defaults to the minimum number necessary to have all
+      numbers aligned to the decimal point
+    - precision is the number of decimal digits. Defaults to 5.
+    """
+    int_len = integer_part_length(*numbers)
+
+    # standard pattern for format_specs
+    pattern = (r"^(?P<align>[<>=^]\d+)?"
+               r"[\+\- ]?"
+               r"[#]?"
+               r"[0]?"
+               r"(?P<minwidth>\d*)"
+               r"([.](?P<prec>\d+))?"
+               r"[bdcoxXneEfFgG\%]?$")
+    m = re.match(pattern, format_specs)
+    if m is None:
+        raise TypeError("Incorrect format specifier for type f.")
+    # process the format specifications:
+    # (1) Number of decimal digits
+    prec = int(m['prec'] or '5')
+    # (2) Minimum width of integer part
+    #    (will left-pad with spaces if needed)
+    min_w = int(m['minwidth'] or 0) or int_len
+    tot_w = max(min_w + prec, int_len + prec) + 1  # +1 for decimal point
+
+    format = f">{tot_w}.{prec}f"
+    raw = ','.join(f"{float(number):{format}}" for number in numbers)
+    align = ''
+    if m.group('align'):
+        align = f"{m.group('align')}"
+
+    return f"{raw:{align}}"
+
+
+def resources_path(dir_name):
+    """Return the correct path to dir_name.
+
+    This is useful when building an executable from pyinstaller.
+    When built from pyinstaller, it takes the path relative to the
+    temporary path in which the "exe" is extracted during execution.
+
+    Parameters
+    ----------
+    dir_name : str
+        Path relative to the one from which resources_path is called.
+
+    Returns
+    -------
+    str
+        Modified path, only if the GUI is running from a pyinstaller
+        'executable', otherwise returns dir_name unchanged.
+    """
+    # EVENTUALLY IT IS PROBABLY BETTER TO INCLUDE THE WHOLE /fonts FOLDER from
+    # '/guilib' IN THE CORRECT PLACE, AND HAVE resources_path RETURN ITS BASE
+    # PATH (i.e., the top-level folder in which the exe is) IF PYINSTALLER IS
+    # USED
+    if hasattr(sys, '_MEIPASS'):
+        return str(Path(sys._MEIPASS, dir_name).resolve())
+    return dir_name
+
+
+def string_matrix_to_numpy(str_matrix, dtype=float, needs_shape=tuple()):
+    """
+    Takes a string representing a matrix with float values and parses it into a
+    numpy array of the right shape. It can also check if the string represents
+    a matrix of a specific shape.
+
+    Parameters
+    ----------
+    - str_matrix: str
+                  String to be parsed to extract a matrix. It needs to be
+                  formatted as an array-like input acceptable for numpy
+    - dtype: data type; default float
+             Data type that the numpy array returned will have
+    - needs_shape: array-like; default = tuple()
+                   if this keyword argument is given, the function checks that
+                   the shape of the parsed matrix matches the input
+
+    Returns
+    -------
+    np.array or None
+
+    If needs_shape is given, the function returns None in case the shapes do not
+    match. Otherwise always returns a numpy array.
+    """
+    if not isinstance(str_matrix, str):
+        raise TypeError("string_matrix_to_numpy: str_matrix should be string. "
+                        f"Found {type(str_matrix).__name__!r} instead")
+    try:
+        _ = len(needs_shape)
+    except TypeError:
+        raise TypeError("string_matrix_to_numpy: needs_shape should be an "
+                        f"array-like. Found {type(needs_shape).__name__!r} "
+                        "instead") from None
+    try:
+        matrix = np.asarray(ast.literal_eval(str_matrix), dtype=float)
+    except SyntaxError as err:
+        raise RuntimeError("Could not extract a matrix from string "
+                           f"{str_matrix}. Most likely a bracket or "
+                           "a comma is missing") from err
+
+    # if dtype=int, round first, then typecast
+    if dtype == int:
+        matrix = matrix.round().astype(int)
+
+    if len(needs_shape) > 0 and matrix.shape != tuple(needs_shape):
+        raise RuntimeError("string_matrix_to_numpy: matrix has the wrong "
+                           f"shape. Expected {tuple(needs_shape)}, found "
+                           f"{matrix.shape}")
+    return matrix
 
 
 # Disable due to pylint bug for sequence of allowed values

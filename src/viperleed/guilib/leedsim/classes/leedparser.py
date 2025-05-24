@@ -27,10 +27,10 @@ from io import IOBase
 
 import numpy as np
 
-from viperleed import guilib as gl
 from viperleed.guilib.classes.planegroup import PlaneGroup
 from viperleed.guilib.helpers import array_to_string
 from viperleed.guilib.helpers import conventional_angles
+from viperleed.guilib.helpers import string_matrix_to_numpy
 
 warnings.simplefilter('always', DeprecationWarning)
 
@@ -187,9 +187,9 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         dtype = float if key == 'surfBasis' else int
 
         try:
-            matrix = gl.string_matrix_to_numpy(self[structure][key],
-                                               dtype=dtype,
-                                               needs_shape=(2, 2))
+            matrix = string_matrix_to_numpy(self[structure][key],
+                                            dtype=dtype,
+                                            needs_shape=(2, 2))
         except RuntimeError as err:
             raise RuntimeError(f"Could not convert {key} "
                                f"of {structure} into a 2x2"

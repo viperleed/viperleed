@@ -19,13 +19,13 @@ from warnings import warn as warning   # eventually will replace with logging
 
 import numpy as np
 
-from viperleed import guilib as gl
 from viperleed.guilib.classes import planegroup
 from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.helpers import conventional_angles
 from viperleed.guilib.helpers import remove_duplicates
 from viperleed.guilib.helpers import single_spaces_only
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
+from viperleed.guilib.leedsim.classes.leedparser import LEEDParser
 
 non_string_keys = ('emax', 'surfbasis', 'superlattice', 'bulkgroup',
                    'surfgroup', 'beamincidence', 'screenaperture')
@@ -314,7 +314,7 @@ class LEEDParameters(MutableMapping):
         if len(parser.sections()) > 1:
             raise RuntimeError("LEEDParameters: multiple structures "
                                "found. Use LEEDParametersList instead")
-        leed_parser = gl.LEEDParser()
+        leed_parser = LEEDParser()
         leed_parser.read_structures(parser)
         self.__from_dict(leed_parser.as_dict())
 
@@ -368,7 +368,7 @@ class LEEDParameters(MutableMapping):
                for k, v in data.items()
                if k in non_string_keys):
             name = data.get('name', 'S1')
-            parser = gl.LEEDParser()
+            parser = LEEDParser()
             parser.read_dict({name: data})
             for k, value in parser.as_dict().items():
                 data[k.lower()] = value
@@ -784,7 +784,7 @@ class LEEDParametersList(MutableSequence):
         if not data:
             ret = []
         elif isinstance(data, ConfigParser):
-            leed_parser = gl.LEEDParser()
+            leed_parser = LEEDParser()
             leed_parser.read_dict(data)
             ret = [LEEDParameters(leed_parser.as_dict(section))
                    for section in data.sections()]

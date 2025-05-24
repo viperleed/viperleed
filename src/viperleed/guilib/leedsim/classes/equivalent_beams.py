@@ -15,11 +15,11 @@ from warnings import warn as warning  # TODO: replace with logging
 
 import numpy as np
 
-from viperleed import guilib as gl
 from viperleed.guilib.classes import planegroup
 from viperleed.guilib.classes.beamindex import BeamIndex
 from viperleed.guilib.helpers import equal_dicts
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
+from viperleed.guilib.leedsim.utils import sort_hk
 
 from viperleed.guilib import decorators as dev_
 
@@ -88,30 +88,6 @@ def beams_list_numerators_to_fractional(beam_list, denominator):
     return tuple(BeamIndex(beam, denominator=denominator,
                            from_numerators=True)
                  for beam in beam_list)
-
-
-def sort_hk(index):
-    """Key-sorting criterion for (h, k) indices.
-
-    This method can be used as the 'key' optional argument of
-    list.sort() or sorted() to sort beams given as (h, k)
-    indices in the iterable to be sorted with decreasing h+k
-    and, on second pass, decreasing h. E.g., applying this to
-    [(-1, 1), (-1, -1), (1, -1), (1, 1)] gives the list
-    [(1, 1), (1, -1), (-1, 1), (-1, -1)].
-
-    Parameters
-    ----------
-    index : iterable
-        Two-element iterable (h, k)
-
-    Returns
-    -------
-    tuple
-        Two elements, same types as h and k.
-    """
-    h_index, k_index = index
-    return -(h_index + k_index), -h_index
 
 
 def same_bases(*bases):
@@ -306,7 +282,13 @@ class LEEDEquivalentBeams:
             # that were originally passed. We assume that the
             # caller will take care of this.
             caller = kwargs.get('caller', None)
-            if not caller or not isinstance(caller, gl.LEEDStructuralDomains):
+            try:  # Do not use isinstance to avoid cyclic imports
+                _ = caller.eq_beams_last_config
+            except AttributeError:
+                _is_struct_domains = False
+            else:
+                _is_struct_domains = True
+            if not caller or not _is_struct_domains:
                 warning("LEEDEquivalentBeams: Single domain was already "
                         "calculated, but domain_ids passed were unused. "
                         "They will need to be fixed at the source!",

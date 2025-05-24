@@ -27,16 +27,30 @@ import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
+from viperleed import __version__
 from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.helpers import string_matrix_to_numpy
+from viperleed.guilib.leedsim.classes.oldleedpatterns import LEEDPattern
+from viperleed.guilib.leedsim.classes.realspace import RealSpace
+from viperleed.guilib.leedsim.dialogs.exportcsvdialog import ExportCSVDialog
+from viperleed.guilib.leedsim.dialogs.newfiledialog_old import NewFileDialog
+from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
+from viperleed.guilib.leedsim.widgets.domainsblock import DomsBlock
+from viperleed.guilib.leedsim.widgets.energyblock import EnergyBlock
+from viperleed.guilib.leedsim.widgets.hoverannot import HoverAnnot
+from viperleed.guilib.leedsim.widgets.leedcanvas import LEEDCanvas
+from viperleed.guilib.leedsim.widgets.realcanvas import RealCanvas
+from viperleed.guilib.leedsim.widgets.rotationblock import RotationBlock
+from viperleed.guilib.pluginsbase import ViPErLEEDPluginBase
 from viperleed.guilib.widgetdecorators import broadcast_mouse
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 
 @broadcast_mouse
-class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
+class LEEDPatternSimulator(ViPErLEEDPluginBase):
     
     extension = '*.tlm'
-    version = gl.GLOBALS['version']
+    version = __version__
 
     extStr = 'LEED input files ({})'.format(' '.join([extension,
                                                       extension.upper()]))
@@ -51,7 +65,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
 
     def __init__(self):
         super().__init__()
-        self.fonts = gl.AllGUIFonts()
+        self.fonts = AllGUIFonts()
         self.leedParams = dict()
         self.openedFile = None  # Keep track of the name of the currently
                                 # open file. This is used for exporting.
@@ -184,7 +198,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
 
     def fileNewDialog(self):
         if not hasattr(self, 'newDialog'):
-            self.newDialog = gl.NewFileDialog(self, self.leedParams)
+            self.newDialog = NewFileDialog(self, self.leedParams)
             self.newDialog.dialogEdited.connect(self.loadLEEDInput)
             self.isSaved = False
         else:
@@ -236,8 +250,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         # Create a dialog to select which domains should be exported
         # and to process the data to export
         if not hasattr(self, 'exportDialog'):
-            self.exportDialog = gl.ExportCSVDialog(self.leed,
-                                                   parent=self)
+            self.exportDialog = ExportCSVDialog(self.leed, parent=self)
             self.exportDialog.exportSelected.connect(self.exportCSV)
         else:
             self.exportDialog.open()
@@ -327,10 +340,10 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
                 par_dict[par] = par_dict.pop(par.lower())
 
         par_dict['eMax'] = float(par_dict['eMax'])
-        par_dict['surfBasis'] = gl.string_matrix_to_numpy(
+        par_dict['surfBasis'] = string_matrix_to_numpy(
             par_dict['surfBasis'], dtype=float, needs_shape=(2, 2)
             )
-        par_dict['SUPERLATTICE'] = gl.string_matrix_to_numpy(
+        par_dict['SUPERLATTICE'] = string_matrix_to_numpy(
             par_dict['SUPERLATTICE'], int, needs_shape=(2, 2)
             )
 
@@ -387,7 +400,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
             params['source'] = self.openFile
         params['version'] = self.version
 
-        gl.export_pattern_csv(fname[0], (self.leed,), **params)
+        export_pattern_csv(fname[0], (self.leed,), **params)
 
     def unsavedPopup(self):
         reply = qtw.QMessageBox.question(self, 'Edits unsaved',
@@ -447,8 +460,8 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         w = self.window().centralWidget()
 
         #### REAL SPACE AND LEED PATTERN PLOTTING CANVASES
-        self.realSpace = gl.RealCanvas(parent=w, title='Real Space Lattice')
-        self.recSpace = gl.LEEDCanvas(parent=w, title='LEED Pattern')
+        self.realSpace = RealCanvas(parent=w, title='Real Space Lattice')
+        self.recSpace = LEEDCanvas(parent=w, title='LEED Pattern')
 
         # draw the LEED screen as a circle. It will also act as a background,
         # and will be used as a clip path for the pattern
@@ -456,21 +469,21 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
                                lineThick=self.realSpace.getSpinesThickness())
 
         #### ROTATION ####
-        self.rotWidg = gl.RotationBlock(w)
+        self.rotWidg = RotationBlock(w)
         self.realSpace.wheel_buddy = self.rotWidg.text
 
         #### ENERGY ####
-        self.enWidg = gl.EnergyBlock(w)
+        self.enWidg = EnergyBlock(w)
         self.recSpace.wheel_buddy = self.enWidg.text
 
         #### DOMAINS ####
-        self.doms = gl.DomsBlock(w)
+        self.doms = DomsBlock(w)
 
         #### Unit cells shape and group ####
         self.cellShapes = qtw.QLabel("Slab: \u2014, \u2014. "
                                      "Bulk: \u2014, \u2014",
                                      w)
-        self.cellShapes.setFont(gl.AllGUIFonts().largeTextFont)
+        self.cellShapes.setFont(AllGUIFonts().largeTextFont)
         self.cellShapes.setStatusTip('Open or drag-drop a LEED pattern file'
                                      'to print the shapes and symmetry'
                                      'groups of the system!')
@@ -629,7 +642,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
               # ctmp, self.recSpace.parentWidget()==winWidg, '\n')
         tmpC = np.array([500, 500])#np.array([530.5, 500.5])
         # print("\ncreating")
-        self.tmps = [gl.HoverAnnot(winWidg) for i in range(12)]
+        self.tmps = [HoverAnnot(winWidg) for i in range(12)]
         deltas = [np.array([np.cos(x), np.sin(x)]) for x in np.linspace(0, 2*np.pi, num=len(self.tmps), endpoint=False)]
         # print("assign deltas")
         for (tmp, delta) in zip(self.tmps, deltas):
@@ -703,8 +716,8 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         if active:
             # An acceptable LEED input has been loaded.
             # Update all controls with the correct stuff
-            self.real = gl.RealSpace(self.leedParams)
-            self.leed = gl.LEEDPattern(self.leedParams)
+            self.real = RealSpace(self.leedParams)
+            self.leed = LEEDPattern(self.leedParams)
             for ctrl in self.allCtrls:
                 self.updateCtrlAfterFileLoad(ctrl)
             self.doms.initPopup()

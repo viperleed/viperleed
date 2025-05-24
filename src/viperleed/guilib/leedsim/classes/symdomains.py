@@ -16,11 +16,16 @@ import itertools
 
 import numpy as np
 
-from viperleed import guilib as gl
+from viperleed.guilib.base import orientation
 from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.helpers import conventional_angles
 from viperleed.guilib.helpers import two_by_n_array_to_tuples
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
+from viperleed.guilib.leedsim.classes.equivalent_beams import (
+    LEEDEquivalentBeams,
+    )
+from viperleed.guilib.leedsim.classes.leedparameters import LEEDParameters
+from viperleed.guilib.leedsim.utils import screen_radius
 
 from viperleed.guilib import decorators as dev_
 
@@ -127,7 +132,7 @@ class LEEDSymmetryDomains(Sequence):
         -------
         None.
         """
-        self.__parameters = gl.LEEDParameters(leed_parameters)
+        self.__parameters = LEEDParameters(leed_parameters)
 
         # __consts contains attributes of this instance
         # that are calculated only once (either during this
@@ -181,7 +186,7 @@ class LEEDSymmetryDomains(Sequence):
         # self.__equiv_spots_no_superpos and self.__extinct_spots are
         # used in the public method self.equivalent_spots(domains,
         # theta, phi) for creating the appropriate
-        # gl.LEEDEquivalentBeams instance (unless it's already cached),
+        # LEEDEquivalentBeams instance (unless it's already cached),
         # whose reference is stored into self.__last_eq.
         # Can be accessed (read-only) with self.eq_beams_last_config
         self.__last_eq = None
@@ -407,8 +412,8 @@ class LEEDSymmetryDomains(Sequence):
             Angles between the first lattice vectors of
             all domains and those of the first domain
         """
-        first_dom_angle = gl.orientation(self[0].real_basis[0], zero_pi)
-        return [gl.orientation(dom.real_basis[0], zero_pi) - first_dom_angle
+        first_dom_angle = orientation(self[0].real_basis[0], zero_pi)
+        return [orientation(dom.real_basis[0], zero_pi) - first_dom_angle
                 for dom in self]
 
     def domains_containing_beam(self, beam):
@@ -525,7 +530,7 @@ class LEEDSymmetryDomains(Sequence):
                   'superlattice': self.superlattices[0],
                   'angle_key': self.__key_from_angles(theta, phi, domains),
                   'caller': self}
-        self.__last_eq = gl.LEEDEquivalentBeams(domains_dicts, **kwargs)
+        self.__last_eq = LEEDEquivalentBeams(domains_dicts, **kwargs)
         return self.__last_eq.indexed_beams
 
     def set_beam_incidence(self, theta=None, phi=None):
@@ -641,7 +646,7 @@ class LEEDSymmetryDomains(Sequence):
             One of 'norm', 'other', or the azimuthal angle
             of mirrors/glides
         """
-        a_angle = gl.orientation(self[0].real_basis[0], zero_pi=False)
+        a_angle = orientation(self[0].real_basis[0], zero_pi=False)
         phi = (phi - a_angle) % 180
 
         if theta < 1e-4:
@@ -662,8 +667,8 @@ class LEEDSymmetryDomains(Sequence):
         surf = Lattice2D(self.__parameters['surfBasis'])
 
         # and get the maximum screen radius
-        max_radius = gl.screen_radius(self.__parameters['eMax'],
-                                      self.__parameters['screenAperture'])
+        max_radius = screen_radius(self.__parameters['eMax'],
+                                   self.__parameters['screenAperture'])
 
         # Then prepare the actual reciprocal lattice of the first domain
         domains = [Lattice2D(surf.reciprocal_basis, space='reciprocal',
@@ -804,7 +809,7 @@ class LEEDSymmetryDomains(Sequence):
         # pylint: disable=no-member
         all_operations = self[0].group.operations()
         # pylint: enable=no-member
-        a_angle = gl.orientation(self[0].real_basis[0], zero_pi=False)
+        a_angle = orientation(self[0].real_basis[0], zero_pi=False)
 
         # Prepare the dict keys:
         labels = ['norm', 'other']
@@ -817,7 +822,7 @@ class LEEDSymmetryDomains(Sequence):
                                         self[0].special_directions):
             if direction is None:  # the operation is a rotation
                 continue
-            phi = gl.orientation(direction, zero_pi=False)
+            phi = orientation(direction, zero_pi=False)
             labels.append(round((phi - a_angle) % 180))
             operations.append((all_operations[0], operation))
 

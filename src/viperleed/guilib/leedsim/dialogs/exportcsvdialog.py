@@ -16,8 +16,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-# import guilib as gl
-from viperleed import guilib as gl
+from viperleed.guilib.leedsim.classes.leedpattern import LEEDPattern            # TODO: maybe the old one?
+from viperleed.guilib.widgetslib import AllGUIFonts
 from viperleed.guilib.widgetslib import get_all_children_widgets
 
 
@@ -27,7 +27,7 @@ class ExportCSVDialog(qtw.QDialog):
     
     
     def __init__(self, leed, parent=None):
-        if not isinstance(leed, gl.LEEDPattern):
+        if not isinstance(leed, LEEDPattern):
             raise
         #super(ExportCSVDialog, self).__init__(parent)
         super().__init__(parent)
@@ -43,7 +43,7 @@ class ExportCSVDialog(qtw.QDialog):
         self.open()
     
     def compose(self):
-        font = gl.AllGUIFonts().labelFont
+        font = AllGUIFonts().labelFont
         if self.leed.n_domains > 1:  # more than one domain
             domColors = self.leed.domColors
         else:

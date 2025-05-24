@@ -15,12 +15,13 @@ import matplotlib as mpl
 #OR
 #from matplotlib.patches import Circle as MplCircle
 
-from viperleed import guilib as gl
+from viperleed.guilib.basewidgets import MPLFigureCanvas
+from viperleed.guilib.leedsim.widgets.hoverannot import HoverAnnot
 
 TEST = False
 
 
-class LEEDCanvas(gl.MPLFigureCanvas):
+class LEEDCanvas(MPLFigureCanvas):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -30,7 +31,7 @@ class LEEDCanvas(gl.MPLFigureCanvas):
         # Define annotations that will appear when the mouse hovers above
         # LEED spots (including symmetry-equivalent). Notice that at most 12
         # symmetry-equivalent spots can exist at the same time
-        self.annots = [gl.HoverAnnot(self.parentWidget()) for _ in range(12)]
+        self.annots = [HoverAnnot(self.parentWidget()) for _ in range(12)]
 
         if TEST:
             self.mpl_connect('motion_notify_event', self.on_hover)

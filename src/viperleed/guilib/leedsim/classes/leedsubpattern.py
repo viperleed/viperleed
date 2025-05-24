@@ -17,7 +17,6 @@ import copy
 import numpy as np
 from matplotlib import (cm as color_maps, colors as mpl_colors)
 
-from viperleed import guilib as gl
 from viperleed.guilib.helpers import two_d_iterable_to_array
 
 from viperleed.guilib import decorators as dev_
@@ -62,7 +61,9 @@ class CachedLEEDSubpatternConstructor:
         ValueError
             If domains_ids is not given or it is None
         """
-        if not isinstance(leed, gl.LEEDPattern):
+        try:  # Don't use isinstance to avoid cyclic imports
+            _ = leed.bulk, leed.domains, leed.parameters
+        except AttributeError:  # Probably not a LEEDPattern
             raise TypeError(f"Invalid 'leed' type {type(leed).__name__}. "
                             "Should be a 'LEEDPattern'")
         domains_ids = kwargs.get('domains_ids', None)
@@ -475,7 +476,10 @@ class LEEDSubpattern:
         ValueError
             If the shape of beams is not (2, N) or (N, 2).
         """
-        if not isinstance(self.__leed, gl.LEEDPattern):
+        leed = self.__leed
+        try:  # Don't use isinstance to avoid cyclic imports
+            _ = leed.bulk, leed.domains, leed.parameters
+        except AttributeError:  # Probably not a LEEDPattern:
             raise TypeError("Invalid argument 'leed'. Expected 'LEEDPattern' "
                             f"found {type(self.__leed).__name__}")
         if not isinstance(self.__domains_id, str):

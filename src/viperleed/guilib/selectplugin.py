@@ -18,10 +18,13 @@ from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw,
                    QtGui as qtg)
 
-from viperleed import guilib as gl
-from viperleed.gui import resources_path
-from viperleed.guilib.pluginsbase import logo_one_line, ViPErLEEDPluginBase
-from viperleed.guilib.measure.uimeasurement import Measure
+from viperleed import __version__
+from viperleed.guilib.helpers import resources_path
+# from viperleed.guilib.leedsim.mainwindow import LEEDPatternSimulator
+from viperleed.guilib.leedsim.mainwindow_old import LEEDPatternSimulator
+# from viperleed.guilib.measure.uimeasurement import Measure                    # TODO: OSError on imagingsource dll inn py37
+from viperleed.guilib.pluginsbase import ViPErLEEDPluginBase
+from viperleed.guilib.pluginsbase import logo_one_line
 from viperleed.guilib.widgetslib import move_to_front
 
 from viperleed.guilib import decorators as dev_
@@ -39,7 +42,7 @@ def show_pre_release_popup():
     -------
     None.
     """
-    txt = (f"ViPErLEED v{gl.GLOBALS['version']} is a pre-release not meant "
+    txt = (f"ViPErLEED v{__version__} is a pre-release not meant "
            "for public distribution!<p> Contact us at <a href="
            u''"'mailto:riva@iap.tuwien.ac.at'"'>riva@iap.tuwien.ac.at</a> '
            "</p>")
@@ -56,7 +59,7 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
     # to use, and key[1] == class that opens the main
     # window of the module
     modules = {'pattern_simulator': ('pattern_simulator.png',
-                                     gl.LEEDPatternSimulator),
+                                     LEEDPatternSimulator),
                # 'measure': ('measure.png', Measure),}
                'measure': ('measure.png', None),}
 

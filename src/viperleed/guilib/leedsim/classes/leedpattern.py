@@ -15,13 +15,18 @@ Created: 2021-03-13
 
 import numpy as np
 
-from viperleed import guilib as gl
 from viperleed.guilib.classes.beamindex import BeamIndex
 from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.leedsim.classes.leedsubpattern import (
-    LEEDSubpattern, CachedLEEDSubpatternConstructor
+    CachedLEEDSubpatternConstructor,
+    LEEDSubpattern,
     )
-from viperleed.guilib.leedsim.classes.equivalent_beams import sort_hk
+from viperleed.guilib.leedsim.classes.leedparameters import LEEDParametersList
+from viperleed.guilib.leedsim.classes.structdomains import (
+    LEEDStructuralDomains,
+    )
+from viperleed.guilib.leedsim.utils import screen_radius
+from viperleed.guilib.leedsim.utils import sort_hk
 
 from viperleed.guilib import decorators as dev_
 
@@ -107,10 +112,10 @@ class LEEDPattern:
         # and prepare the LEEDParametersList that defines the LEED
         # pattern, i.e., a list of STRUCTURAL domains. Consistency of
         # bulk lattices is delegated to LEEDParametersList
-        params = gl.LEEDParametersList(leeds, keep_duplicates)
+        params = LEEDParametersList(leeds, keep_duplicates)
 
         # Construct the structural domains
-        self.domains = gl.LEEDStructuralDomains(params)
+        self.domains = LEEDStructuralDomains(params)
         self.__bulk = self.bulk
 
         # In-plane azimuthal rotation in degrees; positive
@@ -171,7 +176,7 @@ class LEEDPattern:
 
     @property
     def parameters(self):
-        """gl.LEEDParametersList that is used to build this LEED pattern."""
+        """LEEDParametersList that is used to build this LEED pattern."""
         return self.domains.parameters
 
     @property
@@ -501,7 +506,7 @@ class LEEDPattern:
 
     def screen_radius(self, energy):
         """Radius of LEED screen at given energy."""
-        return gl.screen_radius(energy, self.parameters[0]['screenAperture'])
+        return screen_radius(energy, self.parameters[0]['screenAperture'])
 
     # @dev_.exec_time
     def __build_bulk_subpatterns(self):
