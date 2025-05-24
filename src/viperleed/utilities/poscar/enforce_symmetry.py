@@ -11,14 +11,13 @@ __license__ = 'GPLv3+'
 from argparse import ArgumentTypeError
 
 from viperleed.calc import symmetry
-from viperleed.guilib.base import PlaneGroup
+from viperleed.guilib.classes.planegroup import _KNOWN_GROUPS
 from viperleed.utilities.poscar.base import _PoscarSymmetryCLI
 
 
 def validate_planegroup(plane_group):
     """Raise ArgumentTypeError if plane_group is not acceptable."""
-    all_groups = PlaneGroup.allGroups.keys()
-    if plane_group not in all_groups:
+    if plane_group not in _KNOWN_GROUPS:
         raise ArgumentTypeError(f'Invalid planegroup: {plane_group}')
     return plane_group
 
