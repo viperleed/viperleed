@@ -19,6 +19,8 @@ import sys
 
 import numpy as np
 
+import viperleed
+
 
 def integer_part_length(*numbers):
     return max(len(f"{int(number)}") for number in numbers)
@@ -69,7 +71,7 @@ def format_floats(format_specs, *numbers):
 
 
 def resources_path(dir_name):
-    """Return the correct path to dir_name.
+    """Return the correct path to `dir_name`.
 
     This is useful when building an executable from pyinstaller.
     When built from pyinstaller, it takes the path relative to the
@@ -78,21 +80,24 @@ def resources_path(dir_name):
     Parameters
     ----------
     dir_name : str
-        Path relative to the one from which resources_path is called.
+        Relative path within the viperleed source tree.
 
     Returns
     -------
     str
-        Modified path, only if the GUI is running from a pyinstaller
-        'executable', otherwise returns dir_name unchanged.
+        Absolute version of `dir_name` (in the tree where viperleed
+        is installed).
     """
     # EVENTUALLY IT IS PROBABLY BETTER TO INCLUDE THE WHOLE /fonts FOLDER from
     # '/guilib' IN THE CORRECT PLACE, AND HAVE resources_path RETURN ITS BASE
     # PATH (i.e., the top-level folder in which the exe is) IF PYINSTALLER IS
     # USED
-    if hasattr(sys, '_MEIPASS'):
-        return str(Path(sys._MEIPASS, dir_name).resolve())
-    return dir_name
+    try:
+        root = Path(sys._MEIPASS).resolve()  # pyinstaller
+    except AttributeError:
+        # NB: __file__ points to __init__.py
+        root = Path(viperleed.__file__).resolve().parent
+    return str(root/dir_name)
 
 
 def string_matrix_to_numpy(str_matrix, dtype=float, needs_shape=tuple()):
