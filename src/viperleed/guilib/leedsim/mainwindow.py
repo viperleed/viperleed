@@ -698,7 +698,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             self._ctrls['domains'].initPopup()
             # initially set focus to a widget that does not respond to
             # wheelEvent.
-            self._ctrls['domains'].toggle.setFocus()
+            self._ctrls['domains'].setFocus()
 
         self.connectControlEvents(active)
 
