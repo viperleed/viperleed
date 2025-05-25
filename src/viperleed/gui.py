@@ -28,9 +28,11 @@ else:
 from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.guilib import BACKEND
 from viperleed.guilib.base import catch_gui_crash
+from viperleed.guilib.constants import LOGO
 from viperleed.guilib.helpers import resources_path
-from viperleed.guilib.pluginsbase import LOGO
-from viperleed.guilib.selectplugin import ViPErLEEDSelectPlugin
+
+if GLOBALS['USE_GUI']:
+    from viperleed.guilib.selectplugin import ViPErLEEDSelectPlugin
 
 
 class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):

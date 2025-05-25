@@ -19,11 +19,9 @@ from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc,
                    QtGui as qtg)
 
+from viperleed.guilib.constants import LOGO
 from viperleed.guilib.helpers import resources_path
 from viperleed.guilib.widgetslib import AllGUIFonts
-
-
-LOGO = resources_path('guilib/icons/viperleed_logo_circled_48x48.png')
 
 
 def logo_one_line():
