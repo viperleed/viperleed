@@ -150,7 +150,7 @@ class LEEDPattern:
             self.bulk_basis, space='reciprocal',
             group=self.__parameters['bulkGroup'], limit=max_radius
             )
-        self.reciprocal_lattices['bulk'].group.screws_glides = (
+        self.reciprocal_lattices['bulk'].group.set_screws_glides(
             self.__parameters['bulk3Dsym'],
             self.reciprocal_lattices['bulk'].cell_shape
             )

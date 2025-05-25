@@ -16,6 +16,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
+from viperleed.guilib.classes.planegroup import _KNOWN_GROUPS
 from viperleed.guilib.classes.lattice2d import Lattice2D as Lattice
 from viperleed.guilib.leedsim.classes.woods import Woods                        # TODO: maybe the old one?
 from viperleed.guilib.leedsim.dialogs.dialogbulk3dsym import Bulk3DSymDialog
@@ -73,8 +74,8 @@ class NewFileDialog(qtw.QDialog):
         self.bulkLatt = Lattice(bulkBasis, group=bulkGroup)
         
         if self.oldParams:
-            self.bulkLatt.group.screws_glides = (self.oldParams['bulk3Dsym'],
-                                                 self.bulkLatt.cell_shape)
+            self.bulkLatt.group.set_screws_glides(self.oldParams['bulk3Dsym'],
+                                                  self.bulkLatt.cell_shape)
 
     def compose(self):
         labFont = AllGUIFonts().labelFont
@@ -515,8 +516,8 @@ class NewFileDialog(qtw.QDialog):
         self.bulk_3d_sym_dialog.update_operations(self.bulkLatt)
         if self.bulk_3d_sym_dialog.exec() == qtw.QDialog.Accepted:
             operations = self.bulk_3d_sym_dialog.extra_operations()
-            self.bulkLatt.group.screws_glides = (operations,
-                                                 self.bulkLatt.cell_shape)
+            self.bulkLatt.group.set_screws_glides(operations,
+                                                  self.bulkLatt.cell_shape)
     
     # The next 8 function are explicitly called to handle changes of controls
     
@@ -547,13 +548,12 @@ class NewFileDialog(qtw.QDialog):
     def updateLatticeGroups(self):
         bGroup = self.bulkGroup.currentText()
         sGroup = self.surfGroup.currentText()
-        allGroups = self.bulkLatt.group.allGroups
         for (latt, group) in zip([self.bulkLatt, self.surfLatt],
                                  [bGroup, sGroup]):
-            if group in allGroups:
+            if group in _KNOWN_GROUPS:
                 bulk_3d = latt.group.screws_glides
                 latt.group = group
-                latt.group.screws_glides = (bulk_3d, latt.cell_shape)
+                latt.group.set_screws_glides(bulk_3d, latt.cell_shape)
         
         # Also, update the options for extra bulk operations
         self.bulk_3d_sym_dialog.update_operations(self.bulkLatt)
@@ -610,7 +610,7 @@ class NewFileDialog(qtw.QDialog):
                                 [self.bulkLatt, self.surfLatt]):
             shape = latt.cell_shape
             group = latt.group
-            groups = group.groupsForShape[shape]
+            groups = group.groups_compatible_with(shape)
             ctrl.clear()
             ctrl.addItems(groups)
             ctrl.setCurrentText(group.group)
