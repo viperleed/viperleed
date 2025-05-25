@@ -611,7 +611,8 @@ class LEEDPattern:
             for pat in [*self.firstLEED, *self.domsLEED]:
                 pat.transformCoords(rot)
             return None
-        return self.reciprocal_lattices['bulk'].get_rotated_lattice(angle)
+        bulk = self.reciprocal_lattices['bulk']
+        return bulk.get_rotated_lattice_points(angle)
 
 
 class LEEDsubpattern:
