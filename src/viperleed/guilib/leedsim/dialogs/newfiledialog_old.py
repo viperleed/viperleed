@@ -168,8 +168,9 @@ class NewFileDialog(qtw.QDialog):
         for widg in [self.highSymTxt, self.highSymBut]:
             widg.setFont(smallText)
             widg.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
-        self.highSymBut.setMinimumWidth(self.highSymBut.width()*0.4)
-        self.highSymTxt.setMinimumWidth(self.highSymBut.width()*0.4)
+        _min_width = round(self.highSymBut.width()*0.4)
+        self.highSymBut.setMinimumWidth(_min_width)
+        self.highSymTxt.setMinimumWidth(_min_width)
         
         # Superstructure input: dropdown and 2x2 matrix
         superstructLab = qtw.QLabel('Reconstruction periodicity')

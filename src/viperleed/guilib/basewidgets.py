@@ -884,7 +884,7 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
         # Note that I'm using ceil() for the return value because sizeHint
         # should return a QSize(int, int), but w and h are floats and would
         # be typecast without rounding otherwise
-        return qtc.QSize(np.ceil(w), np.ceil(h))
+        return qtc.QSize(int(np.ceil(w)), int(np.ceil(h)))
 
     def paintEvent(self, event):
         self.adjustSize()

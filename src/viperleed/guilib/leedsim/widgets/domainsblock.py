@@ -131,8 +131,8 @@ class DomsBlock(qtw.QWidget):
                     # not shown before --> place it at the standard position
                     tR = self.mapToGlobal(self.text.geometry().topRight())
                     sizePopup = self.matricesPopup.frameSize()
-                    newPos = qtc.QPoint(tR.x() - 0.7*sizePopup.width(),
-                                    tR.y() - sizePopup.height() - 25)
+                    newPos = qtc.QPoint(round(tR.x() - 0.7*sizePopup.width()),
+                                        tR.y() - sizePopup.height() - 25)
                     self.matricesPopup.move(newPos)
                     self.matricesPopup.dragPosition = newPos
                     self.matricesPopup.shown = True

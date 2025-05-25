@@ -439,7 +439,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         elif align == 'right':
             delta0 = label.width()
         else:
-            delta0 = label.width()/2
+            delta0 = label.width()//2
 
         label.setText(text)
         label.adjustSize()
@@ -449,7 +449,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         elif align == 'right':
             delta1 = label.width()
         else:
-            delta1 = label.width()/2
+            delta1 = label.width()//2
 
         label.move(pos0.x() - delta1 + delta0, pos0.y())
 
@@ -914,7 +914,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         for annot in self.recSpace.annots:
             # NB: one cannot use += for in-place assignment since this redefines
             # the .center attribute that is a @property!
-            annot.center = qtc.QPoint(*annot.center) + delta
+            annot.center = qtc.QPoint(*annot.center.round()) + delta
             if annot.isVisible():
                 # move only if visible to handle the situation in which the
                 # window is moved while the annotations are displayed: this way

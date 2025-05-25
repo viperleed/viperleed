@@ -60,7 +60,7 @@ class HoverAnnot(qtw.QWidget):
 
         # Global position of the point that, together with the arrow head_pos
         # defines the direction of the arrow (from head_pos to center)
-        self.__center = center
+        self.__center = np.asarray(center)
 
         self.__head_pos = None  # Global position of the arrowhead
         self.__tip_to_center = None  # distance from tip to center of text box
@@ -209,8 +209,8 @@ class HoverAnnot(qtw.QWidget):
         bbox = qtc.QRectF(self.textBbox)
         bbox.adjust(-self.framePad[0], -self.framePad[1],
                      self.framePad[0], self.framePad[1])
-        bbox.moveTo(self.framePad[0]/2, self.framePad[1]/2)
-        self.frameRadius = 0.2*bbox.height()
+        bbox.moveTo(self.framePad[0]//2, self.framePad[1]//2)
+        self.frameRadius = round(0.2*bbox.height())
         self.frame.addRoundedRect(bbox, self.frameRadius, self.frameRadius)
 
         self.textBbox.adjust(-0.5, -0.5, 0.5, 0.5)
@@ -312,6 +312,6 @@ class HoverAnnot(qtw.QWidget):
         tip = self.tip_pos  # local position
         tip_global = self.mapToGlobal(qtc.QPoint(tip.x(), tip.y()))
         new_pos = self.pos()
-        delta = qtc.QPoint(*self.head_pos) - tip_global
+        delta = qtc.QPoint(*self.head_pos.round()) - tip_global
         new_pos += delta
         self.move(new_pos)
