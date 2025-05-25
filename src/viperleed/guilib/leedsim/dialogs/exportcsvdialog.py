@@ -16,7 +16,6 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed.guilib.leedsim.classes.leedpattern import LEEDPattern            # TODO: maybe the old one?
 from viperleed.guilib.widgetslib import AllGUIFonts
 from viperleed.guilib.widgetslib import get_all_children_widgets
 
@@ -27,9 +26,7 @@ class ExportCSVDialog(qtw.QDialog):
 
 
     def __init__(self, leed, parent=None):
-        if not isinstance(leed, LEEDPattern):
-            raise
-        #super(ExportCSVDialog, self).__init__(parent)
+        _ = leed.n_domains  # Raise AttributeError for wrong type
         super().__init__(parent)
         self.leed = leed
         self.setWindowModality(qtc.Qt.WindowModal)
