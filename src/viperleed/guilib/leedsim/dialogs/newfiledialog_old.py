@@ -18,7 +18,7 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed.guilib.classes.planegroup import _KNOWN_GROUPS
 from viperleed.guilib.classes.lattice2d import Lattice2D as Lattice
-from viperleed.guilib.leedsim.classes.woods import Woods                        # TODO: maybe the old one?
+from viperleed.guilib.leedsim.classes.woods_old import Woods
 from viperleed.guilib.leedsim.dialogs.dialogbulk3dsym import Bulk3DSymDialog
 from viperleed.guilib.widgetslib import AllGUIFonts
 

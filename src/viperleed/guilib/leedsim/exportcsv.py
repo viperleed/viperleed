@@ -17,7 +17,7 @@ from viperleed import GLOBALS
 from viperleed.guilib.classes.beamindex import BeamIndex
 from viperleed.guilib.helpers import format_floats
 from viperleed.guilib.helpers import integer_part_length
-from viperleed.guilib.leedsim.classes.leedpattern import LEEDPattern            # TODO: maybe the old one?
+from viperleed.guilib.leedsim.classes.oldleedpatterns import LEEDPattern
 from viperleed.guilib.leedsim.classes.leedparameters import LEEDParameters
 
 
