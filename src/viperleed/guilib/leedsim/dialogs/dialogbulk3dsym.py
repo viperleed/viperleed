@@ -286,6 +286,9 @@ class Bulk3DSymDialog(qtw.QDialog):
         for op in bulk.group.screws_glides:
             if op in self.__extra_ops:
                 continue
+            # Like above, skip inverses of 6-, 3-, and 4-fold rotations
+            if op in (planegroup.Cm6, planegroup.Cm3, planegroup.Cm4):
+                continue
             self.__extra_ops.append(op)
 
         n_extra = len(self.__extra_ops)
