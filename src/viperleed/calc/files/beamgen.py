@@ -30,6 +30,7 @@ from viperleed.calc.lib.leedbase import getLEEDdict
 from viperleed.guilib.base import get_equivalent_beams
 from viperleed.guilib.classes.beamindex import BeamIndex
 
+
 H_BAR_SQ_OVER_2M = 0.5 * HARTREE_TO_EV * BOHR_TO_ANGSTROM**2  # h**2/2m
 _LOGGER = logging.getLogger(__name__)
 
