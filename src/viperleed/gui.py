@@ -14,24 +14,22 @@ Graphical User Interface
 from pathlib import Path
 import sys
 
-from viperleed import GLOBALS
-
 try:
     import PyQt5.QtCore as qtc
 except ImportError:
-    GLOBALS['USE_GUI'] = False
+    pass
 else:
     import PyQt5.QtGui as qtg
     import PyQt5.QtWidgets as qtw
-    GLOBALS['USE_GUI'] = True
 
 from viperleed.cli_base import ViPErLEEDCLI
-from viperleed.guilib import BACKEND
 from viperleed.guilib.base import catch_gui_crash
 from viperleed.guilib.constants import LOGO
+from viperleed.guilib.detect_graphics import has_graphics
+from viperleed.guilib.detect_graphics import has_pyqt
 from viperleed.guilib.helpers import resources_path
 
-if GLOBALS['USE_GUI']:
+if has_pyqt():
     from viperleed.guilib.selectplugin import ViPErLEEDSelectPlugin
 
 
@@ -49,22 +47,23 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
 def is_commandline_mode():
     """Return whether the system requires to run in command line mode.
 
-    This is the case if, e.g., the correct modules are not installed)
+    This is the case if, e.g., the correct modules are not installed,
     or if the user asked to run in command line mode via the --nogui
     command line argument.
     """
-    needs_commandline = not GLOBALS['USE_GUI']
-    needs_commandline |= BACKEND is None
-    needs_commandline |= '--nogui' in sys.argv
-    return needs_commandline
+    return (
+        not has_pyqt()
+        or not has_graphics()
+        or '--nogui' in sys.argv
+        )
 
 
 def commandline_main():
-    """Body of the command-line version of the GUI.
-
-    In this case, there is very little graphics involved.
-    """
-    print('Running in command line version...', flush=True, end='')
+    """Body of the command-line version of the GUI."""
+    print('Running in command line version', flush=True, end='')
+    if not has_pyqt():
+        print(' because PyQt5 was not found', flush=True, end='')
+    print('...', flush=True, end='')
     print('Not implemented yet.', flush=True)
 
 

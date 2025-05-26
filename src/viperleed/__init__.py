@@ -14,10 +14,6 @@ __license__ = 'GPLv3+'
 __version__ = '0.14.0'
 
 
-GLOBALS = {
-    'USE_GUI': None,
-    }
-
 # Name of environment variable specifying the path to the tensor-LEED
 # source code. Typically the viperleed-tensorleed repository.
 VIPERLEED_TENSORLEED_ENV = 'VIPERLEED_TENSORLEED'
