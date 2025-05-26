@@ -21,7 +21,7 @@ from viperleed.guilib.detect_graphics import has_pyqt
 
 
 NO_CAIRO = (0, 0, 0)
-MIN_CAIRO = (1, 18, 2)  # See Issue #9. Surely 1.17.2 fails
+MIN_CAIRO = (1, 18, 0)  # See Issue #9. Surely 1.17.2 fails
 
 
 class MatplotLibBackend(Enum):

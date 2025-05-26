@@ -53,6 +53,8 @@ class TestFindAndImportBackend:
 
     _cairo_version = {
         (1, 17, 2): MatplotLibBackend.AGG,
+        (1, 17, 9999): MatplotLibBackend.AGG,
+        (1, 18, 0): MatplotLibBackend.CAIRO,
         (1, 18, 2): MatplotLibBackend.CAIRO,
         (1, 19, 0): MatplotLibBackend.CAIRO,
         }
