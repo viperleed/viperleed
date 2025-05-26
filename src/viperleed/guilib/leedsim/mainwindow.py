@@ -674,7 +674,6 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         # set up the other parameters needed for export_pattern_csv
         if self.filename:
             params['source'] = self.filename
-        params['version'] = __version__
 
         export_pattern_csv(fname[0], (self.leed,), **params)
 

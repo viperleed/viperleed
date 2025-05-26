@@ -19,7 +19,7 @@ import struct
 
 import numpy as np
 
-from viperleed import GLOBALS
+from viperleed import __version__
 
 
 class TiffTag:
@@ -907,7 +907,7 @@ class TiffFile:
             TiffTag(name='RowsPerStrip', value=height),
             TiffTag(name='StripByteCounts', value=total_n_bytes),
             TiffTag(name='SampleFormat', value=pixel_type),
-            TiffTag(name='Software', value=f"ViPErLEED v{GLOBALS['version']}"),
+            TiffTag(name='Software', value=f"ViPErLEED v{__version__}"),
             ]
 
         for name, value in extras.items():
