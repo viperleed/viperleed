@@ -22,7 +22,7 @@ from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc,
                    QtSerialPort as qts)
 
-from viperleed.guilib.measure.serial.viperleedserial import ViPErLEEDSerial
+from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDSerial
 
 TIMEOUT = 30000  # milliseconds
 
@@ -30,7 +30,7 @@ TIMEOUT = 30000  # milliseconds
 CONFIG = ConfigParser()
 CONFIG.read(
     Path(__file__).resolve().parents[2]  # The main viperleed directory
-    / 'src/viperleed/guilib/measure/configuration/viperleed_hardware.ini'
+    / 'src/viperleed/gui/measure/configuration/viperleed_hardware.ini'
     )
 
 

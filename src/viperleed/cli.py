@@ -22,12 +22,7 @@ class ViPErLEEDMain(ViPErLEEDCLI, cli_name='viperleed'):
         """Initialize instance by registering sub-utilities."""
         super().__init__(*args, **kwargs)
         children = (
-            # Notice that, because of a current fuckery with the way
-            # the imports are in guilib, viperleed.gui should be the
-            # first one, so that it is not imported later. Otherwise,
-            # "python viperleed gui" thinks it is in command-line
-            # mode, while "python viperleed.gui" works fine.
-            'viperleed.gui',                                                    # TODO: gui arguments
+            'viperleed.gui.cli',                                                # TODO: gui arguments
             'viperleed.calc.bookkeeper.cli',
             'viperleed.calc.cli',
             'viperleed.utilities.cli',

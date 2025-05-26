@@ -11,7 +11,7 @@ __license__ = 'GPLv3+'
 from argparse import ArgumentTypeError
 
 from viperleed.calc import symmetry
-from viperleed.guilib.classes.planegroup import _KNOWN_GROUPS
+from viperleed.gui.classes.planegroup import _KNOWN_GROUPS
 from viperleed.utilities.poscar.base import _PoscarSymmetryCLI
 
 

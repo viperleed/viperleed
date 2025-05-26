@@ -1567,7 +1567,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
     def _interpret_symmetry_bulk_group(self, unrecognized):
         """Look up `unrecognized` for a symmetry group specification."""
         param = 'SYMMETRY_BULK'
-        _group_re = re.compile(                                                 # TODO: For now borrowed from guilib. Eventually will try to instantiate a PlaneGroup
+        _group_re = re.compile(                                                 # TODO: For now borrowed from gui. Eventually will try to instantiate a PlaneGroup
             r'(\s*(\w+)\s*(?:\[\s*-?[012]\s*-?[012]\s*\])?)',
             re.IGNORECASE
             )
@@ -1634,7 +1634,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             # pylint: disable-next=logging-format-interpolation
             _LOGGER.warning(warning_str.format('for z '))
 
-    def interpret_symmetry_fix(self, assignment):                               # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
+    def interpret_symmetry_fix(self, assignment):                               # TODO: use symmetry groups from elsewhere once symmetry and gui are merged
         param = 'SYMMETRY_FIX'
         group = assignment.values_str.lower()
         if group.startswith('t'):  # determine symmetry automatically
