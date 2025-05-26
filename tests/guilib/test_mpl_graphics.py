@@ -12,7 +12,9 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.guilib.mpl_graphics import MatplotLibBackend
+from viperleed.guilib.mpl_graphics import NO_CAIRO
 from viperleed.guilib.mpl_graphics import find_and_import_backend
+from viperleed.guilib.mpl_graphics import get_cairo_version
 from viperleed.guilib.mpl_graphics import import_figure_canvas
 from viperleed.guilib.mpl_graphics import import_matplotlib
 
@@ -42,38 +44,83 @@ class TestMatplotLibBackend:
         assert MatplotLibBackend.AGG.mpl_use == 'qt5agg'
         assert MatplotLibBackend.CAIRO.module == 'mplcairo'
         assert MatplotLibBackend.CAIRO.mpl_use == 'module://mplcairo.qt'
-
-    _defaults = {
-        PY37: MatplotLibBackend.CAIRO,
-        PY38: MatplotLibBackend.AGG,
-        PY310: MatplotLibBackend.AGG,
-        }
-
-    @parametrize('version,expect', _defaults.items())
-    def test_get_default(self, version, expect, mocker):
-        """Check the get_default method."""
-        mocker.patch('sys.version_info', version)
-        assert MatplotLibBackend.get_default() is expect
+        assert MatplotLibBackend.DEFAULT is MatplotLibBackend.CAIRO
 
 
 # TODO: these tests will need adaptation when we'll fix mplcairo issues
 class TestFindAndImportBackend:
     """Tests for the find_and_import_backend function."""
 
-    def test_import_success(self, mocker):
+    _cairo_version = {
+        (1, 17, 2): MatplotLibBackend.AGG,
+        (1, 18, 2): MatplotLibBackend.CAIRO,
+        (1, 19, 0): MatplotLibBackend.CAIRO,
+        }
+
+    @parametrize('cairo_version,expect', _cairo_version.items())
+    def test_import_success(self, cairo_version, expect, mocker):
         """Check the outcome of a successful backend import."""
         mocker.patch('importlib.import_module')
+        mocker.patch(f'{_MODULE}.get_cairo_version',
+                     return_value=cairo_version)
         backend = find_and_import_backend()
-        assert backend == MatplotLibBackend.AGG
+        assert backend is expect
+
+    def test_no_module_to_import(self, mocker):
+        """Check result when the backend needs no import."""
+        mock_backend = mocker.patch(f'{_MODULE}.MatplotLibBackend')
+        mock_backend.DEFAULT.module = None
+        backend = find_and_import_backend()
+        assert backend is mock_backend.DEFAULT
 
     def test_import_failure(self, mocker):
         """Check fallback when importing a backend module fails."""
         mock_backend = mocker.patch(f'{_MODULE}.MatplotLibBackend')
-        mock_backend.AGG.module = 'fake_module'
-        mock_backend.AGG.mpl_use = 'fake_use'
+        mock_backend.DEFAULT.module = 'fake_module'
+        mock_backend.DEFAULT.mpl_use = 'fake_use'
         mocker.patch('importlib.import_module', side_effect=ImportError)
         backend = find_and_import_backend()
         assert backend is mock_backend.AGG
+
+
+class TestGetCairoVersion:
+    """Tests for the get_cairo_version function."""
+
+    def test_import_fails(self, mocker):
+        """Check expected version when importing mplcairo fails."""
+        mocker.patch('importlib.import_module', side_effect=ImportError)
+        result = get_cairo_version()
+        assert result == NO_CAIRO
+
+    def test_invalid_version(self, mocker):
+        """Check result when parsing a version string fails."""
+        mock_cairo = mocker.MagicMock()
+        mock_cairo.get_versions.return_value = {'cairo': 'a.b.c'}
+        mocker.patch('importlib.import_module', return_value=mock_cairo)
+        result = get_cairo_version()
+        assert result == NO_CAIRO
+
+    def test_no_version_info(self, mocker):
+        """Check expected version when the version information is missing."""
+        mock_cairo = mocker.MagicMock()
+        mock_cairo.get_versions.return_value = {'other_key': 'other_value'}
+        mocker.patch('importlib.import_module', return_value=mock_cairo)
+        result = get_cairo_version()
+        assert result == NO_CAIRO
+
+    _valid = {
+        'no at': ('1.6.35', (1, 6, 35)),
+        'at': ('3.2.1 @ location', (3, 2, 1)),
+        }
+
+    @parametrize('version_str,expect', _valid.values(), ids=_valid)
+    def test_valid_version(self, version_str, expect, mocker):
+        """Check expected outcome with valid version information."""
+        mock_cairo = mocker.MagicMock()
+        mock_cairo.get_versions.return_value = {'cairo': version_str}
+        mocker.patch('importlib.import_module', return_value=mock_cairo)
+        result = get_cairo_version()
+        assert result == expect
 
 
 class TestImportMatplotlib:

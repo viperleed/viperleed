@@ -16,12 +16,12 @@ __license__ = 'GPLv3+'
 
 from enum import Enum
 import importlib
-import sys
 
 from viperleed.guilib.detect_graphics import has_pyqt
 
 
-PY38 = (3, 8)
+NO_CAIRO = (0, 0, 0)
+MIN_CAIRO = (1, 18, 2)  # See Issue #9. Surely 1.17.2 fails
 
 
 class MatplotLibBackend(Enum):
@@ -30,6 +30,7 @@ class MatplotLibBackend(Enum):
     # module-to-import, string-for-matplotlib.use
     AGG = (None, 'qt5agg')
     CAIRO = ('mplcairo', 'module://mplcairo.qt')
+    DEFAULT = CAIRO
 
     @property
     def module(self):
@@ -41,11 +42,6 @@ class MatplotLibBackend(Enum):
         """Return the string for matplotlib.use."""
         return self.value[1]
 
-    @classmethod
-    def get_default(cls):
-        """Return the default backend."""
-        return cls.CAIRO if sys.version_info < PY38 else cls.AGG
-
 
 def find_and_import_backend():
     """Determine a suitable backend for matplotlib."""
@@ -54,26 +50,36 @@ def find_and_import_backend():
     # in the documentation concerning this need. If this turns out to
     # be a problem, we can test for matplotlib being imported using
     # sys.modules, and importlib.reload() it after importing mplcairo.
-
-    # TODO: there seems to be a bug of some sort in the way we're
-    # using mplcairo. The UI crashes without any information when
-    # setting mplcairo as a backend upon, e.g., loading an input
-    # file. Tested on:
-    #   - py3.7  (mpl 3.5.3,  cairo 0.5)
-    #   - py3.8  (mpl 3.7.5,  cairo 0.6.1)
-    #   - py3.9  (mpl 3.9.0,  cairo 0.6.1)
-    #   - py3.12 (mpl 3.10.3, cairo 0.6.1)
-    # For now, use the AGG backend for everything. When fixed, replace
-    # the next line with
-    #     target = MatplotLibBackend.get_default()
-    target = MatplotLibBackend.AGG
+    target = MatplotLibBackend.DEFAULT
     if target.module:
         try:
             importlib.import_module(target.module)
         except ImportError:
             # Back-end not found. Fall back to AGG
             return MatplotLibBackend.AGG
+    if target is MatplotLibBackend.CAIRO:
+        cairo_version = get_cairo_version()
+        if cairo_version < MIN_CAIRO:
+            return MatplotLibBackend.AGG
     return target
+
+
+def get_cairo_version():
+    """Return the cairo version used by mplcairo."""
+    try:
+        cairo = importlib.import_module('mplcairo')
+    except ImportError:
+        return NO_CAIRO
+    try:
+        version_str = cairo.get_versions()['cairo']
+    except KeyError:
+        return NO_CAIRO
+    version_str, *_ = version_str.split('@')
+    version_tuple = tuple(version_str.strip().split('.'))
+    try:
+        return tuple(int(p) for p in version_tuple)
+    except ValueError:
+        return NO_CAIRO
 
 
 def import_figure_canvas():
