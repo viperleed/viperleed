@@ -12,40 +12,22 @@ Contains QWidget subclasses that re-implement/enhance/add some features.
 Typically they would be further subclassed to create more complicated widgets
 """
 
-# print("this is guilib.basewidgets")
-
 import os
 
+from matplotlib.figure import Figure
 import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed import guilib as gl
-
-if gl.BACKEND == 'mplcairo':
-    try:
-        import mplcairo  # requires import before matplotlib
-    except ImportError:
-        gl.BACKEND = 'agg'  # fallback on agg if mplcairo is not there
-else:
-    gl.BACKEND = 'agg'
-
-import matplotlib as mpl  # this should be the first import ever of matplotlib
-
-if gl.BACKEND == 'mplcairo':
-    mpl.use("module://mplcairo.qt")
-    from mplcairo.qt import FigureCanvasQTCairo as FigureCanvas
-else:  # 'agg'
-    mpl.use('qt5agg')
-    from matplotlib.backends.backend_qt5agg import FigureCanvas
-
-from matplotlib.figure import Figure
-
+from viperleed.guilib.mpl_graphics import import_figure_canvas
 from viperleed.guilib.widgetdecorators import receive_mouse_broadcast
 from viperleed.guilib.widgetslib import AllGUIFonts
 from viperleed.guilib.widgetslib import drawText
 from viperleed.guilib.widgetslib import editStyleSheet
+
+
+FigureCanvas = import_figure_canvas()
 
 
 @receive_mouse_broadcast
@@ -485,7 +467,7 @@ class MeasurementFigureCanvas(FigureCanvas):
         self.setParent(kwargs.get('parent', None))
 
         self.adjustSize()
-    
+
     @property
     def ax(self):
         """
