@@ -45,7 +45,7 @@ for easier dependency management. See also :ref:`use_venv`.
 
 To install ViPErLEED from :term:`PyPI` using ``pip``, run
 
-.. code-block:: console
+.. code-block:: bash
 
     python -m pip install viperleed
 
@@ -60,14 +60,25 @@ installed as described in :ref:`install_tensor_leed_deps`.
 
 If you want to also install the dependencies for running the ViPErLEED
 graphical user interface, which also allows you to :ref:`measure<hardware>`
-|LEED-IV| data, run
+|LEED-IV| data and to simulate LEED patterns, run
 
-.. code-block:: console
+.. code-block:: bash
 
     python -m pip install viperleed[GUI]
 
 in your terminal.
 
+.. note::
+
+    If you are using the **zsh** shell (default on macOS and some Linux
+    distributions), you need to quote or escape the square brackets as they are
+    otherwise interpreted as a glob pattern:
+
+    .. code-block:: bash
+
+        python -m pip install "viperleed[GUI]"
+        # or
+        python -m pip install viperleed\[GUI\]
 
 .. _wsl:
 
