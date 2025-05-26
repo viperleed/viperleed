@@ -11,7 +11,6 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-22'
 __license__ = 'GPLv3+'
 
-from contextlib import contextmanager
 from multiprocessing import Process
 import sys
 
