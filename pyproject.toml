@@ -83,7 +83,7 @@ classifiers = [
     [project.optional-dependencies]
     GUI = [
         'PyQt5',
-        'mplcairo; python_version<"3.11"',  # See mplcairo #51
+        'mplcairo; python_version<"3.14"',  # v0.6 supports up to 3.13
         ]
     hardware = [
         'requests',
