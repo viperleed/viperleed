@@ -38,23 +38,44 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
 
     def __call__(self, args=None):
         """Call either the CLI or graphical versions of the GUI."""
-        if is_commandline_mode():
+        args = self.parse_cli_args(args)
+        if is_commandline_mode(args):
             return commandline_main()
-            _ = super().__call__(args)                                          # TODO: This line is unreachable because we don't handle the gui arguments correctly yet
         return gui_main()
 
+    def add_parser_arguments(self, parser):
+        """Add CLI arguments for viperleed.gui to `parser`."""
+        super().add_parser_arguments(parser)
+        parser.add_argument(
+            '--nogui',
+            help=('run the ViPErLEED graphical user interface in '
+                  'command-line mode, i.e., without any windows'),
+            action='store_true',
+            )
 
-def is_commandline_mode():
-    """Return whether the system requires to run in command line mode.
+
+def is_commandline_mode(args):
+    """Return whether the GUI should run in command line mode.
 
     This is the case if, e.g., the correct modules are not installed,
     or if the user asked to run in command line mode via the --nogui
     command line argument.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments.
+
+    Returns
+    -------
+    bool
+        Whether the GUI should run in command-line mode, i.e.,
+        without any windows.
     """
     return (
         not has_pyqt()
         or not has_graphics()
-        or '--nogui' in sys.argv
+        or args.nogui
         )
 
 
@@ -65,6 +86,7 @@ def commandline_main():
         print(' because PyQt5 was not found', flush=True, end='')
     print('...', flush=True, end='')
     print('Not implemented yet.', flush=True)
+    return 0
 
 
 def gui_main():
@@ -102,5 +124,5 @@ def gui_main():
 
     print('Done', flush=True)
 
-    sys.exit(app.exec_())
+    return app.exec_()
     # sys.exit()   ######## TODO: Also from master

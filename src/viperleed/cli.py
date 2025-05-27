@@ -22,7 +22,7 @@ class ViPErLEEDMain(ViPErLEEDCLI, cli_name='viperleed'):
         """Initialize instance by registering sub-utilities."""
         super().__init__(*args, **kwargs)
         children = (
-            'viperleed.gui.cli',                                                # TODO: gui arguments
+            'viperleed.gui.cli',
             'viperleed.calc.bookkeeper.cli',
             'viperleed.calc.cli',
             'viperleed.utilities.cli',
