@@ -93,7 +93,7 @@ def import_figure_canvas():
     if backend is MatplotLibBackend.CAIRO:
         module = importlib.import_module('mplcairo.qt')
         return module.FigureCanvasQTCairo
-    raise ImportError(f'Unsupported backend {backend}')
+    raise ImportError(f'Unsupported backend {backend}.')
 
 
 def import_matplotlib():
