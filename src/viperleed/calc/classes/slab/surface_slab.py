@@ -268,7 +268,7 @@ class SurfaceSlab(BaseSlab):
         except NonIntegerMatrixError:
             raise NonIntegerMatrixError(
                 'Automatically detected bulk SUPERLATTICE is '
-                f'not integer-valued: \n{superlattice}'                         # TODO: guilib array formatter
+                f'not integer-valued: \n{superlattice}'                         # TODO: gui array formatter
                 ) from None
         if (rpars.superlattice_defined
                 and not np.allclose(superlattice, rpars.SUPERLATTICE)):
@@ -276,7 +276,7 @@ class SurfaceSlab(BaseSlab):
                 'Automatically detected minimum-area bulk unit cell differs '
                 'from the cell defined by the SUPERLATTICE parameter. '
                 'Consider changing the SUPERLATTICE parameter. Found matrix: '
-                f'\n{superlattice.astype(int)}'                                 # TODO: guilib array formatter
+                f'\n{superlattice.astype(int)}'                                 # TODO: gui array formatter
                 )
         rpars.SUPERLATTICE = superlattice
 
