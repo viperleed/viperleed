@@ -45,7 +45,7 @@ for easier dependency management. See also :ref:`use_venv`.
 
 To install ViPErLEED from :term:`PyPI` using ``pip``, run
 
-.. code-block:: bash
+.. code-block:: console
 
     python -m pip install viperleed
 
