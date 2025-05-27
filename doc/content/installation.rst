@@ -62,7 +62,7 @@ If you want to also install the dependencies for running the ViPErLEED
 graphical user interface, which also allows you to :ref:`measure<hardware>`
 |LEED-IV| data and to simulate LEED patterns, run
 
-.. code-block:: bash
+.. code-block:: console
 
     python -m pip install viperleed[GUI]
 
