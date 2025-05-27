@@ -70,7 +70,7 @@ in your terminal.
 
 .. note::
 
-    If you are using the **zsh** shell (default on macOS and some Linux
+    If you are using the :program:`zsh` shell (default on macOS and some Linux
     distributions), you need to quote or escape the square brackets as they are
     otherwise interpreted as a glob pattern:
 
