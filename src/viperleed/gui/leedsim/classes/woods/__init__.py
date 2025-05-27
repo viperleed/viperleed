@@ -6,6 +6,15 @@ also defines exceptions related to Wood's notation interpretation.
 
 This package was refactored from the former woods.py module, and
 exposes the same API.
+
+Modules
+-------
+_woods
+    The Woods class for interpreting a Wood's notation.
+errors
+    Exceptions that may occur when interpreting a Wood's notation.
+utils
+    Functions used for processing and interpreting a Wood's notation.
 """
 
 __authors__ = (
