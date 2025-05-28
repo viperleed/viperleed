@@ -1,0 +1,7 @@
+== SEARCH z+vib
+
+    = GEO_DELTA
+        Ag_surf z = -0.5 0.5 0.1
+
+    = VIB_DELTA
+        Ag_surf = -0.05 0.05 0.01

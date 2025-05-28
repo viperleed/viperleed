@@ -1,0 +1,16 @@
+! ####### GLOBAL PARAMETERS #######
+RUN = 0
+THEO_ENERGIES = 50 550 3
+
+ELEMENT_MIX Me = Rh Pt
+
+! ####### PARAMETERS FOR INTERPRETING POSCAR #######
+BULK_LIKE_BELOW = 0.45
+
+SITE_DEF O = surf 1 2
+SITE_DEF Me = layer_1 3-5, layer_2 6-8, layer_3 9-11, layer_4 12-14
+
+! ####### PARAMETERS FOR VIBROCC #######
+T_DEBYE = 250             
+T_EXPERIMENT = 300        
+VIBR_AMP_SCALE = *surf 1.3
