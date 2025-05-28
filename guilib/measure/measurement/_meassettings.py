@@ -253,8 +253,9 @@ class StepProfileEditor(qtw.QDialog):                                           
         self.pick_profile = qtw.QComboBox()
         self._profile_editors = {
             name: cls()
-            for name, cls in ProfileStepEditorBase().subclasses.items()
+            for name, cls in EnergyStepProfileShapeEditor().subclasses.items()
             }
+        self._profile_description = qtw.QLabel()
         self._populate_profile_options()
         self.setWindowTitle('Edit energy-step profile')
         self.setWindowFlags(self.windowFlags()
@@ -281,6 +282,9 @@ class StepProfileEditor(qtw.QDialog):                                           
         index = self.pick_profile.findText(name.capitalize() + ' profile')
         self.pick_profile.setCurrentIndex(index)
         self.pick_profile.currentData().set_profile(profile_data)
+        self._profile_description.setText(
+            self.pick_profile.currentData().description
+            )
 
     def _compose_and_connect(self):
         """Compose StepProfileEditor and connect signals."""
@@ -302,6 +306,7 @@ class StepProfileEditor(qtw.QDialog):                                           
         layout = qtw.QHBoxLayout()
         profile_with_stretch = qtw.QVBoxLayout()
         profile_with_stretch.addWidget(self.pick_profile)
+        profile_with_stretch.addWidget(self._profile_description)
         profile_with_stretch.addStretch(1)
         layout.addLayout(profile_with_stretch)
         for profile_editor in self._profile_editors.values():
@@ -313,7 +318,9 @@ class StepProfileEditor(qtw.QDialog):                                           
         """Update the displayed step profile editor."""
         for profile_editor in self._profile_editors.values():
             profile_editor.hide()
-        self.pick_profile.currentData().show()
+        selected_profile = self.pick_profile.currentData()
+        self._profile_description.setText(selected_profile.description)
+        selected_profile.show()
         self._adjust_size_timer.start()
 
     def _populate_profile_options(self):
@@ -329,13 +336,22 @@ class StepProfileEditor(qtw.QDialog):                                           
         super().accept()
 
 
-class ProfileStepEditorBase(qtw.QWidget):#, metaclass=QMetaABC):
+class EnergyStepProfileShapeEditor(qtw.QWidget):
     """Base class for step profiles."""
 
     _subclasses = {}
+    description = None
+    name = None
 
     def __init_subclass__(cls, **kwargs):
+        """Register subclasses."""
         super().__init_subclass__(**kwargs)
+        if not cls.name:
+            raise ValueError(f'{type(cls).__name__} must have a '
+                             '"name" class attribute.')
+        if not cls.description:
+            raise ValueError(f'{type(cls).__name__} must have a '
+                             '"description" class attribute.')
         cls._subclasses[cls.name] = cls
 
     def __init__(self):
@@ -345,9 +361,9 @@ class ProfileStepEditorBase(qtw.QWidget):#, metaclass=QMetaABC):
 
     @property
     def subclasses(self):
+        """Return a {name: cls} dict of subclasses."""
         return self._subclasses.copy()
 
-    # @abstractmethod
     def set_profile(self, profile=None):
         """Set displayed profile.
 
@@ -360,17 +376,30 @@ class ProfileStepEditorBase(qtw.QWidget):#, metaclass=QMetaABC):
         -------
         None.
         """
+        raise NotImplementedError(
+            'set_profile is abstract and must be overridden in subclasses.'
+            )
 
-    # @abstractmethod
     def update_profile(self):
-        """Set the profile to the selected values."""
-        # Set self.profile to the selected values.
+        """Set the profile to the selected values.
+
+        Subclasses must use this method to modify self.profile.
+
+        Returns
+        -------
+        None.
+        """
+        raise NotImplementedError(
+            'update_profile is abstract and must be overridden in subclasses.'
+            )
 
 
-class AbruptStepEditor(ProfileStepEditorBase):
+class AbruptEnergyStepEditor(EnergyStepProfileShapeEditor):
     """Abrupt step."""
 
     name = 'abrupt'
+    description = ('An abrupt energy step that immediately goes from\n'
+                  'the current energy to the next desired energy.')
 
     def __init__(self):
         """Initialise object."""
@@ -387,10 +416,13 @@ class AbruptStepEditor(ProfileStepEditorBase):
         """Do nothing."""
 
 
-class LinearStepEditor(ProfileStepEditorBase):
+class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     """Editor for selecting settings of a linear energy profile."""
 
     name = 'linear'
+    description = ('A linear energy step that goes from the \ncurrent '
+                   'energy to the next desired energy\nin equidistant '
+                   'intermediate steps.')
 
     def __init__(self):
         """Initialise object."""
@@ -418,7 +450,7 @@ class LinearStepEditor(ProfileStepEditorBase):
         layout.addWidget(step_number_label)
         size = step_number_label.fontMetrics().boundingRect('a').height()
         info = ('<nobr>The number of intermediate steps.</nobr> '
-                f'Cannot be higher than {MAX_NUM_STEPS}.')
+                f'Cannot be more than {MAX_NUM_STEPS}.')
         layout.addWidget(FieldInfo(info, size=size))
         container.setLayout(layout)
         return container
@@ -431,7 +463,8 @@ class LinearStepEditor(ProfileStepEditorBase):
         duration_label = qtw.QLabel('Step duration:')
         layout.addWidget(duration_label)
         size = duration_label.fontMetrics().boundingRect('a').height()
-        info = 'The settle time after each energy.'
+        info = ('<nobr>How long to wait (ms) till </nobr>'
+                'the next intermediate step.')
         layout.addWidget(FieldInfo(info, size=size))
         container.setLayout(layout)
         return container
@@ -463,10 +496,13 @@ class LinearStepEditor(ProfileStepEditorBase):
             self.profile = ('abrupt',)
 
 
-class FractionalStepEditor(ProfileStepEditorBase):
+class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     """Editor for the settings of an energy profile with custom steps."""
 
     name = 'custom'
+    description = ('A custom energy step that goes from the \ncurrent '
+                   'energy to the next desired energy\nin fractions of '
+                   f'{DELTA_E_NAME}.')
     step_count_reduced = qtc.pyqtSignal()
 
     def __init__(self):
@@ -486,8 +522,7 @@ class FractionalStepEditor(ProfileStepEditorBase):
     @qtc.pyqtSlot()
     def _add_step(self, fraction=None, duration=None):
         """Add a step to the fractional step profile."""
-        fraction_handler = CoercingDoubleSpinBox(decimals=2, soft_range=(0, 2),
-                                                 step=0.05)
+        fraction_handler = CoercingDoubleSpinBox(decimals=2, step=0.05)
         duration_handler = CoercingSpinBox(soft_range=(0, MAX_DELAY),
                                            suffix=' ms')
         for value, handler in zip((fraction, duration),
@@ -495,7 +530,12 @@ class FractionalStepEditor(ProfileStepEditorBase):
             if value:
                 handler.setValue(value)
             handler.destroyed.connect(self._emit_step_count_reduced)
-        self.layout().addRow(fraction_handler, duration_handler)
+        # The layout is required to stop the QFormLayout
+        # from compressing the fraction_handler.
+        layout = qtw.QHBoxLayout()
+        layout.addWidget(fraction_handler)
+        layout.addWidget(duration_handler)
+        self.layout().addRow(layout)
         self._update_button_states()
 
     def _compose(self):
@@ -531,7 +571,8 @@ class FractionalStepEditor(ProfileStepEditorBase):
         duration_label = qtw.QLabel()
         duration_label.setText('Duration')
         layout.addWidget(duration_label)
-        info = '<nobr>The settle time after each</nobr> energy given in ms.'
+        info = ('<nobr>How long to wait (ms) till </nobr>'
+                'the next intermediate step.')
         layout.addWidget(FieldInfo(info, size=size))
         return layout
 
@@ -590,11 +631,12 @@ class FractionalStepEditor(ProfileStepEditorBase):
         profile = []
         layout = self.layout()
         # The first two elements in the layout are the add/remove
-        # buttons and the labels. After that, each widget, of which
-        # there are two per line, is a separate item.
+        # buttons and the labels. After that, each step is a separate
+        # item with two widgets.
         for index in range(2, layout.count()):
             item = layout.itemAt(index)
-            profile.append(item.widget().value())
+            profile.append(item.itemAt(0).widget().value())
+            profile.append(item.itemAt(1).widget().value())
         self.profile = tuple(profile)
         if not self.profile or not any(self.profile):
             self.profile = ('abrupt',)
