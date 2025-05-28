@@ -382,11 +382,11 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         """Return a SettingsHandler object for displaying settings."""
         handler = super().get_settings_handler()
         info = (
-            ('energy_step_duration', 'Energy step duration',
+            ('energy_step_duration', 'Energy-step duration',
              '<nobr>The time a measurement will remain at each energy.</nobr>'),
             ('measurement_interval', 'Measurement interval',
              '<nobr>The time between measurements at a certain energy in'
-             '</nobr> a triggered, time-resolved measurement.')
+             '</nobr> a non-continuous, time-resolved measurement.')
             )
         for option_name, display_name, tip in info:
             widget = CoercingSpinBox(soft_range=(0, 2147483647), suffix=' ms')
