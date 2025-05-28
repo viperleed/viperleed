@@ -98,6 +98,14 @@ class ControllerABC(DeviceABC):
         ('controller', 'device_name'),
         )
 
+    # Backwards compatibility fix                                               # TODO: #242
+    _settings_synonyms = (
+        (('measurement_settings', 'nr_samples'),
+         ('measurement_settings', 'num_meas_to_average'),),
+        (('controller', 'serial_class'),
+         ('controller', 'serial_port_class'),),
+        )
+
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):
         """Initialise the controller instance.
@@ -603,15 +611,7 @@ class ControllerABC(DeviceABC):
                                                  *extra_mandatory)
 
         # Backwards compatibility fix                                           # TODO: #242
-        new = (
-            ('measurement_settings', 'nr_samples'),
-            ('controller', 'serial_class'),
-            )
-        old = (
-            ('measurement_settings', 'num_meas_to_average'),
-            ('controller', 'serial_port_class'),
-            )
-        for new_setting, old_setting in zip(new, old):
+        for new_setting, old_setting in self._settings_synonyms:
             if '/'.join(new_setting) in invalid_settings:
                 old_missing = settings.has_settings(old_setting)
                 if not old_missing:

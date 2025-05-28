@@ -123,7 +123,22 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     _mandatory_settings = (
         ('devices', 'primary_controller'),
-        ('measurement_settings', 'start_energy'),
+        ('energies', 'start_energy'),
+        ('energies', 'delta_energy'),
+        ('energies', 'end_energy'),
+        ('energies', 'step_profile'),
+        )
+
+    # Backwards compatibility fix                                               # TODO: #242
+    _settings_synonyms = (
+        (('energies', 'start_energy'),
+         ('measurement_settings', 'start_energy'),),
+        (('energies', 'delta_energy'),
+         ('measurement_settings', 'delta_energy'),),
+        (('energies', 'end_energy'),
+         ('measurement_settings', 'end_energy'),),
+        (('energies', 'step_profile'),
+         ('measurement_settings', 'step_profile'),),
         )
 
     def __init__(self, settings):
@@ -314,12 +329,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if not self.settings:
             return 0.0
         try:
-            return self.settings.getfloat('measurement_settings',
-                                          'start_energy', fallback=0)
+            return self.settings.getfloat('energies', 'start_energy',
+                                          fallback=0)
         except (TypeError, ValueError):
             # Not a float
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/start_energy', '')
+                            'energies/start_energy', '')
             return 0.0
 
     @property
@@ -340,11 +355,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             Sequence of energies and waiting intervals.
         """
         try:
-            profile = self.settings.getsequence("measurement_settings",
-                                                "step_profile",
+            profile = self.settings.getsequence('energies', 'step_profile',
                                                 fallback=("abrupt",))
         except NotASequenceError:
-            profile = self.settings["measurement_settings"]["step_profile"]
+            profile = self.settings['energies']['step_profile']
 
         if isinstance(profile, str):
             profile = (profile,)
@@ -364,7 +378,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             values = self._get_linear_step(*params)
         else:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/step_profile',
+                            'energies/step_profile',
                             f'Unknown profile shape {shape}')
             values = tuple()
         return values
@@ -387,7 +401,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._aborted = True
         self._camera_timer.stop()
         if self.settings:
-            self.settings.set('measurement_settings', 'was_aborted', 'True')
+            self.settings.set('measurement_info', 'was_aborted', 'True')
         self._force_end_timer.start()
         # _force_end_timer performs a delayed call to _cleanup_and_end
         # which will stop all threads. The quitting of threads must be
@@ -444,6 +458,19 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             *self._mandatory_settings,
             *self._other_mandatory_settings
             )
+
+        # Backwards compatibility fix                                           # TODO: #242
+        if not settings.has_section('energies'):                                # TODO: Auto-generate new sections if necessary!
+            settings.add_section('energies')
+        for new_setting, old_setting in self._settings_synonyms:
+            if '/'.join(new_setting) in invalid_settings:
+                old_missing = settings.has_settings(old_setting)
+                if not old_missing:
+                    settings.set(*new_setting, settings.get(*old_setting))
+                    settings.remove_option(*old_setting)
+                    settings.update_file()
+                    invalid_settings.remove('/'.join(new_setting))
+
         return [(invalid,) for invalid in invalid_settings]
 
     def disconnect_devices_and_notify(self):
@@ -471,10 +498,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         The base-class implementation returns a handler that
         already contains the following settings:
-            'measurement_settings'/'start_energy'
-            'measurement_settings'/'delta_energy'
-            'measurement_settings'/'end_energy'
-            'measurement_settings'/'step_profile'
+            'energies'/'start_energy'
+            'energies'/'delta_energy'
+            'energies'/'end_energy'
+            'energies'/'step_profile'
 
         Returns
         -------
@@ -488,7 +515,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         settings_path = sys_config.paths['configuration']
 
         handler.add_section('measurement_info', tags=SettingsTag.REGULAR)
-        tip = '<nobr>This string will be appended</nobr> to the folder name.'
+        tip = ('<nobr>This string will be appended </nobr>'
+               'to the file name of the data.')
         handler.add_option('measurement_info', 'tag',
                            handler_widget=qtw.QLineEdit,
                            display_name='File suffix',
@@ -504,31 +532,31 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             type_display, display_name='Measurement type',
             )
 
+        handler.add_section('energies', tags=SettingsTag.REGULAR)
         info = (
-            ('start_energy', 'Start energy',
+            ('start_energy', _settings.START_E_NAME,
              '<nobr>The energy at which the measurement starts.</nobr>'),
-            ('delta_energy', _settings.DELTA_ENERGY_NAME,
+            ('delta_energy', _settings.DELTA_E_NAME,
              '<nobr>The energy difference between two measurement '
              'steps.</nobr>'),
-            ('end_energy', 'End energy',
-             '<nobr>The energy value at which the measurement is '
-             'supposed</nobr> to stop.'),
+            ('end_energy', _settings.END_E_NAME,
+             '<nobr>The energy value at which </nobr>'
+             'the measurement will finish.'),
             )
         for option_name, display_name, tip in info:
             widget = CoercingDoubleSpinBox(decimals=1, soft_range=(0, 1000),
                                            suffix=' eV')
             handler.add_option(
-                'measurement_settings', option_name, handler_widget=widget,
+                'energies', option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip
                 )
-        delta_energy = handler['measurement_settings']['delta_energy']
+        delta_energy = handler['energies']['delta_energy']
         delta_energy.handler_widget.soft_minimum = -1000
         delta_energy.handler_widget.setSingleStep(0.5)
 
         widget = _settings.StepProfileViewer()
-        tip = ('<nobr>The step profile when performing </nobr>'
-               'a step from one energy to another.')
-        handler.add_option('measurement_settings', 'step_profile',
+        tip = '<nobr>How to move from </nobr>one energy to the next one.'
+        handler.add_option('energies', 'step_profile',
                            handler_widget=widget, display_name='Step profile',
                            tooltip=tip)
 
@@ -782,7 +810,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 )
 
         self._has_been_used_before = True
-        self.settings.set('measurement_settings', 'was_aborted', 'False')
+        self.settings.set('measurement_info', 'was_aborted', 'False')
         self.settings.set('measurement_info', 'started',
                           time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
         self.running = True
@@ -1167,7 +1195,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if len(params) != 2:
             # Too many/too few
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/step_profile',
+                            'energies/step_profile',
                             'Too many/few parameters for linear profile. '
                             f'Expected 2, found {len(params)}')
             return tuple()
@@ -1176,14 +1204,14 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             n_steps, tot_time = (int(p) for p in params)
         except (TypeError, ValueError):
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/step_profile',
+                            'energies/step_profile',
                             'Could not convert to integer the '
                             'parameters for linear profile')
             return tuple()
 
         if n_steps <= 0 or tot_time < 0:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/step_profile',
+                            'energies/step_profile',
                             'Linear-step parameters should be '
                             'positive integers')
             return tuple()
@@ -1735,7 +1763,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             time_ = int(time_)
             if time_ < 0:
                 self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                                'measurement_settings/step_profile',
+                                'energies/step_profile',
                                 '\nInfo: Time intervals must be non-negative')
                 return tuple()
             energies_times[2*i+1] = time_

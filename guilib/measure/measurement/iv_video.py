@@ -23,11 +23,6 @@ class IVVideo(MeasurementABC):
     """Measurement class for LEED I(V) videos."""
 
     display_name = 'I(V) video'
-    _mandatory_settings = (
-        *MeasurementABC._mandatory_settings,
-        ('measurement_settings', 'end_energy'),
-        ('measurement_settings', 'delta_energy'),
-        )
 
     @property
     def _delta_energy(self):
@@ -41,13 +36,12 @@ class IVVideo(MeasurementABC):
         if not self.settings:
             return fallback
         try:
-            delta = self.settings.getfloat('measurement_settings',
-                                           'delta_energy')
+            delta = self.settings.getfloat('energies', 'delta_energy')
         except (TypeError, ValueError):
             # Not a float
             delta = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/delta_energy', '')
+                            'energies/delta_energy', '')
         return delta
 
     @property
@@ -62,12 +56,12 @@ class IVVideo(MeasurementABC):
         if not self.settings:
             return fallback
         try:
-            egy = self.settings.getfloat('measurement_settings', 'end_energy')
+            egy = self.settings.getfloat('energies', 'end_energy')
         except (TypeError, ValueError):
             # Not a float
             egy = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/end_energy', '')
+                            'energies/end_energy', '')
         return egy
 
     @property

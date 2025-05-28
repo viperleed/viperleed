@@ -26,6 +26,7 @@ from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.measurement.abc import MeasurementErrors
+from viperleed.guilib.measure.measurement._meassettings import START_E_NAME
 
 
 _MEASURED_EGY = QuantityInfo.HV
@@ -46,27 +47,16 @@ class MeasureEnergyCalibration(MeasurementABC):
         """Return the first energy for the energy ramp.
 
         The returned value is limited below by a minimum energy
-        (as found in 'measurement_settings/min_energy' if present,
-        5 eV otherwise). This is useful to avoid calibrating for
-        the non-linearity of LEED electronics in the low-energy
-        regime.
+        (as found in 'energies/min_energy' if present, 5 eV otherwise).
+        This is useful to avoid calibrating for the non-linearity of
+        LEED electronics in the low-energy regime.
 
         Returns
         -------
         start_energy : float
             The first energy of the energy ramp.
         """
-        start_e = super().start_energy
-
-        # pylint: disable=redefined-variable-type
-        # Seems a pylint bug
-        try:
-            min_e = self.settings.getfloat('measurement_settings',
-                                           'min_energy', fallback=5.0)
-        except (TypeError, ValueError):
-            # Not a float
-            min_e = 5.0
-        return max(min_e, start_e)
+        return max(self._min_energy, super().start_energy)
 
     @property
     def _delta_energy(self):
@@ -80,14 +70,13 @@ class MeasureEnergyCalibration(MeasurementABC):
         if not self.settings:
             return fallback
         try:
-            delta = self.settings.getfloat('measurement_settings',
-                                           'delta_energy')
+            delta = self.settings.getfloat('energies', 'delta_energy')
         except (TypeError, ValueError, NoSectionError, NoOptionError):
             # Not a float or not present
             delta = fallback
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                '', 'measurement_settings/delta_energy', fallback
+                '', 'energies/delta_energy', fallback
                 )
         return delta
 
@@ -103,15 +92,29 @@ class MeasureEnergyCalibration(MeasurementABC):
         if not self.settings:
             return fallback
         try:
-            egy = self.settings.getfloat('measurement_settings', 'end_energy')
+            egy = self.settings.getfloat('energies', 'end_energy')
         except (TypeError, ValueError, NoSectionError, NoOptionError):
             # Not a float or not present
             egy = fallback
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                '', 'measurement_settings/end_energy', fallback
+                '', 'energies/end_energy', fallback
                 )
         return egy                                                              # TODO: warn if end == 1000
+
+    @property
+    def _min_energy(self):
+        """Return the minimum starting energy (in eV)."""
+        try:
+            min_e = self.settings.getfloat('energies', 'min_energy')
+        except (NoSectionError, NoOptionError):
+            # Backwards compatibility fix                                       # TODO: #242
+            min_e = self.settings.getfloat('measurement_settings',
+                                           'min_energy', fallback=5.)
+        except (TypeError, ValueError):
+                # Not a float
+                min_e = 5.0
+        return min_e
 
     @qtc.pyqtSlot()
     def abort(self):
@@ -167,7 +170,7 @@ class MeasureEnergyCalibration(MeasurementABC):
             # Require at least 10 eV for a reasonable calibration
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTINGS,
-                'measurement_settings/start_energy and /end_energy',
+                'energies/start_energy and /end_energy',
                 f"\nToo small energy range ({abs(egy_range)} eV) for "
                 "calibration. It should be at least 10 eV."
                 )
@@ -177,7 +180,7 @@ class MeasureEnergyCalibration(MeasurementABC):
             # Require at least 10 data points for a decent fit
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTINGS,
-                'measurement_settings/start_energy, /end_energy, '
+                'energies/start_energy, /end_energy, '
                 'and /delta_energy',
                 f"\nToo few energies ({n_steps}) for a reasonable fit "
                 "of the calibration curve. Expected at least 10 energies."
@@ -307,13 +310,11 @@ class MeasureEnergyCalibration(MeasurementABC):
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
         handler = super().get_settings_handler()
-        min_energy = self.settings.getfloat('measurement_settings',
-                                            'min_energy', fallback=5.)
-        option = handler['measurement_settings']['start_energy']
-        option.handler_widget.soft_minimum = min_energy
+        option = handler['energies']['start_energy']
+        option.handler_widget.soft_minimum = self._min_energy
         option.set_info_text(
-            '<nobr>The energy at which the measurement starts.</nobr> The '
-            f'minimum start energy is {min_energy} eV.'
+            '<nobr>The energy at which the measurement starts.</nobr> '
+            f'The minimum {START_E_NAME} is {self._min_energy} eV.'
             )
         return handler
 

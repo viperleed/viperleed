@@ -25,7 +25,8 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsTag,
     )
 from viperleed.guilib.measure.widgets.collapsiblelists import (
-    CollapsibleCameraList, CollapsibleControllerList,
+    CollapsibleCameraList,
+    CollapsibleControllerList,
     )
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
@@ -35,7 +36,9 @@ from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
 from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
 
 
-DELTA_ENERGY_NAME = 'Step height'
+DELTA_E_NAME = '\u0394E'
+START_E_NAME = 'E start'
+END_E_NAME = 'E end'
 MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
 
@@ -128,7 +131,9 @@ class DeviceEditor(SettingsDialogSectionBase):
         for collapsible_list in self._device_lists:
             collapsible_list.settings_changed.connect(self.settings_changed)
             collapsible_list.error_occurred.connect(self.error_occurred)
-            collapsible_list.settings_ok_changed.connect(self.settings_ok_changed)
+            collapsible_list.settings_ok_changed.connect(
+                self.settings_ok_changed
+                )
         self._controllers.requires_device = True
         meas = self._settings.get('measurement_settings', 'measurement_class')
         must_have_cameras = ('IVVideo',)
@@ -517,9 +522,11 @@ class FractionalStepEditor(ProfileStepEditorBase):
         fraction_label.setText('Step fraction')
         layout.addWidget(fraction_label)
         size = fraction_label.fontMetrics().boundingRect('a').height()
-        info = ('<nobr>The energies to set given as a '
-                f'fraction</nobr> of "{DELTA_ENERGY_NAME}". '
-                f'Number of steps cannot exceed {MAX_NUM_STEPS}.')
+        info = ('<nobr>The energies to set given as a fraction</nobr> '
+                f'of "{DELTA_E_NAME}". Number of steps cannot exceed '
+                f'{MAX_NUM_STEPS}. Any value is acceptable. Zero is '
+                'equivalent to the current energy and one to the next '
+                'energy.')
         layout.addWidget(FieldInfo(info, size=size))
         duration_label = qtw.QLabel()
         duration_label.setText('Duration')

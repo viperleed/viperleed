@@ -19,6 +19,7 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.measurement._meassettings import START_E_NAME
 from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.guilib.widgets.basewidgets import QCheckBoxInvertedSignal
 from viperleed.guilib.widgetslib import retain_size_when_hidden
@@ -38,6 +39,17 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         *MeasurementABC._mandatory_settings,
         ('measurement_settings', 'is_continuous'),
         ('measurement_settings', 'energy_step_duration'),
+        ('energies', 'endless'),
+        ('energies', 'constant_energy'),
+        )
+
+    # Backwards compatibility fix                                               # TODO: #242
+    _settings_synonyms = (
+        *MeasurementABC._settings_synonyms,
+        (('energies', 'endless'),
+         ('measurement_settings', 'endless'),),
+        (('energies', 'constant_energy'),
+         ('measurement_settings', 'constant_energy'),),
         )
 
     _request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                  # TODO: could be done with QMetaObject.invokeMethod
@@ -88,13 +100,13 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         if not self.settings:
             return fallback
         try:
-            constant_energy = self.settings.getboolean('measurement_settings',
+            constant_energy = self.settings.getboolean('energies',
                                                        'constant_energy')
         except (TypeError, ValueError):
             # Not a bool
             constant_energy = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/constant_energy', '')
+                            'energies/constant_energy', '')
         return constant_energy
 
     @property
@@ -109,13 +121,12 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         if not self.settings:
             return fallback
         try:
-            delta = self.settings.getfloat('measurement_settings',
-                                           'delta_energy')
+            delta = self.settings.getfloat('energies', 'delta_energy')
         except (TypeError, ValueError):
             # Not a float
             delta = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/delta_energy', '')
+                            'energies/delta_energy', '')
         return delta
 
     @property
@@ -125,13 +136,12 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         if not self.settings:
             return fallback
         try:
-            endless = self.settings.getboolean('measurement_settings',
-                                               'endless')
+            endless = self.settings.getboolean('energies', 'endless')
         except (TypeError, ValueError):
             # Not a bool
             endless = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/endless', '')
+                            'energies/endless', '')
         return endless
 
     @property
@@ -146,12 +156,12 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         if not self.settings:
             return fallback
         try:
-            egy = self.settings.getfloat('measurement_settings', 'end_energy')
+            egy = self.settings.getfloat('energies', 'end_energy')
         except (TypeError, ValueError):
             # Not a float
             egy = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/end_energy', '')
+                            'energies/end_energy', '')
         return egy
 
     @property
@@ -386,30 +396,33 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 )
 
         info = (
-            ('is_continuous', 'Continuous measurement',
-             '<nobr>If selected, the measurement will be a continuous,'
-             '</nobr> time-resolved measurement. Useful to perform '
-             'fast sampling of quantities. Non-continuous measurements '
-             'may be more suitable for longer measurements.'),
-            ('endless', 'Endless measurement',
-             '<nobr>If selected, the measurement will return to the start'
-             '</nobr> energy after reaching the end and go on. This kind '
-             'of measurement has to be manually aborted for it to end.'),
-            ('constant_energy', 'Constant energy',
-             '<nobr>If selected, the measurement will allways remain at'
-             '</nobr> the start energy. This kind of measurement has to '
-             'be manually aborted for it to end.'),
+            ('measurement_settings', 'is_continuous',
+             'Continuous measurement',
+             '<nobr>If selected, the measurement will be a continuous, '
+             '</nobr>time-resolved measurement, i.e., it will return '
+             'data as quickly as possible, without averaging. Useful to '
+             'perform fast sampling of quantities. Typically used for '
+             'determining response times of a LEED unit. For <it>I</it>'
+             '(<it>t</it>) measurments, use non-continuous mode.'),
+            ('energies', 'endless', 'Keep repeating',
+             '<nobr>If selected, the measurement will return to the start '
+             '</nobr>energy after reaching the end and go on. This kind '
+             'of measurement can only be manually aborted.'),
+            ('energies', 'constant_energy', 'Constant energy',
+             '<nobr>If selected, the measurement will always remain at '
+             f'</nobr>{START_E_NAME}. This kind of measurement can only'
+             ' be manually aborted.'),
             )
-        for option_name, display_name, tip in info:
+        for section, option_name, display_name, tip in info:
             widget = QCheckBoxInvertedSignal()
             handler.add_option(
-                'measurement_settings', option_name, handler_widget=widget,
+                section, option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip
                 )
 
-        end_energy = handler['measurement_settings']['end_energy']
-        delta_energy = handler['measurement_settings']['delta_energy']
-        constant = handler['measurement_settings']['constant_energy']
+        end_energy = handler['energies']['end_energy']
+        delta_energy = handler['energies']['delta_energy']
+        constant = handler['energies']['constant_energy']
         continuous = handler['measurement_settings']['is_continuous']
         interval = handler['measurement_settings']['measurement_interval']
         for option in (end_energy, delta_energy):
@@ -474,7 +487,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # Pick a different settle time for continuous and triggered:
         # in continuous mode we want to get measurements as quickly as
         # possible (and look at short-term time traces); in "triggered"
-        # mode give the user freedom to choose by using hv_settle_time          # TODO: should we use something else, perhaps?
+        # mode give the user freedom to choose by using hv_settle_time          # TODO: Use something else than hv_settle_time here. i0_settle_time would be long enough for both HV and I0 measurements.
         settle_time = 0 if _continuous else self.hv_settle_time
 
         # Always trigger measurements. For a "triggered" measurement
