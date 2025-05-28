@@ -10,7 +10,7 @@ __license__ = 'GPLv3+'
 import numpy as np
 import pytest
 
-from viperleed.gui.leedsim.classes import RealSpace
+from viperleed.gui.leedsim.classes.realspace import RealSpace
 
 testDict = {'eMax': 15,
             'surfBasis': np.array([[0, 6.76365840], [-7.81, 0]]),

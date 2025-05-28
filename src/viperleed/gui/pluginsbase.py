@@ -231,32 +231,52 @@ class AboutViPErLEED(qtw.QWidget):
         layout = qtw.QVBoxLayout()
         layout.setSpacing(20)
         max_width = 600
+        iv_it = '<em>I</em>(<em>V</em>)'
         papers = (
-            'X. Y, X. Y, and X. Y, ViPErLEED I, <I>Journal</I> <B>Vol</B>, '
-            'pages (2022).',
-            'X. Y, X. Y, and X. Y, ViPErLEED II, <I>Journal</I> <B>Vol</B>, '
-            'pages (2022).',
-            'X. Y, X. Y, and X. Y, ViPErLEED III, <I>Journal</I> <B>Vol</B>, '
-            'pages (2022).',
+            'F. Kraushofer, A. M. Imre, G. Franceschi, T. Ki\u00dflinger, '
+            'E. Rheinfrank, M. Schimd, U. Diebold, L. Hammer, and M. Riva, '
+            f'ViPErLEED package I: Calculation of  {iv_it} curves and '
+            'structural optimization, '
+            '<a href=https://doi.org/10.1103/PhysRevResearch.7.013005>'
+            'Phys. Rev. Res. <B>7</B>, 013005 (2025)</a>.',
+            'M. Schmid, F. Kraushofer, A. M. Imre, T. Ki\u00dflinger, '
+            'L. Hammer, U. Diebold, and M. Riva, '
+            'ViPErLEED package II: Spot tracking, extraction, and processing '
+            f'of {iv_it} curves, '
+            '<a href=https://doi.org/10.1103/PhysRevResearch.7.013006>'
+            'Phys. Rev. Res. <B>7</B>, 013006 (2025)</a>.',
+            # 'X. Y, X. Y, and X. Y, ViPErLEED III, <I>Journal</I> <B>Vol</B>, '
+            # 'pages (2022).',
             )
-        contrib = ('Michele Riva', 'Florian Kraushofer', 'Michael Schmid',
-                   'Lutz Hammer', 'Tilman Ki\u00dflinger', 'Florian D\u00f6rr',
-                   'Bernhard Mayr',)
+        papers = tuple(f'<li>{p}</li>' for p in papers)
+        contrib = (
+            'Michele Riva',
+            'Florian Kraushofer',
+            'Michael Schmid',
+            'Lutz Hammer',
+            'Tilman Ki\u00dflinger',
+            'Florian D\u00f6rr',
+            'Alexander M. Imre',
+            # 'Bernhard Mayr',
+            # 'Christoph Pfungen',
+            # 'Stefan Mitterhofer',
+            )
 
         txt = qtw.QLabel(
-            'Copyright (2019\u22122022) ViPErLEED Team<p>'
+            f'{__copyright__}<p>'
             '<p>ViPErLEED (i.e., the Vienna Package for Erlangen LEED) is an '
-            'open-source project that aims at making LEED-I(V) accessible to '
-            'the broad scientific community for solving surface structures.<p>'
-            'Should you find ViPErLEED useful, we are happy to receive '
-            'citation to our papers:<p>'
-            f'{"<br>".join(papers)}<p>'
-            'ViPErLEED includes tools for measuring and analyzing LEED-I(V) '
-            'data. It can calculate theoretical I(V) curves from a structural '
-            'model, and optimize this model to best match experimental data. '
-            'You can find more information by visiting our documentation '
-            'page, or using the <U>H</U>elp.<p>'
-            'The most recent code is available on our GitHub repository '
+            f'open-source project that aims at making LEED {iv_it} accessible '
+            'to the broad scientific community for solving surface structures.'
+            '<p>Should you find ViPErLEED useful, we are happy to receive '
+            'citation to our papers:<p><ul>'
+            f'{"".join(papers)}</ul><p>'
+            'ViPErLEED includes tools for measuring and analyzing '
+            f'LEED-{iv_it} data. It can calculate theoretical {iv_it} curves '
+            'from a structural model, and optimize this model to best match '
+            'experimental data. You can find more information by visiting our '
+            '<a href=https://www.viperleed.org>documentation page</a>.'
+            #, or using the <U>H</U>elp.'   # We have no Help
+            '<p>The most recent code is available on our GitHub repository '
             '<a href="https://github.com/viperleed">github.com/viperleed</a>, '
             'and is released under the GNU General Public License '
             '<a href="https://www.gnu.org/licenses/gpl-3.0">version 3</a>'
