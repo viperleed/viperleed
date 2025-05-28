@@ -8,6 +8,7 @@ test.py
 # editable install files and folders and other distribution stuff
 **/*egg-info*
 dist
+build/lib
 
 # macOS files
 .DS_Store

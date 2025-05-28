@@ -114,6 +114,10 @@ classifiers = [
         'LICENSE*',
         'FontLog*',
         ]
+    'viperleed.gui.leedsim' = [
+        'input examples/*.tlm',
+        'exported/*.csv',
+        ]
 
 
 

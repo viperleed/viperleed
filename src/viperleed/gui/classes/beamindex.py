@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-03-22'
 __license__ = 'GPLv3+'
 
+import itertools
 import re
 
 from quicktions import Fraction  # Faster than standard Fraction
@@ -19,6 +20,15 @@ from viperleed.gui.helpers import format_floats
 
 
 _SEPARATORS = ',|'
+
+
+def is_fraction(index):
+    """Return whether index is a Fraction."""
+    try:
+        _ = index.limit_denominator
+    except AttributeError:
+        return False
+    return True
 
 
 class BeamIndex(tuple):
@@ -74,15 +84,11 @@ class BeamIndex(tuple):
             <numerator> integer.
         """
         indices = cls._process_indices(indices)
-
-        # We will hash the object only if it does not contain '-1' as
-        # this is a special value for hashing. In fact, hash(-1) == -2.
-        # Hashing stuff that contains -1 would thus produce a large
-        # number of collisions. Moreover hash(obj) never returns -1.
-        for_hash = (*indices, denominator)
-        input_hash = hash(for_hash) if -1 not in for_hash else -1
-        if input_hash in cls._cache:
-            return cls._cache[input_hash]
+        input_hash = cls._get_init_args_hash(indices, denominator)
+        try:
+            return cls._get_cached_value(input_hash, indices)
+        except KeyError:  # Not in cache, or hash collision
+            pass
 
         values = (cls._index_to_fraction(i, denominator, from_numerators)
                   for i in indices)
@@ -245,13 +251,38 @@ class BeamIndex(tuple):
         return numerator + ' ' * n_white
 
     @classmethod
+    def _get_cached_value(cls, hash_value, indices):
+        """Return a cached BeamIndex from its hash, except for collisions."""
+        cached = cls._cache[hash_value]
+        if not all(is_fraction(i) for i in indices):
+            return cached
+        # Fractions can give collisions. Since we take Fractions at
+        # face value, we can explicitly check equality.
+        if indices != cached:
+            del cls._cache[hash_value]
+            raise KeyError
+        return cached
+
+    @staticmethod
+    def _get_init_args_hash(indices, denominator):                              # TODO: think again how we could use the right denominator if from_numerator==True
+        """Return a hash of the initialization arguments."""
+        # We will hash the object only if it does not contain '-1' as
+        # this is a special value for hashing. In fact, hash(-1) == -2.
+        # Hashing stuff that contains -1 would thus produce a large
+        # number of collisions. Moreover hash(obj) never returns -1.
+        # Also, we do not use Fraction's __hash__ as it leads to many
+        # collisions. Instead, use numerators and denominators.
+        numerators_and_denominators = itertools.chain.from_iterable(
+            (i, 1) if not is_fraction(i) else (i.numerator, i.denominator)
+            for i in indices
+            )
+        for_hash = *numerators_and_denominators, denominator
+        return hash(for_hash) if -1 not in for_hash else -1
+
+    @classmethod
     def _index_to_fraction(cls, index, denominator=1, from_numerator=False):
         """Return a Fraction version of index. See also __new__."""
-        try:
-            index.limit_denominator  # attribute of Fraction only
-        except AttributeError:
-            pass
-        else:
+        if is_fraction(index):
             return index
 
         if from_numerator:
