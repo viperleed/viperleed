@@ -17,7 +17,6 @@ from ctypes import POINTER, c_ubyte, cast as c_cast
 
 import numpy as np
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import abc
@@ -31,9 +30,10 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.guilib.measure.hardwarebase import device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
-
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 
 _CUSTOM_NAME_RE = re.compile(r"\[.*\]")
 
@@ -442,8 +442,8 @@ class ImagingSourceCamera(abc.CameraABC):
 
         _min, _max = self.get_black_level_limits()
         if black_level < _min or black_level > _max:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
                 'camera_settings/black_level',
                 f"{black_level} [out of range ({_min}, {_max})]",
                 )
@@ -462,8 +462,8 @@ class ImagingSourceCamera(abc.CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 color_fmt_s, 'camera_settings/color_format', 'Y16'
                 )
             color_fmt = SinkFormat.Y16
@@ -478,8 +478,8 @@ class ImagingSourceCamera(abc.CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 color_fmt, 'camera_settings/color_format', 'Y16'
                 )
             color_fmt = SinkFormat.Y16
@@ -639,9 +639,12 @@ class ImagingSourceCamera(abc.CameraABC):
         # Triggered for _widget. While this is true, it is clear what
         # _widget is used for in each portion of filling the handler
 
+        if not self.connected:
+            return handler
+
         # Black level
-        _widget = qtw.QSpinBox()
-        _widget.setRange(*self.get_black_level_limits())
+        _widget = CoercingSpinBox(soft_range=self.get_black_level_limits())
+        _widget.setMinimum(0)
         _widget.setAccelerated(True)
         _tip = (
             "<nobr>Dark Level, Black Level, or Brightness is a measure of"
@@ -655,7 +658,8 @@ class ImagingSourceCamera(abc.CameraABC):
             )
         handler.add_option('camera_settings', 'black_level',
                            handler_widget=_widget, tooltip=_tip,
-                           is_advanced=True, display_name="Dark Level")
+                           tags=SettingsTag.ADVANCED,
+                           display_name="Dark Level")
 
         # Color format
         _tip = (
@@ -670,7 +674,7 @@ class ImagingSourceCamera(abc.CameraABC):
         _widget.notify_ = _widget.currentIndexChanged
         handler.add_option('camera_settings', 'color_format',
                            handler_widget=_widget, tooltip=_tip,
-                           is_advanced=True)
+                           tags=SettingsTag.ADVANCED)
         return handler
 
     def list_devices(self):
@@ -680,12 +684,16 @@ class ImagingSourceCamera(abc.CameraABC):
         -------
         devices : list of SettingsInfo
             Information for each of the detected Imaging Source cameras.
-            For each item, only .unique_name is set, i.e., there is no
-            .more information.
+            For each item, only .unique_name and .has_hardware_interface
+            are set, i.e., there is no .more information.
         """
         # Use empty dictionaries as there is no
         # additional information to pass along.
-        return [SettingsInfo(name) for name in self.driver.devices]
+        # Since we detect camera presence through the driver, we can
+        # assume the hardware interface is going to be present when
+        # we attempt to connect to the device.
+        present = True
+        return [SettingsInfo(name, present) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.
@@ -760,6 +768,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """Set the exposure time for one frame (from settings)."""
         self.driver.exposure = self.exposure
 
+    @abc.fallback_if_disconnected
     def get_exposure_limits(self):
         """Return the the minimum and maximum exposure times supported.
 
@@ -774,6 +783,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """Return the number of frames delivered per second."""
         return self.driver.frame_rate
 
+    @abc.fallback_if_disconnected
     def get_gain(self):
         """Get the gain (in decibel) from the camera device."""
         return self.driver.gain
@@ -782,6 +792,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """Set the gain of the camera in decibel."""
         self.driver.gain = self.gain
 
+    @abc.fallback_if_disconnected
     def get_gain_limits(self):
         """Return the the minimum and maximum gains supported.
 

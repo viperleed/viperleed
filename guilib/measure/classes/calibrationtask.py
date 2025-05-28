@@ -456,8 +456,8 @@ class CalibrationTask(QObjectWithError, metaclass=QMetaABC):
             If .start() is called while the device is busy.
         """
         if self.device is not None and self.device.busy:
-            base.emit_error(self.device, CalibrationTaskError.DEVICE_BUSY,
-                            self.name, self.device.name)
+            self.device.emit_error(CalibrationTaskError.DEVICE_BUSY,
+                                   self.name, self.device.name)
             return False
 
         self.update_device_settings()
