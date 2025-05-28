@@ -8,7 +8,6 @@ __created__ = '2025-06-23'
 __license__ = 'GPLv3+'
 
 import pytest
-from unittest.mock import MagicMock
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.special.max_tl_displacement import MaxTLDisplacement
@@ -114,10 +113,10 @@ class TestMaxTLDisplacementTooFar:
         }
 
     @parametrize('limit,dgeo,dvib,expect', cases.values(), ids=cases)
-    def test_is_too_far(self, limit, dgeo, dvib, expect):
-        atom = MagicMock()
+    def test_is_too_far(self, limit, dgeo, dvib, expect, mocker):
+        atom = mocker.MagicMock()
         atom.distance.return_value = dgeo
-        atom.oriState = MagicMock()
+        atom.oriState = mocker.MagicMock()
         atom.site.vibamp = {'X': 0.1}
         atom.site.oriState.vibamp = {'X': 0.1+dvib}
         obj = MaxTLDisplacement(limit)
