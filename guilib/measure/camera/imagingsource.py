@@ -768,6 +768,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """Set the exposure time for one frame (from settings)."""
         self.driver.exposure = self.exposure
 
+    @abc.fallback_if_disconnected
     def get_exposure_limits(self):
         """Return the the minimum and maximum exposure times supported.
 
@@ -776,24 +777,22 @@ class ImagingSourceCamera(abc.CameraABC):
         min_exposure, max_exposure : float
             Shortest and longest exposure times in milliseconds
         """
-        if not self.connected:
-            return super().get_exposure_limits()
         return self.driver.exposure_range
 
     def get_frame_rate(self):
         """Return the number of frames delivered per second."""
         return self.driver.frame_rate
 
+    @abc.fallback_if_disconnected
     def get_gain(self):
         """Get the gain (in decibel) from the camera device."""
-        if not self.connected:
-            return self.settings.getfloat('measurement_settings', 'gain')
         return self.driver.gain
 
     def set_gain(self):
         """Set the gain of the camera in decibel."""
         self.driver.gain = self.gain
 
+    @abc.fallback_if_disconnected
     def get_gain_limits(self):
         """Return the the minimum and maximum gains supported.
 
@@ -804,8 +803,6 @@ class ImagingSourceCamera(abc.CameraABC):
         min_gain, max_gain : float
             Smallest and largest gain factors in decibel
         """
-        if not self.connected:
-            return super().get_gain_limits()
         return self.driver.gain_range
 
     def get_mode(self):

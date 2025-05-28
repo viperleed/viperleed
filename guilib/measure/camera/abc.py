@@ -15,8 +15,9 @@ base-class CameraABC. All classes handling cameras should be
 concrete subclasses of CameraABC.
 """
 
-from collections.abc import Sequence
 from abc import abstractmethod
+from collections.abc import Sequence
+from functools import wraps
 import operator
 
 import numpy as np
@@ -44,6 +45,17 @@ from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 # because they are only meant to be reimplemented in
 # concrete subclasses and used internally, not called
 # from user code.
+
+
+def fallback_if_disconnected(func):
+    """Return the parent class implementation if not connected."""
+    @wraps(func)
+    def _wrapper(self, *args, **kwargs):
+        if not self.connected:
+            parent_method = getattr(CameraABC, func.__name__)
+            return parent_method(self, *args, **kwargs)
+        return func(self, *args, **kwargs)
+    return _wrapper
 
 
 class CameraErrors(base.ViPErLEEDErrorEnum):
@@ -1164,7 +1176,7 @@ class CameraABC(DeviceABC):
         gain : float
             Gain in decibel.
         """
-        return
+        return self.settings.getfloat('measurement_settings', 'gain')
 
     @abstractmethod
     def set_gain(self):
