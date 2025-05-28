@@ -85,6 +85,36 @@ class TestBeamIndex:
         beam = BeamIndex(*args.args, **args.kwargs)
         assert beam == expect
 
+    _cache_problems = { # pairs of problematic beams
+        ('2, -2', '-2, 2'): ((Fraction(2), Fraction(-2)),
+                             (Fraction(-2), Fraction(2))),
+        ('2, 2', '-2, -2'): ((Fraction(2), Fraction(2)),
+                             (Fraction(-2), Fraction(-2))),
+        ('3, -2', '-3, 0'): ((Fraction(3), Fraction(-2)),
+                             (Fraction(-3), Fraction(0))),
+        ('-3, -2', '3, 0'): ((Fraction(-3), Fraction(-2)),
+                             (Fraction(3), Fraction(0))),
+        ('3/2, 3/2', '-3/2, -3/2'): (
+            (Fraction(3, 2), Fraction(3, 2)),
+            (Fraction(-3, 2), Fraction(-3, 2)),
+            ),
+        ('3/2, -3/2', '-3/2, 3/2'): (
+            (Fraction(3, 2), Fraction(-3, 2)),
+            (Fraction(-3, 2), Fraction(3, 2)),
+            ),
+        }
+
+    @parametrize('indices,expect', _cache_problems.items())
+    def test_cache_problems(self, indices, expect):
+        """Check correct handling of problematic hash values."""
+        beams = tuple(BeamIndex(i) for i in indices)
+        assert beams == expect
+        
+        # Invalidate cache, and do the opposite
+        BeamIndex.clear_cache()
+        beams = tuple(BeamIndex(i) for i in reversed(indices))
+        assert beams == tuple(reversed(expect))
+
     _fmt = {  # str_arg, spec, expect
         'str': ('1|1', '', '1, 1'),
         'tuple format': ('3/2,5', '>10', '(    3/2, 5)'),
