@@ -211,7 +211,7 @@ class TiffTag:
 
     @value.setter
     def value(self, new_value):
-        """Set the value (i.e., data) of this TiffTag."""
+        """Set the data (i.e., value) of this tag."""
         new_value = self.__check_value_consistency(new_value)
         self.__value = new_value
 

@@ -11,22 +11,32 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-10-21'
 __license__ = 'GPLv3+'
 
-from time import perf_counter as timer
-from math import ceil
 from ctypes import POINTER, c_ubyte, cast as c_cast
+from math import ceil
+import re
+from time import perf_counter as timer
 
 import numpy as np
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
-from viperleed.gui.measure.camera.abc import CameraABC
-from viperleed.gui.measure.camera.abc import CameraErrors
+from viperleed.gui.measure.camera import abc
+from viperleed.gui.measure.camera import imagingsourcecalibration as is_cal
 from viperleed.gui.measure.camera.drivers.imagingsource import (
     FrameReadyCallbackType,
     ImagingSourceError,
     ISCamera as ImagingSourceDriver,
     SinkFormat,
     )
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.classes.abc import SettingsInfo
+from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.gui.measure.widgets.mappedcombobox import MappedComboBox
+
+
+_CUSTOM_NAME_RE = re.compile(r"\[.*\]")
+
 
 # TODO: test roi offset increments with models other than IMX265
 
@@ -61,7 +71,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
 
     Emits
     -----
-    camera.camera_busy(False)
+    camera.busy_changed(False)
         After enough frames have been received while estimating the
         optimal frame rate.
     camera.abort_trigger_burst()
@@ -71,8 +81,11 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
         Each time, except while estimating the frame rate. Carries
         a numpy array with a copy of the image data.
     """
-    process_info.frame_times.append(timer())
     camera = process_info.camera
+    if not camera or not camera.connected:
+        return
+
+    process_info.frame_times.append(timer())
     n_frames_received = len(process_info.frame_times)
 
     if n_frames_received > 2:
@@ -94,19 +107,39 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
             # time can be made longer.
         return
 
-    # Interrut when all frames arrived. This may happen if the camera
+    # Don't emit frame_ready if we got more frames than expected
+    if camera.mode == 'triggered' and n_frames_received > camera.n_frames:
+        return
+
+    # Interrupt when all frames arrived. This may happen if the camera
     # was set to 'triggered' and it supports trigger burst, as we keep
-    # a little safety margin in case frames are actually lost. Notice
-    # the use of a signal: A direct call makes the program access the
-    # camera from two different threads (main, and the thread in which
-    # this callback runs) and silently crashes the whole application.
+    # a little safety margin (only for > 1 frame) in case frames are
+    # actually lost. Notice the use of a signal: A direct call makes the
+    # program access the camera from two different threads (main, and the
+    # thread in which this callback runs) and silently crashes the whole
+    # application.
     if (camera.mode == 'triggered'
         and camera.supports_trigger_burst
-            and n_frames_received >= camera.n_frames > 1):
+            and n_frames_received == camera.n_frames > 1):
         camera.abort_trigger_burst.emit()
 
-    # Prepare the actual image and send it out
+    # Prepare the actual image
     image = _img_ptr_to_numpy(image_start_pixel, camera)
+
+    # Check that the minimum intensity fits what the camera reports
+    # This fixes an issue observed for some Imaging Source cameras
+    # for which the lowest bit is set to zero, rather than to 1 as
+    # one would expect from the documentation.
+    if not camera.has_zero_minimum and not image.min():
+        camera.has_zero_minimum = True
+
+    try:
+        camera.parent()
+    except RuntimeError:
+        # Wrapped C++ object deleted
+        return
+
+    # Send frame out
     camera.frame_ready.emit(image.copy())
 # pylint: enable=useless-param-doc,useless-type-doc
 
@@ -124,7 +157,7 @@ def _img_ptr_to_numpy(image_start_pixel, camera):
     Returns
     -------
     image : numpy.ndarray
-        Grayscale image. The first index runs along rows,
+        Gray-scale image. The first index runs along rows,
         the second one along pixels within a row.
 
     Raises
@@ -214,14 +247,26 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
     return n_lost, opt_rate
 
 
+def _color_format_mapper(formats):
+    """Return keys and values from formats. Used in settings dialog."""
+    return ((i.display_name, i.name) for i in formats)
+
+
 # pylint: disable=too-many-public-methods
 # pylint counts 33, I count 26. Of those, 17 are actually
-# reimplentations of abstract methods that are only supposed
+# reimplementations of abstract methods that are only supposed
 # to be used internally (i.e., they are the driver interface)
-class ImagingSourceCamera(CameraABC):
+class ImagingSourceCamera(abc.CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
-    abort_trigger_burst = qtc.pyqtSignal()
+    _mandatory_settings = (
+        # pylint: disable=protected-access
+        # Needed for extending
+        *abc.CameraABC._mandatory_settings,
+        ('camera_settings', 'black_level'),
+        )
+
+    abort_trigger_burst = qtc.pyqtSignal()                                      # TODO: could be done with QMetaObject.invokeMethod
 
     def __init__(self, *args, settings=None, parent=None, **kwargs):
         """Initialize instance.
@@ -245,21 +290,72 @@ class ImagingSourceCamera(CameraABC):
         **kwargs : object
             Other unused keyword arguments
         """
-        self.hardware_supported_features.extend(['roi', 'color_format'])
+        self.hardware_supported_features.extend(['roi', 'color_format',
+                                                 'black_level'])
         self.is_finding_best_frame_rate = False
+        self.has_zero_minimum = False
         self.best_next_rate = 1024
+        self.__black_level = -1
         self.__burst_count = -1
+        self.__extra_delay = []  # Duration of abort_trigger_burst
 
         self.__has_callback = False
 
         super().__init__(ImagingSourceDriver(), *args,
                          settings=settings, parent=parent, **kwargs)
-        self.abort_trigger_burst.connect(self.driver.abort_trigger_burst)
+        self.abort_trigger_burst.connect(self.__on_abort_trigger_burst)
+
+    @qtc.pyqtSlot()
+    def __on_abort_trigger_burst(self):
+        """Abort trigger burst."""
+        # Calculate how long this takes, as this is slowing
+        # down the camera, since it requires a pause/start.
+        t_start = self.process_info.frame_times[-1]
+        self.driver.abort_trigger_burst()
+        self.__extra_delay.append(1000*(timer() - t_start))
+
+    @property
+    def calibration_tasks(self):
+        """Return a dictionary of CameraCalibrationTask for self.
+
+        Returns
+        -------
+        tasks : dict
+            Keys can be used to discern when the task is to be
+            performed. Values are lists of CameraCalibrationTask
+            instances. Tasks are executed in order.
+            Typical keys are:
+                'bad_pixels'
+                    Tasks that should be executed before running
+                    the bad-pixels finding CameraCalibrationTask
+                'starting'
+                    Tasks to execute before completing a call to
+                    .start(). The camera will not emit .started
+                    until these tasks have been performed.
+                    CURRENTLY UNUSED.
+        """
+        tasks = super().calibration_tasks
+        if not any(isinstance(t, is_cal.DarkLevelCalibration)
+                   for t in tasks['bad_pixels']):
+            tasks['bad_pixels'].append(is_cal.DarkLevelCalibration(self))
+        return tasks
 
     @property
     def exceptions(self):
         """Return a tuple of camera exceptions."""
         return (ImagingSourceError,)
+
+    @property
+    def extra_delay(self):
+        """Return the interval spent not measuring when triggered (msec)."""
+        # Imaging Source cameras have significant delay only
+        # when we have to interrupt an oversized trigger burst
+        if (self.mode != 'triggered'
+            or self.n_frames <= 1
+            or not self.__extra_delay
+                or not self.supports_trigger_burst):
+            return 0.0
+        return np.mean(self.__extra_delay)
 
     @property
     def image_info(self):
@@ -288,9 +384,21 @@ class ImagingSourceCamera(CameraABC):
         pixel_max : int
             Maximum intensity for a pixel
         """
+        # TODO: here something is still incorrect: The right way to             # TODO: Probably the better way would be to have a CameraCalibrationTask that actually detects these limits from the camera by acquiring a very short dark frame and a somewhat long illuminated frame. The advantage: I would get rid of all the sensor crap, which also needs updating when new models come up.
+        # do it is:
+        # MAX_BIT = 8*n_bytes
+        # if MAX_BIT <= DYN_RANGE --> has_zero_minimum = True
+        # MIN_BIT = 0 if has_zero_minimum else MAX_BIT - DYN_RANGE
+        # DELTA = 1 if has_zero_minimum else 0
+        # PX_MIN = 2**MIN_BIT - DELTA
+        # PX_MAX = 2**MAX_BIT - 2**(MAX_BIT - DYN_RANGE) + 2**MIN_BIT - 1
+
+        # For 16-bit with 12-bit range and has_zero_minimum
+        # this gives px_max = 2**16 - 2**4 + 2**0 - 1 = 65520
+
         *_, n_bytes, _ = self.image_info
         min_bit = 8*n_bytes - self.driver.dynamic_range
-        if n_bytes == 1:
+        if n_bytes == 1 or self.has_zero_minimum:
             pixel_min = 0
         else:
             pixel_min = 2**min_bit
@@ -306,17 +414,58 @@ class ImagingSourceCamera(CameraABC):
         return running
 
     @property
+    def black_level(self):
+        """Return the black-level setting of the camera.
+
+        The black level is a measure of a minimum photon intensity
+        at pixels. Pixels illuminated with less than this intensity
+        will appear in images as having self.intensity_limits[0]
+        intensity. Therefore, black_level determines the lower limit
+        at which image-intensity histograms are 'cut'.
+        """
+        try:
+            black_level = self.settings.getint('camera_settings',
+                                               'black_level', fallback=-2)
+        except (TypeError, ValueError):
+            black_level = -2
+
+        if black_level == self.__black_level:
+            return black_level
+
+        if black_level <= -2:
+            # Was not present. Let's read it from the camera
+            # and store it in the settings.
+            black_level = self.get_black_level()
+            self.settings.set('camera_settings', 'black_level',
+                              str(black_level))
+            self.settings.update_file()
+
+        _min, _max = self.get_black_level_limits()
+        if black_level < _min or black_level > _max:
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTINGS,
+                'camera_settings/black_level',
+                f"{black_level} [out of range ({_min}, {_max})]",
+                )
+            return -2
+
+        self.__black_level = black_level
+        return black_level
+
+    @property
     def color_format(self):
         """Return the the color format used."""
         color_fmt_s = self.settings.get('camera_settings', 'color_format',
-                                          fallback='Y16')
+                                        fallback='Y16')
         try:
             color_fmt = SinkFormat.get(color_fmt_s)
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            color_fmt_s, 'camera_settings/color_format', 'Y16')
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                color_fmt_s, 'camera_settings/color_format', 'Y16'
+                )
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
         return color_fmt
@@ -329,8 +478,10 @@ class ImagingSourceCamera(CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            color_fmt, 'camera_settings/color_format', 'Y16')
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                color_fmt, 'camera_settings/color_format', 'Y16'
+                )
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
 
@@ -348,7 +499,7 @@ class ImagingSourceCamera(CameraABC):
             Negative values indicate that there is no need
             to optimize (i.e., exposure is very long).
         """
-        if self.exposure >= 1500:
+        if self.exposure > 1000:
             return -1
         if self.exposure >= 500:
             return 4
@@ -359,10 +510,15 @@ class ImagingSourceCamera(CameraABC):
         return 21
 
     @property
+    def name_clean(self):
+        """Return a version of .name suitable for file names."""
+        # Remove completely the custom part of the name that
+        # is enclosed in square brackets
+        return base.as_valid_filename(_CUSTOM_NAME_RE.sub('', self.name))
+
+    @property
     def supports_trigger_burst(self):
         """Return whether the camera allows triggering multiple frames.
-
-        This property should be reimplemented in concrete subclasses.
 
         Returns
         -------
@@ -377,16 +533,159 @@ class ImagingSourceCamera(CameraABC):
         """Close the camera device."""
         self.driver.close()
 
-    def list_devices(self):
-        """Return a list of available device names.
+    @classmethod
+    # pylint: disable-next=unused-argument  # From base-class signature
+    def is_matching_default_settings(cls, obj_info, config, match_exactly):
+        """Determine if the default `config` file is for this camera.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo or None
+            The information that should be used to check `config`.
+        config : ConfigParser
+            The settings to check.
+        match_exactly : bool
+            Whether obj_info should be matched exactly.
 
         Returns
         -------
-        devices : list
-            Each element is a string representing
-            the name of a camera device.
+        sorting_info : tuple
+            A tuple that can be used to sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the items in the tuple is the
+            order of their significance. This return value is used
+            to determine the best-matching settings files when
+            multiple files are found. An empty tuple signifies that
+            `config` does not match the requirements.
         """
-        return self.driver.devices
+        # Note that we can just return matching here, as we already
+        # know that the class matches. The reason for this is that the
+        # relevant camera attributes taken from the settings files do
+        # not change between the various cameras handled by this class.
+        return (1,)
+
+    @classmethod
+    def is_matching_user_settings(cls, obj_info, config, match_exactly):
+        """Determine if a `config` file is for this camera.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo
+            The information that should be used to check `config`.
+        config : ConfigParser
+            The settings to check.
+        match_exactly : bool
+            Whether obj_info should be matched exactly. The unique_name
+            in obj_info must match the name of the camera exactly if
+            match_exactly is True.
+
+        Returns
+        -------
+        sorting_info : tuple
+            A tuple that can be used to sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the items in the tuple is the
+            order of their significance. This return value is used
+            to determine the best-matching settings files when
+            multiple files are found. An empty tuple signifies that
+            `config` does no match the requirements.
+        """
+        super().is_matching_user_settings(obj_info, config, match_exactly)
+        camera_name = config.get('camera_settings', 'device_name',
+                                 fallback=None)
+        if match_exactly:
+            return (1,) if camera_name == obj_info.unique_name else ()
+        if camera_name is None:
+            return ()
+        camera_name_re = base.device_name_re(camera_name)
+        return (1,) if camera_name_re.match(obj_info.unique_name) else ()
+
+    @classmethod
+    def is_settings_for_this_class(cls, config):                                # TODO: Move to CameraABC?
+        """Determine if a `config` file is for this camera.
+
+        Parameters
+        ----------
+        config : ConfigParser
+            The settings to check.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is for this camera.
+        """
+        camera_class = config.get('camera_settings', 'class_name',
+                                  fallback=None)
+        return cls.__name__ == camera_class
+
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings.
+
+        Adds:
+        - 'camera_settings'/'black_level' (advanced)
+        - 'camera_settings'/color_format' (advanced)
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this controller to users.
+        """
+        base_handler = super().get_settings_handler()
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
+        handler.add_from_handler(base_handler)
+
+        # pylint: disable=redefined-variable-type
+        # Triggered for _widget. While this is true, it is clear what
+        # _widget is used for in each portion of filling the handler
+
+        # Black level
+        _widget = qtw.QSpinBox()
+        _widget.setRange(*self.get_black_level_limits())
+        _widget.setAccelerated(True)
+        _tip = (
+            "<nobr>Dark Level, Black Level, or Brightness is a measure of"
+            "</nobr> minimum photon intensity at pixels. Pixels illuminated "
+            "with less than this intensity will appear in images as "
+            f"having minimum intensity (= {self.intensity_limits[0]}). "
+            "Therefore, it determines the lower limit at which image-"
+            "intensity histograms are 'cut'. The dark level is <b>optimized "
+            "automatically</b> before bad pixels are identified with "
+            "<b>Tools->Find bad pixels...</b>"
+            )
+        handler.add_option('camera_settings', 'black_level',
+                           handler_widget=_widget, tooltip=_tip,
+                           is_advanced=True, display_name="Dark Level")
+
+        # Color format
+        _tip = (
+            "<nobr>Color format defines the bit depth of the images</nobr> "
+            "acquired. It should be set to <b>monochrome</b>, and using a "
+            "number of bits <b>as large as possible</b>."
+            )
+        _widget = MappedComboBox(_color_format_mapper)
+        _widget.addItems(self.driver.video_formats_available)
+        _widget.set_ = _widget.set_current_data
+        _widget.get_ = _widget.currentData
+        _widget.notify_ = _widget.currentIndexChanged
+        handler.add_option('camera_settings', 'color_format',
+                           handler_widget=_widget, tooltip=_tip,
+                           is_advanced=True)
+        return handler
+
+    def list_devices(self):
+        """Return a list of available devices.
+
+        Returns
+        -------
+        devices : list of SettingsInfo
+            Information for each of the detected Imaging Source cameras.
+            For each item, only .unique_name is set, i.e., there is no
+            .more information.
+        """
+        # Use empty dictionaries as there is no
+        # additional information to pass along.
+        return [SettingsInfo(name) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.
@@ -413,6 +712,23 @@ class ImagingSourceCamera(CameraABC):
             self.__has_callback = True
         self.set_roi()
         return True
+
+    @qtc.pyqtSlot()
+    def get_black_level(self):
+        """Return the black level currently set in the camera."""
+        return self.driver.get_vcd_property("Brightness", "Value")
+
+    @qtc.pyqtSlot()
+    def set_black_level(self):
+        """Set the black level in the camera from settings."""
+        _level = self.black_level
+        if _level < 0:  # Invalid settings
+            return
+        self.driver.set_vcd_property("Brightness", "Value", _level)
+
+    def get_black_level_limits(self):
+        """Return minimum and maximum values for the black level."""
+        return self.driver.get_vcd_property_range("Brightness", "Value")
 
     def set_color_format(self):
         """Set a color format in the camera."""
@@ -590,7 +906,7 @@ class ImagingSourceCamera(CameraABC):
         # Connect the busy signal here. The callback
         # takes care of making the camera not busy
         # when done with the estimate.
-        base.safe_connect(self.camera_busy, self.__start_postponed,
+        base.safe_connect(self.busy_changed, self.__start_postponed,
                           type=qtc.Qt.UniqueConnection)
 
         self.is_finding_best_frame_rate = True
@@ -627,32 +943,36 @@ class ImagingSourceCamera(CameraABC):
         """
         self.driver.set_frame_ready_callback(on_frame_ready, self.process_info)
 
+    @qtc.pyqtSlot()
+    @qtc.pyqtSlot(object)
     def start(self, *_):
         """Start the camera in self.mode."""
         self.n_frames_done = 0
+        self.__extra_delay = []
 
         if self.n_frames_estimate > 0:
             # Optimize now the frame rate to minimize frame losses.
             # Postpone actual starting to after optimization is over.
             # Once done, the camera will be automatically started with
             # a call to __start_postponed() (connected in the next
-            # call to the camera_busy signal).
+            # call to the busy_changed signal).
             self.start_frame_rate_optimization()
         else:
             self.best_next_rate = 1024
             self.__start_postponed()
 
+    @qtc.pyqtSlot(bool)
     def __start_postponed(self, *_):
         """Actually start camera after frame-rate estimate is over.
 
-        This method is connected to the camera_busy signal right
+        This method is connected to the busy_changed signal right
         before the camera starts estimating the best frame rate.
 
         Parameters
         ----------
         *_ : object
             Unused arguments. Necessary to allow connection to
-            the camera_busy signal.
+            the busy_changed signal.
 
         Returns
         -------
@@ -661,7 +981,7 @@ class ImagingSourceCamera(CameraABC):
         if self.is_finding_best_frame_rate:
             return
 
-        base.safe_disconnect(self.camera_busy, self.__start_postponed)
+        base.safe_disconnect(self.busy_changed, self.__start_postponed)
 
         # Call base that starts the processing thread if needed
         super().start()
@@ -671,9 +991,16 @@ class ImagingSourceCamera(CameraABC):
         mode = self.mode if self.mode == 'triggered' else 'continuous'
         self.driver.start(mode)
         self.preparing.emit(False)
+        self.started.emit()
 
+    @qtc.pyqtSlot()
     def stop(self):
         """Stop the camera."""
+        if not super().stop():
+            # No need to stop, or cannot stop yet
+            return False
+
+        # Now actually stop the driver.
         # One could wrap the next line in if self.is_running,
         # but it seems that there is a bug in the driver that
         # can return True if the device was lost.
@@ -681,18 +1008,30 @@ class ImagingSourceCamera(CameraABC):
             self.driver.stop()
         except ImagingSourceError:
             pass
-        super().stop()
 
+        self.stopped.emit()
+        return True
+
+    @qtc.pyqtSlot()
     def trigger_now(self):
         """Start acquiring one (or more) frames now.
+
+        Returns
+        -------
+        successfully_triggered : bool
+            True if the camera was successfully triggered.
 
         Emits
         -----
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
         """
-        super().trigger_now()
+        if not super().trigger_now():
+            return False
         if abs(self.best_next_rate - self.driver.frame_rate) > 1:
             self.driver.frame_rate = self.best_next_rate
+            # Store the value currently used, to avoid trying to
+            # set it multiple times if we're already at maximum
+            self.best_next_rate = self.driver.frame_rate
         if self.supports_trigger_burst:
             burst_count = self.n_frames
             if burst_count > 1:
@@ -708,4 +1047,5 @@ class ImagingSourceCamera(CameraABC):
                 self.driver.trigger_burst_count = burst_count
                 self.__burst_count =  self.driver.trigger_burst_count
         self.driver.send_software_trigger()
+        return True
 # pylint: enable=too-many-public-methods

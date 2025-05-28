@@ -11,6 +11,8 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-12'
 __license__ = 'GPLv3+'
 
-from viperleed.gui.measure.camera.imagingsource import (
-    ImagingSourceCamera
-    )
+try:
+    from viperleed.gui.measure.camera.imagingsource import ImagingSourceCamera
+except ImportError:
+    # Probably we are in the wrong environment
+    pass

@@ -3,7 +3,6 @@
 This module contains the definition of the IVVideo class
 which gives commands to the controller classes.
 """
-
 __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Dörr (@FlorianDoerr)',
@@ -12,7 +11,10 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-19'
 __license__ = 'GPLv3+'
 
+from PyQt5 import QtCore as qtc
+
 from viperleed.gui.measure import hardwarebase as base
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement.abc import MeasurementErrors
 
@@ -21,9 +23,11 @@ class IVVideo(MeasurementABC):
     """Measurement class for LEED I(V) videos."""
 
     display_name = 'I(V) video'
-    _mandatory_settings = [*MeasurementABC._mandatory_settings,
-                           ('measurement_settings', 'end_energy'),
-                           ('measurement_settings', 'delta_energy'),]
+    _mandatory_settings = (
+        *MeasurementABC._mandatory_settings,
+        ('measurement_settings', 'end_energy'),
+        ('measurement_settings', 'delta_energy'),
+        )
 
     def __init__(self, measurement_settings):
         """Initialise measurement instance."""
@@ -37,7 +41,7 @@ class IVVideo(MeasurementABC):
         # Seems a pylint bug
 
         # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actualy need it.
+        # and it is unclear whether we will actually need it.
         fallback = 0.5
         if not self.settings:
             return fallback
@@ -47,8 +51,8 @@ class IVVideo(MeasurementABC):
         except (TypeError, ValueError):
             # Not a float
             delta = fallback
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
-                            'measurement_settings/delta_energy')
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/delta_energy', '')
         return delta
 
     @property
@@ -58,7 +62,7 @@ class IVVideo(MeasurementABC):
         # Seems a pylint bug
 
         # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actualy need it.
+        # and it is unclear whether we will actually need it.
         fallback = 0
         if not self.settings:
             return fallback
@@ -67,8 +71,8 @@ class IVVideo(MeasurementABC):
         except (TypeError, ValueError):
             # Not a float
             egy = fallback
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
-                            'measurement_settings/end_energy')
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/end_energy', '')
         return egy
 
     @property
@@ -79,8 +83,8 @@ class IVVideo(MeasurementABC):
         return self.primary_controller.i0_settle_time
 
     @property
-    def __n_digits(self):
-        """Return the number of digts needed to represent each step."""
+    def _n_digits(self):
+        """Return the number of digits needed to represent each step."""
         # Used for zero-padding counter in image names.
         num_meas = (1 + round((self.__end_energy - self.start_energy)
                               / self.__delta_energy))
@@ -98,34 +102,47 @@ class IVVideo(MeasurementABC):
         None.
         """
         super().start_next_measurement()
-        for controller in self.controllers:
-            # Necessary to force secondaries into busy,
-            # before the primary returns not busy anymore.
-            controller.busy = True
+        for device in self.devices:
+            # Make all controllers and cameras busy, so we do not risk
+            # going to the next energy step too early: the secondary
+            # controllers may be not yet busy when the primary becomes
+            # not busy; Same is true for cameras, as they may be
+            # started later and we may go on without acquiring an image
+            device.busy = True
+
         profile = self.step_profile
         self.set_leed_energy(*profile,
                              self.current_energy, self.__i0_settle_time)
-        image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
-                      f"{self.current_energy:.1f}eV.tiff")
-        for camera in self.cameras:
-            camera.process_info.filename = image_name
-            self.data_points.add_image_names(image_name)
-            # Setting cameras busy prevents going to the next
-            # energy before an image has been acquired: in fact,
-            # triggering is delayed, using self._camera_timer
-            camera.busy = True
 
         # TODO: here we should start the camera no earlier than
         # hv_settle_time, but such that image acquisition
         # overlaps as much as possible with the measurement time!
         # Frame delivery from the camera should take:
         # (exposure + 1000/fr_rate) + (n_frames - 1) * fr_interval
-        profile_duration = max(
-            self.primary_controller.time_to_trigger - self.__i0_settle_time,
-            sum(profile[1::2])
-            )
+        # Also, we should probably have one timer per camera, as
+        # cameras may potentially deliver frames at different rates!
+        profile_duration = sum(profile[1::2])
         camera_delay = profile_duration + self.hv_settle_time
         self._camera_timer.start(camera_delay)
+
+        # Let the user know how much time we are loosing, at
+        # the second step, because the first one is a non-step
+        if self.current_step_nr != 2:
+            return
+
+        if profile_duration:
+            txt = "Setting each energy takes"
+            print(txt, f"{profile_duration:>{30-len(txt)}.2f} ms")
+        for ctrl in self.controllers:
+            if not ctrl.measures():
+                continue
+            ctrl_time = ctrl.time_to_first_measurement + ctrl.time_to_trigger
+            txt = f"{ctrl.name} at {ctrl.address}:"
+            print(txt, f"{ctrl_time:>{30-len(txt)}.2f} ms")
+        for cam in self.cameras:
+            txt = f"{cam.name}:"
+            cam_time = camera_delay + cam.time_to_image_ready
+            print(txt, f"{cam_time:>{30-len(txt)}.2f} ms")
 
     def _is_finished(self):
         """Check if the full measurement cycle is done.
@@ -139,7 +156,7 @@ class IVVideo(MeasurementABC):
         bool
         """
         super()._is_finished()
-        if self.current_energy >= self.__end_energy:
+        if self.current_energy + self.__delta_energy > self.__end_energy:
             return True
         self.current_energy += self.__delta_energy
         return False
@@ -147,11 +164,13 @@ class IVVideo(MeasurementABC):
     # pylint: disable=useless-super-delegation
     # We don't have anything much to do in abort() that is not
     # already done in the ABC, but abort is abstract.
+    @qtc.pyqtSlot()
     def abort(self):
         """Abort all current actions."""
         super().abort()
     # pylint: enable=useless-super-delegation
 
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement.
 
@@ -167,7 +186,7 @@ class IVVideo(MeasurementABC):
 
         Parameters
         ----------
-        new_settings : dict, ConfigParser, string or path
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             Configuration of the measurement.
 
         Returns
@@ -184,9 +203,9 @@ class IVVideo(MeasurementABC):
 
         Emits
         -----
-        MeasurementErrors.MISSING_SETTINGS
+        QObjectSettingsErrors.MISSING_SETTINGS
             If new_settings is missing.
-        MeasurementErrors.INVALID_SETTINGS
+        QObjectSettingsErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
         MeasurementErrors.MISSING_CAMERA

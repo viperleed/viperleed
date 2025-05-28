@@ -12,41 +12,46 @@ __created__ = '2021-10-09'
 __license__ = 'GPLv3+'
 
 from ast import literal_eval
-from copy import deepcopy
+from collections.abc import MutableSequence
+from contextlib import nullcontext
 from datetime import datetime
-from enum import Enum
+import functools
 from pathlib import Path
 
 import numpy as np
 from scipy.signal import convolve2d
 from scipy import ndimage
 
-from PyQt5 import (QtCore as qtc,
-                   QtWidgets as qtw)
+from PyQt5 import QtCore as qtc
 
+from viperleed import NUMPY2_OR_LATER
 from viperleed.gui.measure import hardwarebase as base
-from viperleed.gui.measure.camera import abc
 from viperleed.gui.measure.camera import tifffile
-from viperleed.gui.measure.widgets.camerawidgets import CameraViewer
+from viperleed.gui.measure.camera import cameracalibration as _calib
+from viperleed.gui.measure.classes.calibrationtask import (
+    CalibrationTaskOperation,
+    )
 
 
 N_DARK = 100  # Number of dark frames used for finding bad pixels
+_INVOKE = qtc.QMetaObject.invokeMethod
+_UNIQUE = qtc.Qt.UniqueConnection
+_unique_connect = functools.partial(base.safe_connect, type=_UNIQUE)
 
 
 def _report_progress(func):
     """Decorate calculation functions."""
 
+    @functools.wraps(func)
     def _wrapper(self, *args, **kwargs):
         """Wrap decorated function."""
         # Names are of the form "find_WHAT_other_stuff"
         _, what, *_ = func.__name__.split('_')
         section = _FinderSection.from_short_name(what)
-        tasks = section.n_tasks
-        self.progress_occurred.emit(section.long_name, section.value,
-                                    section.n_sections, 0, tasks)
+        steps = section.n_steps
+        self.progress_occurred.emit(self.progress_name, *section, 0, steps)
         ret_val = func(self, *args, **kwargs)
-        self.progress_occurred.emit(section.long_name, section.value,
-                                    section.n_sections, tasks, tasks)
+        self.progress_occurred.emit(self.progress_name, *section, steps, steps)
         return ret_val
 
     return _wrapper
@@ -54,15 +59,14 @@ def _report_progress(func):
 
 class BadPixelsFinderErrors(base.ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
-    DARK_FRAME_TOO_BRIGHT = (210,
-                             "Dark frame has too much intensity. Camera "
-                             "optics is not appropriately covered.")
-    FLAT_FRAME_WRONG_LIGHT = (211,
-                              "Flat frame is too {}. Cannot automatically "
-                              "adjust exposure time and gain.")
+
+    FLAT_FRAME_WRONG_LIGHT = (
+        211,
+        "Flat frame is too {}. Cannot automatically "
+        "adjust exposure time and gain.")
 
 
-class _FinderSection(Enum):
+class _FinderSection(CalibrationTaskOperation):
     """Enumeration class for bad-pixel finder sections."""
 
     ACQUIRE_DARK_SHORT, ACQUIRE_DARK_LONG, ACQUIRE_FLAT = 1, 2, 3
@@ -73,25 +77,20 @@ class _FinderSection(Enum):
     @property
     def long_name(self):
         """Return a long description for this section."""
-        if self.name == 'DONE':
+        if self is _FinderSection.DONE:
             return "Done."
         operation, what, *_ = self.name.split('_')
 
         if operation == "ACQUIRE":
             txt = f"Acquiring {what.lower()} frame"
             txt += "s " if what == "DARK" else " "
-            return txt + "with {:.1f} ms exposure..."
+            return self._format_long_name(txt + "with {:.1f} ms exposure...")
         # Calculating
         return f"Calculating coordinates of {what.lower()} pixels..."
 
     @property
-    def n_sections(self):
-        """Return the total number of sections."""
-        return 8
-
-    @property
-    def n_tasks(self):
-        """Return the number of tasks in this section."""
+    def n_steps(self):
+        """Return the number of steps in this section."""
         if 'DARK' in self.name:
             return N_DARK
         return 1
@@ -108,93 +107,63 @@ class _FinderSection(Enum):
         return getattr(cls, elem)
 
 
-class BadPixelsFinder(qtc.QObject):
+class BadPixelsFinder(_calib.CameraCalibrationTask):
     """Class for finding bad pixels."""
 
-    error_occurred = qtc.pyqtSignal(tuple)
-    done = qtc.pyqtSignal()
-    aborted = qtc.pyqtSignal()
-    progress_occurred = qtc.pyqtSignal(
-        str,  # current operation
-        int,  # current operation index (1-based)
-        int,  # total no. operations
-        int,  # current progress
-        int   # total tasks in this section
+    name = "Bad-pixel detection"
+    progress_name = "Finding bad pixels..."
+    description = (
+        "Detect bad pixels in a camera. Bad pixels are especially "
+        "bright, especially dark, or especially noisy pixels. They "
+        "are corrected by replacing with a suitable average of "
+        "neighbours. This makes your LEED-IV movies significantly "
+        "cleaner. It should be performed regularly (e.g., every 6 "
+        "months), as camera sensors may degrade over time."
         )
 
-    def __init__(self, camera, parent=None):
-        """Initialize object."""
-        if not isinstance(camera, abc.CameraABC):
-            raise TypeError(
-                f"{self.__class__.__name__}: invalid type "
-                f"'{type(camera).__name__}' for camera argument. "
-                "Must be a concrete subclass of CameraABC."
-                )
-        super().__init__(parent=parent)
+    def __init__(self, camera):
+        """Initialize finder task."""
+        super().__init__(camera)
 
-        self.__camera = camera
-        self.__viewer = CameraViewer(self.__camera, stop_on_close=False,
-                                     visible=False)
+        # __adjustments is used for the exposure/gain of flat;
+        # __force_exposure is a flag keeping track of whether we
+        # are resorting to forcing the exposure/gain to averages.
+        # See __adjust_exposure_and_gain for more info. When we
+        # force the exposure, we will use a looser constraint on
+        # whether __frame_acceptable.
+        self.__adjustments = _Adjustments()
+        self.__force_exposure = False
 
-        self.__camera.error_occurred.connect(self.error_occurred)
-        self.__camera.image_processed.connect(self.__check_and_store_frame)
-        self.__camera.camera_busy.connect(self.__trigger_next_frame)
-
-        self.__frames_done = 0
-        self.__adjustments = 0  # used for progress reporting
-
-        # Keep track of the old camera settings, as we will need to
-        # change them on the fly later. Also, store the previous
-        # visibility state of the viewer. This may not match the
-        # False above, as there can only be one camera viewer per
-        # each camera object.
-        # Notice the deep copies of camera settings, which make sure
-        # that camera.settings, self.__original['settings'] and
-        # self.__new_settings are distinct objects. This is necessary
-        # because the camera does some checks for quantities changed
-        # to decide whether to recalculate stuff.
-        self.__original = {'settings': deepcopy(self.__camera.settings),
-                           'process': self.__camera.process_info.copy(),
-                           'show_auto': self.__viewer.show_auto,
-                           'was_visible': self.__viewer.isVisible()}
-
-        # Now set new settings that will be used
-        # throughout the rest of the processing.
-        self.__viewer.show_auto = False
-        self.__viewer.hide()
-        self.__new_settings = deepcopy(self.__camera.settings)
-
-        _, (max_roi_w, max_roi_h), *_ = self.__camera.get_roi_size_limits()
+        # Adjust camera settings: full sensor, no binning, no averaging
+        _, (max_roi_w, max_roi_h), *_ = camera.get_roi_size_limits()
         full_roi = f"(0, 0, {max_roi_w}, {max_roi_h})"
-        self.__new_settings.set('camera_settings', 'roi', full_roi)
-        self.__new_settings.set('camera_settings', 'binning', '1')
-        self.__new_settings.set('camera_settings', 'mode', 'triggered')
-        self.__new_settings.set('measurement_settings', 'n_frames', '1')
-        self.__new_settings.set('camera_settings', 'bad_pixels_path', '')
+        self._task_settings.set('camera_settings', 'roi', full_roi)
+        self._task_settings.set('camera_settings', 'binning', '1')
+        self._task_settings.set('measurement_settings', 'n_frames', '1')
+        self._task_settings.set('camera_settings', 'bad_pixels_path', '')
 
-        # And set them into the camera. This stops
-        # the camera if it is currently running.
-        self.__camera.settings = deepcopy(self.__new_settings)
-        self.__camera.process_info.filename = ''
-
-        # Clear any bad pixel info in the camera (frames should be raw)
-        bad_old = self.__camera.bad_pixels
-        if bad_old:
-            bad_old.clear()
-
-        width, height, n_bytes, _ = self.__camera.image_info
-        dtype = np.uint8 if n_bytes == 1 else np.uint16
+        # Load settings in the camera. This is needed such
+        # that self.frame_info returns the correct values
+        # NB: THIS MAY NOT BE TRUE IF CAMERA IS IN ANOTHER THREAD.
+        # In that case, we would have to ensure there's a way to
+        # distinguish between using a queued and blocking-queued
+        # connection types for the underlying _INVOKE.
+        self.update_device_settings()
 
         # __imgs contains: the short- and long-exposure movies
         # (N_DARK frames each) for the 'dark' frame (i.e., camera
         # with a cap on) and one frame for a 'flat field' (e.g.,
         # white paper right in front of the lens).
+        height, width, dtype = self.frame_info
         self.__imgs = {
-            "dark-short": np.zeros((N_DARK, height, width), dtype=dtype),
-            "dark-long": np.zeros((N_DARK, height, width), dtype=dtype),
-            "flat": np.zeros((height, width), dtype=dtype)
+            _FinderSection.ACQUIRE_DARK_SHORT:
+                np.zeros((N_DARK, height, width), dtype=dtype),
+            _FinderSection.ACQUIRE_DARK_LONG:
+                np.zeros((N_DARK, height, width), dtype=dtype),
+            _FinderSection.ACQUIRE_FLAT:
+                np.zeros((height, width), dtype=dtype)
             }
-        self.__current_section = "dark-short"
+        self.__current_section = _FinderSection.ACQUIRE_DARK_SHORT
 
         # __badness contains a measure of the badness of
         # each pixel. 'Normal' pixels have badness 0, bad
@@ -203,186 +172,124 @@ class BadPixelsFinder(qtc.QObject):
 
         # __bad_pixels will contain info about bad
         # pixel coordinates and their replacements
-        self.__bad_pixels = BadPixels(self.__camera)
-
-        name = camera.name
-
-        self.__info = qtw.QMessageBox(parent=parent)
-        self.__info.setWindowTitle(f"Bad pixel detection for {name}")
-        self.__info.setIcon(self.__info.Information)
-        self.__info.setText(
-            f"Frames will be acquired from {name} camera."
-            )
-
-        self.__calc_thread = _BadPixCalculationThread(self)
-
-    @property
-    def short_exposure(self):
-        """Return a short exposure time in milliseconds."""
-        min_exposure, _ = self.__camera.get_exposure_limits()
-        return max(20, min_exposure)
-
-    @property
-    def long_exposure(self):
-        """Return a long exposure time in milliseconds."""
-        _, max_exposure = self.__camera.get_exposure_limits()
-        return min(1000, max_exposure)
+        self.__bad_pixels = BadPixels(self.camera)
 
     @property
     def large_gain(self):
         """Return a large gain in decibel."""
-        _, max_gain = self.__camera.get_gain_limits()
+        _, max_gain = self._limits['gain']
         return min(20, max_gain)
+
+    @property
+    def long_exposure(self):
+        """Return a long exposure time in milliseconds."""
+        _, max_exposure = self._limits['exposure']
+        return min(1000, max_exposure)
 
     @property
     def missing_frames(self):
         """Return whether frames are missing for the current section."""
-        if 'dark' in self.__current_section:
+        if 'DARK' in self.__current_section.name:
             todo = self.__imgs[self.__current_section].shape[0]
         else:
             todo = 1
-        return self.__frames_done < todo
+        return self._frames_done < todo
+
+    @property
+    def short_exposure(self):
+        """Return a short exposure time in milliseconds."""
+        min_exposure, _ = self._limits['exposure']
+        return max(20, min_exposure)
+
+    @qtc.pyqtSlot()
+    def abort(self):
+        """Abort self and any running tasks."""
+        if self.is_aborted:
+            return
+        for task in self.camera.calibration_tasks['bad_pixels']:
+            if task.is_running:
+                _INVOKE(task, 'abort')
+        super().abort()
 
     def begin_acquiring(self):
         """Start acquiring images."""
-        if "dark" in self.__current_section:
-            self.__info.setInformativeText(
-                "A 'dark' movie will be acquired.\nMake sure no light "
-                "enters the camera.\nFor example, you can close the "
-                "lens with its cap.\n\nPress 'OK' when ready."
+        if self.__current_section is _FinderSection.ACQUIRE_DARK_SHORT:
+            self.set_info_text(
+                "A 'dark' movie will be acquired.<br>Make sure no light "
+                "enters the camera.<br>For example, you can <b>close the "
+                "lens with its cap.</b>"
                 )
-        else:
-            self.__info.setInformativeText(
-                "A 'flat' frame will be acquired.\nMake sure the camera "
+        elif self.__current_section is _FinderSection.ACQUIRE_FLAT:
+            self.set_info_text(
+                "A 'flat' frame will be acquired.<br>Make sure the camera "
                 "is viewing a featureless background with uniform "
-                "illumination.\nFor example, you can place a white "
-                "piece of paper right in front of the lens. Normal room "
-                "light should be uniform enough.\n\nPress 'OK' when ready."
+                "illumination.<br>For example, you can place a <b>white "
+                "piece of paper right in front of the lens</b>. Normal room "
+                "light should be uniform enough."
                 )
-        if 'long' not in self.__current_section:
-            self.__info.exec_()
-
-        if 'dark' in self.__current_section:
-            # Here we set fixed gain and exposure time
-            if 'short' in self.__current_section:
-                exposure = self.short_exposure
-            else:
-                exposure = self.long_exposure
-
-            self.__new_settings.set("measurement_settings", "exposure",
-                                    str(exposure))
-            self.__new_settings.set("measurement_settings", "gain",
-                                    str(self.large_gain))
-
-        else:
-            # Here we use the large gain and a somewhat short
-            # exposure to begin with, but these are adjusted when
-            # frames come back to have an average image intensity
-            self.__new_settings.set("measurement_settings", "gain",
-                                    str(self.large_gain))
-            self.__new_settings.set("measurement_settings", "exposure",
-                                    str(self.short_exposure))
-
-        # Apply the new settings and start the camera.
-        # When the camera is done preparing it will emit
-        # image_processed, which will trigger storage of
-        # frames, and a camera_busy, which will trigger
-        # acquisition of the next frame, if needed.
-        self.__camera.settings = deepcopy(self.__new_settings)
-        self.__report_acquisition_progress()
-        self.__camera.start()
-
-    def abort(self):
-        """Abort finding bad pixels."""
-        self.__restore_settings()  # Also stops
-        self.__camera.update_bad_pixels()  # Restore old file
-        self.__frames_done = 0
-        self.aborted.emit()
-
-    def find(self):
-        """Find bad pixels in the camera."""
-        if self.__camera.busy:
-            # Cannot start detecting bad pixels as long as the
-            # camera is busy (esp. right after it is started)
-            base.emit_error(self, abc.CameraErrors.UNSUPPORTED_WHILE_BUSY,
-                            'find bad pixels')
+        if self.__current_section is not _FinderSection.ACQUIRE_DARK_LONG:
+            # Show dialog. Its .accepted signal will trigger
+            # .continue_(), its .rejected will trigger .abort()
+            self.show_info()
             return
+        self.continue_()
 
-        self.__current_section = "dark-short"
-        self.begin_acquiring()
-
-    def __adjust_exposure_and_gain(self, frame):
-        """Use a frame to estimate optimal exposure for flat frames."""
-        old_exposure = self.__camera.exposure
-        old_gain = self.__camera.gain
-        pix_min, pix_max = self.__camera.intensity_limits
-        intensity_range = pix_max - pix_min
-        exposure_min, exposure_max = self.__camera.get_exposure_limits()
-
-        intensity = frame.mean() - pix_min
-        new_exposure = old_exposure * 0.5*intensity_range / intensity
-        if new_exposure < exposure_min:
-            # Decrease the gain
-            new_gain = old_gain + 20*np.log10(new_exposure/exposure_min)
-            new_exposure = exposure_min
-        elif new_exposure > exposure_max:
-            # Increase the gain (this is very unlikely to happen)
-            new_gain = old_gain + 20*np.log10(new_exposure/exposure_max)
-            new_exposure = exposure_max
-        else:
-            new_gain = old_gain
-
-        # Now check that the gain is OK: the only cases in which
-        # it cannot be OK is if we need very short or very long
-        # exposures (otherwise the gain stayed the same).
-        min_gain, max_gain = self.__camera.get_gain_limits()
-        if new_gain < min_gain:
-            # Too much intensity
-            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
-                            'bright')
-            return
-        if new_gain > max_gain:
-            # Too little intensity
-            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
-                            'bright')
-            return
-        self.__new_settings.set('measurement_settings', 'exposure',
-                                f'{new_exposure:.3f}')
-        self.__new_settings.set('measurement_settings', 'gain',
-                                f'{new_gain:.1f}')
-        self.__camera.settings = deepcopy(self.__new_settings)
-        self.__adjustments += 1
-        self.__report_acquisition_progress()
-        self.__camera.start()
-
-    def __check_and_store_frame(self, frame):
-        """Store a new frame."""
+    @qtc.pyqtSlot(np.ndarray)
+    def _check_and_store_frame(self, frame):
+        """Store a new frame if it is acceptable."""
         sec = self.__current_section
         if not self.__frame_acceptable(frame):
-            if 'dark' in sec:
-                base.emit_error(self,
-                                BadPixelsFinderErrors.DARK_FRAME_TOO_BRIGHT)
+            if 'DARK' in sec.name:
+                base.emit_error(
+                    self, _calib.CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT
+                    )
             else:
                 self.__adjust_exposure_and_gain(frame)
             return
 
-        if 'dark' in sec:
-            self.__imgs[sec][self.__frames_done, :, :] = frame
+        if 'DARK' in sec.name:
+            self.__imgs[sec][self._frames_done, :, :] = frame
         else:
             self.__imgs[sec][:, :] = frame
-        self.__frames_done += 1
+        self._frames_done += 1
         self.__report_acquisition_progress()
+        self._trigger_next_frame()
 
-    def __report_acquisition_progress(self):
-        """Report progress of acquisition."""
-        section = _FinderSection.from_short_name(self.__current_section)
-        name = section.long_name.format(self.__camera.exposure)
-        self.progress_occurred.emit(name, section.value, section.n_sections,
-                                    self.__frames_done + self.__adjustments,
-                                    section.n_tasks + self.__adjustments)
+    @qtc.pyqtSlot()
+    def continue_(self, *_):
+        """Continue acquiring after user confirmation."""
+        # In all cases start from the same gain and pick exposure
+        gain = self.large_gain
+        if self.__current_section is _FinderSection.ACQUIRE_DARK_SHORT:
+            exposure = self.short_exposure
+        elif self.__current_section is _FinderSection.ACQUIRE_DARK_LONG:
+            exposure = self.long_exposure
+        else:
+            # Here we use the large gain and a somewhat short
+            # exposure to begin with, but these are adjusted when
+            # frames come back to have an average image intensity
+            exposure = self.short_exposure
+        self._task_settings.set("measurement_settings", "gain",
+                                str(gain))
+        self._task_settings.set("measurement_settings", "exposure",
+                                str(exposure))
+
+        # Apply the new settings and start the camera. When the camera
+        # is done preparing it will emit .started(), which will trigger
+        # acquisition of the first frame. Each time a frame is done
+        # processing (image_processed) it is checked and stored. Then a
+        # new acquisition is triggered, if needed.
+        self.update_device_settings()
+        self.__report_acquisition_progress(exposure)
+        self.start_camera()
+
+    @qtc.pyqtSlot()
+    def find(self):
+        """Find bad pixels in the camera."""
+        self.start()
 
     @_report_progress
-    def find_bad_and_replacements(self):
+    def find_bad_and_replacements(self):  # too-many-locals
         """Find bad pixels and their optimal replacements.
 
         The best replacements are chosen among opposing
@@ -452,12 +359,11 @@ class BadPixelsFinder(qtc.QObject):
 
         bad_y, bad_x = bad_y[correctable], bad_x[correctable]
 
-
         # Finally, get the offsets of the replacement pixels,
         # and store all the info in a BadPixels object.
         best_offset_indices = total_badness.argmin(axis=0)[bad_y, bad_x]
         self.__bad_pixels = BadPixels(
-            self.__camera,
+            self.camera,
             bad_coordinates=np.asarray((bad_y, bad_x)).T,
             replacement_offsets=offsets[best_offset_indices],
             uncorrectable=uncorrectable
@@ -468,7 +374,7 @@ class BadPixelsFinder(qtc.QObject):
         """Detect dead pixels from flat frame.
 
         Dead pixels are those whose intensity is much smaller
-        than the average of the neighbors (excluding flickery
+        than the average of the neighbours (excluding flickery
         and hot pixels). This method adds to the badness the
         ratio I_neighbors/I_pixel - 1.
 
@@ -476,10 +382,8 @@ class BadPixelsFinder(qtc.QObject):
         ------
         None.
         """
-        pix_min, pix_max = self.__camera.intensity_limits
-        intensity_range = pix_max - pix_min
-
-        flat = self.__imgs['flat'] - pix_min
+        pix_min, _, intensity_range = self._limits['intensity']
+        flat = self.__imgs[_FinderSection.ACQUIRE_FLAT] - pix_min
 
         # We have to exclude the already-detected bad pixels.
         # For this to happen, we will (1) add a bit to all
@@ -487,7 +391,7 @@ class BadPixelsFinder(qtc.QObject):
         # ones to zero, (3) convolve with an appropriate
         # averaging kernel, also counting nonzero pixels (i.e.,
         # the good ones). This way, bad ones do not factor in
-        # the neighbor average.
+        # the neighbour average.
 
         offset = 0.1*intensity_range
         flat_bad = flat + offset
@@ -498,7 +402,7 @@ class BadPixelsFinder(qtc.QObject):
         flat_bad[bad_px_mask] = 0
         flat_bad_ones[bad_px_mask] = 0
 
-        # 5x5 kernel for averaging a diamond-shaped patch of neighbors
+        # 5x5 kernel for averaging a diamond-shaped patch of neighbours
         kernel = np.array(((0, 0, 1, 0, 0),
                            (0, 1, 1, 1, 0),
                            (1, 1, 0, 1, 1),
@@ -509,11 +413,11 @@ class BadPixelsFinder(qtc.QObject):
         neighbor_count = convolve2d(flat_bad_ones, kernel, mode='same')
         neighbor_ave = neighbor_sum / neighbor_count - offset
 
-        # Isolated pixels in a patch of bad neighbors
+        # Isolated pixels in a patch of bad neighbours
         # will also be marked as bad.
         neighbor_ave[neighbor_count < 0.5] = np.inf
 
-        # As will those that have both zero neighbor average
+        # As will those that have both zero neighbour average
         # and zero intensity (dead in a cluster of bad ones)
         delta_badness = neighbor_ave / flat - 1
         delta_badness[np.isnan(delta_badness)] = np.inf
@@ -540,23 +444,174 @@ class BadPixelsFinder(qtc.QObject):
         -------
         None.
         """
-        long_flicker = self.__imgs['dark-long'].var(axis=0)
-        short_flicker = self.__imgs['dark-short'].var(axis=0)
+        _long = _FinderSection.ACQUIRE_DARK_LONG
+        _short = _FinderSection.ACQUIRE_DARK_SHORT
+        long_flicker = self.__imgs[_long].var(axis=0)
+        short_flicker = self.__imgs[_short].var(axis=0)
 
-        # '-1' is such that normally flickery pixels have badness == 0
-        self.__badness = (long_flicker / long_flicker.mean() - 1
-                          + short_flicker / short_flicker.mean() - 1)
+        long_mean, short_mean = long_flicker.mean(), short_flicker.mean()
+        self.__badness = np.zeros_like(long_flicker)
+
+        # The conditional checks prevent division by zero for very good
+        # cameras. '-1' --> badness == 0 for normally flickery pixels
+        if short_mean:
+            self.__badness += short_flicker / short_mean - 1
+        if long_mean:
+            self.__badness += long_flicker / long_mean - 1
 
     @_report_progress
     def find_hot_pixels(self):
         """Set badness of hot pixels to infinity."""
-        pix_min, pix_max = self.__camera.intensity_limits
-        intensity_range = pix_max - pix_min
+        pix_min, _, intensity_range = self._limits['intensity']
+        _long = _FinderSection.ACQUIRE_DARK_LONG
 
-        dark_ave = self.__imgs['dark-long'].mean(axis=0) - pix_min
+        dark_ave = self.__imgs[_long].mean(axis=0) - pix_min
         hot_pixels = dark_ave >= 0.25*intensity_range
 
         self.__badness[hot_pixels] = np.inf
+
+    @qtc.pyqtSlot(tuple)
+    def _on_device_error(self, error):
+        """Silence all bad-pixels-related errors."""
+        # The difference with the base-class implementation is that
+        # self IS NOT part of the list of calibration tasks, but
+        # we should nonetheless skip all bad-pixels-related errors
+        if self.camera.is_bad_pixels_error(error):
+            return True
+        return super()._on_device_error(error)
+
+    def restore_device(self):
+        """Restore settings and other device attributes."""
+        # Load either old or newly saved bad pixels file
+        _INVOKE(self.camera, 'update_bad_pixels')
+        for task in self.camera.calibration_tasks['bad_pixels']:
+            task.mark_as_done(False)
+        super().restore_device()
+
+    def save_and_cleanup(self):
+        """Save a bad pixels file and finish."""
+        bp_path = self.original_settings.get("camera_settings",
+                                             "bad_pixels_path",
+                                             fallback='')
+        self.__bad_pixels.write(bp_path)
+        self.restore_device()
+        done = _FinderSection.DONE
+        self.progress_occurred.emit(self.progress_name, *done,
+                                    done.n_steps, done.n_steps)
+        self.mark_as_done(True)
+
+    @qtc.pyqtSlot()
+    def start(self):
+        """Start this task."""
+        if not super().start():
+            return False
+
+        # See if there is any preliminary task to be performed
+        task = self.__get_preliminary_task()
+        if task:
+            # Make sure all tasks have the same original settings
+            task.original_settings.read_dict(self.original_settings)
+            _unique_connect(task.done, self.__on_preliminary_task_done)
+            _unique_connect(task.aborted, self.abort)
+            _unique_connect(task.error_occurred, self.error_occurred)
+            _unique_connect(task.progress_occurred, self.progress_occurred)
+                            # self.__on_preliminary_task_progress)              # TODO: would be nice to have only one "overall" progress bar
+            _INVOKE(task, 'start')
+            return False
+
+        # No more tasks to do. Proceed to finding bad pixels.
+        # Clear any bad pixel info in the camera (frames should be raw)
+        bad_old = self.camera.bad_pixels
+        if bad_old:
+            bad_old.clear()
+        self.__current_section = _FinderSection.first()
+        self.begin_acquiring()
+        return True
+
+    @qtc.pyqtSlot()
+    def _trigger_next_frame(self, *_):
+        """Trigger acquisition of a new frame if necessary."""
+        if not self.can_trigger_camera:
+            return
+
+        if self.missing_frames:
+            self.trigger_camera()
+            return
+
+        # One section over, go to the next one
+        self.__current_section = self.__current_section.next_()
+        if self.__current_section is _FinderSection.CALCULATE_FLICKERY:
+            # Done with all sections. Can proceed to calculations.
+            self.find_flickery_pixels()
+            self.find_hot_pixels()
+            self.find_dead_pixels()
+            self.find_bad_and_replacements()
+            self.save_and_cleanup()
+            return
+        # Proceed with the next acquisition
+        self._frames_done = 0
+        self.__adjustments.clear()
+        self.begin_acquiring()
+
+    def __adjust_exposure_and_gain(self, frame):
+        """Use frame to estimate optimal exposure/gain for flat frames."""
+        old_exposure = self.camera.exposure
+        old_gain = self.camera.gain
+        pix_min, _, intensity_range = self._limits['intensity']
+
+        intensity = frame.mean() - pix_min
+        exposure = old_exposure * 0.5 * intensity_range / intensity
+        exposure, gain = self.__correct_exposure_gain(exposure, old_gain)
+        if exposure is None:
+            return
+        self.__adjustments.add(exposure * 10**(gain / 20))
+
+        # Now decide whether we really want to set these new values. We
+        # do not want this process to take forever, in case there are
+        # oscillations. Use the estimates only in case we have already
+        # done a lot of attempts,  and only if we can provide a reasonable
+        # estimate for the new exposure/gain.
+        self.__force_exposure = False
+        estimate = self.__adjustments.stable_value
+        if len(self.__adjustments) >= 20 and estimate is not None:              # TODO: should we also have a hard limit with a 'retry' button?
+            exposure = estimate * 10**(-gain / 20)
+            exposure, gain = self.__correct_exposure_gain(exposure, gain)
+            self.__force_exposure = True
+
+        self._task_settings.set('measurement_settings', 'exposure',
+                                f'{exposure:.3f}')
+        self._task_settings.set('measurement_settings', 'gain', f'{gain:.1f}')
+        self.update_device_settings()
+        self.__report_acquisition_progress(exposure)
+        self.start_camera()
+
+    def __correct_exposure_gain(self, exposure, gain):
+        """Return in-range exposure and gain."""
+        exposure_min, exposure_max = self._limits['exposure']
+        if exposure < exposure_min:
+            # Decrease the gain
+            gain += 20*np.log10(exposure/exposure_min)
+            exposure = exposure_min
+        elif exposure > exposure_max:
+            # Increase the gain (this is very unlikely to happen)
+            gain += 20*np.log10(exposure/exposure_max)
+            exposure = exposure_max
+
+        # Now check that the gain is OK: the only cases in which
+        # it cannot be OK is if we need very short or very long
+        # exposures (otherwise the gain stayed the same).
+        min_gain, max_gain = self._limits['gain']
+        if gain < min_gain:
+            # Too much intensity
+            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+                            'bright')
+            return None, 0
+        if gain > max_gain:
+            # Too little intensity
+            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+                            'dark')
+            return None, 0
+        return exposure, gain
 
     def __frame_acceptable(self, frame):
         """Return whether frame has acceptable intensity.
@@ -577,70 +632,222 @@ class BadPixelsFinder(qtc.QObject):
         acceptable : bool
             True if frame is OK.
         """
-        pixel_min, pixel_max = self.__camera.intensity_limits
-        intensity_range = pixel_max - pixel_min
-        intensity = frame.mean() - pixel_min
-        if 'dark' in self.__current_section:
-            return intensity < 0.2*intensity_range
-        return 0.45*intensity_range < intensity < 0.55*intensity_range
+        pixel_min, _, intensity_range = self._limits['intensity']
+        relative_intensity = (frame.mean() - pixel_min) / intensity_range
+        if 'DARK' in self.__current_section.name:
+            return relative_intensity < 0.2
+        _min, _max = (0.45, 0.55) if not self.__force_exposure else (0.3, 0.7)
+        return _min < relative_intensity < _max                                 # TODO: do we want to complain if there are very bright areas (gradients)?
 
-    def __restore_settings(self):
-        """Restore the original settings of the camera."""
-        self.__camera.settings = self.__original['settings']
-        self.__camera.process_info.restore_from(self.__original['process'])
-        self.__viewer.show_auto = self.__original['show_auto']
-        if self.__original['was_visible']:
-            self.__viewer.show()
+    def __get_preliminary_task(self):
+        """Return a CameraCalibrationTask to run before self, or None."""
+        tasks_to_do = (t for t in self.camera.calibration_tasks['bad_pixels']
+                       if t.to_be_done)
+        return next(tasks_to_do, None)
 
-    def save_and_cleanup(self):
-        """Save a bad pixels file and finish."""
-        bp_path = self.__original['settings'].get("camera_settings",
-                                                  "bad_pixels_path",
-                                                  fallback='')
-        self.__bad_pixels.write(bp_path)
-        self.__restore_settings()
-        done = _FinderSection.DONE
-        self.progress_occurred.emit(done.long_name, done.value,
-                                    done.n_sections,
-                                    done.n_tasks, done.n_tasks)
-        self.done.emit()
+    @qtc.pyqtSlot()
+    def __on_preliminary_task_done(self):
+        """React to a preliminary task being finished."""
+        task = self.sender()
 
-    def __trigger_next_frame(self, *_):
-        """Trigger acquisition of a new frame if necessary."""
-        if self.__camera.busy or not self.__camera.is_running:
+        # Make sure to update the original settings to the ones
+        # that may have been edited by the task itself
+        self.original_settings.read_dict(task.original_settings)
+        self.start()
+
+    def __report_acquisition_progress(self, exposure=None):
+        """Report progress of acquisition."""
+        if exposure is None:
+            exposure = self.camera.exposure
+        section = self.__current_section
+        section.set_format(exposure)
+        n_adjustments = len(self.__adjustments)
+        self.progress_occurred.emit(self.progress_name, *section,
+                                    self._frames_done + n_adjustments,
+                                    section.n_steps + n_adjustments)
+
+
+class _Adjustments(MutableSequence):
+    """Class for handling Holt-Winters smoothing of camera exposure/gain.
+
+    This is used to assess whether a series of exposures/gains has
+    settled, as well as determining the average value in the settled
+    region. Holt-Winters exponential smoothing is very good to detect
+    'ends of transients'
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize instance."""
+        self.__params = {'alpha': 0, 'beta': 0,
+                         'thresholds': kwargs.get('thresholds', (7/100, 0.1))}
+        self.alpha = kwargs.get('alpha', 0.6)
+        self.beta = kwargs.get('alpha', 0.2)
+
+        self.__list = []
+        self.__holt_winters = [], []
+        self.__last_settled = None
+        for value in args:
+            self.add(value)
+
+    @property
+    def alpha(self):
+        """Return the smoothing factor for levels."""
+        return self.__params['alpha']
+
+    @alpha.setter
+    def alpha(self, new_alpha):
+        """Set a value for the smoothing factor for levels."""
+        self.__params['alpha'] = new_alpha
+        self.__params['alphac'] = 1 - new_alpha
+
+    @property
+    def beta(self):
+        """Return the smoothing factor for trends."""
+        return self.__params['beta']
+
+    @beta.setter
+    def beta(self, new_beta):
+        """Set a value for the smoothing factor for trends."""
+        self.__params['beta'] = new_beta
+        self.__params['betac'] = 1 - new_beta
+
+    @property
+    def is_settled(self):
+        """Return whether self has settled."""
+        return self.__last_settled is not None
+
+    @property
+    def settled_values(self):
+        """Return the values in the most recent 'settled' region."""
+        return [] if not self.is_settled else self[self.__last_settled:]
+
+    @property
+    def stable_value(self):
+        """Return the mean stable value, or None if not stable."""
+        # Consider stable if the relative standard error of
+        # the mean in settled_values is less than 10%
+        values = np.array(self.settled_values)
+        n_values = len(values)
+        if n_values < 2:  # Need 2 values for s.err calculation
+            return None
+        mean_x, mean_x2 = values.mean(), (values**2).mean()
+        rel_serr = mean_x2 / mean_x**2 - 1
+        rel_serr = np.sqrt(rel_serr / (n_values - 1))
+        if 3 * rel_serr >= self.__stable_thresh:
+            return None
+        return mean_x
+
+    def __delitem__(self, index):
+        """Prevent removal of items at index."""
+        # In principle I could allow removal from the end as
+        # this does not require recomputing anything, but I'm
+        # not going to use it anyway
+        raise NotImplementedError(
+            f"Cannot remove item at positon {index}. Deletion is forbidden."
+            )
+
+    def __getitem__(self, index):
+        """Return item at index."""
+        return self.__list[index]
+
+    def __len__(self):
+        """Return length of self."""
+        return len(self.__list)
+
+    def __repr__(self):
+        """Return a string representation of self."""
+        txt = f"_Adjustments({repr(self.__list)}, "
+        txt += f"alpha={self.alpha}, beta={self.beta}, "
+        txt += f"thresholds={self.__params['thresholds']})"
+        return txt
+
+    def __setitem__(self, index, value):
+        """Prevent setting elements other than at the end."""
+        _invalid = (isinstance(index, slice)
+                    and (index.step != 1 or index.start != len(self)))
+        _invalid |= (isinstance(index, int) and index != len(self))
+        if _invalid:
+            raise NotImplementedError("Can only add elements to the end!")
+        if isinstance(index, int):
+            value = (value,)
+        for val in value:
+            self.add(val)
+
+    def __str__(self):
+        """Return a string representation of self."""
+        return str(self.__list)
+
+    def add(self, value):
+        """Add one value, computing median smoothing, level and trend."""
+        self.__list.append(value)
+
+        # 5-element-window median can still change the i-th element
+        # until the (i+3)-th arrives. Makes no sense to calculate
+        # anything till the 4th element is here.
+        if len(self) < 4:
             return
 
-        if self.missing_frames:
-            self.__camera.trigger_now()
+        level, trend = self.__holt_winters
+
+        idx = len(self) - 4   # This is the stable value
+        self.__median = ndimage.median_filter(self, 5, mode='nearest')
+        median = self.__median[idx]
+        if not idx:           # First stable median value
+            level.append(median)
             return
 
-        # One section over, go to the next one
-        sections = tuple(self.__imgs.keys())
-        next_idx = sections.index(self.__current_section) + 1
-        if next_idx >= len(sections):
-            # Done with all sections. Can proceed to calculations.
-            # Do it in a separate threat to keep the UI responsive.
-            self.__calc_thread.start()
-        else:
-            self.__current_section = sections[next_idx]
-            self.__frames_done = 0
-            self.__adjustments = 0
-            self.begin_acquiring()
+        old_level = level[-1]
+        if not trend:  # Second stable median value
+            trend.append(median - old_level)                     # mul: /
+        old_trend = trend[-1]
+        new_level = (self.alpha * median
+                     + self.__alphac * (old_level + old_trend))  # mul: *
+        new_trend = (self.beta * (new_level - old_level)         # mul: /
+                     + self.__betac * old_trend)
+        level.append(new_level)
+        trend.append(new_trend)
 
+        # Now we decide if we are settled, and store the
+        # index if we are. Notice that min(idx) == 1.
+        settled = abs(new_trend) < self.__settle_thresh * median
+        if not self.is_settled and settled:
+            self.__last_settled = idx
+        elif not settled:
+            self.__last_settled = None
 
-class _BadPixCalculationThread(qtc.QThread):
+    def clear(self):
+        """Clear list."""
+        # No need to clear __median as it is recalculated each time
+        for _list in self.__holt_winters:
+            _list.clear()
+        self.__last_settled = None
+        super().clear()
 
-    def __init__(self, finder, parent=None):
-        super().__init__(parent=parent)
-        self.__finder = finder
+    def insert(self, index, value):
+        """Prevent setting elements other than at the end."""
+        if index != len(self):
+            raise NotImplementedError("Can only add elements to the end!")
+        self.add(value)
 
-    def run(self):
-        """Run calculations."""
-        self.__finder.find_flickery_pixels()
-        self.__finder.find_hot_pixels()
-        self.__finder.find_dead_pixels()
-        self.__finder.find_bad_and_replacements()
-        self.__finder.save_and_cleanup()
+    @property
+    def __alphac(self):
+        """Return 1 - self.alpha."""
+        return self.__params['alphac']
+
+    @property
+    def __betac(self):
+        """Return 1 - self.alpha."""
+        return self.__params['betac']
+
+    @property
+    def __settle_thresh(self):
+        """Return the threshold for settling."""
+        return self.__params['thresholds'][0]
+
+    @property
+    def __stable_thresh(self):
+        """Return the threshold for settling."""
+        return self.__params['thresholds'][1]
 
 
 # pylint: disable=too-many-instance-attributes
@@ -727,11 +934,6 @@ class BadPixels:
                 f"replacement_offsets ({len(replacement_offsets)})."
                 )
 
-        if not isinstance(camera, abc.CameraABC):
-            raise TypeError(f"{self.__class__.__name__}: invalid type "
-                            f"{type(camera).__name__} for camera argument. "
-                            "Expected a subclass of CameraABC.")
-
         self.__camera = camera
         self.__bad_coords = bad_coordinates
         self.__replacements = replacement_offsets
@@ -743,9 +945,8 @@ class BadPixels:
         self.__datetime = datetime.now()
 
         # Prepare a base name used for saving bad-pixel info to disk
-        cam_name = self.__camera.name.replace(' ', '_')
         now = self.__datetime.strftime("%Y%m%d_%H%M%S")
-        self.__base_name = f"{cam_name}_{now}"
+        self.__base_name = f"{self.__camera.name_clean}_{now}"
 
     def __str__(self):
         """Return a string representation of self."""
@@ -812,6 +1013,8 @@ class BadPixels:
     @property
     def n_uncorrectable_sensor(self):
         """Return the total number of uncorrectable pixels."""
+        if self.__uncorrectable is None:
+            return 0
         return len(self.__uncorrectable)
 
     @property
@@ -846,7 +1049,7 @@ class BadPixels:
 
         The coordinates always refer to a region of interest.
         Bad pixels are uncorrectable if they only have bad
-        neighbors (in the allowed replacement directions).
+        neighbours (in the allowed replacement directions).
 
         The array returned should NOT be edited in place. Make a
         .copy() if any editing is needed.
@@ -887,40 +1090,42 @@ class BadPixels:
             raise RuntimeError(f"{self.__class__.__name__}: No bad pixels "
                                "to apply a region of interest to.")
 
+        # Reset all ROI-related info
+        self.__bad_coords_roi = self.__bad_coords
+        self.__replacements_roi = self.__replacements
+        self.__uncorrectable_roi = self.__uncorrectable
+
         if no_roi:
-            self.__bad_coords_roi = self.__bad_coords
-            self.__replacements_roi = self.__replacements
-            self.__uncorrectable_roi = self.__uncorrectable
             return
 
         top_x, top_y, width, height = self.__camera.roi
 
         # Recalculate coordinates based on the new origin
         # NB: the bad coordinates are (row#, col#)!
-        bad_coords = self.__bad_coords - (top_y, top_x)
-        repl_minus = bad_coords - self.__replacements
-        repl_plus = bad_coords + self.__replacements
+        if self.__bad_coords.size:
+            bad_coords = self.__bad_coords - (top_y, top_x)
+            repl_minus = bad_coords - self.__replacements
+            repl_plus = bad_coords + self.__replacements
 
-        # Mask all bad pixels and replacements outside the ROI:
-        mask = np.all((np.all(bad_coords >= (0, 0), axis=1),
-                       np.all(repl_minus >= (0, 0), axis=1),
-                       np.all(repl_plus >= (0, 0), axis=1),
-                       np.all(bad_coords < (height, width), axis=1),
-                       np.all(repl_minus < (height, width), axis=1),
-                       np.all(repl_plus < (height, width), axis=1)),
-                      axis=0)
+            # Mask all bad pixels and replacements outside the ROI:
+            mask = np.all((np.all(bad_coords >= (0, 0), axis=1),
+                           np.all(repl_minus >= (0, 0), axis=1),
+                           np.all(repl_plus >= (0, 0), axis=1),
+                           np.all(bad_coords < (height, width), axis=1),
+                           np.all(repl_minus < (height, width), axis=1),
+                           np.all(repl_plus < (height, width), axis=1)),
+                          axis=0)
 
-        self.__bad_coords_roi = bad_coords[mask]
-        self.__replacements_roi = self.__replacements[mask]
+            self.__bad_coords_roi = bad_coords[mask]
+            self.__replacements_roi = self.__replacements[mask]
 
         # Do the same for uncorrectable pixels (if any)
-        if self.__uncorrectable is None or not self.__uncorrectable.size:
-            return
-        uncorrectable = self.__uncorrectable - (top_y, top_x)
-        mask = np.all((np.all(uncorrectable >= (0, 0), axis=1),
-                       np.all(uncorrectable < (height, width), axis=1)),
-                      axis=0)
-        self.__uncorrectable_roi = uncorrectable[mask]
+        if self.__uncorrectable is not None and self.__uncorrectable.size:
+            uncorrectable = self.__uncorrectable - (top_y, top_x)
+            mask = np.all((np.all(uncorrectable >= (0, 0), axis=1),
+                           np.all(uncorrectable < (height, width), axis=1)),
+                          axis=0)
+            self.__uncorrectable_roi = uncorrectable[mask]
 
     def clear(self):
         """Clear any bad-pixel information in the object.
@@ -931,6 +1136,9 @@ class BadPixels:
         -------
         None.
         """
+        # pylint: disable=unnecessary-dunder-call
+        # Looks funky, but it is the fastest way to clear every
+        # single attribute of self and remove all bad-pixels info
         self.__init__(self.__camera)
 
     def get_uncorrectable_clusters_sizes(self):
@@ -970,6 +1178,39 @@ class BadPixels:
             (np.count_nonzero(labelled[c]) for c in clusters)
             )
 
+    def __get_bad_px_file(self, filepath, most_recent):
+        """Return the path to a bad-pixels file for self.camera."""
+        filepath = Path(filepath)
+        cam_name = self.__camera.name_clean
+
+        # Search in filepath for bad pixels files of the current camera
+        bad_px_files = list(filepath.glob(f"{cam_name}*.badpx"))
+        if not bad_px_files:
+            # Invalidate the information, then complain
+            self.__bad_coords = np.ones((1, 2)) * np.nan
+            raise FileNotFoundError(
+                f"{self.__class__.__name__}: could not find a "
+                f"bad pixels file for camera {self.__camera.name} "
+                f"in directory {filepath.resolve()}"
+                )
+
+        idx = 0      # the most recent
+        if not most_recent:
+            idx = 1  # the second most recent
+
+        # Get the correct bad pixels file
+        try:
+            return sorted(((f.stem, f) for f in bad_px_files),
+                          reverse=True)[idx]
+        except IndexError:
+            self.__bad_coords = np.ones((1, 2)) * np.nan
+            raise FileNotFoundError(
+                f"{self.__class__.__name__}: found only one "
+                f"bad pixels file for camera {self.__camera.name} "
+                f"in directory {filepath.resolve()}. Cannot load "
+                "the second-most recent file."
+                ) from None
+
     def read(self, filepath='', most_recent=True):
         """Read bad pixel information from a file path.
 
@@ -995,41 +1236,11 @@ class BadPixels:
             If filepath contains a corrupt bad pixels file
             for the current camera.
         """
-        filepath = Path(filepath)
-        cam_name = self.__camera.name.replace(' ', '_')
-
-        # Search in filepath for bad pixels files of the current camera
-        bad_px_files = list(filepath.glob(f"{cam_name}*.badpx"))
-        if not bad_px_files:
-            # Invalidate the information, then complain
-            self.__bad_coords = np.ones((1, 2)) * np.nan
-            raise FileNotFoundError(
-                f"{self.__class__.__name__}: could not find a "
-                f"bad pixels file for camera {self.__camera.name} "
-                f"in directory {filepath.resolve()}"
-                )
-
-        idx = 0      # the most recent
-        if not most_recent:
-            idx = 1  # the second most recent
-
-        # Get the correct bad pixels file
-        try:
-            base_name, filename = sorted(((f.stem, f) for f in bad_px_files),
-                                         reverse=True)[idx]
-        except IndexError:
-            self.__bad_coords = np.ones((1, 2)) * np.nan
-            raise FileNotFoundError(
-                f"{self.__class__.__name__}: found only one "
-                f"bad pixels file for camera {self.__camera.name} "
-                f"in directory {filepath.resolve()}. Cannot load "
-                "the second-most recent file."
-                ) from None
+        base_name, filename = self.__get_bad_px_file(filepath, most_recent)
 
         bad_pixels = []
         replacements = []
         uncorrectable = []
-
         with open(filename, 'r', encoding='utf-8') as bad_px_file:
             for line in bad_px_file:
                 if line.strip().startswith('#'):  # Comment
@@ -1078,27 +1289,8 @@ class BadPixels:
         RuntimeError
             If called before any bad pixel info is present.
         """
-        if not self.__has_info:
-            raise RuntimeError(f"{self.__class__.__name__}: No "
-                               "bad pixel information present.")
-
-        # Prepare the image
-        width, height, *_ = self.__camera.image_info
-        mask = np.zeros((height, width), dtype='uint8')
-
-        if len(self.uncorrectable):
-            bad_y, bad_x = self.uncorrectable.T
-            mask[bad_y, bad_x] = 255
-
-        date_time = self.__datetime.strftime("%Y:%m:%d %H:%M:%S")
-        filename = Path(filepath, f"{self.__base_name}_uncorr_mask.tiff")
-        tiff = tifffile.TiffFile.from_array(
-            mask,
-            comment=f"Uncorrectable bad pixels mask for {self.__camera.name}",
-            model=self.__camera.name,
-            date_time=date_time
-            )
-        tiff.write(filename)
+        self.__save_mask_base(self.uncorrectable, filepath, 'uncorr',
+                              "Uncorrectable bad pixels")
 
     def save_bad_px_mask(self, filepath=''):
         """Save an image with bad pixels as white.
@@ -1118,6 +1310,11 @@ class BadPixels:
         RuntimeError
             If called before any bad pixel info is present.
         """
+        self.__save_mask_base(self.bad_pixel_coordinates, filepath, 'bad',
+                              "Bad pixels")
+
+    def __save_mask_base(self, coordinates, filepath, extra_name, comment):
+        """Save coordinates as a binary mask in filepath."""
         if not self.__has_info:
             raise RuntimeError(f"{self.__class__.__name__}: No "
                                "bad pixel information present.")
@@ -1126,15 +1323,15 @@ class BadPixels:
         width, height, *_ = self.__camera.image_info
         mask = np.zeros((height, width), dtype='uint8')
 
-        if len(self.bad_pixel_coordinates):
-            bad_y, bad_x = self.bad_pixel_coordinates.T
+        if coordinates.size:
+            bad_y, bad_x = coordinates.T
             mask[bad_y, bad_x] = 255
 
         date_time = self.__datetime.strftime("%Y:%m:%d %H:%M:%S")
-        filename = Path(filepath, f"{self.__base_name}_bad_mask.tiff")
+        filename = Path(filepath, f"{self.__base_name}_{extra_name}_mask.tiff")
         tiff = tifffile.TiffFile.from_array(
             mask,
-            comment=f"Bad pixels mask for {self.__camera.name}",
+            comment=f"{comment} mask for {self.__camera.name}",
             model=self.__camera.name,
             date_time=date_time
             )
@@ -1159,15 +1356,25 @@ class BadPixels:
             raise RuntimeError(f"{self.__class__.__name__}: No "
                                "bad pixel coordinates to write.")
 
-        # Prepare the column contents
-        columns = [
-            ['Bad pixels',
-             *(f"{tuple(b)}" for b in self.__bad_coords),
-             *(f"{tuple(b)}" for b in self.__uncorrectable)],
-            ['Replacements',
-             *(f"{tuple(r)}" for r in self.__replacements),
-             *(['NaN']*len(self.__uncorrectable))]
-            ]
+        # Since numpy 2.0 (numpy/numpy/pull/22449), numpy data types
+        # are printed out together with scalars. This means that
+        # str(np.int(x)) == 'np.int(x)' rather than 'x'. Reverting the
+        # behavior to the v1.25 one ensures that we can then read the
+        # information back using ast.
+        print_np_scalar_as_number = (
+            np.printoptions(legacy='1.25') if NUMPY2_OR_LATER
+            else nullcontext()
+            )
+        with print_np_scalar_as_number:
+            # Prepare the column contents
+            columns = [
+                ['Bad pixels',
+                 *(f"{tuple(b)}" for b in self.__bad_coords),
+                 *(f"{tuple(b)}" for b in self.__uncorrectable)],
+                ['Replacements',
+                 *(f"{tuple(r)}" for r in self.__replacements),
+                 *(['NaN']*len(self.__uncorrectable))]
+                ]
 
         # Find padding lengths:
         bad_width = max(len('# Bad pixels'), *(len(row) for row in columns[0]))
@@ -1202,12 +1409,9 @@ class BadPixels:
     @property
     def __has_info(self):
         """Return whether bad pixel information is present."""
+        # This means correctly __init__ed, or read from a valid file
         return np.all(np.isfinite(self.__bad_coords))
 
     def __bool__(self):
         """Return the truth value of self."""
-        if not self.__has_info:
-            return False
-        if not self.bad_pixel_coordinates.size:
-            return False
-        return True
+        return bool(self.__has_info and self.n_bad_pixels_sensor)

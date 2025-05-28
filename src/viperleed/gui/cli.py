@@ -12,6 +12,7 @@ __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
 from pathlib import Path
+import signal
 import sys
 
 try:
@@ -23,7 +24,6 @@ else:
     import PyQt5.QtWidgets as qtw
 
 from viperleed.cli_base import ViPErLEEDCLI
-from viperleed.gui.base import catch_gui_crash
 from viperleed.gui.constants import LOGO
 from viperleed.gui.detect_graphics import has_graphics
 from viperleed.gui.detect_graphics import has_pyqt
@@ -31,6 +31,8 @@ from viperleed.gui.helpers import resources_path
 
 if has_pyqt():
     from viperleed.gui.selectplugin import ViPErLEEDSelectPlugin
+    from viperleed.gui.widgetslib import catch_gui_crash
+    from viperleed.gui.widgetslib import raise_on_qt_messages
 
 
 class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
@@ -95,13 +97,24 @@ def gui_main():
     Body of the functionality that invokes the ViPErLEED
     Graphical User Interface.
     """
-    catch_gui_crash()
+    log_path = Path(__file__).resolve().parent.parent / "_logs"
+    if not log_path.exists():
+        log_path.mkdir()
+
+    # Ensure we always use "." as decimal separators 
+    qtc.QLocale.setDefault(qtc.QLocale.c())
 
     print('Loading GUI...', flush=True, end='')
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_UseHighDpiPixmaps)
     app = qtw.QApplication(sys.argv)
     app.setWindowIcon(qtg.QIcon(LOGO))
+
+    # About the disables: we never call gui_main if not has_pyqt()
+    # pylint: disable-next=possibly-used-before-assignment
+    catch_gui_crash(log_path)
+    # pylint: disable-next=possibly-used-before-assignment
+    raise_on_qt_messages()
 
     # Import some fonts from ./fonts folder
     font_path = resources_path('gui/fonts')
@@ -114,6 +127,7 @@ def gui_main():
         str(Path(font_path, 'cmunrm.otf').resolve())
         )
 
+    # pylint: disable-next=possibly-used-before-assignment
     plugin_selector_window = ViPErLEEDSelectPlugin()
     plugin_selector_window.show()
 
@@ -123,6 +137,11 @@ def gui_main():
     # gl.show_use_betatest_version_popup()
 
     print('Done', flush=True)
+
+    # An awful hack to allow keyboard interrupts to be accepted also
+    # while the next app.exec_ runs and the python interpreter is not
+    # running. See https://stackoverflow.com/questions/4938723
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     return app.exec_()
     # sys.exit()   ######## TODO: Also from master

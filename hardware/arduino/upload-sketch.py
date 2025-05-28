@@ -19,13 +19,16 @@ The Arduino CLI is available from https://github.com/arduino/arduino-cli/release
 # boards.txt; (4) compile and upload; (5) undo no.3.
 
 from pathlib import Path
-import requests
+import requests             # Look at https://wiki.qt.io/Download_Data_from_URL
 import subprocess
 import shutil
 import sys
-import os
 import json
 import warnings
+
+
+BASE_PATH = Path(__file__).parent.resolve()
+ARDUINO_MICRO = {'matching_boards':({'fqbn': 'arduino:avr:micro'},)}
 
 
 def get_arduino_cli_from_git():
@@ -42,11 +45,12 @@ def get_arduino_cli_from_git():
     """
     latest = requests.get("https://api.github.com/repos/arduino"
                           "/arduino-cli/releases/latest").json()
-    if 'nt' in os.name:
-        correct_name = 'Windows'
-    elif 'mac' in os.name:
+    platform = sys.platform
+    if 'darwin' in platform:
         correct_name = 'macOS'
-    elif 'posix' in os.name:
+    elif 'win' in platform and 'cyg' not in platform:
+        correct_name = 'Windows'
+    elif 'linux' in platform:
         correct_name = 'Linux'
     else:
         raise RuntimeError("Could not find a suitable precompiled "
@@ -67,13 +71,13 @@ def get_arduino_cli_from_git():
                            "to compile from the source at "
                            "https://github.com/arduino/arduino-cli")
 
-    base_path = Path(__file__).parent.resolve() / 'arduino-cli'
+    base_path = BASE_PATH / 'arduino-cli'
     with open(base_path / correct_name, 'wb') as archive:
         archive.write(requests.get(url_latest).content)
     shutil.unpack_archive(base_path / correct_name, base_path)
 
 
-def get_arduino_cli(get_from_git=False):
+def get_arduino_cli(get_from_git=False):                                        # TODO: progress
     """Pick the correct Arduino CLI tool.
 
     The choice is based on the current operating system.
@@ -100,7 +104,7 @@ def get_arduino_cli(get_from_git=False):
         return Path('arduino-cli')
 
     # Look for the executable in the arduino-cli subfolder
-    base_path = Path(__file__).parent.resolve() / 'arduino-cli'
+    base_path = BASE_PATH / 'arduino-cli'
     try:
         base_path.mkdir()
     except FileExistsError:
@@ -117,7 +121,7 @@ def get_arduino_cli(get_from_git=False):
 
     # See if there is the correct executable in arduino-cli
     arduino_cli = 'arduino-cli'
-    if 'win' in sys.platform:
+    if 'win' in sys.platform and not 'darwin' in sys.platform:
         arduino_cli += '.exe'
     arduino_cli = base_path.joinpath(arduino_cli)
     if not arduino_cli.is_file():
@@ -145,10 +149,11 @@ def get_boards():
             "Arduino CLI failed with return code "
             f"{cli.returncode}. The error was:\n{cli.stderr}"
             ) from err
-    return json.loads(cli.stdout)
+    boards = json.loads(cli.stdout)
+    return [b for b in boards if "matching_boards" in b]
 
 
-def install_arduino_core(core_name):
+def install_arduino_core(core_name):                                            # TODO: progress
     """Install a given core to the Arduino CLI.
 
     Parameters
@@ -204,7 +209,7 @@ def get_arduino_cores():
     return json.loads(cli.stdout)
 
 
-def upgrade_arduino_cli():
+def upgrade_arduino_cli():                                                      # TODO: progress
     """Upgrade the outdated cores and libraries."""
     cli = get_arduino_cli()
     cli = subprocess.run([cli, 'upgrade'], capture_output=True)
@@ -226,7 +231,7 @@ def get_viperleed_hardware():
     boards = get_boards()
     if not boards:
         raise RuntimeError("No Arduino boards connected.")
-    board_names = [board['name'] for board in boards]
+    board_names = [b['matching_boards'][0]['name'] for b in boards]
     viper_boards = []
     for name in viperleed_names:
         for i, board_name in enumerate(board_names):
@@ -239,7 +244,7 @@ def get_viperleed_hardware():
     return viper_boards
 
 
-def compile(for_board, upload=False):
+def compile_(for_board, sketch_name='viper-ino', upload=False, verbose=False):
     """Compile viper-ino for the specified board.
 
     Parameters
@@ -251,22 +256,39 @@ def compile(for_board, upload=False):
         after successful compilation
     """
     cli = get_arduino_cli()
-    viperino = Path(__file__).parent.resolve() / 'viper-ino.ino'
+    viperino = BASE_PATH / sketch_name
+    if "matching_boards" not in for_board:
+        raise ValueError(f"Invalid Arduino device: {for_board}")
 
-    argv = ['compile', '--clean', '-b', for_board['fqbn'], viperino]
+    argv = ['compile', '--clean', '-b',
+            for_board['matching_boards'][0]['fqbn'],
+            viperino]
+    lib_root = BASE_PATH / 'lib'
+    if lib_root.exists():
+        argv.extend(['--library', str(lib_root)])
+
+    if verbose:
+        argv.append('-v')
+
     if upload:
-        argv.append(['-u', '-p', for_board['port']])
+        argv.extend(['-u', '-p', for_board['port']['address']])
 
     cli = subprocess.run([cli, *argv], capture_output=True)
     try:
         cli.check_returncode()
     except subprocess.CalledProcessError as err:
         raise RuntimeError("Arduino CLI failed. Return code="
-                           f"{cli.returncode}. The error was:\n{cli.stderr}")
+                           f"{cli.returncode}. The error was:\n"
+                           + cli.stderr.decode())
+    finally:
+        print(f"Arduino CLI Output:\n{cli.stdout.decode()}")
 
 
 if __name__ == '__main__':
-    # get_arduino_cli(True)
-    print(get_boards())
-    install_arduino_core('arduino:avr')
-    print(get_arduino_cores())
+    get_arduino_cli(True)
+    # print(get_boards())
+    # install_arduino_core('arduino:avr')
+    # print(get_arduino_cores())
+    # print(get_viperleed_hardware())
+    compile_(get_viperleed_hardware()[0], upload=True)
+    # compile_(ARDUINO_MICRO, sketch_name='b_field_comp', upload=False)

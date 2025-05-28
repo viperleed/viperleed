@@ -17,97 +17,87 @@ __created__ = '2021-06-23'
 __license__ = 'GPLv3+'
 
 from abc import abstractmethod
-import time
-from configparser import NoSectionError, NoOptionError
+from configparser import NoOptionError
+from configparser import NoSectionError
 
-from PyQt5 import (QtCore as qtc,
-                   QtSerialPort as qts)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtSerialPort as qts
 
+from viperleed.gui.measure.classes.abc import HardwareABC
 from viperleed.gui.measure.classes.settings import NoSettingsError
-from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
-from viperleed.gui.measure.hardwarebase import QMetaABC
+from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.gui.measure.hardwarebase import emit_error
 
 
 SERIAL_ERROR_MESSAGES = {
-    qts.QSerialPort.NoError: "",
+    qts.QSerialPort.NoError: '',
     qts.QSerialPort.DeviceNotFoundError:
-        ("No device on port {}. Please check the communication "
-         "cables and/or update the list of ports."),
+        ('No device on port {}. Please check the communication '
+         'cables and/or update the list of ports.'),
     qts.QSerialPort.PermissionError:
-        ("Permission error while opening port {}. The port may be "
-         "already in use, or you may not have sufficient privileges."),
+        ('Permission error while opening port {}. The port may be '
+         'already in use, or you may not have sufficient privileges.'),
     qts.QSerialPort.OpenError:
-        ("Cannot open again a port on the same object. "
-         "Close port {} by calling disconnect(), then try again."),
+        ('Cannot open again a port on the same object. '
+         'Close port {} by calling disconnect(), then try again.'),
     qts.QSerialPort.NotOpenError:
-        ("Cannot perform the requested operation on a "
-         "closed port. Open {} by calling .connect()."),
+        ('Cannot perform the requested operation on a '
+         'closed port. Open {} by calling .connect().'),
     qts.QSerialPort.WriteError:
-        "Writing data to port {} failed.",
+        'Writing data to port {} failed.',
     qts.QSerialPort.ReadError:
-        "Reading data from port {} failed.",
+        'Reading data from port {} failed.',
     qts.QSerialPort.ResourceError:
-        ("Port {} became unavailable to the system. Device may be "
-         "disconnected from the system. Check connection cables."),
+        ('Port {} became unavailable to the system. Device may be '
+         'disconnected from the system. Check connection cables.'),
     qts.QSerialPort.UnsupportedOperationError:
-        ("Cannot perform the requested operation on port {}: operation is "
-         "either not supported or prohibited by the operating system."),
+        ('Cannot perform the requested operation on port {}: operation is '
+         'either not supported or prohibited by the operating system.'),
     qts.QSerialPort.TimeoutError:
-        ("Serial timeout error on port {}. This should not normally occur. "
-         "It means someone incorrectly implemented a subclass of "
-         "SerialABC, using waitForBytesWritten or waitForReadyRead "
-         "instead of asynchronous behavior."),
+        ('Serial timeout error on port {}. This should not normally occur. '
+         'It means someone incorrectly implemented a subclass of '
+         'SerialABC, using waitForBytesWritten or waitForReadyRead '
+         'instead of asynchronous behavior.'),
     qts.QSerialPort.UnknownError:
-        "An unknown error occurred while accessing port {}."
+        'An unknown error occurred while accessing port {}.'
 }
 
 
 class ExtraSerialErrors(ViPErLEEDErrorEnum):
     """Data class for basic serial errors not available in QSerialPort."""
+
     NO_MESSAGE_ERROR = (50,
-                        "Empty message received from controller.")
+                        'Empty message received from controller.')
     NO_START_MARKER_ERROR = (51,
-                             "Inconsistent message received from "
-                             "controller (missing start marker). "
-                             "Probably a communication error.")
+                             'Inconsistent message received from '
+                             'controller (missing start marker). '
+                             'Probably a communication error.')
     TIMEOUT_ERROR = (52,
-                     "Serial Timeout: No message received in the "
-                     "last {} sec. Check the communication cable "
-                     "and/or serial-port settings in .ini file.")
+                     'Serial Timeout: No message received in the '
+                     'last {} sec. Check the communication cable '
+                     'and/or serial-port settings in .ini file.')
     UNSUPPORTED_COMMAND_ERROR = (53,
-                                 "Command {} is not supported "
-                                 "by the controller. Check implementation "
-                                 "and/or your configuration file.")
-    # The following two are fatal errors, and should make the GUI
-    # essentially unusable, apart from loading appropriate settings
-    INVALID_PORT_SETTINGS = (54,
-                             "Invalid serial port settings: Required "
-                             "settings {!r} missing or values "
-                             "inappropriate. Check configuration file.")
-    MISSING_SETTINGS = (55,
-                        "Serial port cannot operate without settings. "
-                        "Load an appropriate settings file before "
-                        "proceeding.")
-    PORT_NOT_OPEN = (56,
-                     "Serial port could not be opened.")
+                                 'Command {} is not supported '
+                                 'by the controller. Check implementation '
+                                 'and/or your configuration file.')
+    PORT_NOT_OPEN = (54,
+                     'Serial port could not be opened.')
 
 
-class SerialABC(qtc.QObject, metaclass=QMetaABC):
+# too-many-public-methods, too-many-instance-attributes, too-many-lines
+class SerialABC(HardwareABC):
     """Base class for serial communication for a ViPErLEED controller."""
 
-    error_occurred = qtc.pyqtSignal(tuple)
     data_received = qtc.pyqtSignal(object)
-    serial_busy = qtc.pyqtSignal(bool)
     about_to_trigger = qtc.pyqtSignal()
-    __start_timer = qtc.pyqtSignal(int)
-    __stop_timer = qtc.pyqtSignal()
 
-    _mandatory_settings = [
+    __move_to_thread_requested = qtc.pyqtSignal(bool)  # True==connect          # TODO: Can be done with QMetaObject.invokeMethod
+
+    _mandatory_settings = (
             ('serial_port_settings', 'MSG_END'),
             ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
-            ]
+            )
 
     def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.
@@ -119,9 +109,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             serial port itself one only needs a 'serial_port_settings'
             section. In practice, it is likely safer to pass the whole
             ConfigParser object used for the controller class. It can
-            be changed using the .port_settings property, or with the
-            set_port_settings() setter method. See the documentation
-            of set_port_settings() for more details on other mandatory
+            be changed using the self.settings property, or with the
+            set_settings() setter method. See the documentation
+            of set_settings() for more details on other mandatory
             content of the settings argument.
         port_name : str or QSerialPortInfo, optional
             The name (or info) of the serial port. If not given,
@@ -134,7 +124,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         TypeError
             If no settings are given.
         """
-        super().__init__(**kwargs)
+        # Note that looking for default settings for the serial
+        # will always fail, but the serial is guaranteed to be given
+        # settings from the controller that instantiates it.
+        super().__init__(settings=settings, **kwargs)
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(self)
@@ -145,10 +138,11 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         self.__port = qts.QSerialPort(port_name, parent=self)
 
-        # .__serial_settings is set via the following call to
-        # set_port_settings() for extra checks and preprocessing
-        self.__serial_settings = ViPErLEEDSettings()
-        self.set_port_settings(settings)
+        self.__timeout = qtc.QTimer(parent=self)
+        self.__timeout.setSingleShot(True)
+        self.__timeout.timeout.connect(self.__on_serial_timeout)
+
+        self.set_settings(self._settings_to_load)
 
         # .unprocessed_messages is a list of all the messages
         # that came on the serial line and that have not been
@@ -168,32 +162,17 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         # after the error has been identified with identify_error()
         self.__messages_since_error = []
 
-        # __busy keeps track of whether the serial line is
-        # currently busy, e.g., a message was sent and we
-        # should wait for the reply to come before we send
-        # another message. Accessed via the .busy property.
-        # Default behavior is not to consider the serial busy.
-        # A reimplementation of is_message_supported can set
-        # the .busy right before returning True.
-        self.__busy = False
-
         # Keep track of whether we got an unacceptable message
         # after a .send_message()
         self.__got_unacceptable_response = False
 
-        self.__timeout = qtc.QTimer(parent=self)
-        self.__timeout.setSingleShot(True)
-        self.__timeout.timeout.connect(self.__on_serial_timeout)
-        self.__start_timer.connect(self.__timeout.start)
-        self.__stop_timer.connect(self.__timeout.stop)
-
         self.__open = False
-
-        self.time_stamp = None
 
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
+
+        self.__move_to_thread_requested.connect(self.__on_moved_to_thread)
 
     @property
     def byte_order(self):
@@ -206,33 +185,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             be used in functions converting bytes to human-readable
             data types [e.g., int.from_bytes(bytes_obj, byte_order)].
         """
-        return self.port_settings.get('serial_port_settings',
-                                      'BYTE_ORDER')
-
-    @property
-    def busy(self):
-        """Return whether the serial port is busy."""
-        return self.__busy
-
-    @busy.setter
-    def busy(self, is_busy):
-        """Set the serial to busy True/False.
-
-        Parameters
-        ----------
-        is_busy : bool
-            True if serial is busy
-
-        Emits
-        -----
-        serial_busy(self.busy)
-            If the busy state changes.
-        """
-        was_busy = self.busy
-        is_busy = bool(is_busy)
-        if was_busy is not is_busy:
-            self.__busy = is_busy
-            self.serial_busy.emit(self.busy)
+        return self.settings.get('serial_port_settings', 'BYTE_ORDER')
 
     @property
     def is_open(self):
@@ -251,20 +204,20 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 Only the 'START' marker may be None, in case no
                 start marker is used.
         """
-        start_marker = self.port_settings.getint('serial_port_settings',
-                                                 'MSG_START', fallback=None)
+        start_marker = self.settings.getint('serial_port_settings',
+                                            'MSG_START', fallback=None)
         if start_marker is not None:
             start_marker = start_marker.to_bytes(1, self.byte_order)
 
         return {'START':  start_marker,
-                'END': self.port_settings.getint(
+                'END': self.settings.getint(
                     'serial_port_settings', 'MSG_END'
                     ).to_bytes(1, self.byte_order)}
 
     @property
-    def port_name(self):
+    def port_name(self):                                                        # TODO: change port_name to address
         """Return the name of the current port as a string."""
-        return self.__port.portName()
+        return self.port.portName()
 
     @port_name.setter
     def port_name(self, new_port_name):
@@ -272,7 +225,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         This will disconnect an already-open port, but will not
         connect to the port with the newly set name. Explicitly
-        use .connect() (after changing .port_settings, if needed).
+        use .connect() (after changing self.settings, if needed).
 
         This method can be used as a slot for a signal carrying a
         string or a QSerialPortInfo.
@@ -289,11 +242,12 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         TypeError
             If new_port_name is neither 'str' nor 'QSerialPortInfo'
         """
-        self.__port.close()
+        if self.port:
+            self.disconnect_()
         if isinstance(new_port_name, str):
-            self.__port.setPortName(new_port_name)
+            self.port.setPortName(new_port_name)
         elif isinstance(new_port_name, qts.QSerialPortInfo):
-            self.__port.setPort(new_port_name)
+            self.port.setPort(new_port_name)
         else:
             raise TypeError(
                 f"{self.__class__.__name__}: Invalid port "
@@ -310,7 +264,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def port(self, port_name):
         """Create a new QSerialPort with name port_name.
 
-        Port settings should should already exist.
+        Port settings should already exist.
 
         Parameters
         ----------
@@ -318,27 +272,26 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             Information needed to create and open a new port
         """
         if self.port:
-            self.serial_disconnect()
+            self.disconnect_()
         self.__port = qts.QSerialPort(port_name, parent=self)
-        self.serial_connect()
+        self.connect_()
 
-    # Disable pylint check because of false positive. The method
-    # is used below as the getter for property port_settings
-    # pylint: disable=unused-private-member
-    def __get_port_settings(self):
-        """Return the current settings for the port.
+    @classmethod
+    def _cannot_check_settings(cls, *_):
+        """Raise TypeError as SerialABC settings come from controllers."""
+        # Generally speaking controllers have to find the approriate
+        # settings for their serial. Therefore this method should never
+        # be called.
+        raise TypeError(f'{cls.__name__} was asked to perform a '
+                        'settings check. Serials should never determine '
+                        'appropriate settings on their own.')
 
-        Returns
-        -------
-        port_settings : ConfigParser
-            The ConfigParser containing all the settings, among
-            which the port settings that are available in section
-            'serial_port_settings'.
-        """
-        return self.__serial_settings
-    # pylint: enable=unused-private-member
+    is_matching_default_settings = _cannot_check_settings
+    is_matching_user_settings = _cannot_check_settings
+    is_settings_for_this_class = _cannot_check_settings
 
-    def set_port_settings(self, new_settings):
+    @qtc.pyqtSlot(object)
+    def set_settings(self, new_settings):
         """Change settings of the port.
 
         This will disconnect an already-open port, but will not
@@ -353,7 +306,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or string
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             Configuration of port. It must have a 'serial_port_settings'
             section.
             The following fields in new_settings['serial_port_settings']
@@ -404,51 +357,48 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             or path and if an element of the mandatory_settings is
             None or has a length greater than 3.
 
+        Returns
+        -------
+        settings_valid : bool
+            True if the new settings given were accepted.
+
         Emits
         -----
-        ExtraSerialErrors.MISSING_SETTINGS
+        QObjectSettingsErrors.MISSING_SETTINGS
             If new_settings is missing.
-        ExtraSerialErrors.INVALID_PORT_SETTINGS
+        QObjectSettingsErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
-        try:
-            new_settings = ViPErLEEDSettings.from_settings(new_settings)
-        except (ValueError, NoSettingsError):
-            emit_error(self, ExtraSerialErrors.MISSING_SETTINGS)
-            return
-
-        invalid = new_settings.has_settings(*self._mandatory_settings)
-
-        if invalid:
-            error_msg = invalid
-            emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS,
-                       error_msg)
-            return
-
-        self.__serial_settings = new_settings
-        self.__port.close()
-
-    port_settings = property(__get_port_settings, set_port_settings)
+        if not super().set_settings(new_settings):
+            return False
+        self.disconnect_()
+        return True
 
     def clear_errors(self):
         """Clear all errors.
 
-        This method must be called in the reimplementation of
-        identify_error after the error has been correctly identified.
+        This method must be called in the overridden identify_error
+        after the error has been correctly identified.
+
+        Returns
+        -------
+        None.
         """
-        self.__port.clearError()
-        self.__stop_timer.emit()
+        if self.port.error() != qts.QSerialPort.NoError:
+            self.port.clearError()
+        self.__timeout.stop()
         self.__messages_since_error = []
         self.__got_unacceptable_response = False
 
     def decode(self, message):
         """Decode a message received from the serial.
 
-        The base implementation of this method is a no-op, i.e.,
-        it returns the same message it got. Subclasses of the
-        SerialABC class should reimplement this function
-        to actually decode possibly encoded messages.
+        The base implementation of this method is a no-op, i.e., it
+        returns the same message it got, unless the message is not
+        acceptable (via is_decoded_message_acceptable). Subclasses
+        can extend this method to decode possibly encoded messages.
+        They should then "return super().decode(message)".
 
         Parameters
         ----------
@@ -465,24 +415,21 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             return bytearray()
         return bytearray(message)
 
-    # Disable pylint check as this is supposed
-    # to be the signature for subclasses
-    # pylint: disable=no-self-use
     def encode(self, message):
         """Encode a message to be sent via the serial port.
 
         The base implementation of this method is a no-op, i.e.,
         it returns the same message it got. Subclasses of the
-        SerialABC class should reimplement this function
-        to actually encode messages before sending them to the
-        device via the serial line. The reimplemented method
-        should care about appropriately converting a supported
-        object to an actual message in bytes.
+        SerialABC class should override this method to actually
+        encode messages before sending them to the device via the
+        serial line. The overridden method should care about
+        appropriately converting a supported object to an actual
+        message in bytes.
 
         This method is called on every message right before
         writing it to the serial line.
 
-        The reimplemented encode() should NOT add start and end
+        The overridden encode() should NOT add start and end
         markers, as these are already handled by send_message().
 
         Parameters
@@ -496,14 +443,19 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             The encoded message
         """
         return message
-    # pylint: enable=no-self-use
+
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        self.check_creating_settings_handler_is_possible()
+        handler = SettingsHandler(self.settings, show_path_to_config=True)
+        return handler
 
     @abstractmethod
     def identify_error(self, messages_since_error):
         """Identify which error occurred.
 
-        This function is called whenever an error occurred. Concrete
-        subclasses must reimplement this function and emit a signal
+        This method is called whenever an error occurred. Concrete
+        subclasses must override this method and emit a signal
         self.error_occurred(ViPErLEEDErrorEnum). New error codes
         should be defined in a specific ViPErLEEDErrorEnum subclass.
 
@@ -512,16 +464,17 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         may be contained in the error message itself, or may come
         as data messages following the error message. All messages
         that are received after an error message and before the error
-        is identified are discarded. New messages can be processed
-        only if identify_error() is successfully completed, i.e.,
-        it calls clear_errors().
+        is identified can be used for identification, and will then
+        be discarded. New messages will be processed only after
+        identify_error() is successfully completed, i.e., it calls
+        clear_errors().
 
-        The function should be a no-op if identification of the error
+        The method should be a no-op if identification of the error
         should fail because the data did not arrive yet.
 
         The reimplementation must call the clear_errors() method to
-        be considered successfully completed. It only makes sense to
-        call clear_errors() only after an error has been successfully
+        be considered successfully completed. It makes sense to call
+        clear_errors() only after an error has been successfully
         identified (or if no error information is expected).
 
         Parameters
@@ -547,7 +500,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
     # Disable pylint check as this is supposed
     # to be the signature for subclasses
-    # pylint: disable=no-self-use,unused-argument
+    # pylint: disable=unused-argument
     def is_decoded_message_acceptable(self, message):
         """Check whether a decoded message is ok.
 
@@ -558,8 +511,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         discarded, until the next time the method .send_message()
         runs, or after calling .clear_errors().
 
-        Reimplement this method in subclasses. The base
-        implementation always returns True.
+        Override this method in subclasses. The base implementation
+        always returns True.
 
         Parameters
         ----------
@@ -572,13 +525,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             True if message is acceptable
         """
         return True
-    # pylint: enable=no-self-use,unused-argument
+    # pylint: enable=unused-argument
 
     @abstractmethod
     def is_error_message(self, message):
         """Check if a message corresponds to an error.
 
-        This method must be reimplemented by concrete classes.
+        This method must be overridden by concrete subclasses.
         It should return True if the message is an error message,
         False otherwise. If an error message is received at any
         point, any message that is still unprocessed is discarded
@@ -598,7 +551,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
     # Disable pylint check as this is supposed
     # to be the signature for subclasses
-    # pylint: disable=no-self-use,unused-argument
+    # pylint: disable=unused-argument
     def is_message_supported(self, message):
         """Check whether message is a supported command.
 
@@ -607,10 +560,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         the message. The message will be encoded and sent only
         if this method returns True.
 
-        This method can be reimplemented to (i) keep track of
-        the last 'request' command sent, right before sending
-        it, and (ii) check whether the command requested is one
-        of those supported by the controller, and/or (iii) the
+        This method can be overridden to (i) keep track of the
+        last 'request' command sent, right before sending it,
+        and (ii) check whether the command requested is one of
+        those supported by the controller, and/or (iii) the
         syntax of the command is acceptable.
 
         The base implementation always returns True.
@@ -631,15 +584,15 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             messages will then be sent.
         """
         return True
-    # pylint: enable=no-self-use,unused-argument
+    # pylint: enable=unused-argument
 
     @abstractmethod
     def message_requires_response(self, *messages):
         """Return whether the messages to be sent require a response.
 
-        Needs to be reimplemented in subclasses. This function
-        should return True if the sent message requires a response
-        from the connected hardware.
+        Needs to be overridden in subclasses. This method should
+        return True if the sent message requires a response from
+        the connected hardware.
 
         Parameters
         ----------
@@ -652,8 +605,14 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """
         return True
 
-    # pylint: disable=no-self-use
-    # Method is to be potentially reimplemented
+    def moveToThread(self, thread):  # pylint: disable=invalid-name
+        """Move self to a different thread by recreating self.port."""
+        was_open = self.is_open
+        if was_open:
+            self.disconnect_()
+        super().moveToThread(thread)
+        self.__move_to_thread_requested.emit(was_open)
+
     def prepare_message_for_encoding(self, message, *other_messages):
         """Prepare a message to be encoded.
 
@@ -687,31 +646,29 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             should have one of the types acceptable for encode()
         """
         return (message, *other_messages)
-    # pylint: enable=no-self-use
 
     @abstractmethod
     def process_received_messages(self):
         """Process data received into human-understandable information.
 
-        This function is called every time one (or more) messages
-        arrive on the serial line, unless there currently is an
-        error message that has not yet been handled. Reimplement
+        This method is called every time one (or more) messages
+        arrive at the serial line, unless there currently is an
+        error message that has not yet been handled. Override
         identify_error() to handle errors.
 
-        This method should be reimplemented by any concrete subclass.
-        The reimplementation should look into the list
-        self.unprocessed_messages and .pop() from there the messages
-        it wants to process. Then it should emit the data_received
-        signal for data that are worth processing (e.g., measurements),
-        as this is caught by the controller class.
+        This method should be overridden by concrete subclass. The
+        reimplementation should look into .unprocessed_messages and
+        .pop() from there the messages it wants to process. Then it
+        should emit the data_received signal for data that are worth
+        processing (e.g., measurements).
 
         Each element in .unprocessed_messages is a bytearray.
 
-        When reimplementing this method, it is a good idea to either
-        not process any message (if not enough messages arrived yet)
-        or to process all .unprocessed_messages. This prevents data
-        loss, should an error message be received while there are
-        still unprocessed messages.
+        When overriding this method, it is a good idea to either not
+        process any message (if not enough messages arrived yet) or
+        to process all .unprocessed_messages. This prevents data loss,
+        should an error message be received while there are still
+        unprocessed messages.
 
         Emits
         -----
@@ -747,7 +704,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             the worker times out an ExtraSerialErrors.TIMEOUT_ERROR is
             emitted. If not given or None, the timeout will be taken
             from the option 'serial_port_settings'/'timeout' of
-            self.port_settings. Should this option not exist, timeout
+            self.settings. Should this option not exist, timeout
             will fall back to -1 (i.e., no timeout). Default is None
 
         Returns
@@ -758,7 +715,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             return
 
-        sent_command = message
         all_messages = (message, *other_messages)
         if not self.is_message_supported(all_messages):
             return
@@ -766,13 +722,12 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__got_unacceptable_response = False
 
         if timeout is None:
-            timeout = self.port_settings.getint('serial_port_settings',
-                                                'timeout',
-                                                fallback=-1)
+            timeout = self.settings.getint('serial_port_settings', 'timeout',
+                                           fallback=-1)
 
         timeout = int(timeout)
         if timeout >= 0:
-            self.__start_timer.emit(timeout)
+            self.__timeout.start(timeout)
         all_messages = self.prepare_message_for_encoding(*all_messages)
 
         _requires_response = self.message_requires_response(*all_messages)
@@ -784,16 +739,16 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 encoded[:0] = self.msg_markers['START']
             encoded.extend(self.msg_markers['END'])
             encoded_messages += encoded
-        self.__port.write(encoded_messages)
+        self.port.write(encoded_messages)
 
-        if self.is_measure_command(sent_command):
-            self.time_stamp = time.perf_counter()
         if not _requires_response:
             self.busy = False
 
-    def serial_connect(self, *__args):
+    def connect_(self, *__args):
         """Connect to currently selected port."""
-        if not self.__port.open(self.__port.ReadWrite):
+        if self.is_open:
+            return
+        if not self.port.open(self.port.ReadWrite):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             self.__print_port_config()
             self.__open = False
@@ -802,22 +757,22 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__open = True
         self.__set_up_serial_port()
 
-        self.__port.readyRead.connect(self.__on_bytes_ready_to_read)
-        self.__port.errorOccurred.connect(self.__on_serial_error)
-        _ = self.__port.readAll()
+        self.port.readyRead.connect(self.__on_bytes_ready_to_read)
+        self.port.errorOccurred.connect(self.__on_serial_error)
+        _ = self.port.readAll()
 
-    def serial_disconnect(self, *__args):
+    def disconnect_(self, *__args):
         """Disconnect from connected serial port."""
         self.clear_errors()
-        self.__port.close()
+        self.port.close()
         self.__open = False
         try:
-            self.__port.readyRead.disconnect(self.__on_bytes_ready_to_read)
+            self.port.readyRead.disconnect(self.__on_bytes_ready_to_read)
         except TypeError:
             # port is already disconnected
             pass
         else:
-            self.__port.errorOccurred.disconnect(self.__on_serial_error)
+            self.port.errorOccurred.disconnect(self.__on_serial_error)
 
     def __check_and_preprocess_message(self, message):
         """Check integrity of message.
@@ -832,7 +787,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             The message to be checked. Integrity checks only involve
             making sure that the message is not empty before and after
             removal of a start marker, if used. If a start marker is
-            used (i.e., a MSG_START is present in self.port_settings),
+            used (i.e., a MSG_START is present in self.settings),
             the method considers the message valid only if the first
             character is a MSG_START.
 
@@ -850,7 +805,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             If message is empty (before or after removal of MSG_START)
         error_occurred(ExtraSerialErrors.NO_START_MARKER_ERROR)
             If the first byte of message is not MSG_START, if there
-            is a MSG_START in self.port_settings.
+            is a MSG_START in self.settings.
         """
         if not message:
             emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
@@ -869,19 +824,20 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             return bytearray()
         return bytearray(message)
 
+    @qtc.pyqtSlot()
     def __on_bytes_ready_to_read(self):
         """Read the message(s) received."""
         if self.__got_unacceptable_response:
-            self.__stop_timer.emit()
+            self.__timeout.stop()
             return
 
-        msg = bytes(self.__port.readAll())
+        msg = bytes(self.port.readAll())
         if self.msg_markers['END'] not in msg:
             # Only a fraction of a message has been read.
             self.__last_partial_message.extend(msg)
             return
 
-        self.__stop_timer.emit()
+        self.__timeout.stop()
 
         head, *messages, tail = msg.split(self.msg_markers['END'])
         messages.insert(0, self.__last_partial_message + head)
@@ -920,6 +876,14 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.unprocessed_messages.extend(messages)
         self.process_received_messages()
 
+    @qtc.pyqtSlot(bool)
+    def __on_moved_to_thread(self, was_connected):
+        """Remake QSerialPort in the new thread; connect if needed."""
+        self.port = self.port_name
+        if was_connected:
+            self.connect_()
+
+    @qtc.pyqtSlot(qts.QSerialPort.SerialPortError)
     def __on_serial_error(self, error_code):
         """React to a serial-port error.
 
@@ -939,6 +903,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                    self.port_name)
         self.clear_errors()
 
+    @qtc.pyqtSlot()
     def __on_serial_timeout(self):
         """React to a serial timeout.
 
@@ -951,91 +916,88 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         error_occurred(ExtraSerialErrors.TIMEOUT_ERROR)
             Always
         """
-        timeout = self.port_settings.getint('serial_port_settings', 'timeout')
+        timeout = self.settings.getint('serial_port_settings', 'timeout')
         emit_error(self, ExtraSerialErrors.TIMEOUT_ERROR,
                    round(timeout/1000, 1))
 
     def __set_up_serial_port(self):
         """Load settings to serial port."""
-        settings = self.port_settings
-        self.__port.setBaudRate(
+        settings = self.settings
+        self.port.setBaudRate(
             int(settings.getfloat('serial_port_settings',
                                   'baud_rate',
-                                  fallback=self.__port.baudRate()))
+                                  fallback=self.port.baudRate()))
             )
-        self.__port.setBreakEnabled(
+        self.port.setBreakEnabled(
             settings.getboolean('serial_port_settings',
                                 'break_enabled',
-                                fallback=self.__port.isBreakEnabled())
+                                fallback=self.port.isBreakEnabled())
             )
-        self.__port.setDataBits(
+        self.port.setDataBits(
             settings.getint('serial_port_settings',
                             'data_bits',
-                            fallback=self.__port.dataBits())
+                            fallback=self.port.dataBits())
             )
-        self.__port.setDataTerminalReady(
+        self.port.setDataTerminalReady(
             settings.getboolean('serial_port_settings',
                                 'data_terminal_ready',
-                                fallback=self.__port.isDataTerminalReady())
+                                fallback=self.port.isDataTerminalReady())
             )
 
         try:
             setting = settings.get('serial_port_settings', 'flow_control')
         except (NoSectionError, NoOptionError):
-            flow_control = self.__port.flowControl()
+            flow_control = self.port.flowControl()
         else:
-            flow_control = getattr(self.__port, setting)
-        self.__port.setFlowControl(flow_control)
+            flow_control = getattr(self.port, setting)
+        self.port.setFlowControl(flow_control)
 
         try:
             setting = settings.get('serial_port_settings', 'parity')
         except (NoSectionError, NoOptionError):
-            parity = self.__port.parity()
+            parity = self.port.parity()
         else:
-            parity = getattr(self.__port, setting)
-        self.__port.setParity(parity)
+            parity = getattr(self.port, setting)
+        self.port.setParity(parity)
 
-        if flow_control is not self.__port.HardwareControl:
+        if flow_control is not self.port.HardwareControl:
             # Do the following only if not under HardwareControl,
             # otherwise the following causes UnsupportedOperationError
-            self.__port.setRequestToSend(
+            self.port.setRequestToSend(
                 settings.getboolean('serial_port_settings',
                                     'request_to_send',
-                                    fallback=self.__port.isRequestToSend())
+                                    fallback=self.port.isRequestToSend())
                 )
-        self.__port.setStopBits(
+        self.port.setStopBits(
             settings.getint('serial_port_settings',
                             'stop_bits',
-                            fallback=self.__port.stopBits())
+                            fallback=self.port.stopBits())
             )
 
     def __print_port_config(self):  # For debug
         """Print the configuration of an open port."""
         print(
-            f"### Serial port settings of {self.__port.portName()} ###",
-            f"baudRate: {self.__port.baudRate()}",
-            f"breakEnabled: {self.__port.isBreakEnabled()}",
-            f"dataBits: {self.__port.dataBits()}",
-            f"dataTerminalReady: {self.__port.isDataTerminalReady()}",
-            f"flowControl: {self.__port.flowControl()}",
-            f"parity: {self.__port.parity()}",
-            f"requestToSend: {self.__port.isRequestToSend()}",
-            f"stopBits: {self.__port.stopBits()}",
+            f"### Serial port settings of {self.port.portName()} ###",
+            f"baudRate: {self.port.baudRate()}",
+            f"breakEnabled: {self.port.isBreakEnabled()}",
+            f"dataBits: {self.port.dataBits()}",
+            f"dataTerminalReady: {self.port.isDataTerminalReady()}",
+            f"flowControl: {self.port.flowControl()}",
+            f"parity: {self.port.parity()}",
+            f"requestToSend: {self.port.isRequestToSend()}",
+            f"stopBits: {self.port.stopBits()}",
             sep='\n', end='\n\n'
             )
 
+    @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
         self.__init_errors.append(err)
 
+    @qtc.pyqtSlot()
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
 
-    @abstractmethod
-    def is_measure_command(self, command):                                      # TODO: not nice. Better say what this is used for (keep track of the time the message was sent).
-        """Returns true if the command sent is a
-        command that will return a measurement."""
-        return

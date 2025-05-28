@@ -14,15 +14,15 @@ __license__ = 'GPLv3+'
 
 from collections import defaultdict
 
-from matplotlib.cm import get_cmap
+from matplotlib import colormaps
 from matplotlib.lines import Line2D
 import numpy as np
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.basewidgets import MeasurementFigureCanvas as Canvas
-from viperleed.gui.measure.datapoints import DataPoints
-from viperleed.gui.measure.datapoints import QuantityInfo
+from viperleed.gui.measure.classes.datapoints import DataPoints
+from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.widgets.checkcombobox import CheckComboBox
 from viperleed.gui.widgetslib import AllGUIFonts
 
@@ -42,6 +42,10 @@ _MARKERS = (
     ('*', 'full'), ('*', 'none'),
     )
 
+_COLORS = (colormaps['Greys'], colormaps['Blues'],
+           colormaps['Oranges'], colormaps['Greens'],
+           colormaps['Purples'], colormaps['Reds'],)
+
 def _marker_style(marker, fill, color):
     """Return kwargs for Line2D given a marker and color."""
     empty = fill == 'none'
@@ -60,13 +64,11 @@ class MeasurementPlot(qtw.QWidget):
                        'no_data': qtw.QLabel("NO DATA")}
         self._glob = {'plot_lines': defaultdict(dict),}
         self.__markers = _MARKERS
-        self.__colors = (get_cmap('Greys'), get_cmap('Blues'),
-                         get_cmap('Oranges'), get_cmap('Greens'),
-                         get_cmap('Purples'), get_cmap('Reds'),)
         self.__ctrl_color = {}
         self.__data_points = None
         self.__canvas = Canvas()
 
+        self.setWindowTitle("Measurement data plot")
         self.__compose()
         self._ctrls['quantities'].check_changed.connect(self.plot_all_data)
 
@@ -79,7 +81,9 @@ class MeasurementPlot(qtw.QWidget):
     def data_points(self, data_points):
         """Set the data points to be plotted.
 
-        Setting also clears all axes.
+        Setting also clears all axes, leaving the selection
+        of plotted quantities unchanged. Call self.clear()
+        to untick all explicitly.
 
         Parameters
         ----------
@@ -98,7 +102,8 @@ class MeasurementPlot(qtw.QWidget):
                 "Expected a DataPoints object."
                 )
         self.__data_points = data_points
-        self.clear()
+        self.clear(uncheck_all=False)
+        self.plot_all_data()
 
     @property
     def lines(self):
@@ -110,13 +115,14 @@ class MeasurementPlot(qtw.QWidget):
         """Return plotted quantities."""
         return self._ctrls['quantities'].selected_quantities
 
-    def clear(self):
+    def clear(self, uncheck_all=True):
         """Clear the plot."""
         self.__canvas.ax.clear()
         self._glob['plot_lines'] = defaultdict(dict)
         self.__canvas.figure.tight_layout()
         self.__canvas.draw_idle()
-        self._ctrls['quantities'].uncheck_all()
+        if uncheck_all:
+            self._ctrls['quantities'].uncheck_all()
 
     def plot_all_data(self):
         """Plot data on the canvas for the first time.
@@ -132,10 +138,11 @@ class MeasurementPlot(qtw.QWidget):
         self.__canvas.ax.clear()
         self._glob['plot_lines'] = defaultdict(dict)
 
-        if self.data_points.is_time_resolved:
-            self.__plot_all_time_resolved_data()
-        else:
-            self.__plot_all_energy_resolved_data()
+        if self.plotted_quantities:
+            if self.data_points.is_time_resolved:
+                self.__plot_all_time_resolved_data()
+            else:
+                self.__plot_all_energy_resolved_data()
 
         self.__update_labels_and_legend()
         self.__canvas.draw_idle()
@@ -220,9 +227,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = {}
-        for color, ctrl in zip(self.__colors, data):
-            self.__ctrl_color[ctrl] = color
+        self.__ctrl_color = dict(zip(data, _COLORS))
 
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -250,9 +255,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = {}
-        for color, ctrl in zip(self.__colors, data):
-            self.__ctrl_color[ctrl] = color
+        self.__ctrl_color = dict(zip(data, _COLORS))
 
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -289,9 +292,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = {}                                                  # TODO: do we need this?
-        for color, ctrl in zip(self.__colors, data):
-            self.__ctrl_color[ctrl] = color
+        self.__ctrl_color = dict(zip(data, _COLORS))                      # TODO: do we need this?
 
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -320,9 +321,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = {}                                                  # TODO: do we need this?
-        for color, ctrl in zip(self.__colors, data):
-            self.__ctrl_color[ctrl] = color
+        self.__ctrl_color = dict(zip(data, _COLORS))                      # TODO: do we need this?
 
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -345,8 +344,8 @@ class MeasurementPlot(qtw.QWidget):
                 colors = self.__ctrl_color[ctrl](
                     np.linspace(0.2, 0.8, self.data_points.nr_steps_total)
                     )
-                color = colors[len(ctrl_data)-1]
-                style = _marker_style(*marker, color)
+                color_idx = (len(ctrl_data) - 1) // len(colors)
+                style = _marker_style(*marker, colors[color_idx])
                 # Enough to plot the last step for each
                 axes.plot(ctrl_times[-1], ctrl_data[-1], **style)
 

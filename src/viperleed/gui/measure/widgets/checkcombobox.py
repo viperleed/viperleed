@@ -1,6 +1,6 @@
 """Module checkcombobox of viperleed.gui.measure.widgets.
 
-Defines the CheckComboBox class that allows selecting multiple options.
+Defines the CheckComboBox class: a QComboBox with checkable items.
 """
 
 __authors__ = (
@@ -186,8 +186,8 @@ class CheckComboBox(qtw.QComboBox):
     def paintEvent(self, __event):       # pylint: disable=invalid-name
         """Render this combo box on screen.
 
-        Reimplement base-class behavior to display the list
-        of checked items in the 'header' line.
+        Override base-class behaviour to display the
+        list of checked items in the 'header' line.
 
         Returns
         -------

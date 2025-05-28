@@ -16,17 +16,25 @@ __created__ = '2021-07-12'
 __license__ = 'GPLv3+'
 
 from abc import abstractmethod
+from collections.abc import Sequence
+import operator
 
 import numpy as np
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera.imageprocess import ImageProcessInfo
 from viperleed.gui.measure.camera.imageprocess import ImageProcessor
 from viperleed.gui.measure.camera import badpixels
-from viperleed.gui.measure.classes.settings import NoSettingsError
-from viperleed.gui.measure.classes.settings import NotASequenceError
-from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
+from viperleed.gui.measure.classes import settings as _m_settings
+from viperleed.gui.measure.classes.abc import DeviceABC
+from viperleed.gui.measure.classes.abc import DeviceABCErrors
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.widgets.roieditor import ROIEditor
+from viperleed.gui.measure.widgets.pathselector import PathSelector
+from viperleed.gui.measure.widgets.spinboxes import InfIntSpinBox
+from viperleed.gui.measure.widgets.spinboxes import TolerantCommaSpinBox
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -40,49 +48,31 @@ from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 class CameraErrors(base.ViPErLEEDErrorEnum):
     """Data class for base camera errors."""
 
-    INVALID_SETTINGS = (200,
-                        "Invalid camera settings: Required settings "
-                        "{!r} missing or values inappropriate. "
-                        "Check configuration file.\n{}")
-    MISSING_SETTINGS = (201,
-                        "Camera cannot operate without settings. Load "
-                        "an appropriate settings file before proceeding.")
-    CAMERA_NOT_FOUND = (202,
-                        "Could not find camera {}.\nMake sure the camera is "
-                        "connected and has power. Try (re-)plugging it, and "
-                        "give the camera enough time to boot up.")
-    SETTINGS_MISMATCH = (203,
-                         "Different {} settings found in camera and "
-                         "configuration file: camera={}, settings={}.")
-    INVALID_SETTING_WITH_FALLBACK = (204,
-                                     "Invalid camera settings value {} for "
-                                     "setting {!r}. Using {} instead. Consider"
-                                     " fixing your configuration file.")
-    UNSUPPORTED_OPERATION = (205, "Cannot {} in {} mode. Switch mode before.")
-    BINNING_ROI_MISMATCH = (206,
-                            "Region of interest size ({} x {}) is incompatible"
-                            " with binning factor {}. Reducing region of "
-                            "interest to ({} x {}). A few pixels on the "
-                            "lower-right corner may be removed.")
-    UNSUPPORTED_WHILE_BUSY = (207, "Cannot {} while camera is busy.")
-    TIMEOUT = (208,   # Only in triggered mode
-               "No frames returned by camera {} in the last {} seconds. "
-               "Check that the camera is plugged in and powered. If it "
-               "is, try rebooting the camera.")
+    SETTINGS_MISMATCH = (200,
+                         'Different {} settings found in camera and '
+                         'configuration file: camera={}, settings={}.')
+    UNSUPPORTED_OPERATION = (201, 'Cannot {} in {} mode. Switch mode before.')
+    BINNING_ROI_MISMATCH = (202,
+                            'Region of interest size ({} x {}) is incompatible'
+                            ' with binning factor {}. Reducing region of '
+                            'interest to ({} x {}). A few pixels on the '
+                            'lower-right corner may be removed.')
+    UNSUPPORTED_WHILE_BUSY = (203, 'Cannot {} while camera is busy.')
+    TIMEOUT = (204,   # Only in triggered mode
+               'No frames returned by camera {} in the last {} seconds. '
+               'Check that the camera is plugged in and powered. If it '
+               'is, try rebooting the camera.')
 
 
-class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
+class CameraABC(DeviceABC):
     """Abstract base class for ViPErLEED cameras."""
-
-    camera_busy = qtc.pyqtSignal(bool)
-    error_occurred = qtc.pyqtSignal(tuple)
 
     # frame_ready should be emitted in any callback function that the
     # camera may call. If the camera does not allow to call a callback
-    # function, the reimplementation should take care of emitting a
-    # frame_ready signal as soon as a new frame arrives at the PC.
-    # Whenever this signal is emitted, the new frame will be processed
-    # (in a separate thread).
+    # function, the subclass should take care of emitting a frame_ready
+    # signal as soon as a new frame arrives at the PC. Whenever this
+    # signal is emitted, the new frame will be processed (in a separate
+    # thread).
     frame_ready = qtc.pyqtSignal(np.ndarray)
 
     # image_processed is emitted when operating in triggered mode
@@ -99,6 +89,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     started = qtc.pyqtSignal()
     stopped = qtc.pyqtSignal()
 
+    # camera_connected is emitted any time the camera is connected
+    # or disconnected. It carries the connection state. May be emitted
+    # multiple times with the same connection state.
+    camera_connected = qtc.pyqtSignal(bool)
+
     # preparing is emitted every time a camera begins (True)
     # or finishes (False) any pre-acquisition tasks.
     preparing = qtc.pyqtSignal(bool)
@@ -107,14 +102,14 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     # the processing thread
     __process_frame = qtc.pyqtSignal(np.ndarray)
 
-    _mandatory_settings = [
+    _mandatory_settings = (
             ('camera_settings', 'class_name'),
             ('camera_settings', 'device_name'),
             ('measurement_settings', 'exposure'),
-            ]
+            )
 
     # _abstract is a list of features for which setter and getter
-    # methods must always be reimplemented in concrete classes
+    # methods must always be overridden in concrete classes
     _abstract = ('exposure', 'gain', 'mode')
 
     # hardware_supported_features contains a list of feature names (as
@@ -157,11 +152,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         **kwargs : object
             Other unused keyword arguments.
         """
-        super().__init__(parent=parent)
+        super().__init__(settings=settings, parent=parent)
         self.driver = driver
-        self.__busy = False
         self.__connected = False
-        self.__settings = ViPErLEEDSettings()
         self.__bad_pixels = None
         self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
@@ -184,7 +177,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__process_thread = qtc.QThread()
         self.__retry_stop_timer = qtc.QTimer(parent=self)
         self.__retry_stop_timer.setSingleShot(True)
-        self.__retry_stop_timer.timeout.connect(self.__stop_now_or_retry)
+        self.__retry_stop_timer.timeout.connect(self.stop)
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(parent=self)
@@ -196,8 +189,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # Number of frames accumulated for averaging
         self.n_frames_done = 0
 
+        # Calibration tasks. See calibration_tasks property.
+        self.__calibration_tasks = {'bad_pixels': [], 'starting': []}
+
         try:
-            self.set_settings(settings)
+            self.set_settings(self._settings_to_load)
         except self.exceptions:
             # Start a short QTimer to report errors that occurred here
             # AFTER the whole __init__ is done, i.e., when we suppose
@@ -247,45 +243,43 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         min_bin, max_bin = self.get_binning_limits()
         if binning_factor < min_bin or binning_factor > max_bin:
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            f"{binning_factor} "
-                            f"[out of range ({min_bin}, {max_bin})]",
-                            'camera_settings/binning', 1)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                f'{binning_factor} '
+                f'[out of range ({min_bin}, {max_bin})]',
+                'camera_settings/binning', 1
+                )
             binning_factor = 1
             self.settings.set('camera_settings', 'binning', '1')
         self.__properties['binning'] = binning_factor
         return binning_factor
 
     @property
-    def busy(self):
-        """Return whether the camera is busy.
+    def calibration_tasks(self):
+        """Return a dictionary of CameraCalibrationTask for self.
+
+        If tasks are to be added, this should be done at runtime,
+        i.e., by extending this property! This ensures that all
+        the information is present in the camera by the time the
+        task is created.
 
         Returns
         -------
-        busy : bool
-            True if the camera is busy. A camera is to be considered
-            busy after a measurement started and until the last frame
-            requested arrived back to the PC.
+        tasks : dict
+            Keys can be used to discern when the task is to be
+            performed. Values are lists of CameraCalibrationTask
+            instances. Tasks are executed in order.
+            Typical keys are:
+                'bad_pixels'
+                    Tasks that should be executed before running
+                    the bad-pixels finding CameraCalibrationTask
+                'starting'
+                    Tasks to execute before completing a call to
+                    .start(). The camera will not emit .started
+                    until these tasks have been performed.
+                    CURRENTLY UNUSED.
         """
-        return self.__busy
-
-    @busy.setter
-    def busy(self, is_busy):
-        """Set the busy state of the camera.
-
-        If the busy state of the camera changes, the camera_busy
-        signal will be emitted, carrying the current busy state.
-
-        Emits
-        -----
-        camera_busy(self.busy)
-            If the busy state changes.
-        """
-        was_busy = self.busy
-        is_busy = bool(is_busy)
-        if was_busy is not is_busy:
-            self.__busy = is_busy
-            self.camera_busy.emit(self.busy)
+        return self.__calibration_tasks
 
     @property
     def connected(self):
@@ -301,6 +295,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return self.__connected
 
+    @connected.setter
+    def connected(self, is_connected):
+        """Set whether the camera is currently connected. For internal use."""
+        self.__connected = bool(is_connected)
+        self.camera_connected.emit(self.connected)
+
     @property
     @abstractmethod
     def exceptions(self):
@@ -309,7 +309,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Returns
         -------
         exceptions : tuple
-            Each element is a Exception subclass of exceptions
+            Each element is an Exception subclass of exceptions
             that the camera may raise in case internal driver
             errors occur.
         """
@@ -338,12 +338,33 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         min_exp, max_exp = self.get_exposure_limits()
         if exposure_time < min_exp or exposure_time > max_exp:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/exposure',
-                            f'Info: out of range ({min_exp}, {max_exp})')
+                            f'\nInfo: out of range ({min_exp}, {max_exp})')
             exposure_time = min_exp
         self.__properties['exposure'] = exposure_time
         return exposure_time
+
+    @property
+    @abstractmethod
+    def extra_delay(self):
+        """Return the interval spent not measuring when triggered (msec).
+
+        This quantity is used to judge how long the camera needs to
+        perform one acquisition in triggered mode. The time it takes
+        is typically
+            self.exposure + 1000/self.get_frame_rate()   # First frame
+            + (self.n_frames - 1) * self.frame_interval  # Other frames
+            + self.extra_delay
+        as implemented in self.time_to_image_ready
+
+        Returns
+        -------
+        extra_delay : float
+            Extra time in milliseconds required by the camera
+            to complete a triggering cycle.
+        """
+        return 0.0
 
     @property
     def frame_interval(self):
@@ -374,13 +395,18 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/gain',
-                            f'Info: out of range ({min_gain}, {max_gain})')
+                            f'\nInfo: out of range ({min_gain}, {max_gain})')
             gain = min_gain
             self.settings.set('measurement_settings', 'gain', str(gain))
         self.__properties['gain'] = gain
         return gain
+
+    @property
+    def has_valid_settings(self):
+        """Return whether self.settings is valid for this device."""
+        return bool(self.settings)
 
     @property
     @abstractmethod
@@ -431,8 +457,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                                  fallback='triggered')
 
         if mode not in ('live', 'triggered'):
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            mode, 'camera_settings/mode', 'triggered')
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                mode, 'camera_settings/mode', 'triggered'
+                )
             mode = 'triggered'
             self.settings.set('camera_settings', 'mode', mode)
         return mode
@@ -454,9 +482,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            f"{n_frames} [out of range ({min_n}, {max_n})]",
-                            'measurement_settings/n_frames', 1)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                f'{n_frames} [out of range ({min_n}, {max_n})]',
+                'measurement_settings/n_frames', 1
+                )
             n_frames = 1
             self.settings.set('measurement_settings', 'n_frames', '1')
         self.__properties['n_frames'] = n_frames
@@ -470,6 +500,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.settings['camera_settings']['device_name']
         """
         return self.settings.get('camera_settings', 'device_name')
+
+    @property
+    def name_clean(self):
+        """Return a version of .name suitable for file names."""
+        return base.as_valid_filename(self.name)
 
     @property
     def roi(self):
@@ -489,10 +524,19 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             roi_width, roi_height : int
                 Width and height of the region of interest in pixels
         """
+        # One special case: when the ROI setting is the empty
+        # string, attempt to get ROI info from the camera
+        if not self.settings.get('camera_settings', 'roi', fallback='_'):
+            roi = self.get_roi()
+            if roi:
+                self.settings.set('camera_settings', 'roi', str(roi))
+                self.settings.update_file()
+
         try:
+            # pylint: disable=redefined-variable-type  # pylint bug
             roi = self.settings.getsequence('camera_settings', 'roi',
                                             fallback=tuple())
-        except NotASequenceError:  # Invalid ROI string
+        except _m_settings.NotASequenceError:  # Invalid ROI string
             roi = tuple()
 
         try:
@@ -504,49 +548,23 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if _stored and _stored == roi:
             return roi
 
-        _, (max_w, max_h), _, (roi_dx, roi_dy) = self.get_roi_size_limits()
+        _, size_max, *_ = limits = self.get_roi_size_limits()
+        full_roi = 0, 0, *size_max
 
-        if not self.__is_valid_roi(roi):
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            'camera_settings/roi', 'Info: ROI is invalid.')
+        if not self.__is_valid_roi(roi, limits):
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'camera_settings/roi', '\nInfo: ROI is invalid. '
+                            f'You can use the full sensor: roi = {full_roi}')
             self.settings.set('camera_settings', 'roi', 'None')
-            return 0, 0, max_w, max_h
+            return full_roi
 
-        # See if the ROI position offsets fit the
-        # increments, and adjust if necessary
-        *roi_offsets, roi_w, roi_h = roi
-        roi_x, roi_y = roi_offsets
-        if roi_x % roi_dx or roi_y % roi_dy:
-            roi_offsets = ((roi_x // roi_dx) * roi_dx,
-                           (roi_y // roi_dy) * roi_dy)
-            new_roi = (*roi_offsets, roi_w, roi_h)
-            if not self.__is_valid_roi(roi):
-                base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                                'camera_settings/roi',
-                                f'Info: ROI {new_roi} is invalid after '
-                                'adjusting top-left corner position')
-                self.settings.set('camera_settings', 'roi', 'None')
-                return 0, 0, max_w, max_h
-            self.settings.set('camera_settings', 'roi', str(new_roi))
+        # Adjust the ROI position to fit increments, if necessary
+        roi = self.__adjust_roi_position(roi, limits)
+        if not roi:
+            return full_roi
 
-        # See if the ROI width and height fit with the binning factor
-        if roi_w % self.binning or roi_h % self.binning:
-            new_roi_w = (roi_w // self.binning) * self.binning
-            new_roi_h = (roi_h // self.binning) * self.binning
-            error = (CameraErrors.BINNING_ROI_MISMATCH,
-                     roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
-            if not self.__already_reported(error):
-                # base.emit_error(self, *error)                                 # TODO: make this a non-critical warning!
-                self.__reported_errors.add(error)
-            # Update the ROI in the settings only if the
-            # new ROI is a valid one for the camera. The
-            # image processor will anyway crop off the
-            # extra pixels on the lower-right corner of
-            # the image to apply binning.
-            new_roi = (*roi_offsets, new_roi_w, new_roi_h)
-            if self.__is_valid_roi(new_roi):
-                self.settings.set('camera_settings', 'roi', str(new_roi))
-                roi = new_roi
+        # Adjust ROI width and height to fit the binning factor
+        roi = self.__adjust_roi_size_to_bin(roi, limits)
         self.__properties['roi'] = roi
         return roi
 
@@ -556,7 +574,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         The base implementation relies on the results returned
         by .get_roi_size_limits(). This property should be
-        reimplemented if the sensor size is larger than the
+        overridden if the sensor size is larger than the
         largest ROI applicable.
 
         Returns
@@ -566,75 +584,72 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return self.get_roi_size_limits()[1]
 
-    @property
-    def settings(self):
-        """Return the settings used for the camera."""
-        return self.__settings
-
-    @settings.setter
-    def settings(self, new_settings):
-        """Set new settings for the camera."""
-        self.set_settings(new_settings)
-
     # .settings setter
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Set new settings for the camera.
 
         The new settings are accepted only if valid. Otherwise, the
         previous settings are kept. If valid, the settings are also
-        loaded to the camera hardware.
+        loaded to the camera hardware. It is important to ensure that
+        the camera is currently not waiting to for completion of an
+        image acquisition or image processing step, as this could
+        potentially stall the camera.
+
+        Returns
+        -------
+        settings_valid : bool
+            True if the new settings given were accepted.
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser
-            The new settings. The following sections/options
-            are mandatory:
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
+            Whatever can be used to create a ViPErLEEDSettings.
+            The following sections/options are mandatory:
             'camera_settings'/'class_name'
                 Name of the concrete class that implements
                 the abstract methods of CameraABC.
             'camera_settings'/'device_name'
                 Name of the device as it appears in the device
                 list (e.g., "DMK 33GX265").
-            'measurement_settings'/'camera_exposure'
+            'measurement_settings'/'exposure'
                 Exposure time in milliseconds to be used for
                 acquiring each frame.
         """
-        try:
-            new_settings = ViPErLEEDSettings.from_settings(new_settings)
-        except (ValueError, NoSettingsError):
-            base.emit_error(self, CameraErrors.MISSING_SETTINGS)
-            return
-
-        # Checking of non-mandatory data is done in property getters
-        invalid = new_settings.has_settings(*self._mandatory_settings)
-        if invalid:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            ', '.join(invalid), '')
-            return
-
-        # Keep track of the old ROI: will recalculate
-        # bad pixel coordinates if ROI changes
+        # Will recalculate bad pixel coordinates if ROI changes.
         old_roi = tuple()
         if self.settings:
-            old_roi = self.roi
+            try:
+                old_roi = self.roi
+            except self.exceptions:
+                pass
 
-        self.__settings = new_settings
-        if self.is_running:
-            self.stop()
-        self.close()
-        self.connect_()  # Also loads self.settings to camera
+        # Checking of non-mandatory data is done in property getters.
+        # The base-class implementation takes care of _mandatory_settings.
+        if not super().set_settings(new_settings):
+            return False
+
+        self.disconnect_()
+
+        if self.uses_default_settings:
+            # When loading from default settings, there's no point in           # TODO: should also clear bad pixels if present
+            # trying to connect: the device name is certainly wrong.
+            return True
+
+        self.connect_()  # Also loads self.settings to camera.
 
         if self.roi != old_roi and self.bad_pixels:
             self.bad_pixels.apply_roi()
+        return True
 
     @property
     @abstractmethod
     def supports_trigger_burst(self):
         """Return whether the camera allows triggering multiple frames.
 
-        This property should be reimplemented in concrete subclasses.
+        This property should be overridden in concrete subclasses.
         Should the camera support trigger burst, get_n_frames_limits
-        should also be reimplemented.
+        should also be overridden.
 
         Returns
         -------
@@ -643,6 +658,45 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             frames, i.e., only one 'trigger_now()' call is necessary to
             deliver all the frames needed.
         """
+        return False
+
+    @property
+    def time_to_image_ready(self):
+        """Return the ideal interval (msec) to fully acquire an image.
+
+        Returns
+        -------
+        time_to_image_ready : float
+            The time interval between when .trigger_now() is called
+            and when a full image is ready to be processed (i.e.,
+            the time needed to acquire all .n_frames). This is also
+            the time interval between when camera.busy == True (when
+            triggering) and when camera.busy == False again. This
+            attribute is an estimate.
+        """
+        exposure = self.exposure
+        frame_rate = self.get_frame_rate()
+
+        # Could use self.frame_interval, but we save one call
+        # to .get_frame_rate() by calculating it explicitly
+        interval = max(exposure, 1000/frame_rate)
+        return (exposure + 1000/frame_rate         # first frame
+                + interval * (self.n_frames - 1)   # all other frames
+                + self.extra_delay)
+
+    @staticmethod
+    def is_bad_pixels_error(error_info):
+        """Return whether error_info relates to 'bad pixels'."""
+        error_code, error_msg = error_info
+        try:
+            error = QObjectSettingsErrors.from_code(error_code)
+        except AttributeError:
+            return False
+
+        error_msg = error_msg.replace('_', ' ')
+        if (error is QObjectSettingsErrors.INVALID_SETTINGS
+                and 'bad pixel' in error_msg):
+            return True
         return False
 
     def check_loaded_settings(self):
@@ -668,7 +722,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         error_msg = []
         for setting, (in_config, getter) in to_check.items():
             in_device = getter()
-            if in_config != in_device:
+            if isinstance(in_config, str):
+                equal = operator.eq
+            elif isinstance(in_config, (Sequence, np.ndarray)):
+                equal = np.allclose
+            else:
+                equal = np.isclose
+            if not equal(in_config, in_device):
                 error_msg.append(
                     error_txt.format(setting, in_device, in_config)
                     )
@@ -694,42 +754,194 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def connect_(self):
         """Connect to the camera."""
         if not self.open():
-            base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
-            self.__connected = False
+            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
+            self.connected = False
             return
         self.load_camera_settings()
-        self.__connected = True
+        self.connected = True
 
     def disconnect_(self):
         """Disconnect the device."""
         self.__reported_errors = set()
         self.stop()
         self.close()
-        self.__connected = False
+        self.connected = False
+
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings.
+
+        This method can be extended in subclasses, i.e., do
+        handler = super().get_settings_handler(), and then add
+        appropriate sections and/or options to it using the
+        handler.add_section, and handler.add_option methods.
+
+        The base-class implementation returns a handler that
+        already contains the following settings:
+        - 'camera_settings'/'mode' (read-only, isolated option)
+        - 'measurement_settings'/'exposure'
+        - 'measurement_settings'/'gain'
+        - 'measurement_settings'/'n_frames'
+        - 'camera_settings'/'roi'
+        - 'camera_settings'/'binning'
+        - 'camera_settings'/'bad_pixel_path' (read-only)
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this controller to users.
+        """
+        handler = super().get_settings_handler()
+        handler.add_option('camera_settings', 'mode',
+                           handler_widget=qtw.QLabel,
+                           read_only=True)
+        handler.add_section('measurement_settings', display_name="Acquisition")
+        handler.add_section('camera_settings', display_name="Image Properties")
+
+        # pylint: disable=redefined-variable-type
+        # Triggered for _widget. While this is true, it clear what
+        # _widget is used for in each portion of filling the handler
+
+        # Exposure time in ms
+        _widget = TolerantCommaSpinBox()                                          # TODO: use prefix-adaptive widget
+        _widget.setRange(*self.get_exposure_limits())
+        _widget.setSuffix(" ms")
+        _widget.setStepType(_widget.AdaptiveDecimalStepType)
+        _widget.setSingleStep(5.0)
+        _widget.setAccelerated(True)
+        _tip = (
+            "<nobr>Exposure time used for each frame. For LEED\u2011IV "
+            "videos it is best</nobr> to choose the exposure time <b>as long "
+            "as possible while not causing the camera to saturate</b>. You "
+            "can find the best exposure time by (i) selecting the electron "
+            "energy where you have the maximum intensity of spot(s), and "
+            "(ii) change the exposure time to have close-to-saturated images"
+            )
+        handler.add_option('measurement_settings', 'exposure',
+                           handler_widget=_widget, tooltip=_tip)
+
+        # Gain in dB                                                            # TODO: add also a gain factor!
+        _widget = TolerantCommaSpinBox()
+        _widget.setRange(*self.get_gain_limits())
+        _widget.setSuffix(" dB")
+        _widget.setAccelerated(True)
+        _tip = (
+            "<nobr>ADC gain used for each frame. For LEED\u2011IV videos it "
+            "is</nobr> best to choose the gain <b>as small as possible</b>, "
+            "as larger gains <b>amplify noise</b>. Use a longer exposure time "
+            "(without causing saturation) rather than a larger gain"
+            )
+        handler.add_option('measurement_settings', 'gain',
+                           handler_widget=_widget, tooltip=_tip)
+
+        # n_frames
+        if self.get_n_frames():
+            _range = self.get_n_frames_limits()
+        else:
+            _range = (1, float('inf'))
+        _widget = InfIntSpinBox()
+        _widget.setRange(*_range)
+        _widget.setAccelerated(True)
+        _tip = (
+            "<nobr>Number of frames to be averaged for saving images.</nobr> "
+            "This is <b>used only in triggered mode</b> and not when snapping "
+            "an image. For LEED\u2011IV videos it is a good idea to choose "
+            "the number of frames such that acquiring images takes roughly "
+            "the same amount of time as measuring other quantities (e.g., I0)"
+            )
+        handler.add_option('measurement_settings', 'n_frames',
+                           handler_widget=_widget, tooltip=_tip,
+                           display_name="No. frames")
+
+        # ROI
+        _widget = ROIEditor()
+        size_min, size_max, _d_size, _d_offset = self.get_roi_size_limits()
+
+        # pylint: disable=no-value-for-parameter
+        # Seems a bug related to calling a function with variadic
+        # arguments when it has a signature without.
+        _widget.set_increments(*_d_offset, *_d_size)
+        # pylint: enable=no-value-for-parameter
+
+        _widget.set_ranges(size_min, size_max)
+        _widget.original_roi = self.roi
+        _widget.set_ = _widget.set_from_string
+        _widget.get_ = _widget.get_as_string
+        _widget.notify_ = _widget.roi_changed
+        _tip = (
+            "<nobr>Region of interest used to crop camera images.</nobr> "
+            "Since a LEED screen is circular, it is best to (i) place "
+            "the camera so that the <b>LEED screen fills most of the field "
+            "of view</b>, and (ii) crop the image to a <b>square-ish "
+            "shape.</b> This reduces file sizes and computation times."
+            )
+        handler.add_option('camera_settings', 'roi', handler_widget=_widget,
+                           display_name="ROI", label_alignment='bottom',
+                           tooltip=_tip)
+
+        # Binning factor                                                        # TODO: add a mention of the image size after processing. Also, add some warning if > 10
+        _widget = qtw.QSpinBox()
+        _widget.setRange(*self.get_binning_limits())
+        _tip = (
+            "<nobr>Binning factor used to reduce the size of images. Binning "
+            "consists</nobr> in averaging pixel intensities over a (bin "
+            "\u00d7 bin) mesh. It is best if images in LEED\u2011IV videos "
+            "are reduced to roughly 500\u2013600 pixels. This saves space and "
+            "makes data extraction faster, without compromising the quality"
+            )
+        handler.add_option('camera_settings', 'binning',
+                           handler_widget=_widget, tooltip=_tip)
+
+        # Bad pixels path + note on using Tools...
+        _tip = (
+            "<nobr>Path to folder containing bad\u2011pixels files. This "
+            "path</nobr> can be set while finding bad pixels <b>using the "
+            "Tools\u2011>Find bad pixels... menu</b>. Bad pixels are "
+            "particularly bright, dark, or noisy pixels that should be "
+            "corrected to improve data quality"
+            )
+        if not self.settings.has_option('camera_settings', 'bad_pixels_path'):
+            # We may ignore errors related to the bad-pixels path
+            self.settings['camera_settings']['bad_pixels_path'] = ''
+        handler.add_option('camera_settings', 'bad_pixels_path',
+                           handler_widget=PathSelector, read_only=True,
+                           tooltip=_tip)
+        return handler
 
     @abstractmethod
     def list_devices(self):
-        """Return a list of available device names.
+        """Return a list of available devices.
+
+        This method must return a list of SettingsInfo instances. The
+        SettingsInfo class is located in the classes.abc module. Each
+        camera is represented by a single SettingsInfo instance. The
+        SettingsInfo object contains the uninque device name and a dict
+        holding additional information about the device. If there is
+        no additional information about the camera, then this dict can
+        be empty. The information contained within a SettingsInfo must
+        be enough to determine a suitable settings file for the device
+        from it. Subclasses should raise a DefaultSettingsError if they
+        fail to create instances from the settings in the DEFAULTS_PATH.
 
         Returns
         -------
         devices : list
-            Each element is a string representing
-            the name of a camera device.
+            Each element is a SettingsInfo instance containing the
+            name of a camera and additional information as a dict.
         """
         return
 
     def load_camera_settings(self):
         """Load settings from self.settings into the camera.
 
-        This method should only be reimplemented if the order in which
+        This method should only be overridden if the order in which
         setter-method calls are performed is inappropriate. The default
         order of the calls is:
             set_exposure(),  set_gain(),  set_mode()
             <setters associated to self.hardware_supported_features>
             [set_binning()], [set_n_frames()], [set_roi()]
         The last 3 are called only if they are not hardware-supported.
-        Should the method be reimplemented, the reimplementation should
+        Should the method be overridden, the new implementation should
         call self.check_loaded_settings() at the end, to verify that
         the settings have been correctly loaded.
 
@@ -759,8 +971,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         time .connect_() is called. If the device is already open,
         the method should return True, and typically do nothing.
 
-        The reimplementation can use self.name to access the device
-        name for this camera.
+        Subclasses can use self.name to access the device name for
+        this camera.
 
         Returns
         -------
@@ -769,6 +981,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return False
 
+    @qtc.pyqtSlot()
     def update_bad_pixels(self):
         """Update the list of bad pixels from the settings.
 
@@ -780,25 +993,26 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         Emits
         -----
-        error_occurred(CameraErrors.INVALID_SETTINGS)
+        error_occurred(QObjectSettingsErrors.INVALID_SETTINGS)
             If settings file does not have a 'bad_pixels_path' option
             in section 'camera_settings'.
-        error_occurred(CameraErrors.INVALID_SETTINGS)
+        error_occurred(QObjectSettingsErrors.INVALID_SETTINGS)
             If the path specified does not contain a valid bad-pixels
             file for this camera.
         """
         bad_pix_path = self.settings.get("camera_settings", "bad_pixels_path",
                                          fallback='')
         if not bad_pix_path:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
-                            'Info: No bad_pixel_path found.')
+                            '\nInfo: No bad_pixels_path found.')
             return
         try:
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            'camera_settings/bad_pixels_path', f'Info: {err}')
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'camera_settings/bad_pixels_path',
+                            f'\nInfo: {err}')
             return
         self.__bad_pixels.apply_roi()
 
@@ -806,7 +1020,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_binning(self):
         """Return the binning factor internally used for averaging.
 
-        This method should be reimplemented to query the camera for the
+        This method should be overridden to query the camera for the
         current number of pixels used internally for binning. Binning
         is done on a (binning_factor x binning_factor) mesh. Make sure
         to self.open() before querying the camera.
@@ -824,7 +1038,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_binning(self, no_binning=False):
         """Define binning factor for images.
 
-        Do not reimplement this method, unless the camera internally
+        Do not override this method, unless the camera internally
         supports binning.  Make sure to self.open() before setting.
 
         Parameters
@@ -837,13 +1051,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         ------
         NotImplementedError
-            If this method is not reimplemented for a camera
+            If this method is not overridden for a camera
             that natively supports binning.
         """
         if self.get_binning():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports binning, "
-                "but self.set_binning() was not reimplemented."
+                "but self.set_binning() was not overridden."
                 )
         binning_factor = 1 if no_binning else self.binning
         self.process_info.binning = binning_factor
@@ -851,7 +1065,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_binning_limits(self):
         """Return the minimum and maximum value for binning.
 
-        This method should be reimplemented only if the camera
+        This method should be overridden only if the camera
         internally supports binning. Make sure to self.open()
         before querying the camera.
 
@@ -868,13 +1082,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         ------
         NotImplementedError
-            If this method is not reimplemented for a camera
+            If this method is not overridden for a camera
             that natively supports binning.
         """
         if self.get_binning():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports binning, "
-                "but self.get_binning_limits() was not reimplemented."
+                "but self.get_binning_limits() was not overridden."
                 )
         min_binning = 1
         _, (max_roi_w, max_roi_h), *_ = self.get_roi_size_limits()
@@ -898,13 +1112,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_exposure(self):
         """Set the exposure time for one frame.
 
-        This method must be reimplemented to call the internal driver
+        This method must be overridden to call the internal driver
         function that sets the appropriate exposure time in the camera
         device. Make sure to self.open() before setting.
 
-        The reimplementation must use the exposure time (in
-        milliseconds) returned by self.exposure (i.e., the one
-        in self.settings).
+        Subclasses must use the exposure time (in milliseconds) that
+        self.exposure returns (i.e., the one in self.settings).
 
         Returns
         -------
@@ -929,7 +1142,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_frame_rate(self):
         """Return the number of frames delivered per second.
 
-        This property should be reimplemented in concrete subclasses.
+        This property should be overridden in concrete subclasses.
 
         Notice that this quantity is unrelated to 1000/self.exposure.
         If self.exposure/1000 is larger than 1/frame_rate, frames are
@@ -961,12 +1174,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_gain(self):
         """Set the gain of the camera in decibel.
 
-        This method must be reimplemented to call the internal driver
+        This method must be overridden to call the internal driver
         function that sets the appropriate gain in the camera device.
         Make sure to self.open() before setting.
 
-        The reimplementation must use the gain factor (in decibel)
-        returned by self.gain (i.e., the one in self.settings).
+        Subclasses must use the gain factor (in decibel) returned
+        by self.gain (i.e., the one in self.settings).
         """
         return
 
@@ -987,7 +1200,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_mode(self):
         """Return the mode set in the camera.
 
-        This method should be reimplemented to query the camera for the
+        This method should be overridden to query the camera for the
         current mode, and return the appropriate string. Make sure to
         self.open() before querying the camera.
 
@@ -1009,7 +1222,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_mode(self):
         """Set the camera mode from self.settings.
 
-        This method should be reimplemented to instruct the camera
+        This method should be overridden to instruct the camera
         to switch to a desired mode, which must be retrieved with
         self.mode from the settings. Make sure to self.open() before
         setting.
@@ -1027,7 +1240,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_n_frames(self):
         """Return the number of frames internally used for averaging.
 
-        This method should be reimplemented to query the camera
+        This method should be overridden to query the camera
         for the current number of frames internally used for
         averaging. Make sure to self.open() before querying.
 
@@ -1035,34 +1248,34 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         n_frames : int
             Number of frames used for averaging. Returns 0 if the
-            camera does not support internally frame averaging.
+            camera does not internally support frame averaging.
         """
         return 0
 
     def set_n_frames(self):
         """Set the number of frames internally used for averaging.
 
-        This method should be reimplemented to instruct the camera
-        to use self.n_frames frames for averaging internally, before
-        returning the image. Make sure to self.open() before setting.
+        This method should be overridden to instruct the camera to use
+        self.n_frames frames for averaging internally, before returning
+        the image. Make sure to self.open() before setting.
 
         Should the camera not natively support frame averaging, this
-        method should not be reimplemented, as frame averaging will
-        be done via software during image processing.
+        method should not be overridden, as frame averaging will be
+        done via software during image processing.
         """
         if self.get_n_frames():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports frame "
-                "averaging, but self.set_n_frames() was not reimplemented"
+                "averaging, but self.set_n_frames() was not overridden"
                 )
         self.process_info.n_frames = self.n_frames
 
     def get_n_frames_limits(self):
         """Return the minimum and maximum number of frames supported.
 
-        This method should be reimplemented only if the camera
-        internally supports frame averaging. Make sure to .open()
-        before querying the camera.
+        This method should be overridden only if the camera
+        internally supports frame averaging. Make sure to
+        .open() before querying the camera.
 
         Returns
         -------
@@ -1072,19 +1285,19 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         ------
         NotImplementedError
-            If this method is not reimplemented for cameras that
+            If this method is not overridden for cameras that
             natively support averaging over multiple frames, or
             for those that natively support a trigger-burst mode
         """
         if self.get_n_frames():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports frame averaging,"
-                " but self.get_n_frames_limits() was not reimplemented"
+                " but self.get_n_frames_limits() was not overridden"
                 )
         if self.supports_trigger_burst:
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports trigger burst, "
-                "but self.get_n_frames_limits() was not reimplemented"
+                "but self.get_n_frames_limits() was not overridden"
                 )
         return 1, np.inf
 
@@ -1092,7 +1305,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_roi(self):
         """Return the region of interest set in the camera.
 
-        This method should be reimplemented in concrete subclasses to
+        This method should be overridden in concrete subclasses to
         query the camera for the current settings of the region of
         interest. Make sure to self.open() before querying the camera
 
@@ -1115,12 +1328,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_roi(self, no_roi=False):
         """Set up region of interest in the camera.
 
-        This method should be reimplemented only if the camera natively
+        This method should be overridden only if the camera natively
         supports setting a region of interest at the hardware level.
-        The reimplementation must retrieve the ROI information using
-        self.roi. Make sure to .open() before setting.
+        Subclasses must retrieve the ROI information using self.roi.
+        Make sure to .open() before setting.
 
-        If the camera does not support setting internally a ROI, the
+        If the camera does not internally support setting a ROI, then
         the ROI setting is used to crop the frames during processing.
 
         Parameters
@@ -1132,13 +1345,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         -------
         NotImplementedError
-            If this method is not reimplemented when the camera
+            If this method is not overridden when the camera
             natively supports applying a region of interest.
         """
         if self.get_roi():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports setting a "
-                "region of interest, but self.set_roi() was not reimplemented"
+                "region of interest, but self.set_roi() was not overridden"
                 )
         roi = tuple() if no_roi else self.roi
         self.process_info.roi = roi
@@ -1147,7 +1360,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_roi_size_limits(self):
         """Return minimum, maximum and granularity of the ROI.
 
-        This method must be reimplemented in concrete subclasses.
+        This method must be overridden in concrete subclasses.
         Typically it would return (1, 1) for the minimum ROI,
         (sensor_width, sensor_height) for the maximum ROI, and
         (1, 1) for the minimum increments. Make sure to .open()
@@ -1215,13 +1428,17 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         return
 
     @abstractmethod
+    @qtc.pyqtSlot()
+    @qtc.pyqtSlot(object)
     def start(self, *_):
         """Start the camera.
 
         The camera is started in the mode returned by self.mode.
 
         This method should be extended in concrete subclasses, i.e.,
-        super().start() must be called in the reimplementation.
+        super().start() must be called in the reimplementation. The
+        reimplementation must self.started.emit() after the driver
+        has been appropriately started.
 
         Returns
         -------
@@ -1242,16 +1459,16 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Warn if exposure settings are somewhat stupid
         frame_interval = self.frame_interval
-        if self.exposure < frame_interval:
+        if self.exposure < frame_interval - 0.1:
             print(                                                              # TODO: should become a non-fatal warning
                 f"WARNING: Exposure ({self.exposure} ms) of camera "
                 f"{self.name} is shorter than the time it takes to "
                 f"deliver frames ({frame_interval:.2f} ms). Increase "
                 "the exposure time to avoid wasting time."
                 )
-        self.started.emit()
 
     @abstractmethod
+    @qtc.pyqtSlot()
     def stop(self):
         """Stop the camera.
 
@@ -1261,32 +1478,67 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Once the camera has effectively stopped, the .stopped()
         signal is emitted.
 
-        This method should be extended in concrete subclasses, i.e.,
-        super().stop() must be called in the reimplementation.
+        This method should be extended in concrete subclasses. The
+        pattern of the extended method must be of the form:
+            if not super().stop():
+                return False
+            ... actually stop self.driver ...
+            self.stopped.emit()
+            return True
+
+        Notice that the base implementation DOES NOT EMIT .stopped().
 
         Returns
         -------
-        None.
+        stopped : bool
+            True if the call led to stopping the camera. False if
+            the camera was not running, or if it cannot be stopped
+            yet because some frames are missing.
         """
-        self.__stop_now_or_retry()
+        if not self.is_running:
+            return False
+
+        # Delay the stopping as long as there are image
+        # processors that have not finished their tasks,
+        # i.e., we are still waiting for some frames, or
+        # waiting for images to be processed and saved.
+        if (self.__process_thread.isRunning()
+                and any(p.busy for p in self.__image_processors)):
+            if not self.__retry_stop_timer.isActive():
+                self.__retry_stop_timer.start(100)
+            return False
+
+        # Now it is safe to clean up and stop
+        self.__retry_stop_timer.stop()
+        self.__timeout.stop()
+        self.process_info.clear_times()
+        self.n_frames_done = 0
+        self.busy = False
+        if self.__process_thread.isRunning():
+            self.__process_thread.quit()
+        base.safe_disconnect(self.frame_ready, self.__on_frame_ready)
+        return True
 
     @abstractmethod
+    @qtc.pyqtSlot()
     def trigger_now(self):
         """Start acquiring one (or more) frames now.
 
-        This method should be reimplemented in concrete subclasses
-        to signal the camera that acquisition of one (or multiple)
+        This method should be extended in concrete subclasses to
+        signal the camera that acquisition of one (or multiple)
         frames should start now.
 
-        The reimplementation must call super().trigger_now() before,
-        as this will emit an error_occurred if the camera mode is
-        inappropriate (i.e., the camera is not in triggered mode).
-        It will set the camera to busy and set n_frames_done to 0
-        as well.
+        Subclasses should proceed only if super().trigger_now()
+        is True. The base-class implementation will (i) emit an
+        error_occurred if the camera mode is inappropriate (i.e.,
+        the camera is not in triggered mode); (ii) mark the camera
+        as busy, (iii) reset n_frames_done to zero, and (iv) start
+        a timeout timer.
 
         Returns
         -------
-        None
+        successfully_triggered : bool
+            True if the camera was successfully triggered.
 
         Emits
         -----
@@ -1295,7 +1547,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if self.mode != 'triggered':
             base.emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
                             'trigger', 'live')
-            return
+            return False
         self.busy = True
 
         if self.supports_trigger_burst:
@@ -1303,15 +1555,63 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Start the timeout timer: will fire if it takes
         # more than 5 s longer than the expected time to
-        # receive all frames needed for averaging.
-        # The correct time interval would be
-        #         exposure + 1/frame_rate
-        #        + (n_frames - 1) * self.frame_interval
-        # with .frame_interval == max(exposure, 1/frame_rate).
-        # However, we don't need to be super precise here,
-        # and we can overestimate the interval to:
-        frames_time = (self.n_frames + 1) * self.frame_interval
-        self.__timeout.start(int(frames_time + 5000))
+        # receive all frames needed for averaging
+        self.__timeout.start(int(self.time_to_image_ready + 5000))
+        return True
+
+    def __adjust_roi_position(self, roi, limits):
+        """Check and adjust the position in roi fits the increments."""
+        pos_increments = limits[-1]
+        *roi_pos, roi_w, roi_h = roi
+        if not any(p % i for p, i in zip(roi_pos, pos_increments)):
+            # Offsets are OK
+            return roi
+
+        # Offsets are not OK. Let's try to fix them.
+        roi_pos = ((p // i) * i for p, i in zip(roi_pos, pos_increments))
+        roi = (*roi_pos, roi_w, roi_h)
+        if self.__is_valid_roi(roi, limits):
+            # Successfully adjusted
+            self.settings.set('camera_settings', 'roi', str(roi))
+            return roi
+
+        base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                        'camera_settings/roi',
+                        f'\nInfo: ROI {roi} is invalid after '
+                        'adjusting top-left corner position')
+        self.settings.set('camera_settings', 'roi', 'None')
+        return None
+
+    def __adjust_roi_size_to_bin(self, roi, limits):
+        """Check and adjust roi width/height to fit bin size."""
+        _bin = self.binning
+        if _bin == 1:  # Nothing to check. Will always be OK
+            return roi
+
+        *roi_offsets, roi_w, roi_h = roi
+        if not (roi_w % _bin or roi_h % _bin):
+            # Fits binning
+            return roi
+
+        # Does not fit. Fix it, if possible, otherwise
+        # let the image processor take care of this
+        new_roi_w, new_roi_h = ((s // _bin) * _bin for s in (roi_w, roi_h))
+        error = (CameraErrors.BINNING_ROI_MISMATCH,
+                 roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
+        if not self.__already_reported(error):
+            # base.emit_error(self, *error)                                     # TODO: make this a non-critical warning!
+            self.__reported_errors.add(error)
+
+        # Update the ROI in the settings only if the
+        # new ROI is a valid one for the camera. The
+        # image processor will anyway crop off the
+        # extra pixels on the lower-right corner of
+        # the image to apply binning.
+        new_roi = (*roi_offsets, new_roi_w, new_roi_h)
+        if self.__is_valid_roi(new_roi, limits):
+            self.settings.set('camera_settings', 'roi', str(new_roi))
+            roi = new_roi
+        return roi
 
     def __already_reported(self, error_details):
         """Return whether an error was already reported.
@@ -1327,36 +1627,50 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return error_details in self.__reported_errors
 
-    def __is_valid_roi(self, roi):
+    def __is_valid_roi(self, roi, limits):
         """Check that ROI is OK and fits with limits.
 
         Parameters
         ----------
         roi : tuple
             The region of interest to be checked
+        limits : tuple
+            Limits for ROI, used for the check. Elements are
+            2-tuples with the following meaning: size_min,
+            size_max, size_delta, pos_delta. pos_delta is
+            not used here.
 
         Returns
         -------
         roi_OK : bool
-            True if roi is a valid ROI and if it fits in the limits.
+            True if roi is a valid ROI and if it fits limits.
         """
         if not roi:
             return False
         if len(roi) != 4:
             return False
-        roi_x, roi_y, roi_w, roi_h = roi
-        ((min_w, min_h),
-         (max_w, max_h),
-         (d_w, d_h),
-          _) = self.get_roi_size_limits()
+        pos, size = roi[:2], roi[2:]
+        size_min, size_max, size_delta, _ = limits
 
-        roi_outside = (roi_x < 0 or roi_y < 0
-                       or roi_x + roi_w > max_w
-                       or roi_y + roi_h > max_h)
-        roi_small = roi_w < min_w or roi_h < min_h
-        roi_not_multiple = roi_w % d_w or roi_h % d_h
+        roi_outside = any(p < 0 or p + s > s_max
+                          for p, s, s_max in zip(pos, size, size_max))
+        roi_small = any(s < s_min for s, s_min in zip(size, size_min))
+        roi_not_multiple = any(
+            (s - s_min) % d
+            for s, s_min, d in zip(size, size_min, size_delta)
+            )
         return not (roi_outside or roi_small or roi_not_multiple)
 
+    @qtc.pyqtSlot()
+    def __on_all_frames_done(self):
+        """Disconnect the current processor to prevent duplicate processing."""
+        processor = self.sender()
+        if processor:
+            # Disconnect the sender processor to prevent
+            # double processing of the next frame (issue #122)
+            base.safe_disconnect(self.__process_frame, processor.process_frame)
+
+    @qtc.pyqtSlot(np.ndarray)
     def __on_frame_ready(self, image):
         """React to receiving a new frame from the camera.
 
@@ -1375,10 +1689,17 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             # In live mode, the frames will be handled by the GUI
             return
 
-        if self.n_frames_done == 0:  # pylint: disable=compare-to-zero
+        if not self.busy:
+            # Some frames arrived, but we haven't asked for them:
+            # we should be busy if we are in triggered mode and
+            # went through self.trigger_now()
+            return
+
+        if not self.n_frames_done:
             processor = ImageProcessor()
             processor.image_processed.connect(self.image_processed)
             processor.image_saved.connect(self.__on_image_saved)
+            processor.all_frames_acquired.connect(self.__on_all_frames_done)
             self.__process_thread.finished.connect(processor.deleteLater)
             self.__process_frame.connect(processor.process_frame)
             processor.prepare_to_process(self.process_info.copy(), image)
@@ -1407,9 +1728,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """React to an image being saved."""
         processor = self.sender()
         if processor:
-            # Disconnect the sender processor to prevent
-            # duplicate processing of the next frame
-            base.safe_disconnect(self.__process_frame, processor.process_frame)
             try:
                 self.__image_processors.remove(processor)
             except ValueError:
@@ -1420,38 +1738,19 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if fpath:
             self.image_saved.emit(fpath)
 
+    @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
         self.__init_errors.append(err)
 
+    @qtc.pyqtSlot()
     def __on_timed_out(self):
         """Report a timeout error while in triggered mode."""
         base.emit_error(self, CameraErrors.TIMEOUT, self.name, 5)
 
+    @qtc.pyqtSlot()
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
-
-    def __stop_now_or_retry(self):
-        """Stop camera if image processing is over."""
-        # Delay the stopping as long as there are image
-        # processors that have not finished their tasks
-        if (self.is_running
-            and self.__process_thread.isRunning()
-                and any(p.busy for p in self.__image_processors)):
-            if not self.__retry_stop_timer.isActive():
-                self.__retry_stop_timer.start(100)
-            return
-
-        # Now it is safe to clean up and stop
-        self.__retry_stop_timer.stop()
-        self.__timeout.stop()
-        self.process_info.clear_times()
-        self.n_frames_done = 0
-        self.busy = False
-        if self.__process_thread.isRunning():
-            self.__process_thread.quit()
-        base.safe_disconnect(self.frame_ready, self.__on_frame_ready)
-        self.stopped.emit()

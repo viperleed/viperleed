@@ -2,7 +2,9 @@
 
 This module defines the ViPErLEEDSettings class, a ConfigParser
 subclass used to read/write and handle configurations for hardware
-equipment and measurements.
+equipment and measurements. It also defines the SystemSettings
+subclass of ViPErLEEDSettings, a singleton providing thread-safe
+access to system settings.
 """
 
 __authors__ = (
@@ -21,21 +23,23 @@ from configparser import MissingSectionHeaderError
 from configparser import SectionProxy
 from collections import defaultdict
 from collections.abc import Sequence
+import copy
 import os
 from pathlib import Path
 import sys
 
-from viperleed import gui as gl
+from wrapt import synchronized  # thread-safety decorator
 
+from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.gui.measure.widgets.pathselector import PathSelector
+
+
+# TODO: not nice. Also, there's two places where the _defaults
+# path is used. Here and in hardwarebase. However, due to circular
+# imports I cannot use either for the other one. Probably better
+# to move the path in __init__?
 _MEASURE_PATH = Path(__file__).parent.parent
 SYSTEM_CONFIG_PATH = _MEASURE_PATH / "_defaults" / "_system_settings.ini"
-
-
-def get_system_config():                                                        # TODO: move to hardwarebase?
-    """Return a ConfigParser loaded with system settings."""
-    config = ConfigParser()
-    config.read(SYSTEM_CONFIG_PATH)
-    return config
 
 
 def _interpolate_config_path(filenames):
@@ -52,7 +56,12 @@ def _interpolate_config_path(filenames):
         File names to be interpolated. The interpolation is
         done in-place.
     """
-    cfg = get_system_config()
+    # NB: the next lines should NOT use SystemSettings, as
+    # _interpolate_config_path is used in ViPErLEEDSettings,
+    # the ancestor of SystemSettings. This leads to infinite
+    # recursion.
+    cfg = ConfigParser()
+    cfg.read(SYSTEM_CONFIG_PATH)
     _sys_path = cfg.get('PATHS', 'configuration', fallback=None)
     if not _sys_path:
         return
@@ -67,26 +76,38 @@ def _interpolate_config_path(filenames):
             filenames[i] = fname.replace("__CONFIG__", _sys_path)
 
 
-class MissingSettingsFileError(Exception):
+class SettingsError(Exception):
+    """Base exception for all settings-related errors."""
+
+
+class DefaultSettingsError(SettingsError):
+    """Exception raised when the default settings are corrupted."""
+
+
+class MissingSettingsFileError(SettingsError):
     """Exception raised when failed to read settings file(s)."""
 
 
-class NoSettingsError(Exception):
+class NoSettingsError(SettingsError):
     """Exception raised when failed to read settings file(s)."""
 
 
-class NoDefaultSettingsError(Exception):
+class NoDefaultSettingsError(DefaultSettingsError):
     """Exception raised when no default settings file was found."""
 
 
-class NotASequenceError(Exception):
+class NotASequenceError(SettingsError):
     """Exception raised when getsequence fails to return a sequence."""
+
+
+class TooManyDefaultSettingsError(DefaultSettingsError):
+    """Exception raised when too many default settings files were found."""
 
 
 class ViPErLEEDSettings(ConfigParser):
     """Class for read/write and handling ViPErLEED settings.
 
-    The class rememebers the path to the last file read, which
+    The class remembers the path to the last file read, which
     can be updated by calling .update_file(), and remembers all
     the comments, which are rewritten to file right below each
     section header.
@@ -100,14 +121,14 @@ class ViPErLEEDSettings(ConfigParser):
     * strict : fixed to True
     * interpolate_paths : bool, optional
         New keyword-only argument used while reading. If True,
-        the parser will try to replace an intial "__CONFIG__"
+        the parser will try to replace an initial "__CONFIG__"
         in the path(s) to be read with the default path of the
         configuration files found in the system-wide settings.
         Defaults to True
     """
 
     def __init__(self, *args, **kwargs):
-        """Init instance with custom defaults."""
+        """Initialize instance with custom defaults."""
         # ConfigParser has 3 positional-or-keyword arguments. We
         # want to set the third (allow_no_value) always to True.
         args = args[:2]  # skip positional allow_no_value
@@ -135,20 +156,19 @@ class ViPErLEEDSettings(ConfigParser):
         self.__last_file = ""
         self.__base_dir = ""
 
-    @classmethod  # too-complex
-    def from_settings(cls, settings, find_from=None):
+    def __str__(self):
+        """Return a simple string representation of self."""
+        return str(self.as_dict())
+
+    @classmethod
+    def from_settings(cls, settings):
         """Return a ViPErLEEDSettings from the settings passed.
 
         Parameters
         ----------
-        settings : str or os.PathLike or ViPErLEEDSettings or None
-            The settings to load from. If settings is None,
-            find_from will be used to search for a default settings.
+        settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
+            The settings to load from.
             If a ViPErLEEDSettings, no copy is made.
-        find_from : str or None, optional
-            The string to look for in a configuration file to
-            be loaded and returned. If None, no search will be
-            performed.
 
         Returns
         -------
@@ -158,21 +178,15 @@ class ViPErLEEDSettings(ConfigParser):
         Raises
         ------
         ValueError
-            If settings is not a ViPErLEEDSettings, it is
-            False-y and find_from is False-y.
+            If there are no settings to create a ViPErLEEDSettings from.
         NoSettingsError
-            If settings is invalid and find_from was not given.
-        NoDefaultSettingsError
-            If settings is invalid, and looking for default settings
-            failed.
+            If settings is invalid.
         """
-        if settings is None and not find_from:
-            raise ValueError(f"{cls.__name__}: cannot create from nothing.")
+        if not settings:
+            raise ValueError(f'{cls.__name__}: cannot create from nothing.')
+
         if isinstance(settings, cls):
             return settings
-
-        if not settings and not find_from:
-            raise ValueError(f"{cls.__name__}: cannot create from nothing.")
 
         config = cls()
         if isinstance(settings, (dict, ConfigParser)):
@@ -181,30 +195,10 @@ class ViPErLEEDSettings(ConfigParser):
 
         try:
             config.read(settings)
-        except (TypeError, MissingSettingsFileError):
-            pass
-        else:
-            return config
-
-        if not find_from:
-            raise NoSettingsError(
-                f"{cls.__name__}: could not load settings, and "
-                "no find_from was provided to look for a default."
-                )
-
-        # Failed to read from settings. Try with find_from.
-        get_cfg = gl.measure.hardwarebase.get_device_config
-        settings = get_cfg(find_from, prompt_if_invalid=False)
-        if settings:
-            try:
-                config.read(settings)
-            except MissingSettingsFileError:
-                pass
-            else:
-                return config
-        raise NoDefaultSettingsError(
-            f"{cls.__name__}: could not find (or load) a suitable default."
-            )
+        except (TypeError, MissingSettingsFileError) as exc:
+            raise NoSettingsError(f'{cls.__name__}: could not '
+                                  'load settings.') from exc
+        return config
 
     def __bool__(self):
         """Return True if there is any section."""
@@ -229,6 +223,10 @@ class ViPErLEEDSettings(ConfigParser):
     def last_file(self):
         """Return the path to the last file read."""
         return self.__last_file
+
+    def as_dict(self):
+        """Return a dictionary version of self."""
+        return {sec_name: dict(sec) for sec_name, sec in self.items()}
 
     def getsequence(self, section, option, *, fallback=_UNSET, **kwargs):
         """Return a section/option as a sequence."""
@@ -269,6 +267,8 @@ class ViPErLEEDSettings(ConfigParser):
         -------
         invalid_settings : list
             Invalid required_settings of self as a list of strings.
+            Each entry can be either '<section>', '<section>/<option>',
+            or '<section>/<option> not one of <value1>, <value2>, ...'
 
         Raises
         ------
@@ -276,9 +276,6 @@ class ViPErLEEDSettings(ConfigParser):
             If required_settings contains invalid data (i.e., one
             of the entries is not a Sequence with length <= 3).
         """
-        if not self:
-            return required_settings
-
         invalid_settings = []
         for setting in required_settings:
             if not setting or len(setting) > 3:
@@ -306,14 +303,13 @@ class ViPErLEEDSettings(ConfigParser):
                         "/".join(setting[:2])
                         + " not one of " + ", ".join(admissible_values)
                         )
-
         return invalid_settings
 
     def read(self, filenames, encoding=None):
         """Read and parse a filename or an iterable of filenames.
 
         This extension of the ConfigParser implementation stores
-        the file name of the last succesfully read-in file.
+        the file name of the last successfully read-in file.
         Differently from the base implementation, it also complains
         if any of the files to be read was not.
 
@@ -362,6 +358,16 @@ class ViPErLEEDSettings(ConfigParser):
                 ', '.join(missing)
                 )
         return read_ok
+
+    def read_again(self):
+        """Read once more the last file, returning True if successful."""
+        if not self.last_file or not self.last_file.exists():
+            return False
+        try:
+            self.read(self.last_file)
+        except MissingSettingsFileError:
+            return False
+        return True
 
     def read_file(self, f, source=None):
         """Read from a file-like object."""
@@ -419,7 +425,7 @@ class ViPErLEEDSettings(ConfigParser):
     # The code below is essentially a (simplified) copy of the
     # one in the configparser standard library for RawConfigParser.
     def _read(self, fp, fpname):
-        """Reimplement to preserve comments."""
+        """Override original to preserve comments."""
         elements_added = set()
         cursect = None                        # None, or a dictionary
         sectname = None
@@ -511,7 +517,7 @@ class ViPErLEEDSettings(ConfigParser):
     # pylint: enable=too-many-branches,too-many-statements
 
     def _write_section(self, fp, section_name, section_items, delimiter):
-        """Write a single section to the specified `fp'."""
+        """Write a single section to the specified 'fp'."""
         # Header
         fp.write(f"[{section_name}]\n")
 
@@ -539,7 +545,7 @@ class ViPErLEEDSettings(ConfigParser):
         Parameters
         ----------
         line : str
-            The line to be checked an stored
+            The line to be checked and stored
         sectname : str or None
             The name of the section where the comment appeared.
             None if the line appears before any section header.
@@ -556,3 +562,153 @@ class ViPErLEEDSettings(ConfigParser):
                     self.__comments[sectname].append(line)
                 return True
         return False
+
+
+@synchronized
+class SystemSettings(ViPErLEEDSettings):
+    """A thread-safe singleton for accessing/editing system settings.
+
+    Deep-copy is possible, but will return a ViPErLEEDSettings instance
+    with a copy of all the system settings at the time of copying.
+    """
+
+    __instance = None
+    __non_null = (
+        ('PATHS', 'configuration'),
+        ('PATHS', 'measurements'),
+        )
+
+    # __mandatory can later be extended as __non_null + (...)
+    # Can also decide to add depending on the Version of viperleed
+    __mandatory = __non_null
+
+    # __non_mandatory entries are settings that can be added, but
+    # that are not enforced. They should be used if the setting is
+    # only required by a part of the package that is not essential
+    # for it's core functionality.
+    __non_mandatory = (
+        ('PATHS', 'arduino_cli'),
+        ('PATHS', 'firmware'),
+        )
+
+    def __new__(cls, *args, **kwargs):
+        """Return an uninitialized instance of cls."""
+        if cls.__instance is None:
+            new_instance = super().__new__(cls, *args, **kwargs)
+            new_instance._initialized = False
+            cls.__instance = new_instance
+        return cls.__instance
+
+    def __deepcopy__(self, memo):
+        """Return a ViPErLEEDSettings with the same contents as self."""
+        fake_copy = ViPErLEEDSettings()
+        fake_copy.read_dict(self)
+        return copy.deepcopy(fake_copy, memo)
+
+    def __init__(self, *args, **kwargs):
+        """Initialize instance once."""
+        if self._initialized:  # pylint: disable=no-member
+            return
+        super().__init__(*args, **kwargs)
+        self.__handler = None
+
+        self.read(SYSTEM_CONFIG_PATH)
+        self.__check_mandatory_settings()
+
+    @property
+    def paths(self):
+        """Return the 'PATHS' section of self."""
+        return self['PATHS']
+
+    @property
+    def valid(self):
+        """Return whether all settings are valid."""
+        return all(self[sec][opt] for sec, opt in self.__non_null)
+
+    @property
+    def settings(self):
+        """Return self."""
+        return self
+
+    def get_settings_handler(self):
+        """Return a SettingsHandler instance for displaying self."""
+        if self.__handler is not None:
+            return self.__handler
+
+        handler = self.__handler = SettingsHandler(self)
+        handler.make_from_config()
+
+        # Add some informative text to the entries
+        _infos = (
+        ('PATHS', 'configuration',
+         '<nobr>This is the directory that contains all the</nobr> '
+         'configuration files for your devices and measurements. '
+         'It must be set before you can run any measurement.'),
+        ('PATHS', 'measurements',
+         '<nobr>This is the default folder where all your</nobr> '
+         'measurements will be automatically saved. IN THE FUTURE '
+         'you will be able to decide if you want to be asked each '
+         'time a measurement starts.'),
+        ('PATHS', 'arduino_cli',
+         '<nobr>This is the folder in which the Arduino</nobr> '
+         'command-line interface is installed.'),
+        ('PATHS', 'firmware',
+         '<nobr>This is the folder containing archives with</nobr> '
+         'firmware for ViPErLEED controllers.'),
+
+        )
+        for section, option, info in _infos:
+            handler[section][option].set_info_text(info)
+
+        # Make sure the PATHS are "PathSelector"s even with empty fields
+        for option in handler['PATHS'].values():
+            if not isinstance(option.handler_widget, PathSelector):
+                option.handler_widget = PathSelector(select_file=False)
+
+        # Make it clear which settings are mandatory by
+        # adding a '*' at the beginning of the label text
+        for section, option in self.__mandatory:
+            label = handler[section][option].label
+            unstarred_name = label.text()
+            if unstarred_name.startswith('* '):
+                continue
+            label.setText('* ' + unstarred_name)
+
+        return self.__handler
+
+    def __check_mandatory_settings(self):
+        """Check, and possibly add missing settings.
+
+        Missing, non-null settings are added as empty strings.
+
+        Raises
+        ------
+        RuntimeError
+            If any mandatory setting is missing (after potentially
+            filling the non-null ones)
+        """
+        invalid = self.has_settings(*self.__non_null, *self.__non_mandatory)
+
+        # We're missing settings. Let's add them back...
+        for missing in invalid:
+            section, option = missing.split('/')
+            if section not in self:
+                self.add_section(section)
+            self.set(section, option, '')
+
+        if invalid:
+            # ...and save changes
+            if self.last_file:
+                self.update_file()
+            else:
+                # We even do not have a system settings file
+                self.write(SYSTEM_CONFIG_PATH)
+
+        # Now check all those that must be there
+        missing = self.has_settings(*self.__mandatory)
+        if missing:
+            raise RuntimeError(
+                f"System settings file at {SYSTEM_CONFIG_PATH} is "
+                "missing the following mandatory sections/options: "
+                "; ".join(missing)
+                )

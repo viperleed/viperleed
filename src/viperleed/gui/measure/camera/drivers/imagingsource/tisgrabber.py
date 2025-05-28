@@ -24,12 +24,11 @@ __license__ = 'GPLv3+'
 # considering that the WindowsCamera class already exceeds the 1000
 # lines limit.
 
-from enum import Enum
+from enum import IntEnum
 from ctypes import CFUNCTYPE
 from ctypes import POINTER
 from ctypes import Structure as CStructure
-from ctypes import WinDLL
-from ctypes import cast as c_cast,
+from ctypes import cast as c_cast
 from ctypes import c_char
 from ctypes import c_char_p
 from ctypes import c_float
@@ -38,7 +37,8 @@ from ctypes import c_long
 from ctypes import c_ubyte
 from ctypes import c_ulong
 from ctypes import c_void_p
-from ctypes import py_object,
+from ctypes import py_object
+from ctypes import windll
 import os
 from pathlib import Path
 import sys
@@ -59,12 +59,12 @@ from viperleed.gui.measure.camera.drivers.imagingsource.properties import (
 from viperleed.gui.measure.camera.drivers.imagingsource.models import ISModels
 
 
-dll_path = Path(__file__).parent.resolve()
+dll_path = Path(__file__).resolve().parent
 try:
     os.add_dll_directory(dll_path)
 except AttributeError:
     pass
-sys.path.append(dll_path)
+sys.path.append(str(dll_path))
 
 
 c_float_p = POINTER(c_float)
@@ -101,13 +101,13 @@ def _to_bytes(string):
                     "Expected, 'str', 'bytes', or 'bytearray")
 
 
-class SinkFormat(Enum):
+class SinkFormat(IntEnum):
     """Available video formats for Imaging Source cameras."""
 
     Y800 = 0      # Monochrome 1-byte;    top-left
     RGB24 = 1     # 3 bytes: B G R;       top-left
     RGB32 = 2     # 4 bytes: B G R alpha; top-left; alpha unused == 0
-    UYVY = 3      # 4-bytes color;        top-left; see fourcc.org;
+    UYVY = 3      # 4-bytes color;        top-left
     Y16 = 4       # Monochrome 2-bytes;   top-left
     NONE = 5      # Used only as return value to signal 'invalid'
     MEGA = 65536  # Guard for max enum value, i.e., 2**sizeof(int)
@@ -158,6 +158,22 @@ class SinkFormat(Enum):
         return sink_format
 
     @property
+    def display_name(self):
+        """Return a descriptive name for this format."""
+        if self.n_colors == 1:
+            return f"{8*self.n_bytes:d}-bit monochrome"
+        _map = {SinkFormat.RGB24: "RGB color (8-bits)",
+                SinkFormat.RGB32: "RGB+alpha color (8-bits)",
+                SinkFormat.UYVY: "UYVY color"}
+        try:
+            return _map[self]
+        except KeyError:
+            raise ImagingSourceError(
+                f"Format {self} does not have a display_name.",
+                err_code=DLLReturns.INVALID_SINK_FORMAT
+                ) from None
+
+    @property
     def n_colors(self):
         """Return the number of color channels for a format."""
         if self.name.startswith('Y'):
@@ -188,8 +204,7 @@ class SinkFormat(Enum):
         raise ValueError(f"No green channel for {self.name} format.")
 
 
-
-class StreamMode(Enum):
+class StreamMode(IntEnum):
     """Enum for setting the stream mode of the camera.
 
     Attributes
@@ -248,9 +263,11 @@ class WindowsCamera:
     # omitted below where this is the case.
 
     if sys.maxsize > 2**32:
-        _dll = WinDLL("tisgrabber_x64.dll")
+        windll.LoadLibrary(str(dll_path / "TIS_UDSHL11_x64.dll"))
+        _dll = windll.LoadLibrary(str(dll_path / "tisgrabber_x64.dll"))
     else:
-        _dll = WinDLL("tisgrabber.dll")
+        windll.LoadLibrary(str(dll_path / "TIS_UDSHL11.dll"))
+        _dll = windll.LoadLibrary(str(dll_path / "tisgrabber.dll"))
 
     __initalized = False
 
@@ -267,7 +284,8 @@ class WindowsCamera:
         # device, and takes a while to retrieve the first time.
         self.__video_fmt_info = {'min_w': None, 'min_h': None,
                                  'max_w': None, 'max_h': None,
-                                 'd_w': None, 'd_h': None}
+                                 'd_w': None, 'd_h': None,
+                                 'types': None}
         self.__model = ''
 
     @classmethod
@@ -454,7 +472,7 @@ class WindowsCamera:
 
     @gain.setter
     def gain(self, new_gain):
-        """Set gain to new_gain (in decibel)."""
+        """Set a new gain in decibel."""
         self.set_vcd_property("Gain", "Value", new_gain, method=float)
 
     _dll_get_image_description = _dll.IC_GetImageDescription
@@ -525,7 +543,7 @@ class WindowsCamera:
 
     @property
     def is_running(self):
-        """Returns whether the camera is currently running."""
+        """Return whether the camera is currently running."""
         return bool(self._dll_is_running(self.__handle))
 
     _dll_get_sink_format = _dll.IC_GetFormat
@@ -701,16 +719,22 @@ class WindowsCamera:
         if not self.__video_fmt_info['min_w']:
             widths = []
             heights = []
+            types = set()
             for vid_fmt in self.__default_video_formats:
                 # formats are of the form "<type> (wxh)"
-                vid_fmt = vid_fmt.split()[1].replace('(','').replace(')','')
+                fmt_type, vid_fmt = vid_fmt.split()
+                vid_fmt = vid_fmt.replace('(','').replace(')','')
                 width, height = vid_fmt.split('x')
                 widths.append(int(width))
                 heights.append(int(height))
+                types.add(fmt_type)
             self.__video_fmt_info['min_w'] = min(widths)
             self.__video_fmt_info['min_h'] = min(heights)
             self.__video_fmt_info['max_w'] = max(widths)
             self.__video_fmt_info['max_h'] = max(heights)
+            self.__video_fmt_info['types'] = sorted(
+                SinkFormat.get(t) for t in types
+                )
         return (self.__video_fmt_info['min_w'], self.__video_fmt_info['min_h'],
                 self.__video_fmt_info['max_w'], self.__video_fmt_info['max_h'])
 
@@ -765,6 +789,14 @@ class WindowsCamera:
         width = self._dll_video_format_width(self.__handle)
         height = self._dll_video_format_height(self.__handle)
         return width, height
+
+    @property
+    def video_formats_available(self):
+        """Return a list of available SinkFormat for this camera."""
+        if self.__video_fmt_info['types'] is None:
+            # No video_format_shape_range was never called.
+            _ = self.video_format_shape_range
+        return  self.__video_fmt_info['types']
 
     def abort_trigger_burst(self):
         """Abort frame delivery."""
@@ -1039,7 +1071,6 @@ class WindowsCamera:
 
     _dll_stop_live = _dll.IC_StopLive
     _dll_stop_live.argtypes = (GrabberHandlePtr,)
-    _dll_stop_live.errcheck = check_dll_return()
 
     def stop(self):
         """Stop the camera."""
@@ -1524,9 +1555,18 @@ class WindowsCamera:
 
         Raises
         ------
+        ImagingSourceError
+            If this method is called but the device is not open.
         ValueError
             If the element/interface cannot be picked univocally.
         """
+        if not self.vcd_properties:
+            # Device is not open
+            raise ImagingSourceError(
+                "Cannot access properties when camera is not open",
+                err_code=DLLReturns.NO_DEVICE
+                )
+
         # Get the property
         vcd_prop = self.vcd_properties.get(prop_name, None)
         if vcd_prop is None:
@@ -1635,7 +1675,12 @@ class WindowsCamera:
             The unique name of the device. An empty string in case of
             failure.
         """
-        name = self._dll_unique_name_from_index(index)
+        try:
+            name = self._dll_unique_name_from_index(index)
+        except ImagingSourceError as err:
+            # Probably some fuckup with the index.
+            print(f"IS driver warning: {err}. index={index} self.__n_devices={self.__n_devices}")    # TODO: remove this
+            name = None
         if name is not None:
             return name.decode()
         return ''

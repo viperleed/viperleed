@@ -96,6 +96,7 @@ class CameraProperty(Enum):
 
 class VideoProperty(Enum):
     """Class holding possible video properties."""
+
     BRIGHTNESS = 0
     CONTRAST = 1
     HUE = 2

@@ -1,7 +1,7 @@
 """Module winerrors of viperleed.gui.measure.camera.drivers.imagingsource.
 
-Defines functionality to catch errors as return values of the
-tisgrabber C code.
+Contains definitions useful for identifying errors reported by
+Imaging Source cameras when used with the windows .dll library.
 """
 
 __authors__ = (
@@ -207,7 +207,7 @@ class DLLReturns(tuple, Enum):
     # like it actually is not.
     @property
     def value(self):
-        """Reimplement .value to return only the numeric code."""
+        """Override .value to return only the numeric code."""
         return self[0]
     # pylint: enable=invalid-overridden-method
 

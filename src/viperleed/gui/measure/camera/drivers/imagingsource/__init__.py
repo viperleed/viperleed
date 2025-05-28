@@ -11,18 +11,21 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-12'
 __license__ = 'GPLv3+'
 
-import os
+import sys
+
+if not sys.platform.startswith('win'):
+    # TODO: it would be better to have a custom exception for this,
+    # but we should first remove the various __init__ imports in
+    # gui. When we do have a custom exception, we should also fix
+    # the except block in camera.__init__.
+    raise ImportError('Imaging Source cameras are currently '
+                      'unsupported on non-Windows platforms.')
+
 from viperleed.gui.measure.camera.drivers.imagingsource.tisgrabber import (
     FrameReadyCallbackType,
     SinkFormat,
-    WindowsCamera,
+    WindowsCamera as ISCamera,
     )
 from viperleed.gui.measure.camera.drivers.imagingsource.winerrors import (
     ImagingSourceError,
     )
-
-if 'nt' in os.name:
-    ISCamera = WindowsCamera
-else:
-    raise EnvironmentError("Imaging Source cameras are unsupported on "
-                           "non-Windows platforms.")

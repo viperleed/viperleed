@@ -1,4 +1,4 @@
-"""Module models of viperleed.measure.camera.drivers.imagingsource.
+"""Module models of viperleed.gui.measure.camera.drivers.imagingsource.
 
 Contains useful data relative to specific camera models
 currently fabricated by The Imaging Source.
@@ -19,6 +19,8 @@ from enum import Enum
 
 class _Sensors(Enum):
     """Camera sensors. For now only dynamic range in bits is stored."""
+
+    IMX546 = (12,)
     IMX267 = (12,)
     IMX304 = (12,)
     ICX618 = (12,)
@@ -57,14 +59,16 @@ class _Sensors(Enum):
 
 class ISModels(Enum):
     """Available model numbers for Imaging Source cameras."""
+
     # pylint: disable=invalid-name
     # The invalid-name would be issued for camera models
     # that contain the small "e" (PoE models). Easier to
     # disable the invalid-name in this case than rewriting
     # the attribute getter for the class.
 
+    DMK_33GX546 = _Sensors.IMX546
     DMK_38GX267 = _Sensors.IMX267
-    DMK_38GX304	= _Sensors.IMX304
+    DMK_38GX304 = _Sensors.IMX304
     DMK_33G618 = _Sensors.ICX618
     DMK_33GX287 = _Sensors.IMX287
     DMK_33GV024 = _Sensors.MT9V024

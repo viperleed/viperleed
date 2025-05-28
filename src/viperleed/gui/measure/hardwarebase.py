@@ -3,7 +3,6 @@
 This module contains utility functions and classes shared
 by multiple ViPErLEED hardware objects.
 """
-
 __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Dörr (@FlorianDoerr)',
@@ -12,20 +11,24 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-08'
 __license__ = 'GPLv3+'
 
-from abc import ABCMeta
 import enum
 import inspect
 from pathlib import Path
+import re
 import sys
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui import measure as vpr_measure
+from viperleed.gui.dialogs.dropdowndialog import DropdownDialog
+from viperleed.gui.dialogs.errors import DialogDismissedError
+from viperleed.gui.measure.classes.settings import NoSettingsError
 
-
-DEFAULTS_PATH = (Path(inspect.getfile(vpr_measure)).parent                      # TODO: get it from system settings
-                 / '_defaults')
+# TODO: not nice. Also, there's two places where the _defaults
+# path is used. Here and in classes.settings. However, due to circular
+# imports I cannot use either for the other one. Probably better
+# to move the path in __init__?
+DEFAULTS_PATH = Path(__file__).parent / '_defaults'
 
 
 ################################## FUNCTIONS ##################################
@@ -92,6 +95,12 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
     ValueError
         If error is not a 2-element tuple
     """
+    try:
+        sender.parent()
+    except RuntimeError:
+        # C++ QObject deleted
+        return
+
     if not hasattr(sender, 'error_occurred'):
         raise TypeError(f"Object {sender} has no error_occurred signal "
                         "to emit. Probably an inappropriate type")
@@ -112,94 +121,243 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
     sender.error_occurred.emit((error_code, error_msg))
 
 
-def get_device_config(device_name, directory=DEFAULTS_PATH,
-                      prompt_if_invalid=True, parent_widget=None):
-    """Return the configuration file for a specific device.
+_W_DASH_DOT_RE = re.compile(r'[^-\w.]')
+_MULTI_DASH_RE = re.compile(r'[-]+')
+_MULTI_UNDERSCORE_RE = re.compile(r'[_]+')
 
-    Only configuration files with a .ini suffix are considered.
+def as_valid_filename(name):
+    """Return a valid filename from name."""
+    # - Spaces to underscores;
+    # - Keep alphanumeric, dashes, underscores, dots;
+    # - Keep ASCII only
+    # - Replace multiple dashes/underscores with singles;
+    # - Remove dashes/underscores from the ends;
+    fname = name.replace(' ', '_')
+    fname = _W_DASH_DOT_RE.sub('', fname)
+    fname = fname.encode('ascii', 'ignore').decode('ascii')
+    fname = _MULTI_DASH_RE.sub('-', fname)
+    return _MULTI_UNDERSCORE_RE.sub('_', fname).strip('-_')
 
-    Parameters
-    ----------
-    device_name : str
-        String to be looked up in the configuration files
-        to identify that a file is meant for the device.
-    directory : str or Path, optional
-        The base of the directory tree in which the
-        configuration file should be looked for. The
-        search is recursive. Default is the path to
-        the _defaults drectory.
-    prompt_if_invalid : bool, optional
-        In case the search for a config file failed, pop up
-        a dialog asking the user for input. The search is
-        considered failed in case no config file was found,
-        or if multiple config files matched the criterion.
-        Defaul is True.
-    parent_widget : QWidget or None, optional
-        The parent widget of the pop up. Unless parent_widget
-        is None, the pop up will be blocking user events for
-        parent_widget till the user closes it. Used only
-        if prompt_if_invalid is True. Default is None.
+
+_MATCH_SQUARES = re.compile(r'(\[)(\[*(?:[^\[\]]*|\[[^\]]*\])*\]*)(\])')
+# All capture groups appear in re.split
+# (\[)                 # open bracket capture group
+# (                    # capture group
+#     \[*              # maybe an open bracket
+#     (?:              # maybe a non-capture group containing
+#         [^\[\]]*     # any except '[' ']'
+#         |            # or
+#         \[           # an open bracket,
+#         [^\]]*       # anything that is not a closed bracket
+#         \]           # a closed bracket
+#     )*
+#     \]*              # maybe a closed bracket
+# )
+# (\])                 # closed bracket capture group
+
+def device_name_re(name):
+    """Return a re.Pattern object that matches name tolerantly.
 
     Returns
     -------
-    path_to_config : Path or None
-        The path to the only configuration file succesfully
-        found. None if no configuraiton file was found (either
-        because prompt_if_invalid is False, or because the
-        user dismissed the pop-up).
+    pattern : re.Pattern
+        A compiled regular expression to use for matching a name
+        tolerantly. The regular expression will match <text> if:
+        (1) <text> contains exactly name, (2) <text> contains name
+        with its square brackets removed, (3) <text> contains name,
+        but possibly misses parts of name included in square brackets;
+        the text in brackets may be missing, or may be different;
+        (4) <text> may contain parts in between square brackets
+        where there are spaces in name, if name does not contain any
+        quare bracket.
+
+        Matching only occurs toward the end of <text>, apart from an
+        arbitrary numbers of spaces
     """
-    directory = Path(directory)
-    config_files = [f for f in directory.glob('**/*')
-                    if f.is_file() and f.suffix == '.ini']
-    device_config_files = []
-    for config_name in config_files:
-        with open(config_name, 'r', encoding='utf-8') as config_file:
-            if device_name in config_file.read():
-                device_config_files.append(config_name)
+    # (1) Match exactly
+    _patterns = [re.escape(name)]
+
+    # Now things depend on whether we have '[' in name:
+    if '[' not in name:
+        # Allow for squares to appear anywhere where there is a space
+        _patterns.append(re.escape(name).replace('\\ ', '\\ (\\[.*\\]\\ )?'))
+    else:
+        # (2) Same as name, apart from '[' or ']' characters
+        _patterns.append(re.escape(name.replace('[', '').replace(']', '')))
+        # (3) All parts in name, but possibly excluding those in squares
+        #     This is a bit more involved as we want to replace only
+        #     outer square brackets with an optional capture group, which
+        #     can capture any character. The group can appear zero or once.
+        #     Moreover, we need to escape all characters out of the group,
+        #     and replace ' ' with ' ?' in case parts are missing.
+        _pattern3 = []
+        _in_brackets = False
+        _space = re.escape(' ')
+        for part in _MATCH_SQUARES.split(name):
+            if not part:
+                continue
+            if not _in_brackets and part not in '[]':
+                _pattern3.append(re.escape(part).replace(_space, _space + '?'))
+            elif _in_brackets and part != ']':
+                _pattern3.append(f"({_MATCH_SQUARES.pattern})?")
+            if part == '[':
+                _in_brackets = True
+            elif part == ']':
+                _in_brackets = False
+        _patterns.append(''.join(_pattern3))
+    # All patterns should match towards the end of the line,
+    # and can have any characters before
+    return re.compile('|'.join(rf'^\s*{p}\s*$' for p in _patterns))
+
+
+def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
+    """Return a device config when it was not found in the original path.
+
+    This function is only called as part of get_object_settings
+    in case no settings file was found with the original arguments
+    given to get_object_settings. Prompts the user for an action.
+
+    Parameters
+    ----------
+    obj_cls : type
+        The class of the object to get settings for.
+    obj_info : SettingsInfo
+        This SettingsInfo is necessary to determine the correct
+        settings. How exactly is up to the implementation of
+        find_matching_settings_files in obj_cls.
+    **kwargs : dict
+        The same arguments given to get_object_settings. See
+        help(get_object_settings) for more information.
+
+    Returns
+    -------
+    path_to_config : Path
+        The path to the only settings file successfully found or the
+        file that has been selected by the user.
+
+    Raises
+    ------
+    DialogDismissedError
+        If no settings file was found and an alternative option was
+        given as a third_btn_text parameter, but the user anyway
+        dismissed the dialog.
+    NoSettingsError
+        If no settings file was found and no alternative option was
+        given.
+    """
+    parent_widget = kwargs.get("parent_widget", None)
+    directory = kwargs.get("directory", DEFAULTS_PATH)
+    third_btn_text = kwargs.get("third_btn_text", "")
+
+    obj_name = obj_info.unique_name
+    msg_box = qtw.QMessageBox(parent=parent_widget)
+    msg_box.setWindowTitle("No settings file found")
+    msg = (f'Directory {directory} and its subfolders do not contain '
+           f'any settings file for device {obj_name}. Select a '
+           'different directory.')
+    if third_btn_text:
+        msg += f' Alternatively, you can {third_btn_text.lower()}.'
+    msg_box.setText(msg)
+    msg_box.setIcon(msg_box.Warning)
+    btn = msg_box.addButton("Select path", msg_box.ActionRole)
+    third_btn = None
+    if third_btn_text:
+        third_btn = msg_box.addButton(third_btn_text, msg_box.AcceptRole)
+    msg_box.addButton(msg_box.Cancel)
+    msg_box.exec_()
+    msg_box.setParent(None)  # py garbage collector will take care
+    _clicked = msg_box.clickedButton()
+    if _clicked is btn:
+        new_path = qtw.QFileDialog.getExistingDirectory(
+            parent=parent_widget,
+            caption="Choose directory of device settings",
+            directory=str(directory),
+            )
+        if new_path:
+            kwargs["directory"] = new_path
+            return get_object_settings(obj_cls, obj_info, **kwargs)
+    if third_btn and _clicked is not third_btn:
+        # User had another option but dismissed the dialog
+        raise DialogDismissedError('Failed to get device settings.')
+    raise NoSettingsError('Failed to get device settings.')
+
+
+def get_object_settings(obj_cls, obj_info, **kwargs):
+    """Return the settings file for a specific device.
+
+    Only settings files with a .ini suffix are considered.
+    This function must be executed in the main GUI thread.
+
+    Parameters
+    ----------
+    obj_cls : type
+        The class of the object to get settings for.
+    obj_info : SettingsInfo
+        This SettingsInfo is necessary to determine the correct
+        settings. How exactly is up to the implementation of
+        find_matching_settings_files in obj_cls.
+    **kwargs : dict, optional
+        directory : str or Path, optional
+            The base of the directory tree in which the settings file
+            should be looked for. The search is recursive. Default is
+            the path to the _defaults directory.
+        match_exactly : bool, optional
+            Whether settings in obj_info should be looked up exactly
+            or not. What this entails is up to the implementation of
+            obj_cls.find_matching_settings_files. Default is False.
+        parent_widget : QWidget or None, optional
+            The parent widget of the pop up. Unless parent_widget
+            is None, the pop up will be blocking user events for
+            parent_widget till the user closes it. Default is None.
+        third_btn_text : str, optional
+            If given and not empty, the string is used as the text
+            for an extra button with "accept role" in the did-not-
+            find-a-config case. Default is an empty string.
+
+    Returns
+    -------
+    path_to_config : Path
+        The path to the only settings file successfully found or the
+        file that has been selected by the user.
+
+    Raises
+    ------
+    DialogDismissedError
+        If no settings file was found and an alternative option was
+        given as a third_btn_text parameter, but the user anyway
+        dismissed the dialog.
+    NoSettingsError
+        If no settings file was found and no alternative option was
+        given, or if multiple files were found but the user did not
+        pick one.
+    """
+    directory = kwargs.get('directory', DEFAULTS_PATH)
+    match_exactly = kwargs.get('match_exactly', False)
+    parent_widget = kwargs.get('parent_widget', None)
+
+    device_config_files = obj_cls.find_matching_settings_files(
+        obj_info, directory, match_exactly,
+        )
 
     if device_config_files and len(device_config_files) == 1:
-        # Found exactly one config file
+        # Found exactly one config file.
         return device_config_files[0]
 
-    if not prompt_if_invalid:
-        return None
-
-    if not device_config_files:
-        msg_box = qtw.QMessageBox(parent=parent_widget)
-        msg_box.setWindowTitle("No settings file found")
-        msg_box.setText(
-            f"Directory {directory} and its subfolders do not contain "
-            f"any settings file for device {device_name}. Select "
-            "a different directory."
+    if device_config_files:
+        # Found multiple config files that match.
+        # Let the user pick which one to use.
+        names = [f.name for f in device_config_files]
+        dropdown = DropdownDialog(
+            "Found multiple settings files",
+            "Found multiple settings files for "
+            f"{obj_info.unique_name} in {directory} and subfolders.\n"
+            "Select which one should be used:",
+            names, parent=parent_widget
             )
-        msg_box.setIcon(msg_box.Critical)
-        msg_box.addButton(msg_box.Cancel)
-        btn = msg_box.addButton("Select path", msg_box.ActionRole)
-        msg_box.exec_()
-        if msg_box.clickedButton() is btn:
-            new_path = qtw.QFileDialog.getExistingDirectory(
-                parent=parent_widget,
-                caption="Choose directory of device settings",
-                directory=str(directory)
-                )
-            if new_path:
-                return get_device_config(device_name, directory=new_path)
-        return None
-
-    # Found multiple config files that match.
-    # Let the use pick which one to use
-    names = [f.name for f in device_config_files]
-    dropdown = vpr_measure.dialogs.DropdownDialog(
-        "Found multiple settings files",
-        "Found multiple settings files for device "
-        f"{device_name} in {directory} and subfolders.\n"
-        "Select which one should be used:",
-        names, parent=parent_widget
-        )
-    config = None
-    if dropdown.exec_() == dropdown.Apply:
-        config = device_config_files[names.index(dropdown.selection)]
-    return config
+        if dropdown.exec_() == dropdown.Apply:
+            return device_config_files[names.index(dropdown.selection)]
+        raise NoSettingsError('Multiple setting files found. None selected.')
+    return _get_object_settings_not_found(obj_cls, obj_info, **kwargs)
 
 
 def get_devices(package):
@@ -219,14 +377,16 @@ def get_devices(package):
     -------
     devices : dict
         Dictionary of available, supported devices. Keys are
-        names of available devices, values are the driver classes
-        that can be used to handle the devices (one class per
-        device).
+        names of available devices, values are tuples containing
+        the driver classes that can be used to handle the devices
+        (one class per device) and the SettingsInfo from list_devices.
 
     Raises
     ------
     AttributeError
         If package is not one of the gui.measure subpackages.
+    DefaultSettingsError
+        If the default settings are corrupted.
     """
     try:
         getattr(sys.modules[__package__], package)
@@ -240,9 +400,11 @@ def get_devices(package):
                                      inspect.isclass):
         if hasattr(cls, 'list_devices'):
             dummy_instance = cls()
+            # list_devices raises a DefaultSettingsError if the default
+            # settings do not suffice to make and detect devices.
             dev_list = dummy_instance.list_devices()
-            for dev_name in dev_list:
-                devices[dev_name] = cls
+            for device in dev_list:
+                devices[device.unique_name] = (cls, device)
     return devices
 
 
@@ -252,8 +414,8 @@ def safe_connect(signal, slot, **kwargs):
         raise TypeError(f"{slot} is not a valid slot")
     for arg in kwargs:
         if arg not in ("type", "no_receiver_check"):
-            raise TypeError("safe_connect got an unexpeced "
-                            f"keyord argument {arg!r}")
+            raise TypeError("safe_connect got an unexpected "
+                            f"keyword argument {arg!r}")
     try:
         signal.connect(slot, **kwargs)
     except TypeError:
@@ -281,10 +443,6 @@ def safe_disconnect(signal, *slot):
 ################################### CLASSES ###################################
 
 
-class QMetaABC(ABCMeta, type(qtc.QObject)):
-    """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
-
-
 class ViPErLEEDErrorEnum(tuple, enum.Enum):
     """Base class for ViPErLEED hardware errors.
 
@@ -295,6 +453,7 @@ class ViPErLEEDErrorEnum(tuple, enum.Enum):
     may also contain formatting directives, that should be .format()ted
     by the controller or by the GUI.
     """
+
     @classmethod
     def as_dict(cls):
         """Return a dictionary of error codes and error names."""
@@ -337,3 +496,266 @@ class ViPErLEEDErrorEnum(tuple, enum.Enum):
     def code(self):
         """Return the code of this error."""
         return self.value[0]
+
+
+_DOTS_OR_DIGITS = re.compile(r"[.0-9]+")
+
+
+class Version:
+    """Simple class to easily handle versions."""
+
+    def __init__(self, major, minor=-1, patch=-1):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        major : int, float, str, or Version
+            When an integer, interpret as the "major" part of
+            version; when a string, it should be of the form
+            "<major>.<minor>.<patch>", with minor and patch
+            optional, and each field be int-able; when a float,
+            interpret the whole as the major and the decimal
+            as the minor.
+        minor : int, optional
+            Minor portion of the version. This is discarded if major
+            is given as a string, a float, or a Version. If negative
+            or not given, it is interpreted as "zero".
+        minor : int, optional
+            Patch portion of the version. This is discarded if major
+            is given as a string, a float, or a Version. If negative
+            or not given, it is interpreted as "zero".
+
+        Raises
+        ------
+        TypeError
+            If any of the inputs is not an integer. If major is given
+            as a string, the exception is raised if one of the parts
+            is not int-able.
+        ValueError
+            If major is an empty string, if it does not conform to
+            the <number>[.<number>[.<number>]] syntax, if <major>
+            is negative, if <minor> is not given but <patch> is.
+        """
+        _name = self.__class__.__name__
+        if isinstance(major, float):
+            major = str(major)
+        if isinstance(major, str):
+            major, minor, patch = self.__from_string(major)
+        elif isinstance(major, Version):
+            major, minor, patch = major
+
+        if not all(isinstance(p, int) for p in (major, minor, patch)):
+            raise TypeError(f"{_name}: Invalid type for one of the parts")
+        if major < 0:
+            raise ValueError(f"{_name}: version cannot be negative")
+
+        # pylint: disable=chained-comparison
+        # pylint would probably like the next one to be
+        # minor < 0 < patch, but it feels less readable
+        if patch > 0 and minor < 0:
+            raise ValueError(f"{_name}: Cannot have 'patch' without 'minor'")
+        self.__has_parts = (True, minor > 0, patch > 0)
+        self._parts = (major, max(minor, 0), max(patch, 0))
+
+    @property
+    def major(self):
+        """Return the major part of self."""
+        return self._parts[0]
+
+    @property
+    def minor(self):
+        """Return the minor part of self (if present) or RuntimeError."""
+        if not self.__has_parts[1]:
+            raise RuntimeError(f"{self.__class__.__name__} has no minor.")
+        return self._parts[1]
+
+    @property
+    def patch(self):
+        """Return the minor part of self (if present) or RuntimeError."""
+        if not self.__has_parts[2]:
+            raise RuntimeError(f"{self.__class__.__name__} has no patch.")
+        return self._parts[2]
+
+    def __eq__(self, other):
+        """Return True if self == other, NotImplemented otherwise."""
+        if not isinstance(other, self.__class__):
+            try:
+                other = self.__class__(other)
+            except TypeError:
+                return NotImplemented
+        if self._parts == other._parts:
+            return True
+        return NotImplemented
+
+    def __iter__(self):
+        """Return an iterable version of self."""
+        return iter(self._parts)
+
+    def __lt__(self, other):
+        """Return whether self < other."""
+        if not isinstance(other, self.__class__):
+            try:
+                other = self.__class__(other)
+            except TypeError:
+                return NotImplemented
+        return self._parts < other._parts
+
+    def __le__(self, other):
+        """Return whether self <= other."""
+        if not isinstance(other, self.__class__):
+            try:
+                other = self.__class__(other)
+            except TypeError:
+                return NotImplemented
+        return self._parts <= other._parts
+
+    def __gt__(self, other):
+        """Return whether self > other."""
+        if not isinstance(other, self.__class__):
+            try:
+                other = self.__class__(other)
+            except TypeError:
+                return NotImplemented
+        return self._parts > other._parts
+
+    def __ge__(self, other):
+        """Return whether self > other."""
+        if not isinstance(other, self.__class__):
+            try:
+                other = self.__class__(other)
+            except TypeError:
+                return NotImplemented
+        return self._parts >= other._parts
+
+    def __str__(self):
+        """Return a string representation of self."""
+        return ".".join(str(p)
+                        for p, had_part in zip(self._parts, self.__has_parts)
+                        if had_part)
+
+    def __repr__(self):
+        """Return a representation of self."""
+        return f"{self.__class__.__name__}({self})"
+
+    def __from_string(self, _as_string):
+        """Return major, minor, patch from a string."""
+        _name = self.__class__.__name__
+        if not _as_string:
+            # Empty version
+            raise ValueError(f"{_name}: version cannot be an empty string")
+        _as_string = _as_string.replace('v', '')
+        if not _DOTS_OR_DIGITS.match(_as_string):
+            raise ValueError(
+                f"{_name}: version can contain only digits and dots"
+                )
+        major, *rest = (int(v) for v in _as_string.split('.'))
+        try:
+            minor = rest.pop(0)
+        except IndexError:
+            minor = -1
+        try:
+            patch = rest.pop(0)
+        except IndexError:
+            patch = -1
+        return major, minor, patch
+
+
+_RESULT_UNKNOWN = object()
+
+class QMainThreadDispatcher(qtc.QObject):
+    """Class to always execute a function in the main GUI thread.
+
+    Instances are callable like so:
+    >>> dispatcher = QMainThreadDispatcher(func, *args, **kwargs)
+    >>> dispatcher(*other_args, **other_kwargs)
+
+    Attributes
+    ----------
+    func : callable
+        The function to be called in the main GUI thread
+    args : tuple
+        The positional arguments (excluding self/cls) for the
+        call to func
+    has_result : bool
+        Whether the call to func has returned already, and
+        its result is available in the .result attribute.
+    kwargs : dict
+        The keyword arguments for the call to func
+    result : object
+        The latest result of the call to func(*args, **kwargs)
+
+    Signals
+    -------
+    result_arrived()
+        Emitted whenever the call to func(*args, **kwargs) has been
+        completed in the GUI thread.
+    """
+
+    __dispatch = qtc.pyqtSignal()
+    result_arrived = qtc.pyqtSignal()
+
+    def __init__(self, func, *args, **kwargs):
+        """Create instance, move it to the main thread and call func there.
+
+        Parameters
+        ----------
+        func : callable
+            The function to be executed. It can be accessed (and
+            freely edited) via the .func attribute.
+        *args : object, optional
+            Positional-only arguments for the call to func. They can
+            later be accessed as a tuple via the .args attribute. If
+            func is an instance or class method, do not pass self/cls
+            as part of args, as this is taken care of automatically.
+        call_immediately : bool, optional
+            Whether func(*args, **kwargs) should be called right at
+            the end of the initialization. Default is True.
+        **kwargs : object, optional
+            Keyword-only arguments for the call to func. They can
+            later be accessed as a dictionary via the .kwargs attribute
+
+        Returns
+        -------
+        None.
+        """
+        self.func, self.args, self.kwargs = func, args, kwargs
+        self.__result = _RESULT_UNKNOWN
+        super().__init__()
+
+        if self.thread().currentThread() != qtw.qApp.thread():
+            self.moveToThread(qtw.qApp.thread())
+
+        self.__dispatch.connect(self.__call_func)
+        if kwargs.pop('call_immediately', True):
+            self.__dispatch.emit()
+
+    @property
+    def has_result(self):
+        """Return whether the function call has already returned."""
+        return self.__result is _RESULT_UNKNOWN
+
+    @property
+    def result(self):
+        """Return the result of func(*args, **kwargs)."""
+        return self.__result
+
+    def __call__(self, *args, **kwargs):
+        """Call func(*args, **kwargs)."""
+        self.__result = _RESULT_UNKNOWN
+        if args:
+            self.args = args
+        if kwargs:
+            self.kwargs = kwargs
+        self.__dispatch.emit()
+
+    @qtc.pyqtSlot()
+    def __call_func(self):
+        """Call the method in the main thread, store the result."""
+        assert self.thread().currentThread() == qtw.qApp.thread()
+        self.__result = self.func(*self.args, **self.kwargs)
+        self.result_arrived.emit()
+
+    def moveToThread(self, new_thread):  # pylint: disable=invalid-name
+        """Change thread affinity of self to new_thread."""
+        self.__result = _RESULT_UNKNOWN
+        super().moveToThread(new_thread)

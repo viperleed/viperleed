@@ -13,30 +13,33 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 
-from PyQt5 import (QtWidgets as qtw,
-                   QtCore as qtc)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.measure import dialogs
+from viperleed.gui.dialogs.busywindow import BusyWindow
+from viperleed.gui.dialogs.errors import DialogDismissedError
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera import badpixels
-from viperleed.gui.measure.camera import abc as camera_abc
-from viperleed.gui.measure.classes.settings import get_system_config
+from viperleed.gui.measure.classes.settings import NoSettingsError
+from viperleed.gui.measure.classes.settings import SystemSettings
+from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.widgetslib import change_control_text_color
 
 
-DEFAULT_CONFIG_PATH = Path(
-    get_system_config().get("PATHS", 'configuration', fallback='')
-    )
+_INVOKE = qtc.QMetaObject.invokeMethod
+
 NOT_FOUND = "No file found!"
 NOT_SET = "\u2014"
 NO_BAD_PX_PATH = "None selected"
 
 
+def _user_config_path():
+    return SystemSettings().paths['configuration']
+
+
 class BadPixelsFinderDialog(qtw.QDialog):
     """Dialog to handle user interaction when finding bad pixels."""
-
-    __start_finder = qtc.pyqtSignal()
-    __abort_finder = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize dialog."""
@@ -53,7 +56,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 'find': qtw.QPushButton("&Find"),
                 'set_bad_px_path': qtw.QToolButton(),
                 'save_uncorr_mask': qtw.QPushButton(
-                    "Save uncorrectable &mask"
+                    "Save &uncorrectable mask"
+                    ),
+                'save_bad_mask': qtw.QPushButton(
+                    "Save &bad-pixels mask"
                     ),
                 },
             'bad_px_info': {
@@ -66,6 +72,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 },
             'progress': {
                 'group' : qtw.QGroupBox("Progress"),
+                'total_text': qtw.QLabel(),
                 'total': qtw.QProgressBar(),
                 'section_text': qtw.QLabel(),
                 'section': qtw.QProgressBar(),
@@ -79,9 +86,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 'delay_busy_hide': (qtc.QTimer(self), 100),
                 },
             'dialogs': {
-                'camera_busy': dialogs.BusyWindow(parent=self,
-                                                  text="Preparing camera...",
-                                                  max_onscreen_time=10)
+                'camera_busy': BusyWindow(parent=self,
+                                          text="Preparing camera...",
+                                          max_onscreen_time=10)
                 }
             }
 
@@ -96,13 +103,15 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__compose()
         self.__connect()
 
-    def showEvent(self, event):  # pylint: disable=invalid-name
+    def showEvent(self, event):          # pylint: disable=invalid-name
         """Extend showEvent to update controls."""
         self.__reset_progress_bars()
         self.__progress['group'].hide()
         self.update_available_camera_list()
-        self.__ctrls['camera'].setCurrentIndex(-1)  # TODO: path label not updated correctly
+        self.__ctrls['camera'].setCurrentIndex(-1)
+        self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
         self.adjustSize()
+        self.__finder_thread.start()
         super().showEvent(event)
 
     def accept(self):
@@ -128,6 +137,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
             camera_combo.addItems(self.__available_cameras.keys())
             if old_selection:
                 camera_combo.setCurrentText(old_selection)
+        if not old_selection:
+            self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
         self.__enable_controls(True)
 
     @property
@@ -162,7 +173,21 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __abort(self, *_):
         """Abort bad-pixel-finder routine."""
-        self.__abort_finder.emit()
+        try:
+            _INVOKE(self.__finder, "abort")
+        except RuntimeError:
+            # In case this happens because of an unprocessed
+            # error_occurred before __finder is not None. This is
+            # due to the qApp.processEvents() call inside __start().
+            # It also guards against trying to invoke the method if
+            # the C++ object wrapped by self.__finder gets destroyed
+            # in the meantime. If the invoke call is successful, the
+            # __reset_controls happens when finder is done aborting
+            self.__reset_controls()
+
+    @qtc.pyqtSlot()
+    def __reset_controls(self):
+        """Reset runtime controls to 'idle' state."""
         self.__reset_progress_bars()
         self.__progress['group'].hide()
         self.__enable_controls(True)
@@ -175,6 +200,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.active_camera = None
         if self.__finder_thread.isRunning():
             self.__finder_thread.quit()
+            if not self.__finder_thread.wait(200):
+                self.__finder_thread.terminate()
 
     def __compose(self):
         """Place children widgets."""
@@ -219,6 +246,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         layout.addWidget(self.__bad_px_info['n_uncorrectable'], 2, 0)
         layout.addWidget(self.__bad_px_info['n_uncorrectable_old'], 2, 1)
         layout.addWidget(self.__buttons['save_uncorr_mask'], 3, 0, 1, 2)
+        layout.addWidget(self.__buttons['save_bad_mask'], 4, 0, 1, 2)
         group.setLayout(layout)
         return group
 
@@ -253,7 +281,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         group = self.__progress['group']
         layout = qtw.QVBoxLayout()
         layout.setAlignment(qtc.Qt.AlignLeft)
-        layout.addWidget(qtw.QLabel("Finding bad pixels..."))
+        layout.addWidget(self.__progress['total_text'])
         layout.addWidget(self.__progress['total'])
         layout.addWidget(self.__progress['section_text'])
         layout.addWidget(self.__progress['section'])
@@ -270,9 +298,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__buttons['set_bad_px_path'].triggered.connect(
             self.__on_set_bad_pixel_directory
             )
-        self.__buttons['save_uncorr_mask'].clicked.connect(
-                self.__on_save_mask_clicked
-                )
+        for btn_ in ('save_uncorr_mask', 'save_bad_mask'):
+            self.__buttons[btn_].clicked.connect(self.__on_save_mask_clicked)
 
         self.__ctrls['camera'].textActivated.connect(
             self.__on_camera_selected,
@@ -326,6 +353,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__buttons['abort'].setEnabled(abort_enabled)
         self.__buttons['find'].setEnabled(find_enabled)
         self.__buttons['save_uncorr_mask'].setEnabled(has_bad_px_info)
+        self.__buttons['save_bad_mask'].setEnabled(has_bad_px_info)
 
     def __get_bad_pixel_info(self, previous=False):
         """Return bad pixel info from the active camera.
@@ -369,9 +397,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 bad_px.read(self.__ctrls['bad_px_path'].text(),
                             most_recent=False)
             except FileNotFoundError:
-                bad_px = None
+                pass
 
-        if not bad_px or not bad_px.file_name:
+        if not bad_px and not bad_px.file_name:
             return NOT_SET, -1, -1, -1, -1
 
         *_, date, time = bad_px.file_name.split('_')
@@ -388,6 +416,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         return (date_time, n_bad, bad_fraction,
                 n_uncorrectable, uncorrectable_fraction)
 
+    @qtc.pyqtSlot(bool)
     def __on_camera_preparing(self, busy):
         """Show a busy dialog while camera prepares to acquire."""
         timer, interval = self.__timers['delay_busy_hide']
@@ -407,50 +436,63 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if self.active_camera and self.active_camera.name == camera_name:
             # Same selection
             return
+        camera_cls, camera_info = self.__available_cameras[camera_name]
 
         # New camera selected.
-        settings = base.get_device_config(camera_name,
-                                          directory=DEFAULT_CONFIG_PATH,
-                                          parent_widget=self)
-
-        # Signal errors by picking an invalid entry
-        if not settings:
+        try:
+            config_name = base.get_object_settings(
+                camera_cls, camera_info, directory=_user_config_path(),
+                parent_widget=self
+                )
+        except (DialogDismissedError, NoSettingsError):
+            # Signal errors by picking an invalid entry
             self.__ctrls['camera'].setCurrentIndex(-1)
+            self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
+            self.active_camera = None
             return
+        settings = ViPErLEEDSettings.from_settings(config_name)
+        settings['camera_settings']['device_name'] = camera_name
 
         if not self.__camera_busy.isVisible():
             self.__camera_busy.show()
-        cls = self.__available_cameras[camera_name]
-        self.active_camera = cls()
+        self.active_camera = camera_cls()
         self.active_camera.error_occurred.connect(self.__on_error_occurred)
         self.active_camera.started.connect(self.adjustSize)
         self.active_camera.preparing.connect(self.__on_camera_preparing)
-        self.active_camera.settings = settings
+        # Set settings again and make sure the camera connects.
+        self.active_camera.uses_default_settings = False
+        self.active_camera.set_settings(settings)
         self.__update_controls()
 
+    @qtc.pyqtSlot(tuple)
     def __on_error_occurred(self, error_info):
         """React to an error situation."""
         error_code, error_msg = error_info
         try:
-            error = camera_abc.CameraErrors.from_code(error_code)
+            error = QObjectSettingsErrors.from_code(error_code)
         except AttributeError:
             error = None
-        if (error is camera_abc.CameraErrors.MISSING_SETTINGS
-            or (error is camera_abc.CameraErrors.INVALID_SETTINGS
-                and ("could not find a bad pixels file" in error_msg
-                     or "No bad_pixel_path found" in error_msg))):
-            # We don't want to spam messages if the current
-            # folder does not contain a bad pixels file. Also,
-            # we will not allow running anything if there is
-            # no bad_pixel_path option in the configuration,
-            # but we report this 'invalid' situation by having
-            # red text.
+        if error is QObjectSettingsErrors.MISSING_SETTINGS:
+            # Swallow a MISSING_SETTINGS error since we always
+            # create the active_camera without settings, and give
+            # it settings shortly afterwards.
             return
+        if self.active_camera.is_bad_pixels_error(error_info):
+            # Swallow bad-pixels path errors that may occur
+            # before the calibration is started
+            return
+
+        self.__buttons['abort'].click()
         qtw.QMessageBox.critical(self, "Error",
                                  f"{error_msg}\n\n(Code: {error_code})")
 
     def __on_finder_done(self):
         """React to bad pixels being found."""
+        # Reconnect the error_occurred, as we should now handle
+        # it ourselves rather than have the finder do it for us
+        base.safe_connect(self.active_camera.error_occurred,
+                          self.__on_error_occurred,
+                          type=qtc.Qt.UniqueConnection)
         bar_total = self.__progress['total']
         bar_total.setValue(bar_total.maximum())
 
@@ -499,16 +541,21 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__report_uncorrectable()
         self.__enable_controls(True)
 
+    @qtc.pyqtSlot(str, str, int, int, int, int)
     def __on_progress(self, *args):
         """React to a progress report from the finder."""
-        sec_txt, sec_no, tot_secs, progress, n_tasks = args
+        tot_txt, sec_txt, sec_no, tot_secs, progress, n_tasks = args
+        total = self.__progress['total_text']
         bar_total = self.__progress['total']
         section = self.__progress['section_text']
         bar_section = self.__progress['section']
 
+        self.__buttons['abort'].setEnabled("done" not in sec_txt.lower())
+
         if bar_total.maximum() != tot_secs:
             bar_total.setMaximum(tot_secs)
 
+        total.setText(tot_txt)
         section.setText(sec_txt)
         if bar_section.maximum() != n_tasks:
             bar_section.setMaximum(n_tasks)
@@ -526,15 +573,23 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # This should never happen: the button
             # is disabled if this is the case
             return
+
+        btn = self.sender()
+        if btn is self.__buttons['save_uncorr_mask']:
+            txt = 'uncorrectable'
+            _save = cam.bad_pixels.save_uncorrectable_mask
+        else:
+            txt = 'bad'
+            _save = cam.bad_pixels.save_bad_px_mask
         mask_path = qtw.QFileDialog.getExistingDirectory(
             parent=self,
-            caption="Set directory for uncorrectable pixels mask",
+            caption=f"Set directory for {txt}-pixels mask",
             directory=self.__ctrls['bad_px_path'].text()
             )
         if not mask_path:
             # User exited without selecting
             return
-        cam.bad_pixels.save_uncorrectable_mask(mask_path)
+        _save(mask_path)
 
     def __on_set_bad_pixel_directory(self, *_):
         """React to a user request to set the bad pixel directory."""
@@ -556,6 +611,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             progress_bar.setMinimum(0)
             progress_bar.setValue(0)
         self.__progress['section_text'].setText('')
+        self.__progress['total_text'].setText('')
 
     def __report_uncorrectable(self):
         """Report an error if there are many uncorrectable pixels."""
@@ -581,9 +637,12 @@ class BadPixelsFinderDialog(qtw.QDialog):
             "gun to discard the damaged areas of the sensor."
             )
 
+    @qtc.pyqtSlot()
+    @qtc.pyqtSlot(bool)
     def __start(self, *_):
         """Begin finding bad pixels for the selected camera."""
         self.__enable_controls(False)
+        self.__buttons['abort'].setEnabled(False)
         self.__reset_progress_bars()
         self.__progress['group'].show()
         self.__camera_busy.show()
@@ -597,12 +656,15 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__finder.done.connect(self.__on_finder_done)
         self.__finder.done.connect(self.__finder.deleteLater)
         self.__finder.aborted.connect(self.__finder.deleteLater)
+        self.__finder.aborted.connect(self.__reset_controls)
         self.__finder_thread.finished.connect(self.__finder.deleteLater)
         self.__finder.error_occurred.connect(self.__on_error_occurred)
-        self.__start_finder.connect(self.__finder.find)
-        self.__abort_finder.connect(self.__finder.abort)
         self.__finder.moveToThread(self.__finder_thread)
-        self.__start_finder.emit()
+
+        # Device errors are handled by the finder while it runs
+        base.safe_disconnect(self.active_camera.error_occurred,
+                             self.__on_error_occurred)
+        _INVOKE(self.__finder, "find")
 
     def __stop_timers(self):
         """Stop all timers."""

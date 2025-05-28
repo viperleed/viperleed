@@ -28,14 +28,13 @@ from pathlib import Path
 
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
-from scipy.signal import convolve2d
 from PyQt5 import QtCore as qtc
 
 from viperleed.gui.measure.camera import tifffile as tiff
 
 
 @dataclass
-class ImageProcessInfo:
+class ImageProcessInfo:  # pylint: disable=too-many-instance-attributes
     """Data class storing information needed for processing images.
 
     Attributes
@@ -77,13 +76,19 @@ class ImageProcessInfo:
     comment : str, optional
         Any user comment that will be stored with the image (e.g.,
         sample surface, preparation details, etc.).
+    count : int, optional
+        This is used exclusively if filename contains "{__count__".
+        It can be used to progressively number frames. It is used
+        to produce a filename like follows:
+        filename = filename.format(__count__=count)
 
     Methods
     ------
     copy()
         Return a deep-copy of self
     """
-    filename: str = ''
+
+    __filename: str = ''
     base_path: str = ''
     n_frames: int = 0
     roi: typing.Sequence = tuple()
@@ -93,11 +98,25 @@ class ImageProcessInfo:
     energy: typing.Any = None     # energy in eV, typically float
     date_time: typing.Any = None  # datetime object
     comment: str = ''
+    count: int = 0
 
     @property
     def bad_pixels(self):
         """Return bad pixel info as a BadPixels object."""
         return self.camera.bad_pixels
+
+    @property
+    def filename(self):
+        """Return the name of the file to save to."""
+        fname = self.__filename
+        if "{__count" in fname:
+            fname = fname.format(__count__=self.count)
+        return fname
+
+    @filename.setter
+    def filename(self, new_name):
+        """Set the name of the file to save to."""
+        self.__filename = new_name
 
     def copy(self):
         """Return a deep-copy of self."""
@@ -121,23 +140,22 @@ class ImageProcessInfo:
 class ImageProcessor(qtc.QObject):
     """Class that processes frames."""
 
+    all_frames_acquired = qtc.pyqtSignal()
     image_processed = qtc.pyqtSignal(np.ndarray)
     image_saved = qtc.pyqtSignal(str)  # path to file
 
     def __init__(self):
-        """Initialize the instance.
-
-        Parameters
-        ----------
-        camera : CameraABC
-            The camera that is producing the frames to be processed.
-        """
+        """Initialize the instance."""
         super().__init__()
         self.process_info = ImageProcessInfo()
         self.processed_image = np.zeros(0)
         self.n_frames_received = 0
         self.frame_bits = 16
         self.busy = False
+
+        # Prevent double-processing of images (Issue #122).
+        # _should_process_image is made True in prepare_to_process.
+        self._should_process_image = False
 
     @property
     def missing_frames(self):
@@ -176,6 +194,7 @@ class ImageProcessor(qtc.QObject):
         self.busy = True
         self.process_info = process_info
         self.n_frames_received = 0
+        self._should_process_image = True
 
         # Select an appropriate data type to avoid overflowing
         # [kind is either 'u' (unsigned) or '' (signed)]
@@ -198,12 +217,14 @@ class ImageProcessor(qtc.QObject):
         if self.missing_frames > 0:
             return
 
-        # All frames arrived
-        self.apply_roi()
-        self.remove_bad_pixels()
-        self.bin_and_average()
-        fname = self.save()
-        self.image_saved.emit(fname)
+        if self._should_process_image:  # All frames arrived
+            self._should_process_image = False
+            self.all_frames_acquired.emit()
+            self.apply_roi()
+            self.remove_bad_pixels()
+            self.bin_and_average()
+            fname = self.save()
+            self.image_saved.emit(fname)
 
     def remove_bad_pixels(self):
         """Remove bad pixels by neighbor averaging."""

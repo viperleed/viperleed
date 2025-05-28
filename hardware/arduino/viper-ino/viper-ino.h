@@ -1,20 +1,28 @@
-/*
-ViPErLEED - Firmware for Arduino hardware controller
----------------------
-Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr
+/* ViPErLEED - Firmware for Arduino hardware controller
+
+@author: Bernhard Mayr
+@author: Michael Schmid (@schmid-iap)
+@author: Michele Riva (@michele-riva)
+@author: Florian Dörr (@FlorianDoerr)
 Date: 26.04.2021
----------------------
 */
 
 #ifndef _VIPERLEED
 #define _VIPERLEED
 
-#include "ADC_AD7705.h"  // Settings of the currently used ADC
-#include "DAC_AD5683.h"  // Settings of the currently used DAC
+
+// arduino_utils.h, states-def.h and viper-serial.h come from ../lib
+#include "arduino_utils.h"  // from ../lib; for setChipSelectHigh,
+                            // getMedian, bigger, biggest
+#include "states-def.h"     // Basic state-manchine definitions
+#include "viper-serial.h"   // Serial-communication functions and constants
+#include "ADC_AD7705.h"     // Settings of the currently used ADC
+#include "DAC_AD5683.h"     // Settings of the currently used DAC
 
 
 // Useful macros, structs and unions
 #define LENGTH(array)  (sizeof(array) / sizeof((array)[0]))
+#define MIN(a, b)      ((a) < (b) ? (a) : (b))
 #ifndef NAN
     #define NAN   (1.0/0)   // Floating-point not-a-number
 #endif
@@ -44,163 +52,232 @@ union floatOrBytes{
 };
 
 
-
-
-/** ------------------------- Communication with PC ------------------------ **/
-
-// Constants for communication with the PC
-#define MSG_START 254              // Beginning of a serial message
-#define MSG_END 255                // End of a serial message
-#define MSG_SPECIAL_BYTE 252       // Prevents clashing of data with (start, end, error)
-#define MSG_MAX_LENGTH 32          // Max no. of bytes in an incoming serial message
-#ifndef SERIAL_BUFFER_SIZE
-    #define SERIAL_BUFFER_SIZE 64  // Arduino limit for serial buffer. If buffer is full, new bytes are DISCARDED
-#endif
+/** ------------------------ Communication with PC ----------------------- **/
+// Further globals and constans defined in viper-serial.h
 
 // Acceptable messages for communication with the PC
-#define PC_AUTOGAIN       65    // PC requested auto-gain for ADCs (ASCII 'A')
-#define PC_CALIBRATION    67    // PC requested self-calibration of all ADCs at all gains (ASCII 'C')
-#define PC_ERROR         253    // An error occurred
-#define PC_CONFIGURATION  63    // PC requested hardware configuration (ASCII '?')
-#define PC_SET_UP_ADCS    83    // PC requested to prepare the ADCs for a measurement (ASCII 'S')   // TODO: The python side will have to keep track of when the last calibration was done, and warn if it is too old.
-#define PC_OK             75    // Acknowledge request from PC (ASCCI 'K')
-#define PC_RESET          82    // PC requested a global reset (ASCII 'R')
-#define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
-#define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
-#define PC_CHANGE_MEAS_MODE 109 // PC requested a change between continuous and single measurement mode (ASCII 'm')
-#define PC_STOP          120    // PC requested a stop on all activity. Return to idle (ASCII 'x')
-#define PC_SET_VOLTAGE_ONLY 118 // PC requested set energy without follow up measurement (ASCII 'v')
-#define PC_SET_SERIAL_NR 115           // PC requested serial number (ASCII 's')
+// Further commands defined in viper-serial.h
 
-// Error codes
-#define ERROR_NO_ERROR            0   // No error
-#define ERROR_SERIAL_OVERFLOW     1   // Hardware overflow of Arduino serial
-#define ERROR_MSG_TOO_LONG        2   // Too many characters in message from PC
-#define ERROR_MSG_INCONSISTENT    3   // Message received from PC is inconsistent. Probably corrupt.
-#define ERROR_MSG_UNKNOWN         4   // Unknown request from PC
-#define ERROR_MSG_DATA_INVALID    5   // Request from PC contains invalid information
-#define ERROR_NEVER_CALIBRATED    6   // The ADCs have never been calibrated before since bootup
-#define ERROR_TIMEOUT             7   // Timed out while waiting for something
-#define ERROR_ADC_SATURATED       8   // One of the ADC values reached saturation, and gain can't be decreased further
-#define ERROR_TOO_HOT             9   // The temperature read by the LM35 is too high
-#define ERROR_HARDWARE_UNKNOWN   10   // The PC never asked for the hardware configuration
-#define ERROR_RUNTIME           255   // Some function has been called from an inappropriate state. This is to flag possible bugs for future development.
-byte errorTraceback[2];               // Keeps track of: (0) the state that produced the error, (1) which error occurred (one of ERROR_*)
+// PC_AUTOGAIN: PC requested auto-gain for ADCs (ASCII 'A').
+#define PC_AUTOGAIN          65
+// PC_CALIBRATION: PC requested self-calibration
+// of all ADCs at all gains (ASCII 'C').
+#define PC_CALIBRATION       67
+// PC_CHANGE_MEAS_MODE: PC requested a change between
+// continuous and single-measurement modes (ASCII 'm').
+#define PC_CHANGE_MEAS_MODE 109
+// PC_CONFIGURATION: PC requested hardware configuration (ASCII '?').
+#define PC_CONFIGURATION     63
+// PC_MEASURE_ONLY: PC requested measurement
+// without changing voltage (ASCII 'M').
+#define PC_MEASURE_ONLY      77
+// PC_RESET: PC requested a global reset (ASCII 'R').
+#define PC_RESET             82
+// PC_SET_SERIAL_NR: PC requested setting of a serial number (ASCII 's').
+#define PC_SET_SERIAL_NR    115
+// PC_SET_UP_ADCS: PC requested to prepare the
+// ADCs for a measurement (ASCII 'S').
+#define PC_SET_UP_ADCS       83                                                 // TODO: The python side will have to keep track of when the last calibration was done, and warn if it is too old.
+// PC_SET_VOLTAGE: PC requested to set a certain energy (ASCII 'V').
+// After setting the voltage, the arduino will start measuring.
+#define PC_SET_VOLTAGE       86
+// PC_SET_VOLTAGE_ONLY: PC requested set energy without
+// follow-up measurement (ASCII 'v').
+#define PC_SET_VOLTAGE_ONLY 118
+// PC_STOP: PC requested a stop on all activity. Return to idle (ASCII 'x').
+#define PC_STOP             120
 
-// Variables used while communicating with the PC
-byte numBytesRead = 0;                   // Counter for no. of bytes received. numBytesRead may be larger than the number of true data bytes due to encoding.
-byte msgLength = 0;                      // No. bytes to be expected in message (2nd byte of received message). Used in states that expect data to check the message
-byte serialInputBuffer[MSG_MAX_LENGTH];  // Contains all the raw (i.e., still encoded) bytes read from the serial line
-boolean readingFromSerial = false;       // True while Arduino is receiving a message
-boolean newMessage = false;              // True when a complete, acceptable message has been read
+// Serial-communication-related error codes
+// Further errors defined in viper-serial.h and states-def.h
 
-/** TODO:
-    Judging from the code, and if I didn't misinterpret anything, I think
-    we can have only one buffer for the input/output to the PC, so we can
-    replace "data_received" and "data_send" with a single "message" array
-    Alternatively, we can have them be a decodedCommand[] and encodedReply[]
-*/
-byte data_received[MSG_MAX_LENGTH];      // Real message
-byte data_send[MSG_MAX_LENGTH];
-
-
+// ERROR_NEVER_CALIBRATED: The ADCs have never
+// been calibrated before since bootup.
+#define ERROR_NEVER_CALIBRATED    6
+// ERROR_ADC_SATURATED: One of the ADC values reached saturation,
+// and gain can't be decreased further.
+#define ERROR_ADC_SATURATED       8
+// ERROR_TOO_HOT: The temperature read by the LM35 is too high.
+#define ERROR_TOO_HOT             9
+// ERROR_HARDWARE_UNKNOWN: The PC never asked for the hardware configuration.
+#define ERROR_HARDWARE_UNKNOWN   10
 
 
-/** ------------------------- Finite state machine ------------------------- **/
+/** ------------------------ Finite state machine ------------------------ **/
+// Further globals and constans defined in states-def.h
 
-#define STATE_IDLE                 0  // Wait for requests from PC
-#define STATE_SET_UP_ADCS          1  // Pick correct ADC channels and no. of measurement points
-#define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC, wait, then trigger the ADCs
-#define STATE_CHANGE_MEASUREMENT_MODE 3 // Get and set the desired measurement mode
-#define STATE_MEASURE_ADCS         4  // ADC measurements in progress
-#define STATE_ADC_VALUES_READY     5  // ADC measurements done
-#define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
-#define STATE_GET_CONFIGURATION    7  // Find current hardware configuration and return it with the firmware version
-#define STATE_CALIBRATE_ADCS       8  // Figure out correct offset and calibration factors for ADCs at all gains.
-#define STATE_ERROR                9  // An error occurred
-#define STATE_SET_SERIAL_NR       10  // Read serial number from EEPROM
-uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
-bool waitingForDataFromPC = false;    // Keeps track of whether we are in a state that is waiting for the PC to send something
-bool continuousMeasurement = false;   // Decides if the Arduino continues to measure and return data or if it stops after doing so once
+// STATE_SET_UP_ADCS: Pick correct ADC channels and no. of measurement points.
+#define STATE_SET_UP_ADCS          1
+// STATE_SET_VOLTAGE: Set a voltage with the DAC, wait, then trigger the ADCs.
+#define STATE_SET_VOLTAGE          2
+// STATE_CHANGE_MEASUREMENT_MODE: Get and set the desired measurement mode.
+#define STATE_CHANGE_MEASUREMENT_MODE 3
+// STATE_MEASURE_ADCS: ADC measurements in progress.
+#define STATE_MEASURE_ADCS         4
+// STATE_ADC_VALUES_READY: ADC measurements done.
+#define STATE_ADC_VALUES_READY     5
+// STATE_AUTOGAIN_ADCS: Find optimal gain for both ADCs.
+#define STATE_AUTOGAIN_ADCS        6
+// STATE_GET_CONFIGURATION: Find current hardware configuration
+// and return it, together with box ID, firmware version, and serial number.
+#define STATE_GET_CONFIGURATION    7
+// STATE_CALIBRATE_ADCS: Figure out correct offset and
+// calibration factors for ADCs at all gains.
+#define STATE_CALIBRATE_ADCS       8
+// STATE_SET_SERIAL_NR: Read serial number from EEPROM.
+#define STATE_SET_SERIAL_NR       10
+// continuousMeasurement: Decides if the Arduino continues to measure
+// and return data or if it stops after doing so once.
+bool continuousMeasurement = false;
 
 
-
-/** ---------------------- Hardware-specific settings ---------------------- **/
+/** --------------------- Hardware-specific settings --------------------- **/
 // Measurement devices
-#define N_MAX_MEAS         3  // Number of measurement devices that we can have: ADC#0, ADC#1, LM35 (if present)
-#define N_MAX_ADCS_ON_PCB  2  // Maximum number of ADCs on the PCB
+
+// N_MAX_MEAS: Number of measurement devices that we can have: 3
+// ADC#0, ADC#1, LM35 (if present)
+#define N_MAX_MEAS         3
+// N_MAX_ADCS_ON_PCB: Maximum number of ADCs on the PCB
+#define N_MAX_ADCS_ON_PCB  2
 
 // I/O pins on Arduino board
-#define CS_DAC             4    // (Inverted) chip select of DAC
-#define CS_ADC_0           5    // (Inverted) chip select of ADC #0
-#define CS_ADC_1           6    // (Inverted) chip select of ADC #1 (optional)
-#define LM35_PIN          A1    // LM35 temperature sensor (optional)
-#define RELAY_PIN         A4    // Relay is connected here if present
-#define JP_I0_PIN         A4    // Jumper for manual I0 2.5V range, same as relay pin
-#define JP_AUX_PIN        A5    // Jumper for manual AUX 2.5 V range
 
-// Arduino internal reference, ADC maximum, and settings for relay an LM35
-#define VREF_INTERNAL   2.56    // Arduino micro internal ADC reference is 2.56 V
-#define ARDUINO_ADC_MAX  0x3ff  // 10-bit internal ADC
-#define RELAY_MIN_ADU     24    // Relay has about 0.12 V with pull-up, ADC signal is larger than this
-#define RELAY_MAX_ADU     96    // ADC signal of relay with pull-up is less than this
-#define LM35_MAX_ADU     320    // LM35 signal should be less than 0.8 V (80 degC)
-#define ARDUINO_ADU_VOLTS (VREF_INTERNAL/ARDUINO_ADC_MAX)      // Internal ADC: volts per ADU
-#define ARDUINO_ADU_DEG_C (100*VREF_INTERNAL/ARDUINO_ADC_MAX)  // LM35 degC per ADU
+// CS_DAC: (Inverted) chip select of DAC.
+#define CS_DAC             4
+// CS_ADC_0: (Inverted) chip select of ADC #0.
+#define CS_ADC_0           5
+// CS_ADC_1: (Inverted) chip select of ADC #1 (optional).
+#define CS_ADC_1           6
+// LM35_PIN: LM35 temperature sensor (optional).
+#define LM35_PIN          A1
+// RELAY_PIN: Relay is connected here if present.
+#define RELAY_PIN         A4
+// JP_I0_PIN: Jumper for manual I0 2.5V range, same as relay pin.
+#define JP_I0_PIN         A4
+// JP_AUX_PIN: Jumper for manual AUX 2.5 V range.
+#define JP_AUX_PIN        A5
 
-// Scaling of ADC input ranges due to voltage dividers or preamplification on the board
-#define ADC_0_CH0_SCALE_JO      0.004          // ADC#0 channel 0: with JP at I0 open or relay off, in volts
-#define ADC_0_CH1_SCALE    (16000./39.*0.001)  // ADC#0 channel 1: High-voltage divider
-#define ADC_1_CH0_SCALE        (10/2500.0)     // ADC#1 channel 0: uAmps
-#define ADC_1_CH1_SCALE_JO      0.004          // ADC#1 channel 1: with JP5 open (voltage divider), in volts
+// Arduino internal reference, ADC maximum, and settings for relay and LM35
 
-// Which hardware and closed jumpers do we have? Bits of present/closed jumpers are 1
-#define ADC_0_PRESENT   0x01  // Bit is set if ADC #0 was detected
-#define ADC_1_PRESENT   0x02  // Bit is set if ADC #1 was detected
-#define LM35_PRESENT    0x04  // Bit is set if LM35 temperature sensor was detected
-#define RELAY_PRESENT   0x08  // Bit is set if the relay for I0 input 2.5V/10V is present
-#define JP_I0_CLOSED    0x10  // Bit is set if JP3 7-8 is closed or relay on (to indicate 2.5V I0 range)
-#define JP_AUX_CLOSED   0x20  // Bit is set if JP5 is closed (to indicate 2.5V AUX range rather than 10V range)
+// VREF_INTERNAL: Arduino micro internal ADC reference is 2.56 V.
+#define VREF_INTERNAL   2.56
+// ARDUINO_ADC_MAX: 10-bit internal ADC
+#define ARDUINO_ADC_MAX  0x3ff
+// RELAY_MIN_ADU: Relay has about 0.12 V with pull-up,
+// ADC signal is larger than this.
+#define RELAY_MIN_ADU     24
+// RELAY_MAX_ADU: ADC signal of relay with pull-up is less than this.
+#define RELAY_MAX_ADU     96
+// LM35_MAX_ADU: LM35 signal should be less than 0.8 V (80 degC).
+#define LM35_MAX_ADU     320
+// ARDUINO_ADU_VOLTS: Internal ADC: volts per ADU.
+#define ARDUINO_ADU_VOLTS (VREF_INTERNAL/ARDUINO_ADC_MAX)
+// ARDUINO_ADU_DEG_C: LM35 degC per ADU.
+#define ARDUINO_ADU_DEG_C (100*ARDUINO_ADU_VOLTS)
+
+// Scaling of ADC input ranges due to voltage
+// dividers or preamplification on the board.
+
+// ADC_0_CH0_SCALE_JO: ADC#0 channel 0:
+// with JP at I0 open or relay off, in volts
+#define ADC_0_CH0_SCALE_JO      0.004
+// ADC_0_CH1_SCALE: ADC#0 channel 1: High-voltage divider
+#define ADC_0_CH1_SCALE    (16000./39.*0.001)
+// ADC_1_CH0_SCALE: ADC#1 channel 0: uAmps
+#define ADC_1_CH0_SCALE        (10/2500.0)
+// ADC_1_CH1_SCALE_JO: ADC#1 channel 1:
+// with JP5 open (voltage divider), in volts
+#define ADC_1_CH1_SCALE_JO      0.004
+
+// Which hardware and closed jumpers do we have?
+// Bits of present/closed jumpers are 1.
+
+// ADC_0_PRESENT: Bit is set if ADC #0 was detected
+#define ADC_0_PRESENT   0x01
+// ADC_1_PRESENT: Bit is set if ADC #1 was detected
+#define ADC_1_PRESENT   0x02
+// LM35_PRESENT: Bit is set if LM35 temperature sensor was detected
+#define LM35_PRESENT    0x04
+// RELAY_PRESENT: Bit is set if the relay for I0 input 2.5V/10V is present
+#define RELAY_PRESENT   0x08
+// JP_I0_CLOSED: Bit is set if JP3 7-8 is closed
+// or relay on (to indicate 2.5V I0 range)
+#define JP_I0_CLOSED    0x10
+// JP_AUX_CLOSED: Bit is set if JP5 is closed
+// (to indicate 2.5V AUX range rather than 10V range)
+#define JP_AUX_CLOSED   0x20
 
 // ADC saturation thresholds
-#define ADC_SATURATION       32760   // Threshold to deem abs(adcValue) at saturation, in principle it should be 32767/-32768 but needs testing
-#define ADC_RANGE_THRESHOLD  0x3fff  // If output is larger than this (~25% of range), we need a new gain next time
+
+// ADC_SATURATION: Threshold to deem abs(adcValue) at saturation,
+// in principle it should be 32767/-32768 but needs testing.
+#define ADC_SATURATION       32760
+// ADC_RANGE_THRESHOLD: If output is larger than this
+// (~25% of range), we need a new gain next time
+#define ADC_RANGE_THRESHOLD  0x3fff
 
 
-
-/** -------------------- Globals for firmware functions -------------------- **/
+/** ------------------- Globals for firmware functions ------------------- **/
 // Timers (defined in milliseconds)
-#define TIMEOUT 4000                  // Max 4 seconds to do stuff
-unsigned long initialTime;            // System time when switching to a new state
-uint16_t      dacSettlingTime = 100;  // The time interval for the DAC output to be stable
-                                      //   This is just a default value. The actual one comes
-                                      //   from the PC with a PC_SET_VOLTAGE command, and is
-                                      //   read in setVoltage()
-byte nextVoltageStep;                 // Counter for multiple voltage steps
 
-uint16OrBytes hardwareDetected;       // Bits set indicate this hardware is present/jumper closed
-bool hardwareNeverChecked = true;     // Is set false if the PC asked for the hardware configuration
-bool takeMeasurements = true;         // Is set according to set voltage command. True if measurements are requested.
+// dacSettlingTime: The time interval for the DAC output to be stable.
+// This is just a default value. The actual one comes from the PC with a
+// PC_SET_VOLTAGE command, and is read in setVoltage().
+uint16_t      dacSettlingTime = 100;
+// nextVoltageStep: Counter for multiple voltage steps.
+byte nextVoltageStep;
+
+// hardwareDetected: Bits set indicate this hardware is present/jumper closed.
+uint16OrBytes hardwareDetected;
+// hardwareNeverChecked: Is set false if the
+// PC asked for the hardware configuration.
+bool hardwareNeverChecked = true;
+// takeMeasurements: Is set according to set voltage command.
+// True if measurements are requested.
+bool takeMeasurements = true;
 
 // ADCs: measurement frequency, channel, gain
-byte     adcUpdateRate;        // Update rate for both ADCs (will be set for line frequency)
-byte     adc0Channel;          // Channel of ADC#0
-byte     adc1Channel;          // Channel of ADC#1
-byte     adc0Gain = 0;         // Gain of ADC#0, 0...7
-byte     adc1Gain = 0;         // Gain of ADC#1, 0...7
-bool     adc0ShouldDecreaseGain = false;  // Whether ADC#0 should increase its gain in the next cycle
-bool     adc1ShouldDecreaseGain = false;  // Whether ADC#1 should increase its gain in the next cycle
+
+// adcUpdateRate: Update rate for both ADCs (will be set for line frequency).
+byte     adcUpdateRate;
+// adc0Channel: Channel of ADC#0
+byte     adc0Channel;
+// adc1Channel: Channel of ADC#1
+byte     adc1Channel;
+// adc0Gain: Gain of ADC#0, 0...7
+byte     adc0Gain = 0;
+// adc1Gain: Gain of ADC#1, 0...7
+byte     adc1Gain = 0;
+// adc0ShouldDecreaseGain: Whether ADC#0 should
+// increase its gain in the next cycle.
+bool     adc0ShouldDecreaseGain = false;
+// adc1ShouldDecreaseGain: Whether ADC#1 should
+// increase its gain in the next cycle.
+bool     adc1ShouldDecreaseGain = false;
 
 // ADCs: quantities needed for self-calibration
-byte     calibrationGain = 0;                         // Gain for which a calibration is currently being performed (in parallel for both ADCs)
-bool     calibratedChannels[N_MAX_ADCS_ON_PCB][2];    // Array of flags to keep track of which channels (last index) of the ADCs have been calibrated
-int32_t  selfCalDataVsGain[AD7705_MAX_GAIN + 1][2][2][2]; // For each gain, two ADCs, two channels each, and last index is offset(0)&gain(1)
+
+// calibrationGain: Gain for which a calibration is currently
+// being performed (in parallel for both ADCs).
+byte     calibrationGain = 0;
+// calibratedChannels: Array of flags to keep track of which
+// channels (last index) of the ADCs have been calibrated.
+bool     calibratedChannels[N_MAX_ADCS_ON_PCB][2];
+// selfCalDataVsGain: For each gain, two ADCs, two
+// channels each, and last index is offset(0)&gain(1).
+int32_t  selfCalDataVsGain[AD7705_MAX_GAIN + 1][2][2][2];
 
 // ADCs: variables for measuring and storing the line frequency ripple
-int16_t  maximumPeak[N_MAX_ADCS_ON_PCB];       // Maximum of measurement, one for each ADC
-int16_t  minimumPeak[N_MAX_ADCS_ON_PCB];       // Minimum of measurement, one for each ADC
-int16_t  adc0RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#0 during auto-gain
-int16_t  adc1RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#1 during auto-gain
+
+// maximumPeak: Maximum of measurement, one for each ADC.
+int16_t  maximumPeak[N_MAX_ADCS_ON_PCB];
+// : minimumPeak: Minimum of measurement, one for each ADC.
+int16_t  minimumPeak[N_MAX_ADCS_ON_PCB];
+// adc0RipplePP: Ripple (peak-peak) measured
+// at gain=0 for ADC#0 during auto-gain.
+int16_t  adc0RipplePP = 0;
+// adc1RipplePP: Ripple (peak-peak) measured
+// at gain=0 for ADC#1 during auto-gain.
+int16_t  adc1RipplePP = 0;
 
 /* // ADC container                                                             // TODO: use it to simplify code below
 struct analogToDigitalConverter {
@@ -209,23 +286,31 @@ struct analogToDigitalConverter {
     byte     channel = AD7705_CH0;
     byte     gain = 0;
     bool     shouldDecreaseGain = false;
-    int16_t  ripplePP = 0;                                   // Ripple (peak-peak) measured at gain=0 during auto-gain    // TODO: should we keep the largest ripple value ever measured or the latest?
-    int32_t  calibrationForGain[AD7705_MAX_GAIN + 1][2][2];  // For each gain, two channels each, and last index is offset(0) & gain(1)
-	bool     calibratedChannels[2] = {false, false};
+    // Ripple (peak-peak) measured at gain=0 during auto-gain.
+    int16_t  ripplePP = 0;                                                       // TODO: should we keep the largest ripple value ever measured or the latest?
+    // For each gain, two channels each, and last index is offset(0) & gain(1)
+    int32_t  calibrationForGain[AD7705_MAX_GAIN + 1][2][2];
+    bool     calibratedChannels[2] = {false, false};
 } externalADCs[N_MAX_ADCS_ON_PCB]; */
 
 // Measurements
-uint16_t numMeasurementsToDo = 1;           // No. of ADC measurements to do before measurement is considered over
-uint16_t numMeasurementsToDoBackup = 1;     // Copy of the previous one, used to restore the previous value after auto-gain is done
-uint16_t numMeasurementsDone;               // Counter for the number of ADC measurements done so far
-int32_t  summedMeasurements[N_MAX_MEAS];    // Measurements of ADCs and LM35 are summed up here
-uint16_t continuousMeasurementInterval;     // Time between measurements if continuous-measurement mode is on
 
-floatOrBytes fDataOutput[N_MAX_MEAS];       // Measurements in physical units  // TODO: rename
+// numMeasurementsToDo: No. of ADC measurements
+// to do before measurement is considered over.
+uint16_t numMeasurementsToDo = 1;
+// numMeasurementsToDoBackup: Copy of the previous one, used
+// to restore the previous value after auto-gain is done.
+uint16_t numMeasurementsToDoBackup = 1;
+// numMeasurementsDone: Counter for the number
+// of ADC measurements done so far.
+uint16_t numMeasurementsDone;
+// summedMeasurements: Measurements of ADCs and LM35 are summed up here.
+int32_t  summedMeasurements[N_MAX_MEAS];
+// continuousMeasurementInterval: Time between measurements
+// if continuous-measurement mode is on. Currently unused.
+uint16_t continuousMeasurementInterval;
 
-
-
-
-
+// floatOrBytes: Measurements in physical units
+floatOrBytes fDataOutput[N_MAX_MEAS];                                           // TODO: rename
 
 #endif
