@@ -26,6 +26,7 @@ from viperleed.gui.classes.lattice2d import Lattice2D as Lattice
 from viperleed.gui.helpers import conventional_angles
 from viperleed.gui.helpers import remove_duplicates
 from viperleed.gui.helpers import single_spaces_only
+from viperleed.gui.helpers import string_matrix_to_numpy
 from viperleed.gui.helpers import two_by_two_array_to_tuple
 from viperleed.gui.leedsim.classes.leedparser import LEEDParser
 
