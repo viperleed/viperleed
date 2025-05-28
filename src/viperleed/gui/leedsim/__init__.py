@@ -1,6 +1,6 @@
 """Package leedsim of viperleed.gui.
 
-Schematic simulation of a LEED pattern. Allowa exporting a list of LEED
+Schematic simulation of a LEED pattern. Allows exporting a list of LEED
 spots (i.e., the pattern file) for properly indexing an experimental
 LEED pattern.
 

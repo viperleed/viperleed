@@ -21,7 +21,8 @@ from scipy import spatial as sp
 
 from viperleed.gui.classes import planegroup
 from viperleed.gui.classes.lattice2d import Lattice2D as Lattice
-from viperleed.gui.leedsim.classes.leedparameters import LEEDParameters
+from viperleed.gui.leedsim.classes.leedparameters_old import LEEDParameters
+# from viperleed.gui.leedsim.classes.leedparameters import LEEDParameters       # TODO: this makes beamgen fail because of unexpected beam sorting between beam groups at the same energy
 from viperleed.gui.leedsim.utils import screen_radius
 
 # from viperleed.gui import decorators as _dev
