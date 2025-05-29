@@ -20,9 +20,10 @@ _LOGGER = logging.getLogger(__name__)
 def write(slab, rpars):                                                         # TODO: shouldn't this use getLEEDdict from leedbase? Otherwise the info in rpars may be lost.
     """Write the experiment_symmetry.ini file for the ViPErLEED GUI.
 
-    The experiment_symmetry.ini file can be used by the ViPErLEED
-    pattern-simulator GUI to display the expected LEED pattern and
-    export a "pattern file" to be used in the spot tracker.
+    The experiment_symmetry.ini file can be used as input for the
+    ViPErLEED pattern-simulator GUI to display the expected LEED
+    pattern and export a "spot-pattern file" to be used in the
+    ImageJ spot tracker.
 
     Parameters
     ----------

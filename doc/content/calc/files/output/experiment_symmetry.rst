@@ -8,8 +8,8 @@ The :file:`experiment_symmetry.ini` file is generated during the
 cell and symmetry of the structure, on the energy range used, and
 on the incidence direction of the electron beam. It serves as an
 input file to the GUI, which can display a simulated LEED pattern
-for the structure, and export a "pattern file" for the Spot Tracker
-of the :ref:`imagej_plugins`.
+for the structure, and export a "spot-pattern file" for the Spot
+Tracker of the :ref:`imagej_plugins`.
 
 
 Changes
