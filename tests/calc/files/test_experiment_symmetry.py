@@ -30,8 +30,8 @@ _MODULE = 'viperleed.calc.files.experiment_symmetry'
 SYMM_FAILS = _TestPG.known_incorrect_groups
 NO_GROUP = 'unknown'
 _INT_RE = r'-?\d+'
-_FLOAT_RE = r'-?\d+(.\d+)?'
-_MATRIX_RE = r'\[\[{0}, {0}\], \[{0}, {0}\]\]'
+_FLOAT_RE = r'-?\d+(.\d*)?'
+_MATRIX_RE = r'\[\[{0},\s*{0}\],\s*\[{0},\s*{0}\]\]'
 
 
 def mock_energies(rpars):
