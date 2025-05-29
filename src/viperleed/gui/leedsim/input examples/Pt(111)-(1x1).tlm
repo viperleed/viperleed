@@ -1,0 +1,6 @@
+[Pt(111)-(1x1)]
+eMax=700.0
+SUPERLATTICE=[[1,0],[0,1]]
+surfBasis=[[2.7662,0.],[-1.3831,2.39559947]]
+surfGroup=p3m1
+bulkGroup=p3m1

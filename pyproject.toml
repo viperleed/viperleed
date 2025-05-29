@@ -83,7 +83,7 @@ classifiers = [
     [project.optional-dependencies]
     GUI = [
         'PyQt5',
-        'mplcairo; python_version<"3.11"',  # See mplcairo #51
+        'mplcairo; python_version<"3.14"',  # v0.6 supports up to 3.13
         ]
     hardware = [
         'requests',
@@ -107,12 +107,16 @@ classifiers = [
     viperleed = ['*.mplstyle']
     'viperleed.calc.lib' = ['*.dat']
     'viperleed.extensions' = ['**/*.f*', 'Make*', 'make*']
-    'viperleed.guilib.icons' = ['*.png', '*.svg']
-    'viperleed.guilib.fonts' = [
+    'viperleed.gui.icons' = ['*.png', '*.svg']
+    'viperleed.gui.fonts' = [
         'DejaVuSans.ttf',
         'cmunrm.otf',
         'LICENSE*',
         'FontLog*',
+        ]
+    'viperleed.gui.leedsim' = [
+        'input examples/*.tlm',
+        'exported/*.csv',
         ]
 
 

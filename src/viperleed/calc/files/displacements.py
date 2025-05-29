@@ -319,7 +319,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             grouplist = [
                 "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg",
                 "cmm", "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m",
-                "p6", "p6m"]  # TODO: use guilib or put as const in leedbase
+                "p6", "p6m"]  # TODO: use gui or put as const in leedbase
             targetsym = ""
             if s[0] == "t":
                 # True - go to highest symmetry

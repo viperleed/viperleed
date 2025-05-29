@@ -222,7 +222,7 @@ def initialization(sl, rp, subdomain=False):
             rp.setHaltingLevel(2)
 
         if not rp.superlattice_defined:
-            ws = writeWoodsNotation(rp.SUPERLATTICE)                   # TODO: replace writeWoodsNotation with guilib functions
+            ws = writeWoodsNotation(rp.SUPERLATTICE)                   # TODO: replace writeWoodsNotation with gui functions
             superlattice = rp.SUPERLATTICE.astype(int)
             if ws:
                 info = f"= {ws}"

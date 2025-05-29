@@ -69,7 +69,7 @@ bibtex_reference_style = 'label' # use numbers in text too
 
 html_theme = 'sphinx_rtd_theme'
 
-html_favicon = '../src/viperleed/guilib/icons/favicon.ico'
+html_favicon = '../src/viperleed/gui/icons/favicon.ico'
 html_logo = '_static/viperleed_logo_oneline.svg'
 html_static_path = ['_static']
 
