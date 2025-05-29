@@ -237,9 +237,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             elif key == 'bulk3Dsym' and val is None:
                 del params[key]
         # now params contains correctly formatted strings
-        params = list(params.items())
-        paramsTxt = '\n'.join('{}'.format('='.join(param))
-                              for param in params)
+        paramsTxt = '\n'.join(f'{k}={v}' for k, v in params.items())
         with open(fname, 'w+') as f:
             f.write(paramsTxt)
 
