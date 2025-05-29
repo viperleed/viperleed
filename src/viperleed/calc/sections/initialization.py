@@ -359,7 +359,13 @@ def initialization(sl, rp, subdomain=False):
         raise
 
     if not subdomain:
-        experiment_symmetry.write(sl, rp)
+        try:
+            experiment_symmetry.write(sl, rp)
+        except ValueError:
+            # SUPERLATTICE not integer. Probably we complain already
+            # somewhere else. Surely in iobeams.writeIVBEAMS, likely
+            # already earlier when we work on the slab.
+            pass
 
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:
