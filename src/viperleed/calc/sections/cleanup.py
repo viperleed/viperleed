@@ -89,7 +89,7 @@ _OUT_FILES = (
     'Errors.pdf',                     # error calc
     'Errors.zip',                     # error calc
     'Errors_summary.csv',             # error calc
-    'experiment_symmetry.tlm',        # inizialization
+    'experiment_symmetry.ini',        # inizialization
     'FD_Optimization.csv',            # FD optimization
     'FD_Optimization.pdf',            # FD optimization
     'FD_Optimization_beams.pdf',      # FD optimization
