@@ -2,70 +2,100 @@
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-07-01'
 __license__ = 'GPLv3+'
 
+import re
+
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.slab import MissingBulkSlabError
 from viperleed.calc.files import experiment_symmetry
 from viperleed.calc.lib.context import execute_in_dir
 
-from pathlib import Path
-
-from .. import poscar_slabs
+from ...helpers import exclude_tags
+from ..poscar_slabs import CasePOSCARSlabs
+from ..symmetry.test_symmetry import TestPlaneGroupFinding as _TestPG
+from ..symmetry.test_symmetry import _reconstruct_case_id
 from ..tags import CaseTag as Tag
 
-CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
+SYMM_FAILS = _TestPG.known_incorrect_groups
+NO_GROUP = 'unknown'
+_INT_RE = r'-?\d+'
+_FLOAT_RE = r'-?\d+(.\d+)?'
+_MATRIX_RE = r'\[\[{0}, {0}\], \[{0}, {0}\]\]'
 
-with_bulk_info = parametrize_with_cases('args', cases=CasePOSCARSlabs,
-                                        has_tag=Tag.BULK_PROPERTIES)
 
-
-@fixture(name='mock_energies')
-def fixture_mock_energies():
+def mock_energies(rpars):
     """Give an example THEO_ENERGIES to rpars."""
-    def _mock(rpars):
-        rpars.THEO_ENERGIES = TheoEnergies(10, 100, 2)
-    return _mock
+    rpars.THEO_ENERGIES = TheoEnergies(10, 100, 2)
 
 
-@with_bulk_info
-def test_success(args, mock_energies, tmp_path):
-    """Check the expected result of writing experiment_symmetry.ini."""
-    slab, rpars, *_ = args
-    slab.make_bulk_slab(rpars)
+def prepare_slab_and_rpars(slab, rpars, make_bulk=True):
+    """Prepare slab the same way as initialization would."""
     mock_energies(rpars)
+    if slab.foundplanegroup == NO_GROUP:
+        symmetry.findSymmetry(slab, rpars, forceFindOri=True)
+    if make_bulk:
+        bulk = slab.make_bulk_slab(rpars)
+        symmetry.findBulkSymmetry(bulk, rpars)
+        symmetry.findSymmetry(bulk, rpars, bulk=True)
+
+
+@fixture(name='with_info')
+@parametrize_with_cases('args',
+                        cases=CasePOSCARSlabs,
+                        filter=exclude_tags(Tag.NO_INFO))
+def fixture_with_info(args):
+    """Return a prepared slab and rpars."""
+    slab, rpars, *_ = args
+    prepare_slab_and_rpars(slab, rpars)
+    return args
+
+
+def test_success(with_info, tmp_path, subtests, first_case):
+    """Check the expected result of writing experiment_symmetry.ini."""
+    slab, rpars, info = with_info
     with execute_in_dir(tmp_path):
         experiment_symmetry.write(slab, rpars)
     written = tmp_path / 'experiment_symmetry.ini'
     assert written.exists()
-    content = written.read_text()
-    assert 'superlattice' in content
-    assert 'eMax = 100.00' in content
+    contents = [line.strip() for line in written.read_text().splitlines()]
+
+    this_case = _reconstruct_case_id(first_case)
+    expected = (
+        rf'superlattice = {_MATRIX_RE.format(_INT_RE)}',
+        rf'surfBasis = {_MATRIX_RE.format(_FLOAT_RE)}',
+        'eMax = 100.00',
+        )
+    if info.symmetry.hermann and this_case not in SYMM_FAILS:
+        expected += (f'surfGroup = {info.symmetry.hermann}.*',)
+    for pattern in expected:
+        with subtests.test(pattern):
+            assert any(re.match(pattern, line) for line in contents)
 
 
-@parametrize_with_cases('args', cases=CasePOSCARSlabs,
+@parametrize_with_cases('args',
+                        cases=CasePOSCARSlabs,
                         has_tag=Tag.NO_INFO)
-def test_raises_without_bulk_info(args, mock_energies):
+def test_raises_without_bulk_info(args):
     """Check complaints if no bulk-symmetry information is present."""
     slab, rpars, *_ = args
-    mock_energies(rpars)
+    prepare_slab_and_rpars(slab, rpars, make_bulk=False)
     with pytest.raises(MissingBulkSlabError):
         experiment_symmetry.write(slab, rpars)
 
 
-@with_bulk_info
-def test_write_failing(args, mock_energies, mocker):
+def test_write_failing(with_info, mocker):
     """Check complaints when writing to file fails."""
-    slab, rpars, *_ = args
-    slab.make_bulk_slab(rpars)
-    mock_energies(rpars)
+    slab, rpars, *_ = with_info
     mocker.patch('builtins.open', side_effect=OSError)
     with pytest.raises(OSError):
         experiment_symmetry.write(slab, rpars)
