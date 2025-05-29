@@ -26,6 +26,7 @@ from ..symmetry.test_symmetry import TestPlaneGroupFinding as _TestPG
 from ..symmetry.test_symmetry import _reconstruct_case_id
 from ..tags import CaseTag as Tag
 
+_MODULE = 'viperleed.calc.files.experiment_symmetry'
 SYMM_FAILS = _TestPG.known_incorrect_groups
 NO_GROUP = 'unknown'
 _INT_RE = r'-?\d+'
@@ -71,9 +72,11 @@ def test_success(with_info, tmp_path, subtests, first_case):
 
     this_case = _reconstruct_case_id(first_case)
     expected = (
-        rf'superlattice = {_MATRIX_RE.format(_INT_RE)}',
+        rf'SUPERLATTICE = {_MATRIX_RE.format(_INT_RE)}',
         rf'surfBasis = {_MATRIX_RE.format(_FLOAT_RE)}',
-        'eMax = 100.00',
+        'eMax = 100(.00)?',  # GUI doesn't care if it's float
+        rf'screenAperture = {_FLOAT_RE}',
+        rf'beamIncidence = \({_FLOAT_RE}, {_FLOAT_RE}\)',
         )
     if info.symmetry.hermann and this_case not in SYMM_FAILS:
         expected += (f'surfGroup = {info.symmetry.hermann}.*',)
@@ -82,20 +85,28 @@ def test_success(with_info, tmp_path, subtests, first_case):
             assert any(re.match(pattern, line) for line in contents)
 
 
-@parametrize_with_cases('args',
-                        cases=CasePOSCARSlabs,
-                        has_tag=Tag.NO_INFO)
-def test_raises_without_bulk_info(args):
+def test_raises_without_bulk_info(mocker):
     """Check complaints if no bulk-symmetry information is present."""
-    slab, rpars, *_ = args
-    prepare_slab_and_rpars(slab, rpars, make_bulk=False)
+    slab, rpars = (mocker.MagicMock() for _ in range(2))
+    slab.bulkslab = None
     with pytest.raises(MissingBulkSlabError):
         experiment_symmetry.write(slab, rpars)
 
 
-def test_write_failing(with_info, mocker):
+def test_write_failing(mocker):
     """Check complaints when writing to file fails."""
-    slab, rpars, *_ = with_info
+    mock_dict = {'SUPERLATTICE': mocker.MagicMock(),
+                 'surfBasis': mocker.MagicMock()}
+    mocker.patch(f'{_MODULE}.getLEEDdict', return_value=mock_dict)
     mocker.patch('builtins.open', side_effect=OSError)
+    args = (mocker.MagicMock() for _ in range(2))
     with pytest.raises(OSError):
-        experiment_symmetry.write(slab, rpars)
+        experiment_symmetry.write(*args)
+
+
+def test_get_dict_fails(mocker):
+    """Check complaints when fetching a dict of LEED parameters fails."""
+    mocker.patch(f'{_MODULE}.getLEEDdict', return_value=None)
+    args = (mocker.MagicMock() for _ in range(2))
+    with pytest.raises(ValueError):
+        experiment_symmetry.write(*args)

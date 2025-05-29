@@ -12,13 +12,14 @@ __license__ = 'GPLv3+'
 import logging
 
 from viperleed.calc.classes.slab import MissingBulkSlabError
+from viperleed.calc.lib.leedbase import getLEEDdict
 
 
 FILENAME = 'experiment_symmetry.ini'
 _LOGGER = logging.getLogger(__name__)
 
 
-def write(slab, rpars):                                                         # TODO: shouldn't this use getLEEDdict from leedbase? Otherwise the info in rpars may be lost.
+def write(slab, rpars):
     """Write the experiment_symmetry.ini file for the ViPErLEED GUI.
 
     The experiment_symmetry.ini file can be used as input for the
@@ -38,34 +39,33 @@ def write(slab, rpars):                                                         
     Raises
     ------
     MissingBulkSlabError
-        If slab has no `.bulkslab` attribute.
+        If `slab` has no `.bulkslab` yet.
+    ValueError
+        If `rpars.SUPERLATTICE` is not (close to) integer.
     OSError
-        If writing to file experiment_symmetry.ini fails.
+        If writing to file fails.
     """
-    output = f'eMax = {rpars.THEO_ENERGIES.max:.2f}\n'
-    mstring = '[[{}, {}], [{}, {}]]'.format(*slab.ab_cell.T.ravel())
-    output += f'surfBasis = {mstring}\n'
-    mstring = '[[{}, {}], [{}, {}]]'.format(
-        *rpars.SUPERLATTICE.round().astype(int).ravel()
-        )
-    output += f'superlattice = {mstring}\n'
-    pgstring = slab.planegroup
-    if pgstring in {'pm', 'pg', 'cm', 'rcm', 'pmg'}:
-        pgstring += str(slab.orisymplane.par)
-    output += f'surfGroup = {pgstring}\n'
     if slab.bulkslab is None:
         _LOGGER.error('experiment_symmetry.ini: bulk '
                       'slab has not been initialized.')
-        raise MissingBulkSlabError(
-            'experiment_symmetry.write called without bulk slab.'
-            )
-    output += f'bulkGroup = {slab.bulkslab.foundplanegroup}\n'
-    output += f'bulk3Dsym = {slab.bulkslab.get_bulk_3d_str()}'
-    # write output
-    filename = 'experiment_symmetry.ini'
+        raise MissingBulkSlabError('experiment_symmetry.write '
+                                   'called without bulk slab.')
+    as_dict = getLEEDdict(slab, rpars)
+    if as_dict is None:
+        raise ValueError('SUPERLATTICE is not integer-valued.')
+
+    # Convert arrays to lists for one-line display
+    for key in ('SUPERLATTICE', 'surfBasis'):
+        as_dict[key] = as_dict[key].tolist()
+
+    # Prepare lines to be written
+    lines = '\n'.join(f'{k} = {v}' for k, v in as_dict.items())
+        ))
+
+    # Actually do the writing
     try:  # pylint: disable=too-many-try-statements  # Two OK for open
         with open(FILENAME, 'w', encoding='utf-8') as file:
-            file.write(output)
+            file.write(lines)
     except OSError:
         _LOGGER.error(f'Failed to write {FILENAME!r}')
         raise
