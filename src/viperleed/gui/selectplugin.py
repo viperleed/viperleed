@@ -29,7 +29,7 @@ from viperleed.gui.widgetslib import move_to_front
 
 from viperleed.gui import decorators as dev_
 
-PRE_RELEASE = True
+PRE_RELEASE = False
 
 
 def show_pre_release_popup():
