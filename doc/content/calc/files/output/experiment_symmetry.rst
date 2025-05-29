@@ -15,6 +15,6 @@ of the :ref:`imagej_plugins`.
 Changes
 -------
 
-.. versionchanged:: 1.0.0
+.. versionchanged:: 0.14.0
    The name and extension of the file changed from
    :file:`PatternInfo.tlm` to :file:`experiment_symmetry.ini`.
