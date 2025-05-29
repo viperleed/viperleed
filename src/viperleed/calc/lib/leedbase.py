@@ -26,7 +26,7 @@ from viperleed.calc.lib.math_utils import cosvec
 from viperleed.calc.lib.math_utils import lcm
 from viperleed.calc.lib.matrix import SingularMatrixError
 from viperleed.calc.lib.matrix import ensure_integer_matrix
-from viperleed.guilib import get_equivalent_beams
+from viperleed.gui.base import get_equivalent_beams
 
 
 # constants for conversion Angstrom and eV <-> atomic units
@@ -533,7 +533,7 @@ def bulk_3d_string(screws, glides):
 
 
 def getLEEDdict(sl, rp):
-    """Return a LEED dict containing information needed by guilib functions."""
+    """Return a LEED dict containing information needed by gui functions."""
     if sl.planegroup == 'unknown':
         logger.warning('Generating LEED dictionary for slab with unknown '
                        'plane group!')
@@ -561,7 +561,7 @@ def getLEEDdict(sl, rp):
     if 'group' not in rp.SYMMETRY_BULK:
         return d
 
-    # Some definitions for bulk symmetry.                                       # TODO: use guilib functions
+    # Some definitions for bulk symmetry.                                       # TODO: use gui functions
     allowed_groups = {
         'oblique': ('p1', 'p2'),
         'rhombic': ('p1', 'p2', 'cm', 'cmm'),

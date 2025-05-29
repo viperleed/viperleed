@@ -27,8 +27,8 @@ from viperleed.calc import symmetry
 from viperleed.calc.lib.leedbase import BOHR_TO_ANGSTROM
 from viperleed.calc.lib.leedbase import HARTREE_TO_EV
 from viperleed.calc.lib.leedbase import getLEEDdict
-from viperleed.guilib.base import BeamIndex
-from viperleed.guilib.base import get_equivalent_beams
+from viperleed.gui.base import get_equivalent_beams
+from viperleed.gui.classes.beamindex import BeamIndex
 
 
 H_BAR_SQ_OVER_2M = 0.5 * HARTREE_TO_EV * BOHR_TO_ANGSTROM**2  # h**2/2m
@@ -80,7 +80,7 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
         slab.make_bulk_slab(rpars)
         symmetry.findSymmetry(slab.bulkslab, rpars)
 
-    # Use guilib to generate list of beams
+    # Use gui to generate list of beams
     leed_parameters = getLEEDdict(slab, rpars)
     leed_parameters['screenAperture'] = 180  # All possible beams
     leed_parameters['eMax'] = _get_emax_for_evanescent_beams(slab, rpars,

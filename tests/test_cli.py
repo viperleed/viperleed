@@ -9,11 +9,13 @@ __license__ = 'GPLv3+'
 
 import io
 
+import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.cli import ViPErLEEDMain
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.gui.detect_graphics import has_pyqt
 
 from .helpers import CustomTestException
 
@@ -58,6 +60,17 @@ def fixture_mock_stdin(tmp_path, mocker):
     with execute_in_dir(tmp_path):
         yield
 
+@fixture(name='mock_gui')
+def fixture_mock_gui(mocker):
+    """Prevent the GUI from opening up."""
+    if not has_pyqt():
+        return  # Nothing to do here
+    mocker.patch('viperleed.gui.cli.ViPErLEEDSelectPlugin')
+    mocker.patch('viperleed.gui.cli.qtc')
+    mocker.patch('viperleed.gui.cli.qtg')
+    qtw = mocker.patch('viperleed.gui.cli.qtw')
+    qtw.QApplication.exec_.return_value = 0
+
 
 def call_cli(cli_cls, argv=None):
     """Execute `cli_cls` with command-line arguments."""
@@ -70,6 +83,7 @@ def call_cli(cli_cls, argv=None):
 
 
 @parametrize(util=ALL_CLI_NAMES)
+@pytest.mark.usefixtures('mock_gui')
 def test_can_call_main_viperleed(util):
     """Check that calling a viperleed `util` is successful.
 
@@ -90,6 +104,7 @@ def test_can_call_main_viperleed(util):
 
 
 @parametrize(cli_cls=CONCRETE_CLIS.values(), ids=CONCRETE_CLIS)
+@pytest.mark.usefixtures('mock_gui')
 def test_call_child_util_cls(cli_cls):
     """Check the successful execution of a `cli_cls`.
 
