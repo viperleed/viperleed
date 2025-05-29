@@ -8,7 +8,7 @@ module used to be part of viperleed.tests.helpers.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-03-19'
 __license__ = 'GPLv3+'
 
@@ -17,7 +17,7 @@ from typing import Dict, List, Mapping, Set, Tuple
 
 import numpy as np
 
-from viperleed.calc.classes.rparams import LayerCuts
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.lib.dataclass_utils import non_init_field
 
 from ..helpers import InfoBase

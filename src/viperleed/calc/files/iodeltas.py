@@ -9,7 +9,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -20,6 +20,7 @@ import shutil
 import fortranformat as ff
 import numpy as np
 
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.lib.version import Version
 
@@ -149,7 +150,7 @@ def checkDelta(filename, at, el, rp):
             fvib.append(parselist[0])
             if any([f != 0. for f in parselist[1:ngeo]]):
                 logger.warning("File "+filename+": Found unexpected entries "
-                               "in list of vibrational displacements.")
+                               "in list of vibration displacements.")
             parselist = parselist[ngeo:]
         if len(fvib) >= nvib:
             break
@@ -206,12 +207,14 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     if auxbeams == "":
         # if AUXBEAMS is not in work folder, check SUPP folder
         if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
-            if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
+            if os.path.isfile(os.path.join(".", DEFAULT_SUPP, "AUXBEAMS")):
                 try:
-                    shutil.copy2(os.path.join(".", "SUPP", "AUXBEAMS"),
+                    shutil.copy2(os.path.join(".", DEFAULT_SUPP, "AUXBEAMS"),
                                  "AUXBEAMS")
                 except Exception:
-                    logger.warning("Failed to copy AUXBEAMS from SUPP folder")
+                    logger.warning(
+                        f"Failed to copy AUXBEAMS from {DEFAULT_SUPP} folder"
+                        )
             else:
                 logger.warning("generateDeltaInput: AUXBEAMS not found")
         try:
@@ -324,7 +327,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         vibamps = [v + atom.site.vibamp[targetel] for v in viblist]
         if any([v <= 0 for v in vibamps]):
             logger.warning(
-                "Vibrational amplitudes for {} contain values <= 0 "
+                "Vibration amplitudes for {} contain values <= 0 "
                 "(smallest: {:.4f}). Shifting displacement list to avoid "
                 "non-positive numbers.".format(atom, min(vibamps)))
             corr = min([v for v in vibamps if v > 0]) - min(vibamps)

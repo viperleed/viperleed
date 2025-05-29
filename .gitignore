@@ -66,3 +66,6 @@ tensorleed/eeasisss
 **/.pytest_cache/
 .coverage
 **/prof/
+
+# Ignore windows batch files in devutils 
+devutils/*.bat

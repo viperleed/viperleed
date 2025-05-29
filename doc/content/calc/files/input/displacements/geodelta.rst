@@ -2,10 +2,10 @@
 
 .. _geodelta:
 
-Geometrical displacements
-=========================
+Geometric displacements
+=======================
 
-Geometrical displacements to be used during the search must be specified in a
+Geometric displacements to be used during the search must be specified in a
 block starting with the
 
 ..  code-block:: none
@@ -17,9 +17,9 @@ one wants to move during the search.
 
 .. note::
     Geometric displacements for any atom can only be applied along one
-    :ref:`direction<geodelta_direction>`` (e.g. z, x, y, along arcs etc.) at a
-    time. To optimize positions in multiple directions, multiple subsequent 
-    search blocks are necessary.
+    :ref:`direction<geodelta_direction>` (e.g., |z|, |x|, |y|, along arcs
+    etc.) at a time. To optimize positions in multiple directions, multiple
+    subsequent search blocks are necessary.
 
 **Example**:
 
@@ -63,7 +63,7 @@ Possible directions for displacements are:
 
 ``z``
    Displacements along the direction orthogonal to the surface.
-   Positive *z* values correspond to movements of the atoms away from the bulk.
+   Positive |z| values correspond to movements of the atoms away from the bulk.
 
    ..  code-block:: none
 
@@ -185,10 +185,10 @@ and the other one is out-of-plane:
    -  During one optimization run, an atom can only be displaced along
       **one** axis (so, for example, **not** sampling all in-plane directions
       at once). This is due to the way that the TensErLEED search is currently
-      designed, with geometrical displacements being optimized along a 1D array
+      designed, with geometric displacements being optimized along a 1D array
       of points only. Since LEED is much more sensitive to variations of the
       out-of-plane geometry of your sample (small :math:`k_{\textrm{par}}`),
-      it is a good idea to *first* run a few optimization runs on the *z*
+      it is a good idea to *first* run a few optimization runs on the |z|
       positions only, and treat in-plane displacements later as a refinement
       (unless your :ref:`POSCAR` model is *very far off* from the real 
       structure).

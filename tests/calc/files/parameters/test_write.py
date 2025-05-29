@@ -3,23 +3,32 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-18'
 __license__ = 'GPLv3+'
+
+from pathlib import Path
 
 import numpy as np
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.classes.rparams import LMax
-from viperleed.calc.classes.rparams import LayerCuts
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
+from viperleed.calc.classes.rparams.special.l_max import LMax
+from viperleed.calc.files import parameters
+from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.write import ModifiedParameterValue
 from viperleed.calc.files.parameters.write import ParametersFileEditor
-from viperleed.calc.files.parameters.write import comment_out, modify
+from viperleed.calc.files.parameters.write import comment_out
+from viperleed.calc.files.parameters.write import modify
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.string_utils import strip_comments
 
-from ....helpers import execute_in_dir
+_MODULE = 'viperleed.calc.files.parameters.write'
+_AUTO_COMMENT = '! line commented out automatically'
+_AUTO_DUPE = '! Duplicate values given. This was ignored.'
+_AUTO_EDIT = '! line automatically changed to:'
 
 
 class TestModifiedParameterValue:
@@ -28,21 +37,28 @@ class TestModifiedParameterValue:
     def test_comment_out_only(self):
         """Check attributes when parameter is to be commented out."""
         mod_param = ModifiedParameterValue('param1', 'value1',
+                                           original=None,
                                            only_comment_out=True)
         assert mod_param.only_comment_out
         assert mod_param.param == 'param1'
         assert not strip_comments(mod_param.line)
+        assert not mod_param.original
+        assert mod_param.to_assignment() is None
 
     def test_param_comment(self):
         """Check attributes when a comment is requested for a parameter."""
+        custom_comment = 'Test Comment'
         mod_param = ModifiedParameterValue('N_BULK_LAYERS', 'value1',
-                                           comment='Test Comment')
+                                           original=None,
+                                           comment=custom_comment)
         assert not mod_param.only_comment_out
         assert mod_param.param == 'N_BULK_LAYERS'
-        assert mod_param.comment == 'Test Comment'
+        assert mod_param.comment == custom_comment
         assign, _comment = (s.strip() for s in mod_param.line.split('!'))
-        assert _comment == 'Test Comment'
+        assert _comment == custom_comment
         assert assign == 'N_BULK_LAYERS = value1'
+        new_assignment = mod_param.to_assignment()
+        assert new_assignment == Assignment('value1', 'N_BULK_LAYERS')
 
     _fmt_values = {
         'string': ('N_BULK_LAYERS', 3, '3'),
@@ -64,7 +80,7 @@ class TestModifiedParameterValue:
         """Check the expected formatting of example values."""
         rpars = Rparams()
         setattr(rpars, attr, value)
-        mod_param = ModifiedParameterValue(attr, rpars)
+        mod_param = ModifiedParameterValue(attr, rpars, original=None)
         assert mod_param.fmt_value == expected
 
     _fmt_layer_cuts = {
@@ -78,7 +94,7 @@ class TestModifiedParameterValue:
         attr = 'LAYER_CUTS'
         rpars = Rparams()
         setattr(rpars, attr, LayerCuts.as_layer_cuts(val))
-        mod_param = ModifiedParameterValue(attr, rpars)
+        mod_param = ModifiedParameterValue(attr, rpars, original=None)
         assert mod_param.fmt_value == expected
 
     _fmt_special_values = {
@@ -93,7 +109,7 @@ class TestModifiedParameterValue:
         rpars = Rparams()
         for attr, value in rpars_settings.items():
             setattr(rpars, attr, value)
-        mod_param = ModifiedParameterValue(param, rpars)
+        mod_param = ModifiedParameterValue(param, rpars, original=None)
         assert mod_param.fmt_value == expected
 
     _invalid = {
@@ -111,12 +127,12 @@ class TestModifiedParameterValue:
         except AttributeError:
             pass
         with pytest.raises(ValueError):
-            ModifiedParameterValue(attr, rpars)
+            ModifiedParameterValue(attr, rpars, original=None)
 
     def test_raises_no_formatter(self):
         """Check complaints when asking for a parameter without a formatter."""
         with pytest.raises(ValueError):
-            ModifiedParameterValue('PARAM_WITHOUT_FORMATTER', 1)
+            ModifiedParameterValue('PARAM_WITHOUT_FORMATTER', 1, original=None)
 
 
 class TestParametersEditor:
@@ -128,12 +144,24 @@ class TestParametersEditor:
         editor = ParametersFileEditor(rpars)
         modpar, comment = 'PARAM1', 'Test Comment'
         modified = editor.comment_out_parameter(modpar, comment=comment)
-        assert modified.only_comment_out
-        assert modified.param == modpar
-        assert modified.comment == comment
+        assert len(modified) == 1
+        assert modified[0].only_comment_out
+        assert modified[0].param == modpar
+        assert modified[0].comment == comment
+
+    def test_fails_to_read_parameters(self, read_one_param_file, mocker):
+        """Check complaints when reading PARAMETERS fails."""
+        fpath, rpars = read_one_param_file
+        mock_reader = mocker.MagicMock()
+        mocker.patch(f'{_MODULE}.RawLineParametersReader',
+                     return_value=mock_reader)
+        mock_reader.__enter__.side_effect = Exception('read failed')
+        with pytest.raises(Exception, match='read failed'):
+            with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+                editor.comment_out_parameter('PARAM1')
 
     def test_modify_parameter_explicit_value(self):
-        """Test successful execution of modify_param method."""
+        """Test successful execution of the modify_param method."""
         rpars = Rparams()
         editor = ParametersFileEditor(rpars)
         modpar, new_value, comment = 'BULK_LIKE_BELOW', 0.23, 'Test Comment'
@@ -143,44 +171,72 @@ class TestParametersEditor:
         assert modified.comment == comment
         assert modified.fmt_value == '0.2300'
 
-    def test_dont_save_nonexisting_file(self):
-        """Check no duplicate file is created if one did not exist."""
+    def test_modify_multi_valued_raises(self, read_one_param_file):
+        """Test complaints when modifying a multi-valued parameter."""
         rpars = Rparams()
-        editor = ParametersFileEditor(rpars, path='_a_non_exis_ting_pa_th__',
-                                      save_existing_parameters_file=True)
-        editor.save_existing_parameters_file()
-        # pylint: disable-next=protected-access
-        assert not any(editor._path.glob('*'))
-
-    def test_save_existing_parameters_file(self, read_one_param_file):
-        """Check that original file is duplicated correctly."""
         fpath, rpars = read_one_param_file
-        rpars.timestamp = timestamp = 'new_timestamp_123456'
-        editor = ParametersFileEditor(rpars, path=fpath.parent)
-        editor.save_existing_parameters_file()
-        new_param = next(fpath.parent.glob(f'PARAMETERS*{timestamp}'), None)
-        assert new_param is not None
-        with fpath.open('r', encoding='utf-8') as old_file:
-            with new_param.open('r', encoding='utf-8') as new_file:
-                assert new_file.read() == old_file.read()
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            with pytest.raises(TypeError):  # original not given
+                editor.modify_param('SITE_DEF')
 
-    def test_write_modified_nothing(self, read_one_param_file):
-        """Check that file is unchanged with no edits."""
+    def test_modify_twice(self):
+        """Test correct subsequent modification of the same parameter."""
+        rpars = Rparams()
+        editor = ParametersFileEditor(rpars)
+        modpar = 'BULK_LIKE_BELOW'
+        once = {'new_value': 0.23,
+                'comment': 'First edit'}
+        twice = {'new_value': 0.99,
+                 'comment': 'Second edit'}
+        editor.modify_param(modpar, **once)
+        modified = editor.modify_param(modpar, **twice)
+        assert not modified.only_comment_out
+        assert modified.param == modpar
+        assert modified.comment == twice['comment']
+        assert modified.fmt_value == f'{twice["new_value"]:.4f}'
+
+    def test_write_commented_param(self, read_one_param_file):
+        """check correct commenting-out of one parameter."""
         fpath, rpars = read_one_param_file
-        editor = ParametersFileEditor(rpars, path=fpath.parent)
-        editor.write_modified_parameters()
-        ori_path = next(fpath.parent.glob(f'PARAMETERS*{rpars.timestamp}'))
-        with fpath.open('r', encoding='utf-8') as mod_file:
-            with ori_path.open('r', encoding='utf-8') as ori_file:
-                assert mod_file.read() == ori_file.read()
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            editor.comment_out_parameter('BULK_LIKE_BELOW')  # 4 times!
+        assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
+        check_marked_as_edited(rpars)
+
+    def test_write_comment_out_then_edit(self, read_one_param_file):
+        """Check successive commenting and editing of a parameter."""
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            editor.comment_out_parameter('LMAX')
+            rpars.LMAX = LMax(3, 16)
+            editor.modify_param('LMAX')
+        old_value = '! LMAX = 8-14'
+        check_file_modified(fpath, old_value, _AUTO_EDIT)
+
+    def test_write_edit_then_comment_out(self, read_one_param_file):
+        """Check successive editing and commenting of a parameter."""
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            rpars.LMAX = LMax(3, 16)
+            editor.modify_param('LMAX')
+            editor.comment_out_parameter('LMAX')
+        old_value = '! LMAX = 8-14'
+        check_file_modified(fpath, old_value, _AUTO_COMMENT)
+        for not_present in ('LMAX = 3-16', '! LMAX = 3-16'):
+            try:
+                check_file_modified(fpath, not_present)
+            except AssertionError:
+                pass
+            else:
+                pytest.fail(reason=f'Unexpectedly wrote {not_present!r}')
 
     @staticmethod
-    def _modify_one_param(editor, rpars):
+    def _modify_one_param(editor, rpars, new_value=0.9876):
         """Edit one parameter, return a comment."""
-        rpars.BULK_LIKE_BELOW = 0.9876
-        comment = 'Decreasing digits'
+        rpars.BULK_LIKE_BELOW = new_value
+        comment = f'Value changed to {new_value}'
         editor.modify_param('BULK_LIKE_BELOW', comment=comment)
-        return comment, 'BULK_LIKE_BELOW = 0.9876'
+        return comment, f'BULK_LIKE_BELOW = {new_value:.4f}'
 
     def test_write_modified_called(self, read_one_param_file):
         """Check editing for explicit call to write_modified_parameters."""
@@ -191,6 +247,7 @@ class TestParametersEditor:
             comment, value = self._modify_one_param(editor, rpars)
             editor.write_modified_parameters()
             check_file_modified(fpath.name, value, comment)
+        check_marked_as_edited(rpars)
 
     def test_write_modified_context(self, read_one_param_file):
         """Check editing behaviour when used as a context manager."""
@@ -204,13 +261,33 @@ class TestParametersEditor:
             else:
                 pytest.fail(reason='File was modified too early')
         check_file_modified(fpath, value, comment)
+        check_marked_as_edited(rpars)
 
-    def test_write_commented_param(self, read_one_param_file):
-        """check correct commenting-out of one parameter."""
+    def test_write_modified_nothing(self, read_one_param_file):
+        """Check that file is unchanged with no edits."""
+        fpath, rpars = read_one_param_file
+        ori_contents = fpath.read_text(encoding='utf-8')
+        rpars.files_to_out.clear()  # In case STOP was commented out
+        editor = ParametersFileEditor(rpars, path=fpath.parent)
+        editor.write_modified_parameters()
+        edited_contents = fpath.read_text(encoding='utf-8')
+        assert edited_contents == ori_contents
+        assert not rpars.files_to_out
+
+    def test_write_modified_twice(self, read_one_param_file):
+        """Check editing behaviour when used as a context manager."""
         fpath, rpars = read_one_param_file
         with ParametersFileEditor(rpars, path=fpath.parent) as editor:
-            editor.comment_out_parameter('SITE_DEF')  # Two of them!
-        assert all_commented_out(fpath, 'SITE_DEF')
+            comment_1, value_1 = self._modify_one_param(editor, rpars, 0.1234)
+            comment_2, value_2 = self._modify_one_param(editor, rpars, 0.7865)
+        try:
+            check_file_modified(fpath, value_1, comment_1)
+        except AssertionError:
+            pass
+        else:
+            pytest.fail(reason='Only the last modification should be written')
+        check_file_modified(fpath, value_2, comment_2)
+        check_marked_as_edited(rpars)
 
 
 def all_commented_out(fpath, param):
@@ -229,14 +306,113 @@ def check_file_modified(fpath, assign_str, comment=''):
             assert line.strip().endswith(comment)
 
 
+def check_marked_as_edited(rpars):
+    """Check that `rpars` has PARAMETERS among the edited files."""
+    # pylint: disable-next=magic-value-comparison
+    assert 'PARAMETERS' in rpars.files_to_out
+
+
 class TestCommentOutAndModifyFunctions:
     """Collection of tests for the public functions of .write."""
+
+    def test_add_new_param(self, read_one_param_file):
+        """Check correct addition of a new PARAMETER."""
+        fpath, rpars = read_one_param_file
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'N_BULK_LAYERS')
+            rpars_again = parameters.read()
+        check_file_modified(fpath, 'N_BULK_LAYERS = 1')
+        check_marked_as_edited(rpars)
+        assert rpars.readParams == rpars_again.readParams
 
     def test_comment_out_param(self, read_one_param_file):
         """Check effective commenting-out of one parameter."""
         fpath, rpars = read_one_param_file
-        comment_out(rpars, 'BULK_LIKE_BELOW', path=fpath.parent)
+        with execute_in_dir(fpath.parent):
+            comment_out(rpars, 'BULK_LIKE_BELOW')
         assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
+        check_marked_as_edited(rpars)
+
+    def test_modify_multi_value_add_new(self, read_domains_file):
+        """Check correct addition of a new multi-valued line."""
+        fpath, rpars = read_domains_file
+        with execute_in_dir(fpath.parent):
+            new = Assignment('this line did not exist',
+                             'DOMAIN',
+                             flags_str='added')
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=new)
+        check_file_modified(fpath, 'DOMAIN added = other_path')
+
+    def test_modify_multi_value_add_new_one_given(self, read_domains_file):
+        """Check addition of a new multi-valued line when only one existed."""
+        fpath, rpars = read_domains_file
+        orig = next(a for a in rpars.readParams['DOMAIN']
+                    # pylint: disable-next=magic-value-comparison
+                    if a.flags_str == 'Bi')
+        with execute_in_dir(fpath.parent):
+            # Comment out one of the two
+            comment_out(rpars, 'DOMAIN', original=orig)
+            new = Assignment('this line did not exist',
+                             'DOMAIN',
+                             flags_str='added')
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=new)
+        try:
+            check_file_modified(fpath, '! DOMAIN = silver')
+        except AssertionError:
+            pass
+        else:
+            pytest.fail(reason='Unexpectedly commented out DOMAIN silver')
+        check_file_modified(fpath, 'DOMAIN added = other_path')
+
+    def test_modify_multi_value_duplicate(self, read_identical_domains):
+        """Check correct editing of a multi-valued line given twice."""
+        fpath, rpars = read_identical_domains
+        first = next(iter(rpars.readParams['DOMAIN']))
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=first)
+        lines = fpath.read_text().splitlines()
+        commented = '! DOMAIN = silver'
+        n_commented = sum(1 for line in lines if line.startswith(commented))
+        assert n_commented == 1
+        check_file_modified(fpath, commented, _AUTO_EDIT)
+        check_file_modified(fpath, 'DOMAIN = other_path')
+
+    def test_modify_multi_value_one_given(self, read_domains_file):
+        """Check correct modification of one multi-valued parameter."""
+        fpath, rpars = read_domains_file
+        orig = next(a for a in rpars.readParams['DOMAIN']
+                    # pylint: disable-next=magic-value-comparison
+                    if a.flags_str == 'Bi')
+        with execute_in_dir(fpath.parent):
+            # Comment out one of the two
+            comment_out(rpars, 'DOMAIN', original=orig)
+            # And modify the other one, without giving the original
+            modify(rpars, 'DOMAIN', new=Path('other_path'))
+        check_file_modified(fpath, '! DOMAIN Bi = bismuth')
+        check_file_modified(fpath, '! DOMAIN = silver')
+        check_file_modified(fpath, 'DOMAIN = other_path')
+
+    def test_modify_multi_value_no_flag(self, read_domains_file):
+        """Check correct modification of one multi-valued parameter."""
+        fpath, rpars = read_domains_file
+        orig = next(a for a in rpars.readParams['DOMAIN']
+                    # pylint: disable-next=magic-value-comparison
+                    if a.values_str == 'silver')
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=orig)
+        check_file_modified(fpath, '! DOMAIN = silver')
+        check_file_modified(fpath, 'DOMAIN = other_path')
+
+    def test_modify_multi_value_with_flag(self, read_domains_file):
+        """Check correct modification of one multi-valued parameter."""
+        fpath, rpars = read_domains_file
+        orig = next(a for a in rpars.readParams['DOMAIN']
+                    # pylint: disable-next=magic-value-comparison
+                    if a.flags_str == 'Bi')
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'DOMAIN', new=Path('other_path'), original=orig)
+        check_file_modified(fpath, '! DOMAIN Bi = bismuth')
+        check_file_modified(fpath, 'DOMAIN Bi = other_path')
 
     def test_modify_param(self, read_one_param_file):
         """Check effective modification of one parameter."""
@@ -245,3 +421,51 @@ class TestCommentOutAndModifyFunctions:
         with execute_in_dir(fpath.parent):
             modify(rpars, 'LMAX')
         check_file_modified(fpath, 'LMAX = 3-16')
+        check_marked_as_edited(rpars)
+
+    def test_modify_param_twice(self, read_one_param_file):
+        """Check successive modifications of one parameter."""
+        fpath, rpars = read_one_param_file
+        once, twice = LMax(3, 16), LMax(9, 11)
+        with execute_in_dir(fpath.parent):
+            for new_value in (once, twice):
+                rpars.LMAX = new_value
+                modify(rpars, 'LMAX')
+        check_file_modified(fpath,  # The original line
+                            '! LMAX = 8-14',
+                            _AUTO_EDIT)
+        check_file_modified(fpath,  # First edit
+                            '! LMAX = 3-16',
+                            _AUTO_EDIT)
+        check_file_modified(fpath, 'LMAX = 9-11')  # Last edit
+        check_marked_as_edited(rpars)
+
+    def test_modify_replicated_param(self, read_one_param_file):
+        """Check edit of one parameter that the user gave multiple times."""
+        fpath, rpars = read_one_param_file
+        rpars.BULK_LIKE_BELOW = 12345
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'BULK_LIKE_BELOW')
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.32', _AUTO_DUPE)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.33', _AUTO_DUPE)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.34', _AUTO_DUPE)
+        check_file_modified(fpath, '! BULK_LIKE_BELOW = 0.35', _AUTO_EDIT)
+        check_file_modified(fpath, 'BULK_LIKE_BELOW = 12345.0000')
+        check_marked_as_edited(rpars)
+
+    def test_read_params_updated_when_commented(self, read_one_param_file):
+        """Check that rpars.readParams is updated upon modification."""
+        fpath, rpars = read_one_param_file
+        with execute_in_dir(fpath.parent):
+            comment_out(rpars, 'BULK_LIKE_BELOW')  # 4 of them!
+            rpars_again = parameters.read()
+        assert rpars.readParams == rpars_again.readParams
+
+    def test_read_params_updated_when_modified(self, read_one_param_file):
+        """Check that rpars.readParams is updated upon modification."""
+        fpath, rpars = read_one_param_file
+        rpars.LMAX = LMax(3, 16)
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'LMAX')
+            rpars_again = parameters.read()
+        assert rpars.readParams == rpars_again.readParams

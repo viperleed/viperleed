@@ -8,12 +8,13 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-03-26'
 __license__ = 'GPLv3+'
 
 import argparse
 from collections import defaultdict
+from contextlib import AbstractContextManager
 from functools import partial
 import importlib
 import inspect
@@ -23,6 +24,7 @@ import pkgutil
 import sys
 
 from viperleed import GLOBALS
+from viperleed.calc.lib.string_utils import harvard_commas
 from viperleed.calc.lib.string_utils import parent_name
 
 
@@ -40,7 +42,7 @@ def _to_float(value_str):
         return float(value_str)
     except ValueError:
         raise argparse.ArgumentTypeError('Must be a floating-point '
-                                         'value') from None
+                                         'value.') from None
 
 
 def float_in_zero_one(value_str):
@@ -62,25 +64,20 @@ def float_in_zero_one(value_str):
     value = _to_float(value_str)
     if not 0 < value < 1:
         raise argparse.ArgumentTypeError('Must be between zero '
-                                         'and one (excluded)')
+                                         'and one (both excluded).')
     return value
 
 
 def length_choices(*choices):
     """Return an action that forces `choices` as the only acceptable nargs."""
 
-    if len(choices) > 2:  # pylint: disable=magic-value-comparison
-        fmt_choices = ', '.join(str(c) for c in choices[:-1])
-        fmt_choices += f', or {choices[-1]}'
-    else:
-        fmt_choices = ' or '.join(str(c) for c in choices)
-
     # pylint: disable-next=too-few-public-methods
     class _LengthChoices(argparse.Action):
         def __call__(self, parser, args, values, option_string=None):
             n_values = len(values)
             if n_values not in choices:
-                err_ = f'argument {self.dest!r} requires {fmt_choices} values'
+                fmt_choices = harvard_commas(*choices, sep='or')
+                err_ = f'argument {self.dest!r} requires {fmt_choices} values.'
                 parser.error(err_)
             setattr(args, self.dest, values)
 
@@ -104,7 +101,7 @@ def positive_float(value_str):
     """
     value = _to_float(value_str)
     if value <= 0:
-        raise argparse.ArgumentTypeError('Must be strictly positive')
+        raise argparse.ArgumentTypeError('Must be strictly positive.')
     return value
 
 
@@ -118,10 +115,10 @@ def required_length(n_min=None, n_max=None):
             n_values = len(values)
             err_ = f'argument {self.dest!r} requires '
             if n_min is not None and n_values < n_min:
-                err_ += f'at least {n_min} values'
+                err_ += f'at least {n_min} values.'
                 parser.error(err_)
             if n_max is not None and n_values > n_max:
-                err_ += f'at most {n_max} values'
+                err_ += f'at most {n_max} values.'
                 parser.error(err_)
             setattr(args, self.dest, values)
 
@@ -130,6 +127,61 @@ def required_length(n_min=None, n_max=None):
 
 minimum_length = partial(required_length, n_max=None)
 maximum_length = partial(required_length, n_min=None)
+
+
+class StreamArgument(AbstractContextManager):
+    """A context to handle streams to files, stdin, or stdout."""
+
+    def __init__(self, mode, encoding='utf-8'):
+        """Initialize a stream argument with mode and encoding."""
+        self._mode = mode
+        self._encoding = encoding
+        self._path = None
+        self._stream = None
+
+    @property
+    def is_interactive(self):
+        """Return whether this stream is an interactive terminal."""
+        return self.is_terminal and self._stream.isatty()
+
+    @property
+    def is_terminal(self):
+        """Return whether this stream goes to the terminal."""
+        return self._stream in {sys.stdin, sys.stdout, sys.stderr}
+
+    def __call__(self, stream_or_path):
+        """Prepare this stream for reading/writing."""
+        self._stream = (stream_or_path if self._is_stream(stream_or_path)
+                        else None)
+        if not self._stream:
+            try:
+                self._path = Path(stream_or_path).resolve()
+            except (TypeError, ValueError) as exc:
+                raise argparse.ArgumentTypeError(
+                    f'Cannot open {stream_or_path}: {exc}'
+                    ) from None
+        return self
+
+    def __enter__(self):
+        """Return an open stream for reading or writing."""
+        if not self._stream:
+            self._stream = self._path.open(self._mode, encoding=self._encoding)
+        return self._stream
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        """Close open files and let exceptions propagate."""
+        if not self.is_terminal and self._stream:
+            self._stream.close()
+        return super().__exit__(exc_type, exc_value, exc_tb)
+
+    @staticmethod
+    def _is_stream(stream_or_path):
+        """Return whether `stream_or_path` is an io stream."""
+        try:
+            stream_or_path.closed
+        except AttributeError:  # Not a stream
+            return False
+        return True
 
 
 def strip_cli_module(module_name):
@@ -251,8 +303,15 @@ class ViPErLEEDCLI:
         try:
             command = args.func
         except AttributeError:  # Called without arguments
+            command = None
+        # About disable: we really want to compare command
+        # with the callable object, NOT with the result.
+        # pylint: disable-next=comparison-with-callable
+        if command == self.__call__:  # Avoid infinite recursion
+            command = None
+        if not command:
             self.parser.parse_args(['--help'])
-            return 0  # Unreachable, as help does sys.exit
+            return 0  # pragma: no cover  # Help does sys.exit
         return command(args)
 
     @property
@@ -419,12 +478,13 @@ class ViPErLEEDCLI:
             TERMINATE THE INTERPRETER.
         """
         cli = cls()
+        exit_msg = ''
         try:
             exit_code = cli()
         except KeyboardInterrupt:
-            print('Terminated by keyboard interrupt')
+            exit_msg = 'Terminated by keyboard interrupt.'
             exit_code = 1
-        sys.exit(exit_code)
+        cli.parser.exit(exit_code, exit_msg)
 
     def add_child_aliases(self, child_cli_name, *aliases):
         """Add `aliases` for `child_cli_name`."""

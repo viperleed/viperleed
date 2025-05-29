@@ -8,7 +8,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
@@ -16,14 +16,11 @@ import copy
 import logging
 import os
 from pathlib import Path
-import shutil
-from zipfile import ZipFile
 
 import numpy as np
 
-from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc import symmetry
-from viperleed.calc.classes.rparams import DomainParameters
+from viperleed.calc.classes.rparams.domain_params import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import NoBulkRepeatError
@@ -31,23 +28,23 @@ from viperleed.calc.classes.slab import NoVacuumError
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
+from viperleed.calc.constants import DEFAULT_DOMAIN_FOLDER_PREFIX
+from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
-from viperleed.calc.files import iotensors
 from viperleed.calc.files import parameters
 from viperleed.calc.files import experiment_symmetry
 from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
-from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.math_utils import angle
 from viperleed.calc.lib.matrix import NonIntegerMatrixError
 from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
-from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
-from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
+from viperleed.calc.sections.cleanup import preserve_original_inputs
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +87,7 @@ def initialization(sl, rp, subdomain=False):
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info(f"Found SYMMETRY_CELL_TRANSFORM {ws}")
             sl.symbaseslab = ssl
-            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM")                    #TODO: there should probably a comment in the PARAMETERS file?
+            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM")                    # TODO: there should probably a comment in the PARAMETERS file?
         else:
             logger.warning(
                 f"POSCAR unit cell is not minimal (supercell {ws}). "
@@ -131,7 +128,7 @@ def initialization(sl, rp, subdomain=False):
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
-    rp.manifest.append('POSCAR')
+    rp.files_to_out.add('POSCAR')
     # generate POSCAR_oricell
     tmpslab.revert_unit_cell()
     try:
@@ -152,13 +149,15 @@ def initialization(sl, rp, subdomain=False):
             # to file below). The slab will have .layers and the
             # freshly detected .bulkslab.
             sl.detect_bulk(rp)
-            vec_str = parameters.modify(
+            bulk_repeat = parameters.modify(
                 rp, 'BULK_REPEAT',
-                comment='Automatically detected repeat vector'
+                comment='Automatically detected repeat vector',
                 )
             parameters.modify(rp, 'LAYER_CUTS')
             parameters.modify(rp, 'N_BULK_LAYERS')
-            logger.info(f'Detected bulk repeat vector: {vec_str}')
+            logger.info(
+                f'Detected bulk repeat vector: {bulk_repeat.fmt_value}'
+                )
         parameters.comment_out(rp, 'BULK_LIKE_BELOW')
 
     # create bulk slab:
@@ -174,11 +173,12 @@ def initialization(sl, rp, subdomain=False):
         except NoBulkRepeatError:
             pass
         else:
-            vec_str = parameters.modify(
+            bulk_repeat = parameters.modify(
                 rp, 'BULK_REPEAT',
                 comment='Automatically detected repeat vector'
                 )
-            logger.info(f'Detected bulk repeat vector: {vec_str}')
+            logger.info('Detected bulk repeat vector: %s',
+                        bulk_repeat.fmt_value)
             # update bulk slab vector
             sl.bulkslab.update_cartesian_from_fractional()
             sl.bulkslab.c_vector[:] = rp.BULK_REPEAT
@@ -341,14 +341,14 @@ def initialization(sl, rp, subdomain=False):
             raise
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
-    rp.manifest.append("PHASESHIFTS")
+    rp.manifest.add("PHASESHIFTS")
     try:
         phaseshifts.plot_phaseshifts(sl, rp)
     except Exception:
         logger.warning("Failed to plot phaseshifts", exc_info=rp.is_debug_mode)
 
     # generate beamlist
-    logger.info("Generating BEAMLIST...")
+    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in init_domains
     calc_and_write_beamlist(sl, rp, beamlist_name="BEAMLIST")
 
     try:
@@ -370,7 +370,7 @@ def initialization(sl, rp, subdomain=False):
                 rp.ivbeams = iobeams.writeIVBEAMS(sl, rp)
                 rp.ivbeams_sorted = False
                 rp.fileLoaded["IVBEAMS"] = True
-                rp.manifest.append("IVBEAMS")
+                rp.manifest.add("IVBEAMS")
             except Exception:
                 logger.error("Error while writing IVBEAMS file based on "
                              "EXPBEAMS data.")
@@ -382,8 +382,6 @@ def initialization(sl, rp, subdomain=False):
     # Create directory compile_logs in which logs from compilation will be saved
     make_compile_logs_dir(rp)
 
-    # At the end of initialization preserve the original input files
-    _preserve_original_input(rp, logger)
     return
 
 
@@ -397,166 +395,56 @@ def init_domains(rp):
                      "are defined. Execution will stop.")
         rp.setHaltingLevel(3)
         return
-    checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    main_work = Path.cwd().resolve()
-    for name, path in rp.DOMAINS.items():
-        # determine the target path
-        target = Path(f"Domain_{name}").resolve()
-        dp = DomainParameters(target, main_work, name)
-        if target.is_dir():
-            logger.warning(f"Folder {target} already exists. "
-                           "Contents may get overwritten.")
-        else:
-            target.mkdir()
-        logger.info(f"Fetching input files for domain {name}")
-        if path.is_dir():
-            # check the path for Tensors
-            tensorIndex = leedbase.getMaxTensorIndex(path)
-            if tensorIndex != 0:
-                try:
-                    iotensors.getTensors(tensorIndex, base_dir=path,
-                                         target_dir=target)
-                except Exception as exc:
-                    tensorIndex = 0
-                    logger.warning(f"Error fetching Tensors: {exc}")
-            if tensorIndex != 0:
-                tensorDir = target / "Tensors" / f"Tensors_{tensorIndex:03d}"
-                for file in (checkFiles + ["IVBEAMS"]):
-                    if (tensorDir / file).is_file():
-                        shutil.copy2(tensorDir / file, target)
-                    else:
-                        logger.warning(f"Input file {file} is missing in "
-                                       "Tensors directory. A new reference "
-                                       "calculation is required.")
-                        tensorIndex = 0
-                        break
-            if tensorIndex != 0:
-                dp.tensorDir = tensorDir
-            else:       # no usable tensors in that dir; get input
-                dp.refcalcRequired = True
-                logger.info("No previous Tensors found, reference calculation "
-                            "is required.")
-                for file in checkFiles:
-                    if (path / file).is_file():
-                        try:
-                            shutil.copy2(path / file, target)
-                        except Exception:
-                            if file != "PHASESHIFTS":
-                                logger.error(
-                                    f"Error copying required file {file} for "
-                                    f"domain {name} from origin folder {path}"
-                                    )
-                                raise RuntimeError("Error getting domain "
-                                                   "input files")
-                    elif file != "PHASESHIFTS":
-                        logger.error(f"Required file {file} for domain {name} "
-                                     f"not found in origin folder {path}")
-                        raise RuntimeError("Error getting domain input files")
-        elif path.is_file():
-            try:
-                tensorIndex = leedbase.getMaxTensorIndex(target)
+    # Make sure we always have unique work folders for all domains
+    nr_unique_paths = len(set(p for p, _ in rp.DOMAINS.values()))
+    must_use_auto_name = nr_unique_paths < len(rp.DOMAINS)
+    for name, (path, user_given) in rp.DOMAINS.items():
+        workdir = _make_domain_workdir(name,
+                                       path,
+                                       rp.paths.home,
+                                       must_use_auto_name)
+        domain = DomainParameters(workdir, name)
+        domain.collect_input_files(path)
+        mod_path = Path(domain.workdir.name)
+        mod_value = parameters.modify(rp, 'DOMAIN', f'./{mod_path}',
+                                      original=user_given)
+        rp.DOMAINS[name] = (mod_path, mod_value.to_assignment())
+        with execute_in_dir(domain.workdir):
+            try:  # Initialize for that domain
+                _run_initialization_for_domain(domain, rp)
             except Exception:
-                tensorIndex = 0
-            tensorDir = target / "Tensors" / f"Tensors_{tensorIndex + 1:03d}"
-            try:
-                tensorDir.mkdir(parents=True, exist_ok=True)
-            except Exception:
+                logger.error(f'Error while initializing {domain}')
                 raise
-            try:
-                with ZipFile(path, 'r') as archive:
-                    archive.extractall(tensorDir)                               # TODO: maybe it would be nicer to read directly from the zip file
-            except Exception:
-                logger.error("Failed to unpack Tensors for domain "
-                             f"{name} from file {path}")
-                raise RuntimeError("Error getting domain input files")
-            for file in (checkFiles + ["IVBEAMS"]):
-                if (tensorDir / file).is_file():
-                    shutil.copy2(tensorDir / file, target / file)
-                else:
-                    logger.error(f"Required file {file} for domain {name} not "
-                                 f"found in Tensor directory {tensorDir}")
-                    raise RuntimeError("Error getting domain input files")
-            dp.tensorDir = tensorDir
-        try:
-            # initialize for that domain
-            os.chdir(target)
-            logger.info(f"Reading input files for domain {name}")
-            try:
-                dp.sl = poscar.read()
-                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
-                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
-                dp.rp.paths.work = main_work
-                dp.rp.paths.tensorleed = rp.paths.tensorleed
-                dp.rp.timestamp = rp.timestamp
-                parameters.interpret(dp.rp, slab=dp.sl,
-                                     silent=rp.LOG_LEVEL > logging.DEBUG)
-                dp.sl.full_update(dp.rp)
-                dp.rp.fileLoaded["POSCAR"] = True
-                dp.rp.updateDerivedParams()
-                try:
-                    vibrocc.readVIBROCC(dp.rp, dp.sl)
-                    dp.rp.fileLoaded["VIBROCC"] = True
-                except Exception:
-                    logger.error("Error while reading required file VIBROCC")
-                    raise
-                dp.sl.full_update(dp.rp)
-                try:
-                    dp.rp.ivbeams = iobeams.readIVBEAMS()
-                except FileNotFoundError:
-                    pass
-                except Exception:
-                    logger.error(
-                        f"Error while reading IVBEAMS for domain {name}"
-                        )
-                else:
-                    dp.rp.ivbeams_sorted = False
-                    dp.rp.fileLoaded["IVBEAMS"] = True
-            except Exception:
-                logger.error("Error loading POSCAR and "
-                             f"PARAMETERS for domain {name}")
-                raise
-            logger.info(f"Running initialization for domain {name}")
-            try:
-                initialization(dp.sl, dp.rp, subdomain=True)
-            except Exception:
-                logger.error(f"Error running initialization for domain {name}")
-                raise
-            rp.domainParams.append(dp)
-        except Exception:
-            logger.error(f"Error while initializing domain {name}")
-            raise
-        finally:
-            os.chdir(main_work)
     if len(rp.domainParams) < len(rp.DOMAINS):
         raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
     logger.info("Starting domain consistency check...")
-    bulkuc0 = rp.domainParams[0].sl.bulkslab.ab_cell.T
+    bulkuc0 = rp.domainParams[0].slab.bulkslab.ab_cell.T
     eps = 1e-4
     for dp in rp.domainParams[1:]:
-        bulkuc = dp.sl.bulkslab.ab_cell.T
+        bulkuc = dp.slab.bulkslab.ab_cell.T
         if np.all(abs(bulkuc-bulkuc0) < eps):
             continue
         # if the unit cells don't match right away, try if rotation matches
         if (all(abs(np.linalg.norm(bulkuc0[i]) - np.linalg.norm(bulkuc[i]))
                 < eps for i in range(0, 2))
                 and abs(angle(*bulkuc) - angle(*bulkuc0)) < eps):
-            logger.info(f"Bulk unit cells of domain {rp.domainParams[0].name} "
-                        f"and domain {dp.name} are mismatched, but can be "
-                        f"matched by rotating domain {dp.name}.")
+            logger.info(f"Bulk unit cells of {rp.domainParams[0]} "
+                        f"and {dp} are mismatched, but can be "
+                        f"matched by rotating {dp}.")
             ang = angle(bulkuc[0], bulkuc0[0])
-            dp.sl.apply_matrix_transformation(rotation_matrix(ang, dim=3))      # TODO: this changes the coordinate frame. We need to modify BEAM_INCIDENCE! Issue #69, PR #73
+            dp.slab.apply_matrix_transformation(rotation_matrix(ang, dim=3))    # TODO: this changes the coordinate frame. We need to modify BEAM_INCIDENCE! Issue #69, PR #73
         else:
-            logger.error(f"Bulk unit cells of domain {rp.domainParams[0].name}"
-                         f" and domain {dp.name} are mismatched, and cannot be"
-                         "matched by rotation. Domain search cannot proceed. "
-                         "Execution will stop.")
+            logger.error(f'Bulk unit cells of {rp.domainParams[0]} '
+                         f'and {dp} are mismatched, and cannot be '
+                         'matched by rotation. Domain search cannot '
+                         'proceed. Execution will stop.')
             rp.setHaltingLevel(3)
             return
     logger.debug("Domain bulk unit cells are compatible.")
-    uc0 = rp.domainParams[0].sl.ab_cell.T
+    uc0 = rp.domainParams[0].slab.ab_cell.T
     largestDomain = rp.domainParams[0]
-    allMatched = all(np.all(abs(dp.sl.ab_cell.T - uc0) < 1e-4)
+    allMatched = all(np.all(abs(dp.slab.ab_cell.T - uc0) < 1e-4)
                      for dp in rp.domainParams[1:])
     supercellRequired = []
     if allMatched:
@@ -564,48 +452,50 @@ def init_domains(rp):
     else:
         maxArea = abs(np.linalg.det(uc0))
         for dp in rp.domainParams[1:]:
-            uc = dp.sl.ab_cell.T
+            uc = dp.slab.ab_cell.T
             if abs(np.linalg.det(uc)) > maxArea:
                 maxArea = abs(np.linalg.det(uc))
                 largestDomain = dp
-        uc0 = largestDomain.sl.ab_cell.T
+        uc0 = largestDomain.slab.ab_cell.T
         for dp in [p for p in rp.domainParams if p != largestDomain]:
-            uc = dp.sl.ab_cell.T
+            uc = dp.slab.ab_cell.T
             if not np.all(abs(uc-uc0) < 1e-4):
-                dp.refcalcRequired = True
+                dp.refcalc_required = True
                 trans = np.dot(uc0, np.linalg.inv(uc))
                 if np.any(abs(trans - np.round(trans)) > 1e-4):
                     logger.error(
-                        f"Surface unit cell of domain {dp.name} cannot be "
-                        "transformed to the largest surface unit cell (domain "
-                        f"{largestDomain.name}) by an integer transformation. "
-                        "Execution will stop. Please supply all domain "
-                        "structures as matching supercells."
+                        f'Surface unit cell of {dp} cannot be transformed '
+                        f'to the largest surface unit cell ({largestDomain}) '
+                        'by an integer transformation. Execution will stop. '
+                        'Please supply all domain structures as matching '
+                        'supercells.'
                         )
                     rp.setHaltingLevel(3)
                     return
                 else:
                     supercellRequired.append(dp)
-                    oldslab = dp.sl
-                    dp.sl = dp.sl.make_supercell(np.round(trans))
-                    dp.rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
-                    dp.sl.symbaseslab = oldslab
-                    dp.rp.SYMMETRY_CELL_TRANSFORM = trans
-                    parameters.modify(dp.rp, "SYMMETRY_CELL_TRANSFORM",
-                                      path=dp.workdir)
+                    oldslab = dp.slab
+                    dp.slab = dp.slab.make_supercell(np.round(trans))
+                    dp.rpars.SUPERLATTICE = (
+                        largestDomain.rpars.SUPERLATTICE.copy()
+                        )
+                    dp.slab.symbaseslab = oldslab
+                    dp.rpars.SYMMETRY_CELL_TRANSFORM = trans
+                    with execute_in_dir(dp.workdir):
+                        parameters.modify(dp.rpars, 'SYMMETRY_CELL_TRANSFORM')
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
     rp.pseudoSlab = Slab()
-    rp.pseudoSlab.ucell = largestDomain.sl.ucell.copy()
+    rp.pseudoSlab.ucell = largestDomain.slab.ucell.copy()
     rp.pseudoSlab.bulkslab = BulkSlab()
-    rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
+    rp.pseudoSlab.bulkslab.ucell = largestDomain.slab.bulkslab.ucell.copy()
     # run beamgen for the whole system
-    logger.info("Generating BEAMLIST...")
-    calc_and_write_beamlist(copy.deepcopy(largestDomain.sl),
-                      rp,
-                      domains=True,
-                      beamlist_name='BEAMLIST')
+    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in the end of initialization
+    calc_and_write_beamlist(copy.deepcopy(largestDomain.slab),
+                            rp,
+                            domains=True,
+                            beamlist_name='BEAMLIST')
     try:
         rp.beamlist = iobeams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
@@ -621,7 +511,7 @@ def init_domains(rp):
             rp.ivbeams = iobeams.writeIVBEAMS(None, rp, domains=True)
             rp.ivbeams_sorted = False
             rp.fileLoaded["IVBEAMS"] = True
-            rp.manifest.append("IVBEAMS")
+            rp.manifest.add("IVBEAMS")
         except Exception:
             logger.error("Error while writing IVBEAMS file based on "
                          "EXPBEAMS data.")
@@ -632,60 +522,64 @@ def init_domains(rp):
 
     rp.updateDerivedParams()  # Also sets LMAX
     if not rp.LMAX.has_max:
-        rp.LMAX.max = max(dp.rp.LMAX.max for dp in rp.domainParams)
+        rp.LMAX.max = max(dp.rpars.LMAX.max for dp in rp.domainParams)
     for dp in rp.domainParams:
-        if dp.refcalcRequired:
+        if dp.refcalc_required:
             continue
-        cmessage = f"Reference calculation required for domain {dp.name}: "
+        cmessage = f'Reference calculation required for {dp}: '
         # check energies
-        if not dp.rp.THEO_ENERGIES.contains(rp.THEO_ENERGIES):
+        if not dp.rpars.THEO_ENERGIES.contains(rp.THEO_ENERGIES):
             logger.info("%sEnergy range is mismatched.", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
             continue
         # check LMAX - should be obsolete since TensErLEED version 1.6
-        if rp.TL_VERSION <= Version('1.6.0') and rp.LMAX.max != dp.rp.LMAX.max:
+        if (rp.TL_VERSION <= Version('1.6.0')
+                and rp.LMAX.max != dp.rpars.LMAX.max):
             logger.info("%sLMAX is mismatched.", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
         # check beam incidence
-        if rp.THETA != dp.rp.THETA or rp.PHI != dp.rp.PHI:
+        if rp.THETA != dp.rpars.THETA or rp.PHI != dp.rpars.PHI:
             logger.info("%sBEAM_INCIDENCE is mismatched.", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
         # check IVBEAMS
-        if not dp.rp.fileLoaded["IVBEAMS"]:
+        if not dp.rpars.fileLoaded["IVBEAMS"]:
             logger.info("%sNo IVBEAMS file loaded", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
             continue
-        if (len(rp.ivbeams) != len(dp.rp.ivbeams)
-                or not all(dp.rp.ivbeams[i].isEqual(rp.ivbeams[i])
+        if (len(rp.ivbeams) != len(dp.rpars.ivbeams)
+                or not all(dp.rpars.ivbeams[i].isEqual(rp.ivbeams[i])
                            for i in range(len(rp.ivbeams)))):
             logger.info("%sIVBEAMS file mismatched with supercell.", cmessage)
-            dp.refcalcRequired = True
+            dp.refcalc_required = True
             continue
 
-    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     if rr:
         logger.info("The following domains require new reference "
                     f"calculations: {', '.join(d.name for d in rr)}")
+        inherited = (
+            'THEO_ENERGIES',
+            'THETA',
+            'PHI',
+            'N_CORES',
+            'ivbeams',
+            )
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams"]:
-                setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
+            dp.rpars.inherit_from(rp, *inherited, override=True)
             if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
-                dp.rp.LMAX.max = rp.LMAX.max
+                dp.rpars.LMAX.max = rp.LMAX.max
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
-        logger.info("Re-running initialization with "
-                    f"supercell slab for domain {dp.name}")
-        try:
-            os.chdir(dp.workdir)
-            dp.sl.clear_symmetry_and_ucell_history()
-            dp.rp.SYMMETRY_FIND_ORI = True
-            initialization(dp.sl, dp.rp, subdomain=True)
-        except Exception:
-            logger.error(f"Error while re-initializing domain {dp.name}")
-            raise
-        finally:
-            os.chdir(main_work)
+        logger.info(f'Re-running initialization with supercell slab for {dp}')
+        dp.slab.clear_symmetry_and_ucell_history()
+        dp.rpars.SYMMETRY_FIND_ORI = True
+        with execute_in_dir(dp.workdir):
+            try:
+                initialization(dp.slab, dp.rpars, subdomain=True)
+            except Exception:
+                logger.error(f'Error while re-initializing {dp}')
+                raise
 
     if 4 not in rp.RUN and 1 not in rp.RUN and rr:
         logger.error(
@@ -704,53 +598,17 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def _preserve_original_input(rp, init_logger, path=""):
-    """Create original_inputs directory and copies the input files there."""
-    path = Path(path)
-    orig_inputs_path = path / ORIGINAL_INPUTS_DIR_NAME
-    try:
-        orig_inputs_path.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
-        raise RuntimeError(f"Could not create directory "
-                           f"{ORIGINAL_INPUTS_DIR_NAME}. "
-                           "Check disk permissions.") from exc
-
-    # We will copy all files that have potentially been used as
-    # inputs. Make sure the correct version of EXPBEAMS is stored
-    files_to_preserve = ALL_INPUT_FILES.copy()
-    files_to_preserve.remove('EXPBEAMS')
-    if rp.expbeams_file_name:
-        files_to_preserve.add(rp.expbeams_file_name)
-
-    # copy all files to orig_inputs that were used as original input
-    for file in files_to_preserve:
-        # save under name EXPBEAMS.csv
-        file_path = path / file
-        if not file_path.is_file():
-            init_logger.warning(f"Could not find file {file}. "
-                                    "It will not be stored in "
-                                    f"{ORIGINAL_INPUTS_DIR_NAME}.")
-            rp.setHaltingLevel(1)
-            return
-        try:
-            shutil.copy2(file_path, orig_inputs_path)
-        except OSError:
-            init_logger.warning(f"Could not copy file {file} to "
-                                f"{ORIGINAL_INPUTS_DIR_NAME}.")
-            rp.setHaltingLevel(1)
-
-
-def make_compile_logs_dir(rp):
+def make_compile_logs_dir(rpars):
     """Create compile_logs directory where compilation logs are saved."""
-    directory = rp.paths.compile_logs
+    directory = rpars.paths.compile_logs
     try:
         directory.mkdir(exist_ok=True)
     except OSError:
         logger.warning(f'Could not create directory {directory}')
-        rp.setHaltingLevel(1)
+        rpars.setHaltingLevel(1)
 
 
-def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
+def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain=None):
     """Log a WARNING if slab's atoms do not all belong to the same cell.
 
     It only makes sense to use this function right after `slab` has
@@ -766,15 +624,15 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
         The slab to be checked.
     rpars : Rparams
         The current PARAMETERS object. Used for logging purposes only.
-    domain_name : str, optional
-        The name of the structural domain to which slab belongs.
-        Used only for logging purposes. Default is an empty string.
+    domain : DomainParameters, optional
+        The structural domain to which `slab` belongs. Used only for
+        logging purposes. Default is None.
 
     Returns
     -------
     None.
     """
-    _msg = 'POSCAR file ' + f'of domain {domain_name} ' if domain_name else ''
+    _msg = 'POSCAR file ' + f'of {domain} ' if domain else ''
     _msg += ('has some atoms outside the base unit cell along the third unit '
              'vector (i.e., they have fractional c coordinates smaller/larger '
              'than 0/1). These atoms will be back-folded into the base unit '
@@ -805,7 +663,6 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
 
 def _check_and_warn_layer_cuts(rpars, slab):
     """Check if layer cuts are too close together and warn if so."""
-    layer_cuts = rpars.LAYER_CUTS
     min_spacing = slab.smallest_interlayer_gap
     if min_spacing < 1.0:
         logger.warning(
@@ -829,8 +686,10 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
         poscar.write(exc.fixed_slab, 'POSCAR_vacuum_corrected')
         exc_type = type(exc)
         _msg = exc.message
-        _msg += '. This may cause problems with layer assignment! '
-        _msg += 'You can find a POSCAR_vacuum_corrected file in SUPP with '
+        _msg += (
+            '. This may cause problems with layer assignment! You can '
+            f'find a POSCAR_vacuum_corrected file in {DEFAULT_SUPP} with '
+            )
         _msg += ('the correct position of vacuum. '
                  if exc_type is WrongVacuumPositionError
                  else 'a large enough vacuum gap. ')
@@ -849,3 +708,142 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
     if not slab.layers:
         # May have been cleared by shifting slab away from c==0
         slab.create_layers(rpars)
+
+
+def _make_domain_workdir(name, src, calc_started_at, must_use_auto_name):
+    """Create a work directory (as a subfolder of CWD) for a domain.
+
+    The work directory is named 'Domain_<name>', unless
+    `must_use_auto_name` is False and the inputs for this
+    domain come from a direct subfolder of the path at
+    which viperleed.calc was originally started.
+
+    Parameters
+    ----------
+    name : str
+        The user-given (or auto-generated) name of the domain for which
+        the work folder should be created. Typically the left-side flag
+        in a DOMAIN assignment.
+    src : Path
+        The path from where the domain input files should be collected.
+    calc_started_at : Path or None
+        The path in which viperleed.calc was started.
+    must_use_auto_name : bool
+        Whether 'Domain_<name>' should be used irrespective of the
+        value of `src`. This is used to ensure that there always
+        is one unique path for each domain.
+
+    Returns
+    -------
+    workdir : Path
+        Absolute path to the work directory that was created.
+    """
+    should_use_src = (
+       not must_use_auto_name
+       and calc_started_at is not None
+       and src.is_dir()
+       and src.parent == calc_started_at
+       )
+    workdir = Path(src.name if should_use_src
+                   else f'{DEFAULT_DOMAIN_FOLDER_PREFIX}{name}')
+    try:
+        workdir.mkdir()
+    except FileExistsError:
+        logger.warning(f'Folder {workdir} already exists. '
+                       'Contents may get overwritten.')
+    return workdir.resolve()
+
+
+def _read_inputs_for_domain(domain, main_rpars):
+    """Read input files for a single domain.
+
+    Parameters
+    ----------
+    domain : DomainParameters
+        The parameters for this domain. At the end of this call,
+        domain.rpars and domain.slab are updated to contain the
+        Rparams and Slab objects read (and updated) from file.
+        domain.rpars is also up to date with respect to other
+        input files loaded.
+    main_rpars : Rparams
+        The run parameters of the **main** viperleed.calc run.
+
+    Raises
+    ------
+    Exception
+        If reading VIBROCC or an existing IVBEAMS fails.
+    """
+    # NB: if we are running from stored Tensors, then
+    # this PARAMETERS will be a copy of the one stored
+    # in the Tensors, not the one the user may have given
+    # in the current Domain directory (it is overwritten
+    # when fetching files in init_domains).
+    domain.rpars = rpars = parameters.read()
+
+    # Inherit some values from the main PARAMETERS
+    inherited = (
+        'paths',
+        'timestamp',
+        'ZIP_COMPRESSION_LEVEL',
+        )
+    rpars.inherit_from(main_rpars, *inherited)
+
+    # Store input files for each domain, BEFORE any edit
+    preserve_original_inputs(rpars)
+
+    domain.slab = slab = poscar.read()
+    warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain)
+
+    silent = rpars.LOG_LEVEL > logging.DEBUG
+    parameters.interpret(rpars, slab=slab, silent=silent)
+    slab.full_update(rpars)
+    rpars.fileLoaded['POSCAR'] = True
+    rpars.updateDerivedParams()
+    try:
+        vibrocc.readVIBROCC(rpars, slab)
+    except Exception:
+        logger.error('Error while reading required file VIBROCC')
+        raise
+    rpars.fileLoaded['VIBROCC'] = True
+    slab.full_update(rpars)
+    try:
+        rpars.ivbeams = iobeams.readIVBEAMS()
+    except FileNotFoundError:
+        pass
+    except Exception:
+        logger.error(f'Error while reading IVBEAMS for {domain}')
+    else:
+        rpars.ivbeams_sorted = False
+        rpars.fileLoaded['IVBEAMS'] = True
+
+
+def _run_initialization_for_domain(domain, main_rpars):
+    """Execute initialization for a specific domain.
+
+    Parameters
+    ----------
+    domain : DomainParameters
+        The parameters for the domain to be initialized.
+    main_rpars : Rparams
+        The run parameters of the **main** viperleed.calc run.
+
+    Raises
+    ------
+    Exception
+        If reading input files or executing the initialization fail.
+    """
+    logger.info(f'Reading input files for {domain}')
+    try:
+        _read_inputs_for_domain(domain, main_rpars)
+    except Exception:
+        logger.error(f'Error loading input files for {domain}')
+        raise
+
+    logger.info(f'Running initialization for {domain}')
+    try:
+        initialization(domain.slab, domain.rpars, subdomain=True)
+    except Exception:
+        logger.error(f'Error running initialization for {domain}')
+        raise
+
+    main_rpars.domainParams.append(domain)

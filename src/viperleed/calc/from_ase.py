@@ -5,7 +5,7 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
@@ -14,7 +14,6 @@ from dataclasses import FrozenInstanceError, dataclass
 from io import StringIO
 import logging
 from numbers import Real
-import os
 from pathlib import Path
 import shutil
 from typing import Any, Sequence
@@ -22,16 +21,17 @@ import warnings
 
 import numpy as np
 
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.classes.rparams import IVShiftRange
-from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.energy_range import IVShiftRange
+from viperleed.calc.classes.rparams.special.energy_range import TheoEnergies
 from viperleed.calc.classes.slab import Slab
+from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import iorfactor as rf_io
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.ivplot import plot_iv
+from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.dataclass_utils import set_frozen_attr
 from viperleed.calc.lib.matrix import rotation_matrix
 from viperleed.calc.run import run_calc
@@ -285,50 +285,41 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     work_path = _make_work_dir(exec_path)
 
     home = Path.cwd()
-    os.chdir(work_path)
+    with execute_in_dir(work_path):
+        # Get temporary parameters object
+        rpars = parameters.read(parameters_file)
+        parameters.interpret(rpars, slab=slab, silent=False)
 
-    # Get temporary parameters object
-    rparams = parameters.read(parameters_file)
-    parameters.interpret(rparams, slab=slab, silent=False)
+        # We are ready to run ViPErLEED! Have fun!
+        try:
+            exit_code, _ = run_calc(
+                slab=slab,
+                preset_params=_make_preset_params(rpars, slab),
+                home=home,
+                )
+        except Exception as exc:
+            raise RuntimeError('ViPErLEED calculation failed') from exc
 
-    # We are ready to run ViPErLEED! Have fun!
-    try:
-        exit_code, _ = run_calc(
-            slab=slab,
-            preset_params=_make_preset_params(rparams, slab),
-            home=home,
-            )
-    except Exception as err:
-        # If ViPErLEED fails, move back to home directory
-        os.chdir(home)
-        raise RuntimeError("ViPErLEED calculation failed") from err
+        if exit_code:
+            raise RuntimeError('ViPErLEED calculation failed. '
+                               'See log file for details.')
 
-    if exit_code:
-        os.chdir(home)
-        raise RuntimeError("ViPErLEED calculation failed. "
-                           "See log file for details.")
+        # ViPErLEED should have succeeded if you arrive here. However,
+        # we may not have run a refcalc (id == 1). In that case, return
+        # empty strings.
+        if 1 not in rpars.RUN:
+            return '', '', '', rpars.V0_IMAG
 
-    # ViPErLEED should have succeeded if you arrive here. However, we may not
-    # have run a refcalc (id == 1). In that case, return empty strings.
-    if 1 not in rparams.RUN:
-        os.chdir(home)
-        return "", "", "", rparams.V0_IMAG
-
-    # read out the THEOBEAMS.csv file and complex amplitudes
-    try:
-        content_list = _read_refcalc_output(rparams)
-    finally:
-        # Always move back home, even if there were errors
-        os.chdir(home)
+        # Read out the THEOBEAMS.csv file and complex amplitudes
+        content_list = _read_refcalc_output(rpars)
 
     if cleanup_work:
         try:
             shutil.rmtree(work_path)
-        except OSError as err:
-            _LOGGER.warning(
-                f"Failed to remove work directory {work_path}. Info: {err}"
-                )
-    return (*content_list, rparams.V0_IMAG)
+        except OSError as exc:
+            _LOGGER.warning('Failed to remove work directory '
+                            f'{work_path}. Info: {exc}')
+    return (*content_list, rpars.V0_IMAG)
 
 
 def _copy_inputs_to_exec_path(inputs_path, exec_path):
