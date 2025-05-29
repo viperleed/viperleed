@@ -42,7 +42,7 @@ def export_pattern_csv(fnames, leeds, **kwargs):
     - keyword arguments:
         * source: str
             Path to file (or any other useful reference to it) that was used
-            as an input to generate the pattern file. In GUI, this is the .tlm
+            as an input to generate the pattern file. In GUI, this is the .ini
             file. When called from calc it may be related to the names given
             automatically by the bookkeeper.
         * name: str
@@ -233,7 +233,7 @@ def _format_header_(lengths, leed, **kwargs):                                   
     - keyword arguments:
         * source: str
             Path to file (or any other useful reference to it) that was used
-            as an input to generate the pattern file. In GUI, this is the .tlm
+            as an input to generate the pattern file. In GUI, this is the .ini
             file. When called from calc it may be related to the names given
             automatically by the bookkeeper.
         * name: str

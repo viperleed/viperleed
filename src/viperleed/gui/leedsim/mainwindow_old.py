@@ -32,6 +32,9 @@ from viperleed.gui.leedsim.classes.realspace import RealSpace
 from viperleed.gui.leedsim.dialogs.exportcsvdialog import ExportCSVDialog
 from viperleed.gui.leedsim.dialogs.newfiledialog_old import NewFileDialog
 from viperleed.gui.leedsim.exportcsv import export_pattern_csv
+from viperleed.gui.leedsim.mainwindow import DEFAULT_EXPORT_FILE
+from viperleed.gui.leedsim.mainwindow import DEFAULT_OPEN_FILE
+from viperleed.gui.leedsim.mainwindow import default_input_file_extensions
 from viperleed.gui.leedsim.widgets.domainsblock import DomsBlock
 from viperleed.gui.leedsim.widgets.energyblock import EnergyBlock
 from viperleed.gui.leedsim.widgets.hoverannot import HoverAnnot
@@ -46,16 +49,11 @@ from viperleed.gui.widgetslib import AllGUIFonts
 @broadcast_mouse
 class LEEDPatternSimulator(ViPErLEEDPluginBase):
 
-    extension = '*.tlm'
     version = __version__
 
-    extStr = 'LEED input files ({})'.format(' '.join([extension,
-                                                      extension.upper()]))
-    extStr = ';;'.join([extStr, 'All files (*)'])
-    default_open = (resources_path('gui/leedsim/input examples/'),
-                    'PatternInfo.tlm')
-    default_export = (resources_path('gui/leedsim/exported/'),
-                      'LEEDSpots.csv')
+    extStr = default_input_file_extensions()
+    default_open = DEFAULT_OPEN_FILE
+    default_export = DEFAULT_EXPORT_FILE
 
     # these are the parameters to read from the LEED file
     inputParams = ('eMax', 'surfBasis', 'SUPERLATTICE', 'surfGroup',
