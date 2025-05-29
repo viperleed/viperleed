@@ -130,12 +130,6 @@ def gui_main():
     # pylint: disable-next=possibly-used-before-assignment
     plugin_selector_window = ViPErLEEDSelectPlugin()
     plugin_selector_window.show()
-
-    ########## TODO: stuff from master to deactivate GUI
-    # leed_gui = gl.LEED_GUI()
-    # leed_gui.show()
-    # gl.show_use_betatest_version_popup()
-
     print('Done', flush=True)
 
     # An awful hack to allow keyboard interrupts to be accepted also
@@ -144,4 +138,3 @@ def gui_main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     return app.exec_()
-    # sys.exit()   ######## TODO: Also from master
