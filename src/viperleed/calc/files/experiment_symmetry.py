@@ -14,6 +14,7 @@ import logging
 from viperleed.calc.classes.slab import MissingBulkSlabError
 
 
+FILENAME = 'experiment_symmetry.ini'
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -63,9 +64,9 @@ def write(slab, rpars):                                                         
     # write output
     filename = 'experiment_symmetry.ini'
     try:  # pylint: disable=too-many-try-statements  # Two OK for open
-        with open(filename, 'w', encoding='utf-8') as file:
+        with open(FILENAME, 'w', encoding='utf-8') as file:
             file.write(output)
     except OSError:
-        _LOGGER.error(f'Failed to write {filename!r}')
+        _LOGGER.error(f'Failed to write {FILENAME!r}')
         raise
-    _LOGGER.debug(f'Wrote to {filename!r} successfully')
+    _LOGGER.debug(f'Wrote to {FILENAME!r} successfully')
