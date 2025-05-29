@@ -59,7 +59,10 @@ def write(slab, rpars):
         as_dict[key] = as_dict[key].tolist()
 
     # Prepare lines to be written
-    lines = '\n'.join(f'{k} = {v}' for k, v in as_dict.items())
+    header = rpars.systemName or 'structure'                                    # TODO: not so great for multi-domain.
+    lines = '\n'.join((
+        f'[{header}]',
+        *(f'{k} = {v}' for k, v in as_dict.items()),
         ))
 
     # Actually do the writing

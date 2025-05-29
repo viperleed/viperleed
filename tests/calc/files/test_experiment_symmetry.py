@@ -72,6 +72,7 @@ def test_success(with_info, tmp_path, subtests, first_case):
 
     this_case = _reconstruct_case_id(first_case)
     expected = (
+        r'\[\w+\]',  # Header
         rf'SUPERLATTICE = {_MATRIX_RE.format(_INT_RE)}',
         rf'surfBasis = {_MATRIX_RE.format(_FLOAT_RE)}',
         'eMax = 100(.00)?',  # GUI doesn't care if it's float
