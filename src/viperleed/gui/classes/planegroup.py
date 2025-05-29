@@ -225,6 +225,8 @@ def _with_positive_leading_element(direction):
     return direction
 
 
+# TODO: function to "invert" the screws/glides to a string again.
+# It may actually be cleaner to have the screws/glides be a class.
 class PlaneGroup:
     """Class representing a planar 2D group."""
 

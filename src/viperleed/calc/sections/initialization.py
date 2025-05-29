@@ -32,7 +32,7 @@ from viperleed.calc.constants import DEFAULT_DOMAIN_FOLDER_PREFIX
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
-from viperleed.calc.files import patterninfo
+from viperleed.calc.files import experiment_symmetry
 from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
@@ -359,7 +359,18 @@ def initialization(sl, rp, subdomain=False):
         raise
 
     if not subdomain:
-        patterninfo.writePatternInfo(sl, rp)
+        try:
+            experiment_symmetry.write(sl, rp)
+        except (OSError, ValueError):
+            # OSError: failed to write file. It's not that critical,
+            # so we can probably go ahead. We logged the problem
+            # already. If it is a more fundamental issue it will
+            # pop up when we try to do more file-system operations.
+            # ValueError: SUPERLATTICE not integer. Probably
+            # we complain already somewhere else. Surely in
+            # iobeams.writeIVBEAMS, likely already earlier
+            # when we work on the slab.
+            pass
 
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:

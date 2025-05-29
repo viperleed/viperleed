@@ -22,6 +22,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed import __version__
+from viperleed.calc.files import experiment_symmetry
 from viperleed.gui.helpers import resources_path
 from viperleed.gui.leedsim.classes.leedparameters import LEEDParametersList
 from viperleed.gui.leedsim.classes.leedparser import LEEDParser
@@ -41,25 +42,37 @@ from viperleed.gui.widgetdecorators import broadcast_mouse
 from viperleed.gui.widgetslib import AllGUIFonts
 
 
-DEFAULT_INPUT_FILE_EXTENSION = '*.tlm'
-DEFAULT_OPEN_FILE = (
-    resources_path('gui/leedsim/input examples/'),
-    'PatternInfo.tlm',
-    )
 DEFAULT_EXPORT_FILE = (
     resources_path('gui/leedsim/exported/'),
-    'LEEDBeams.csv',
+    'spot_pattern.csv',
     )
+DEFAULT_OPEN_FILE = (
+    resources_path('gui/leedsim/input examples/'),
+    experiment_symmetry.FILENAME,
+    )
+INPUT_FILE_EXTENSIONS = {
+    # <extension>: <descriptive text>
+    '*.ini': 'LEED pattern input files',
+    '*.tlm': 'Legacy input files',
+    '*': 'All files',
+    }
 TITLE = 'LEED Pattern Simulator'
 SCREEN_FRACTION = 0.63
 
 
+def _file_extension_pair(extension):
+    """Return a string with lowercase and uppercase file extensions."""
+    lower = extension.lower()
+    upper = extension.upper()
+    if upper == lower:
+        return lower
+    return f'{lower} {upper}'
+
+
 def default_input_file_extensions():
     """Return a string that can be used in Open/Save dialogs for filtering."""
-    txt = ("LEED Pattern simulation input files ("
-           f"{DEFAULT_INPUT_FILE_EXTENSION}, "
-           f"{DEFAULT_INPUT_FILE_EXTENSION.upper()})")
-    return f"{txt};;All files (*)"
+    return ';;'.join(f'{descr} ({_file_extension_pair(ext)})'
+                     for ext, descr in INPUT_FILE_EXTENSIONS.items())
 
 
 # TODO: this may easily go into a settings.ini file
