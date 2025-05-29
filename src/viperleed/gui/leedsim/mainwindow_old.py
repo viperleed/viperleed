@@ -25,6 +25,7 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed import __version__
 from viperleed.gui.classes.planegroup import PlaneGroup
+from viperleed.gui.helpers import resources_path
 from viperleed.gui.helpers import string_matrix_to_numpy
 from viperleed.gui.leedsim.classes.oldleedpatterns import LEEDPattern
 from viperleed.gui.leedsim.classes.realspace import RealSpace
@@ -51,8 +52,10 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
     extStr = 'LEED input files ({})'.format(' '.join([extension,
                                                       extension.upper()]))
     extStr = ';;'.join([extStr, 'All files (*)'])
-    default_open = ('./gui/leedsim/input examples/', 'PatternInfo.tlm')
-    default_export = ('./gui/leedsim/exported/', 'LEEDSpots.csv')
+    default_open = (resources_path('gui/leedsim/input examples/'),
+                    'PatternInfo.tlm')
+    default_export = (resources_path('gui/leedsim/exported/'),
+                      'LEEDSpots.csv')
 
     # these are the parameters to read from the LEED file
     inputParams = ('eMax', 'surfBasis', 'SUPERLATTICE', 'surfGroup',
