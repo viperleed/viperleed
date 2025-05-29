@@ -13,6 +13,7 @@ import logging
 
 from viperleed.calc.classes.slab import MissingBulkSlabError
 from viperleed.calc.lib.leedbase import getLEEDdict
+from viperleed.gui.leedsim.classes.leedparser import LEEDParser
 
 
 FILENAME = 'experiment_symmetry.ini'
@@ -58,17 +59,10 @@ def write(slab, rpars):
     for key in ('SUPERLATTICE', 'surfBasis'):
         as_dict[key] = as_dict[key].tolist()
 
-    # Prepare lines to be written
-    header = rpars.systemName or 'structure'                                    # TODO: not so great for multi-domain.
-    lines = '\n'.join((
-        f'[{header}]',
-        *(f'{k} = {v}' for k, v in as_dict.items()),
-        ))
-
-    # Actually do the writing
-    try:  # pylint: disable=too-many-try-statements  # Two OK for open
-        with open(FILENAME, 'w', encoding='utf-8') as file:
-            file.write(lines)
+    if rpars.systemName:
+        as_dict['name'] = rpars.systemName                                      # TODO: adapt for domains
+    try:
+        LEEDParser.write_structures(as_dict, FILENAME)
     except OSError:
         _LOGGER.error(f'Failed to write {FILENAME!r}')
         raise
