@@ -1,6 +1,15 @@
 """Package controller of viperleed.gui.measure.
 
 This package contains controller classes.
+
+Modules
+-------
+abc
+    Abstract base classes defining the common interface for all
+    non-camera devices.
+viperinocontroller
+    Concrete class for interacting with the ViPErLEED Data Acquisition
+    hardware.
 """
 
 __authors__ = (

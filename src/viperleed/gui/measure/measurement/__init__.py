@@ -1,6 +1,19 @@
 """Package measurement of viperleed.gui.measure.
 
 This package contains classes to perform measurements.
+
+Modules
+-------
+abc
+    Abstract base classes defining the interface for all measurement
+    types.
+energy_calibration
+    A measurement for calibrating the LEED energy.
+iv_video
+    A measurement for acquiring LEED-I(V) data.
+time_resolved
+    Measurements for acquiring data in a not-(only-)energy-resolved
+    manner.
 """
 
 __authors__ = (

@@ -1,6 +1,18 @@
 """Package imagingsource of viperleed.gui.camera.drivers.
 
 Defines the driver for cameras produced by The Imaging Source.
+
+Modules
+-------
+models
+    Collects information about known camera models.
+properties
+    Functionality for accessing settings of cameras.
+tisgrabber
+    The actual driver for low-level interaction with the hardware.
+winerrors
+    Functionality for reporting Python exceptions when the low-level
+    driver code returns error codes.
 """
 
 __authors__ = (

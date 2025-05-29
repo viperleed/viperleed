@@ -4,6 +4,15 @@ This package contains generic dialogs that can be used
 throughout the application. In addition to the dialogs
 defined in this package, each gui 'plug-in' defines
 its own specific dialogs.
+
+Modules
+-------
+busywindow
+    A popup indicating that an operation is waiting for completion.
+dropdowndialog
+    A dialog that asks users to pick from some options.
+errors
+    Exceptions related to dialogs.
 """
 
 __authors__ = (

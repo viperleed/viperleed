@@ -2,6 +2,11 @@
 
 Contains drivers for cameras, i.e., python and non-python
 files useful to control cameras.
+
+Packages
+--------
+imagingsource
+    Driver for cameras produced by The Imaging Source GmbH.
 """
 
 __authors__ = (

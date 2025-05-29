@@ -2,6 +2,15 @@
 
 This package contains classes to communicate with LEED controllers via
 the serial line.
+
+Modules
+-------
+abc
+    Abstract base classes defining the common interface for all
+    serial-communication implementations.
+viperleedserial
+    Classes for interacting with hardware via the ViPErLEED
+    communication protocol.
 """
 
 __authors__ = (
