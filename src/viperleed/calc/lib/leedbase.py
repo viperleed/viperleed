@@ -548,7 +548,7 @@ def getLEEDdict(sl, rp):
         return None
     # Some values can be overwritten via parameters:
     d = {'eMax': rp.THEO_ENERGIES.max,
-         'SUPERLATTICE': rp.SUPERLATTICE.astype(int),
+         'SUPERLATTICE': rp.SUPERLATTICE.round().astype(int),
          'surfBasis': sl.ab_cell.T,
          'surfGroup': pgstring,
          'bulkGroup': sl.bulkslab.foundplanegroup,
