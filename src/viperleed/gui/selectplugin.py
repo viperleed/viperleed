@@ -30,24 +30,35 @@ from viperleed.gui.widgetslib import move_to_front
 from viperleed.gui import decorators as dev_
 
 PRE_RELEASE = False
+PRE_RELEASE_MODULES = (
+    'measure',
+    )
 
 
-def show_pre_release_popup():
+def show_pre_release_popup(module_name=''):
     """Show a pop-up informing about pre-release status.
 
     The current ViPErLEED version is a not meant to be distributed
     without permission, as it is a pre-release.
 
+    Parameters
+    ----------
+    module_name : str, optional
+        The name of the module that is in pre-release stage.
+        If not given, no module information is added.
+
     Returns
     -------
     None.
     """
-    txt = (f"ViPErLEED v{__version__} is a pre-release not meant "
+    module_txt = (f'The {module_name} module of ' if module_name
+                  else '')
+    txt = (f"{module_txt}ViPErLEED v{__version__} is a pre-release not meant "
            "for public distribution!<p> Contact us at <a href="
            u''"'mailto:riva@iap.tuwien.ac.at'"'>riva@iap.tuwien.ac.at</a> '
            "</p>")
     msg_box = qtw.QMessageBox(qtw.QMessageBox.Information,
-                             "Pre-release notice", txt)
+                              "Pre-release notice", txt)
     msg_box.exec()
 
 
@@ -176,6 +187,9 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
         _, cls = self.modules[name]
 
         module = cls()
+        if name in PRE_RELEASE_MODULES:
+            show_pre_release_popup(module.name or name)
+
         self._open_modules[name] = module
         module.show()
         try:
