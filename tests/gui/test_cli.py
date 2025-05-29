@@ -139,6 +139,7 @@ class TestGuiMain:
             'qtc': mocker.patch(f'{_MODULE}.qtc'),
             'qtg': mocker.patch(f'{_MODULE}.qtg'),
             'qtw': mocker.patch(f'{_MODULE}.qtw'),
+            'raise_qt': mocker.patch(f'{_MODULE}.raise_on_qt_messages'),
             'select_cls': mocker.patch(f'{_MODULE}.ViPErLEEDSelectPlugin'),
             }
         mocks['app'] = mocks['qtw'].QApplication.return_value
@@ -191,6 +192,7 @@ class TestGuiMain:
     def test_implementation(self, mocks):
         """Check inner implementation details."""
         gui_main()
-        mocks['catch_crash'].assert_called_once_with()
+        mocks['catch_crash'].assert_called_once()
+        mocks['raise_qt'].assert_called_once_with()
         mocks['select_cls'].assert_called_once_with()
         mocks['qtw'].QApplication.assert_called_once_with(sys.argv)
