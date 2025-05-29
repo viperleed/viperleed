@@ -66,7 +66,7 @@ def _file_extension_pair(extension):
     upper = extension.upper()
     if upper == lower:
         return lower
-    return f'{lower}, {upper}'
+    return f'{lower} {upper}'
 
 
 def default_input_file_extensions():
