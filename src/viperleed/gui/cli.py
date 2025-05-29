@@ -116,13 +116,5 @@ def gui_main():
 
     plugin_selector_window = ViPErLEEDSelectPlugin()
     plugin_selector_window.show()
-
-    ########## TODO: stuff from master to deactivate GUI
-    # leed_gui = gl.LEED_GUI()
-    # leed_gui.show()
-    # gl.show_use_betatest_version_popup()
-
     print('Done', flush=True)
-
     return app.exec_()
-    # sys.exit()   ######## TODO: Also from master
