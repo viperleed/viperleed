@@ -229,6 +229,10 @@ def run_section(index, sl, rp):
         rp.last_refcalc_time = since_section_started.how_long()
 
 
+def _check_exceeds_tl_limit(rp, sl):
+    return any(rp.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in sl)
+
+
 def section_loop(rp, sl):
     """
     Executes sections as specified in rp.RUN, may loop if required.
@@ -303,8 +307,7 @@ def section_loop(rp, sl):
                     rp.RUN.insert(0, 12)
             elif sec == 12 and not rp.STOP:
                 # check for max. displacement condition:
-                exceeds_tl_limit = any(
-                    rp.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in sl)
+                exceeds_tl_limit = _check_exceeds_tl_limit
                 # check for loops:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
                 for loop in sorted(loops)[::-1]:
