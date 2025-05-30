@@ -307,7 +307,7 @@ def section_loop(rp, sl):
                     rp.RUN.insert(0, 12)
             elif sec == 12 and not rp.STOP:
                 # check for max. displacement condition:
-                exceeds_tl_limit = _check_exceeds_tl_limit
+                exceeds_tl_limit = _check_exceeds_tl_limit(rp, sl)
                 # check for loops:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
                 for loop in sorted(loops)[::-1]:
@@ -340,7 +340,7 @@ def section_loop(rp, sl):
                 stop_search = False
                 if len(rp.disp_blocks) > rp.search_index and exceeds_tl_limit:
                     if rp.MAX_TL_DISPLACEMENT.action == 'ignore':
-                        logger.warn(
+                        logger.warning(
                             'Displacements exceed MAX_TL_DISPLACEMENT, but '
                             'actions are disabled. Calculation will '
                             'proceed, please check results carefully.')
