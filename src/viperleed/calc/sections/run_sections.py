@@ -254,8 +254,7 @@ def section_loop(rp, sl):
     state_recorder = CalcStateRecorder()
 
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
-    searchLoopR = None
-    searchLoopLevel = 0
+    search_loop_R = {}   # dict of R for each loop
     initHalt = False
     while rp.RUN:
         try:
@@ -308,35 +307,31 @@ def section_loop(rp, sl):
                     rp.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in sl)
                 # check for loops:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
-                if loops:
+                for loop in sorted(loops)[::-1]:
                     # At least one loop ends at the index we're at now.
-                    #  Decide whether to exit or repeat:
-                    if (searchLoopLevel == 0
-                            or searchLoopR is None
-                            or searchLoopR > rp.last_R
+                    # Starting at the deepest loop, see if there was any
+                    #  improvement since it has last been checked. If so,
+                    #  repeat it; if not, go one loop out and keep checking.
+                    # Automatically repeat deepest loop if exceeds_tl_limit.
+                    if (loop not in search_loop_R
+                            or rp.last_R < search_loop_R[loop]
                             or exceeds_tl_limit):
-                        # repeat the highest-level (deepest) loop
-                        searchLoopR = rp.last_R
-                        searchLoopLevel = len(loops)
-                    elif searchLoopR <= rp.last_R:
-                        # exit the current loop
-                        searchLoopLevel -= 1
-                    if searchLoopLevel != 0:
-                        # if we're not back at ground level, this means we
-                        #  loop back now
-                        rp.search_index = sorted(loops)[searchLoopLevel-1][0]
+                        # loop back
+                        search_loop_R[loop] = rp.last_R
+                        rp.search_index = loop[0]
                         logger.info("Search loop: repeating at block "
                                     + rp.disp_blocks[rp.search_index][1])
-                    else:
-                        # loops done, proceed to the next block
-                        rp.search_index += 1
+                        break
+                else:
+                    # We arrive here if there were no loops, or no loops have
+                    #   improved. Go to next block.
+                    rp.search_index += 1
+                    if loops:
                         o = "Search loop ends."
                         if len(rp.disp_blocks) > rp.search_index:
                             o += (" Continuing at block "
                                   + rp.disp_blocks[rp.search_index][1])
                         logger.info(o)
-                else:
-                    rp.search_index += 1
                 for dp in rp.domainParams:
                     dp.rpars.search_index = rp.search_index
                 stop_search = False
@@ -373,7 +368,7 @@ def section_loop(rp, sl):
                             'Displacements exceed MAX_TL_DISPLACEMENT. '
                             'A new reference calculation will be performed '
                             'before the next search block.')
-                        searchLoopR = None  # ignore previous best R
+                        search_loop_R = {}  # ignore all previously known R
                         rp.RUN = [1, 2, 3] + rp.RUN
                     else:
                         if rp.RUN[:2] != [2, 3]:
