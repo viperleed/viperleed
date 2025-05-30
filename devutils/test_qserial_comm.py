@@ -27,12 +27,10 @@ from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDSerial
 TIMEOUT = 30000  # milliseconds
 
 
+CONFIG_FILE = Path(__file__).resolve().parent / 'viperleed_hardware.ini'
+assert CONFIG_FILE.exists(), f'No {CONFIG_FILE.name} at {CONFIG_FILE.parent}'
 CONFIG = ConfigParser()
-CONFIG.read(
-    Path(__file__).resolve().parents[2]  # The main viperleed directory
-    / 'src/viperleed/gui/measure/configuration/viperleed_hardware.ini'
-    )
-
+CONFIG.read(CONFIG_FILE)
 
 class MainWindow(qtw.QWidget):
     """Simple window for basic tests."""
