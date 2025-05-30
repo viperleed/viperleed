@@ -1,0 +1,2 @@
+# Dependencies used for development, to check code style.
+pylint>2.16  # We may consider moving to ruff
