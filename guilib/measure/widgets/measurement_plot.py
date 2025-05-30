@@ -360,9 +360,10 @@ class MeasurementPlot(qtw.QWidget):
             return
 
         if self.data_points.is_time_resolved:
-            xlabel = f"Time ({QuantityInfo.TIMES.units})"
+            xlabel = (f"{QuantityInfo.TIMES.display_label} "
+                      f"({QuantityInfo.TIMES.units})")
         else:
-            xlabel = (f"{QuantityInfo.ENERGY.label} "
+            xlabel = (f"{QuantityInfo.ENERGY.display_label} "
                       f"({QuantityInfo.ENERGY.units})")
         axes.set_xlabel(xlabel)
 
@@ -373,7 +374,7 @@ class MeasurementPlot(qtw.QWidget):
             return
 
         if len(self.plotted_quantities) == 1:
-            yname = self.plotted_quantities[0].label
+            yname = self.plotted_quantities[0].display_label
         else:
             yname = self.plotted_quantities[0].common_label
         axes.set_ylabel(f"{yname} ({self.plotted_quantities[0].units})")
@@ -389,18 +390,18 @@ class PlotComboBox(CheckComboBox):
         """Return checked QuantityInfo objects."""
         checked = self.selected_items
         for index, item in enumerate(checked):
-            checked[index] = QuantityInfo.from_label(item)
+            checked[index] = QuantityInfo.from_display_label(item)
         return checked
 
     def toggle_checked(self, name):
         """Toggle the checked state of an entry with given name."""
         item = self.model().findItems(name)[0]
         super().toggle_checked(name)
-        quantity = QuantityInfo.from_label(name)
+        quantity = QuantityInfo.from_display_label(name)
         if self.is_item_checked(item):
             for i in range(self.count()):
                 label = self.model().item(i, 0).text()
-                other_quantity = QuantityInfo.from_label(label)
+                other_quantity = QuantityInfo.from_display_label(label)
 
                 if quantity.units != other_quantity.units:
                     disable = self.model().findItems(label)[0]

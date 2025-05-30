@@ -16,6 +16,7 @@ from ast import literal_eval
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.widgets.basewidgets import QUncheckableButtonGroup
 
@@ -74,7 +75,8 @@ class QuantitySelector(qtw.QFrame):
             for quantity in selections:
                 button = qtw.QCheckBox()
                 group.addButton(button)
-                button.setText(quantity)
+                q = QuantityInfo.from_label(quantity)
+                button.setText(q.display_label)
                 layout.addWidget(button)
             layout.addStretch(1)
             self._selections.append(group)
@@ -97,7 +99,9 @@ class QuantitySelector(qtw.QFrame):
         quantities = []
         for group in self._selections:
             if group.checkedButton():
-                quantities.append(group.checkedButton().text())
+                display_label = group.checkedButton().text()
+                q = QuantityInfo.from_display_label(display_label)
+                quantities.append(q.label)
         return tuple(quantities)
 
     def set_quantities(self, quantities):
@@ -115,8 +119,9 @@ class QuantitySelector(qtw.QFrame):
         buttons = tuple(btn for group in self._selections
                         for btn in group.buttons())
         for quantity in quantities:
+            q = QuantityInfo.from_label(quantity)
             for button in buttons:
-                if button.text() == quantity:
+                if button.text() == q.display_label:
                     button.click()
                     break
             else:
