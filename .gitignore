@@ -5,7 +5,6 @@
 test.py
 *wrong*
 gui*/measure/uimeasurement_keepmeasuring.py
-*.ini
 
 # editable install files and folders and other distribution stuff
 **/*egg-info*
