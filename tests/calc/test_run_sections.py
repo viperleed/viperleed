@@ -20,6 +20,13 @@ from viperleed.calc.sections.run_sections import section_loop
 class TestSectionLoop:
     """Tests for the section_loop function."""
 
+    @fixture(name='patch_common')
+    def patch_common(self, monkeypatch):
+        for p in ("viperleed.calc.files.parameters.update",
+                  "viperleed.calc.sections.run_sections.cleanup",
+                  "viperleed.calc.sections.run_sections.move_oldruns"):
+            monkeypatch.setattr(p, lambda *_args, **_kwargs: None)
+
     @fixture(name='dummy_slab')
     def _make_dummy_slab(self, mocker):
         slab = mocker.MagicMock()
@@ -201,16 +208,12 @@ class TestSectionLoop:
 
     @parametrize('run,actions,expect', valid_runs.values(), ids=valid_runs)
     def test_section_loop_valid(self, run, actions, expect,
-                                dummy_rp, dummy_slab, monkeypatch):
+                                dummy_rp, dummy_slab,
+                                patch_common, monkeypatch):
         dummy_rp.RUN = run[:]
 
         monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
                             self.make_fake_run_section(actions))
-        for p in ("viperleed.calc.files.parameters.update",
-                  "viperleed.calc.sections.run_sections.cleanup",
-                  "viperleed.calc.sections.run_sections.move_oldruns"):
-            monkeypatch.setattr(p, lambda *_args, **_kwargs: None)
-
         exit_code, state_recorder = section_loop(dummy_rp, dummy_slab)
 
         assert exit_code == 0
@@ -219,7 +222,7 @@ class TestSectionLoop:
     @parametrize('run,actions,expect', domain_runs.values(), ids=domain_runs)
     def test_section_loop_valid_with_domains(self, run, actions, expect,
                                              dummy_rp, dummy_slab,
-                                             monkeypatch, mocker):
+                                             patch_common, monkeypatch):
         dummy_rp.RUN = run[:]
         dp = DomainParameters('.', 'dummy_name')
         dp.rpars = Rparams()
@@ -229,11 +232,6 @@ class TestSectionLoop:
 
         monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
                             self.make_fake_run_section(actions))
-        for p in ("viperleed.calc.files.parameters.update",
-                  "viperleed.calc.sections.run_sections.cleanup",
-                  "viperleed.calc.sections.run_sections.move_oldruns"):
-            monkeypatch.setattr(p, lambda *_args, **_kwargs: None)
-
         exit_code, state_recorder = section_loop(dummy_rp, dummy_slab)
 
         assert exit_code == 0
@@ -243,7 +241,7 @@ class TestSectionLoop:
                  ids=max_disp_runs)
     def test_section_loop_valid_max_tl_disp(self, run, actions, which, expect,
                                             dummy_rp, dummy_slab,
-                                            monkeypatch, mocker):
+                                            monkeypatch, patch_common):
         dummy_rp.RUN = run[:]
         dummy_rp.MAX_TL_DISPLACEMENT.action = which
 
@@ -253,11 +251,6 @@ class TestSectionLoop:
             lambda *_args, **_kwargs: True)
         monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
                             self.make_fake_run_section(actions))
-        for p in ("viperleed.calc.files.parameters.update",
-                  "viperleed.calc.sections.run_sections.cleanup",
-                  "viperleed.calc.sections.run_sections.move_oldruns"):
-            monkeypatch.setattr(p, lambda *_args, **_kwargs: None)
-
         exit_code, state_recorder = section_loop(dummy_rp, dummy_slab)
 
         assert exit_code == 0
@@ -266,66 +259,13 @@ class TestSectionLoop:
     @parametrize('run,actions,expect_code,expect_history',
                  stopped_runs.values(), ids=stopped_runs)
     def test_section_loop_stops(self, run, actions,
-                                expect_code, expect_history,
-                                dummy_rp, dummy_slab, monkeypatch):
+                                expect_code, expect_history, dummy_rp,
+                                dummy_slab, monkeypatch, patch_common):
         dummy_rp.RUN = run[:]
 
         monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
                             self.make_fake_run_section(actions))
-        for p in ("viperleed.calc.files.parameters.update",
-                  "viperleed.calc.sections.run_sections.cleanup",
-                  "viperleed.calc.sections.run_sections.move_oldruns"):
-            monkeypatch.setattr(p, lambda *_args, **_kwargs: None)
-
         exit_code, state_recorder = section_loop(dummy_rp, dummy_slab)
 
         assert exit_code == expect_code
         assert dummy_rp.runHistory == expect_history
-
-    # @patch("viperleed.calc.sections.run_sections.run_section")
-    # @patch("viperleed.calc.sections.run_sections.cleanup")
-    # def test_section_loop_keyboard_interrupt(self, mock_cleanup,
-    #                                          mock_run_section,
-    #                                          dummy_rp, dummy_slab):
-    #     def side_effect(*args, **kwargs):
-    #         raise KeyboardInterrupt()
-    #     mock_run_section.side_effect = side_effect
-    #     dummy_rp.RUN = [0]
-
-    #     exit_code, _ = section_loop(dummy_rp, dummy_slab)
-    #     assert exit_code == 1
-    #     mock_cleanup.assert_called_once()
-
-    # @patch("viperleed.calc.sections.run_sections.run_section")
-    # @patch("viperleed.calc.sections.run_sections.cleanup")
-    # def test_section_loop_exception(self, mock_cleanup, mock_run_section,
-    #                                 dummy_rp, dummy_slab):
-    #     mock_run_section.side_effect = RuntimeError("fail")
-    #     dummy_rp.RUN = [0]
-
-    #     exit_code, _ = section_loop(dummy_rp, dummy_slab)
-    #     assert exit_code == 3
-    #     mock_cleanup.assert_called_once()
-
-    # @patch("viperleed.calc.sections.run_sections.run_section")
-    # def test_section_loop_halt(self, dummy_run_section, dummy_rp, dummy_slab):
-    #     dummy_rp.RUN = [0, 1]
-    #     dummy_rp.halt = 3
-    #     dummy_rp.HALTING = 3
-    #     exit_code, _ = section_loop(dummy_rp, dummy_slab)
-    #     assert exit_code == 0
-    #     assert dummy_run_section.call_count == 1
-
-    # @patch("viperleed.calc.sections.run_sections.run_section")
-    # def test_section_loop_stops_on_STOP(self, dummy_run_section, dummy_rp,
-    #                                     dummy_slab):
-    #     dummy_rp.RUN = [0, 1, 2]
-    #     dummy_rp.STOP = True
-    #     dummy_rp.RUN[0] = 0
-    #     dummy_rp.fileLoaded = {"EXPBEAMS": True}
-    #     dummy_rp.runHistory = []
-
-    #     exit_code, _ = section_loop(dummy_rp, dummy_slab)
-    #     assert exit_code == 0
-    #     # Should run only the first section
-    #     assert dummy_run_section.call_count == 1
