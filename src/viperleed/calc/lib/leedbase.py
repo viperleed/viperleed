@@ -537,18 +537,17 @@ def getLEEDdict(sl, rp):
     if sl.planegroup == 'unknown':
         logger.warning('Generating LEED dictionary for slab with unknown '
                        'plane group!')
-    if sl.planegroup in ['pm', 'pg', 'cm', 'rcm', 'pmg']:
-        pgstring = sl.planegroup + '[{} {}]'.format(*sl.orisymplane.par)
-    else:
-        pgstring = sl.planegroup
+    pgstring = sl.planegroup
+    if pgstring in {'pm', 'pg', 'cm', 'rcm', 'pmg'}:
+        pgstring += str(sl.orisymplane.par)
     if not (abs(np.round(rp.SUPERLATTICE).astype(int) - rp.SUPERLATTICE)
             < 1e-3).all():
         logger.error('getLEEDdict: SUPERLATTICE contains non-integer-valued '
                      'entries.')
-        return None
+        return None                                                             # TODO: would be better to raise
     # Some values can be overwritten via parameters:
     d = {'eMax': rp.THEO_ENERGIES.max,
-         'SUPERLATTICE': rp.SUPERLATTICE.astype(int),
+         'SUPERLATTICE': rp.SUPERLATTICE.round().astype(int),
          'surfBasis': sl.ab_cell.T,
          'surfGroup': pgstring,
          'bulkGroup': sl.bulkslab.foundplanegroup,

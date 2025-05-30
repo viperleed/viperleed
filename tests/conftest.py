@@ -8,6 +8,8 @@ check_log_records (factory)
     Raise unless caplog records are exactly as expected.
 data_path
     Path to the top-level folder containing test data.
+first_case
+    The first of the current pytest-cases.
 re_match (factory)
     Return a match object from a pattern and a string.
 """
@@ -53,3 +55,23 @@ def re_match():  # This is actually a fixture factory
 def data_path():
     """Return the Path to the top-level folder containing test data."""
     return TEST_DATA
+
+
+@fixture(name='first_case')
+def first_case(current_cases):
+    """Return the first of the current cases."""
+    def _find_case(cases_dict):
+        for value in cases_dict.values():
+            if isinstance(value, dict):
+                try:
+                    return _find_case(value)
+                except ValueError:
+                    pass
+            try:
+                value.id
+            except AttributeError:
+                pass
+            else:
+                return value
+        raise ValueError('No case found')
+    return _find_case(current_cases)

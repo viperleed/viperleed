@@ -83,34 +83,35 @@ OPTIONAL_INPUT_FILES = (
 
 # Files to go in OUT
 _OUT_FILES = (
-    'Complex_amplitudes_imag.csv',
-    'Complex_amplitudes_real.csv',
-    'control.chem',
-    'Errors_summary.csv',
-    'Errors.pdf',
-    'Errors.zip',
-    'FD_Optimization_beams.pdf',
-    'FD_Optimization.csv',
-    'FD_Optimization.pdf',
-    'FITBEAMS_norm.csv',
-    'FITBEAMS.csv',
-    'PatternInfo.tlm',
-    'refcalc-amp.out',
-    'Rfactor_analysis_refcalc.pdf',
-    'Rfactor_analysis_superpos.pdf',
-    'Rfactor_plots_refcalc.pdf',
-    'Rfactor_plots_superpos.pdf',
-    'SD.TL',
-    'refcalc-fd.out',
-    'Search-progress.csv',
-    'Search-progress.pdf',
-    'Search-report.csv',
-    'Search-report.pdf',
-    'superpos-spec.out',
-    'THEOBEAMS_norm.csv',
-    'THEOBEAMS.csv',
-    'THEOBEAMS.pdf',
+    'Complex_amplitudes_imag.csv',    # refcalc
+    'Complex_amplitudes_real.csv',    # refcalc
+    'control.chem',                   # search
+    'Errors.pdf',                     # error calc
+    'Errors.zip',                     # error calc
+    'Errors_summary.csv',             # error calc
+    'experiment_symmetry.ini',        # inizialization
+    'FD_Optimization.csv',            # FD optimization
+    'FD_Optimization.pdf',            # FD optimization
+    'FD_Optimization_beams.pdf',      # FD optimization
+    'FITBEAMS.csv',                   # superpos
+    'FITBEAMS_norm.csv',              # superpos
+    'refcalc-amp.out',                # TensErLEED refcalc
+    'refcalc-fd.out',                 # TensErLEED refcalc
+    'Rfactor_analysis_refcalc.pdf',   # R factor after refcalc
+    'Rfactor_analysis_superpos.pdf',  # R factor after superpos
+    'Rfactor_plots_refcalc.pdf',      # R factor after refcalc
+    'Rfactor_plots_superpos.pdf',     # R factor after superpos
+    'SD.TL',                          # TensErLEED search
+    'Search-progress.csv',            # search
+    'Search-progress.pdf',            # search
+    'Search-report.csv',              # search
+    'Search-report.pdf',              # search
+    'superpos-spec.out',              # TensErLEED superpos
+    'THEOBEAMS.csv',                  # refcalc
+    'THEOBEAMS.pdf',                  # refcalc
+    'THEOBEAMS_norm.csv',             # refcalc
     )
+
 
 # Label given to workhistory folders when cleaning up stray remains
 # from previous viperleed.calc executions from the work directory
@@ -120,12 +121,14 @@ PREVIOUS_LABEL = 'previous'
 # log file was found
 MOVED_LABEL = 'moved-'
 
+
 # Output files that may be inputs in future runs - keep during prerun
 _IOFILES = (
     'control.chem',
     'refcalc-fd.out',
     'superpos-spec.out',
     )
+
 
 _LOGGER = logging.getLogger(__name__)
 
