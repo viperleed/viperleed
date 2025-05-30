@@ -2,11 +2,10 @@
 
 This module contains QObjectSettingsErrors, DeviceABCErrors,
 QObjectWithError, QObjectWithSettingsABC, HardwareABC and DeviceABC.
-QObjectWithError is the base class of QObjectWithSettingsABC,
-CalibrationTask, and DataPoints. QObjectWithSettingsABC is the base
-class of HardwareABC and MeasurementABC. HardwareABC is the base class
-of DeviceABC and SerialABC. DeviceABC is the base class of ControllerABC
-and CameraABC.
+QObjectWithError is the base class of QObjectWithSettingsABC.
+QObjectWithSettingsABC is the base class of HardwareABC and
+MeasurementABC. HardwareABC is the base class of DeviceABC and
+SerialABC. DeviceABC is the base class of ControllerABC and CameraABC.
 
 Note that all of the classes defined in this module are subclasses of
 QObject. Any subclass of a QObject cannot inherit from a second QObject,
@@ -23,19 +22,15 @@ __license__ = 'GPLv3+'
 
 from abc import ABCMeta
 from abc import abstractmethod
-from configparser import ConfigParser
+from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
 from operator import itemgetter
 from pathlib import Path
 
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.measure import hardwarebase
-from viperleed.gui.measure.hardwarebase import DEFAULTS_PATH
-from viperleed.gui.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.gui.measure.hardwarebase import emit_error
+from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes.settings import NoDefaultSettingsError
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import SettingsError
@@ -44,11 +39,14 @@ from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 
 
+_UNIQUE = qtc.Qt.UniqueConnection
+
+
 class QMetaABC(ABCMeta, type(qtc.QObject)):
     """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
 
 
-class DeviceABCErrors(ViPErLEEDErrorEnum):
+class DeviceABCErrors(base.ViPErLEEDErrorEnum):
     """Errors of ViPErLEED devices."""
 
     DEVICE_NOT_FOUND = (
@@ -59,7 +57,7 @@ class DeviceABCErrors(ViPErLEEDErrorEnum):
         )
 
 
-class QObjectSettingsErrors(ViPErLEEDErrorEnum):
+class QObjectSettingsErrors(base.ViPErLEEDErrorEnum):
     """Settings errors of ViPErLEED objects."""
 
     MISSING_SETTINGS = (100,
@@ -76,9 +74,15 @@ class QObjectSettingsErrors(ViPErLEEDErrorEnum):
         '{!r}. Using {} instead. Consider fixing your configuration file.'
         )
     DEFAULT_SETTINGS_CORRUPTED = (103,
-                                  'Default settings corrupted. {!r} '
+                                  'Default settings corrupted. {} '
                                   'Contact the ViPErLEED team to fix '
                                   'your default settings.')
+    SPECIFIED_SETTINGS_CORRUPTED = (
+        104,
+        'Unable to read settings at {}. Check if the file is still present. '
+        'If the file is still present, it is most likely corrupted.'
+        )
+
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
@@ -87,7 +91,58 @@ class QObjectWithError(qtc.QObject):                                            
     # information about the error in the form (code, message).
     error_occurred = qtc.pyqtSignal(tuple)
 
-    emit_error = hardwarebase.emit_error
+    emit_error = base.emit_error
+
+    def __init__(self, *args, **kwargs):
+        """Initialise instance.
+
+        Parameters
+        ----------
+        *args : object
+            Positional arguments passed on to the parent class.
+        **kwargs : object
+            Keyword arguments passed on to the parent class.
+        """
+        super().__init__(*args, **kwargs)
+        self._delayed_errors = []
+        self._delay_errors_timer = qtc.QTimer(parent=self)
+        self._delay_errors_timer.setSingleShot(True)
+        self._delay_errors_timer.setInterval(20)
+        self._delay_errors_timer.timeout.connect(self._report_delayed_errors)
+
+    @contextmanager
+    def errors_delayed(self):
+        """Temporarily make the next code block to report errors later.
+
+        This context manager is useful when the error_occurred signal
+        of this QObjectWithError is not yet connected to its final
+        slot, for example, when this object is created.
+        """
+        base.safe_connect(self.error_occurred,
+                          self._on_error_delayed,
+                          type=_UNIQUE)
+        try:
+            yield
+        finally:
+            self.error_occurred.disconnect(self._on_error_delayed)
+
+    @qtc.pyqtSlot(tuple)
+    def _on_error_delayed(self, error):
+        """Collect errors to be delayed."""
+        self._store_delayed_error(error)
+        self._delay_errors_timer.start()
+
+    @qtc.pyqtSlot()
+    def _report_delayed_errors(self):
+        """Emit errors that we have accumulated."""
+        for error in self._delayed_errors:
+            self.emit_error(error)
+        self._delayed_errors.clear()
+
+    @qtc.pyqtSlot(tuple)
+    def _store_delayed_error(self, error):
+        """Remember an error to be delayed."""
+        self._delayed_errors.append(error)
 
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
@@ -231,7 +286,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             and an exact match was asked for.
         """
         settings = self.find_matching_settings_files(
-            find_from, DEFAULTS_PATH, match_exactly,
+            find_from, base.DEFAULTS_PATH, match_exactly,
             )
         if not settings:
             # No default settings was found.
@@ -281,12 +336,12 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             worst.
         """
         directory = Path(directory).resolve()
-        default = True if directory == DEFAULTS_PATH else False
+        default = directory == base.DEFAULTS_PATH
         settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
             settings_files = [file for file in settings_files
-                              if not '_defaults' in str(file)]
+                              if '_defaults' not in str(file)]
 
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
@@ -404,7 +459,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             True if the settings file is for the class.
         """
 
-    def are_settings_invalid(self, new_settings):
+    def are_settings_invalid(self, settings):
         """Check if there are any invalid settings.
 
         Subclasses may add additional mandatory settings at
@@ -415,7 +470,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Parameters
         ----------
-        new_settings : ViPErLEEDSettings
+        settings : ViPErLEEDSettings
             The new settings.
 
         Returns
@@ -430,7 +485,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             invalid setting.
         """
         return [(invalid,) for invalid in
-                new_settings.has_settings(*self._mandatory_settings)]
+                settings.has_settings(*self._mandatory_settings)]
 
     @abstractmethod
     def get_settings_handler(self):
@@ -443,6 +498,10 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         The base-class implementation returns a handler that
         contains the location of the settings file.
+
+        Use the QNoDefaultPushButton from the basewidgets module
+        in order to prevent any button from being set as the
+        default button of the dialog.
 
         Returns
         -------
@@ -492,12 +551,12 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         try:                                                                    # TODO: #242 make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except (ValueError, NoSettingsError):
-            emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS)
+            self.emit_error(QObjectSettingsErrors.MISSING_SETTINGS)
             return False
         invalid = self.are_settings_invalid(new_settings)
         for missing, *info in invalid:
-            emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                       missing, ' '.join(info))
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            missing, ' '.join(info))
             return False
 
         self._settings = new_settings
@@ -512,6 +571,10 @@ class HardwareABC(QObjectWithSettingsABC):
     # Emitted whenever the busy state of the device changes.
     # Contains the new busy state of the device.
     busy_changed = qtc.pyqtSignal(bool)
+
+    # Emitted right after the hardware connection status has changed.
+    # Cointains the new connection status of the hardware.
+    connection_changed = qtc.pyqtSignal(bool)
 
     def __init__(self, *args, **kwargs):
         """Initialise instance."""
@@ -587,9 +650,10 @@ class DeviceABC(HardwareABC):
 
         This method must return a list of SettingsInfo instances. Each
         device is represented by a single SettingsInfo instance. The
-        SettingsInfo object must contain a .unique_name and can contain
-        .more information as a dict. The information contained within
-        a SettingsInfo must be enough to determine settings files that
+        SettingsInfo object must contain a .unique_name, a
+        .has_hardware_interface boolean, and can contain .more
+        information as a dict. The information contained within a
+        SettingsInfo must be enough to determine settings files that
         contain the correct settings for this device. Subclasses should
         raise a DefaultSettingsError if they fail to create instances
         from the settings in the DEFAULTS_PATH.
@@ -613,14 +677,20 @@ class SettingsInfo:
     ----------
     unique_name : str
         Unique name identifying the device.
+    has_hardware_interface : bool
+        Whether the device has a hardware interface or not.
     more : dict
         Extra, optional, information about the device.
     """
     unique_name: str
+    has_hardware_interface: bool
     more: dict = field(default_factory=dict)
 
     def __post_init__(self):
-        """Check that we have a string unique_name."""
+        """Check that we have the correct attribute types."""
         if not isinstance(self.unique_name, str):
             raise TypeError(f'{type(self).__name__}: '
                             'unique_name must be a string')
+        if not isinstance(self.has_hardware_interface, bool):
+            raise TypeError(f'{type(self).__name__}: '
+                            'has_hardware_interface must be a bool')

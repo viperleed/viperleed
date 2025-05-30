@@ -29,10 +29,12 @@ from viperleed.gui.measure.classes import thermocouple
 from viperleed.gui.measure.dialogs.settingsdialog import (
     FieldInfo,
     SettingsDialogSectionBase,
+    SettingsTag,
     )
-from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDHardwareError
 from viperleed.gui.measure.serial.viperleedserial import ExtraSerialErrors
-from viperleed.gui.measure.widgets.spinboxes import TolerantCommaSpinBox
+from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDHardwareError
+from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.gui.widgets.basewidgets import QNoDefaultPushButton
 from viperleed.gui.widgetslib import change_control_text_color
 from viperleed.gui.widgetslib import move_to_front
 
@@ -102,8 +104,8 @@ class SerialNumberEditor(qtw.QWidget):
         self.__ctrl = controller
 
         self.__edit = qtw.QLineEdit()
-        self.__rand_btn = qtw.QPushButton("Generate randomly")
-        self.__set_btn = qtw.QPushButton("Set")
+        self.__rand_btn = QNoDefaultPushButton("Generate randomly")
+        self.__set_btn = QNoDefaultPushButton("Set")
         self.__old_serial = ''
         self.notify_ = self.serial_number_changed
 
@@ -250,6 +252,28 @@ class SerialNumberEditor(qtw.QWidget):
         _INVOKE(self.__ctrl, 'set_serial_number', qtc.Q_ARG(str, new_serial))
 
 
+class UpdateRateSelector(qtw.QComboBox):
+    """Combo box to select ADC update-rate values."""
+
+    def __init__(self, controller, **kwargs):
+        """Initialize instance."""
+        super().__init__(**kwargs)
+        for key, frequency in controller.settings.items('adc_update_rate'):
+            self.addItem(f'{round(float(frequency))} Hz', userData=key)
+        self.notify_ = self.currentIndexChanged
+
+    def get_(self):
+        """Return the selected update rate."""
+        return self.currentData()
+
+    def set_(self, value):
+        """Set update rate from the settings file."""
+        for i in range(self.count()):
+            if self.itemData(i) == value:
+                self.setCurrentIndex(i)
+                return
+
+
 class HardwareConfigurationEditor(SettingsDialogSectionBase):
     """Class for viewing and setting ADC inputs.
 
@@ -283,7 +307,7 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
 
         # Modify arguments for the following super() call
         kwargs['display_name'] = "Hardware configuration"
-        kwargs['is_advanced'] = True
+        kwargs['tags'] = SettingsTag.ADVANCED
         kwargs['tooltip'] = (
             "This section lists what each hardware channel "
             "is capable of measuring. Quantities appearing "
@@ -309,21 +333,6 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
         # QueuedConnection prevents serial port not open errors
         self.__ctrl.error_occurred.connect(self.__on_ctrl_error,
                                            type=qtc.Qt.QueuedConnection)
-
-    @property
-    def advanced(self):
-        """Return whether this section contains only advanced settings."""
-        # We want this section to be normally visible (i.e., not
-        # advanced) only if there are some problems with the settings.
-        # We want to see this if
-        # (1) we don't have info yet
-        if not self.__adcs:
-            return False
-        # (2) something is wrong with the current selection
-        if any('?' in combo.currentText()
-               for adc in self.__adcs for combo in adc.values()):
-            return False
-        return super().advanced
 
     @property
     def hardware_info(self):
@@ -544,6 +553,24 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
 
         # Finally "+" and "-" buttons for adding/removing channels              # TODO. Also, have one button to start fresh from ?? everywhere (in case of fucked up settings)
 
+    def has_tag(self, tag):
+        """Return whether this section hsa a specific tag."""
+        # We want this section to be normally visible if there are some
+        # problems with the settings and have to adjust the tags accordingly.
+        # We want to see this section if:
+        #   (1) we don't have info yet
+        #   (2) something is wrong with the current selection
+        adcs = self.__adcs or {}
+        selection_faulty = any('?' in combo.currentText()
+                               for adc in adcs
+                               for combo in adc.values())
+        if not adcs or selection_faulty:
+            if tag is SettingsTag.ADVANCED:
+                return False
+            if tag is SettingsTag.REGULAR:
+                return True
+        return super().has_tag(tag)
+
 
 class _ADCChannelCombo(qtw.QComboBox):
     """A combo for showing/editing quantities measured at an ADC channel.
@@ -747,7 +774,7 @@ class _InputRangeSelector(qtw.QWidget):
                 ranges = ("0 \u2013 2.5 V", "0 \u2013 10 V")
 
         self.__range_options = {r: qtw.QRadioButton(r) for r in ranges}
-        self.__tooltips = []
+        self.__tooltips = []                                                    # TODO: unused
         self.__btn_group = qtw.QButtonGroup()
         self.__range_change_info = qtw.QPushButton(
             "Help me to\nswitch range..."
@@ -798,7 +825,7 @@ class _InputRangeSelector(qtw.QWidget):
 
     def update_widgets(self):
         """Update the state of children."""
-        for widg in (*self.__range_options.values(), *self.__tooltips):
+        for widg in self.__range_options.values():
             widg.setEnabled(self.editable)
         _enabled = self.__range_change_info.isEnabled()
         self.__range_change_info.setVisible(_enabled and not self.editable)
@@ -943,7 +970,7 @@ class _I0EditDialog(_EditDialogBase):
             ))
         super().__init__(controller, *args, **kwargs)
 
-        self.__gain = TolerantCommaSpinBox()
+        self.__gain = CoercingDoubleSpinBox(decimals=8)
         self.__gain_info = None
 
         self.__compose()
@@ -985,9 +1012,6 @@ class _I0EditDialog(_EditDialogBase):
         layout.addWidget(self.__gain)
 
         self.central_widget.setLayout(layout)
-
-        self.__gain.setRange(float('-inf'), float('inf'))
-        self.__gain.setDecimals(8)
 
     def __connect(self):
         """Connect appropriate signals."""

@@ -408,6 +408,30 @@ def get_devices(package):
     return devices
 
 
+def make_device(settings_file, device_cls, settings_info, **kwargs):
+    """Return an instance of `device_cls`.
+
+    Parameters
+    ----------
+    settings_file : dict or ConfigParser or str or Path or ViPErLEEDSettings
+        The device settings.
+    device_cls : type
+        The class of the device.
+    settings_info : SettingsInfo
+        The SettingsInfo necessary to determine the settings.
+    **kwargs : object
+        Keyword arguments passed to `device_cls`.
+
+    Returns
+    -------
+    device : DeviceABC
+        An instance of an implemented DeviceABC subclass object.
+    """
+    if 'address' in settings_info.more:
+        kwargs['address'] = settings_info.more['address']
+    return device_cls(settings=settings_file, **kwargs)
+
+
 def safe_connect(signal, slot, **kwargs):
     """Connect signal to slot swallowing TypeError."""
     if not callable(slot) and not isinstance(slot, qtc.pyqtSignal):

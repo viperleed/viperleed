@@ -1,4 +1,4 @@
-"""Package imagingsource of viperleed.gui.camera.drivers.
+"""Package imagingsource of viperleed.gui.measure.camera.drivers.
 
 Defines the driver for cameras produced by The Imaging Source.
 
