@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-08'
 __license__ = 'GPLv3+'
 
+from contextlib import contextmanager
 import enum
 import inspect
 from pathlib import Path
@@ -208,6 +209,24 @@ def device_name_re(name):
     # All patterns should match towards the end of the line,
     # and can have any characters before
     return re.compile('|'.join(rf'^\s*{p}\s*$' for p in _patterns))
+
+
+@contextmanager
+def disconnected(slot, signal, *more_signals, type=None):
+    """Temporarily disconnect signals from a slot."""
+    reconnect = []
+    for signal in (signal, *more_signals):
+        try:
+            signal.disconnect(slot)
+        except TypeError:  # Not connected
+            continue
+        reconnect.append(signal)
+
+    try:
+        yield
+    finally:
+        for signal in reconnect:
+            safe_connect(signal, slot, type=type)
 
 
 def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):

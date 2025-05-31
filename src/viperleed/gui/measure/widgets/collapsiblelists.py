@@ -24,9 +24,9 @@ from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.controller.abc import NO_HARDWARE_INTERFACE
 from viperleed.gui.measure.hardwarebase import class_from_name
+from viperleed.gui.measure.hardwarebase import disconnected
 from viperleed.gui.measure.hardwarebase import emit_error
 from viperleed.gui.measure.hardwarebase import get_devices
-from viperleed.gui.measure.hardwarebase import safe_disconnect
 from viperleed.gui.measure.widgets.collapsibleviews import (
     CollapsibleCameraView,
     CollapsibleControllerView,
@@ -390,13 +390,12 @@ class CollapsibleCameraList(CollapsibleDeviceList):
             settings_info = SettingsInfo(name, present, info)
             correct_view = self.add_new_view(name, (cls, settings_info))
 
-        safe_disconnect(self._checkbox(correct_view).stateChanged,
-                        self._emit_and_update_settings)
-        correct_view.original_settings = settings.last_file
-        self._checkbox(correct_view).setChecked(True)
-        self._checkbox(correct_view).stateChanged.connect(
-            self._emit_and_update_settings, type=qtc.Qt.UniqueConnection
-            )
+        with disconnected(self._emit_and_update_settings,
+                          self._checkbox(correct_view).stateChanged,
+                          type=qtc.Qt.UniqueConnection
+                          ):
+            correct_view.original_settings = settings.last_file
+            self._checkbox(correct_view).setChecked(True)
 
     def _update_stored_settings(self):
         """Update the internally stored camera settings."""
@@ -611,19 +610,14 @@ class CollapsibleControllerList(CollapsibleDeviceList):
             settings_info = SettingsInfo(name, present, info)
             correct_view = self.add_new_view(name, (cls, settings_info))
 
-        safe_disconnect(self._checkbox(correct_view).stateChanged,
-                        self._emit_and_update_settings)
-        safe_disconnect(self.views[correct_view][1].toggled,
-                        self._emit_and_update_settings)
-        correct_view.original_settings = settings.last_file
-        self._checkbox(correct_view).setChecked(True)
-        correct_view.set_quantities(quantities)
-        self._checkbox(correct_view).stateChanged.connect(
-            self._emit_and_update_settings, type=qtc.Qt.UniqueConnection
-            )
-        self.views[correct_view][1].toggled.connect(
-            self._emit_and_update_settings, type=qtc.Qt.UniqueConnection
-            )
+        with disconnected(self._emit_and_update_settings,
+                          self._checkbox(correct_view).stateChanged,
+                          self.views[correct_view][1].toggled,
+                          type=qtc.Qt.UniqueConnection
+                          ):
+            correct_view.original_settings = settings.last_file
+            self._checkbox(correct_view).setChecked(True)
+            correct_view.set_quantities(quantities)
 
     def _set_primary_from_settings(self):
         """Attempt to select the primary controller from settings."""
