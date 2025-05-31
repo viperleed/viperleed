@@ -1,0 +1,5 @@
+# This file contains a list of the required python packages for
+# building viperleed from source, and necessary to create sdist
+# for upload to pypi
+build
+twine

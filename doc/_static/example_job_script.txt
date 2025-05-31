@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#SBATCH -J viperleed  # job name
+#SBATCH -N 1          # 1 node
+
+#SBATCH --qos=skylake_0096
+#SBATCH --partition=skylake_0096
+
+# source .bashrc to initialize conda
+source ~/.bashrc
+module purge
+
+# load Intel compilers
+module load compiler/2022.0.1
+module load mkl/2022.0.1
+module load mpi/2021.5.0
+
+# load conda
+module load miniconda3/4.12.0-intel-2021.5.0-kwofrye
+
+# activate conda environment
+conda activate viperleed
+
+
+# viperleed source code location
+tensorleed_path=$DATA/viperleed_tensorleed
+
+# location of the input files
+work_path=$DATA/calculations/example/work
+
+echo "Working directory:   $work_path"
+echo "ViPErLEED Source:    $tensorleed_path"
+echo
+
+viperleed calc -w $work_path -t $tensorleed_path

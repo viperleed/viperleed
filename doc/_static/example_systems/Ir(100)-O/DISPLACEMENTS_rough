@@ -1,0 +1,17 @@
+! Label for the 1st search run
+== Search z
+    = GEO_DELTA
+        O_ads     z = -0.20 0.20 0.01
+        Ir_surf   z = -0.20 0.20 0.01
+        Ir L(2-5) z = -0.20 0.20 0.01
+
+! Label for the 2nd search run
+== Search x
+    = GEO_DELTA
+        Ir L(1-4) xy[1 0] = -0.20 0.20 0.01
+
+! Label for the 3rd search run
+== Search u
+    = VIB_DELTA
+        O_ads   = -0.10 0.10 0.01
+        Ir_surf = -0.03 0.03 0.01

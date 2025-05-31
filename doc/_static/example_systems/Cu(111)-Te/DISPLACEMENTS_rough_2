@@ -1,0 +1,14 @@
+== SEARCH z
+    = GEO_DELTA
+        Te_surf   z        = -0.10 0.10 0.01
+        Te_def    z        = -0.10 0.10 0.01
+        Cu_surf   z        = -0.10 0.10 0.01
+        Cu_def    z L(1-4) = -0.05 0.05 0.005
+
+== SEARCH xy
+    = GEO_DELTA
+        Te_surf xy         = -0.10 0.10 0.01
+        Te_def  xy         = -0.10 0.10 0.01
+        Cu_surf xy         = -0.10 0.10 0.01
+        Cu_def  xy L(1-4)  = -0.05 0.05 0.005
+

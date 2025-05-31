@@ -1,0 +1,25 @@
+! ####### GLOBAL PARAMETERS #######
+
+RUN = 1-3
+THEO_ENERGIES =   50 700 3
+
+V0_IMAG = 5.0
+LMAX = 8-14
+
+STOP
+
+! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
+
+BULK_LIKE_BELOW = 0.32
+BULK_LIKE_BELOW = 0.33  ! Multiple assignments
+BULK_LIKE_BELOW = 0.34  ! Multiple assignments
+BULK_LIKE_BELOW = 0.35  ! Multiple assignments
+
+SITE_DEF Ir = surf top(2)
+SITE_DEF O = ads top(1)
+
+! ####### PARAMETERS FOR VIBROCC #######
+
+T_DEBYE = 420
+T_EXPERIMENT = 100
+VIBR_AMP_SCALE = *surf 1.3

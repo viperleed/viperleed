@@ -1,0 +1,26 @@
+...
+Reading structure from file POSCAR
+ViPErLEED is using TensErLEED version 1.76.
+
+STARTING SECTION: INITIALIZATION
+
+Loaded EXPBEAMS.csv file containing 41 beams (total energy range: 1.2e+04 eV).
+Found unit cell type: rectangular
+Starting symmetry search...
+Found plane group: pg[0 1]
+Detected bulk repeat vector: [-2.51774 2.33620 3.68229]
+Checking bulk unit cell...
+Found SUPERLATTICE = (1x1)
+Starting bulk symmetry search...
+Found bulk plane group: pg[0 1]
+Generating phaseshifts data... 
+Generating BEAMLIST...
+Finishing section at 11:55:31. Section took 11.79 seconds.
+
+Starting cleanup...
+Wrote manifest file successfully.
+
+Finishing execution at 2024-02-20 11:55:31
+Total elapsed time: 11.83 seconds
+
+Executed segments: 0

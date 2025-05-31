@@ -1,0 +1,48 @@
+name: Run unit tests
+
+on: workflow_dispatch
+
+jobs:
+  pytest-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+      matrix:
+        python-version: ["3.7"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+          python-version: ${{ matrix.python-version }}
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Install Python dependencies
+      run: |
+        conda env update -n base --file environments/viperleed_base.yml
+    - name: Install gfortran and LAPACK/BLAS
+      run: |
+        sudo apt update
+        sudo apt install gfortran -y
+        sudo apt install libblas-dev liblapack-dev -y
+    - name: Install MPI & mpifort,mpicc
+      run: |
+        sudo apt install openmpi-bin
+        sudo apt install libopenmpi-dev
+    - name: compile static
+      run: |
+        cd tensorleed
+        make gcc
+        cd TensErLEED-v1.73
+        make gcc
+        cd ../..
+    - name: Install pytest dependencies
+      run: |
+        conda install wrapt parameterized
+        pip install ase pytest pytest-cases pytest-subtests
+    - name: Test with pytest
+      run: |
+        cd tests
+        pytest

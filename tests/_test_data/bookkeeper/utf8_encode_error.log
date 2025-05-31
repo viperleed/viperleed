@@ -1,0 +1,34 @@
+Starting new log: viperleed-calc-250515-080457.log
+Time of execution: 2025-05-15 08:04:57
+This is ViPErLEED version 0.13.1
+
+Reading structure from file POSCAR
+The POSCAR file will be processed and overwritten. Copying the original POSCAR to POSCAR_user...
+No system name specified. Using name of the parent directory: utf8.
+ViPErLEED is using TensErLEED version 2.0.0.
+# WARNING: Could not find file DISPLACEMENTS. It will not be stored in original_inputs.
+
+STARTING SECTION: INITIALIZATION
+# WARNING: Parameter T_EXPERIMENT is defined but unused.
+# WARNING: Parameter T_DEBYE is defined but unused.
+# WARNING: It looks like the first line in the IVBEAMS file may contain data. Note that the first line should be a header line, so the data will not be read.
+Found unit cell type: hexagonal
+Starting symmetry search...
+Found plane group: p3
+Detected bulk repeat vector: [0.00000 -2.74755 4.33033]
+Checking bulk unit cell...
+Found SUPERLATTICE = (1x1)
+Starting bulk symmetry search...
+Found bulk plane group: p3
+# WARNING: Layer cuts are very close together. The minimum spacing between layers is 0.84 Å. This may lead to convergence issues in the reference calculation. Check the LAYERS_CUTS parameter in the PARAMETERS file.
+Generating BEAMLIST...
+Finishing section at 08:04:58. Section took 1.12 seconds.
+
+Starting cleanup...
+Wrote manifest file successfully.
+
+Finishing execution at 2025-05-15 08:04:58
+Total elapsed time: 1.28 seconds
+
+Executed segments: 0
+

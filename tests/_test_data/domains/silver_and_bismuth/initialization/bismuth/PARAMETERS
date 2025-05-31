@@ -1,0 +1,13 @@
+###########################  DOMAIN Bi  ###############################
+
+
+! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
+
+N_BULK_LAYERS = 1
+BULK_REPEAT = abc[0.50  0.50 -0.10]
+
+SITE_DEF Bi = surf 1
+SUPERLATTICE = (1x1)
+
+
+! ####### PARAMETERS FOR REFCALC #######

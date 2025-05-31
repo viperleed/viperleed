@@ -1,0 +1,9 @@
+! ######################  VIBROCC for DOMAIN Bi  ######################
+
+= Vibrational Amplitudes
+Bi_surf = 1.55
+Bi_def = 0.269
+
+= Occupations
+
+= Search offsets

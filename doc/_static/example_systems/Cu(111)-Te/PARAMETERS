@@ -1,0 +1,20 @@
+! ####### GLOBAL PARAMETERS #######
+RUN = 0
+
+THEO_ENERGIES = 20 500 3
+LMAX = 8-14
+
+! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
+
+BULK_LIKE_BELOW = 0.6
+
+SITE_DEF Te = surf top(2)
+SITE_DEF Cu = surf top(2)
+
+SUPERLATTICE M = 5 0, 1 2
+
+! ####### PARAMETERS FOR VIBROCC #######
+
+T_DEBYE = 343
+T_EXPERIMENT = 100
+VIBR_AMP_SCALE = *surf 1.3
