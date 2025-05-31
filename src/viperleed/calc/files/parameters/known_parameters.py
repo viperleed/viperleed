@@ -57,6 +57,7 @@ KNOWN_PARAMS = (
     'LMAX',
     'LOG_LEVEL',
     'LOG_SEARCH',
+    'MAX_TL_DISPLACEMENT',
     'N_BULK_LAYERS',
     'N_CORES',
     'OPTIMIZE',

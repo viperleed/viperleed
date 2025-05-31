@@ -17,7 +17,7 @@ from dataclasses import field
 import logging
 from typing import Dict
 
-
+import itertools
 import numpy as np
 
 from viperleed.calc.lib.coordinates import add_edges_and_corners
@@ -604,7 +604,7 @@ class Atom:                                                                     
     def is_same_xy(self, cartpos, eps=1e-3):
         """Return whether this atom is close to a 2D cartpos.
 
-        If the atom is close to an edge or corner its replicas
+        If the atom is close to an edge or corner, its replicas
         are also considered.
 
         Parameters
@@ -629,6 +629,36 @@ class Atom:                                                                     
         complist, _ = add_edges_and_corners([self.cartpos[:2]], (self.pos,),
                                             releps, abt)
         return any(np.linalg.norm(cartpos - complist, axis=1) < eps)
+
+    def distance(self, cartpos, include_c_replicas=False):
+        """Return the distance of this atom from a cartpos.
+
+        2D or 3D replicas of this atom in other unit cells are also
+        considered, and the minimum distance is returned.
+
+        Parameters
+        ----------
+        cartpos : numpy.ndarray or Atom
+            3D Cartesian coordinates to check against the position
+            of this atom. If an Atom, its Cartesian position is used.
+        include_c_replicas : bool
+            Whether replicas in the out-of-plane directions should be
+            considered. The default is False (2D-replicas only).
+
+        Returns
+        -------
+        float
+            The smallest absolute distance among the replicas.
+        """
+        if isinstance(cartpos, Atom):
+            cartpos = cartpos.cartpos
+        offsets = itertools.product((-1, 0, 1),
+                                    repeat=3 if include_c_replicas else 2)
+        ucell = self.slab.ucell.T
+        if not include_c_replicas:
+            ucell = ucell[:2]
+        complist = [self.cartpos + np.dot(v, ucell) for v in offsets]
+        return min(np.linalg.norm(cartpos - complist, axis=1))
 
     def mergeDisp(self, el):
         """
