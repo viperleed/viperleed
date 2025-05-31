@@ -25,7 +25,7 @@ def export_pattern_csv(fnames, leeds, **kwargs):
     """
     Exports the pattern file needed for the ViPErLEED ImageJ plug-in for
     extracting experimental I(V) curves.
-    
+
     Parameters
     ----------
     - fnames: str, or list of str
@@ -60,7 +60,7 @@ def export_pattern_csv(fnames, leeds, **kwargs):
     source = kwargs.get('source', None)
     name = kwargs.get('name', None)
     all_domains = kwargs.get('domains', [None]*len(leeds))
-    
+
     if isinstance(fnames, (list, tuple, np.ndarray)):
         # will export one combined file, plus as many files as
         # there are patterns
@@ -110,7 +110,7 @@ def export_pattern_csv(fnames, leeds, **kwargs):
             with open(fname, 'w+') as f:
                 f.write('\n'.join(lines))
         all_lines.append(lines)
-    
+
     # and export the combined one
     combined = _combine_pattern_files_(all_lines)
     with open(fname_combined, 'w+') as f:
@@ -127,7 +127,7 @@ def _combine_pattern_files_(all_lines):
 def _format_beams_(leed, **kwargs):
     """
     Format beams BLAH BLAH
-    
+
     Parameters
     ----------
     - leed: LEEDPattern
@@ -199,7 +199,7 @@ def _format_beams_(leed, **kwargs):
 
     for (beam, g, group, doms) in zip(hk, gg, groups, dd):
         n, d = lengths['numerator'], lengths['denominator']
-        
+
         line = (    # list of entries for each column:
             f"{beam:({n},{d})s},"                              # fractional hk
             + f"{beam:{lengths['hk_integer']}f}"[1:-1] + ','   # floating hk
@@ -245,7 +245,7 @@ def _format_header_(lengths, leed, **kwargs):                                   
     Returns
     -------
     - list of str: list of lines to be exported
-    
+
     """
     # 1st Header
     # * ViPErLEED header
@@ -258,12 +258,10 @@ def _format_header_(lengths, leed, **kwargs):                                   
     # * surf shape (group); lattice parameters
     # * total number of domains, and number of domains exported
     # * for each exported domain: basis and superlattice matrix
+    # * one blank line with only a comment character
     # * finally an uncommented header line for the columns
 
     # check mandatory parameters
-    if not isinstance(leed, LEEDPattern):
-        raise TypeError("exportcsv: leed must be a "
-                        "LEEDPattern instance")
     needed_keys = ('numerator', 'denominator', 'hk_integer', 'g_integer',
                    'group', 'domains')
     if any((key not in lengths.keys()) for key in needed_keys):
@@ -286,7 +284,7 @@ def _format_header_(lengths, leed, **kwargs):                                   
         header.append(f"# Structure: {name}\n#")
 
     header.append(f"# Max. LEED Energy: {leed.max_energy:.1f} eV")
-    
+
     # TODO: add incidence angles
 
     # TODO: the next block inevitably needs to change, as we have to be
@@ -298,7 +296,7 @@ def _format_header_(lengths, leed, **kwargs):                                   
     #       lattice..." will need to be different if there is a single
     #       structure or multiple ones. Probably something like "Structural
     #       domain {name}: ..." in the latter case
-    
+
     #       LEEDSymmetryDomains has a .bulk property (a Lattice2D), and self[0]
     #       is the first-domain Lattice2D
 
