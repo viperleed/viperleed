@@ -328,22 +328,17 @@ def _format_header_(lengths, leed, **kwargs):                                   
 
     # Prepare the headers of the columns
     # 0) Some description
-    header.append(
-        '#\n'
-        '# * h and k are the surface Miller indices of each LEED spot;'
-        ' both fractional\n'
-        '#   and floating-point versions are provided.\n'
-        '# * gx and gy are the horizontal and vertical components of'
-        ' reciprocal lattice\n'
-        '#   vectors in AA^(-1), and include a factor of 2*pi.\n'
-        '# * Beams with the same absolute value of \'group\' are'
-        ' symmetry equivalent (at\n'
-        '#   normal incidence); extinct spots have a negative \'group\''
-        ' index.\n'
-        '# * The domains contributing to each spot are listed in'
-        ' \'domain(s)\'. Domains\n'
-        '#   contributing with glide-extinct spots are reported in'
-        ' parentheses.\n'
+    header.append('''\
+#
+# * h and k are the surface Miller indices of each LEED spot; both fractional
+#   and floating-point versions are provided.
+# * gx and gy are the horizontal and vertical components of reciprocal lattice
+#   vectors in AA^(-1), and include a factor of 2*pi.
+# * Beams with the same absolute value of 'group' are symmetry equivalent (at
+#   normal incidence); extinct spots have a negative 'group' index.
+# * The domains contributing to each spot are listed in 'domain(s)'. Domains
+#   contributing with glide-extinct spots are reported in parentheses.
+#'''
         )
 
     # then all column headers centered with the contents

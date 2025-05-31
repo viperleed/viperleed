@@ -86,7 +86,7 @@ class TestFormatHeader:
 
         # Checks for Issue #86
         commented_lines = '\n'.join(commented).splitlines()
-        assert all(line.startswith('#') for line in commented_lines[:-1])
+        assert all(line.startswith('#') for line in commented_lines)
         assert not any('"' in line for line in header)
 
     @pytest.mark.usefixtures('mock_impl')
