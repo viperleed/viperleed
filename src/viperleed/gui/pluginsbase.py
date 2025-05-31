@@ -21,7 +21,7 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.constants import LOGO
 from viperleed.gui.helpers import resources_path
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.lib import AllGUIFonts
 
 
 def logo_one_line():

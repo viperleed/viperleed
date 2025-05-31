@@ -13,9 +13,9 @@ __license__ = 'GPLv3+'
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed.gui.basewidgets import PainterMatrix
-from viperleed.gui.widgetslib import AllGUIFonts
-from viperleed.gui.widgetslib import editStyleSheet
+from viperleed.gui.widgets.basewidgets import PainterMatrix
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.lib import editStyleSheet
 
 
 class MatricesPopup(qtw.QWidget):

@@ -33,8 +33,8 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
 from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDHardwareError
 from viperleed.gui.measure.serial.viperleedserial import ExtraSerialErrors
 from viperleed.gui.measure.widgets.spinboxes import TolerantCommaSpinBox
-from viperleed.gui.widgetslib import change_control_text_color
-from viperleed.gui.widgetslib import move_to_front
+from viperleed.gui.widgets.lib import change_control_text_color
+from viperleed.gui.widgets.lib import move_to_front
 
 # pylint: disable=too-many-lines
 # Makes sense to keep all the widgets in a single module

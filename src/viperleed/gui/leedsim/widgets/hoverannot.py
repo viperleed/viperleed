@@ -16,7 +16,7 @@ import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
 from viperleed.gui.base import check_type
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.lib import AllGUIFonts
 
 
 class HoverAnnot(qtw.QWidget):
