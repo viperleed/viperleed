@@ -1,5 +1,6 @@
 # Ignore workspace and pycache:
 **/__pycache__
+**/.idea
 .spyproject
 test.py
 *wrong*
@@ -18,9 +19,6 @@ dist
 
 # Ignore log file from recompile script
 utilities/recompile_parts.log
-
-# built docs
-doc/_build/
 
 # Ignore testing folder
 calculations/

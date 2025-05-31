@@ -1,5 +1,0 @@
-eMax=700.0
-SUPERLATTICE=[[1,0],[0,1]]
-surfBasis=[[7.81,0.],[0.,5.5225]]
-surfGroup=pg[1 0]
-bulkGroup=pmm
