@@ -1,4 +1,4 @@
-"""Module widgetslib of viperleed.gui.
+"""Module lib of viperleed.gui.widgets.
 
 Library of functions that are common to several Qt objects.
 """
@@ -213,6 +213,12 @@ def screen_fraction(obj, size):
 ################################################################################
 #                                   CLASSES                                    #
 ################################################################################
+
+
+class QDoubleValidatorNoDot(qtg.QDoubleValidator):
+    def validate(self, text:str, cursor_pos:int):
+        text = text.replace(',', '.')
+        return super().validate(text, cursor_pos)
 
 
 class AllGUIFonts():  ## > Will handle in a different way!

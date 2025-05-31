@@ -22,7 +22,7 @@ from viperleed.gui.classes.planegroup import _KNOWN_GROUPS
 from viperleed.gui.classes.lattice2d import Lattice2D as Lattice
 from viperleed.gui.leedsim.classes.woods_old import Woods
 from viperleed.gui.leedsim.dialogs.dialogbulk3dsym import Bulk3DSymDialog
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.lib import AllGUIFonts
 
 angstrom = ' \u212b'
 degrees = '\u00b0'
