@@ -20,11 +20,11 @@ import numpy as np
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.basewidgets import MeasurementFigureCanvas as Canvas
 from viperleed.gui.measure.classes.datapoints import DataPoints
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.widgets.checkcombobox import CheckComboBox
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.canvases import MeasurementFigureCanvas as Canvas
+from viperleed.gui.widgets.lib import AllGUIFonts
 
 
 

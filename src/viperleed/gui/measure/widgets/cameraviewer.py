@@ -26,8 +26,8 @@ from viperleed.gui.measure.camera.imageprocess import ImageProcessor
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsDialog
 from viperleed.gui.measure.widgets.imageviewer import ImageViewer
 from viperleed.gui.measure.widgets.roi import RegionOfInterest
-from viperleed.gui.widgetslib import move_to_front
-from viperleed.gui.widgetslib import screen_fraction
+from viperleed.gui.widgets.lib import move_to_front
+from viperleed.gui.widgets.lib import screen_fraction
 
 
 # TODO: ImageViewer.optimum_size is not updated when screen is changed

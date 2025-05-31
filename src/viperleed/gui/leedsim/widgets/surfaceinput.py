@@ -25,8 +25,8 @@ from viperleed.gui.leedsim.classes.woods import WoodsNotRepresentableError
 from viperleed.gui.leedsim.classes.woods import WoodsSyntaxError
 from viperleed.gui.leedsim.widgets.editablematrix import EditableMatrix
 from viperleed.gui.leedsim.widgets.latticeinput import LatticeInput
-from viperleed.gui.widgetslib import AllGUIFonts
-from viperleed.gui.widgetslib import change_control_text_color
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.lib import change_control_text_color
 
 from viperleed.gui import decorators as dev_
 
