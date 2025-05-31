@@ -25,7 +25,7 @@ from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.hardwarebase import DEFAULTS_PATH
 from viperleed.gui.measure.measurement import ALL_MEASUREMENTS
 from viperleed.gui.measure.widgets.pathselector import PathSelector
-from viperleed.gui.widgets.basewidgets import QNoDefaultDialogButtonBox
+from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
 
 
 default = object()

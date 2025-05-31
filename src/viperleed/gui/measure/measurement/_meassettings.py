@@ -31,9 +31,9 @@ from viperleed.gui.measure.widgets.collapsiblelists import (
 from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
-from viperleed.gui.widgets.basewidgets import ButtonWithLabel
-from viperleed.gui.widgets.basewidgets import QNoDefaultDialogButtonBox
-from viperleed.gui.widgets.basewidgets import QNoDefaultPushButton
+from viperleed.gui.widgets.buttons import ButtonWithLabel
+from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
+from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 
 DELTA_E_NAME = '\u0394E'

@@ -46,8 +46,8 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
-from viperleed.gui.widgets.basewidgets import QNoDefaultDialogButtonBox
-from viperleed.gui.widgets.basewidgets import QNoDefaultPushButton
+from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
+from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 # TODO: find a proper mechanism to make "invalid" values disable
 # "Apply" or "Ok" (but leave "Cancel" enabled). Probably equip

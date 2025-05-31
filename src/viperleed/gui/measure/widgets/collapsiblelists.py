@@ -33,11 +33,11 @@ from viperleed.gui.measure.widgets.collapsibleviews import (
     CollapsibleDeviceView,
     )
 from viperleed.gui.measure.widgets.pathselector import PathSelector
-from viperleed.gui.widgets.basewidgets import CollapsibleList
-from viperleed.gui.widgets.basewidgets import QNoDefaultPushButton
-from viperleed.gui.widgets.basewidgets import QUncheckableButtonGroup
-from viperleed.gui.widgets.basewidgets import _PIXEL_SPACING
-from viperleed.gui.widgetslib import remove_spacing_and_margins
+from viperleed.gui.widgets.collapsible import CollapsibleList
+from viperleed.gui.widgets.collapsible import _PIXEL_SPACING
+from viperleed.gui.widgets.buttons import QNoDefaultPushButton
+from viperleed.gui.widgets.buttons import QUncheckableButtonGroup
+from viperleed.gui.widgets.lib import remove_spacing_and_margins
 
 
 class CollapsibleDeviceList(CollapsibleList):

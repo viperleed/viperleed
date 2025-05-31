@@ -1,482 +1,276 @@
 """Module basewidgets of viperleed.gui.widgets.
 
-This module defines basic, non-specific widgets.
+Contains custom QWidget subclasses that do not fit other modules
+of the widgets package.
 """
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
-    'Florian Dörr (@FlorianDoerr)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
-__created__ = '2024-06-13'
+__created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
+import numpy as np
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtGui as qtg
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.widgetslib import remove_spacing_and_margins
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.lib import drawText
 
 
-_ALIGN_CTR = qtc.Qt.AlignHCenter
-_PIXEL_SPACING = 4
+class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a tick-box? or checkable?
+    def __init__(self, matrix, fs=None, color=(0, 0, 0, 1), parent=None):
+        if not isinstance(matrix, (np.ndarray, list)):
+            raise
 
+        if not len(np.shape(matrix)) == 2:
+            # check that it only has 2 dimensions
+            raise
 
-class ButtonWithLabel(qtw.QWidget):
-    """QLabel and QPushButton."""
+        super().__init__(parent)
+        self.setSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding)
+        self.setParent(parent)
 
-    def __init__(self, tight=True, **kwargs):
-        """Initialise widget.
+        self.color = color
 
-        Parameters
-        ----------
-        tight : bool, optional
-            Whether the layout should not have
-            spacing around it. Default is true.
+        #----- set up the font -----#
+        font = AllGUIFonts().mathFont
+        if fs is None:
+            fs = AllGUIFonts().mathFont.pointSize()
+        font.setPointSize(fs)
+        self.setFont(font)
 
-        Returns
-        -------
-        None
+        # Some details about the CMU Serif font (fs = fontSize in points): #
+        # lineSpacing() = 1.58*fs
+        # leading() = 0
+        # descent() = fs/3
+        # ascent() = 3.74/3 * fs
+        # parenthesis(L,R) tight height = 4*descent() = 4/3 * fs
+        # parenthesis(L,R) tight width = .3085 * fs ~ 25/81 * fs
+        # parenthesis(L) bbox width = .4405 * fs
+        # parenthesis(R) bbox width = 3.47/9 * fs
+        # parenthesis(L,R) baseline is 3/4 h from top of tight box,
+        #                              or exactly fs
+        # parenthesis(L,R) bottom point is at baseline+descent
+        # parenthesis(L) horizontalAdvance() = .5174*fs = 6.2*h/16
+        #                from left edge of bbox
+
+        # Process the numeric matrix into an array of strings with the same
+        # shape also replacing '-' with the right character '\u2212'
+        # everywhere
+        self.matrix = self.textMatrix(matrix)
+
+        #----- Initialize the QTransforms for painting the matrix -----#
+        self.initTransforms()
+
+    def textMatrix(self, matrix):
         """
-        super().__init__(**kwargs)
-        self.label = qtw.QLabel()
-        self.button = QNoDefaultPushButton()
-        self._compose(tight)
-
-    def _compose(self, tight):
-        """Compose widget."""
-        layout = qtw.QHBoxLayout()
-        layout.addWidget(self.label)
-        layout.addWidget(self.button)
-        if tight:
-            layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(layout)
-
-    @qtc.pyqtSlot(str)
-    def set_label_text(self, text):
-        """Set the text of the label."""
-        self.label.setText(text)
-
-    @qtc.pyqtSlot(str)
-    def set_button_text(self, text):
-        """Set the text of the button."""
-        self.button.setText(text)
-
-
-class CollapsibleList(qtw.QScrollArea):
-    """Base class for CollapsibleLists."""
-
-    def __init__(self, parent=None):
-        """Initialise widget.
-
-        Parameters
-        ----------
-        parent : QObject
-            The parent QObject of this widget.
-
-        Returns
-        -------
-        None.
+        Returns a string version of the matrix in which occurrences of '-'
+        (minus) are replaced by the Unicode minus sign (u+2212)
         """
-        super().__init__(parent=parent)
-        # The _views dict contains the displayed CollapsibleViews as
-        # keys and the corresponding values are lists of the widgets
-        # that are displayed right next to each CollapsibleView in the
-        # CollapsibleList.
-        self._views = {}
-        self._widths = {}
-        self._top_widget_types = []
-        self._layout = None
-        self.setWidgetResizable(True)
-        self.clear()
-        self.setFrameStyle(self.Panel | self.Sunken)
+        strMatr = np.array(matrix).astype(str)
+        fixMinus = np.array([el.replace('-','\u2212')
+                             for el in strMatr.ravel()])
 
-    @property
-    def views(self):
-        """Return views."""
-        return self._views
+        return fixMinus.reshape(strMatr.shape)
 
-    def clear(self):
-        """Clear all views in the list and delete references to them."""
-        self._views = {}
-        self._layout = qtw.QVBoxLayout()
-        self._layout.setSpacing(0)
-        self._make_scroll_area()
-
-    def insert_view(self, view):
-        """Insert new view at the bottom of the list.
-
-        Parameters
-        ----------
-        view : CollapsibleDeviceView
-            The view that is to be inserted into the
-            CollapsibleList.
-
-        Returns
-        -------
-        None.
+    def colSep(self):
         """
-        self._add_top_widgets_to_view(view)
-        self._layout.insertWidget(self._layout.count()-1, view)
-
-    def _add_top_widgets_to_view(self, view):
-        """Add the top widget types to the CollapsibleView.
-
-        Parameters
-        ----------
-        view : CollapsibleView
-            The CollapsibleView to which the widgets will be attached.
-
-        Returns
-        -------
-        None.
+        Returns the correct distance (in pixels) between:
+        * the right-hand side of the bounding box of elements of column j
+        AND
+        * the left-hand side of the bounding box of elements of column j+1
         """
-        self.views[view] = []
-        for widget_type in self._top_widget_types:
-            widget = widget_type()
-            view.add_top_widget(widget)
-            self.views[view].append(widget)
+        fs = self.font().pointSize()
+        return 13.6 + ((1.4)**5 + (1.6*fs/27)**5)**(1/5)
 
-    def _add_top_widget_types(self, *widg_types):
-        """Extend the list of widgets to add.
-
-        Must be called in the '__init__' of subclasses.
-
-        Parameters
-        ----------
-        *widg_types : type(QWidget)
-            A widget type of which an instance should be added
-            next to the button of each CollapsibleView.
-
-        Returns
-        -------
-        None.
+    def colWidths(self):
         """
-        self._top_widget_types.extend(widg_types)
-
-    def _make_scroll_area(self):
-        """Compose QScrollArea."""
-        widget = qtw.QWidget(parent=self)
-        self._layout.addStretch(1)
-        widget.setLayout(self._layout)
-        self.setWidget(widget)
-
-
-class CollapsibleView(qtw.QWidget):
-    """A widget that can be expanded/collapsed by the press of a button."""
-
-    def __init__(self, parent=None):
-        """Initialise widget.
-
-        parent : QObject
-            The parent QObject of this widget.
-
-        Returns
-        -------
-        None.
+        Returns the largest width (in pixels) of each column that fits all
+        entries in the column
         """
-        super().__init__(parent=parent)
-        self._button = QNoDefaultIconButton()
-        self._frame = qtw.QFrame(parent=self)
-        self._bottom_space = qtw.QSpacerItem(1, 1)
-        self._compose_and_connect()
+        return [max(self.textWidth(el) for el in col)
+                 for col in self.matrix.transpose()]
 
-    @property
-    def button(self):
-        """Return the main button."""
-        return self._button
-
-    def add_collapsible_item(self, item):
-        """Add widget to the widgets in the inner collapsible layout.
-
-        Parameters
-        ----------
-        item : QWidget or QLayout
-            Any widget or layout that should be
-            added to the collapsible frame.
-
-        Raises
-        -------
-        TypeError
-            If the given item to add to the layout
-            is neither a layout nor a widget.
+    def interLine(self):
         """
-        if isinstance(item, qtw.QWidget):
-            self._frame.layout().addWidget(item)
-        elif isinstance(item, qtw.QLayout):
-            self._frame.layout().addLayout(item)
-        else:
-            raise TypeError('Cannot add items to the collapsible view '
-                            'that are neither a layout nor a widget.')
-
-    def add_top_widget(self, widget, width=None, align=_ALIGN_CTR):
-        """Add widget to the widgets in the outer top layout.
-
-        Parameters
-        ----------
-        widget : QWidget
-            Any widget that should be added next
-            to the constantly displayed button.
-        width : int or None, optional
-            The pixel width the widget should be displayed with.
-            Default is None, which means the widget itself
-            determines the pixel width.
-        align : Qt.AlignmentFlag, optional
-            How the widget should be aligned horizontally.
-            Default is central alignment.
-
-        Returns
-        -------
-        None.
+        Returns the interline spacing, i.e., the distance in pixels between the
+        baselines of two adjacent lines
         """
-        layout = qtw.QVBoxLayout()
-        height = (self.button.sizeHint().height() -
-                  widget.sizeHint().height())//2
-        if height > 0:
-            layout.addSpacing(height)
-        # We use a surrounding widget in order to be
-        # able to set a sizePolicy later on.
-        surrounding_widget = qtw.QWidget(parent=self)
-        widget_layout = qtw.QHBoxLayout()
-        remove_spacing_and_margins(widget_layout)
-        widget_layout.addWidget(widget)
-        layout.addWidget(surrounding_widget)
-        surrounding_widget.setLayout(widget_layout)
-        layout.addStretch(1)
-        self.layout().addLayout(layout)
-        self.layout().addSpacing(_PIXEL_SPACING)
-        self.set_top_widget_geometry(widget, width=width, align=align)
+        fs = self.font().pointSize()
+        return 1.73*fs
 
-    def is_enabled(self):
-        """Return whether the view is enabled."""
-        return self.button.isEnabled()
-
-    @qtc.pyqtSlot(int)
-    @qtc.pyqtSlot(bool)
-    def set_expanded_state(self, expanded):
-        """Expand/collapse the collapsible part of this widget.
-
-        Parameters
-        ----------
-        expanded : bool or int
-            Converted to bool. Decides whether the collapsible
-            widgets are visible/expanded. True means they become/stay
-            visible.
-
-        Returns
-        -------
-        None.
+    def parenthesisVGeo(self):
         """
-        expanded = bool(expanded)
-        self.button.setEnabled(expanded)
-        self._toggle_expanded_state(expanded)
-
-    def set_top_widget_geometry(self, widget, width=None, align=_ALIGN_CTR):
-        """Adjust width and alignment of a widget in the outer top layout.
-
-        Parameters
-        ----------
-        widget : QWidget
-            The widget in the outer top layout whose geometry should be
-            changed. (One of the widgets that have been added via
-            add_top_widget.)
-        width : int or None, optional
-            The pixel width the widget should be displayed with.
-            Default is None, which means the widget itself
-            determines the pixel width.
-        align : Qt.AlignmentFlag, optional
-            How the widget should be aligned horizontally.
-            Default is central alignment.
-
-        Returns
-        -------
-        None.
+        Returns the geometrical parameters (in pixels) that allow correct
+        positioning of the parentheses. These are returned as a tuple
+        (h, deltaTop), where
+        - h = total height of the parenthesis
+        - deltaTop = Distance between top of parenthesis tightRect and baseline
+          of top row
         """
-        for lay_i in range(1, self.layout().count()):
-            layout = self.layout().itemAt(lay_i)
-            try:
-                lay_widget = layout.itemAt(1).widget()
-            except AttributeError:
-                # This means the item in question is a QSpacerItem.
-                continue
-            inner_layout = lay_widget.layout()
-            inner_widget = inner_layout.itemAt(0).widget()
-            if inner_widget is not widget:
-                continue
-            policy = lay_widget.sizePolicy()
-            inner_layout.setAlignment(widget, align)
-            if width:
-                lay_widget.setMinimumWidth(width)
-                lay_widget.setMaximumWidth(width)
-            policy.setHorizontalPolicy(policy.Fixed)
-            lay_widget.setSizePolicy(policy)
-            return
 
-    def _adjust_bottom_space(self):
-        """Update spacing below the QFrame depending on frame visibility."""
-        spacer_height = (1 if not self._frame.isVisible()
-                         else self._button.sizeHint().height()/2)
-        self._bottom_space.changeSize(1, round(spacer_height))
-        self._bottom_space.invalidate()
+        # Analysis for 2 lines:
+        # - htight = (3.57418+-0.01904)*fs
+        # - interline = 1.73 * fs
+        # --> htight - interline = (1.84418+-0.01904)*fs
+        # - dTop = (1.27362+-0.00951)*fs ~ 3.82/3 * fs
+        # --> dBottom = htight - interline - dTop = 0.57 * fs
 
-    def _adjust_button_icon(self, button_up):
-        """Change in which direction the icon in the top button is pointing.
+        nrows = len(self.matrix)
+        fs = self.font().pointSize()
 
-        Parameters
-        ----------
-        button_up : bool
-            True if the button is meant to point upwards.
+        # - Distance between top of parenthesis tightRect and baseline
+        #   of top row
+        deltaTop = 3.82*fs/3
 
-        Returns
-        -------
-        None.
+        # - Contribution of the number of rows
+        deltaRows = self.interLine()*(nrows-1)
+
+        # - Distance between baseline of bottom row and bottom of
+        #   parenthesis tightRect
+        deltaBottom = 0.57*fs
+
+        h = deltaTop + deltaRows + deltaBottom
+
+        return (h, deltaTop)
+
+    def initTransforms(self):
+        if not hasattr(self, 'lParTransform'):   # left parenthesis
+            self.lParTransform = qtg.QTransform()
+        if not hasattr(self, 'elemsTransform'):  # matrix elements
+            self.elemsTransform = qtg.QTransform()
+        if not hasattr(self, 'rParTransform'):   # right parenthesis
+            self.rParTransform = qtg.QTransform()
+
+        (h, dTop) = self.parenthesisVGeo()   # h and dTop are in the
+                                             # unscaled coordinate system
+        (sx, sy) = self.scaleFactor()
+
+        # 1) Get the correct starting position for the painter to get the
+        #    left parenthesis drawn at the right location
+        dxPar = -.1*h * (sx/sy)
+        # NB:
+        # .1*h comes from
+        #    width - tightWidth = .4405*fs - .3085*fs
+        #                       = .132*fs = .132*3/4 * h
+        #                       = approx. .1*h
+        # it is then scaled by (sx/sy) because the parenthesis is narrower
+        # than normal (h/sy is the height of a normal parenthesis)
+        dyPar = 3*h/4
+        self.lParTransform.reset()
+        self.lParTransform.translate(dxPar, dyPar)  # First translate to the
+                                                    # baseline of the big
+                                                    # parenthesis.
+        self.lParTransform.scale(sx, sy)            # Then scale
+
+        # 2) Set painter position to start drawing the first element
+        #    of the first line of the matrix, relative to the one found
+        #    above for the left parenthesis
+        # - horizontal: shift by the scaled horizontal advance of the
+        #               parenthesis + dxPar
+        # - vertical: shift by the vertical distance between the
+        #             tightBoundingRect of the large bracket and the
+        #             baseline of the first line
+        self.elemsTransform.reset()
+        self.elemsTransform.translate((6.2*h/16) * (sx/sy) + dxPar, dTop)
+
+        # 3) Set painter position for right parenthesis
+        # - horizontal: start at left side of top line, and add the total
+        #   width of the matrix, considering both the columns with text and
+        #   the inter-column separation.
+        # - vertical: same as left parenthesis
+        colWs = self.colWidths()
+        ncols = len(colWs)
+        dxPar = self.elemsTransform.dx()
+        dxPar += sum(colWs)
+        dxPar += self.colSep()*(ncols-1)
+
+        self.rParTransform.reset()
+        # first translate to the baseline:
+        self.rParTransform.translate(dxPar, dyPar)
+        # then scale
+        self.rParTransform.scale(sx, sy)
+
+    def scaleFactor(self):
         """
-        icon = (qtw.QStyle.SP_TitleBarShadeButton if button_up
-                else qtw.QStyle.SP_TitleBarUnshadeButton)
-        self.button.setIcon(self.style().standardIcon(icon))
-
-    def _compose_and_connect(self):
-        """Assemble children widgets and connect their signals."""
-        # layout is the layout which contains the
-        # button and the collapsible frame.
-        layout = qtw.QVBoxLayout()
-        remove_spacing_and_margins(layout)
-        layout.addWidget(self.button)
-        policy = self.button.sizePolicy()
-        policy.setHorizontalPolicy(policy.Expanding)
-        self.button.setSizePolicy(policy)
-        self.button.setIcon(
-            self.style().standardIcon(qtw.QStyle.SP_TitleBarUnshadeButton)
-            )
-
-        # inner_layout is the layout that is inside of the frame.
-        # It is necessary to add widgets to the frame.
-        inner_layout = qtw.QVBoxLayout()
-        remove_spacing_and_margins(inner_layout)
-        self._frame.setFrameStyle(self._frame.StyledPanel | self._frame.Plain)
-        self._frame.setLayout(inner_layout)
-        self._frame.setVisible(False)
-
-        # frame_layout is the layout in which the frame is nested in.
-        # It is necessary for spacing.
-        frame_layout = qtw.QHBoxLayout()
-        frame_layout.addSpacing(1)
-        frame_layout.addWidget(self._frame)
-        frame_layout.addSpacing(1)
-        layout.addLayout(frame_layout)
-
-        layout.addItem(self._bottom_space)
-        # outer_layout is the main layout which holds button,
-        # frame, and the top widgets.
-        outer_layout = qtw.QHBoxLayout()
-        remove_spacing_and_margins(outer_layout)
-        outer_layout.addLayout(layout)
-        self.setLayout(outer_layout)
-
-        self.button.clicked.connect(self._on_button_clicked)
-
-    @qtc.pyqtSlot()
-    def _on_button_clicked(self):
-        """Expand/collapse the CollapsibleView."""
-        self._toggle_expanded_state(not self._frame.isVisible())
-
-    def _toggle_expanded_state(self, expanded):
-        """Expand/collapse the CollapsibleView."""
-        self._frame.setVisible(expanded)
-        self._adjust_bottom_space()
-        self._adjust_button_icon(expanded)
-
-
-class QCheckBoxInvertedSignal(qtw.QCheckBox):
-    """QCheckBox with extra unchecked signal."""
-
-    unchecked = qtc.pyqtSignal(bool)
-
-    def __init__(self, **kwargs):
-        """Initialise widget."""
-        super().__init__(**kwargs)
-        self.stateChanged.connect(self._emit_inverted_signal)
-
-    @qtc.pyqtSlot(int)
-    def _emit_inverted_signal(self, value):
-        """Emit unchecked signal."""
-        self.unchecked.emit(not bool(value))
-
-
-class QNoDefaultDialogButtonBox(qtw.QDialogButtonBox):
-    """QDialogButtonBox without default buttons."""
-
-    def event(self, event):
-        """Overwrite event to skip setting default."""
-        if event.type() == qtc.QEvent.Show:
-            self._unset_default_buttons()
-            return qtw.QWidget().event(event)
-        return super().event(event)
-
-    def _unset_default_buttons(self):
-        """Ensure no button is a default."""
-        for button in self.buttons():
-            button.setAutoDefault(False)
-            button.setDefault(False)
-
-
-class QNoDefaultPushButton(qtw.QPushButton):
-    """QPushbutton that is not a default button."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialise button."""
-        super().__init__(*args, **kwargs)
-        self.setAutoDefault(False)
-        self.setDefault(False)
-
-
-class QNoDefaultIconButton(QNoDefaultPushButton):
-    """QNoDefaultPushButton with right-aligned icons."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialise button."""
-        super().__init__(*args, **kwargs)
-        self.setLayout(qtw.QHBoxLayout())
-        self._label = qtw.QLabel()
-        self._label.setAlignment(qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
-        self._label.setAttribute(qtc.Qt.WA_TransparentForMouseEvents, True)
-        self.layout().addWidget(self._label)
-
-    def setIcon(self, icon):        # pylint: disable=invalid-name
-        """Set the desired icon on the button.
-
-        Parameters
-        ----------
-        icon : QIcon
-            The icon to be added to the button.
+        Returns the correct scaling factors that make a standard parenthesis
+        assume the correct appearance
         """
-        icon_size_real = icon.actualSize(self.sizeHint()*0.5)
-        self._label.setPixmap(icon.pixmap(icon_size_real))
+        nrows = len(self.matrix)
+        fs = self.font().pointSize()
 
+        h = self.parenthesisVGeo()[0]  # correct tight height
+        h0 = 4/3 * fs
+        sy = h/h0
 
-class QUncheckableButtonGroup(qtw.QButtonGroup):
-    """QButtonGroup that can be unchecked."""
+        # w comes from a fit of the dependence of the width of the
+        # parenthesis on its height for a 2-line matrix: ~ linear at
+        # beginning, saturates to 19 px (from which 1px of anti-alias should
+        # be removed)
+        w = (19-1) / (1 + (100/h)**10)**(1/12)
+        w0 = 25/81 * fs  # tight width from fit
+        sx = w/w0
 
-    def __init__(self, *args, **kwargs):
-        """Initialise button group."""
-        super().__init__(*args, **kwargs)
-        self._pressed_button_was_checked = False
-        self.buttonPressed.connect(self._remember_checked_state_of_button)
+        return (sx, sy)
 
-    def uncheck_buttons(self):
-        """Uncheck all buttons."""
-        self.setExclusive(False)
-        self.checkedButton().setChecked(False)
-        self.setExclusive(True)
+    def textWidth(self, text):
+        fm = qtg.QFontMetricsF(self.font())
+        return fm.boundingRect(text).width()
 
-    @qtc.pyqtSlot(qtw.QAbstractButton)
-    def uncheck_if_clicked(self, button):
-        """Uncheck if checked button was clicked."""
-        was_checked = self._pressed_button_was_checked
-        self._pressed_button_was_checked = False
-        if was_checked and button == self.checkedButton():
-            self.uncheck_buttons()
+    def minimumSizeHint(self):
+        return self.sizeHint()
 
-    @qtc.pyqtSlot(qtw.QAbstractButton)
-    def _remember_checked_state_of_button(self, button):
-        if button == self.checkedButton():
-            self._pressed_button_was_checked = True
+    def sizeHint(self):
+        h = self.parenthesisVGeo()[0]
+        (sx, sy) = self.scaleFactor()
+        w = self.rParTransform.dx() + (3.47*h/12) * (sx/sy)
+
+        # Note that I'm using ceil() for the return value because sizeHint
+        # should return a QSize(int, int), but w and h are floats and would
+        # be typecast without rounding otherwise
+        return qtc.QSize(int(np.ceil(w)), int(np.ceil(h)))
+
+    def paintEvent(self, event):
+        self.adjustSize()
+        painter = qtg.QPainter()
+
+        pen = qtg.QPen(qtg.QColor.fromRgbF(*self.color))
+
+        painter.begin(self)
+        painter.setFont(self.font())
+        painter.setPen(pen)
+        painter.setRenderHint(qtg.QPainter.Antialiasing)
+        painter.setRenderHint(qtg.QPainter.TextAntialiasing)
+
+        #-- Draw first the entries of the matrix
+        self.paintElements(painter)
+
+        #-- Then draw the parentheses (with correct translation/scaling)
+        drawText(painter, '(', self.lParTransform, combine = True)
+        drawText(painter, ')', self.rParTransform, combine = True)
+
+        painter.end()
+
+    def paintElements(self, painter):
+        widths = self.colWidths()
+
+        painter.save()
+        painter.setWorldTransform(self.elemsTransform, True)
+        for row in self.matrix:  # run through rows
+            painter.save()   # save at each run
+            for (el, w) in zip(row, widths):
+                painter.save()   # save each element
+                dx = w - self.textWidth(el)
+                painter.translate(dx, 0)
+                drawText(painter, el)
+                painter.restore()  # restore to go back to the left side
+                painter.translate(self.colSep() + w, 0)  # and go to the
+                                                         # next column
+            painter.restore()  # go back to the left-hand side of the line
+            painter.translate(0, self.interLine())  # and switch to the new
+                                                    # line
+        painter.restore()  # and back to the initial state
+

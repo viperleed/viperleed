@@ -24,8 +24,8 @@ from viperleed.gui.helpers import resources_path
 from viperleed.gui.leedsim.classes.leedparameters import LEEDParametersList
 from viperleed.gui.leedsim.widgets.bulkinput import BulkInput
 from viperleed.gui.leedsim.widgets.surfaceinput import SurfaceStructureInput
-from viperleed.gui.widgetslib import AllGUIFonts
-from viperleed.gui.widgetslib import change_control_text_color
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.lib import change_control_text_color
 
 from viperleed.gui import decorators as dev_
 

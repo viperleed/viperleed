@@ -18,7 +18,7 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
-from viperleed.gui.widgets.basewidgets import QUncheckableButtonGroup
+from viperleed.gui.widgets.buttons import QUncheckableButtonGroup
 
 
 class QuantitySelector(qtw.QFrame):

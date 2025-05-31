@@ -775,9 +775,9 @@ class CameraABC(DeviceABC):
         appropriate sections and/or options to it using the
         handler.add_section, and handler.add_option methods.
 
-        Use the QNoDefaultPushButton from the basewidgets module
-        in order to prevent any button from being set as the
-        default button of the dialog.
+        Use the QNoDefaultPushButton from the widgets.buttons
+        module in order to prevent any button from being set
+        as the default button of the dialog.
 
         The base-class implementation returns a handler that
         already contains the following settings:

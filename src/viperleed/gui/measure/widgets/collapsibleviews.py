@@ -30,7 +30,7 @@ from viperleed.gui.measure.hardwarebase import safe_connect
 from viperleed.gui.measure.hardwarebase import safe_disconnect
 from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.measure.widgets.quantityselector import QuantitySelector
-from viperleed.gui.widgets.basewidgets import CollapsibleView
+from viperleed.gui.widgets.collapsible import CollapsibleView
 
 
 class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):

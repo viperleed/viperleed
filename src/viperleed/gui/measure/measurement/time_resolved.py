@@ -20,8 +20,8 @@ from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement._meassettings import START_E_NAME
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
-from viperleed.gui.widgets.basewidgets import QCheckBoxInvertedSignal
-from viperleed.gui.widgetslib import retain_size_when_hidden
+from viperleed.gui.widgets.checkboxes import QCheckBoxInvertedSignal
+from viperleed.gui.widgets.lib import retain_size_when_hidden
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod

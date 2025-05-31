@@ -26,7 +26,7 @@ from viperleed.gui.measure.classes.settings import DefaultSettingsError
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
-from viperleed.gui.widgetslib import change_control_text_color
+from viperleed.gui.widgets.lib import change_control_text_color
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod

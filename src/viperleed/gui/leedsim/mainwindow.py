@@ -38,8 +38,8 @@ from viperleed.gui.leedsim.widgets.leedcanvas import LEEDCanvas
 from viperleed.gui.leedsim.widgets.realcanvas import RealCanvas
 from viperleed.gui.leedsim.widgets.rotationblock import RotationBlock
 from viperleed.gui.pluginsbase import ViPErLEEDPluginBase
-from viperleed.gui.widgetdecorators import broadcast_mouse
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.decorators import broadcast_mouse
+from viperleed.gui.widgets.lib import AllGUIFonts
 
 
 DEFAULT_EXPORT_FILE = (

@@ -499,9 +499,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         The base-class implementation returns a handler that
         contains the location of the settings file.
 
-        Use the QNoDefaultPushButton from the basewidgets module
-        in order to prevent any button from being set as the
-        default button of the dialog.
+        Use the QNoDefaultPushButton from the widgets.buttons
+        module in order to prevent any button from being set
+        as the default button of the dialog.
 
         Returns
         -------
