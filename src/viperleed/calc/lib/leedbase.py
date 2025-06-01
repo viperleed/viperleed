@@ -26,7 +26,7 @@ from viperleed.calc.lib.math_utils import cosvec
 from viperleed.calc.lib.math_utils import lcm
 from viperleed.calc.lib.matrix import SingularMatrixError
 from viperleed.calc.lib.matrix import ensure_integer_matrix
-from viperleed.guilib import get_equivalent_beams
+from viperleed.gui.base import get_equivalent_beams
 
 
 # constants for conversion Angstrom and eV <-> atomic units
@@ -533,22 +533,21 @@ def bulk_3d_string(screws, glides):
 
 
 def getLEEDdict(sl, rp):
-    """Return a LEED dict containing information needed by guilib functions."""
+    """Return a LEED dict containing information needed by gui functions."""
     if sl.planegroup == 'unknown':
         logger.warning('Generating LEED dictionary for slab with unknown '
                        'plane group!')
-    if sl.planegroup in ['pm', 'pg', 'cm', 'rcm', 'pmg']:
-        pgstring = sl.planegroup + '[{} {}]'.format(*sl.orisymplane.par)
-    else:
-        pgstring = sl.planegroup
+    pgstring = sl.planegroup
+    if pgstring in {'pm', 'pg', 'cm', 'rcm', 'pmg'}:
+        pgstring += str(sl.orisymplane.par)
     if not (abs(np.round(rp.SUPERLATTICE).astype(int) - rp.SUPERLATTICE)
             < 1e-3).all():
         logger.error('getLEEDdict: SUPERLATTICE contains non-integer-valued '
                      'entries.')
-        return None
+        return None                                                             # TODO: would be better to raise
     # Some values can be overwritten via parameters:
     d = {'eMax': rp.THEO_ENERGIES.max,
-         'SUPERLATTICE': rp.SUPERLATTICE.astype(int),
+         'SUPERLATTICE': rp.SUPERLATTICE.round().astype(int),
          'surfBasis': sl.ab_cell.T,
          'surfGroup': pgstring,
          'bulkGroup': sl.bulkslab.foundplanegroup,
@@ -561,7 +560,7 @@ def getLEEDdict(sl, rp):
     if 'group' not in rp.SYMMETRY_BULK:
         return d
 
-    # Some definitions for bulk symmetry.                                       # TODO: use guilib functions
+    # Some definitions for bulk symmetry.                                       # TODO: use gui functions
     allowed_groups = {
         'oblique': ('p1', 'p2'),
         'rhombic': ('p1', 'p2', 'cm', 'cmm'),

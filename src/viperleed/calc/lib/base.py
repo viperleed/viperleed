@@ -112,7 +112,7 @@ def dict_equal(d1, d2):                                                         
     return False
 
 
-def parseMathSqrt(s):                                                           # TODO: replace with guilib math parser after refactor
+def parseMathSqrt(s):                                                           # TODO: replace with gui math parser after refactor
     try:
         f = float(s)
     except ValueError:
