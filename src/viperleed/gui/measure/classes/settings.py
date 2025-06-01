@@ -556,7 +556,11 @@ class ViPErLEEDSettings(ConfigParser):
             True if the line was a comment (whether it was stored
             or not).
         """
-        for prefix in self._comment_prefixes:
+        try:
+            prefixes = self._comment_prefixes  # < PY3_13
+        except AttributeError:
+            prefixes = self._prefixes.full
+        for prefix in prefixes:
             if line.strip().startswith(prefix):
                 if line not in self.__comments[sectname]:
                     self.__comments[sectname].append(line)
