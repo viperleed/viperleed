@@ -1144,7 +1144,7 @@ class CameraABC(DeviceABC):
         min_exposure, max_exposure : float
             Shortest and longest exposure times in milliseconds
         """
-        return 1, np.inf
+        return 0, np.inf
 
     @abstractmethod
     def get_frame_rate(self):
