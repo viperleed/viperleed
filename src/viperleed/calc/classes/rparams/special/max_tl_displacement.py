@@ -72,6 +72,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
     def assign_single_value(self, flag, value):
         """Assign values to geo or _vib."""
         attr = flag
+        # pylint: disable-next=magic-value-comparison
         if attr == 'vib':
             attr = '_vib'
         setattr(self, attr,
