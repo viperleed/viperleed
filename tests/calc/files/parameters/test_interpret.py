@@ -807,8 +807,9 @@ class TestMaxTLDisplacement(_TestInterpretBase):
              'two floats': ('0.5 1.0', '', MaxTLDisplacement(0.5, 1.0)),
              'geo': ('0.8', 'geo', MaxTLDisplacement(0.8)),
              'vib': ('0.9', 'vib', MaxTLDisplacement(_default.geo, 0.9)),
-             'ignore': ('ignore', 'action', MaxTLDisplacement(
-                 _default.geo, action='ignore')),
+             'ignore': ('ignore',
+                        'action',
+                        MaxTLDisplacement(_default.geo, action='ignore')),
              'stop': ('stop', 'action', MaxTLDisplacement(
                  _default.geo, action='stop')),
              'refcalc': ('refcalc', 'action', MaxTLDisplacement(
