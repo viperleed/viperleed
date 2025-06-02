@@ -47,10 +47,10 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
             float_v = float(value)
         except (ValueError, TypeError):
             raise TypeError(f'MAX_TL_DISPLACEMENT {extra_msg}value '
-                            'must be float') from None
+                            'must be float.') from None
         if float_v <= 0:
             raise ValueError(f'MAX_TL_DISPLACEMENT {extra_msg}value '
-                             'must be positive')
+                             'must be positive.')
         return float_v
 
     @property
