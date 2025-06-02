@@ -1,4 +1,4 @@
-"""Tests for module run_sections of viperleed.calc."""
+"""Tests for module run_sections of viperleed.calc.sections."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
@@ -7,19 +7,18 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-28'
 __license__ = 'GPLv3+'
 
-import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.domain_params import DomainParameters
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.sections.run_sections import section_loop
 
 
 class TestSectionLoop:
     """Tests for the section_loop function."""
 
-    @fixture(name='patch_common')
+    @fixture(name='patch_common', autouse=True)
     def patch_common(self, monkeypatch):
         for p in ("viperleed.calc.files.parameters.update",
                   "viperleed.calc.sections.run_sections.cleanup",
@@ -207,8 +206,7 @@ class TestSectionLoop:
 
     @parametrize('run,actions,expect', valid_runs.values(), ids=valid_runs)
     def test_section_loop_valid(self, run, actions, expect,
-                                dummy_rp, dummy_slab,
-                                patch_common, monkeypatch):
+                                dummy_rp, dummy_slab, monkeypatch):
         dummy_rp.RUN = run[:]
 
         monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
@@ -221,7 +219,7 @@ class TestSectionLoop:
     @parametrize('run,actions,expect', domain_runs.values(), ids=domain_runs)
     def test_section_loop_valid_with_domains(self, run, actions, expect,
                                              dummy_rp, dummy_slab,
-                                             patch_common, monkeypatch):
+                                             monkeypatch):
         dummy_rp.RUN = run[:]
         dp = DomainParameters('.', 'dummy_name')
         dp.rpars = Rparams()
@@ -239,8 +237,7 @@ class TestSectionLoop:
     @parametrize('run,actions,which,expect', max_disp_runs.values(),
                  ids=max_disp_runs)
     def test_section_loop_valid_max_tl_disp(self, run, actions, which, expect,
-                                            dummy_rp, dummy_slab,
-                                            monkeypatch, patch_common):
+                                            dummy_rp, dummy_slab, monkeypatch):
         dummy_rp.RUN = run[:]
         dummy_rp.MAX_TL_DISPLACEMENT.action = which
 
@@ -259,7 +256,7 @@ class TestSectionLoop:
                  stopped_runs.values(), ids=stopped_runs)
     def test_section_loop_stops(self, run, actions,
                                 expect_code, expect_history, dummy_rp,
-                                dummy_slab, monkeypatch, patch_common):
+                                dummy_slab, monkeypatch):
         dummy_rp.RUN = run[:]
 
         monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
