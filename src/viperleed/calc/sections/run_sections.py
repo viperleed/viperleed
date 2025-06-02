@@ -311,7 +311,7 @@ def section_loop(rp, sl):
                 exceeds_tl_limit = _check_exceeds_tl_limit(rp, sl)
                 # check for loops:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
-                for loop in sorted(loops)[::-1]:
+                for loop in sorted(loops, reverse=True):
                     # At least one loop ends at the index we're at now.
                     # Starting at the deepest loop, see if there was any
                     #  improvement since it has last been checked. If so,
