@@ -987,11 +987,12 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         if len(values) != 1:
             raise ParameterNumberOfInputsError(parameter=param)
         try:
-            self.rpars.MAX_TL_DISPLACEMENT.assign_single_value(
-                flag, values[0])
+            self.rpars.MAX_TL_DISPLACEMENT.assign_single_value(flag, values[0])
         except TypeError as exc:
             raise ParameterFloatConversionError(
-                param, message=str(exc)) from exc
+                param,
+                message=str(exc),
+                ) from exc
         except ValueError as exc:
             raise ParameterRangeError(param,
                                       message=str(exc)) from None
@@ -1002,11 +1003,10 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterValueError(f'Invalid value {action} for action.')
         if action != 'refcalc' and len(values) != 1:
             raise ParameterNumberOfInputsError(parameter=param)
-        if action == 'refcalc':
-            if len(values) not in {1, 2, 3}:
-                raise ParameterNumberOfInputsError(parameter=param)
-            if (len(values) == 3 and values[1] != '<'):
-                raise ParameterParseError(parameter=param)
+        if action == 'refcalc' and len(values) not in {1, 2, 3}:
+            raise ParameterNumberOfInputsError(parameter=param)
+        if action == 'refcalc' and len(values) == 3 and values[1] != '<':
+            raise ParameterParseError(parameter=param)
         try:
             self.rpars.MAX_TL_DISPLACEMENT.assign_action(values)
         except TypeError as exc:
