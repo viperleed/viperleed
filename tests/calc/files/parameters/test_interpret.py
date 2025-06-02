@@ -23,7 +23,9 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutTokenType as CutType
     )
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
-from viperleed.calc.classes.rparams.special.max_tl_displacement import MaxTLDisplacement
+from viperleed.calc.classes.rparams.special.max_tl_displacement import (
+    MaxTLDisplacement,
+    )
 from viperleed.calc.files import parameters
 from viperleed.calc.files.parameters import errors as err
 from viperleed.calc.files.parameters.checker import ParametersChecker
