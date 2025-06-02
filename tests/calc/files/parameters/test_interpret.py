@@ -802,7 +802,6 @@ class TestMaxTLDisplacement(_TestInterpretBase):
     """Tests for interpreting MAX_TL_DISPLACEMENT."""
     param = 'MAX_TL_DISPLACEMENT'
     _default = Rparams.get_default(param)
-    print(_default)
     valid = {'one float': ('0.5', '', MaxTLDisplacement(0.5)),
              'two floats': ('0.5 1.0', '', MaxTLDisplacement(0.5, 1.0)),
              'geo': ('0.8', 'geo', MaxTLDisplacement(0.8)),
