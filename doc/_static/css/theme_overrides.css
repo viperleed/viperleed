@@ -1,0 +1,94 @@
+/* override table width restrictions */
+@media screen and (min-width: 480px) {
+
+    .wy-table-responsive table td {
+        /* !important prevents the common CSS stylesheets from overriding
+         this as on RTD they are loaded after this stylesheet */
+        white-space: normal !important;
+    }
+
+    .wy-table-responsive {
+        overflow: visible !important;
+    }
+}
+
+/* Change colors of visited links*/
+a:visited {
+    color: #2980b9 !important;
+}
+/* Change colors of pre formatted text*/
+.pre{
+    color: #000000 !important;
+}
+/* Same in sidebar */
+.wy-menu-vertical a:visited {
+    color: #d9d9d9 !important;
+}
+/* Same for some other labels */
+.wy-side-nav-search .wy-dropdown a:visited,
+.wy-side-nav-search a:visited {
+    color: #d9d9d9 !important;
+}
+/* Same for level 1 in side bar */
+.wy-menu-vertical li.toctree-l1.current a:visited{
+    color: #404040 !important;
+}
+/* Change colors behind ViPErLEED logo*/
+.wy-side-nav-search {
+    background-color: #6ab1e1 !important;
+}
+/* Change colors of version switch and arrow*/
+.wy-side-nav-search>div.switch-menus>div.language-switch select,
+.wy-side-nav-search>div.switch-menus>div.version-switch select,
+.wy-side-nav-search>div.switch-menus>div.language-switch:after,
+.wy-side-nav-search>div.switch-menus>div.version-switch:after{
+    color: #404040 !important;
+}
+
+/* Place equation numbers on the right side instead of above. See
+https://github.com/readthedocs/sphinx_rtd_theme/pull/383#issuecomment-348803509 */
+div.math {
+    position: relative;
+    padding-right: 2.5em;
+}
+.eqno {
+    height: 100%;
+    position: absolute;
+    right: 0;
+    padding-left: 5px;
+    padding-bottom: 5px;
+    /* Fix for mouse over in Firefox */
+    padding-right: 1px;
+}
+.eqno:before {
+    /* Force vertical alignment of number */
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+    content: "";
+}
+/* The following would move the label left-right when hovering. Annoying.
+/*.eqno .headerlink {
+    display: none;
+    visibility: hidden;
+    font-size: 14px;
+    padding-left: .3em;
+}
+.eqno:hover .headerlink {
+    display: inline-block;
+    visibility: hidden;
+    margin-right: -1.05em;
+}
+.eqno .headerlink:after {
+    visibility: visible;
+    content: "\f0c1";
+    font-family: FontAwesome;
+    display: inline-block;
+    margin-left: -.9em;
+}*/
+/* Make responsive */
+.MathJax_Display {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+}

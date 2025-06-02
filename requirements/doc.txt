@@ -1,0 +1,28 @@
+# This file contains a list of the required python packages for
+# building the viperleed documentation.
+# !!!!!!!!!!!!  Important: requires python >= 3.9 !!!!!!!!!!!!!!!!!!!!!
+
+# Jupyter notebook execution
+ase              # Used in example Ni(110)
+myst-nb>1.0
+myst-parser>1.0
+
+# Sphinx, and our theme
+sphinx>6.1
+sphinx-rtd-theme
+
+# Sphinx plugins
+#   For now take the sphinx-argparse fork by @michele-riva, till
+#   the edits are released in the main sphinx-argparse repo
+sphinx-argparse@git+https://github.com/michele-riva/sphinx-argparse@collated-edits
+sphinx-copybutton
+sphinx-design
+sphinxcontrib-bibtex
+sphinxcontrib-qthelp
+sphinxcontrib-spelling
+sphinxcontrib-svg2pdfconverter
+setuptools  # Workaround for sphinxcontrib-bibtex #345
+
+# Additional dependencies not related to sphinx, but necessary in
+# some of our build scripts that should be used for the documentation
+-r dev_scripts.txt

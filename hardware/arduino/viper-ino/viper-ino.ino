@@ -1,20 +1,17 @@
-/*
-ViPErLEED - Firmware for Arduino hardware controller
----------------------
-Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr
+/* ViPErLEED - Firmware for Arduino hardware controller
+
+@author: Bernhard Mayr
+@author: Michael Schmid (@schmid-iap)
+@author: Michele Riva (@michele-riva)
+@author: Florian Dörr (@FlorianDoerr)
 Date: 09.02.2022
----------------------
 */
 
-// Libraries
-#include <Arduino.h>
-#include <SPI.h>
-#include <EEPROM.h>
-#include <stdarg.h>
+#include "viper-ino.h"  // Arduino-related constants, globals and functions.
+                        // Includes serial, states, ADC and DAC.
 
-#include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
-
-#define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
+#define DEBUG   false   // Debug mode, writes to serial line,
+                        // for use in serial monitor.
 
 // The box ID is an indentifier that is necessary for the PC to know what
 // type of Arduino it is handling. 1 is the identifier of a ViPErino
@@ -25,10 +22,6 @@ Date: 09.02.2022
 // Firmware version (MAX: v255.255). CURENTLY: v0.10
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
 #define FIRMWARE_VERSION_MINOR    10  // max 255
-
-
-
-
 
 
 /** ---------------------------- INITIALIZATION ---------------------------- **/
@@ -46,23 +39,21 @@ void setup() {
         delay(1000);
     #endif
 
-    analogReference(INTERNAL);  // Used for LM35 and for checking relay presence
+    analogReference(INTERNAL); // Used for LM35 and for checking relay presence
 
-    // Set all inverted chip-select pins to high via pull-up (to avoid low glitch)
+    // Set all inverted chip-select pins to high via pull-up
+    // (to avoid low glitch)
     setChipSelectHigh(CS_DAC);
     setChipSelectHigh(CS_ADC_0);
     setChipSelectHigh(CS_ADC_1);
     pinMode(SCK, OUTPUT);  // Should not be needed, but it did not work without
+                           // Probably just because SPI.begin call is missing?
     pinMode(MOSI, OUTPUT);
 
     // Reset ADC and DAC, set DAC output to zero,
     // and set variables to well-defined defaults
     reset();
 }
-
-
-
-
 
 
 /** ----------------------------- STATE MACHINE ---------------------------- **/
@@ -182,7 +173,8 @@ void updateState() {
             break;
         case PC_MEASURE_ONLY:
             encodeAndSend(PC_OK);
-            triggerMeasurements(); //This contains the state switch to STATE_MEASURE_ADCS
+            triggerMeasurements();
+            // This contains the state switch to STATE_MEASURE_ADCS.
             break;
         case PC_CHANGE_MEAS_MODE:
             waitingForDataFromPC = true;
@@ -210,221 +202,14 @@ void updateState() {
 }
 
 
-bool checkIfTimedOut(){
-    /**Return whether the Arduino waiting has timed out.
-
-    Reads
-    -----
-    initialTime
-
-    Returns
-    -------
-    true if timed out
-
-    Goes to state
-    -------------
-    STATE_ERROR with ERROR_TIMEOUT
-        If timed out
-    **/
-    if((millis() -  initialTime) > TIMEOUT){
-        raise(ERROR_TIMEOUT);
-        return true;
-        }
-    return false;
-}
-
-
-bool raise(byte error_code){
-    /**Bring the system to a STATE_ERROR with a given error_code.
-
-    Parameters
-    ----------
-    error_code
-        Byte that identifies the error, see header.
-
-    Writes
-    -----
-    currentState
-
-    Goes to state
-    -------------
-    STATE_ERROR : error_code
-    **/
-    errorTraceback[0] = currentState;
-    errorTraceback[1] = error_code;
-    currentState = STATE_ERROR;
-}
-
-
-
-
-/** ----------------------------- COMMUNICATION ---------------------------- **/
-
-void readFromSerial() {
+bool isAllowedCommand(){
     /**
-    Store bytes (i.e., characters) read from the serial line (i.e., PC)
-    in serialInputBuffer. A message is considered complete when we
-    receive a MSG_END. When this happens, serialInputBuffer will be
-    [MSG_START, byte with length of decoded message, message, MSG_END]
-
-    A full message will likely be read during a single call to this
-    function, unless its characters come in very slowly. In this case
-    it will take a few loop iterations to read a full message.
-
-    Writes
-    ------
-    numBytesRead, serialInputBuffer, readingFromSerial, msgLength
-
-    Goes to state
-    -------------
-    STATE_ERROR : ERROR_SERIAL_OVERFLOW
-        In case the Arduino serial buffer reaches its limit
-    STATE_ERROR : ERROR_MSG_INCONSISTENT
-        In case the number of bytes read does not fit with the
-        number expected from the first byte after MSG_START
-
-    */
-    // Do something only if there is data on the serial line
-    if(not Serial.available())  return;
-
-    if(Serial.available() >= SERIAL_BUFFER_SIZE){  // Should never be '>', but better safe than sorry
-        // The serial buffer is full and it potentially
-        // already discarded some of the bytes that came.
-        // The buffer will be flushed in the error handler
-        raise(ERROR_SERIAL_OVERFLOW);
-        return;
-    }
-
-    while (Serial.available()){
-        byte byteRead = Serial.read();
-
-        // New message
-        if (byteRead == MSG_START) {
-            numBytesRead = 0;
-            readingFromSerial = true;
-        }
-        // Accumulate characters
-        if(readingFromSerial) {
-            // Make sure we are not going to write
-            // past the end of serialInputBuffer
-            if (numBytesRead == MSG_MAX_LENGTH) {
-                raise(ERROR_MSG_TOO_LONG);
-                return;
-            }
-            serialInputBuffer[numBytesRead] = byteRead;
-            numBytesRead++;
-        }
-
-        // A full message has been read
-        if (byteRead == MSG_END) {
-            readingFromSerial = false;
-            /*for (int i; i < numBytesRead; i++)  // echo message, for debug
-                Serial.write(serialInputBuffer[i]);*/
-            newMessage = decodeAndCheckMessage();
-            return;
-        }
-
-        // Delay a very little bit to make sure new characters
-        // come in, if any. This should be enough to read in a
-        // whole message. If it isn't the case, we will finish
-        // during the next state-loop iteration anyway.
-        delayMicroseconds(20);
-    }
-}
-
-
-bool decodeAndCheckMessage(){
-    /**
-    Move the interesting bytes of serialInputBuffer[]
-    into data_received[], and return whether the
-    message read is acceptable.
-
-    In practice, only the actual characters are kept.
-    This means:
-    (1) Skipping:
-           MSG_START == serialInputBuffer[0]
-           no. of bytes after decoding == serialInputBuffer[1]
-           MSG_END == serialInputBuffer[last]
-    (2) Decoding bytes with value MSG_SPECIAL_BYTE. In this case, the
-        actual character is MSG_SPECIAL_BYTE + the next character.
-
-    A message is considered acceptable if:
-    (1) the length contained in the message fits the number
-        of bytes decoded
-    (2) when it is a one-character message (i.e., a command)
-        it should be one of the known commands
-    (3) when it is longer (i.e., it's data), we should be
-        in a state that expects data
-
-    If a message is not acceptable, it also brings the system
-    to a STATE_ERROR with the appropriate error code
-
-    Reads
-    -----
-    serialInputBuffer
-
-    Writes
-    ------
-    data_received, currentState, msgLength
+    Check if the received command is among those that the arduino can process.
 
     Returns
     -------
     True if the message is acceptable
-
-    Goes to state
-    -------------
-    (unchanged)
-        if message is acceptable
-    STATE_ERROR : ERROR_MSG_INCONSISTENT
-        if the number of decoded bytes does not match the
-        length expected from the value that came with the
-        message itself
-    STATE_ERROR : ERROR_MSG_UNKNOWN
-        if the message is an unknown command, or if we
-        got some 'data' while we were not expecting any
-    STATE_ERROR : ERROR_MSG_DATA_INVALID
-        if the message only contains a length byte with
-        length 0
-    */
-    // Decode the message, starting at the second byte,
-    // and going up to numBytesRead - 2 (included). This
-    // skips MSG_START, the length, and MSG_END
-    byte numDecodedBytes = 0;
-    for (byte nthByte = 2; nthByte <= numBytesRead - 2; nthByte++) {
-        byte decodedByte = serialInputBuffer[nthByte];
-        if (decodedByte == MSG_SPECIAL_BYTE) {
-            // The actual character is MSG_SPECIAL_BYTE + the next byte
-            nthByte++;
-            decodedByte += serialInputBuffer[nthByte];
-        }
-        data_received[numDecodedBytes] = decodedByte;
-        numDecodedBytes++;
-    }
-
-    // Check if data was received
-    msgLength = serialInputBuffer[1];
-    if (msgLength == 0){
-      raise(ERROR_MSG_DATA_INVALID);
-      return false;
-    }
-
-    // Check that the number of bytes decoded fits
-    if (msgLength != numDecodedBytes){
-        raise(ERROR_MSG_INCONSISTENT);
-        return false;
-        }
-
-    if (numDecodedBytes > 1){
-        // Message is some data
-        if (not waitingForDataFromPC){
-            // But we're not expecting any
-            raise(ERROR_MSG_UNKNOWN);
-            return false;
-        }
-        // Defer checking to state handlers
-        return true;
-    }
-
+    **/
     // Check that it is one of the understandable commands
     switch(data_received[0]){
         case PC_AUTOGAIN: break;
@@ -444,111 +229,6 @@ bool decodeAndCheckMessage(){
     }
     return true;
 }
-
-
-void encodeAndSend(byte singleByte){
-/*
- * Prepares message before sending it to the PC. Puts single
- * byte into an array and forwards the array to the "real"
- * encode message
- * This overloaded function essentially prepares a single-byte-long message
- * to be actually encoded in the next function. Having the two with the same
- * names prevents the rest of the code from having to figure out which function
- * to call depending on whether the message is a single byte or a byte array
- *
- * Parameters
- * ----------
- * singleByte : byte
- *     The one byte to be sent
- */
-  byte byteArray[] = {singleByte};
-  encodeAndSend(byteArray, 1);
-}
-
-
-void encodeAndSend(byte *byteArray, uint16_t numBytesBeforeEncoding){
-/*
- * Prepares message before sending it to the PC. Changes every
- * byte which happens to have the same value as a MSG_START, and MSG_END or
- * a MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and
- * a following "byte - MSG_SPECIAL_BYTE."
- *
- * Parameters:
- * -----------
- * byteArray : byte*
- *     Pointer to message to be sent
- */
-    if (numBytesBeforeEncoding >= MSG_SPECIAL_BYTE){
-        raise(ERROR_MSG_SENT_TOO_LONG);
-        return;
-        }
-    byte encodedMessage[2*numBytesBeforeEncoding]; // Worst-case: each byte encoded as two
-    byte numBytesAfterEncoding = 0;
-    for(int i=0; i < numBytesBeforeEncoding; i++){
-        if (byteArray[i] >= MSG_SPECIAL_BYTE){
-            encodedMessage[numBytesAfterEncoding] = MSG_SPECIAL_BYTE;
-            numBytesAfterEncoding++;
-            encodedMessage[numBytesAfterEncoding] = byteArray[i] - MSG_SPECIAL_BYTE;
-        }
-        else {
-            encodedMessage[numBytesAfterEncoding] = byteArray[i];
-        }
-      numBytesAfterEncoding++;
-    }
-/*  Send byte array "encodedMessage" (i.e., the actual message) to PC as:
-       * MSG_START
-       * numbers of bytes in actual message (before encoding, excl. itself and markers)
-       * actual message
-       * MSG_END
- */
-    Serial.write(MSG_START);
-    Serial.write(numBytesBeforeEncoding);
-    Serial.write(encodedMessage, numBytesAfterEncoding);
-    Serial.write(MSG_END);
-}
-
-
-void debugMsg(const char *message, ...){  // can be a format string
-    /** Send a debug message to the PC.
-
-    Caution: when sending a debugMsg to the PC, it is a good idea
-    to do so BEFORE sending out a PC_OK, as the python side may be
-    triggered into doing some other stuff (including sending other
-    serial messages) when a PC_OK is received. Sending a debugMsg
-    can disrupt the progress or hold the serial line busy, preventing
-    new messages to be actually sent without this being noticed.
-
-    Parameters
-    ----------
-    message:
-        string to be sent. Can contain format characters
-    ...:
-        variable number of arguments, interpreted as the values
-        to be formatted into message.
-
-    First a PC_DEBUG is sent to the PC, then the actual message is
-    sent. The message is formatted like "<message % ...>\0", and
-    should be at most MSG_SPECIAL_BYTE - 1 characters long, including
-    the terminating \0. It is encoded like all others.
-    **/
-    va_list args;
-    va_start(args, message);
-
-    uint16_t n_chars;
-    // Note that the buffer size is larger than the maximal message
-    // length of MSG_SPECIAL_BYTE - 1
-    char _buffer[255];
-
-    n_chars = vsnprintf(_buffer, 255, message, args);
-    va_end(args);
-
-    encodeAndSend(PC_DEBUG);
-    encodeAndSend(reinterpret_cast<byte*>(_buffer), n_chars);
-}
-
-
-
-
 
 
 /** -------------------- PREPARE FOR ENTERING NEW STATES ------------------- **/
@@ -609,7 +289,8 @@ void triggerMeasurements() {
     // trigger each time the gain is changed.
     decreaseADCGainsIfNeeded();
 
-    // After triggering, 3/updateRate sec pass before the first data is available
+    // After triggering, 3/updateRate sec pass
+    // before the first data is available
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
@@ -620,8 +301,6 @@ void triggerMeasurements() {
     initialTime = millis();
     currentState = STATE_MEASURE_ADCS;
 }
-
-
 
 
 /** ---------------------- STATE & PC-REQUEST HANDLERS --------------------- **/
@@ -658,7 +337,10 @@ void getConfiguration(){
     // Note that the ATmega32U4 of Arduino Micro uses
     // little-endian memory layout, i.e., LSB is
     // at lower memory index
+
     hardwareDetected.asInt = getHardwarePresent();
+    byte serial_nr[4];
+    getSerialNumber(serial_nr);
     byte configuration[9] = {BOX_ID,
                              FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR,
@@ -666,8 +348,8 @@ void getConfiguration(){
                              hardwareDetected.asBytes[0]};
     int address = 0;
     while(address <= 3){
-      configuration[address + 5] = EEPROM.read(address);
-      address += 1;
+        configuration[address + 5] = serial_nr[address];
+        address += 1;
     }
     encodeAndSend(configuration, LENGTH(configuration));
     hardwareNeverChecked = false;
@@ -838,7 +520,7 @@ void calibrateADCsAtAllGains(){
         for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: using the externalADCs array of struct would make this easier: externalADCs[iADC].channel
             for (int offsetOrGain = 0; offsetOrGain < 2; offsetOrGain++) {
-                int32_t median = getMedian32(
+                int32_t median = getMedian(
                     selfCalDataForMedian[0][iADC][offsetOrGain],
                     selfCalDataForMedian[1][iADC][offsetOrGain],
                     selfCalDataForMedian[2][iADC][offsetOrGain]
@@ -854,7 +536,7 @@ void calibrateADCsAtAllGains(){
         // Remember which channels we have calibrated
         for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;
-            calibratedChannels[iADC][channel] = true;  // TODO: perhaps should only set to true only for the ADCs that are present. Think what are the consequences.
+            calibratedChannels[iADC][channel] = true;                           // TODO: perhaps should only set to true only for the ADCs that are present. Think what are the consequences.
         }
 
         // Set gains to the lowest value, and load the
@@ -1075,8 +757,8 @@ void setVoltageWaitAndTrigger(){
         triggerMeasurements();  // This switches to STATE_MEASURE_ADCS
     }
     else {
-      currentState = STATE_IDLE;
-      takeMeasurements = true;
+        currentState = STATE_IDLE;
+        takeMeasurements = true;
     }
     nextVoltageStep = 0;    // This is not strictly needed, but nicer for cleanup
 }
@@ -1134,7 +816,7 @@ void measureADCs(){
     //       the error. It could be solved easily by a simple check:
     //       if (currentState == STATE_ERROR) return;
     if (checkIfTimedOut()){
-      return;
+        return;
     }
     if(numMeasurementsDone == numMeasurementsToDo){
         currentState = STATE_ADC_VALUES_READY;
@@ -1210,8 +892,8 @@ void sendMeasuredValues(){
     byte littleToBigEndian[4];
     for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB+1; iADC++){  // external ADCs + LM35
         for (int i = 0; i < 4; i++){
-          littleToBigEndian[i] = fDataOutput[iADC].asBytes[3-i];
-          }
+            littleToBigEndian[i] = fDataOutput[iADC].asBytes[3-i];
+        }
         encodeAndSend(littleToBigEndian, 4);
     }
     //encodeAndSend(adc0Gain); //uncomment for debug (adapt python side accordingly)
@@ -1278,7 +960,7 @@ void findOptimalADCGains(){
     // end of the self-calibration.
     measureADCsRipple();
     if (numMeasurementsDone < numMeasurementsToDo){
-        if(checkIfTimedOut()){
+        if (checkIfTimedOut()){
             // Do some cleanup:
             resetMeasurementData();
             numMeasurementsToDo = numMeasurementsToDoBackup;
@@ -1307,13 +989,13 @@ void findOptimalADCGains(){
     //       if the specific ADC is present.
     if(hardwareDetected.asInt & ADC_0_PRESENT){
         while(((autogain_value0 << (adc0Gain + 1)) < ADC_RANGE_THRESHOLD)
-              && (adc0Gain < AD7705_MAX_GAIN)){
+                && (adc0Gain < AD7705_MAX_GAIN)){
             adc0Gain++;
         }
     }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         while(((autogain_value1 << (adc1Gain + 1)) < ADC_RANGE_THRESHOLD)
-              && (adc1Gain < AD7705_MAX_GAIN)){
+                && (adc1Gain < AD7705_MAX_GAIN)){
             adc1Gain++;
         }
     }
@@ -1468,7 +1150,7 @@ void reset(){
     AD5683setVoltage(CS_DAC, 0x0000);
 
     for (int iDevice=0; iDevice<N_MAX_MEAS; iDevice++){
-        fDataOutput[iDevice].asFloat = 0.0;  
+        fDataOutput[iDevice].asFloat = 0.0;
     }
 }
 
@@ -1540,8 +1222,8 @@ void changeMeasurementMode() {
         continuousMeasurement = false;
     }
     if (continuous_mode != 1 and continuous_mode != 0) {
-      raise(ERROR_MSG_DATA_INVALID);
-      return;
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
     }
 
     encodeAndSend(PC_OK);
@@ -1607,100 +1289,86 @@ void setSerialNr() {
         return;
     }
 
-    // Check if address only contains allowed values.
-    int address = 0;
-    byte tmp_char;
-    while(address <= 3){
-      tmp_char = data_received[address];
-      if (not ((tmp_char > 47 and tmp_char < 58)
-                || (tmp_char > 64 and tmp_char < 91))){
-        raise(ERROR_MSG_DATA_INVALID);
-        return;
-      }
-      address += 1;
-    }
-
-    address = 0;
-    while(address <= 3){
-      EEPROM.update(address, data_received[address]);
-      address += 1;
-    }
-    // Serial number is stored on EEPROM bytes with addresses 0 to 3.
+    storeSerialNumber(data_received);
 
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
 }
 
-
-
 /** ---------------- FUNCTIONS CALLED WITHIN STATE HANDLERS ---------------- **/
 
 /** Returns a bit mask of which hardware was detected */
 uint16_t getHardwarePresent() {
-  int result = 0;
-  //Check for ADCs
-  //First reset AD7705 IO. Note that (inverted) chip select = high does not reset
-  //communication. Reset is done by writing 32 high bits.
-  delay(1);     //make sure that all lines have settled (1 millisec)
-  AD7705resetCommunication(CS_ADC_0);
-  AD7705resetCommunication(CS_ADC_1);
-  delay(1);     //make sure that all lines have settled (1 millisec)
-  byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0); //0xff if only pullup, no ADC
-  if (adc0comm != 0xff)
-    result |= ADC_0_PRESENT;
-  byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
-  if (adc1comm != 0xff)
-    result |= ADC_1_PRESENT;
-  //Check for LM35 temperature sensor: the analog voltage should be within
-  //the ADC range and settle to a similar value after connecting to a pullup resistor
-  //(the LM35 cannot sink more than about 1 uA, so the pullup will drive it high)
-  pinMode(LM35_PIN, INPUT);
-  analogReadMedian(LM35_PIN); //unused measurement; the ADC needs time till it works correctly
-  delay(10);    //make sure the voltage has settled (10 millisec)
-  int sensorValue0 = analogReadMedian(LM35_PIN);
-  int sensorValue0a = analogReadMedian(LM35_PIN);
-  pinMode(LM35_PIN, INPUT_PULLUP);  //measure the voltage with internal pullup
-  delay(10);    //apply pullup for 10 millisec
-  int sensorValue1 = analogReadMedian(LM35_PIN);
-  pinMode(LM35_PIN, INPUT);         //reset for usual measurements
-  delay(10);    //make sure the voltage has settled (10 millisec)
-  int sensorValue2 = analogReadMedian(LM35_PIN);
-  if (sensorValue0 > 0 && sensorValue0 < LM35_MAX_ADU &&
-      sensorValue2 > 0 && sensorValue2 < LM35_MAX_ADU &&
-      abs(sensorValue2 - sensorValue0) < 10 &&
-      sensorValue1 == ARDUINO_ADC_MAX)
-    result |= LM35_PRESENT;
-  //Check for relay present: If the relay is mounted, it should also have an
-  //external pullup that results in about 0.12 V at the pin, about 48 ADUs.
-  //If no relay is mounted, it is either open or jumpered to ground, signalling
-  //whether the input range is 10 V or 2.5 V range, respectively.
-  //If the input is open, the arduino internal pullup would drive it high;
-  //if the input is grounded, the voltage should be close to 0.
-  pinMode(RELAY_PIN, INPUT_PULLUP);  //measure the voltage with arduino pullup
-  analogReadMedian(RELAY_PIN);       //unused measurement just to make sure
-  delay(10);    //apply pullup for 10 millisec
-  int sensorValue3 = analogReadMedian(RELAY_PIN);
-  pinMode(RELAY_PIN, INPUT);  //measure the voltage without pullup
-  delay(10);    //no pullup for 10 millisec
-  int sensorValue4 = analogReadMedian(RELAY_PIN);
-  if (sensorValue3 < ARDUINO_ADC_MAX && //not an open input
-      sensorValue4 > RELAY_MIN_ADU && sensorValue4 < RELAY_MAX_ADU) {
-    result |= RELAY_PRESENT;
-  } else {
-    //Check jumper at JP3 indicating 2.5 V I0 range set by user (if no relay)
-    pinMode(JP_I0_PIN, INPUT_PULLUP);
-    delay(1);
-    if (digitalRead(JP_I0_PIN) == 0)
-      result |= JP_I0_CLOSED;
-    pinMode(JP_I0_PIN, INPUT);      //pullup off, reduces power consuption
-  }
-    //Check jumper at JP5 indicating 2.5 V AUX range set by user (if no relay)
+    int result = 0;
+    // Check for ADCs
+    // First reset AD7705 IO. Note that (inverted) chip select = high does
+    // not reset communication. Reset is done by writing 32 high bits.
+    delay(1);     // Make sure that all lines have settled (1 millisec)
+    AD7705resetCommunication(CS_ADC_0);
+    AD7705resetCommunication(CS_ADC_1);
+    delay(1);     // Make sure that all lines have settled (1 millisec)
+    byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0);
+    if (adc0comm != 0xff) // 0xff if only pullup, no ADC
+        result |= ADC_0_PRESENT;
+    byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
+    if (adc1comm != 0xff) // 0xff if only pullup, no ADC
+        result |= ADC_1_PRESENT;
+    // Check for LM35 temperature sensor: the analog voltage should be within
+    // the ADC range and settle to a similar value after connecting to a pullup
+    // resistor (the LM35 cannot sink more than about 1 uA, so the pullup will
+    // drive it high)
+    pinMode(LM35_PIN, INPUT);
+    // Unused measurement; the ADC needs time till it works correctly
+    analogReadMedian(LM35_PIN);
+    delay(10);    // Make sure the voltage has settled (10 millisec)
+    int sensorValue0 = analogReadMedian(LM35_PIN);
+    // Measure the voltage with internal pullup
+    pinMode(LM35_PIN, INPUT_PULLUP);
+    delay(10);    // Apply pullup for 10 millisec
+    int sensorValue1 = analogReadMedian(LM35_PIN);
+    pinMode(LM35_PIN, INPUT);         // Reset for usual measurements
+    delay(10);    // Make sure the voltage has settled (10 millisec)
+    int sensorValue2 = analogReadMedian(LM35_PIN);
+    if (sensorValue0 > 0 && sensorValue0 < LM35_MAX_ADU
+            && sensorValue2 > 0 && sensorValue2 < LM35_MAX_ADU
+            && abs(sensorValue2 - sensorValue0) < 10
+            && sensorValue1 == ARDUINO_ADC_MAX)
+        result |= LM35_PRESENT;
+    // Check for relay present: If the relay is mounted, it should also have an
+    // external pullup that results in about 0.12 V at the pin, about 48 ADUs.
+    // If no relay is mounted, it is either open or jumpered to ground,
+    // signalling whether the input range is 10 V or 2.5 V range, respectively.
+    // If the input is open, the arduino internal pullup would drive it high;
+    // if the input is grounded, the voltage should be close to 0.
+    // Measure the voltage with arduino pullup
+    pinMode(RELAY_PIN, INPUT_PULLUP);
+    // Unused measurement just to make sure
+    analogReadMedian(RELAY_PIN);
+    delay(10);    // Apply pullup for 10 millisec
+    int sensorValue3 = analogReadMedian(RELAY_PIN);
+    pinMode(RELAY_PIN, INPUT);  // Measure the voltage without pullup
+    delay(10);    // No pullup for 10 millisec
+    int sensorValue4 = analogReadMedian(RELAY_PIN);
+    if (sensorValue3 < ARDUINO_ADC_MAX // Not an open input
+            && sensorValue4 > RELAY_MIN_ADU && sensorValue4 < RELAY_MAX_ADU) {
+        result |= RELAY_PRESENT;
+    }
+    else {
+        // Check jumper at JP3 indicating 2.5 V I0 range
+        // set by user (if no relay)
+        pinMode(JP_I0_PIN, INPUT_PULLUP);
+        delay(1);
+        if (digitalRead(JP_I0_PIN) == 0)
+            result |= JP_I0_CLOSED;
+        pinMode(JP_I0_PIN, INPUT);     // Pullup off, reduces power consuption
+    }
+    // Check jumper at JP5 indicating 2.5 V AUX range set by user (if no relay)
     pinMode(JP_AUX_PIN, INPUT_PULLUP);
     delay(1);
     if (digitalRead(JP_AUX_PIN) == 0)
-      result |=   JP_AUX_CLOSED;
-    pinMode(JP_AUX_PIN, INPUT);     //pullup off, reduces power consuption
-  return result;
+        result |=   JP_AUX_CLOSED;
+    pinMode(JP_AUX_PIN, INPUT);        // Pullup off, reduces power consuption
+    return result;
 }
 
 
@@ -1904,7 +1572,7 @@ void makeAndSumMeasurements() {
                                    measurement, adc0RipplePP);
         }
     if (checkIfTimedOut()){
-      return;
+        return;
     }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
@@ -1958,9 +1626,9 @@ void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
     Stays unchanged
         Otherwise
     **/
-    if(abs(adcValue) > (ADC_RANGE_THRESHOLD - abs(ripple>>*gain))
-       && (*gain > 0)
-       && !(*adcShouldDecreaseGain)){
+    if (abs(adcValue) > (ADC_RANGE_THRESHOLD - abs(ripple>>*gain))
+            && (*gain > 0)
+            && !(*adcShouldDecreaseGain)){
         // The measured value is above the "saturation" threshold,
         // but not yet at true saturation, which would make the
         // measured value completely wrong. Defer the decrease of
@@ -2089,72 +1757,4 @@ void measureADCsRipple(){
             }
         }
     numMeasurementsDone++;
-}
-
-
-
-/** -------------------------- ARDUINO UTILITIES --------------------------- **/
-
-void setChipSelectHigh(byte ioPin) {
-    /**
-    Set a digital output used as a chip select signal from
-    the default high-impedance state to high (=unselected),
-    without a glitch to the low state.
-    **/
-    pinMode(ioPin, INPUT_PULLUP);
-    digitalWrite(ioPin, HIGH);
-    pinMode(ioPin, OUTPUT);
-}
-
-
-
-
-
-
-/** ---------------------------- OTHER UTILITIES --------------------------- **/
-
-uint16_t analogReadMedian(byte pin) {
-  /**
-  Read the Arduino ADC for a given pin
-  (A0...) three times and return the median
-  */
-  uint16_t a0 = analogRead(pin);
-  uint16_t a1 = analogRead(pin);
-  uint16_t a2 = analogRead(pin);
-  return getMedian16(a0, a1, a2);
-}
-
-/* TODO: probably nicer to just have the getMedian, bigger and biggest
-         functions just be overloaded for uint16_t and int32_t*/
-
-/** Gets the median of three numbers */
-uint16_t getMedian16(uint16_t a0, uint16_t a1, uint16_t a2) {
-  uint16_t maximum = biggest16(a0, a1, a2);
-  if (maximum == a0) return bigger16(a1, a2);
-  if (maximum == a1) return bigger16(a0, a2);
-  else return bigger16(a0, a1);
-}
-
-uint16_t bigger16(uint16_t a, uint16_t b) {
-  return (a > b) ? a : b;
-}
-
-uint16_t biggest16(uint16_t a, uint16_t b, uint16_t c) {
-  return bigger16(a, bigger16(b, c));
-}
-
-/** Gets the median of three numbers */
-int32_t getMedian32(int32_t a0, int32_t a1, int32_t a2) {
-  int32_t maximum = biggest32(a0, a1, a2);
-  if (maximum == a0) return bigger32(a1, a2);
-  if (maximum == a1) return bigger32(a0, a2);
-  else return bigger32(a0, a1);
-}
-
-int32_t bigger32(int32_t a, int32_t b) {
-  return (a > b) ? a : b;
-}
-
-int32_t biggest32(int32_t a, int32_t b, int32_t c) {
-  return bigger32(a, bigger32(b, c));
 }
