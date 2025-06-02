@@ -31,8 +31,8 @@ from viperleed.gui.helpers import resources_path
 
 if has_pyqt():
     from viperleed.gui.selectplugin import ViPErLEEDSelectPlugin
-    from viperleed.gui.widgetslib import catch_gui_crash
-    from viperleed.gui.widgetslib import raise_on_qt_messages
+    from viperleed.gui.widgets.lib import catch_gui_crash
+    from viperleed.gui.widgets.lib import raise_on_qt_messages
 
 
 class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):

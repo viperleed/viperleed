@@ -25,7 +25,7 @@ from viperleed.gui.leedsim.mainwindow_old import LEEDPatternSimulator
 from viperleed.gui.measure.uimeasurement import Measure
 from viperleed.gui.pluginsbase import ViPErLEEDPluginBase
 from viperleed.gui.pluginsbase import logo_one_line
-from viperleed.gui.widgetslib import move_to_front
+from viperleed.gui.widgets.lib import move_to_front
 
 from viperleed.gui import decorators as dev_
 

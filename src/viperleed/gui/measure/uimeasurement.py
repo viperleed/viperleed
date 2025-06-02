@@ -197,7 +197,6 @@ import time
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed.gui.basewidgets import QDoubleValidatorNoDot
 from viperleed.gui.dialogs.errors import DialogDismissedError
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera.abc import CameraABC
@@ -222,8 +221,9 @@ from viperleed.gui.measure.serial.abc import SerialABC
 from viperleed.gui.measure.widgets.cameraviewer import CameraViewer
 from viperleed.gui.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.gui.pluginsbase import ViPErLEEDPluginBase
-from viperleed.gui.widgetslib import AllGUIFonts
-from viperleed.gui.widgetslib import move_to_front
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.lib import QDoubleValidatorNoDot
+from viperleed.gui.widgets.lib import move_to_front
 
 
 TITLE = 'Measure LEED-IV'
