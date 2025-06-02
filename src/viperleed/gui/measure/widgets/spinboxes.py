@@ -53,7 +53,14 @@ class TolerantCommaSpinBox(qtw.QDoubleSpinBox):
 
 
 class CoercingDoubleSpinBox(TolerantCommaSpinBox):
-    """Coercing QDoubleSpinBox that sets limits after edit is done."""
+    """Coercing QDoubleSpinBox that sets limits after edit is done.
+
+    Note that the valueChanged signal will carry uncoerced values! This
+    signal should therefore never be used. Rather use the value_coerced
+    signal.
+    """
+
+    value_coerced = qtc.pyqtSignal(float)
 
     def __init__(self, decimals=None, soft_range=tuple(), step=1, suffix='',
                  **kwargs):
@@ -135,12 +142,14 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
         _, value, _ = sorted((*self.soft_range,
                               self.value() + steps*self.singleStep()))
         self.setValue(value)
+        self.value_coerced.emit(value)
 
     @qtc.pyqtSlot()
     def _coerce_value(self):
         """Check if value is whithin the limits and adjust it if necessary."""
         _, value, _ = sorted((self.value(), *self.soft_range))
         self.setValue(value)
+        self.value_coerced.emit(value)
 
 
 class CoercingSpinBox(CoercingDoubleSpinBox):
