@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-28'
 __license__ = 'GPLv3+'
 
+from collections import defaultdict
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
@@ -46,10 +47,10 @@ class TestSectionLoop:
         :param actions_per_index: dict mapping index to list of actions
                                   (each action is a callable receiving `rp`)
         """
-        call_counts = {}
+        call_counts = defaultdict(int)
 
         def fake_run_section(index, slab, rp):
-            call_counts[index] = call_counts.get(index, 0) + 1
+            call_counts[index] += 1
             rp.runHistory.append(index)
 
             if actions_per_index and index in actions_per_index:
