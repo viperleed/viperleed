@@ -957,33 +957,40 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         param = 'MAX_TL_DISPLACEMENT'
         if not assignment.values:
             raise ParameterHasNoValueError(param)
-        if not assignment.flag:    # vib and geo
-            self._interpret_max_tl_displacement_no_flag(
-                param, assignment.values)
-        else:
-            flag = assignment.flag.lower()
-            if flag not in {'geo', 'vib', 'action'}:
-                raise ParameterUnknownFlagError(param, f'{flag!r}')
-            if flag in {'geo', 'vib'}:
-                self._interpret_max_tl_displacement_named_geo_vib(
-                    param, flag, assignment.values)
-            else:
-                self._interpret_max_tl_displacement_action(
-                    param, assignment.values)
-
-    def _interpret_max_tl_displacement_no_flag(self, param, values):
-        if len(values) not in {1, 2}:
-            raise ParameterNumberOfInputsError(parameter=param)
+        _flag_to_interpreter = {
+            None: self._interpret_max_tl_displacement_no_flag,
+            'geo': self._interpret_max_tl_displacement_named_geo_vib,
+            'vib': self._interpret_max_tl_displacement_named_geo_vib,
+            'action': self._interpret_max_tl_displacement_action,
+            }
+        flag = assignment.flag.lower() if assignment.flag else None
         try:
-            self.rpars.MAX_TL_DISPLACEMENT.assign_float_values(values)
-        except TypeError as exc:
-            raise ParameterFloatConversionError(param,
-                                                message=str(exc)) from exc
-        except ValueError as exc:
-            raise ParameterRangeError(param, message=str(exc)) from None
+            interpret_ = _flag_to_interpreter[flag]
+        except KeyError:
+            raise ParameterUnknownFlagError(param, f'{flag!r}') from None
+        interpret_(param, assignment.values, flag)
 
-    def _interpret_max_tl_displacement_named_geo_vib(self, param,
-                                                     flag, values):
+    def _interpret_max_tl_displacement_action(self, param, values, _):
+        """Interpret MAX_TL_DISPLACEMENT with flag `geo` or `action`."""
+        action = values[0].lower()
+        if action != 'refcalc' and len(values) != 1:
+            raise ParameterNumberOfInputsError(parameter=param)
+        if action == 'refcalc' and len(values) not in {1, 2, 3}:
+            raise ParameterNumberOfInputsError(parameter=param)
+        if action == 'refcalc' and len(values) == 3 and values[1] != '<':
+            raise ParameterParseError(parameter=param)
+        try:
+            self.rpars.MAX_TL_DISPLACEMENT.assign_action(*values)
+        except KeyError as exc:
+            raise ParameterValueError(param, message=str(exc)) from exc
+        except TypeError as exc:
+            raise ParameterParseError(param, message=str(exc)) from exc
+        except ValueError as exc:
+            raise ParameterRangeError(param, message=str(exc)) from exc
+
+    def _interpret_max_tl_displacement_named_geo_vib(self, param, values,
+                                                     flag):
+        """Interpret MAX_TL_DISPLACEMENT with named flags `geo` or `vib`."""
         if len(values) != 1:
             raise ParameterNumberOfInputsError(parameter=param)
         try:
@@ -997,20 +1004,15 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterRangeError(param,
                                       message=str(exc)) from None
 
-    def _interpret_max_tl_displacement_action(self, param, values):
-        action = values[0].lower()
-        if action not in {'stop', 'refcalc', 'ignore'}:
-            raise ParameterValueError(f'Invalid value {action} for action.')
-        if action != 'refcalc' and len(values) != 1:
+    def _interpret_max_tl_displacement_no_flag(self, param, values, _):
+        """Interpret MAX_TL_DISPLACEMENT when no flag is given."""
+        if len(values) not in {1, 2}:
             raise ParameterNumberOfInputsError(parameter=param)
-        if action == 'refcalc' and len(values) not in {1, 2, 3}:
-            raise ParameterNumberOfInputsError(parameter=param)
-        if action == 'refcalc' and len(values) == 3 and values[1] != '<':
-            raise ParameterParseError(parameter=param)
         try:
-            self.rpars.MAX_TL_DISPLACEMENT.assign_action(values)
+            self.rpars.MAX_TL_DISPLACEMENT.assign_float_values(values)
         except TypeError as exc:
-            raise ParameterParseError(param, message=str(exc)) from exc
+            raise ParameterFloatConversionError(param,
+                                                message=str(exc)) from exc
         except ValueError as exc:
             raise ParameterRangeError(param, message=str(exc)) from None
 

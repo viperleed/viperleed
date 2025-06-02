@@ -24,7 +24,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     )
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
-    MaxTLDisplacement,
+    MaxTLAction, MaxTLDisplacement,
     )
 from viperleed.calc.files import parameters
 from viperleed.calc.files.parameters import errors as err
@@ -808,17 +808,17 @@ class TestMaxTLDisplacement(_TestInterpretBase):
              'two floats': ('0.5 1.0', '', MaxTLDisplacement(0.5, 1.0)),
              'geo': ('0.8', 'geo', MaxTLDisplacement(0.8)),
              'vib': ('0.9', 'vib', MaxTLDisplacement(_default.geo, 0.9)),
-             'ignore': ('ignore',
-                        'action',
-                        MaxTLDisplacement(_default.geo, action='ignore')),
+             'ignore': ('ignore', 'action', MaxTLDisplacement(
+                 _default.geo, action=MaxTLAction.IGNORE)),
              'stop': ('stop', 'action', MaxTLDisplacement(
-                 _default.geo, action='stop')),
+                 _default.geo, action=MaxTLAction.STOP)),
              'refcalc': ('refcalc', 'action', MaxTLDisplacement(
-                 _default.geo, action='refcalc', max_duration=None)),
+                 _default.geo, action=MaxTLAction.REFCALC, max_duration=None)),
              'refcalc time': ('refcalc 15m', 'action', MaxTLDisplacement(
-                 _default.geo, action='refcalc', max_duration=60*15)),
+                 _default.geo, action=MaxTLAction.REFCALC,
+                 max_duration=60*15)),
              'refcalc < time': ('refcalc < 30', 'action', MaxTLDisplacement(
-                 _default.geo, action='refcalc', max_duration=30)),
+                 _default.geo, action=MaxTLAction.REFCALC, max_duration=30)),
              }
     invalid = {
         'no value': ('', '', err.ParameterHasNoValueError),

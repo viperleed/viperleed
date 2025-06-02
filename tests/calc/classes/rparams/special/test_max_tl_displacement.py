@@ -10,7 +10,9 @@ __license__ = 'GPLv3+'
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.classes.rparams.special.max_tl_displacement import MaxTLDisplacement
+from viperleed.calc.classes.rparams.special.max_tl_displacement import (
+    MaxTLAction, MaxTLDisplacement
+    )
 from viperleed.calc.classes.rparams.defaults import NO_VALUE
 
 
@@ -82,9 +84,9 @@ class TestMaxTLDisplacementValid:
     @parametrize('values,expect', valid_refcalc.values(), ids=valid_refcalc)
     def test_assign_refcalc(self, values, expect):
         obj = MaxTLDisplacement(geo=1.0)
-        obj.assign_action(values)
-        assert obj.action == values[0]
-        if obj.action == 'refcalc':
+        obj.assign_action(*values)
+        assert obj.action is MaxTLAction[values[0].upper()]
+        if obj.action is MaxTLAction.REFCALC:
             assert obj.max_duration == expect
 
 

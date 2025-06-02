@@ -12,14 +12,33 @@ __created__ = '2025-05-15'
 __license__ = 'GPLv3+'
 
 from dataclasses import dataclass
+from enum import Enum
+from enum import auto
 import logging
-
 import numpy as np
 
 from ..defaults import NO_VALUE
 from .base import SpecialParameter
 
 _LOGGER = logging.getLogger(__name__)
+_MAP_TIME_MULTIPLIER = {
+    # Assume pure float in seconds if none of these
+    'h': 3600,
+    'm': 60,
+    's': 1,  # explicitly include second option so char is dropped if given
+    }
+
+
+class MaxTLAction(Enum):
+    """What to do if we exceed MAX_TL_DISPLACEMENT."""
+
+    IGNORE = auto()
+    STOP = auto()
+    REFCALC = auto()
+
+    @property
+    def has_options(self):
+        return self is MaxTLAction.REFCALC
 
 
 @dataclass
@@ -28,7 +47,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
 
     geo: float
     _vib: float = NO_VALUE
-    action: str = 'refcalc'
+    action: MaxTLAction = MaxTLAction.REFCALC
     max_duration: float = 1800   # max. refcalc duration for 'refcalc' in s
 
     def __post_init__(self):
@@ -78,26 +97,42 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
         setattr(self, attr,
                 self._check_float_value(value, extra_msg=f'{flag} '))
 
-    def assign_action(self, values):
-        """Assign values to an action. Also interprets the requested time
-        if the action is 'refcalc'."""
-        self.action = values[0]
-        if values[0] == 'refcalc' and len(values) == 1:
+    def assign_action(self, action, *options):
+        """Assign an `action` with additional `options`.
+
+        Parameters
+        ----------
+        action : str
+            The action to be assigned. Should be one of the known actions.
+        *options : str, optional
+            Additional information for `action`. Only used for action 'refcalc'
+            to set the `max_duration` attribute from the last item in
+            `options`.
+        Returns
+        -------
+        None.
+        """
+        try:
+            self.action = MaxTLAction[action.upper()]
+        except ValueError:
+            raise ValueError(f'Unkonwn action {action!r}.') from None
+        if self.action is MaxTLAction.REFCALC and not options:
             # disable checking for reference calculation time
             self.max_duration = NO_VALUE
-        elif values[0] == 'refcalc' and len(values) > 1:
-            time_str = values[-1].lower()
+            return
+        if self.action is MaxTLAction.REFCALC:
+            self._assign_max_duration(options[-1].lower().strip())
+
+    def _assign_max_duration(self, time_str):
+        """Set a maximum refcalc duration from a `time_str` interval."""
+        try:
+            multiplier = _MAP_TIME_MULTIPLIER[time_str[-1]]
+            time_str = time_str[:-1]
+        except KeyError:
             multiplier = 1
-            if time_str[-1] in {'h', 'm', 's'}:
-                # if none of these letters, assume pure float in seconds
-                if time_str[-1] == 'h':
-                    multiplier = 3600
-                if time_str[-1] == 'm':
-                    multiplier = 60
-                time_str = time_str[:-1]
-            float_v = self._check_float_value(time_str,
-                                              extra_msg='(flag "refcalc") ')
-            self.max_duration = float_v*multiplier
+        float_v = self._check_float_value(time_str,
+                                          extra_msg='(flag "refcalc") ')
+        self.max_duration = float_v*multiplier
 
     def is_too_far(self, atom):
         """Return whether `atom` was displaced too much."""
