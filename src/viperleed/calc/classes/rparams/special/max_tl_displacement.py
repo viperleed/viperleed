@@ -42,7 +42,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
 
     @staticmethod
     def _check_float_value(value, extra_msg=''):
-        """Return a float version of value. Raise if not acceptable."""
+        """Return a float version of `value`. Raise if not acceptable."""
         try:
             float_v = float(value)
         except (ValueError, TypeError):
