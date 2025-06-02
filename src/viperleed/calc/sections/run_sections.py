@@ -229,8 +229,9 @@ def run_section(index, sl, rp):
         rp.last_refcalc_time = since_section_started.how_long()
 
 
-def _check_exceeds_tl_limit(rp, sl):
-    return any(rp.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in sl)
+def _check_exceeds_tl_limit(rpars, slab):
+    """Return whether any atom in `slab` is too far from its refcalc state."""
+    return any(rpars.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in slab)
 
 
 def section_loop(rp, sl):
@@ -381,15 +382,15 @@ def section_loop(rp, sl):
                         #  original position!
                         if not rp.domainParams:
                             sl.restoreOriState()
-                        for dp in rp.domainParams:
-                            dp.slab.restoreOriState()
+                        for domain in rp.domainParams:
+                            domain.slab.restoreOriState()
                 else:
                     # The current instance of 'RUN = 2, 3' is done, all blocks
                     # in DISPLACEMENTS have been handled. However, we may want
                     # to do another search later (e.g. 'RUN = 1-3 1-3 1').
                     rp.search_index = 0
-                    for dp in rp.domainParams:
-                        dp.rpars.search_index = 0
+                    for domain in rp.domainParams:
+                        domain.rpars.search_index = 0
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")
