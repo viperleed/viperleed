@@ -840,6 +840,15 @@ class TestMaxTLDisplacement(_TestInterpretBase):
                  _default.geo, action=MaxTLAction.REFCALC, max_duration=30)),
              }
 
+    def test_interpret_consecutive(self, interpreter):
+        """Test consecutive assignments to the different flags."""
+        self.interpret(interpreter, '0.5')
+        self.interpret(interpreter, '0.3', flags_str='vib')
+        self.interpret(interpreter, 'refcalc 300', flags_str='action')
+        assert self.rpars_value(interpreter) == MaxTLDisplacement(
+            0.5, 0.3, action=MaxTLAction.REFCALC, max_duration=300
+            )
+
     @parametrize('val,flag,expect', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, expect, interpreter):
         """Ensure invalid MAX_TL_DISPLACEMENT raises exceptions."""
