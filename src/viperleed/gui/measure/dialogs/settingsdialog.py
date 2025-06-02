@@ -44,8 +44,9 @@ import warnings
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
+from viperleed.gui.measure.widgets.pathselector import PathSelector
+from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
 from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
@@ -87,6 +88,7 @@ _DEFAULT_HOOKS = {
     qtw.QLineEdit: ('text', 'setText', 'textChanged', None),
     qtw.QCheckBox: ('isChecked', 'setChecked', 'stateChanged',
                     ast.literal_eval),
+    CoercingDoubleSpinBox: ('cleanText', 'setValue', 'editingFinished', float),
     qtw.QSpinBox: ('cleanText', 'setValue', 'valueChanged', int),
     qtw.QDoubleSpinBox: ('cleanText', 'setValue', 'valueChanged', float),
     qtw.QButtonGroup: (__get_qbuttongroup, __set_qbuttongroup,
