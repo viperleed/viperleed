@@ -813,7 +813,7 @@ class CameraABC(DeviceABC):
                                         decimals=2, step=5.0, suffix=' ms')
         _widget.setStepType(_widget.AdaptiveDecimalStepType)
         _widget.setAccelerated(True)
-        _widget.setMinimum(_widget.soft_minimum)
+        _widget.setMinimum(0)  # Can't have negative exposure
         _tip = (
             "<nobr>Exposure time used for each frame. For LEED\u2011IV "
             "videos it is best</nobr> to choose the exposure time <b>as long "
