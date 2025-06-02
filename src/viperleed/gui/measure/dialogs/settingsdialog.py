@@ -88,7 +88,7 @@ _DEFAULT_HOOKS = {
     qtw.QLineEdit: ('text', 'setText', 'textChanged', None),
     qtw.QCheckBox: ('isChecked', 'setChecked', 'stateChanged',
                     ast.literal_eval),
-    CoercingDoubleSpinBox: ('cleanText', 'setValue', 'editingFinished', float),
+    CoercingDoubleSpinBox: ('cleanText', 'setValue', 'coerced_value', float),
     qtw.QSpinBox: ('cleanText', 'setValue', 'valueChanged', int),
     qtw.QDoubleSpinBox: ('cleanText', 'setValue', 'valueChanged', float),
     qtw.QButtonGroup: (__get_qbuttongroup, __set_qbuttongroup,
