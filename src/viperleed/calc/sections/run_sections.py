@@ -377,7 +377,7 @@ def section_loop(rp, sl):
                             'A new reference calculation will be performed '
                             'before the next search block.'
                             )
-                        search_loop_R = {}  # ignore all previously known R
+                        search_loop_R.clear()  # Ignore previous Rs
                         rp.RUN = [1, 2, 3] + rp.RUN
                     else:
                         if rp.RUN[:2] != [2, 3]:
