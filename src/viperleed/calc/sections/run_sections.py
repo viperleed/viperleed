@@ -231,11 +231,6 @@ def run_section(index, sl, rp):
         rp.last_refcalc_time = since_section_started.how_long()
 
 
-def _check_exceeds_tl_limit(rpars, slab):
-    """Return whether any atom in `slab` is too far from its refcalc state."""
-    return any(rpars.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in slab)
-
-
 def section_loop(rp, sl):
     """
     Executes sections as specified in rp.RUN, may loop if required.
@@ -339,32 +334,7 @@ def section_loop(rp, sl):
                         logger.info(o)
                 for dp in rp.domainParams:
                     dp.rpars.search_index = rp.search_index
-                stop_search = False
-                if len(rp.disp_blocks) > rp.search_index and exceeds_tl_limit:
-                    if rp.MAX_TL_DISPLACEMENT.action == 'ignore':
-                        logger.warning(
-                            'Displacements exceed MAX_TL_DISPLACEMENT, but '
-                            'actions are disabled. Calculation will '
-                            'proceed, please check results carefully.'
-                            )
-                    elif rp.MAX_TL_DISPLACEMENT.action == 'stop':
-                        logger.info(
-                            'Displacements exceed MAX_TL_DISPLACEMENT. '
-                            'Search will stop.'
-                            )
-                        stop_search = True
-                    elif rp.MAX_TL_DISPLACEMENT.action == 'refcalc':
-                        maxtime = rp.MAX_TL_DISPLACEMENT.max_duration
-                        if (maxtime != NO_VALUE
-                                and rp.last_refcalc_time is not None):
-                            if rp.last_refcalc_time > maxtime:
-                                logger.info(
-                                    'Displacements exceed '
-                                    'MAX_TL_DISPLACEMENT, and reference '
-                                    'calculations take longer than the '
-                                    'specified limit time. Search will stop.'
-                                    )
-                                stop_search = True
+                stop_search = _should_stop_search(rp, exceeds_tl_limit)
                 if len(rp.disp_blocks) > rp.search_index and not stop_search:
                     # there are more disp_blocks to do; append another search
                     rp.resetSearchConv()
@@ -424,3 +394,40 @@ def section_loop(rp, sl):
     logger.log(1, f'Total ranges of all displacements:\n{disp_ranges_str}')     # TODO: Consider deleting, it's not even really true - outside of the loop, this is only the *final* displacement ranges.
     cleanup(rp)
     return 0, state_recorder
+
+
+def _check_exceeds_tl_limit(rpars, slab):
+    """Return whether any atom in `slab` is too far from its refcalc state."""
+    return any(rpars.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in slab)
+
+
+def _should_stop_search(rpars, exceeds_tl_limit):
+    """Check if MAX_TL_DISPLACEMENT is triggered, and if search should stop
+    based on the defined `action`."""
+    if not (len(rpars.disp_blocks) > rpars.search_index and exceeds_tl_limit):
+        return False
+    if rpars.MAX_TL_DISPLACEMENT.action == 'ignore':
+        logger.warning(
+            'Displacements exceed MAX_TL_DISPLACEMENT, but actions are '
+            'disabled. Calculation will proceed, please check results '
+            'carefully.'
+            )
+        return False
+    if rpars.MAX_TL_DISPLACEMENT.action == 'stop':
+        logger.info(
+            'Displacements exceed MAX_TL_DISPLACEMENT. Search will stop.'
+            )
+        return True
+    if rpars.MAX_TL_DISPLACEMENT.action == 'refcalc':
+        maxtime = rpars.MAX_TL_DISPLACEMENT.max_duration
+        if (maxtime != NO_VALUE
+                and rpars.last_refcalc_time is not None):
+            if rpars.last_refcalc_time > maxtime:
+                logger.info(
+                    'Displacements exceed '
+                    'MAX_TL_DISPLACEMENT, and reference '
+                    'calculations take longer than the '
+                    'specified limit time. Search will stop.'
+                    )
+                return True
+    return False
