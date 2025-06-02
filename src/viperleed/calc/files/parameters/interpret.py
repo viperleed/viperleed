@@ -35,7 +35,9 @@ from viperleed.calc.classes.rparams.special.layer_cuts import LayerCuts
 from viperleed.calc.classes.rparams.special.l_max import LMax
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
-from viperleed.calc.classes.rparams.special.max_tl_displacement import MaxTLDisplacement
+from viperleed.calc.classes.rparams.special.max_tl_displacement import (
+    MaxTLDisplacement,
+    )
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
