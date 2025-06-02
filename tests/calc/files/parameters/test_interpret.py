@@ -23,7 +23,9 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutTokenType as CutType
     )
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
-from viperleed.calc.classes.rparams.special.max_tl_displacement import MaxTLDisplacement
+from viperleed.calc.classes.rparams.special.max_tl_displacement import (
+    MaxTLDisplacement,
+    )
 from viperleed.calc.files import parameters
 from viperleed.calc.files.parameters import errors as err
 from viperleed.calc.files.parameters.checker import ParametersChecker
@@ -802,13 +804,13 @@ class TestMaxTLDisplacement(_TestInterpretBase):
     """Tests for interpreting MAX_TL_DISPLACEMENT."""
     param = 'MAX_TL_DISPLACEMENT'
     _default = Rparams.get_default(param)
-    print(_default)
     valid = {'one float': ('0.5', '', MaxTLDisplacement(0.5)),
              'two floats': ('0.5 1.0', '', MaxTLDisplacement(0.5, 1.0)),
              'geo': ('0.8', 'geo', MaxTLDisplacement(0.8)),
              'vib': ('0.9', 'vib', MaxTLDisplacement(_default.geo, 0.9)),
-             'ignore': ('ignore', 'action', MaxTLDisplacement(
-                 _default.geo, action='ignore')),
+             'ignore': ('ignore',
+                        'action',
+                        MaxTLDisplacement(_default.geo, action='ignore')),
              'stop': ('stop', 'action', MaxTLDisplacement(
                  _default.geo, action='stop')),
              'refcalc': ('refcalc', 'action', MaxTLDisplacement(
