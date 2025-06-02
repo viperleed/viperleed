@@ -22,14 +22,15 @@ class TestMaxTLDisplacementValid:
     valid_creation = {
         'two floats': (0.15, 0.2),
         'as string': ('1.0', '0.5'),
-        'no value': (1.1, NO_VALUE)
+        'no value': (1.1, NO_VALUE),
         }
     valid_float = {
         'one': (0.15,),
         'two': (0.15, 0.2),
         }
-    valid_refcalc = {
+    valid_action = {
         'ignore': (('ignore',), NO_VALUE),
+        'stop': (('stop',), NO_VALUE),
         'no duration': (('refcalc',), NO_VALUE),
         'pure float': (('refcalc', '600'), 600),
         'pure float, lt': (('refcalc', '<', '600'), 600),
@@ -53,7 +54,7 @@ class TestMaxTLDisplacementValid:
         obj = MaxTLDisplacement(geo=geo, _vib=vib)
         assert isinstance(obj.geo, float)
         if vib is not NO_VALUE:
-            assert isinstance(obj._vib, float)
+            assert isinstance(obj.vib, float)
 
     @parametrize(args=valid_float.values(), ids=valid_float)
     def test_from_value(self, args):
@@ -61,7 +62,7 @@ class TestMaxTLDisplacementValid:
         assert isinstance(obj, MaxTLDisplacement)
         assert obj.geo == args[0]
         if len(args) > 1:
-            assert obj._vib == args[1]
+            assert obj.vib == args[1]
 
     @parametrize(args=valid_float.values(), ids=valid_float)
     def test_assign_float_values(self, args):
@@ -69,7 +70,7 @@ class TestMaxTLDisplacementValid:
         obj.assign_float_values(args)
         assert obj.geo == args[0]
         if len(args) > 1:
-            assert obj._vib == args[1]
+            assert obj.vib == args[1]
 
     def test_assign_named_geo(self):
         obj = MaxTLDisplacement(geo=1.0)
@@ -79,9 +80,9 @@ class TestMaxTLDisplacementValid:
     def test_assign_named_vib(self):
         obj = MaxTLDisplacement(geo=1.0)
         obj.assign_single_value('vib', 0.6)
-        assert obj._vib == 0.6
+        assert obj.vib == 0.6
 
-    @parametrize('values,expect', valid_refcalc.values(), ids=valid_refcalc)
+    @parametrize('values,expect', valid_action.values(), ids=valid_action)
     def test_assign_refcalc(self, values, expect):
         obj = MaxTLDisplacement(geo=1.0)
         obj.assign_action(*values)
