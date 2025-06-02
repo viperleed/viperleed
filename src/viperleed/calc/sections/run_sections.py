@@ -14,6 +14,7 @@ __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
 import logging
+import numpy as np
 import os
 import shutil
 
@@ -39,6 +40,7 @@ from viperleed.calc.sections.cleanup import cleanup, move_oldruns
 
 
 logger = logging.getLogger(__name__)
+R_MAX = np.inf
 
 
 def run_section(index, sl, rp):
@@ -317,9 +319,8 @@ def section_loop(rp, sl):
                     # improvement since it has last been checked. If so,
                     # repeat it; if not, go one loop out and keep checking.
                     # Automatically repeat deepest loop if exceeds_tl_limit.
-                    if (loop not in search_loop_R
-                            or rp.last_R < search_loop_R[loop]
-                            or exceeds_tl_limit):
+                    improved = rp.last_R < search_loop_R.get(loop, R_MAX)
+                    if improved or exceeds_tl_limit:
                         # Loop back
                         search_loop_R[loop] = rp.last_R
                         rp.search_index = loop[0]
