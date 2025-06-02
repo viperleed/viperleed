@@ -11,12 +11,13 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-15'
 __license__ = 'GPLv3+'
 
-import numpy as np
-import logging
 from dataclasses import dataclass
+import logging
 
-from .base import SpecialParameter
+import numpy as np
+
 from ..defaults import NO_VALUE
+from .base import SpecialParameter
 
 _LOGGER = logging.getLogger(__name__)
 
