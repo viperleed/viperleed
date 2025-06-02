@@ -12,7 +12,6 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
-# from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.rparams.domain_params import DomainParameters
 from viperleed.calc.sections.run_sections import section_loop
 

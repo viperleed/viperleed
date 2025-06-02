@@ -119,14 +119,14 @@ class TestDistance:
 
     @parametrize('vec,include_c', distance_zero.values(), ids=distance_zero)
     def test_distance_zero(self, manually_displaced_atom, vec, include_c):
-        """Checks cases in which the atom matches a replica exactly."""
+        """Check cases in which the atom matches a replica exactly."""
         atom = manually_displaced_atom
         ucell = atom.slab.ucell.T
         assert atom.distance(atom.cartpos + np.dot(vec, ucell),
                              include_c_replicas=include_c) == approx(0)
 
     def test_distance_non_zero(self, manually_displaced_atom):
-        """Checks cases in which the distance is not zero."""
+        """Check cases in which the distance is not zero."""
         atom = manually_displaced_atom
         ucell = atom.slab.ucell.T
         abs_dist = np.linalg.norm(ucell[2])
@@ -136,6 +136,6 @@ class TestDistance:
         assert atom.distance(cartpos) <= 0.2501 * np.linalg.norm(ucell[0])
 
     def test_atom_as_cartpos(self, manually_displaced_atom):
-        """Tests that atoms are interpreted as their cartpos."""
+        """Test that atoms are interpreted as their cartpos."""
         atom = manually_displaced_atom
         assert atom.distance(atom) == approx(0)

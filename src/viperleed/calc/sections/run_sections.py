@@ -314,13 +314,13 @@ def section_loop(rp, sl):
                 for loop in sorted(loops, reverse=True):
                     # At least one loop ends at the index we're at now.
                     # Starting at the deepest loop, see if there was any
-                    #  improvement since it has last been checked. If so,
-                    #  repeat it; if not, go one loop out and keep checking.
+                    # improvement since it has last been checked. If so,
+                    # repeat it; if not, go one loop out and keep checking.
                     # Automatically repeat deepest loop if exceeds_tl_limit.
                     if (loop not in search_loop_R
                             or rp.last_R < search_loop_R[loop]
                             or exceeds_tl_limit):
-                        # loop back
+                        # Loop back
                         search_loop_R[loop] = rp.last_R
                         rp.search_index = loop[0]
                         logger.info("Search loop: repeating at block "
@@ -328,7 +328,7 @@ def section_loop(rp, sl):
                         break
                 else:
                     # We arrive here if there were no loops, or no loops have
-                    #   improved. Go to next block.
+                    # improved. Go to next block.
                     rp.search_index += 1
                     if loops:
                         o = "Search loop ends."
@@ -344,11 +344,13 @@ def section_loop(rp, sl):
                         logger.warning(
                             'Displacements exceed MAX_TL_DISPLACEMENT, but '
                             'actions are disabled. Calculation will '
-                            'proceed, please check results carefully.')
+                            'proceed, please check results carefully.'
+                            )
                     elif rp.MAX_TL_DISPLACEMENT.action == 'stop':
                         logger.info(
                             'Displacements exceed MAX_TL_DISPLACEMENT. '
-                            'Search will stop.')
+                            'Search will stop.'
+                            )
                         stop_search = True
                     elif rp.MAX_TL_DISPLACEMENT.action == 'refcalc':
                         maxtime = rp.MAX_TL_DISPLACEMENT.max_duration
@@ -359,7 +361,8 @@ def section_loop(rp, sl):
                                     'Displacements exceed '
                                     'MAX_TL_DISPLACEMENT, and reference '
                                     'calculations take longer than the '
-                                    'specified limit time. Search will stop.')
+                                    'specified limit time. Search will stop.'
+                                    )
                                 stop_search = True
                 if len(rp.disp_blocks) > rp.search_index and not stop_search:
                     # there are more disp_blocks to do; append another search
@@ -371,7 +374,8 @@ def section_loop(rp, sl):
                         logger.info(
                             'Displacements exceed MAX_TL_DISPLACEMENT. '
                             'A new reference calculation will be performed '
-                            'before the next search block.')
+                            'before the next search block.'
+                            )
                         search_loop_R = {}  # ignore all previously known R
                         rp.RUN = [1, 2, 3] + rp.RUN
                     else:

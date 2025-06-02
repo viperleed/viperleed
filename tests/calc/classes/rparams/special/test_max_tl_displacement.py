@@ -1,4 +1,4 @@
-"""Tests for module l_max of viperleed.calc.classes.rparams.special."""
+"""Tests for viperleed.calc.classes.rparams.special.max_tl_displacement."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
@@ -103,8 +103,7 @@ class TestMaxTLDisplacementInvalid:
 
 
 class TestMaxTLDisplacementTooFar:
-    """Collection of tests for whether thresholds have been reached in
-    MaxTLDisplacement objects."""
+    """Tests for whether displacement thresholds have been reached."""
 
     cases = {   # limit, geo.dist., vib.dist., expect
         'geometry': (.1, 1., 0., True),
