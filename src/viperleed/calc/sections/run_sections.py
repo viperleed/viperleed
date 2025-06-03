@@ -17,11 +17,11 @@ import logging
 import os
 import shutil
 
-from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.classes.rparams.defaults import NO_VALUE
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
     )
+from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
