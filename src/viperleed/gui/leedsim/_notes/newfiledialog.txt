@@ -1,0 +1,544 @@
+Current behavior of widgets used in NewFileDialog on user edit
+
+##########################   LatticeInput/BulkInput   ##########################
+
+>>> USER IS EDITING A PARAMETER (o---> textEdited)
+    L._on_lattice_param_edited
+	    |
+	  [OK?]
+		|--> L.update_lattice_restrictions()
+		|	 (enforces parameters to change in accord with shape selected)
+		|
+		|--> L.update_lattice_basis
+		     (set basis of underlying lattice from ctrls,
+			  the lattice also adjusts its shape)
+
+
+>>> EDIT PARAMETER FINISHED (o---> editingFinished)
+    Happens on Enter/Return or focus loss, lattice is up to date
+	because the signal comes always after the last textEdited
+
+	L.__on_lattice_param_edit_finished
+	    |
+		|--> L.update_controls_from_lattice
+		|        |
+		|        |--> L._update_lattice_params_ctrls_from_lattice
+		|        |    (reformat lattice param entries in controls
+		|		 |	   from lattice, with units)
+		|		 |
+		|		 |--> L.check_high_symmetry
+		|		 |		  |
+		|		 |		  |--> L.lattice.is_high_symmetry ?
+		|		 |		  |
+		|		 |		  |--> Show/hide 'hi_sym' button
+		|		 |		  |
+		|		 |	 [ high sym? ]
+		|		 |		  |
+		|		 |		  |--> L.__valid_input = True
+		|		 |		  |
+		|		 | [ not high sym? ]
+		|		 |		  |
+		|		 |		  |--> L.__valid_input = False
+		|    [ shape  ]
+		|    [changed?]
+		|		 |
+		|        |--> (shape from lattice into control)
+		|        |
+		|        |--> L.update_lattice_restrictions
+		|        |    (enable/disable ctrls & set relations, no units
+		|		 |     added if missing, but here they are there)
+		|        |
+		|        |--> L._group_from_lattice_and_update_options
+		|		 |    (load group options, set group from lattice)
+		|        |        |
+		|        |    [ group  ]
+		|        |    [changed?]
+		|        |        |
+		|        |        o--- group_changed --->
+		|        |                |
+		|        |                |--> L._update_lattice_group
+		|        |                     (if group in ctrl is different than
+		|		 |                      lattice, set group in lattice. BulkInput
+		|        |                      also fixes the 3D symmetry of the group,
+		|        |                      and enables/disables the button)
+		|		 o--- shape_changed --->
+		|
+		o--- lattice_parameters_changed --->
+		|
+		|--> (not high symmetry ?)
+			   |
+			   o--- L.need_high_sym_reduction --->
+
+
+>>> USER PICKS A NEW SHAPE (o---> activated)
+    The signal is sent also if the choice did not actually change
+
+    L._on_shape_changed
+	    |
+	[ shape  ]
+	[changed?]
+	    |--> L.update_lattice_restrictions
+		|    (enable/disable ctrls & set relations)
+		|
+		|--> L.update_lattice_basis
+		|    (set basis of underlying lattice from ctrls,
+		|	  the lattice also adjusts its shape)
+		|
+		|--> L.check_high_symmetry
+		|	 (see USER IS EDITING A PARAMETER)
+		|
+		|--> L._group_from_lattice_and_update_options
+		|	(load group options, set group from lattice)
+		|        |
+		|    [ group  ]
+		|	 [changed?]
+		|		 |
+		|        o--- group_changed --->
+		|                |
+		|                |--> L._update_lattice_group
+		|                     (if group in ctrl is different than
+		|		               lattice, set group in lattice. BulkInput
+		|                      also fixes the 3D symmetry of the group,
+		|                      and enables/disables the button)
+		o--- shape_changed --->
+		|
+		|--> (not high symmetry ?)
+			   |
+			   o--- L.need_high_sym_reduction --->
+
+
+>>> USER PICKS A NEW GROUP (o---> activated)
+    The signal is sent also if the choice did not actually change
+
+	L._on_group_changed
+	    |
+	[ group  ]
+	[changed?]
+		|
+		o--- group_changed --->
+		        |
+		        |--> L._update_lattice_group
+		             (if group in ctrl is different than
+		              lattice, set group in lattice. BulkInput
+		              also fixes the 3D symmetry of the group,
+		              and enables/disables the button)
+
+
+>>> USER PRESSES THE 'MAKE HIGH SYMMETRY' BUTTON (o---> clicked)
+
+	L._on_high_sym_pressed
+		|
+		o--- L.high_sym_pressed --->	
+		|
+		|--> L.lattice.make_high_symmetry
+		|--> L.update_controls_from_lattice
+		|	    |
+		|      [o--- L.need_high_sym_reduction --->]  << should not be emitted as lattice is high symmetry
+		|      [o--- group_changed ---> ]
+		|      [o--- shape_changed ---> ]
+		|
+		o--- L.lattice_parameters_changed --->
+
+
+################################   BulkInput   #################################
+
+In addition to the stuff above:
+
+L._update_lattice_group reimplemented to take care of 3D operations.
+
+>>> BULK 3D OPERATIONS BUTTON CLICKED (o---> clicked)
+
+	B._on_bulk_3d_pressed
+		|
+		|--> update and open dialog
+		|
+   [ accepted? ]
+		|
+		|--> update screws_glides from lattice
+		|
+[ operations changed? ]
+		|
+		o--- bulk_3d_operations_changed --->
+
+
+
+##########################   SurfaceStructureInput   ###########################
+
+>>> SUPERLATTICE MATRIX IS EDITED (o---> superlattice.matrix_edited)
+	Occurs upon user edit of the matrix
+    elements, if the entries are integers
+
+	S._on_superlattice_changed
+	    |
+		|--> matrix singular?
+		|       |--> self.__valid_input = False; update matrix colors
+		|       |
+		|       o--- user_gave_invalid_input --->
+		|
+	 [matrix]
+	 [ OK?  ]
+	    |
+		|--> self.__valid_input = True; update matrix colors
+		|
+		|--> new_basis from new_superlattice and self.bulk_basis
+		|
+		|--> L.update_lattice_basis(new_basis)
+		|	 (set basis of underlying lattice from ctrls,
+		|	  the lattice also adjusts its shape)
+		|
+		|--> L.update_controls_from_lattice
+		|    (see EDIT PARAMETER FINISHED)
+		|	    |
+		|	  [ ? ]
+		|		|
+		|		o--- lattice.group_changed --->
+		|		o--- lattice.shape_changed --->
+		|
+		|--> S._pick_right_woods
+		|		|
+		|       |--> superlattice from control
+		|       |
+		|  [ Wood's representable? ] --> pick it, and add to list if not there yet
+		|       |
+		|  [ Not representable ] --> pick 'None'
+		|
+		o--- surface_changed --->
+		|
+		|--> (end of superlattice.matrix_edited)
+
+
+>>> USER ACTIVATES OR CHANGES THE WOOD'S NOTATION
+    (o---> activated)        # Happens also if the user chose the same
+	(o---> editingFinished)  # Enter/Return or focus loss
+
+	S._on_woods_selected
+	    |
+		|--> get Wood's text
+		|
+[ syntax not OK? ]
+		|
+		o--- user_gave_invalid_input --->
+		|
+   [ syntax OK? ]
+		|
+		|--> convert to matrix
+		|
+[incommensurate?]----|--> Try guessing correct angle
+        |            |
+		|    [ commensurate? ]----|--> update text in combo
+		|            |            |
+		|            |            |--> see 'commensurate' branch below
+		|            |
+		|    [incommensurate?]
+		|            |
+		|			 o--- user_gave_invalid_input --->
+        |
+[ commensurate? ]
+		|
+		|--> change superlattice matrix
+		|        |
+		|		 o--- superlattice.matrix_edited --->
+		|				|
+		|			 (see SUPERLATTICE MATRIX IS EDITED)
+		|				|
+		|			   [o--- lattice.group_changed --->]
+		|			   [o--- lattice.shape_changed --->]
+		|				|
+		|				o--- surface_changed --->
+	[ both ]
+		|
+		|--> update text color
+
+
+
+##############################   NewFileDialog   ###############################
+
+CONNECTED SIGNALS (in connection order):
+	* NFD.done/.cancel.clicked           --> NFD._on_finish_buttons_pressed
+	* NFD.e_max.editingFinished          --> NFD._on_energy_changed
+	* NFD.tabs.tabCloseRequested         --> NFD._on_surface_tab_closed
+	* NFD.tabs.tabBarClicked             --> NFD._on_surface_tab_clicked
+	* NFD.tabs.tabBarDoubleClicked       --> NFD._edit_surface_name
+	* NFD.add_surface_tab.clicked        --> NFD._on_add_structure_pressed
+	* NFD.edit_surf_name.editingFinished --> NFD._on_surface_name_changed
+	* bulk.shape_changed                 --> NFD._on_bulk_shape_changed
+	* bulk.high_sym_pressed              --> NFD._on_bulk_high_sym_pressed
+	* bulk.need_high_sym_reduction       --> NFD._update_done_enabled
+	* bulk.lattice_parameters_changed    --> NFD._update_done_enabled  << DISCONNECTED AND RECONNECTED AFTER ADDING EACH TAB
+  (for each new surface tab added)
+	* bulk.lattice_parameters_changed    --> S._on_bulk_basis_changed
+	* bulk.group_changed                 --> S._on_bulk_group_changed
+	* bulk.shape_changed		         --> S._update_woods_list_and_selection
+	* S.user_gave_invalid_input          --> NFD.status_bar.showMessage
+	* S.surface_changed                  --> NFD.status_bar.clearMessage
+	* S.user_gave_invalid_input          --> NFD._update_done_enabled
+	* S.need_high_sym_reduction          --> NFD._update_done_enabled
+	* S.surface_changed                  --> NFD._update_done_enabled
+
+
+>>> USER CHANGES BULK GROUP (o---> B.group_changed)
+	[B.group is up to date]
+
+(for all surfaces, in addition order)
+	S._on_bulk_group_changed
+		|
+		|--> L._group_from_lattice_and_update_options (reimplemented)
+			 (update correctly entries in combo, accounting for)
+			 (consistency with bulk group; select correct group)
+				|
+				o--- L.group_changed --->
+
+	NB: lattice._group_from_lattice_and_update_options is reimplemented
+	by SurfaceStructureInput to access also information on the bulk group
+	operations (excl. 3D). This is used to better pick the list of acceptable
+	groups.
+
+
+>>> USER CHANGES BULK SHAPE FROM CONTROL (o---> bulk.shape_changed)
+Bulk lattice parameters, group, shape and B.valid_input are up to date.
+
+	NFD._on_bulk_shape_changed
+	|	|
+	|	o--- B.lattice_parameters_changed --->
+	|			|
+	|	 (  all surfaces,  )
+	|	 (in addition order)
+	|			|
+	|			|--> S._on_bulk_basis_changed
+	|			|		|
+	|			|		|--> superlattice from EditableMatrix control, and
+	|			|		|    self.bulk.basis to compute new basis
+	|			|		|
+	|			|		|--> L.update_lattice_basis(new_basis)
+	|			|		|	 (set basis of underlying lattice from ctrls,
+	|			|		|	  the lattice also adjusts its shape)
+	|			|		|
+	|			|		|--> update self.__woods bulk basis
+	|			|		|
+	|			|		|--> L.update_controls_from_lattice
+	|			|		|    (see EDIT PARAMETER FINISHED)
+	|			|		|	    |
+	|			|		|	  [ ? ]
+	|			|		|		|
+	|			|		|		o--- lattice.group_changed --->
+	|			|		|		o--- lattice.shape_changed --->
+	|			|		|
+	|		 	|	(S lattice parameters,)
+	|		 	|	(superlattice, and    )
+	|		 	|	(group are up to date )
+	|			|
+	|    (after all surfaces)
+	|	 (are processed     )
+	|			|
+	|			|--> NFD._update_done_enabled
+	|			|	 (Only Woods controls may be not up to date here)
+	|
+(  all surfaces,  )
+(in addition order)
+	|
+	S._update_woods_list_and_selection
+			|
+			|--> place examples from the gl.Woods() object
+			|    into combo using the new bulk shape to
+			|	 select the correct list
+			|
+			|--> S._pick_right_woods
+					|
+					|--> superlattice from control
+					|
+		[ Wood's representable? ] --> pick it, and add to list if
+					|				  not there yet
+					|
+		[ Not representable ] --> pick 'None'
+
+
+
+>>> USER CHANGES BULK LATTICE PARAMETERS (edit finished)
+	(B.valid_input and B.hi_sym is up to date)
+
+[new B.shape?] --
+	|			|
+	|	[new B.group?] o---> bulk.group_changed
+	|	  		|			 >> See USER CHANGES BULK GROUP
+	|			|			 ...
+	|			|			 S.group and combo are now up to date
+	|			|
+	|			o---> bulk.shape_changed
+	|				|
+	|				|--> NFD._on_bulk_shape_changed
+	|				|		|
+	|				|		o--- B.lattice_parameters_changed --->
+	|				|				|
+	|				|		 (  all surfaces,  )
+	|				|		 (in addition order)
+	|				|				|
+	|				|				|--> S._on_bulk_basis_changed
+	|				|				|		|
+	|				|				|		|--> superlattice from EditableMatrix control, and
+	|				|				|		|    self.bulk.basis to compute new basis
+	|				|				|		|
+	|				|				|		|--> L.update_lattice_basis(new_basis)
+	|				|				|		|	 (set basis of underlying lattice from ctrls,
+	|				|				|		|	  the lattice also adjusts its shape)
+	|				|				|		|
+	|				|				|		|--> update self.__woods bulk basis
+	|				|				|		|
+	|				|				|		|--> L.update_controls_from_lattice
+	|				|				|		|    (see EDIT PARAMETER FINISHED)
+	|				|				|		|	    |
+	|				|				|		|	  [ ? ]
+	|				|				|		|		|
+	|				|				|		|		o--- lattice.group_changed --->
+	|				|				|		|		o--- lattice.shape_changed --->
+	|				|				|		|
+	|				|				|	(S lattice parameters,)
+	|				|				|	(superlattice, and    )
+	|				|				|	(group are up to date )
+	|				|				|
+	|				|		(after all surfaces processed)
+	|				|				|
+	|				|				|
+	|				|				|--> NFD._update_done_enabled
+	|				|					 (Surfaces are up to date, except  )
+	|				|				     (Woods control that does not count)
+	|		(  all surfaces,  )
+	|		(in addition order)
+	|				|
+	|				|--> S._update_woods_list_and_selection
+	|				|		|
+	|				|		|--> place examples from the gl.Woods() object
+	|				|		|    into combo using the new bulk shape to
+	|				|		|	 select the correct list
+	|				|		|
+	|				|		|--> S._pick_right_woods
+	|				|				|
+	|				|				|--> superlattice from control
+	|				|				|
+	|				|	[ Wood's representable? ] --> pick it, and add to list
+	|				|				|				  if not there yet
+	|				|				|
+	|				|	  [ Not representable ] --> pick 'None'
+	|				|
+	|		 (All S controls)
+	|		 (are up to date)
+	|
+(bulk controls )
+(are up to date)
+	|
+	o---> bulk.lattice_parameters_changed
+	|		|
+	|	[ FOLLOWS AN EXACT COPY OF THE PREVIOUS PART (in response to ]
+	|	[ lattice_parameters_changed) THAT IS NOT VERY USEFUL EXCEPT ]
+	|	[ FOR THE CALL TO NFD._update_done_enabled AS NOW ALL        ]
+	|	[ CONTROLS ARE ACTUALLY UP TO DATE.                          ]
+	|	[ HOWEVER THIS CONNECTION IS USEFUL IN CASE THE EDIT OF THE  ]
+	|	[ LATTICE PARAMETERS DOES NOT CHANGE THE SHAPE, BUT ONLY     ]
+	|	[ SOME OF THE PARAMETERS THEMSELVES							 ]
+	|		|
+	|		|--> S._on_bulk_basis_changed
+	|		|		|
+	|		|		|--> superlattice from EditableMatrix control, and
+	|		|		|    self.bulk.basis to compute new basis
+	|		|		|
+	|		|		|--> L.update_lattice_basis(new_basis)
+	|		|		|	 (set basis of underlying lattice from ctrls,
+	|		|		|	  the lattice also adjusts its shape)
+	|		|		|
+	|		|		|--> update self.__woods bulk basis
+	|		|		|
+	|		|		|--> L.update_controls_from_lattice
+	|		|		|    (see EDIT PARAMETER FINISHED)
+	|		|		|	    |
+	|		|		|	  [ ? ]
+	|		|		|	    |
+	|		|		|	    o--- lattice.group_changed --->
+	|		|		|	    o--- lattice.shape_changed --->
+	|		|		|
+	|	  	|	(S lattice parameters,)
+	|	  	|	(superlattice, and    )
+	|	  	|	(group are up to date )
+	|		|
+	|	(after all surfaces processed)
+	|		|
+	|		|--> NFD._update_done_enabled
+	|
+[B.hi_sym?]
+	|
+	o---> bulk.need_high_sym_reduction
+			|
+			|--> NFD._update_done_enabled
+
+
+	NB: right now no S.surface_changed signal is emitted. This
+	may be good, despite being not much logical: the BulkInput
+	signals will likely be hooked to live updates anyway.
+
+
+
+>>> USER PRESSES THE 'MAKE HIGH SYMMETRY' BUTTON
+
+[BULK]
+	B._on_high_sym_pressed
+		|
+		o--- B.high_sym_pressed --->
+		|		|
+		|		|--> NFD._on_bulk_high_sym_pressed
+		|			 (FOR NOW DOES NOTHING)	
+		|
+		|--> B.lattice.make_high_symmetry
+		|--> B.update_controls_from_lattice
+		|	    |
+		|     [ o--- B.group_changed --->           ]
+		|	  [ |    >> See USER CHANGES BULK GROUP ]
+		|       |
+		|     [ o--- B.shape_changed --->                        ]
+		|	  [      >> See USER CHANGES BULK SHAPE FROM CONTROL ]
+		|
+		o--- B.lattice_parameters_changed --->
+				|
+			(each surface,    )
+			(in addition order)
+				|
+				|--> S._on_bulk_basis_changed
+				|		|
+				|		|--> superlattice from EditableMatrix control, and
+				|		|    self.bulk.basis to compute new basis
+				|		|
+				|		|--> L.update_lattice_basis(new_basis)
+				|		|	 (set basis of underlying lattice from ctrls,
+				|		|	  the lattice also adjusts its shape)
+				|		|
+				|		|--> update self.__woods bulk basis
+				|		|
+				|		|--> L.update_controls_from_lattice
+				|		|    (see EDIT PARAMETER FINISHED)
+				|		|	    |
+				|		|	  [ ? ]
+				|		|	    |
+				|		|	    o--- lattice.group_changed --->
+				|		|	    o--- lattice.shape_changed --->
+				|		|
+				|	(S lattice parameters,)
+				|	(superlattice, and    )
+				|	(group are up to date )
+				|
+		(after all surfaces processed)
+				|
+				|--> NFD._update_done_enabled
+
+[SURF]
+	L._on_high_sym_pressed
+		|
+		o--- L.high_sym_pressed --->	
+		|
+		|--> L.lattice.make_high_symmetry
+		|--> L.update_controls_from_lattice
+		|	    |
+		|      [o--- L.group_changed ---> ]
+		|      [o--- L.shape_changed ---> ]
+		|
+		o--- L.lattice_parameters_changed --->
+
+
+
+

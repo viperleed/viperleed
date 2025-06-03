@@ -1,6 +1,7 @@
 """Version class to keep track of version numbers internally.
 
-Taken originally from guilib."""
+Taken originally from gui.
+"""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
