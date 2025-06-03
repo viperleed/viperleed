@@ -971,7 +971,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         interpret_(param, assignment.values, flag)
 
     def _interpret_max_tl_displacement_action(self, param, values, _):
-        """Interpret MAX_TL_DISPLACEMENT with flag `geo` or `action`."""
+        """Interpret MAX_TL_DISPLACEMENT with flag `action`."""
         action = values[0].lower()
         if action != 'refcalc' and len(values) != 1:
             raise ParameterNumberOfInputsError(parameter=param)
