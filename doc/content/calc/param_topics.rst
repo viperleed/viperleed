@@ -196,6 +196,8 @@ Search behavior
   +----------------------------------+-----------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                            |
   +==================================+=====================================================================================================+
+  | :ref:`MAX_TL_DISPLACEMENT`       | Whether to automatically re-do reference calculations when displacements get too large              |
+  +----------------------------------+-----------------------------------------------------------------------------------------------------+
   | :ref:`SEARCHBEAMS`               | Whether to use |R factor| of integer, fractional, or all beams for the search                       |
   +----------------------------------+-----------------------------------------------------------------------------------------------------+
   | :ref:`SEARCH_CONVERGENCE`        | Convergence criteria for the search, and convergence-dependent parameter control                    |

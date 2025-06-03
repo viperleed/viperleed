@@ -100,6 +100,7 @@ _PHASESHIFT_SETTINGS = {'cases': poscar_slabs.CasePOSCARSlabs,
                         'filter': exclude_tags(CaseTag.NO_INFO),
                         'scope': 'session'}
 
+
 @pytest_cases.fixture(scope='session')
 @pytest_cases.parametrize_with_cases('args', **_PHASESHIFT_SETTINGS)
 def run_phaseshift(args, tensorleed_path, tmp_path_factory):
