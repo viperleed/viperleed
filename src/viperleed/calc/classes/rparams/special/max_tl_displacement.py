@@ -82,21 +82,6 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
         """Return a MaxTLDisplacement from a 2-item tuple."""
         return cls(*value)
 
-    def assign_float_values(self, values):
-        """Assign unlabelled tuple of 1 or 2 values to geo [and _vib]."""
-        self.assign_single_value('geo', values[0])
-        if len(values) > 1:
-            self.assign_single_value('_vib', values[1])
-
-    def assign_single_value(self, flag, value):
-        """Assign values to geo or _vib."""
-        attr = flag
-        # pylint: disable-next=magic-value-comparison
-        if attr == 'vib':
-            attr = '_vib'
-        setattr(self, attr,
-                self._check_float_value(value, extra_msg=f'{flag} '))
-
     def assign_action(self, action, *options):
         """Assign an `action` with additional `options`.
 
@@ -123,6 +108,21 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
             return
         if self.action is MaxTLAction.REFCALC:
             self._assign_max_duration(options[-1].lower().strip())
+
+    def assign_float_values(self, values):
+        """Assign unlabelled tuple of 1 or 2 values to geo [and _vib]."""
+        self.assign_single_value('geo', values[0])
+        if len(values) > 1:
+            self.assign_single_value('_vib', values[1])
+
+    def assign_single_value(self, flag, value):
+        """Assign values to geo or _vib."""
+        attr = flag
+        # pylint: disable-next=magic-value-comparison
+        if attr == 'vib':
+            attr = '_vib'
+        setattr(self, attr,
+                self._check_float_value(value, extra_msg=f'{flag} '))
 
     def _assign_max_duration(self, time_str):
         """Set a maximum refcalc duration from a `time_str` interval."""
