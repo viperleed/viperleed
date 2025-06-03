@@ -17,6 +17,25 @@ from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     )
 
 
+class TestMaxTLAction:
+    """Tests for the MaxTLAction class."""
+
+    def test_enum_values(self):
+        assert MaxTLAction.IGNORE.value == 'ignore'
+        assert MaxTLAction.STOP.value == 'stop'
+        assert MaxTLAction.REFCALC.value == 'refcalc'
+
+    def test_has_options_property(self):
+        assert not MaxTLAction.IGNORE.has_options
+        assert not MaxTLAction.STOP.has_options
+        assert MaxTLAction.REFCALC.has_options
+
+    def test_enum_identity(self):
+        assert MaxTLAction('ignore') is MaxTLAction.IGNORE
+        assert MaxTLAction('stop') is MaxTLAction.STOP
+        assert MaxTLAction('refcalc') is MaxTLAction.REFCALC
+
+
 class TestMaxTLDisplacementValid:
     """Collection of tests for valid inputs to MaxTLDisplacement objects."""
 
