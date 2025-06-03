@@ -988,7 +988,9 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except ValueError as exc:
             raise ParameterRangeError(param, message=str(exc)) from exc
 
-    def _interpret_max_tl_displacement_named_geo_vib(self, param, values,
+    def _interpret_max_tl_displacement_named_geo_vib(self,
+                                                     param,
+                                                     values,
                                                      flag):
         """Interpret MAX_TL_DISPLACEMENT with named flags `geo` or `vib`."""
         if len(values) != 1:

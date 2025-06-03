@@ -13,8 +13,8 @@ __license__ = 'GPLv3+'
 
 from dataclasses import dataclass
 from enum import Enum
-from enum import auto
 import logging
+
 import numpy as np
 
 from ..defaults import NO_VALUE
@@ -25,16 +25,16 @@ _MAP_TIME_MULTIPLIER = {
     # Assume pure float in seconds if none of these
     'h': 3600,
     'm': 60,
-    's': 1,  # explicitly include second option so char is dropped if given
+    's': 1,  # Explicitly include this so char is dropped if given
     }
 
 
 class MaxTLAction(Enum):
     """What to do if we exceed MAX_TL_DISPLACEMENT."""
 
-    IGNORE = auto()
-    STOP = auto()
-    REFCALC = auto()
+    IGNORE = 'ignore'
+    STOP = 'stop'
+    REFCALC = 'refcalc'
 
     @property
     def has_options(self):
@@ -102,18 +102,19 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
 
         Parameters
         ----------
-        action : str
+        action : MaxTLAction or str
             The action to be assigned. Should be one of the known actions.
         *options : str, optional
             Additional information for `action`. Only used for action 'refcalc'
             to set the `max_duration` attribute from the last item in
             `options`.
+
         Returns
         -------
         None.
         """
         try:
-            self.action = MaxTLAction[action.upper()]
+            self.action = MaxTLAction(action)
         except ValueError:
             raise ValueError(f'Unkonwn action {action!r}.') from None
         if self.action is MaxTLAction.REFCALC and not options:

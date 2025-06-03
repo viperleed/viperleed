@@ -24,7 +24,8 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     )
 from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
-    MaxTLAction, MaxTLDisplacement,
+    MaxTLAction,
+    MaxTLDisplacement,
     )
 from viperleed.calc.files import parameters
 from viperleed.calc.files.parameters import errors as err
@@ -802,6 +803,7 @@ class TestLogLevel(_TestInterpretBase):
 
 class TestMaxTLDisplacement(_TestInterpretBase):
     """Tests for interpreting MAX_TL_DISPLACEMENT."""
+
     param = 'MAX_TL_DISPLACEMENT'
     _default = Rparams.get_default(param)
     invalid = {

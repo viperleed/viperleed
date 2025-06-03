@@ -11,7 +11,8 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
-    MaxTLAction, MaxTLDisplacement
+    MaxTLAction,
+    MaxTLDisplacement,
     )
 from viperleed.calc.classes.rparams.defaults import NO_VALUE
 

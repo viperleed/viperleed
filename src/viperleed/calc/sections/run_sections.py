@@ -40,7 +40,7 @@ from viperleed.calc.sections.cleanup import cleanup, move_oldruns
 
 
 logger = logging.getLogger(__name__)
-R_MAX = np.inf
+R_MAX = float('inf')
 
 
 def run_section(index, sl, rp):
@@ -336,12 +336,16 @@ def section_loop(rp, sl):
                     dp.rpars.search_index = rp.search_index
                 stop_search = _should_stop_search(rp, exceeds_tl_limit)
                 if len(rp.disp_blocks) > rp.search_index and not stop_search:
-                    # there are more disp_blocks to do; append another search
+                    # There are more disp_blocks to do; append another search
                     rp.resetSearchConv()
                     for dp in rp.domainParams:
                         dp.rpars.resetSearchConv()
-                    if (exceeds_tl_limit
-                            and rp.MAX_TL_DISPLACEMENT.action == 'refcalc'):
+                    _action = rp.MAX_TL_DISPLACEMENT.action
+                    should_inject_refcalc = (
+                        exceeds_tl_limit
+                        and _action is MaxTLAction.refcalc
+                        )
+                    if should_inject_refcalc:
                         logger.info(
                             'Displacements exceed MAX_TL_DISPLACEMENT. '
                             'A new reference calculation will be performed '
@@ -402,32 +406,49 @@ def _check_exceeds_tl_limit(rpars, slab):
 
 
 def _should_stop_search(rpars, exceeds_tl_limit):
-    """Check if MAX_TL_DISPLACEMENT is triggered, and if search should stop
-    based on the defined `action`."""
-    if not (len(rpars.disp_blocks) > rpars.search_index and exceeds_tl_limit):
+    """Return whether the current search segment should be interrupted.
+    
+    Parameters
+    ----------
+    rpars : Rparams
+        The current parameters.
+    exceeds_tl_limt : bool
+        Whether any atom was displaced too much from its refcalc state.
+
+    Returns
+    -------
+    bool
+        True if MAX_TL_DISPLACEMENT was triggered and if its `.action`
+        requires the search to be interrupted.
+    """
+    search_done = len(rpars.disp_blocks) <= rpars.search_index
+    if search_done or not exceeds_tl_limit:
         return False
-    if rpars.MAX_TL_DISPLACEMENT.action == 'ignore':
+    action = rpars.MAX_TL_DISPLACEMENT.action
+    if action is MaxTLAction.IGNORE:
         logger.warning(
             'Displacements exceed MAX_TL_DISPLACEMENT, but actions are '
             'disabled. Calculation will proceed, please check results '
             'carefully.'
             )
         return False
-    if rpars.MAX_TL_DISPLACEMENT.action == 'stop':
+    if action is MaxTLAction.STOP:
         logger.info(
             'Displacements exceed MAX_TL_DISPLACEMENT. Search will stop.'
             )
         return True
-    if rpars.MAX_TL_DISPLACEMENT.action == 'refcalc':
+    if action is MaxTLAction.REFCALC:
         maxtime = rpars.MAX_TL_DISPLACEMENT.max_duration
-        if (maxtime != NO_VALUE
-                and rpars.last_refcalc_time is not None):
-            if rpars.last_refcalc_time > maxtime:
-                logger.info(
-                    'Displacements exceed '
-                    'MAX_TL_DISPLACEMENT, and reference '
-                    'calculations take longer than the '
-                    'specified limit time. Search will stop.'
-                    )
-                return True
+        refcalc_was_slow = (
+            maxtime is not NO_VALUE
+            and rpars.last_refcalc_time is not None
+            and rpars.last_refcalc_time > maxtime
+            )
+        if refcalc_was_slow:
+            logger.info(
+                'Displacements exceed MAX_TL_DISPLACEMENT, and reference '
+                'calculations take longer than the specified limit time. '
+                'Search will stop.'
+                )
+            return True
     return False
