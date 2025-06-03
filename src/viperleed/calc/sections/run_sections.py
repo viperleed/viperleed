@@ -345,7 +345,7 @@ def section_loop(rp, sl):
                     _action = rp.MAX_TL_DISPLACEMENT.action
                     should_inject_refcalc = (
                         exceeds_tl_limit
-                        and _action is MaxTLAction.refcalc
+                        and _action is MaxTLAction.REFCALC
                         )
                     if should_inject_refcalc:
                         logger.info(
