@@ -823,7 +823,7 @@ class TestMaxTLDisplacement(_TestInterpretBase):
         'negative, named': ('-1', 'vib', err.ParameterRangeError),
         'refcalc, not float': ('refcalc a', 'action',
                                err.ParameterParseError),
-        'refcalc, negative': ('refcalc -1', 'action', err.ParameterRangeError),
+        'refcalc, negative': ('refcalc -1', 'action', err.ParameterValueError),
         }
     valid = {'one float': ('0.5', '', MaxTLDisplacement(0.5)),
              'two floats': ('0.5 1.0', '', MaxTLDisplacement(0.5, 1.0)),

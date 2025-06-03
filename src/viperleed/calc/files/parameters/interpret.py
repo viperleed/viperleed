@@ -950,6 +950,8 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             If numeric values cannot be converted to float.
         ParameterRangeError
             If any of the numeric values are negative.
+        ParameterValueError
+            If the `action` is not recognized.
         ParameterParseError
             If the first value for the 'action' flag is 'continue' and the
             remaining values cannot be parsed.
@@ -981,12 +983,10 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterParseError(parameter=param)
         try:
             self.rpars.MAX_TL_DISPLACEMENT.assign_action(*values)
-        except KeyError as exc:
-            raise ParameterValueError(param, message=str(exc)) from exc
         except TypeError as exc:
             raise ParameterParseError(param, message=str(exc)) from exc
         except ValueError as exc:
-            raise ParameterRangeError(param, message=str(exc)) from exc
+            raise ParameterValueError(param, message=str(exc)) from exc
 
     def _interpret_max_tl_displacement_named_geo_vib(self,
                                                      param,
