@@ -58,6 +58,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
                 continue
             setattr(self, attr_name,
                     self._check_float_value(attr, extra_msg=f'{attr_name} '))
+        self.action = self._typecast_action(self.action)
 
     @staticmethod
     def _check_float_value(value, extra_msg=''):
@@ -98,10 +99,7 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
         -------
         None.
         """
-        try:
-            self.action = MaxTLAction(action)
-        except ValueError:
-            raise ValueError(f'Unkonwn action {action!r}.') from None
+        self.action = self._typecast_action(action)
         if self.action is MaxTLAction.REFCALC and not options:
             # disable checking for reference calculation time
             self.max_duration = NO_VALUE
@@ -156,3 +154,10 @@ class MaxTLDisplacement(SpecialParameter, param='MAX_TL_DISPLACEMENT'):
                 )
             return True
         return False
+
+    def _typecast_action(self, action):
+        """Takes an action as str or MaxTLAction, returns it as MaxTLAction."""
+        try:
+            return MaxTLAction(action)
+        except ValueError:
+            raise ValueError(f'Unkonwn action {action!r}.') from None
