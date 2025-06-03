@@ -24,10 +24,8 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
 from viperleed.gui.measure.classes.abc import HardwareABC
-from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.gui.measure.hardwarebase import emit_error
 
 
 SERIAL_ERROR_MESSAGES = {
@@ -129,20 +127,17 @@ class SerialABC(HardwareABC):
         # settings from the controller that instantiates it.
         super().__init__(settings=settings, **kwargs)
 
-        self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(self)
-        self.__init_err_timer.setSingleShot(True)
-
-        self.error_occurred.connect(self.__on_init_errors)
-        self.__init_err_timer.timeout.connect(self.__report_init_errors)
-
         self.__port = qts.QSerialPort(port_name, parent=self)
 
         self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
 
-        self.set_settings(self._settings_to_load)
+        # Keeps track of whether the serial port is open or not.
+        self._open = False
+
+        with self.errors_delayed():
+            self.set_settings(self._settings_to_load)
 
         # .unprocessed_messages is a list of all the messages
         # that came on the serial line and that have not been
@@ -166,12 +161,6 @@ class SerialABC(HardwareABC):
         # after a .send_message()
         self.__got_unacceptable_response = False
 
-        self.__open = False
-
-        if self.__init_errors:
-            self.__init_err_timer.start(20)
-        self.error_occurred.disconnect(self.__on_init_errors)
-
         self.__move_to_thread_requested.connect(self.__on_moved_to_thread)
 
     @property
@@ -190,7 +179,20 @@ class SerialABC(HardwareABC):
     @property
     def is_open(self):
         """Return whether this port is currently open."""
-        return self.__open
+        return self._open
+
+    def _set_is_open(self, open_status):
+        """Set whether this port is currently open.
+
+        Emits
+        -----
+        connection_changed
+            If the connection status of the port has changed.
+        """
+        was_open = self._open
+        self._open = open_status
+        if open_status != was_open:
+            self.connection_changed.emit(open_status)
 
     @property
     def msg_markers(self):
@@ -711,8 +713,8 @@ class SerialABC(HardwareABC):
         -------
         None.
         """
-        if not self.__open:
-            emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
+        if not self.is_open:
+            self.emit_error(ExtraSerialErrors.PORT_NOT_OPEN)
             return
 
         all_messages = (message, *other_messages)
@@ -749,12 +751,12 @@ class SerialABC(HardwareABC):
         if self.is_open:
             return
         if not self.port.open(self.port.ReadWrite):
-            emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
+            self.emit_error(ExtraSerialErrors.PORT_NOT_OPEN)
             self.__print_port_config()
-            self.__open = False
+            self._set_is_open(False)
             return
 
-        self.__open = True
+        self._set_is_open(True)
         self.__set_up_serial_port()
 
         self.port.readyRead.connect(self.__on_bytes_ready_to_read)
@@ -765,7 +767,6 @@ class SerialABC(HardwareABC):
         """Disconnect from connected serial port."""
         self.clear_errors()
         self.port.close()
-        self.__open = False
         try:
             self.port.readyRead.disconnect(self.__on_bytes_ready_to_read)
         except TypeError:
@@ -773,6 +774,7 @@ class SerialABC(HardwareABC):
             pass
         else:
             self.port.errorOccurred.disconnect(self.__on_serial_error)
+        self._set_is_open(False)
 
     def __check_and_preprocess_message(self, message):
         """Check integrity of message.
@@ -808,19 +810,19 @@ class SerialABC(HardwareABC):
             is a MSG_START in self.settings.
         """
         if not message:
-            emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
+            self.emit_error(ExtraSerialErrors.NO_MESSAGE_ERROR)
             return bytearray()
 
         start_marker = self.msg_markers['START']
         if start_marker is not None:
             # Protocol uses a start marker
             if message[:1] != start_marker:
-                emit_error(self, ExtraSerialErrors.NO_START_MARKER_ERROR)
+                self.emit_error(ExtraSerialErrors.NO_START_MARKER_ERROR)
                 return bytearray()
             message = message[1:]
 
         if not message:
-            emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
+            self.emit_error(ExtraSerialErrors.NO_MESSAGE_ERROR)
             return bytearray()
         return bytearray(message)
 
@@ -899,7 +901,7 @@ class SerialABC(HardwareABC):
         """
         if error_code == qts.QSerialPort.NoError:
             return
-        emit_error(self, (error_code, SERIAL_ERROR_MESSAGES[error_code]),
+        self.emit_error((error_code, SERIAL_ERROR_MESSAGES[error_code]),
                    self.port_name)
         self.clear_errors()
 
@@ -917,7 +919,7 @@ class SerialABC(HardwareABC):
             Always
         """
         timeout = self.settings.getint('serial_port_settings', 'timeout')
-        emit_error(self, ExtraSerialErrors.TIMEOUT_ERROR,
+        self.emit_error(ExtraSerialErrors.TIMEOUT_ERROR,
                    round(timeout/1000, 1))
 
     def __set_up_serial_port(self):
@@ -988,16 +990,3 @@ class SerialABC(HardwareABC):
             f"stopBits: {self.port.stopBits()}",
             sep='\n', end='\n\n'
             )
-
-    @qtc.pyqtSlot(tuple)
-    def __on_init_errors(self, err):
-        """Collect initialization errors to report later."""
-        self.__init_errors.append(err)
-
-    @qtc.pyqtSlot()
-    def __report_init_errors(self):
-        """Emit error_occurred for each initialization error."""
-        for error in self.__init_errors:
-            self.error_occurred.emit(error)
-        self.__init_errors = []
-

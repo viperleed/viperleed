@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-08'
 __license__ = 'GPLv3+'
 
+from contextlib import contextmanager
 import enum
 import inspect
 from pathlib import Path
@@ -210,6 +211,24 @@ def device_name_re(name):
     return re.compile('|'.join(rf'^\s*{p}\s*$' for p in _patterns))
 
 
+@contextmanager
+def disconnected(slot, signal, *more_signals, type=None):
+    """Temporarily disconnect signals from a slot."""
+    reconnect = []
+    for signal in (signal, *more_signals):
+        try:
+            signal.disconnect(slot)
+        except TypeError:  # Not connected
+            continue
+        reconnect.append(signal)
+
+    try:
+        yield
+    finally:
+        for signal in reconnect:
+            safe_connect(signal, slot, type=type)
+
+
 def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     """Return a device config when it was not found in the original path.
 
@@ -406,6 +425,30 @@ def get_devices(package):
             for device in dev_list:
                 devices[device.unique_name] = (cls, device)
     return devices
+
+
+def make_device(settings_file, device_cls, settings_info, **kwargs):
+    """Return an instance of `device_cls`.
+
+    Parameters
+    ----------
+    settings_file : dict or ConfigParser or str or Path or ViPErLEEDSettings
+        The device settings.
+    device_cls : type
+        The class of the device.
+    settings_info : SettingsInfo
+        The SettingsInfo necessary to determine the settings.
+    **kwargs : object
+        Keyword arguments passed to `device_cls`.
+
+    Returns
+    -------
+    device : DeviceABC
+        An instance of an implemented DeviceABC subclass object.
+    """
+    if 'address' in settings_info.more:
+        kwargs['address'] = settings_info.more['address']
+    return device_cls(settings=settings_file, **kwargs)
 
 
 def safe_connect(signal, slot, **kwargs):
