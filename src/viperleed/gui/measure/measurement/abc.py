@@ -1755,7 +1755,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             except OSError:
                 pass
 
-    def _step_profile_from_strings(self, profile):
+    def _step_profile_from_strings(self, profile):                              # TODO: Warn for .ini files created before 23/05/2025.
         """Return a tuple of energies and times from strings."""
         delta = self.current_energy - self._previous_energy
         if abs(delta) < 1e-4:
@@ -1763,7 +1763,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         energies_times = [0]*len(profile)
         for i, fraction in enumerate(profile[::2]):
-            energies_times[2*i] = float(fraction)*delta + self.current_energy
+            # We shift by -1 here in order to display to the user that
+            # the 'current_energy' (the energy before the energy step)
+            # is equivalent to a step fraction of 0 and the next energy
+            # is equivalent to 1. We have to do this as the
+            # current_energy is already incremented to the next energy.
+            this_delta = (float(fraction) - 1) * delta
+            energies_times[2*i] = this_delta + self.current_energy
         for i, time_ in enumerate(profile[1::2]):
             time_ = int(time_)
             if time_ < 0:

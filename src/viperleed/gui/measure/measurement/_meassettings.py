@@ -566,7 +566,9 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
                 f'of "{DELTA_E_NAME}". Number of steps cannot exceed '
                 f'{MAX_NUM_STEPS}. Any value is acceptable. Zero is '
                 'equivalent to the current energy and one to the next '
-                'energy.')
+                'energy. A fraction of one does not have to be '
+                'explicitly included as the last step as this is added '
+                'automatically with the settle time.')
         layout.addWidget(FieldInfo(info, size=size))
         duration_label = qtw.QLabel()
         duration_label.setText('Duration')
