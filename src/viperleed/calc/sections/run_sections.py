@@ -20,6 +20,9 @@ import shutil
 
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.classes.rparams.defaults import NO_VALUE
+from viperleed.calc.classes.rparams.special.max_tl_displacement import (
+    MaxTLAction,
+    )
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
@@ -407,7 +410,7 @@ def _check_exceeds_tl_limit(rpars, slab):
 
 def _should_stop_search(rpars, exceeds_tl_limit):
     """Return whether the current search segment should be interrupted.
-    
+
     Parameters
     ----------
     rpars : Rparams
