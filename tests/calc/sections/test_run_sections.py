@@ -13,6 +13,9 @@ from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.domain_params import DomainParameters
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.rparams.special.max_tl_displacement import (
+    MaxTLAction,
+    )
 from viperleed.calc.sections.run_sections import section_loop
 
 
@@ -178,20 +181,21 @@ class TestSectionLoop:
         }
 
     max_disp_runs = {   # name: (RUN, actions, which, expect_code, expect)
-        'default': ([0, 1, 2, 3], {0: [set_multi_search]}, 'refcalc',
+        'default': ([0, 1, 2, 3], {0: [set_multi_search]}, MaxTLAction.REFCALC,
                     [0, 1, 11, 2, 3, 31, 12, 1, 11, 2, 3, 31, 12]),
-        'ignore': ([0, 1, 2, 3], {0: [set_multi_search]}, 'ignore',
+        'ignore': ([0, 1, 2, 3], {0: [set_multi_search]}, MaxTLAction.IGNORE,
                    [0, 1, 11, 2, 3, 31, 12, 2, 3, 31, 12]),
-        'stop': ([0, 1, 2, 3], {0: [set_multi_search]}, 'stop',
+        'stop': ([0, 1, 2, 3], {0: [set_multi_search]}, MaxTLAction.STOP,
                  [0, 1, 11, 2, 3, 31, 12]),
         'timeout': ([0, 1, 2, 3], {
             0: [set_multi_search],
             1: [lambda rp: setattr(rp, 'last_refcalc_time', 1e5)]
-                }, 'refcalc', [0, 1, 11, 2, 3, 31, 12]),
+                }, MaxTLAction.REFCALC, [0, 1, 11, 2, 3, 31, 12]),
         'known time': ([0, 1, 2, 3], {
             0: [set_multi_search],
             1: [lambda rp: setattr(rp, 'last_refcalc_time', 1)]
-                }, 'refcalc', [0, 1, 11, 2, 3, 31, 12, 1, 11, 2, 3, 31, 12]),
+                }, MaxTLAction.REFCALC, [0, 1, 11, 2, 3, 31, 12,
+                                         1, 11, 2, 3, 31, 12]),
         }
 
     stopped_runs = {  # name: (RUN, actions, expect_code, expect_history)
