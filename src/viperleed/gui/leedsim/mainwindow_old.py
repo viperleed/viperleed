@@ -248,7 +248,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                 params[key] = str(val)
             elif key in ('bulkGroup', 'surfGroup'):
                 params[key] = val.group
-            elif key == 'bulk3Dsym' and val is None:
+            elif key == 'bulk3Dsym' and not val:
                 del params[key]
         # now params contains correctly formatted strings
         paramsTxt = '\n'.join(f'{k}={v}' for k, v in params.items())
