@@ -17,8 +17,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed.gui.widgetslib import AllGUIFonts
-from viperleed.gui.widgetslib import get_all_children_widgets
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.lib import get_all_children_widgets
 
 
 class ExportCSVDialog(qtw.QDialog):

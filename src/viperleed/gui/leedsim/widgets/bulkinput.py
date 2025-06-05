@@ -15,7 +15,7 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed.gui.leedsim.dialogs.dialogbulk3dsym import Bulk3DSymDialog
 from viperleed.gui.leedsim.widgets.latticeinput import LatticeInput
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.lib import AllGUIFonts
 
 from viperleed.gui import decorators as dev_
 
