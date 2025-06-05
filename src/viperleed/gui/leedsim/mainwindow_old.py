@@ -87,7 +87,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         # File -> New
         newF = qtw.QAction('&New...', self)
         newF.setShortcut('Ctrl+N')
-        newF.setStatusTip('New/Edit experiment-symmetry')
+        newF.setStatusTip('New/Edit experiment symmetry')
         newF.triggered.connect(self.fileNewDialog)
 
         # File -> Open
@@ -164,7 +164,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
 
         saveF = qtw.QAction(
             self.style().standardIcon(qtw.QStyle.SP_DialogSaveButton),
-            'Save experiment-symmetry  to file', self)
+            'Save experiment-symmetry to file', self)
         saveF.setStatusTip(
             'Save current experiment-symmetry to file (Ctrl+S)'
             )
