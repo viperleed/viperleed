@@ -45,6 +45,18 @@ def fixture_patched_folder(mocker):
 class TestHistoryExplorer:
     """Tests for the HistoryExplorer class (except collection)."""
 
+    @fixture(name='mock_last_and_siblings')
+    def fixture_mock_last_folder_and_siblings(self, history, mocker):
+        """Replace the last_folder_and_siblings property."""
+        mock_folders = [mocker.MagicMock() for _ in range(5)]
+        for i, folder in enumerate(mock_folders):
+            folder.path.name = i
+        mock_last = mocker.patch.object(type(history),
+                                        'last_folder_and_siblings',
+                                        new_callable=mocker.PropertyMock)
+        mock_last.return_value = mock_folders
+        return mock_folders
+
     def test_init(self, history, mock_path):
         """Test initialization of HistoryExplorer."""
         # pylint: disable=protected-access                # OK in tests
@@ -244,21 +256,29 @@ class TestHistoryExplorer:
                 assert parent_hash not in maps['main_hash_to_folders']
                 assert maps['hash_to_parent'][folder_hash] is folder
 
-    def test_discard_last(self, history, mocker):
+    def test_discard_last(self,
+                          history,
+                          mock_last_and_siblings,
+                          mocker,
+                          caplog):
         """Test the discard_most_recent_run method."""
         rmtree = mocker.patch('shutil.rmtree')
-        fake_paths = tuple(range(5))
-        mocker.patch.object(history,
-                            'list_paths_to_discard',
-                            return_value=fake_paths)
-        history.discard_most_recent_run()
-        rmtree.assert_has_calls(mocker.call(p) for p in fake_paths)
+        update_subfolders = mocker.patch.object(
+            history,
+            'collect_subfolders',
+            wraps=history.collect_subfolders
+            )
+        caplog.set_level(0)  # All messages
+        discarded = history.discard_most_recent_run()
+        rmtree.assert_has_calls(mocker.call(f.path)
+                                for f in mock_last_and_siblings)
+        update_subfolders.assert_called_once()
+        assert discarded == mock_last_and_siblings
+        assert not caplog.text
 
-    def test_discard_last_raises(self, history, mocker):
+    @pytest.mark.usefixtures('mock_last_and_siblings')
+    def test_discard_last_raises(self, history):
         """Check that exceptions while removing folders are propagated."""
-        mocker.patch.object(history,
-                            'list_paths_to_discard',
-                            return_value=(history.path/'some_subfolder',))
         with raises_exception('shutil.rmtree', OSError):
             history.discard_most_recent_run()
 
@@ -344,6 +364,7 @@ class TestHistoryExplorer:
         'fix': 'prepare_info_file',
         'find_new_history_directory(None, None)': None,
         'register_folder': None,
+        'subfolder_from_hash(None)': None,
         '_backup_info_file': 'prepare_info_file',
         '_find_name_for_new_history_subfolder(None, None)': None,
         }
@@ -510,6 +531,21 @@ class TestHistoryExplorerCollection:
         history._maps['jobs_for_tensor'] = {1: {1, 2}, 2: {3}}
         expected_result = {1: 2, 2: 3}
         assert history.max_run_per_tensor == expected_result
+
+    def test_subfolder_from_hash_existing(self, history, mocker):
+        """Check returning of an existing subfolder."""
+        mock_folder = mocker.MagicMock()
+        mock_hash = 'mock_hash'
+        # pylint: disable-next=protected-access           # OK in tests
+        history._maps['hash_to_parent'] = {mock_hash: mock_folder}
+        assert history.subfolder_from_hash(mock_hash) is mock_folder
+
+    @parametrize(hash_=({}, 'non-existing-hash'))
+    def test_subfolder_from_hash_not_there(self, hash_, history):
+        """Check returning of an existing subfolder."""
+        # pylint: disable-next=protected-access           # OK in tests
+        history._maps['hash_to_parent'] = {}
+        assert history.subfolder_from_hash(hash_) is None
 
     def test_update_maps(self, history, mocker):
         """Test _update_maps method."""

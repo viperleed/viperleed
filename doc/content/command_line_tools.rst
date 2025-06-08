@@ -81,9 +81,13 @@ tool for running |LEED-IV| calculations.
     via the ``--work`` argument. Now calculations run in the path given as
     the ``--work`` argument.
 
+.. versionadded:: 0.13.0
+    The ``-y`` command-line argument.
+
 .. versionremoved:: 0.13.0
-    The ``--no-cont`` argument. The same effect can be obtained by
-    manually running :ref:`bookkeeper` after |calc|.
+    The ``--no-cont`` argument. The same effect can be obtained by manually
+    running :ref:`bookkeeper` in ``--discard`` (or ``--discard-full``) mode
+    after |calc|.
 
 .. versionremoved:: 0.13.0
     The ``--job-name``, ``--history-name``, and ``--work-history-name``

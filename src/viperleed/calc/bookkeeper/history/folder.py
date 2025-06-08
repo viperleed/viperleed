@@ -184,6 +184,54 @@ class HistoryFolder(IncompleteHistoryFolder):
             fix_actions.add(FolderFixAction.ADD_METADATA)
         return fix_actions
 
+    def mark_as_domains_main(self, domain_paths, domain_folders):
+        """Register this folder as the main of a DOMAINS calculation.
+
+        Parameters
+        ----------
+        domain_paths : Sequence
+            Paths to the root domain folders that should be registered.
+        domain_folders : Sequence
+            The history folders of the domains to be registered. Items
+            should be HistoryFolder instances or None. Only those that
+            are non-None are registered.
+
+        Raises
+        ------
+        ValueError
+            If `domain_paths` and `domain_folders` have different
+            lengths.
+        """
+        if len(domain_paths) != len(domain_folders):
+            raise ValueError(
+                f'Inconsistent number of paths ({len(domain_paths)}) '
+                f'and folders ({len(domain_folders)}).'
+                )
+        # Keep only folders that are non-None
+        domains = ((str(p), f.hash_)
+                   for (p, f) in zip(domain_paths, domain_folders)
+                   if f)
+        # pylint: disable-next=no-member  # Inference
+        self.metadata.mark_as_domains_main(domains)
+
+    def mark_as_domain(self, main_path, main_folder):
+        """Register this folder as a subdomain of a main one.
+
+        Parameters
+        ----------
+        main_path : Pathlike
+            Absolute path to the root folder of the main calculation.
+        main_folder : HistoryFolder
+            The history subfolder of the main calculation that should
+            be used for marking this one.
+
+        Returns
+        -------
+        None.
+        """
+        # pylint: disable-next=no-member  # Inference
+        self.metadata.mark_as_domain((str(main_path), main_folder.hash_))
+
     def _analyze_path(self):
         """Collect information from the history folder at self.path."""
         if not self.path.is_dir():

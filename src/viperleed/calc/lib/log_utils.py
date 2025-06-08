@@ -132,7 +132,7 @@ def prepare_calc_logger(logger, file_name, with_console):
     """Prepare logger to be used with calc.run."""
     logger.setLevel(logging.INFO)
     formatter = CalcLogFormatter()
-    file_handler = logging.FileHandler(file_name, mode='w')
+    file_handler = logging.FileHandler(file_name, mode='w', encoding='utf-8')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     if not with_console:

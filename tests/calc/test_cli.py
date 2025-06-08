@@ -47,6 +47,7 @@ class TestCalcCliCall:
                     ),
                 'manifest': mocker.patch(
                     f'{_MODULE}._copy_files_from_manifest',
+                    return_value=mocker.MagicMock(),
                     ),
                 'multiprocess': mocker.patch('multiprocessing.freeze_support'),
                 'rmtree': mocker.patch('shutil.rmtree'),
@@ -93,6 +94,23 @@ class TestCalcCliCall:
         assert bool(result)    # Should fake an error condition
         mocks['rmtree'].assert_not_called()  # work should stay
 
+    def test_forwards_y_cli_arg(self, tmp_path, mock_implementation, mocker):
+        """Check forwarding of -y CLI argument to bookkeeper."""
+        cli = ViPErLEEDCalcCLI()
+        mocks = mock_implementation(exit_code=0)
+        with execute_in_dir(tmp_path):
+            error = cli(['-y'])
+        assert not error
+        # Check bookkeeper calls
+        bookkeeper = mocks['bookie'].return_value
+        assert bookkeeper.run.mock_calls == [
+            mocker.call(mode=BookkeeperMode.CLEAR,
+                        requires_user_confirmation=False),
+            mocker.call(mode=BookkeeperMode.ARCHIVE,
+                        requires_user_confirmation=False,
+                        domains=mocks['manifest'].return_value),
+            ]
+
     def test_keep_workdir(self, tmp_path, mock_implementation):
         """Check that work is not deleted if requested."""
         cli = ViPErLEEDCalcCLI()
@@ -103,7 +121,7 @@ class TestCalcCliCall:
         mocks['rmtree'].assert_not_called()
 
     def test_success(self, tmp_path, mock_implementation, mocker):
-        """Check the successful call to ViPErLEEDCalcCLI."""
+        """Check the successful call to ViPErLEEDCalcCLI with default args."""
         cli = ViPErLEEDCalcCLI()
         mocks = mock_implementation(exit_code=0)
         with execute_in_dir(tmp_path):
@@ -114,8 +132,11 @@ class TestCalcCliCall:
         mocks['bookie'].assert_called_once()  # Made instance
         bookkeeper = mocks['bookie'].return_value
         assert bookkeeper.run.mock_calls == [
-            mocker.call(mode=BookkeeperMode.CLEAR),
-            mocker.call(mode=BookkeeperMode.ARCHIVE),
+            mocker.call(mode=BookkeeperMode.CLEAR,
+                        requires_user_confirmation=True),
+            mocker.call(mode=BookkeeperMode.ARCHIVE,
+                        requires_user_confirmation=True,
+                        domains=mocks['manifest'].return_value),
             ]
         # As well as calls to other functions. Don't bother specifying
         # the arguments for those functions that require the parsed
@@ -210,11 +231,16 @@ two/domain_file
         dest = tmp_path/'dest'
         dest.mkdir()
         with execute_in_dir(tmp_path):
-            _copy_files_from_manifest(dest)
+            domains = _copy_files_from_manifest(dest)
         expect_copy, expect_stay = manifest
         copied = filesystem_to_dict(dest)
         assert copied == expect_copy
         assert not any(s in copied for s in expect_stay)
+
+        expect_domains = [dest/f
+                          for f, contents in copied.items()
+                          if contents and isinstance(contents, dict)]
+        assert domains == expect_domains
 
     def test_copy_fails(self, manifest, tmp_path, capsys):
         """Check complaints are printed if copying resources fails."""

@@ -603,7 +603,6 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
             pass
     close_figures(plt, fig)
 
-
     # Output for Search-report.csv
     if csv_name is None:
         # No CSV output requested
@@ -618,4 +617,3 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf",
         delimiter=',',
         header=headers,
         )
-    logger.info(f'Written to {csv_name}.')

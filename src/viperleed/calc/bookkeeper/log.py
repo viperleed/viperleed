@@ -50,7 +50,10 @@ def add_bookkeeper_logfile(at_path):
                            logging.FileHandler,
                            baseFilename=str(bookkeeper_log))
     if not any(has_log):
-        LOGGER.addHandler(logging.FileHandler(bookkeeper_log, mode='a'))
+        log_handler = logging.FileHandler(bookkeeper_log,
+                                          mode='a',
+                                          encoding='utf-8')
+        LOGGER.addHandler(log_handler)
 
 
 def ensure_has_stream_handler():
@@ -59,6 +62,17 @@ def ensure_has_stream_handler():
         LOGGER.addHandler(logging.StreamHandler())
     LOGGER.setLevel(logging.INFO)
     LOGGER.propagate = True
+
+
+def remove_bookkeeper_logfile(at_path):
+    """Remove the FileHandler(s) `at_path` for LOGGER, if any."""
+    handlers = get_handlers(LOGGER,
+                            logging.FileHandler,
+                            baseFilename=str(at_path/BOOKIE_LOGFILE))
+    for handler in handlers:
+        handler.flush()
+        LOGGER.removeHandler(handler)
+        handler.close()
 
 
 class LogFiles:
@@ -165,8 +179,12 @@ class LogFiles:
 
         timestamp = most_recent_log.name[-17:-4]
         last_log_lines = ()
+        open_kwargs = {
+            'encoding': 'utf-8',
+            'errors': 'replace',
+            }
         try:  # pylint: disable=too-many-try-statements
-            with most_recent_log.open('r', encoding='utf-8') as log_file:
+            with most_recent_log.open('r', **open_kwargs) as log_file:
                 last_log_lines = tuple(log_file.readlines())
         except OSError:
             pass

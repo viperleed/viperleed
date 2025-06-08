@@ -17,6 +17,10 @@ import logging
 import os
 import shutil
 
+from viperleed.calc.classes.rparams.defaults import NO_VALUE
+from viperleed.calc.classes.rparams.special.max_tl_displacement import (
+    MaxTLAction,
+    )
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
@@ -38,6 +42,7 @@ from viperleed.calc.sections.cleanup import cleanup, move_oldruns
 
 
 logger = logging.getLogger(__name__)
+R_MAX = float('inf')
 
 
 def run_section(index, sl, rp):
@@ -224,6 +229,8 @@ def run_section(index, sl, rp):
         f'Finishing section at {DateTimeFormat.TIME.now()}. '
         f'Section took {since_section_started.how_long(as_string=True)}.'
         )
+    if index == 1:
+        rp.last_refcalc_time = since_section_started.how_long()
 
 
 def section_loop(rp, sl):
@@ -251,8 +258,7 @@ def section_loop(rp, sl):
     state_recorder = CalcStateRecorder()
 
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
-    searchLoopR = None
-    searchLoopLevel = 0
+    search_loop_R = {}   # dict of R for each loop
     initHalt = False
     while rp.RUN:
         try:
@@ -300,37 +306,72 @@ def section_loop(rp, sl):
                 if next_section != 12:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
             elif sec == 12 and not rp.STOP:
+                # check for max. displacement condition:
+                exceeds_tl_limit = _check_exceeds_tl_limit(rp, sl)
+                # check for loops:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
-                if loops:
-                    if searchLoopLevel == 0 or searchLoopR > rp.last_R:
-                        searchLoopR = rp.last_R
-                        searchLoopLevel = len(loops)
-                    elif searchLoopR <= rp.last_R:
-                        searchLoopLevel -= 1
-                    if searchLoopLevel != 0:
-                        rp.search_index = sorted(loops)[searchLoopLevel-1][0]
+                for loop in sorted(loops, reverse=True):
+                    # At least one loop ends at the index we're at now.
+                    # Starting at the deepest loop, see if there was any
+                    # improvement since it has last been checked. If so,
+                    # repeat it; if not, go one loop out and keep checking.
+                    # Automatically repeat deepest loop if exceeds_tl_limit.
+                    improved = rp.last_R < search_loop_R.get(loop, R_MAX)
+                    if improved or exceeds_tl_limit:
+                        # Loop back
+                        search_loop_R[loop] = rp.last_R
+                        rp.search_index = loop[0]
                         logger.info("Search loop: repeating at block "
                                     + rp.disp_blocks[rp.search_index][1])
-                    else:
-                        rp.search_index += 1
+                        break
+                else:
+                    # We arrive here if there were no loops, or no loops have
+                    # improved. Go to next block.
+                    rp.search_index += 1
+                    if loops:
                         o = "Search loop ends."
                         if len(rp.disp_blocks) > rp.search_index:
                             o += (" Continuing at block "
                                   + rp.disp_blocks[rp.search_index][1])
                         logger.info(o)
-                else:
-                    rp.search_index += 1
                 for dp in rp.domainParams:
                     dp.rpars.search_index = rp.search_index
-                if len(rp.disp_blocks) > rp.search_index:
-                    if not rp.domainParams:
-                        sl.restoreOriState()
+                stop_search = _should_stop_search(rp, exceeds_tl_limit)
+                if len(rp.disp_blocks) > rp.search_index and not stop_search:
+                    # There are more disp_blocks to do; append another search
                     rp.resetSearchConv()
                     for dp in rp.domainParams:
-                        dp.slab.restoreOriState()
                         dp.rpars.resetSearchConv()
-                    if rp.RUN[:2] != [2, 3]:
-                        rp.RUN = [2, 3] + rp.RUN
+                    _action = rp.MAX_TL_DISPLACEMENT.action
+                    should_inject_refcalc = (
+                        exceeds_tl_limit
+                        and _action is MaxTLAction.REFCALC
+                        )
+                    if should_inject_refcalc:
+                        logger.info(
+                            'Displacements exceed MAX_TL_DISPLACEMENT. '
+                            'A new reference calculation will be performed '
+                            'before the next search block.'
+                            )
+                        search_loop_R.clear()  # Ignore previous Rs
+                        rp.RUN = [1, 2, 3] + rp.RUN
+                    else:
+                        if rp.RUN[:2] != [2, 3]:
+                            rp.RUN = [2, 3] + rp.RUN
+                        # call restoreOriState *only* if we don't insert a
+                        #  refcalc; otherwise the refcalc would run at the
+                        #  original position!
+                        if not rp.domainParams:
+                            sl.restoreOriState()
+                        for domain in rp.domainParams:
+                            domain.slab.restoreOriState()
+                else:
+                    # The current instance of 'RUN = 2, 3' is done, all blocks
+                    # in DISPLACEMENTS have been handled. However, we may want
+                    # to do another search later (e.g. 'RUN = 1-3 1-3 1').
+                    rp.search_index = 0
+                    for domain in rp.domainParams:
+                        domain.rpars.search_index = 0
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")
@@ -356,6 +397,60 @@ def section_loop(rp, sl):
 
     logger.debug("End of section loop.")
     disp_ranges_str = '\n\t'.join(str(at.disp_ranges) for at in sl)
-    logger.debug(f'Total ranges of all displacements:\n{disp_ranges_str}')
+    logger.log(1, f'Total ranges of all displacements:\n{disp_ranges_str}')     # TODO: Consider deleting, it's not even really true - outside of the loop, this is only the *final* displacement ranges.
     cleanup(rp)
     return 0, state_recorder
+
+
+def _check_exceeds_tl_limit(rpars, slab):
+    """Return whether any atom in `slab` is too far from its refcalc state."""
+    return any(rpars.MAX_TL_DISPLACEMENT.is_too_far(atom) for atom in slab)
+
+
+def _should_stop_search(rpars, exceeds_tl_limit):
+    """Return whether the current search segment should be interrupted.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The current parameters.
+    exceeds_tl_limt : bool
+        Whether any atom was displaced too much from its refcalc state.
+
+    Returns
+    -------
+    bool
+        True if MAX_TL_DISPLACEMENT was triggered and if its `.action`
+        requires the search to be interrupted.
+    """
+    search_done = len(rpars.disp_blocks) <= rpars.search_index
+    if search_done or not exceeds_tl_limit:
+        return False
+    action = rpars.MAX_TL_DISPLACEMENT.action
+    if action is MaxTLAction.IGNORE:
+        logger.warning(
+            'Displacements exceed MAX_TL_DISPLACEMENT, but actions are '
+            'disabled. Calculation will proceed, please check results '
+            'carefully.'
+            )
+        return False
+    if action is MaxTLAction.STOP:
+        logger.info(
+            'Displacements exceed MAX_TL_DISPLACEMENT. Search will stop.'
+            )
+        return True
+    if action is MaxTLAction.REFCALC:
+        maxtime = rpars.MAX_TL_DISPLACEMENT.max_duration
+        refcalc_was_slow = (
+            maxtime is not NO_VALUE
+            and rpars.last_refcalc_time is not None
+            and rpars.last_refcalc_time > maxtime
+            )
+        if refcalc_was_slow:
+            logger.info(
+                'Displacements exceed MAX_TL_DISPLACEMENT, and reference '
+                'calculations take longer than the specified limit time. '
+                'Search will stop.'
+                )
+            return True
+    return False

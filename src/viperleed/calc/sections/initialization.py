@@ -28,10 +28,11 @@ from viperleed.calc.classes.slab import NoVacuumError
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
+from viperleed.calc.constants import DEFAULT_DOMAIN_FOLDER_PREFIX
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
-from viperleed.calc.files import patterninfo
+from viperleed.calc.files import experiment_symmetry
 from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
@@ -221,7 +222,7 @@ def initialization(sl, rp, subdomain=False):
             rp.setHaltingLevel(2)
 
         if not rp.superlattice_defined:
-            ws = writeWoodsNotation(rp.SUPERLATTICE)                   # TODO: replace writeWoodsNotation with guilib functions
+            ws = writeWoodsNotation(rp.SUPERLATTICE)                   # TODO: replace writeWoodsNotation with gui functions
             superlattice = rp.SUPERLATTICE.astype(int)
             if ws:
                 info = f"= {ws}"
@@ -358,7 +359,18 @@ def initialization(sl, rp, subdomain=False):
         raise
 
     if not subdomain:
-        patterninfo.writePatternInfo(sl, rp)
+        try:
+            experiment_symmetry.write(sl, rp)
+        except (OSError, ValueError):
+            # OSError: failed to write file. It's not that critical,
+            # so we can probably go ahead. We logged the problem
+            # already. If it is a more fundamental issue it will
+            # pop up when we try to do more file-system operations.
+            # ValueError: SUPERLATTICE not integer. Probably
+            # we complain already somewhere else. Surely in
+            # iobeams.writeIVBEAMS, likely already earlier
+            # when we work on the slab.
+            pass
 
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:
@@ -743,7 +755,8 @@ def _make_domain_workdir(name, src, calc_started_at, must_use_auto_name):
        and src.is_dir()
        and src.parent == calc_started_at
        )
-    workdir = Path(src.name if should_use_src else f'Domain_{name}')
+    workdir = Path(src.name if should_use_src
+                   else f'{DEFAULT_DOMAIN_FOLDER_PREFIX}{name}')
     try:
         workdir.mkdir()
     except FileExistsError:

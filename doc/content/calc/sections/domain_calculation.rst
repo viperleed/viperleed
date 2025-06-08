@@ -15,7 +15,7 @@ for ViPErLEED changes when domains are present.
 
 .. tip::
     While domain calculations can be run from scratch (i.e., including the
-    :ref:`reference calculations<ref-calc>`) from two sets of input files,
+    :ref:`reference calculations<ref-calc>`) from multiple sets of input files,
     a way to get more user control is to first execute reference calculations
     separately for the different structures, then start the domain calculation
     from the :file:`Tensors_<index>.zip` :ref:`files<tensorszip>` produced
@@ -109,9 +109,14 @@ after the :ref:`super_pos`).
         of a domain calculation.
 
     my_domain_calc/
-    ├── history/           <-- For the main directory
-    │   └── ...
+    ├── history/           <-- Created by bookkeeper, for the main directory
+    │   └── t000.r001_<timestamp>/
+    │       └── ...
     ├── my_domain_1/       <-- Use input files, requires reference calculation
+    │   ├── history/       <-- Created by bookkeeper, for my_domain_1
+    │   │   ├── ...
+    │   │   └── t001.r001_<timestamp>/
+    │   │       └── ...
     │   ├── OUT/           <-- Created by calc at end
     │   │   ├── POSCAR
     │   │   ├── VIBROCC
@@ -121,12 +126,20 @@ after the :ref:`super_pos`).
     │   │   └── ...
     │   ├── Tensors/       <-- Created by calc at end
     │   │   └── Tensors_001.zip
+    │   ├── history.info   <-- Created by bookkeeper, for my_domain_1
     │   ├── PARAMETERS
+    │   ├── PARAMETERS_ori
     │   ├── POSCAR
+    │   ├── POSCAR_ori
     │   ├── VIBROCC
+    │   ├── VIBROCC_ori
     │   └── DISPLACEMENTS  <-- Not used
     │
     ├── my_domain_2/       <-- Use most recent Tensors
+    │   ├── history/       <-- Created by bookkeeper, for my_domain_2
+    │   │   ├── ...
+    │   │   └── t005.r001_<timestamp>/
+    │   │       └── ...
     │   ├── OUT/           <-- Created by calc at end
     │   │   ├── POSCAR
     │   │   ├── VIBROCC
@@ -137,9 +150,13 @@ after the :ref:`super_pos`).
     │   ├── Tensors/
     │   │   ├── ...
     │   │   └── Tensors_005.zip
+    │   ├── history.info   <-- Created by bookkeeper, for my_domain_2
     │   ├── PARAMETERS
+    │   ├── PARAMETERS_ori <-- The unused one
     │   ├── POSCAR
-    │   └── VIBROCC
+    │   ├── POSCAR_ori     <-- The unused one
+    │   ├── VIBROCC
+    │   └── VIBROCC_ori    <-- The unused one
     │
     ├── OUT/
     │   ├── Rfactor_analysis_superpos.pdf
@@ -147,42 +164,64 @@ after the :ref:`super_pos`).
     │   └── ...
     ├── DISPLACEMENTS
     ├── EXPBEAMS.csv
-    ├── history.info       <-- For the main directory
+    ├── history.info       <-- Created by bookkeeper, for the main directory
     ├── PARAMETERS_ori
     ├── PARAMETERS
     └── viperleed-calc-<timestamp>.log
 
 To specify which segments should be run, either use the :ref:`RUN` parameter
-as usual, or set ``RUN = 4`` as a shorthand for a domain calculation. This
-will be interpreted as ``RUN = 2-3`` or ``RUN = 1-3``, depending on whether
-the input files are compatible :file:`Tensors.zip` files or whether a reference
-calculation is needed, respectively. For ``RUN = 4``, reference calculations
-will only be executed for the domains that need them. Specify ``RUN = 1-3``
-explicitly to rerun reference calculations for all domains. However, as
-discussed above, it is recommended to run the reference calculations separately
-beforehand for better control.
+as usual, or set ``RUN = 4 1`` as a shorthand for a domain calculation, plus
+a final reference calculation for the result of the optimization. This will be
+interpreted as ``RUN = 2-3 1`` or ``RUN = 1-3 1``, depending on whether the
+input files are compatible :file:`Tensors.zip` files or whether a reference
+calculation is needed, respectively. For ``RUN = 4``, initial reference
+calculations will only be executed for the domains that need them. Specify
+``RUN = 1-3`` explicitly to rerun reference calculations for all domains.
+However, as discussed above, it is recommended to run the reference
+calculations separately beforehand for better control.
 
 .. warning::
-    The :ref:`bookkeeper<bookkeeper>` functionality is only partially
-    implemented for domain calculations. Only the :file:`history` folder and
-    :file:`history.info` file for the root directory (\ :file:`my_domain_calc`
-    in :numref:`list_domains_outputs`) are handled automatically.
-    The domain-specific subfolders (i.e., :file:`my_domain_1` and
-    :file:`my_domain_2` in :numref:`list_domains_outputs`) will not be
-    processed. To preserve the domain-specific output files, you must manually
-    run the |bookkeeper| in each of the domain subfolders using the command
-    ``viperleed bookkeeper --archive``. Then, to clean the directories
-    and remove old ``*_ori`` and ``*.log`` files, run the |bookkeeper|
-    with the ``--clear`` flag in each of the domain subfolders. If you
-    do not run the |bookkeeper| (in ``--archive`` mode) in the subfolders,
-    the results of a structure optimization (especially, files |POSCAR| and
-    |VIBROCC|) **will be lost**: the next calculation will **start from the**
-    **same inputs as the previous one**.
+    It is important to execute an explicit reference calculation at the end
+    of a multi-domain optimization, especially if additional multi-domain
+    optimizations are planned. In fact, subsequent steps will always start
+    from the most recent :file:`Tensors` of each domain, i.e., the structure
+    at the most recent reference calculation.
+    See also `Issue #337 <https://github.com/viperleed/viperleed/issues/337>`__.
+
+|bookkeeper| will automatically run both in the root directory (i.e.,
+:file:`my_domain_calc`) as well as in all the domain subfolders (i.e.,
+:file:`my_domain_1` and :file:`my_domain_2`), producing for each the usual
+:file:`history` folder and :file:`history.info` file.\ [#fn_history_domains]_
+As for a single-domain calculation, it will also copy the appropriate
+:file:`OUT` files and rename the corresponding inputs with an ``_ori``
+suffix, as displayed in :numref:`list_domains_outputs`. This ensures that each
+following execution of |calc| will use the results from the previous one as
+inputs (as long as each run ends with a reference calculation, see
+`Issue #337 <https://github.com/viperleed/viperleed/issues/337>`__\ ).
+See the :ref:`bookkeeper` page for more details.
+
+.. warning::
+    Notice that, for folder :file:`my_domain_2`, the files that are given an
+    ``_ori`` suffix are those that were already present in the root folder
+    before |calc| started. These are not the exact files that were taken as
+    inputs: the latter were fetched from :file:`Tensors/Tensors_005.zip`.
+    These files are normally the same, as long as a reference calculation
+    was executed in :file:`my_domain_2` as the last step before starting
+    the multi-domain calculation.
+    See also `Issue #337 <https://github.com/viperleed/viperleed/issues/337>`__.
+
 
 .. versionchanged:: 0.13.0
     In earlier versions of |calc|, the results of the calculations from each
     domain in a domain calculation would **not be copied back from the work**
-    **folder**.
+    **folder**. They were thus also not processed by |bookkeeper|.
+
+.. [#fn_history_domains]
+    Since no :file:`Tensors` are created in the root directory of a
+    multi-domain calculation, all :file:`history` subfolders there
+    have names starting with ``t000``. For the same reason, all
+    entries in the main :file:`history.info` file will have a
+    ``# TENSORS    None`` field.
 
 
 The DISPLACEMENTS file for domains
@@ -268,6 +307,9 @@ collected from :file:`domain_2_somewhere_else`.
 
     my_domain_calc/
     ├── Domain_1/          <-- Created by calc at initialization
+    │   ├── history/       <-- Created by bookkeeper, for Domain_1
+    │   │   └── t001.r001_<timestamp>/
+    │   │       └── ...
     │   ├── OUT/           <-- Created by calc at end
     │   │   ├── POSCAR
     │   │   ├── VIBROCC
@@ -277,11 +319,18 @@ collected from :file:`domain_2_somewhere_else`.
     │   │   └── ...
     │   ├── Tensors/       <-- Created by calc at end
     │   │   └── Tensors_001.zip
-    │   ├── PARAMETERS     <-- Copied by calc from /domain_1_somewhere_else/
-    │   ├── POSCAR         <-- Copied by calc from /domain_1_somewhere_else/
-    │   └── VIBROCC        <-- Copied by calc from /domain_1_somewhere_else/
+    │   ├── history.info   <-- Created by bookkeeper, for Domain_1
+    │   ├── PARAMETERS
+    │   ├── PARAMETERS_ori <-- Copied by calc from /domain_1_somewhere_else/
+    │   ├── POSCAR
+    │   ├── POSCAR_ori     <-- Copied by calc from /domain_1_somewhere_else/
+    │   ├── VIBROCC
+    │   └── VIBROCC_ori    <-- Copied by calc from /domain_1_somewhere_else/
     │
     ├── Domain_another/    <-- Created by calc at initialization
+    │   ├── history/       <-- Created by bookkeeper, for Domain_another
+    │   │   └── t005.r001_<timestamp>/
+    │   │       └── ...
     │   ├── OUT/           <-- Created by calc at end
     │   │   ├── POSCAR
     │   │   ├── VIBROCC
@@ -289,9 +338,16 @@ collected from :file:`domain_2_somewhere_else`.
     │   ├── SUPP/          <-- Created by calc at end
     │   │   ├── POSCAR_bulk
     │   │   └── ...
-    │   └── Tensors/       <-- Copied by calc from /domain_2_somewhere_else/
-    │       └── Tensors_005.zip
+    │   ├── Tensors/       <-- Copied by calc from /domain_2_somewhere_else/
+    │   │   └── Tensors_005.zip
+    │   ├── history.info   <-- Created by bookkeeper, for Domain_another
+    │   ├── PARAMETERS
+    │   ├── POSCAR
+    │   └── VIBROCC
     │
+    ├── history/           <-- Created by bookkeeper, for the main directory
+    │   └── t000.r001_<timestamp>/
+    │       └── ...
     ├── OUT/
     │   ├── Rfactor_analysis_superpos.pdf
     │   ├── Search_progress.pdf
@@ -299,6 +355,7 @@ collected from :file:`domain_2_somewhere_else`.
     ├── viperleed-calc-<timestamp>.log
     ├── EXPBEAMS.csv
     ├── DISPLACEMENTS
+    ├── history.info       <-- Created by bookkeeper, for the main directory
     └── PARAMETERS
 
 

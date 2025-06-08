@@ -12,6 +12,7 @@ from itertools import permutations
 import logging
 from operator import attrgetter
 from pathlib import Path
+import shutil
 
 import pytest
 from pytest_cases import fixture
@@ -20,6 +21,7 @@ from pytest_cases import parametrize
 from viperleed.calc.bookkeeper.log import LogFiles
 from viperleed.calc.bookkeeper.log import add_bookkeeper_logfile
 from viperleed.calc.bookkeeper.log import ensure_has_stream_handler
+from viperleed.calc.bookkeeper.log import remove_bookkeeper_logfile
 
 from ...helpers import make_obj_raise
 
@@ -43,6 +45,10 @@ class MockLogger:
     def addHandler(self, handler):       # pylint: disable=invalid-name
         """Add one handler."""
         self.handlers.append(handler)
+
+    def removeHandler(self, handler):    # pylint: disable=invalid-name
+        """Remove one handler."""
+        self.handlers.remove(handler)
 
     def setLevel(self, level):           # pylint: disable=invalid-name
         """set a new logging level."""
@@ -96,6 +102,23 @@ class TestAddBookkeeperLogfile:
         assert not logger.handlers
         add_bookkeeper_logfile(tmp_path)
         assert logger.handlers
+
+
+class TestRemoveBookkeeperLogfile:
+    """Tests for the remove_bookkeeper_logfile function."""
+
+    def test_no_handler(self, logger, tmp_path):
+        """Check that no handler is removed if none exists."""
+        remove_bookkeeper_logfile(tmp_path)
+        assert not logger.handlers
+
+    def test_remove_one(self, logger, tmp_path):
+        """Check removal of a file handler to BOOKIE_LOGFILE."""
+        assert not logger.handlers
+        add_bookkeeper_logfile(tmp_path)
+        assert logger.handlers
+        remove_bookkeeper_logfile(tmp_path)
+        assert not logger.handlers
 
 
 class TestEnsureHasStreamHandler:
@@ -217,6 +240,14 @@ class TestLogFiles:
         logs._infer_calc_version()
         assert logs.version == expect
 
+    def test_infer_calc_version_no_log(self, logs, mocker):
+        """Test the result of the _infer_calc_version method."""
+        mocker.patch.object(logs, '_calc')
+        logs.most_recent = None
+        # pylint: disable-next=protected-access           # OK in tests
+        logs._infer_calc_version()
+        assert logs.version is None
+
     @pytest.mark.xfail(reason=('Bug in Version. Should be fixed '
                                'when merging measurement code.'))
     def test_infer_calc_version_malformed(self, logs, mocker):
@@ -291,6 +322,16 @@ class TestLogFiles:
                 # pylint: disable-next=protected-access   # OK in tests
                 logs._read_most_recent()
             assert logs.most_recent == (expect_time, ())
+
+    def test_most_recent_no_decode_errors(self, logs, data_path, tmp_path):
+        """Ensure Unicode decoding errors are gracefully handled."""
+        utf8_error = tmp_path/'viperleed-calc_123456-123456.log'
+        shutil.copy2(data_path/'bookkeeper'/'utf8_encode_error.log',
+                     utf8_error)
+        # pylint: disable=protected-access                # OK in tests
+        logs._calc = (utf8_error,)
+        logs._read_most_recent()
+        assert logs.most_recent
 
     _attr_needs_update = (
         'files',

@@ -191,7 +191,7 @@ class DetectBulkCLI(ViPErLEEDCLI,
             _no_repeat = False
 
         superlattice = rpars.SUPERLATTICE
-        ws = writeWoodsNotation(superlattice)                                   # TODO: replace writeWoodsNotation with guilib functions
+        ws = writeWoodsNotation(superlattice)                                   # TODO: replace writeWoodsNotation with gui functions
         info = (
             f'= {ws}' if ws
             else 'M = {} {}, {} {}'.format(*superlattice.astype(int).ravel())

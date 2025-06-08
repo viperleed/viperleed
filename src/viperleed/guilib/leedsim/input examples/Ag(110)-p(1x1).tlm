@@ -1,6 +1,0 @@
-eMax=700.0
-SUPERLATTICE=[[1,0],[0,1]]
-surfBasis=[[4.09,0.],[0.,5.784]]
-surfGroup=pmm
-bulkGroup=pmm
-bulk3Dsym=None

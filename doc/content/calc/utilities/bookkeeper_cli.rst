@@ -35,8 +35,12 @@ If no new output is detected, it will simply exit without doing anything.
     The ``--name`` command-line argument was renamed to ``--job-name``.
 
 .. versionadded:: 0.12.0
-    ``--history-name`` and ``--work-history-name`` command-line arguments.
-    These arguments were removed again in v0.13.0.
+    The ``--history-name`` and ``--work-history-name`` command-line
+    arguments. These arguments were removed again in v0.13.0.
+
+.. versionadded:: 0.13.0
+    The ``-a``/``--archive``, ``-c``/``--clear``, ``-df``/``--discard-full``,
+    ``--fix``, and ``-y`` command-line arguments.
 
 .. versionchanged:: 0.13.0
     The behavior of the ``--discard`` mode has been changed. The new equivalent
@@ -46,6 +50,10 @@ If no new output is detected, it will simply exit without doing anything.
     in the root folder. What was previously the "default" mode can now be
     executed with ``--clear``. See the :ref:`bookkeeper<bookkeeper>` page
     for more details.
+
+.. versionchanged:: 0.13.0
+    |bookkeeper| automatically runs (in the same mode) in all domain
+    subfolders when executed in the root of a multi-domain calculation.
 
 .. versionremoved:: 0.13.0
     The ``--job-name``, ``--history-name``, and ``--work-history-name``

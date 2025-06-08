@@ -23,6 +23,7 @@ from viperleed.calc.bookkeeper.constants import STATE_FILES
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.errors import FileOperationFailedError
+from viperleed.calc.bookkeeper.root_explorer import DomainRootExplorer
 from viperleed.calc.bookkeeper.root_explorer import RootExplorer
 from viperleed.calc.bookkeeper.root_explorer import TensorAndDeltaInfo
 from viperleed.calc.constants import DEFAULT_DELTAS
@@ -33,6 +34,7 @@ from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
 from ...helpers import filesystem_from_dict
+from ...helpers import filesystem_to_dict
 from ...helpers import make_obj_raise
 from ...helpers import not_raises
 from ...helpers import raises_exception
@@ -50,6 +52,7 @@ def fixture_explorer(mocker):
     """Return a RootExplorer with a fake bookkeeper."""
     mock_bookkeeper = mocker.MagicMock()
     root_path = Path(_MOCK_ROOT)
+    mocker.patch('pathlib.Path.iterdir', return_value=())
     return RootExplorer(root_path, mock_bookkeeper)
 
 
@@ -165,11 +168,16 @@ class TestRootExplorer:
         mock_logs = mocker.patch(f'{_MODULE}.LogFiles')
         mock_attributes(mock_logs, 'collect')
         mock_attributes(explorer, '_collect_files_to_archive')
+        mock_attributes(explorer, '_find_potential_domain_subfolders')
 
         explorer.collect_info()
 
         explorer.logs.collect.assert_called_once()
-        called = {'_collect_files_to_archive', 'collect_info'}
+        called = {
+            '_collect_files_to_archive',
+            'collect_info',
+            '_find_potential_domain_subfolders',
+            }
         for method in dir(explorer):
             try:
                 called_ok = getattr(explorer, called_or_not(method in called))
@@ -199,6 +207,17 @@ class TestRootExplorer:
         to_archive = explorer._files_to_archive
         assert to_archive == tuple(explorer.path / f for f in expected_files)
 
+    @parametrize(has_domains=(True, False))
+    def test_find_domains(self, has_domains, explorer, mocker):
+        """Test the _find_potential_domain_subfolders method."""
+        mock_finder = mocker.MagicMock()
+        mock_domains = (mocker.MagicMock(),) if has_domains else ()
+        mock_finder.find_potential_domains.return_value = mock_domains
+        mocker.patch(f'{_MODULE}.DomainFinder', return_value=mock_finder)
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._find_potential_domain_subfolders()
+        mock_finder.find_potential_domains.assert_called_once()
+        assert explorer.has_domains == has_domains
 
     _remove_files = {
         '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
@@ -254,6 +273,13 @@ class TestRootExplorer:
         patched_path.read.assert_not_called()
         patched_path.write.assert_not_called()
 
+    def test_remove_tensors_and_deltas(self, explorer, mocker):
+        """Check delegation of calls in remove_tensors_and_deltas."""
+        mock_discard = mocker.patch.object(explorer.tensors, 'discard')
+        mock_folders = mocker.MagicMock()
+        explorer.remove_tensors_and_deltas(mock_folders)
+        mock_discard.assert_called_once_with(explorer.history, mock_folders)
+
     def test_replace_state_files_from_ori_no_ori(self, explorer):
         """Check there are no complaints if an _ori file is not there."""
         with make_obj_raise('pathlib.Path.replace', FileNotFoundError):
@@ -278,6 +304,132 @@ class TestRootExplorer:
         assert returned == bool(files)
 
 
+class TestRootExplorerCopyStateFilesFrom:
+    """Tests for the _copy_state_files_from method."""
+
+    copy_info = namedtuple('copy_info', ('missing', 'fail'))
+    copy_info_domain = namedtuple('copy_info',
+                                  ('missing', 'fail', 'no_complain'))
+
+    @fixture(name='call_copy')
+    def fixture_call_copy(self, src, explorer, mock):
+        """Call _copy_state_files_from, return expected failures."""
+        def _call(missing, fail, only_files):
+            failures = mock(missing, fail, only_files)
+            context = pytest.raises if failures else not_raises
+            with context(FileOperationFailedError) as exc_info:
+                # pylint: disable-next=protected-access
+                explorer._copy_state_files_from(src, '{}', '{}_fmt',
+                                                only_files=only_files)
+            return failures, exc_info
+        return _call
+
+    @fixture(name='make_expected_failures')
+    def fixture_make_expected_failures(self, src, oserror):
+        """Return a dict of failures for copying state files."""
+        def _make(missing, fail, only_files):
+            failures = {}
+            for file in (*missing, *fail):
+                if only_files and file not in only_files:
+                    continue
+                if not only_files and file not in MOCK_STATE_FILES:
+                    continue
+                failures[file] = (oserror if file in fail
+                                  else [src/file, src/f'{file}_fmt'])
+            return failures
+        return _make
+
+    @fixture(name='mock')
+    def fixture_mock_implementation(self,
+                                    oserror,
+                                    make_expected_failures,
+                                    mocker):
+        """Replace implementation details with mocks."""
+        def _mock(missing, fail, only_files):
+            def is_file(path):
+                return not path.name.startswith(missing)
+            def copy2(_, dst):
+                if dst.name in fail:
+                    raise oserror
+            def _glob(path, pattern):
+                globbed = next(f for f in only_files or MOCK_STATE_FILES
+                               if pattern.startswith(f))
+                return (path/globbed,)
+            mocker.patch('pathlib.Path.is_file', is_file)
+            mocker.patch('pathlib.Path.glob', _glob)
+            mocker.patch('shutil.copy2', copy2)
+            return make_expected_failures(missing, fail, only_files)
+        return _mock
+
+    @fixture(name='oserror')
+    def fixture_oserror(self):
+        """Return an OSError instance."""
+        return OSError()
+
+    @fixture(name='src')
+    def fixture_src(self):
+        """Return a non-existing path."""
+        return Path.cwd()/'does_not_exist'
+
+    _copy_from = {  # missing, copy failures
+        'successful': copy_info((), ()),
+        'not found': copy_info(('fake', 'PARAMETERS'), ()),
+        'fail to copy': copy_info((), ('fake',)),
+        }
+
+    @parametrize(info=_copy_from.values(), ids=_copy_from)
+    @parametrize(only_files=(None, ('fake',)))
+    def test_copy_state_files_from(self, info, only_files, call_copy):
+        """Test the _copy_state_files_from method."""
+        failures, exc_info = call_copy(*info, only_files)
+        if failures:
+            assert exc_info.value.failures == failures
+
+    _copy_from_domain_main = {  # missing, copy failures, no complaints
+        'successful': copy_info_domain((), (), ()),
+        'not found': copy_info_domain(('PARAMETERS', 'POSCAR'),
+                                      (),
+                                      ('POSCAR',)),
+        # VIBROCC should not be there, but if it is and
+        # we fail to copy it, we should still complain
+        'fail to copy': copy_info_domain((), ('VIBROCC',), ()),
+        }
+
+    @parametrize(info=_copy_from_domain_main.values(),
+                 ids=_copy_from_domain_main)
+    def test_copy_state_files_from_domains(self,
+                                           explorer,
+                                           info,
+                                           call_copy):
+        """Test the _copy_state_files_from method for the main domain root."""
+        explorer.has_domains = True
+        failures, exc_info = call_copy(info.missing, info.fail, None)
+        for file in info.no_complain:
+            try:
+                del failures[file]
+            except KeyError:
+                pass
+        if failures:
+            assert exc_info.value.failures == failures
+
+    def test_log_failures_exception(self, explorer, caplog):
+        """Check logging emission when file copy raises exceptions."""
+        exc_txt = 'test exception'
+        failures = {'file': Exception(exc_txt)}
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._log_failures_when_copying_input_files(failures)
+        assert exc_txt in caplog.text
+
+    def test_log_failures_not_found(self, explorer, caplog):
+        """Check logging emission when file copy fails because not found."""
+        rel_paths = ['try_one', 'try_folder/try_file']
+        failures = {'file': [explorer.path/f for f in rel_paths]}
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._log_failures_when_copying_input_files(failures)
+        log = caplog.text
+        assert all(p in log for p in rel_paths)
+
+
 class TestRootExplorerNextCalc:
     """Tests for prepare_for_next_calc_run and related methods."""
 
@@ -285,7 +437,7 @@ class TestRootExplorerNextCalc:
     called = (
         '_mark_state_files_as_ori',
         '_copy_state_files_from_out_or_original_inputs',
-        '_complain_about_edited_files',
+        'complain_about_edited_files',
         )
 
     def test_methods_called(self, explorer, mocker):
@@ -402,52 +554,6 @@ class TestRootExplorerNextCalc:
             assert exc_info.value.failures == fails
             mock_log.assert_called_once_with(fails)
 
-    _copy_from = {  # missing, copy failures
-        'successful': ((), ()),
-        'not found': (('fake', 'PARAMETERS'), ()),
-        'fail to copy': ((), ('fake',)),
-        }
-
-    @parametrize('missing,fail', _copy_from.values(), ids=_copy_from)
-    @parametrize(only_files=(None, ('fake',)))
-    # pylint: disable-next=too-many-arguments  # 2 fixtures
-    def test_copy_state_files_from(self, missing, fail, only_files,
-                                   explorer, mocker):
-        """Test the _copy_state_files_from method."""
-        def is_file(path):
-            return not path.name.startswith(missing)
-        oserror = OSError()
-        def copy2(_, dst):
-            if dst.name in fail:
-                raise oserror
-        def _glob(path, pattern):
-            globbed = next(f for f in only_files or MOCK_STATE_FILES
-                           if pattern.startswith(f))
-            return (path/globbed,)
-
-        mocker.patch('pathlib.Path.is_file', is_file)
-        mocker.patch('pathlib.Path.glob', _glob)
-        mocker.patch('shutil.copy2', copy2)
-        src = Path.cwd()/'does_not_exist'
-
-        # Build the expected result of a failure
-        failures = {}
-        for file in (*missing, *fail):
-            if only_files and file not in only_files:
-                continue
-            if not only_files and file not in MOCK_STATE_FILES:
-                continue
-            failures[file] = (oserror if file in fail
-                              else [src/file, src/f'{file}_fmt'])
-
-        context = pytest.raises if failures else not_raises
-        with context(FileOperationFailedError) as exc_info:
-            # pylint: disable-next=protected-access
-            explorer._copy_state_files_from(src, '{}', '{}_fmt',
-                                            only_files=only_files)
-        if failures:
-            assert exc_info.value.failures == failures
-
 
 class TestRootExplorerListFiles:
     """Tests for listing files/directories to be removed."""
@@ -546,6 +652,13 @@ class TestRootExplorerMarkEditedFiles:
     def check_warns_edited(log_text, expected):
         """Check that all expected edited files are named in log_text."""
         assert all(f+EDITED_SUFFIX in log_text for f in expected)
+
+    def test_complain_edited(self, explorer, mocker, caplog):
+        """Check warnings when edited files are present."""
+        mocker.patch('pathlib.Path.glob',
+                     return_value=(explorer.path/f'file{EDITED_SUFFIX}',))
+        explorer.complain_about_edited_files()
+        assert caplog.text
 
     def test_no_log_file(self, explorer, make_calc_inputs):
         """Check that no files are _edited if there's no calc log file."""
@@ -658,7 +771,6 @@ class TestRootExplorerRaises:
         'infer_run_info',
         'list_paths_to_discard',
         'mark_edited_files',
-        'remove_tensors_and_deltas',
         'revert_to_previous_calc_run',
         '_collect_files_to_archive',
         )
@@ -677,6 +789,112 @@ class TestRootExplorerRaises:
         with pytest.raises(AttributeError,
                            match=r'.*collect_(info|subfolders).*'):
             method()
+
+
+class TestRootExplorerUnlabledFiles:
+    """Tests for the ensure_has_unlabled_inputs method."""
+
+    def test_no_ori_files(self, explorer, mocker):
+        """Check no file operations happen if no _ori files exist."""
+        mock_copy = mocker.patch('shutil.copy2')
+        missing = explorer.ensure_has_unlabled_inputs()
+        assert not missing
+        mock_copy.assert_not_called()
+
+    def test_oserror(self, explorer, mocker, caplog):
+        """Check that failure to copy files emits log messages."""
+        mocker.patch('pathlib.Path.glob',
+                     return_value=(explorer.path/'input_file_ori',))
+        mocker.patch('pathlib.Path.is_file', return_value=False)
+        mock_copy = mocker.patch('shutil.copy2', side_effect=OSError)
+        missing = explorer.ensure_has_unlabled_inputs()
+        assert missing
+        mock_copy.assert_called_once()  # One "fake" _ori file
+        assert caplog.text
+
+    def test_expected_files(self, tmp_path, mocker):
+        """Ensure the expected unlabeled files are created."""
+        tree_before = {
+            'file_1': 'contents of file_1',
+            'file_1_ori': 'file_1 exists already ',
+            'file_2_ori': 'file_2 instead is missing',
+            # NB: given the current implementation of bookkeeper there
+            # should never be both _ori and _edited files. However,
+            # better be sure that we handle correctly this case too.
+            'file_3_edited': 'contents of the edited version of file_3',
+            'file_3_ori': 'file_3 has been edited instead',
+            }
+        expect_tree = {
+            **tree_before,
+            'file_2': tree_before['file_2_ori'],  # Only file_2 created
+            }
+        filesystem_from_dict(tree_before, tmp_path)
+        explorer = RootExplorer(tmp_path, mocker.MagicMock())
+        missing = explorer.ensure_has_unlabled_inputs()
+        assert missing
+        tree_after = filesystem_to_dict(tmp_path)
+        assert tree_after == expect_tree
+
+
+class TestDomainRootExplorer:
+    """Tests for the DomainRootExplorer subclass of RootExplorer."""
+
+    @fixture(name='domain')
+    def fixture_domain(self, explorer):
+        """Return an initialized DomainRootExplorer."""
+        return DomainRootExplorer(explorer.path/'domain',
+                                  explorer.workhistory.bookkeeper,
+                                  explorer)
+
+    def test_calc_timestamp_from_domain(self, domain, explorer, mocker):
+        """Check pulling of the calc_timestamp property from root logs."""
+        most_recent_log_in_domain = mocker.MagicMock()
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._logs = mocker.MagicMock(most_recent=None)
+        # pylint: disable-next=protected-access           # OK in tests
+        domain._logs = mocker.MagicMock(most_recent=most_recent_log_in_domain)
+        assert domain.calc_timestamp is most_recent_log_in_domain.timestamp
+
+    def test_calc_timestamp_from_main(self, domain, explorer, mocker):
+        """Check pulling of the calc_timestamp property from main."""
+        most_recent_log_in_main = mocker.MagicMock()
+        # pylint: disable-next=protected-access           # OK in tests
+        explorer._logs = mocker.MagicMock(most_recent=most_recent_log_in_main)
+        # pylint: disable-next=protected-access           # OK in tests
+        domain._logs = mocker.MagicMock(most_recent=None)
+        assert domain.calc_timestamp is most_recent_log_in_main.timestamp
+
+    def test_infer_run_info_from_domain(self, domain, explorer, mocker):
+        """Check inferring run info from the log file in the domain folder."""
+        for root in (domain, explorer):
+            mocker.patch.object(root, '_logs')
+        domain_info = mocker.MagicMock()
+        explorer.logs.infer_run_info.return_value = mocker.MagicMock()
+        domain.logs.infer_run_info.return_value = domain_info
+        assert domain.infer_run_info() is domain_info
+
+    def test_infer_run_info_from_main(self, domain, explorer, mocker):
+        """Check inferring run info from the main log file."""
+        for root in (domain, explorer):
+            mocker.patch.object(root, '_logs')
+        main_info = mocker.MagicMock()
+        explorer.logs.infer_run_info.return_value = main_info
+        domain.logs.infer_run_info.return_value = {}
+        assert domain.infer_run_info() is main_info
+
+    def test_relative_path_from_domain(self, domain):
+        """Check the expected return of _relative_path."""
+        # pylint: disable-next=protected-access           # OK in tests
+        domain._path = Path('/some/other/path')
+        # pylint: disable-next=protected-access           # OK in tests
+        result = domain._relative_path(domain.path/'abc')
+        assert result == Path('abc').as_posix()
+
+    def test_relative_path_from_main(self, domain):
+        """Check the expected return of _relative_path."""
+        # pylint: disable-next=protected-access           # OK in tests
+        result = domain._relative_path(domain.path/'abc')
+        assert result == Path('domain/abc').as_posix()
 
 
 class TestTensorsAndDeltasInfo:
@@ -754,7 +972,8 @@ class TestTensorsAndDeltasInfo:
         removed = tuple(tensors._root/f for f in removed)
         tensors.collect()
         mocker.patch.object(Path, 'is_file', return_value=True)
-        tensors.discard(simple_history)
+        tensors.discard(simple_history,
+                        simple_history.last_folder_and_siblings)
         mock_discard_files.assert_called_once_with(*removed)
 
     _attr_needs_update = (

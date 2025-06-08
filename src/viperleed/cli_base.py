@@ -23,7 +23,7 @@ from pathlib import Path
 import pkgutil
 import sys
 
-from viperleed import GLOBALS
+from viperleed import __version__
 from viperleed.calc.lib.string_utils import harvard_commas
 from viperleed.calc.lib.string_utils import parent_name
 
@@ -492,10 +492,11 @@ class ViPErLEEDCLI:
 
     def add_global_arguments(self, parser):
         """Add arguments to `parser`. This method is called on all children."""
+        msg = f'ViPErLEED (Vienna Package for Erlangen LEED) v{__version__}'
         parser.add_argument('--version',
                             help='print version number',
                             action='version',
-                            version=GLOBALS['version_message'])
+                            version=msg)
 
     def add_parser_arguments(self, parser):
         """Add CLI arguments for this utility to `parser`.

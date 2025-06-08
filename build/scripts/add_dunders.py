@@ -294,6 +294,6 @@ def check_and_fix_viperleed_repo(package):
 
 
 if __name__ == '__main__':
-    check_and_fix_viperleed_repo('viperleed')
+    check_and_fix_viperleed_repo('src/viperleed')
     check_and_fix_viperleed_repo('tests')
     check_and_fix_viperleed_repo('build/scripts')
