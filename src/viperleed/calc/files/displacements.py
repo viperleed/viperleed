@@ -161,12 +161,15 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
         rp.disp_blocks[-1][0].append(line)
     if copyblock:
         rp.disp_blocks.append(copyblock)
-    if len(rp.disp_blocks[-1][0]) == 0 and len(rp.disp_blocks) > 1:
+    if len(rp.disp_blocks) > 1 and len(rp.disp_blocks[-1][0]) == 0:
         rp.disp_blocks = rp.disp_blocks[:-1]
     if len(loopStarts) != 0:
         logger.warning("DISPLACEMENTS file: Unmatched <loop> flags found, "
                        "loops are still open at end of file.")
         rp.setHaltingLevel(2)
+    if not rp.disp_blocks:
+        raise NoDisplacementsError(f'File {filename} contains '
+                                   'no valid displacements.')
     if not rp.domainParams:
         return
     # in case of domains, now split blocks to domains
