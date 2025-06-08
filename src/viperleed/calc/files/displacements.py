@@ -21,6 +21,13 @@ from viperleed.calc.symmetry import setSymmetry
 
 logger = logging.getLogger(__name__)
 
+class DisplacementsError(Exception):
+    """Base exception for DISPLACEMENTS-related errors."""
+
+
+class NoDisplacementsError(DisplacementsError):
+    """No valid displacements were found in DISPLACEMENTS."""
+
 
 def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            # TODO: This should probably set rp.fileLoaded['DISPLACEMENTS'] = True
     """
