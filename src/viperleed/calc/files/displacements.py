@@ -218,9 +218,12 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
                         "of a domain block, line will be skipped: "+line)
                 else:
                     dlines[d].append(line)
-        for dp in rp.domainParams:
-            dp.rpars.disp_blocks.append((dlines[dp.name], blockname))
-    return
+        for domain in rp.domainParams:
+            domain.rpars.disp_blocks.append((dlines[domain.name], blockname))
+    if not any(lines for domain in rp.domainParams
+               for lines, _ in domain.rpars.disp_blocks):
+        raise NoDisplacementsError(f'File {filename} contains '
+                                   'no valid displacements.')
 
 
 def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
