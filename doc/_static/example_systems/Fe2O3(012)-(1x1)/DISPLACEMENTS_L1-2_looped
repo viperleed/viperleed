@@ -1,0 +1,14 @@
+<loop>
+
+== SEARCH L1-2 z+vib
+  = GEO_DELTA
+  * L(1-2) z = -0.05 0.05 0.01
+
+ = VIB_DELTA
+  *surf = -0.02 0.02 0.005 
+
+== SEARCH L1-2 xy
+  = GEO_DELTA
+  * L(1-2) xy = -0.03 0.03 0.01
+
+</loop>

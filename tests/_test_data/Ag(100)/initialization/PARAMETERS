@@ -1,0 +1,26 @@
+! ####### GLOBAL PARAMETERS #######
+
+RUN = 0
+LOG_DEBUG = True
+THEO_ENERGIES =   50 350 3
+
+
+! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
+
+N_BULK_LAYERS = 1
+BULK_REPEAT = abc[0.50  0.50 -0.10]
+
+SITE_DEF Ag = surf 1
+SUPERLATTICE = (1x1)
+
+
+! ####### PARAMETERS FOR REFCALC #######
+
+V0_IMAG = 5.0
+LMAX = 8-12
+
+# The following lines should be commented out automatically
+# since we have a VIBROCC file in the inputs
+T_DEBYE = 330
+T_EXPERIMENT = 100
+VIBR_AMP_SCALE = *surf 1.3
