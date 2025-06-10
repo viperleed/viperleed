@@ -1074,9 +1074,9 @@ class SettingsDialog(qtw.QDialog):
         # Ask to save the settings to file.
         if self.settings != self._settings['original']:
             reply = self._ask_to_save()
-            self._process_saving(reply == _MSGBOX.Save)
+            self._save_edited_settings(reply == _MSGBOX.Save)
             if reply == _MSGBOX.Abort:
-                super().reject
+                super().reject()
                 return
         super().accept()
 
@@ -1254,19 +1254,19 @@ class SettingsDialog(qtw.QDialog):
                                             and widg.has_tag(Tag.R)))
         self.adjustSize()   # TODO: does not always adjust when going smaller?
 
-    def _process_saving(self, save):
+    def _save_edited_settings(self, should_save):
         """Save changes to the current settings to file.
 
         Parameters
         ----------
-        save : bool
+        should_save : bool
             Decides whether the settings should be saved or not.
 
         Returns
         -------
         None.
         """
-        if save:
+        if should_save:
             try:
                 self.settings.update_file()
             except FileNotFoundError:
@@ -1275,7 +1275,7 @@ class SettingsDialog(qtw.QDialog):
                 pass
             finally:
                 self._settings['original'].read_dict(self.settings)
-        self.settings_saved.emit(save)
+        self.settings_saved.emit(should_save)
 
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):
