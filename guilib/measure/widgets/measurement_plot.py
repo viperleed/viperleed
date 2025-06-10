@@ -206,7 +206,7 @@ class MeasurementPlot(qtw.QWidget):
         for color, quantity in zip(_COLORS, self.plotted_quantities):
             legend_elements.append(
                 Line2D([], [], label=quantity.label,
-                       color=color(COLOR_FRACTION),linewidth=4)
+                       color=color(COLOR_FRACTION), linewidth=4)
                 )
         return legend_elements
 
