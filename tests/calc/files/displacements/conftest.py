@@ -25,9 +25,9 @@ from viperleed.calc.files.displacements.tokens import (
     TypeToken,
 )
 
-_MOCK_DISPLACEMENTS_PATH = Path('tests/test_data/displacements/')
+_MOCK_DISPLACEMENTS_PATH = Path('tests/_test_data/DISPLACEMENTS/')
 MOCK_DISPLACEMENTS_PATH = Path(
-    'tests/test_data/displacements/DISPLACEMENTS_mixed'
+    'tests/_test_data/DISPLACEMENTS/DISPLACEMENTS_mixed'
 )
 _CU_111_DISPLACEMENTS_PATH = _MOCK_DISPLACEMENTS_PATH / 'Cu_111'
 _CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / 'DISPLACEMENTS_simple'
