@@ -265,6 +265,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 'file': qtw.QMenu("&File"),
                 'devices': qtw.QMenu("&Devices"),
                 'tools': qtw.QMenu("&Tools"),
+                'views': qtw.QMenu("Views"),
                 'sys_settings': qtw.QAction("&Settings"),
                 },
             }
@@ -557,6 +558,12 @@ class Measure(ViPErLEEDPluginBase):                                             
         act = tools_menu.addAction("Upload/upgrade firmware...")
         act.setEnabled(True)
         act.triggered.connect(self._dialogs['firmware_upgrade'].open)
+
+        # Views
+        views_menu = self._ctrls['menus']['views']
+        menu.insertMenu(self.about_action, views_menu)
+        act = views_menu.addAction('Show data plot...')
+        act.triggered.connect(self._glob['plot'].show)
 
         # System settings
         act = self._ctrls['menus']['sys_settings']
