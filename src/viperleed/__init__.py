@@ -11,7 +11,7 @@ __authors__ = (
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-03'
 __license__ = 'GPLv3+'
-__version__ = '0.14.0'
+__version__ = '0.14.1'
 
 
 # Name of environment variable specifying the path to the tensor-LEED

@@ -19,8 +19,8 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed.gui.classes.lattice2d import Lattice2D
 from viperleed.gui.classes.planegroup import PlaneGroup
-from viperleed.gui.widgetslib import AllGUIFonts
-from viperleed.gui.widgetslib import change_control_text_color
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.lib import change_control_text_color
 
 from viperleed.gui import decorators as dev_
 
