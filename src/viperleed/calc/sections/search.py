@@ -35,7 +35,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iosearch
 from viperleed.calc.files import parameters
 from viperleed.calc.files import searchpdf
-from viperleed.calc.files.new_displacements import readDISPLACEMENTS_block
+from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.context import execute_in_dir

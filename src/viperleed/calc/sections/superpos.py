@@ -20,7 +20,7 @@ from viperleed.calc.files import iosuperpos
 from viperleed.calc.files.beams import averageBeams
 from viperleed.calc.files.beams import writeFdOut
 from viperleed.calc.files.beams import writeOUTBEAMS
-from viperleed.calc.files.new_displacements import readDISPLACEMENTS_block
+from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.files.iorefcalc import readFdOut
 from viperleed.calc.files.iosearch import readSDTL_blocks
 from viperleed.calc.files.iosearch import readSDTL_end

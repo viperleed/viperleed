@@ -14,7 +14,7 @@ import os
 from viperleed.calc.classes.r_error import R_Error
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc
-from viperleed.calc.files.new_displacements import readDISPLACEMENTS_block
+from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.sections.deltas import deltas as section_deltas
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 from viperleed.calc.sections.superpos import superpos as section_superpos
