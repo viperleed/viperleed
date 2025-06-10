@@ -3,7 +3,7 @@ import re
 
 import pytest
 
-from viperleed.calc.files.displacements.tokens.target import (
+from viperleed.calc.files.new_displacements.tokens.target import (
     TargetingError,
     TargetToken,
     _generate_label_match_regex,

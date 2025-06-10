@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from viperleed.calc.files.displacements.tokens.direction import (
+from viperleed.calc.files.new_displacements.tokens.direction import (
     DirectionToken,
     DirectionTokenParserError,
 )

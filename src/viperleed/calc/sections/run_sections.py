@@ -25,7 +25,7 @@ from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
-from viperleed.calc.files.displacements import readDISPLACEMENTS
+from viperleed.calc.files.new_displacements import readDISPLACEMENTS
 from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
 from viperleed.calc.lib.time_utils import DateTimeFormat

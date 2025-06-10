@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from pytest_cases import fixture
 
-from viperleed.calc.files.displacements.lines import (
+from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
     GeoDeltaLine,
     OccDeltaLine,
@@ -16,7 +16,7 @@ from viperleed.calc.files.displacements.lines import (
     SectionHeaderLine,
     VibDeltaLine,
 )
-from viperleed.calc.files.displacements.tokens import (
+from viperleed.calc.files.new_displacements.tokens import (
     DirectionToken,
     ElementToken,
     LinearOperationToken,

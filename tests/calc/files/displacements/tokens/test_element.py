@@ -6,7 +6,7 @@ __created__ = '2025-05-13'
 # test_element_token.py
 import pytest
 
-from viperleed.calc.files.displacements.tokens.element import (
+from viperleed.calc.files.new_displacements.tokens.element import (
     ElementToken, ElementTokenParserError)
 
 

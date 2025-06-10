@@ -7,7 +7,7 @@ __created__ = '2025-04-11'
 import numpy as np
 import pytest
 
-from viperleed.calc.files.displacements.tokens.linear_operation import (
+from viperleed.calc.files.new_displacements.tokens.linear_operation import (
     LinearOperationToken,
     LinearOperationTokenParserError,
 )

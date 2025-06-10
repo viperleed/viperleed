@@ -4,22 +4,22 @@ __authors__ = ('Alexander M. Imre (@amimre)',)
 
 import pytest
 
-from viperleed.calc.files.displacements.errors import (
+from viperleed.calc.files.new_displacements.errors import (
     InvalidSearchBlocksError,
     InvalidSearchLoopError,
     OffsetsNotAtBeginningError,
 )
-from viperleed.calc.files.displacements.file import (
+from viperleed.calc.files.new_displacements.file import (
     DisplacementsFile,
     OffsetsBlock,
     SearchBlock,
 )
-from viperleed.calc.files.displacements.lines import (
+from viperleed.calc.files.new_displacements.lines import (
     GeoDeltaLine,
     LoopMarkerLine,
     OffsetsLine,
 )
-from viperleed.calc.files.displacements.reader import (
+from viperleed.calc.files.new_displacements.reader import (
     DisplacementFileSections,
     LoopMarker,
 )
