@@ -1,7 +1,9 @@
-"""Module range."""
+"""Module for the <range> token in the DISPLACEMENTS file."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__created__ = '2024-10-15'
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
+__created__ = "2024-10-15"
+__license__ = "GPLv3+"
 
 from .base import DisplacementsFileToken, TokenParserError
 

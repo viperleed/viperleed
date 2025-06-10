@@ -1,9 +1,9 @@
-"""Module tl_backend."""
+"""Module tl_backend of viperleed.files.displacements."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__created__ = '2024-10-15'
-
-from viperleed.calc.files.displacements.errors import IncompatibleBackendError
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
+__created__ = "2024-10-15"
+__license__ = "GPLv3+"
 
 class TensorLEEDBackend:
     """Base class for the tensor LEED backends.

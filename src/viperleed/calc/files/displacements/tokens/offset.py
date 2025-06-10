@@ -1,7 +1,9 @@
-"""Offset token for DISPLACEMENT file parsing."""
+"""Module for the <offset> token in the DISPLACEMENTS file."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__created__ = '2025-05-12'
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
+__created__ = "2025-05-12"
+__license__ = "GPLv3+"
 
 from .base import DisplacementsFileToken, TokenParserError
 

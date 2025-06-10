@@ -1,7 +1,9 @@
-"""Module file."""
+"""Module file of viperleed.calc.files.displacements."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__created__ = '2024-10-04'
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
+__created__ = "2024-10-04"
+__license__ = "GPLv3+"
 
 from .errors import (
     InvalidSearchBlocksError,
