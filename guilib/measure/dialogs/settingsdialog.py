@@ -1073,9 +1073,8 @@ class SettingsDialog(qtw.QDialog):
         self.__on_apply_pressed()
         # Ask to save the settings to file.
         if self.settings != self._settings['original']:
-            reply = self._ask_to_save()
-            self._save_edited_settings(reply == _MSGBOX.Save)
-            if reply == _MSGBOX.Abort:
+            action = self._save_edited_settings(self._ask_to_save())
+            if action == qtw.QDialog.Rejected:
                 super().reject()
                 return
         super().accept()
@@ -1254,19 +1253,21 @@ class SettingsDialog(qtw.QDialog):
                                             and widg.has_tag(Tag.R)))
         self.adjustSize()   # TODO: does not always adjust when going smaller?
 
-    def _save_edited_settings(self, should_save):
+    def _save_edited_settings(self, reply):
         """Save changes to the current settings to file.
 
         Parameters
         ----------
-        should_save : bool
-            Decides whether the settings should be saved or not.
+        reply : qtw.QMessageBox.Constant
+            The response seleced by the user. Decides
+            whether the settings should be saved or not.
 
         Returns
         -------
-        None.
+        action : QDialog.Accepted
+            The action that is to be performed on the dialog.
         """
-        if should_save:
+        if reply == _MSGBOX.Save:
             try:
                 self.settings.update_file()
             except FileNotFoundError:
@@ -1275,7 +1276,8 @@ class SettingsDialog(qtw.QDialog):
                 pass
             finally:
                 self._settings['original'].read_dict(self.settings)
-        self.settings_saved.emit(should_save)
+        self.settings_saved.emit(reply == _MSGBOX.Save)
+        return qtw.QDialog.Accepted
 
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):
@@ -1335,6 +1337,25 @@ class MeasurementSettingsDialog(SettingsDialog):
                 widget.settings_ok_changed.connect(self._check_if_settings_ok)
             except AttributeError:
                 pass
+
+    def _save_edited_settings(self, reply):
+        """Save changes to the current settings to file.
+
+        Parameters
+        ----------
+        reply : qtw.QMessageBox.Constant
+            The response seleced by the user. Decides
+            whether the settings should be saved or not.
+
+        Returns
+        -------
+        action : QDialog.DialogCode
+            The action that is to be performed on the dialog.
+        """
+        action = super()._save_edited_settings(reply)
+        if reply == _MSGBOX.Abort:
+            action = qtw.QDialog.Rejected
+        return action
 
     @qtc.pyqtSlot()
     def accept(self):
