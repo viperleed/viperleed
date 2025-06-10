@@ -1138,7 +1138,7 @@ class SettingsDialog(qtw.QDialog):
         self.setWindowTitle(title)
 
     def _ask_to_save(self):
-        """Ask whether to save or not.
+        """Ask the users whether to save edits or not.
 
         Returns
         -------
@@ -1255,7 +1255,7 @@ class SettingsDialog(qtw.QDialog):
         self.adjustSize()   # TODO: does not always adjust when going smaller?
 
     def _process_saving(self, save):
-        """Process saving.
+        """Save changes to the current settings to file.
 
         Parameters
         ----------
