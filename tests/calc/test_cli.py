@@ -20,7 +20,10 @@ from viperleed.calc.cli import ViPErLEEDCalcCLI
 from viperleed.calc.cli import _copy_files_from_manifest
 from viperleed.calc.cli import _copy_input_files_to_work
 from viperleed.calc.cli import _copy_tensors_and_deltas_to_work
+from viperleed.calc.cli import _has_history
+from viperleed.calc.cli import _remove_history
 from viperleed.calc.cli import _verbosity_to_log_level
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.lib.context import execute_in_dir
@@ -56,8 +59,47 @@ class TestCalcCliCall:
                 'tensors_deltas': mocker.patch(
                     f'{_MODULE}._copy_tensors_and_deltas_to_work',
                     ),
+                'has_history': mocker.patch(f'{_MODULE}._has_history',
+                                            return_value=True),
                 }
         return _mock
+
+    def test_cwd_is_empty(self, tmp_path):
+        """Ensure that running in an empty directory only produces the log."""
+        # "Empty" actually means "without any calc input files"
+        tree_before = {
+            'some-file.txt': '',
+            'some_folder': {},
+            }
+        filesystem_from_dict(tree_before, tmp_path)
+        cli = ViPErLEEDCalcCLI()
+        with execute_in_dir(tmp_path):
+            error = cli([])
+        assert error
+
+        # The only file added must be the log
+        tree_after = filesystem_to_dict(tmp_path)
+        log_file, *others = (f for f in tree_after if f not in tree_before)
+        assert not others
+        assert log_file.startswith(LOG_PREFIX)
+
+    @parametrize(tree_before=({'history': {}},
+                              {'history.info': ''}))
+    def test_cwd_has_history(self, tree_before, tmp_path):
+        """Ensure that pre-existing history is not removed."""
+        filesystem_from_dict(tree_before, tmp_path)
+        cli = ViPErLEEDCalcCLI()
+        with execute_in_dir(tmp_path):
+            error = cli([])
+        assert error
+
+        tree_after = filesystem_to_dict(tmp_path).keys()
+        # If a history exists, it should be preserved.
+        assert tree_after & tree_before.keys()
+        # Similarly, work should remain. The log file is always there.
+        diff = tree_after - tree_before.keys()
+        assert DEFAULT_WORK in diff
+        assert any(f.startswith(LOG_PREFIX) for f in diff)
 
     def test_delete_workdir(self, tmp_path, mock_implementation):
         """Check the successful removal of the work directory."""
@@ -119,6 +161,27 @@ class TestCalcCliCall:
             error = cli(['--keep-workdir'])
         assert not error
         mocks['rmtree'].assert_not_called()
+
+    def test_keep_workdir_cwd_empty(self, tmp_path):
+        """Ensure that work is preserved even if cwd is empty, if requested."""
+        # "Empty" actually means "without any calc input files"
+        tree_before = {
+            'some-file.txt': '',
+            'some_folder': {},
+            }
+        filesystem_from_dict(tree_before, tmp_path)
+        cli = ViPErLEEDCalcCLI()
+        with execute_in_dir(tmp_path):
+            error = cli(['-k'])
+        assert error
+
+        # The only file added must be the log
+        tree_after = filesystem_to_dict(tmp_path)
+        diff = {f for f in tree_after if f not in tree_before}
+        assert DEFAULT_WORK in diff
+        log_file, *others = (f for f in diff if f != DEFAULT_WORK)
+        assert not others
+        assert log_file.startswith(LOG_PREFIX)
 
     def test_success(self, tmp_path, mock_implementation, mocker):
         """Check the successful call to ViPErLEEDCalcCLI with default args."""
@@ -327,6 +390,58 @@ class TestCopyTensorsDeltas:
         _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=False)
         copy.assert_not_called()
         assert not caplog.text
+
+
+class TestHasHistory:
+    """Tests for the _has_history helper."""
+
+    def test_empty(self, tmp_path):
+        """Check expected results for a completely empty directory."""
+        with execute_in_dir(tmp_path):
+            assert not _has_history()
+
+    def test_history_folder(self, tmp_path):
+        """Check expected result when a history folder is present."""
+        (tmp_path/'history').mkdir()
+        with execute_in_dir(tmp_path):
+            assert _has_history()
+
+    def test_history_info(self, tmp_path):
+        """Check expected result when history.info is present."""
+        (tmp_path/'history.info').touch()
+        with execute_in_dir(tmp_path):
+            assert _has_history()
+
+    def test_other_contents(self, tmp_path):
+        """Check expected results for non-bookkeeper contents."""
+        contents = {
+            'dummy_file': '',
+            'PARAMETERS': '',
+            'dummy_folder': {},
+            }
+        filesystem_from_dict(contents, tmp_path)
+        with execute_in_dir(tmp_path):
+            assert not _has_history()
+
+
+def test_remove_history(tmp_path, mocker):
+    """Check implementation of the _remove_history helper function."""
+    mocks = {
+        'logger': mocker.patch(f'{_MODULE}.bookie_log'),
+        'handlers': mocker.patch(f'{_MODULE}.close_all_handlers'),
+        'rmtree': mocker.patch('shutil.rmtree'),
+        'unlink': mocker.patch('pathlib.Path.unlink'),
+        }
+    calls = {
+        'handlers': mocker.call(mocks['logger']),
+        'rmtree': mocker.call(tmp_path/'history'),
+        }
+    with execute_in_dir(tmp_path):
+        _remove_history()
+    for mock_name, call in calls.items():
+        mock = mocks[mock_name]
+        assert mock.mock_calls == [call]
+    (tmp_path/'history.info').unlink.assert_called_once_with()
 
 
 _presets = {  # cli_args: expected_presets
