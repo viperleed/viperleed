@@ -1,6 +1,6 @@
 import pytest
 
-from viperleed_jax.files.displacements.tokens.offset import (
+from viperleed.calc.files.displacements.tokens.offset import (
     OffsetToken,
     OffsetTokenParserError,
 )

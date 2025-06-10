@@ -10,7 +10,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from viperleed_jax.perturbation_type import PerturbationType
+from viperleed.calc.classes.perturbation_type import PerturbationType
 
 from .errors import InvalidDisplacementsSyntaxError
 from .tokens import (

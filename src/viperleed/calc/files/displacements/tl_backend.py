@@ -3,7 +3,7 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-10-15'
 
-from viperleed_jax.files.displacements.errors import IncompatibleBackendError
+from viperleed.calc.files.displacements.errors import IncompatibleBackendError
 
 class TensorLEEDBackend:
     """Base class for the tensor LEED backends.

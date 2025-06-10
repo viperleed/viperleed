@@ -6,7 +6,7 @@ __authors__ = ('Alexander M. Imre (@amimre)',)
 import pytest
 from pytest_cases import fixture
 
-from viperleed_jax.files.displacements.reader import DisplacementsReader
+from viperleed.calc.files.displacements.reader import DisplacementsReader
 
 
 def _compare_lines(path, expected_lines):

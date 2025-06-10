@@ -6,10 +6,10 @@ __created__ = '2025-04-10'
 import numpy as np
 import pytest
 
-from viperleed_jax.files.displacements.errors import (
+from viperleed.calc.files.displacements.errors import (
     InvalidDisplacementsSyntaxError,
 )
-from viperleed_jax.files.displacements.lines import (
+from viperleed.calc.files.displacements.lines import (
     ConstraintLine,
     GeoDeltaLine,
     OccDeltaLine,
@@ -17,7 +17,7 @@ from viperleed_jax.files.displacements.lines import (
     VibDeltaLine,
     separate_direction_from_targets,
 )
-from viperleed_jax.files.displacements.tokens import (
+from viperleed.calc.files.displacements.tokens import (
     DirectionToken,
     ElementToken,
     LinearOperationToken,
@@ -27,7 +27,7 @@ from viperleed_jax.files.displacements.tokens import (
     TokenParserError,
     TypeToken,
 )
-from viperleed_jax.files.displacements.tokens.direction import DirectionToken
+from viperleed.calc.files.displacements.tokens.direction import DirectionToken
 
 
 class TestGeoDeltaLine:

@@ -5,8 +5,8 @@ __created__ = '2025-05-13'
 
 import pytest
 
-from viperleed_jax.perturbation_type import PerturbationType
-from viperleed_jax.files.displacements.tokens.type import TypeToken
+from viperleed.calc.classes.perturbation_type import PerturbationType
+from viperleed.calc.files.displacements.tokens.type import TypeToken
 
 
 @pytest.mark.parametrize(
