@@ -48,6 +48,10 @@ _UNKNOWN = QuantityInfo.UNKNOWN
 _UNIQUE = qtc.Qt.UniqueConnection
 _QMSG = qtw.QMessageBox
 
+# TODO: the next one will need to be fixed when we
+# move the hardware code to a different repository!
+_SCHEMATICS_ROOT = Path(resources_path('../../hardware/schematics'))            # Issue #372
+
 
 class FWVersionViewer(qtw.QLabel):
     """Simple class to show a read-only firmware version.
@@ -470,9 +474,9 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
         if self.__ctrl.firmware_version >= 1.0:
             # Only for public releases of ViPErLEED!
             # TODO: Is there a decent way to pick the file name?
-            _path = Path(resources_path(
-                'hardware/schematics/viperLEED_HW_v8 - basic_configuration.pdf'
-                )).resolve()
+            _path = (
+                _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - basic_configuration.pdf'
+                ).resolve()
             show_schem = msg.addButton("Open schematics...", _QMSG.ActionRole)
             show_schem.disconnect()  # Box stays open when clicked
             show_schem.clicked.connect(functools.partial(
@@ -965,9 +969,9 @@ class _I0EditDialog(_EditDialogBase):
                 "resistor. <b>Use this for an Omicron SPECTALEED optics<b>"
                 )
             }
-        kwargs['help_file'] = Path(resources_path(
-            'hardware/schematics/viperLEED_HW_v8 - jumpers.pdf'
-            ))
+        kwargs['help_file'] = (
+            _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - jumpers.pdf'
+            ).resolve()
         super().__init__(controller, *args, **kwargs)
 
         self.__gain = CoercingDoubleSpinBox(decimals=8)
@@ -1070,9 +1074,9 @@ class _TemperatureEditDialog(_EditDialogBase):                                  
                 "likely inaccurate (thermovoltages are only a few millivolts)"
                 )
             }
-        kwargs['help_file'] = Path(resources_path(
-            'hardware/schematics/viperLEED_HW_v8 - jumpers.pdf'
-            ))
+        kwargs['help_file'] = (
+            _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - jumpers.pdf'
+            ).resolve()
         super().__init__(controller, *args, **kwargs)
         self.__thermocouples = qtw.QComboBox()
         self.__cjc = qtw.QCheckBox()
@@ -1153,7 +1157,7 @@ class _AUXEditDialog(_EditDialogBase):
     def __init__(self, controller, *args, **kwargs):
         """Initialise dialog."""
         kwargs['raw_quantity'] = "AUX"
-        kwargs['help_file'] = Path(resources_path(
-            'hardware/schematics/viperLEED_HW_v8 - jumpers.pdf'
-            ))
+        kwargs['help_file'] = (
+            _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - jumpers.pdf'
+            ).resolve()
         super().__init__(controller, *args, **kwargs)
