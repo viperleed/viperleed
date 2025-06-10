@@ -207,15 +207,22 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
     @qtc.pyqtSlot(int)
     def _check_for_handler(self):
         """Check if creating a handler is possible."""
-        enabled = (self._expanded and self._settings_file_selector.isEnabled())
-        if not enabled and self.has_hardware_interface:
+        enabled = self._expanded and self._settings_file_selector.isEnabled()
+        if enabled:
+            # Always fetch a settings handler for visible devices
+            self._get_settings_handler()
+        elif not self.has_hardware_interface:
             # Devices without a hardware interface are not enabled, as
             # they lack the ability to select a settings file, but they
             # are allowed to create a settings handler in order to
             # display the settings with which a previous measurement
             # was performed.
-            return
-        self._get_settings_handler()
+            self._get_settings_handler()
+        else:
+            # Disabled devices with a hardware interface were detected
+            # but not selected by the user. We will fetch a handler in
+            # the 'if enabled' case above whenever they are selected.
+            pass
 
     def _check_if_settings_changed(self):
         """Check if the current settings differ from the original settings.
