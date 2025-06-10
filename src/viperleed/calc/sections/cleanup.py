@@ -277,14 +277,21 @@ def _collect_supp_contents(rpars):
         )
     files_to_copy.update(logs_to_supp)
 
-    _copy_files_and_directories(files_to_copy,
-                                directories_to_copy,
-                                Path(DEFAULT_SUPP))
+    copied_files, copied_dirs = _copy_files_and_directories(
+        files_to_copy,
+        directories_to_copy,
+        Path(DEFAULT_SUPP),
+        )
+    has_files = (
+        any(copied_files)
+        or any(any(d.iterdir()) for d in copied_dirs)
+        )
+    if has_files:
+        rpars.manifest.add(DEFAULT_SUPP)
 
 
 def _collect_out_contents(rpars):
     """Store relevant files/folder from the current directory to OUT."""
-    out_path = Path(DEFAULT_OUT)
     out_files = set(Path(f) for f in _OUT_FILES)
     # Add R-factor output files
     out_files.update(Path().glob('R_*R=*'))
@@ -292,19 +299,25 @@ def _collect_out_contents(rpars):
     # They may be the ones created at initialization, or those from
     # an optimization.
     out_files.update(Path(f) for f in rpars.files_to_out)
-    _copy_files_and_directories(out_files, (), out_path)
+    copied_files, _ = _copy_files_and_directories(out_files,
+                                                  (),
+                                                  Path(DEFAULT_OUT))
+    if any(copied_files):
+        rpars.manifest.add(DEFAULT_OUT)
 
 
 def _copy_files_and_directories(files, directories, target):
     """Copy files and directories to target, creating it if not existing."""
+    copied_files, copied_directories = set(), set()
     try:
         target.mkdir(parents=True, exist_ok=True)
     except OSError:
         _LOGGER.error(f'Error creating {target.name} folder: ', exc_info=True)
-        return
+        return copied_files, copied_directories
 
     for item in (*files, *directories):
         _copy = shutil.copy2 if item.is_file() else fs_utils.copytree_exists_ok
+        container = copied_files if item.is_file() else copied_directories
         try:
             _copy(item, target/item.name)
         except FileNotFoundError:
@@ -313,6 +326,9 @@ def _copy_files_and_directories(files, directories, target):
             which = 'file' if item.is_file() else 'directory'
             _LOGGER.error(f'Error moving {target.name} {which} {item.name}: ',
                           exc_info=True)
+        else:
+            container.add(item)
+    return copied_files, copied_directories
 
 
 def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
@@ -650,6 +666,7 @@ def get_rpars_from_manifest(rpars_or_manifest):
     # Make a dummy, essentially empty Rparams
     rpars = Rparams()
     rpars.manifest = rpars_or_manifest
+    rpars.TENSOR_INDEX = -1  # To avoid TypeError when formatting None
     rpars.timer.stop()  # To print the correct final message
     return rpars
 
