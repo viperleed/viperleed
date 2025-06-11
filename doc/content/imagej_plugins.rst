@@ -12,8 +12,9 @@ For further details, see also the corresponding paper: :cite:t:`schmidViPErLEEDP
 
     :download:`Download the most recent version of the documentation here.</_static/imagej_plugins/ViPErLEED_ImageJ_Plugins_GUI_documentation.pdf>`
 
-    All versions of the documentation for the ViPErLEED ImageJ plugins are available for download in
-    the `release section of the viperleed-imagej repository on GitHub
+    All versions of the documentation for the ViPErLEED ImageJ plugins are
+    available for download in the `release section of the viperleed-imagej
+    repository on GitHub
     <https://github.com/viperleed/viperleed-imagej/releases>`__.
 
 
