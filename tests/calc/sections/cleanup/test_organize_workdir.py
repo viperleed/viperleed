@@ -163,11 +163,14 @@ class TestCollectSuppOut:
         }
 
     @parametrize(which=_ordered.values(), ids=_ordered)
-    def test_success(self, which, run, caplog):
+    def test_success(self, rpars, which, run, caplog):
         """Check a successful copy of contents to SUPP/OUT."""
+        in_manifest = DEFAULT_SUPP, DEFAULT_OUT
+        assert not any(f in rpars.manifest for f in in_manifest)
         expect, organized = run(*which)
         assert organized == expect
         assert not caplog.text
+        assert all(f in rpars.manifest for f in in_manifest)
 
     _folder_to_collector = {
         DEFAULT_SUPP: _collect_supp_contents,

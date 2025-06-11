@@ -2,6 +2,7 @@
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
@@ -64,6 +65,19 @@ class TestCalcCliCall:
                 }
         return _mock
 
+    @staticmethod
+    def check_bookkeeper_calls(mocks, mocker, confirm=True):
+        """Ensure bookkeeper was called as expected."""
+        mocks['bookie'].assert_called_once()  # Made instance
+        bookkeeper = mocks['bookie'].return_value
+        assert bookkeeper.run.mock_calls == [
+            mocker.call(mode=BookkeeperMode.CLEAR,
+                        requires_user_confirmation=confirm),
+            mocker.call(mode=BookkeeperMode.ARCHIVE,
+                        requires_user_confirmation=confirm,
+                        domains=mocks['manifest'].return_value),
+            ]
+
     def test_cwd_is_empty(self, tmp_path):
         """Ensure that running in an empty directory only produces the log."""
         # "Empty" actually means "without any calc input files"
@@ -100,6 +114,29 @@ class TestCalcCliCall:
         diff = tree_after - tree_before.keys()
         assert DEFAULT_WORK in diff
         assert any(f.startswith(LOG_PREFIX) for f in diff)
+
+    @parametrize(first_run=(True, False))
+    def test_cwd_not_empty(self,
+                           first_run,
+                           mock_implementation,
+                           tmp_path,
+                           mocker):
+        """Ensure that running in an empty directory only produces the log."""
+        def _copy_inputs(to_path):
+            (to_path/'dummy_input_file').touch()
+
+        mocks = mock_implementation(exit_code=0)
+        mocks['has_history'].return_value = not first_run
+        mocker.patch(f'{_MODULE}._copy_input_files_to_work', _copy_inputs)
+        mock_remove = mocker.patch(f'{_MODULE}._remove_history')
+
+        cli = ViPErLEEDCalcCLI()
+        with execute_in_dir(tmp_path):
+            error = cli([])
+        assert not error
+
+        mock_remove.assert_not_called()
+        self.check_bookkeeper_calls(mocks, mocker)
 
     def test_delete_workdir(self, tmp_path, mock_implementation):
         """Check the successful removal of the work directory."""
@@ -143,15 +180,7 @@ class TestCalcCliCall:
         with execute_in_dir(tmp_path):
             error = cli(['-y'])
         assert not error
-        # Check bookkeeper calls
-        bookkeeper = mocks['bookie'].return_value
-        assert bookkeeper.run.mock_calls == [
-            mocker.call(mode=BookkeeperMode.CLEAR,
-                        requires_user_confirmation=False),
-            mocker.call(mode=BookkeeperMode.ARCHIVE,
-                        requires_user_confirmation=False,
-                        domains=mocks['manifest'].return_value),
-            ]
+        self.check_bookkeeper_calls(mocks, mocker, confirm=False)
 
     def test_keep_workdir(self, tmp_path, mock_implementation):
         """Check that work is not deleted if requested."""
@@ -192,15 +221,7 @@ class TestCalcCliCall:
         assert not error
 
         # Check bookkeeper calls
-        mocks['bookie'].assert_called_once()  # Made instance
-        bookkeeper = mocks['bookie'].return_value
-        assert bookkeeper.run.mock_calls == [
-            mocker.call(mode=BookkeeperMode.CLEAR,
-                        requires_user_confirmation=True),
-            mocker.call(mode=BookkeeperMode.ARCHIVE,
-                        requires_user_confirmation=True,
-                        domains=mocks['manifest'].return_value),
-            ]
+        self.check_bookkeeper_calls(mocks, mocker)
         # As well as calls to other functions. Don't bother specifying
         # the arguments for those functions that require the parsed
         # command-line arguments.
