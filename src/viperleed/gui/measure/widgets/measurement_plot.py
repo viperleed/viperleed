@@ -265,9 +265,9 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self._store_markers_for_devices(data.keys())
+        self._store_markers_for_devices(data)
 
-        for color, quantity in zip(_COLORS, self.plotted_quantities):
+        for quantity_color, quantity in zip(_COLORS, self.plotted_quantities):
             for ctrl, measurements in data.items():
                 if quantity not in measurements:
                     continue
@@ -275,21 +275,21 @@ class MeasurementPlot(qtw.QWidget):
                 ctrl_times = measurements[QuantityInfo.TIMES]
 
                 if not SEPARATE_STEPS:
-                    plot_color = color(COLOR_FRACTION)
+                    plot_color = quantity_color(COLOR_FRACTION)
                     style = self._get_marker_style_for_device(ctrl, plot_color)
                     self.lines[quantity][ctrl], = axes.plot(ctrl_times,
                                                             ctrl_data, **style)
                     continue
 
                 # SEPARATE_STEPS
-                colors = color(
+                colors = quantity_color(
                     np.linspace(0.2, 0.8, self.data_points.nr_steps_total)
                     )
                 # Cannot construct a big array of arrays and plot in
                 # parallel because each step may (and usually will)
                 # have a variable number of data.
-                for step_color, times, values in zip(colors, ctrl_times, ctrl_data):
-                    style = self._get_marker_style_for_device(ctrl, step_color)
+                for color, times, values in zip(colors, ctrl_times, ctrl_data):
+                    style = self._get_marker_style_for_device(ctrl, color)
                     axes.plot(times, values, **style)
 
     def _plot_new_energy_resolved_data(self):
@@ -302,7 +302,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self._store_markers_for_devices(data.keys())
+        self._store_markers_for_devices(data)
 
         for color, quantity in zip(_COLORS, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -331,7 +331,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self._store_markers_for_devices(data.keys())
+        self._store_markers_for_devices(data)
 
         for color, quantity in zip(_COLORS, self.plotted_quantities):
             for ctrl, measurements in data.items():
