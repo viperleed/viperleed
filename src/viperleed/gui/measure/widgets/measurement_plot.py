@@ -196,8 +196,8 @@ class MeasurementPlot(qtw.QWidget):
 
         Returns
         -------
-        marker
-        style
+        marker_style : dict
+            marker of the associated device set to the given color.
         """
         marker = self._ctrl_markers[ctrl]
         return _marker_style(*marker, color)
@@ -281,7 +281,7 @@ class MeasurementPlot(qtw.QWidget):
                                                             ctrl_data, **style)
                     continue
 
-                # SEPARATE_STEPS
+                # SEPARATE_STEPS                                                # TODO: potentially keep lines of non-continuous data and use these to shift color gradient during measurement while always displaying newest data with the darkest coloring scheme. Use Line2D.set_color(color). Replace self.data_points.nr_steps_total with len(ctrl_data).
                 colors = quantity_color(
                     np.linspace(0.2, 0.8, self.data_points.nr_steps_total)
                     )
