@@ -922,7 +922,7 @@ class CameraABC(DeviceABC):
         SettingsInfo class is located in the classes.abc module. Each
         camera is represented by a single SettingsInfo instance. The
         SettingsInfo object must contain a .unique_name,
-        .has_hardware_interface which is true if the device has a
+        .has_hardware_interface which is True if the device has a
         hardware interface present, and a dict holding .more information
         about the device. If there is no additional information about
         the camera, then this dict can be empty. The information
