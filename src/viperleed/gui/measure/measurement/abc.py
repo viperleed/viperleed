@@ -526,7 +526,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                            handler_widget=qtw.QLineEdit,
                            display_name='File suffix',
                            tooltip=tip,)
-        handler.add_option('measurement_info', 'info',
+        # Backwards compatibility fix                                           # TODO: #242
+        has_option = self.settings.has_option('measurement_info', 'comments')
+        option = 'comments' if has_option else 'info'
+        handler.add_option('measurement_info', option,
                            handler_widget=qtw.QTextEdit,
                            display_name='Comments',)
 
