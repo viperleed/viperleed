@@ -201,7 +201,7 @@ def _format_beams_(leed, **kwargs):
         n, d = lengths['numerator'], lengths['denominator']
 
         line = (    # list of entries for each column:
-            f"{beam:({n},{d})s},"                              # fractional hk
+            f"({beam:({n},{d})s}),"                            # fractional hk
             + f"{beam:{lengths['hk_integer']}f}"[1:-1] + ','   # floating hk
             + format_floats(f"{lengths['g_integer']}f", *g) + ','  # gx, gy
             + f"{group:>{lengths['group']}},"                  # group index
