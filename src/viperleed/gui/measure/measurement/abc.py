@@ -522,7 +522,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         handler.add_section('measurement_info', tags=SettingsTag.REGULAR)
         tip = ('<nobr>This string will be appended </nobr>'
                'to the file name of the data.')
-        handler.add_option('measurement_info', 'tag',
+        # Backwards compatibility fix                                           # TODO: #242
+        has_option = self.settings.has_option('measurement_info', 'suffix')
+        option = 'suffix' if has_option else 'tag'
+        handler.add_option('measurement_info', option,
                            handler_widget=qtw.QLineEdit,
                            display_name='File suffix',
                            tooltip=tip,)
