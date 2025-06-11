@@ -206,7 +206,7 @@ class MeasurementPlot(qtw.QWidget):
         """Create the legend for the displayed plot."""
         controllers = []
         legend_elements = []
-        for ctrl in self._ctrl_markers.keys():
+        for ctrl in self._ctrl_markers:
             try:
                 ctrl_name = ctrl.name
             except AttributeError:
@@ -237,7 +237,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self._store_markers_for_devices(data.keys())
+        self._store_markers_for_devices(data)
 
         for color, quantity in zip(_COLORS, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -288,8 +288,8 @@ class MeasurementPlot(qtw.QWidget):
                 # Cannot construct a big array of arrays and plot in
                 # parallel because each step may (and usually will)
                 # have a variable number of data.
-                for clr, times, values in zip(colors, ctrl_times, ctrl_data):
-                    style = self._get_marker_style_for_device(ctrl, clr)
+                for step_color, times, values in zip(colors, ctrl_times, ctrl_data):
+                    style = self._get_marker_style_for_device(ctrl, step_color)
                     axes.plot(times, values, **style)
 
     def _plot_new_energy_resolved_data(self):

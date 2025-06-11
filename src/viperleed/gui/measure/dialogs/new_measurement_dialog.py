@@ -191,6 +191,6 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         super().accept()
 
     def showEvent(self, event):          # pylint: disable=invalid-name
-        """Find sensible measurement settings, then show this dialog."""
+        """Find known measurement settings, then show this dialog."""
         self._find_appropriate_settings()
         super().showEvent(event)

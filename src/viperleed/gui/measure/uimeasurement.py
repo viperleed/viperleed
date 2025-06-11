@@ -265,7 +265,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 'file': qtw.QMenu("&File"),
                 'devices': qtw.QMenu("&Devices"),
                 'tools': qtw.QMenu("&Tools"),
-                'views': qtw.QMenu("Views"),
+                'views': qtw.QMenu("&View"),
                 'sys_settings': qtw.QAction("&Settings"),
                 },
             }

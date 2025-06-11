@@ -1235,7 +1235,7 @@ class SettingsDialog(qtw.QDialog):
         message_box = _MSGBOX(
             _MSGBOX.Question, "Save settings to file?",
             (f"{self.windowTitle()} were edited.\n\n"
-            "Would you like to save changes to file?"),
+             "Would you like to save changes to file?"),
             parent=self,
             )
         message_box.addButton(_MSGBOX.Save)
