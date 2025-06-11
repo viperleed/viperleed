@@ -902,7 +902,7 @@ class SerialABC(HardwareABC):
         if error_code == qts.QSerialPort.NoError:
             return
         self.emit_error((error_code, SERIAL_ERROR_MESSAGES[error_code]),
-                   self.port_name)
+                        self.port_name)
         self.clear_errors()
 
     @qtc.pyqtSlot()
