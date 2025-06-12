@@ -108,9 +108,9 @@ def test_equality_and_epsilon():
     assert dr1 != (0, 1, 0.1)
 
 
-def test_repr():
+def test_str():
     dr = RangeToken('1 2')
-    assert repr(dr) == 'RangeToken(start=1.0, stop=2.0)'
+    assert str(dr) == 'RangeToken(start=1.0, stop=2.0)'
 
     drs = RangeToken('1 2 0.25')
-    assert repr(drs) == 'RangeToken(start=1.0, stop=2.0, step=0.25)'
+    assert str(drs) == 'RangeToken(start=1.0, stop=2.0, step=0.25)'
