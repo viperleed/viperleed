@@ -20,7 +20,11 @@ from .lines import (
     SectionHeaderLine,
     VibDeltaLine,
 )
-from .reader import DisplacementFileSections, DisplacementsReader, LoopMarker
+from .reader import (
+    DisplacementFileSections,
+    DisplacementsReader,
+    LoopMarker,
+)
 
 
 class SearchBlock:
@@ -29,12 +33,7 @@ class SearchBlock:
     def __init__(self, label):
         """Initialize with a label and empty sections."""
         self.label = label
-        self.sections = {
-            DisplacementFileSections.GEO_DELTA: [],
-            DisplacementFileSections.VIB_DELTA: [],
-            DisplacementFileSections.OCC_DELTA: [],
-            DisplacementFileSections.CONSTRAIN: [],
-        }
+        self.sections = {s: [] for s in DisplacementFileSections}
 
     def add_line(self, section, line):
         """Add a line to the corresponding section."""
