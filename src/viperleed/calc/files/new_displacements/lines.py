@@ -85,10 +85,12 @@ class ParsedLine(ABC):
     def __repr__(self):
         """Return the string representation of the line."""
 
+    @property
     @abstractmethod
     def block_name(self):
         """Name of the block in the DISPLACEMENTS file."""
 
+    @property
     @abstractmethod
     def expected_format(self):
         """Name of the block in the DISPLACEMENTS file."""
