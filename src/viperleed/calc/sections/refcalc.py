@@ -855,9 +855,11 @@ def _reinitialize_deltas(slab):
                 "cause the delta file to incorrectly be labelled as belonging "
                 "with the new set of tensors.")
 
-    # empty atom.known_deltas
+    # empty atom.known_deltas, reset displacements and constraints
     for at in slab:
         at.known_deltas = []
+        at.initDisp(force=True)
+        at.constraints = {1: {}, 2: {}, 3: {}}
 
 
 def run_refcalc_for_one_domain(domain):
