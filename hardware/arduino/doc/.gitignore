@@ -1,0 +1,6 @@
+# Ignore TeX processing files:
+*.log
+*.aux
+*.bbl
+*.blg
+*.synctex*
