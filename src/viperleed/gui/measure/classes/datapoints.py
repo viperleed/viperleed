@@ -68,11 +68,11 @@ class QuantityInfo(enum.Enum):
           '<nobr>The actual value of the primary electron energy'
           '</nobr> measured on the LEED optics at high voltage')
     TIMES = ('s', 'lin', float, 'Times', 'x', None, 'Time','')
-    I0 = ('µA', 'lin', float, 'I0', 'y', 'Current', 'I0',
+    I0 = ('µA', 'lin', float, 'I0', 'y', 'Current', 'I\u2080',
           '<nobr>The total electron current emitted by the '
           'electron gun,</nobr> measured on the LEED optics')
     ISAMPLE = ('µA', 'lin', float, 'I_Sample',
-               'y', 'Current', 'Sample current',
+               'y', 'Current', 'I\u209b\u2090\u2098\u209a\u2097\u2091',
                '<nobr>The total electron current emitted by the electron '
                'gun,</nobr> measured by biasing the sample to +33 V via the '
                '"I_target" BNC connector. This is an alternative to '

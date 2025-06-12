@@ -717,11 +717,11 @@ class _ADCChannelCombo(qtw.QComboBox):
         _qty_ok = quantity is not _UNKNOWN
 
         if quantity is QuantityInfo.I0:
-            _name = f"I\u2080 ({quantity.units})"
+            _name = f"{QuantityInfo.I0.display_label} ({quantity.units})"
             _tooltip += f". Range: {hardware['i0_range']}"
         elif quantity is QuantityInfo.ISAMPLE:
             # Unicode chars are for "sample" as subscripts
-            _name = f"I\u209b\u2090\u2098\u209a\u2097\u2091 ({quantity.units})"
+            _name = f"{QuantityInfo.ISAMPLE.display_label} ({quantity.units})"
         elif quantity is QuantityInfo.TEMPERATURE:
             _tc_type = "??"
             _qty_ok = False
