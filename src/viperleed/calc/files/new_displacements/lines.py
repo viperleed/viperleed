@@ -1,7 +1,9 @@
-"""Module lines."""
+"""Module lines of viperleed.calc.files.new_displacements."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-04'
+__license__ = 'GPLv3+'
 
 import logging
 import re
@@ -85,11 +87,11 @@ class ParsedLine(ABC):
 
     @abstractmethod
     def block_name(self):
-        """Name of the Block in the DISPLACEMENTS file."""
+        """Name of the block in the DISPLACEMENTS file."""
 
     @abstractmethod
     def expected_format(self):
-        """Name of the Block in the DISPLACEMENTS file."""
+        """Name of the block in the DISPLACEMENTS file."""
 
     def _parse_targets(self, targets_str):
         target_parts = targets_str.split(',')
@@ -166,7 +168,7 @@ class GeoDeltaLine(ParsedLine):
 
     Lines in the GEO_DELTA block are of the form:
         <target> [, <target>] <direction> = <range>
-    where <target>, <direction>, and <range> are tokes that are parsed by the
+    where <target>, <direction>, and <range> are tokens that are parsed by the
     `Targets`, `Direction`, and `RangeToken` classes, respectively.
     """
 
@@ -206,7 +208,7 @@ class VibDeltaLine(ParsedLine):
 
     Lines in the VIB_DELTA block are of the form:
         <target> [, <target>] = <range>
-    where <target>, and <range> are tokes that are parsed by the
+    where <target>, and <range> are tokens that are parsed by the
     `Targets`, `Direction`, and `RangeToken` classes, respectively.
     """
 
@@ -241,7 +243,7 @@ class OccDeltaLine(ParsedLine):
 
     Lines in the OCC_DELTA block are of the form:
         <target> [, <target>] = <element> <range> [, <element> <range> ...]
-    where <target>, <element> and <range> are tokes that are parsed by the
+    where <target>, <element> and <range> are tokens that are parsed by the
     `Targets`, `Element` and `RangeToken` classes, respectively.
     """
 
@@ -415,7 +417,7 @@ class OffsetsLine(ParsedLine):
 
     Lines in the OFFSETS block are of the form:
         <type> <target> [, <target> ...] [<direction>] = <offset>
-    where <target>, ... are tokes that are parsed by the OffsetToken class.
+    where <target>, ... are tokens that are parsed by the OffsetToken class.
     A direction token must be specified if and only if the type of the offset
     is geometric.
     """
