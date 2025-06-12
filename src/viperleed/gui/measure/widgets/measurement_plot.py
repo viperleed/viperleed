@@ -197,7 +197,8 @@ class MeasurementPlot(qtw.QWidget):
         Returns
         -------
         marker_style : dict
-            Settings for the marker for `ctrl`, set to the given color. To be used as keyword arguments for matplotlib.
+            Settings for the marker for `ctrl`, set to the given color.
+            To be used as keyword arguments for matplotlib.
         """
         marker = self._ctrl_markers[ctrl]
         return _marker_style(*marker, color)
