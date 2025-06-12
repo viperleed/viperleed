@@ -1074,7 +1074,7 @@ class SettingsDialog(qtw.QDialog):
         # Ask to save the settings to file.
         if self.settings != self._settings['original']:
             action = self._save_edited_settings(self._ask_to_save())
-            if action == qtw.QDialog.Rejected:
+            if action == self.Rejected:
                 super().reject()
                 return
         super().accept()
@@ -1300,7 +1300,7 @@ class SettingsDialog(qtw.QDialog):
             finally:
                 self._settings['original'].read_dict(self.settings)
         self.settings_saved.emit(reply == _MSGBOX.Save)
-        return qtw.QDialog.Accepted
+        return self.Accepted
 
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):
@@ -1389,7 +1389,7 @@ class MeasurementSettingsDialog(SettingsDialog):
         """
         action = super()._save_edited_settings(reply)
         if reply == _MSGBOX.Abort:
-            action = qtw.QDialog.Rejected
+            action = self.Rejected
         return action
 
 

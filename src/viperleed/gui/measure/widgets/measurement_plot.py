@@ -185,7 +185,7 @@ class MeasurementPlot(qtw.QWidget):
         self._canvas.figure.tight_layout()
 
     def _get_marker_style_for_device(self, ctrl, color):
-        """Get the marker style for the selected device.
+        """Return the marker style for the selected device.
 
         Parameters
         ----------
@@ -197,7 +197,7 @@ class MeasurementPlot(qtw.QWidget):
         Returns
         -------
         marker_style : dict
-            marker of the associated device set to the given color.
+            Settings for the marker for `ctrl`, set to the given color. To be used as keyword arguments for matplotlib.
         """
         marker = self._ctrl_markers[ctrl]
         return _marker_style(*marker, color)
