@@ -421,7 +421,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
-        # pylint: disable-next=unsupported-binary-operation 
+        # pylint: disable-next=unsupported-binary-operation
         tags = kwargs.pop('tags', Tag.NONE) | Tag.READ_ONLY
         option = StaticSettingsDialogOption(option_name, handler_widget,
                                             *args, tags=tags, **kwargs)
@@ -1069,28 +1069,14 @@ class SettingsDialog(qtw.QDialog):
 
     @qtc.pyqtSlot()
     def accept(self):
-        """Notify if settings changed, then close."""
+        """Notify if settings changed, decide whether to save, then close."""
         self.__on_apply_pressed()
-
         # Ask to save the settings to file.
         if self.settings != self._settings['original']:
-            reply = _MSGBOX.question(
-                self, "Save settings to file?",
-                f"{self.windowTitle()} were edited.\n\n"
-                "Would you like to save changes to file?",
-                _MSGBOX.Save | _MSGBOX.Discard
-                )
-            _saved = reply == _MSGBOX.Save
-            if _saved:
-                try:
-                    self.settings.update_file()
-                except FileNotFoundError:
-                    # The file must have been moved before
-                    # the settings could be saved.                              # TODO: open QMessageBox to ask the user how to proceed from here. Ask whether the user wants to save the settings and if yes, ask where and under which name.
-                    pass
-                finally:
-                    self._settings['original'].read_dict(self.settings)
-            self.settings_saved.emit(_saved)
+            action = self._save_edited_settings(self._ask_to_save())
+            if action == self.Rejected:
+                super().reject()
+                return
         super().accept()
 
     @qtc.pyqtSlot()
@@ -1149,6 +1135,17 @@ class SettingsDialog(qtw.QDialog):
                 title = handled_obj.__class__.__name__
             title += " settings"
         self.setWindowTitle(title)
+
+    def _ask_to_save(self):
+        """Ask the users whether to save edits or not.
+
+        Returns
+        -------
+        reply : QMessageBox.Constant
+            The action selected by the user.
+        """
+        message_box = self._get_ask_to_save_dialog()
+        return message_box.exec()
 
     def _compose_and_connect(self):
         """Place and update children widgets."""
@@ -1233,6 +1230,18 @@ class SettingsDialog(qtw.QDialog):
         columns[0].addStretch(1)
         return columns
 
+    def _get_ask_to_save_dialog(self):
+        """Get the QMessageBox that asks if settings can be saved."""
+        message_box = _MSGBOX(
+            _MSGBOX.Question, "Save settings to file?",
+            (f"{self.windowTitle()} were edited.\n\n"
+             "Would you like to save changes to file?"),
+            parent=self,
+            )
+        message_box.addButton(_MSGBOX.Save)
+        message_box.addButton(_MSGBOX.Discard)
+        return message_box
+
     @qtc.pyqtSlot(bool)
     def __on_apply_pressed(self, _=False):
         """React to the user pressing 'Apply'."""
@@ -1266,6 +1275,32 @@ class SettingsDialog(qtw.QDialog):
                 widg.setVisible(visible or (not widg.has_tag(Tag.A)
                                             and widg.has_tag(Tag.R)))
         self.adjustSize()   # TODO: does not always adjust when going smaller?
+
+    def _save_edited_settings(self, reply):
+        """Save changes to the current settings to file.
+
+        Parameters
+        ----------
+        reply : qtw.QMessageBox.Constant
+            The response seleced by the user. Decides
+            whether the settings should be saved or not.
+
+        Returns
+        -------
+        action : QDialog.Accepted
+            The action that is to be performed on the dialog.
+        """
+        if reply == _MSGBOX.Save:
+            try:
+                self.settings.update_file()
+            except FileNotFoundError:
+                # The file must have been moved before
+                # the settings could be saved.                                  # TODO: open QMessageBox to ask the user how to proceed from here. Ask whether the user wants to save the settings and if yes, ask where and under which name.
+                pass
+            finally:
+                self._settings['original'].read_dict(self.settings)
+        self.settings_saved.emit(reply == _MSGBOX.Save)
+        return self.Accepted
 
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):
@@ -1321,6 +1356,41 @@ class MeasurementSettingsDialog(SettingsDialog):
                 widget.settings_ok_changed.connect(self._check_if_settings_ok)
             except AttributeError:
                 pass
+
+    def _get_ask_to_save_dialog(self):
+        """Ask whether to save or not.
+
+        Returns
+        -------
+        reply : QMessageBox.Constant
+            The action selected by the user.
+        """
+        message_box = super()._get_ask_to_save_dialog()
+        for button in message_box.buttons():
+            if message_box.buttonRole(button) == _MSGBOX.DestructiveRole:
+                button.setText('Discard settings')
+                break
+        message_box.addButton(_MSGBOX.Abort)
+        return message_box
+
+    def _save_edited_settings(self, reply):
+        """Save changes to the current settings to file.
+
+        Parameters
+        ----------
+        reply : qtw.QMessageBox.Constant
+            The response seleced by the user. Decides
+            whether the settings should be saved or not.
+
+        Returns
+        -------
+        action : QDialog.DialogCode
+            The action that is to be performed on the dialog.
+        """
+        action = super()._save_edited_settings(reply)
+        if reply == _MSGBOX.Abort:
+            action = self.Rejected
+        return action
 
 
 class StaticSettingsDialogOption(SettingsDialogOption):

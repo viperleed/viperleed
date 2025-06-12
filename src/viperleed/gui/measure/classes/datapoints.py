@@ -843,6 +843,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         # Finally define a primary controller
         self.primary_controller = self.controllers[0]
         self.nr_steps_done = len(self)
+        self.nr_steps_total = len(self)
 
     def save_data(self, csv_name):
         """Save data to file.

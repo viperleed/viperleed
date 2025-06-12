@@ -142,7 +142,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             The path to the new cloned settings.
         """
         current_time = strftime("%Y-%m-%d_%H-%M-%S", localtime())
-        name = cls.__name__
+        name = cls.display_name.replace(' ', '_')
         settings_path = self.cfg_dir / f'{name}_{current_time}.ini'
         shutil.copy2(source_path, settings_path)
         return settings_path
@@ -185,3 +185,8 @@ class SelectNewMeasurementDialog(qtw.QDialog):
 
         self.measurement_selected.emit(cls, config)
         super().accept()
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Find known measurement settings, then show this dialog."""
+        self._find_appropriate_settings()
+        super().showEvent(event)

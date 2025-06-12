@@ -15,6 +15,7 @@ __license__ = 'GPLv3+'
 
 from abc import abstractmethod
 from collections.abc import Sequence
+from inspect import isabstract
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import time
@@ -101,6 +102,10 @@ class MeasurementReusedError(MeasurementException):
 # too-many-instance-attributes
 class MeasurementABC(QObjectWithSettingsABC):                                   # TODO: doc about inner workings
     """Generic measurement class."""
+
+    # The string with which this class is displayed to the user.
+    # Has to be set in concrete subclasses.
+    display_name = None
 
     # All cameras and controllers have been disconnected
     devices_disconnected = qtc.pyqtSignal()
@@ -194,6 +199,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if self._delayed_errors:
             self._delay_errors_timer.start(20)
         self.error_occurred.disconnect(self._store_delayed_error)
+
+    def __init_subclass__(cls, **kwargs):
+        """Ensure display name is set."""
+        if not isabstract(cls) and not cls.display_name:
+            raise ValueError('Concrete measurement subclasses require a '
+                             'display_name class attribute.')
+        return super().__init_subclass__(**kwargs)
 
     @property
     def aborted(self):
