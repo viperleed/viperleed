@@ -6,6 +6,7 @@ __created__ = "2025-05-13"
 __license__ = "GPLv3+"
 
 from enum import Enum
+from viperleed.calc.lib.string_utils import harvard_commas
 
 
 class PerturbationTypeError(ValueError):
@@ -25,13 +26,10 @@ class PerturbationType(str, Enum):
         return self.value
 
     @classmethod
-    def from_string(cls, s: str) -> 'PerturbationType':
+    def from_string(cls, s: str):
         """Convert a string to a PerturbationType enum."""
         try:
             return cls(s)
         except ValueError:
-            msg = (
-                f'Unknown perturbation type tag: {s}. Tag must be one of '
-                '"geo", "vib", "occ", or "dom"."'
-            )
+            msg = harvard_commas((repr(e.value) for e in cls), sep='or')
             raise PerturbationTypeError(msg) from None
