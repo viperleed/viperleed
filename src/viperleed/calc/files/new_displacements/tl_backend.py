@@ -52,10 +52,10 @@ def tenserleed_search_block_handler_func(offsets_block, search_block):
     raise NotImplementedError
 
 
-def viplerleed_jax_search_block_handler_func(offsets_block, search_block):
+def viplerleed_jax_search_block_handler_func(search_block):
     """Handle the search block with the VIPERLEED backend."""
     # no special handling needed, ViPErLEED jax can handle all search blocks
-    return
+    return (search_block,)
 
 
 VIPERLEED_JAX_BACKEND = TensorLEEDBackend(
