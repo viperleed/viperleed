@@ -171,11 +171,6 @@ class MeasurementPlot(qtw.QWidget):
         """Prepare widget."""
         layout = qtw.QGridLayout()
         self._ctrls['quantities'].addItems(QuantityInfo.get_axis_labels('y'))
-        # self._ctrls['quantities'].setFont(AllGUIFonts().buttonFont)
-        # self._ctrls['quantities'].ensurePolished()
-
-        # self._ctrls['no_data'].setFont(AllGUIFonts().labelFont)
-        # self._ctrls['no_data'].ensurePolished()
 
         layout.addWidget(self._ctrls['quantities'], 0, 0)
         layout.addWidget(self._canvas, 1, 0)
