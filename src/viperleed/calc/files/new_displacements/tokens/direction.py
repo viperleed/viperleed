@@ -106,7 +106,7 @@ class DirectionToken(DisplacementsFileToken):
 
     def _normalize(self, vec):
         norm = np.linalg.norm(vec)
-        if norm > COMPARE_EPS:
+        if norm < COMPARE_EPS:
             msg = f'Zero-length vector: {vec}'
             raise ValueError(msg)
         return vec / norm
