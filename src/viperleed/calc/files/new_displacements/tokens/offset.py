@@ -65,6 +65,6 @@ class OffsetToken(DisplacementsFileToken):
             return False
         return abs(self.offset - other.offset) < self._EPS
 
-    def __repr__(self):
+    def __str__(self):
         """Return a string representation of the OffsetToken object."""
         return f'OffsetToken(offset={self.offset})'

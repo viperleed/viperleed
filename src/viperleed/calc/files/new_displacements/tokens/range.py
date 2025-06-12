@@ -70,7 +70,6 @@ class RangeToken(DisplacementsFileToken):
         inst.start = start
         inst.stop = stop
         inst.step = step
-        inst.has_step = step is not None
         return inst
 
     def __eq__(self, other):
@@ -91,7 +90,7 @@ class RangeToken(DisplacementsFileToken):
             and abs(self.stop - other.stop) < self._EPS
         )
 
-    def __repr__(self):
+    def __str__(self):
         """Return a string representation of the RangeToken object."""
         if self.has_step:
             return (f'RangeToken(start={self.start}, stop={self.stop}, '

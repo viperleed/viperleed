@@ -66,6 +66,6 @@ class LinearOperationToken(DisplacementsFileToken):
             return False
         return np.allclose(self.arr, other.arr)
 
-    def __repr__(self):
+    def __str__(self):
         """Return a string representation of the LinearOperationToken object."""
         return f'LinearOperationToken(arr={self.arr})'

@@ -292,7 +292,7 @@ class OccDeltaLine(ParsedLine):
             raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
         self.element_ranges = tuple(element_ranges)
 
-    def __repr__(self):
+    def __str__(self):
         """Return the string representation of the line."""
         txt = f'{self.targets[0]}'
         for target in self.targets[1:]:

@@ -34,6 +34,6 @@ class TypeToken(DisplacementsFileToken):
             return False
         return self.type is other.type
 
-    def __repr__(self):
+    def __str__(self):
         """Return representation of TypeToken."""
         return f'TypeToken({self.type})'

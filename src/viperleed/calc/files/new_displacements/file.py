@@ -58,7 +58,7 @@ class SearchBlock:
     def explicit_constraints(self):
         return self.sections[DisplacementFileSections.CONSTRAIN]
 
-    def __repr__(self):
+    def __str__(self):
         return f'SearchBlock(label={self.label}, sections={self.sections})'
 
 

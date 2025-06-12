@@ -19,5 +19,5 @@ class DisplacementsFileToken(ABC):
         """Compare self to other token object."""
 
     @abstractmethod
-    def __repr__(self):
+    def __str__(self):
         """Return representation of token object."""

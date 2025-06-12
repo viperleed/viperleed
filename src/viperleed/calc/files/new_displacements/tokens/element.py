@@ -49,7 +49,7 @@ class ElementToken(DisplacementsFileToken):
             return False
         return other.atomic_number == self.atomic_number
 
-    def __repr__(self):
+    def __str__(self):
         """Return a string representation of the ElementToken object."""
         return f'ElementToken(element={self.symbol})'
 
