@@ -448,10 +448,9 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         layout.setContentsMargins(0, 0, 0, 0)
         step_number_label = qtw.QLabel('Nr. of steps:')
         layout.addWidget(step_number_label)
-        size = step_number_label.fontMetrics().boundingRect('a').height()
         info = ('<nobr>The number of intermediate steps.</nobr> '
                 f'Cannot be more than {MAX_NUM_STEPS}.')
-        layout.addWidget(FieldInfo(info, size=size))
+        layout.addWidget(FieldInfo.for_widget(step_number_label, tooltip=info))
         container.setLayout(layout)
         return container
 
@@ -462,10 +461,9 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         layout.setContentsMargins(0, 0, 0, 0)
         duration_label = qtw.QLabel('Step duration:')
         layout.addWidget(duration_label)
-        size = duration_label.fontMetrics().boundingRect('a').height()
         info = ('<nobr>How long to wait (ms) till </nobr>'
                 'the next intermediate step.')
-        layout.addWidget(FieldInfo(info, size=size))
+        layout.addWidget(FieldInfo.for_widget(duration_label, tooltip=info))
         container.setLayout(layout)
         return container
 
@@ -561,7 +559,6 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         fraction_label = qtw.QLabel()
         fraction_label.setText('Step fraction')
         layout.addWidget(fraction_label)
-        size = fraction_label.fontMetrics().boundingRect('a').height()
         info = ('<nobr>The energies to set given as a fraction</nobr> '
                 f'of "{DELTA_E_NAME}". Number of steps cannot exceed '
                 f'{MAX_NUM_STEPS}. Any value is acceptable. Zero is '
@@ -569,13 +566,13 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
                 'energy. A fraction of one does not have to be '
                 'explicitly included as the last step as this is added '
                 'automatically with the settle time.')
-        layout.addWidget(FieldInfo(info, size=size))
+        layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
         duration_label = qtw.QLabel()
         duration_label.setText('Duration')
         layout.addWidget(duration_label)
         info = ('<nobr>How long to wait (ms) till </nobr>'
                 'the next intermediate step.')
-        layout.addWidget(FieldInfo(info, size=size))
+        layout.addWidget(FieldInfo.for_widget(duration_label, tooltip=info))
         return layout
 
     def _connect(self):

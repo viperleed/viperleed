@@ -683,9 +683,7 @@ class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
         v_align_layout.setContentsMargins(0, 0, 0, 0)
         h_align_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Get an appropriate size for the info object
-        info_size = self.label.fontMetrics().boundingRect(label_text).height()
-        self._info = FieldInfo(info_text, size=info_size)
+        self._info = FieldInfo.for_widget(self.label, tooltip=info_text)
 
         # Fill layout
         h_align_layout.addWidget(self.label)

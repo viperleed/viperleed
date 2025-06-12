@@ -861,8 +861,7 @@ class _InputRangeSelector(qtw.QWidget):
             tooltip = tooltips.get(range_, "")
             if not tooltip:
                 continue
-            _size = btn.fontMetrics().boundingRect(btn.text()).height()
-            info = FieldInfo(tooltip, _size)
+            info = FieldInfo.for_widget(btn, tooltip=tooltip)
             _lay.addWidget(info)
             _lay.addStretch(1)
             self.__tooltips.append(info)
@@ -1004,8 +1003,7 @@ class _I0EditDialog(_EditDialogBase):
         _label = qtw.QLabel("I\u2080 gain")
         _policy = _label.sizePolicy()
         _label.setSizePolicy(_policy.Fixed, _policy.Preferred)
-        height = _label.fontMetrics().boundingRect(_label.text()).height()
-        self.__gain_info = FieldInfo(size=height)
+        self.__gain_info = FieldInfo.for_widget(_label)
         self.__gain_info.setSizePolicy(_policy.Fixed, _policy.Fixed)
         self.__update_gain_info()
 

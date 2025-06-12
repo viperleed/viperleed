@@ -59,11 +59,10 @@ class QuantitySelector(qtw.QFrame):
         main_layout = qtw.QVBoxLayout()
         label_layout = qtw.QHBoxLayout()
         label = qtw.QLabel('Measured Quantities')
-        size = label.fontMetrics().boundingRect('a').height()
         info = ('<nobr>Quantities in the same column cannot </nobr>'
                 'be measured at the same time.')
         label_layout.addWidget(label)
-        label_layout.addWidget(FieldInfo(info, size=size))
+        label_layout.addWidget(FieldInfo.for_widget(label ,tooltip=info))
         label_layout.addStretch(1)
         main_layout.addLayout(label_layout)
         quantity_layout = qtw.QHBoxLayout()
