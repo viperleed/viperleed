@@ -11,6 +11,7 @@ import numpy as np
 
 from .base import DisplacementsFileToken, TokenParserError
 
+COMPARE_EPS = 1E-6
 DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
 
@@ -78,7 +79,7 @@ class DirectionToken(DisplacementsFileToken):
             if not match:
                 msg = f'Invalid direction format: {direction_str}'
                 raise ValueError(msg)
-            dirs = list(match.group('dir'))
+            dirs = list(match['dir'])
             vecs = list(map(float, match.group('vec').split()))
             if len(dirs) != len(vecs):
                 msg = ('Mismatch between directions and components '
@@ -109,7 +110,7 @@ class DirectionToken(DisplacementsFileToken):
 
     def _normalize(self, vec):
         norm = np.linalg.norm(vec)
-        if norm == 0:
+        if norm > COMPARE_EPS:
             msg = f'Zero-length vector: {vec}'
             raise ValueError(msg)
         return vec / norm
