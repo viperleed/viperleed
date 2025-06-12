@@ -19,10 +19,10 @@ from viperleed.calc.files.new_displacements.tokens.type import TypeToken
     ],
 )
 def test_valid_type_strings(type_str, expected_enum):
-    tok = TypeToken(type_str)
-    assert tok.type is expected_enum
-    # repr should mention the enum
-    rep = repr(tok)
+    token = TypeToken(type_str)
+    assert token.type is expected_enum
+    # str representation should mention the enum
+    rep = str(token)
     assert 'TypeToken' in rep
     assert expected_enum.name in rep or expected_enum.value in rep
 
