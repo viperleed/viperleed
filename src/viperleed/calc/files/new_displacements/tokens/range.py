@@ -53,7 +53,12 @@ class RangeToken(DisplacementsFileToken):
         self.start = start
         self.stop = stop
         self.step = step
-        self.has_step = step is not None
+
+    @property
+    def has_step(self):
+        """Check if the range has a step defined."""
+        return self.step is not None
+
 
     @classmethod
     def from_floats(
@@ -80,8 +85,7 @@ class RangeToken(DisplacementsFileToken):
                 and abs(self.stop - other.stop) < self._EPS
                 and abs(self.step - other.step) < self._EPS
             )
-        if other.step is not None:
-            return False
+
         return (
             abs(self.start - other.start) < self._EPS
             and abs(self.stop - other.stop) < self._EPS
