@@ -5,7 +5,14 @@ __copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
 __created__ = "2024-10-15"
 __license__ = "GPLv3+"
 
-class TensorLEEDBackend:
+# Note by @michele-riva: (Part of) this module can probably be moved higher up
+# the calc tree so we will be ready to support more backends, not only
+# search-related. (See my suggestion of having a more generic BACKEND parameter
+# in #333.)
+
+from abc import ABC, abstractmethod
+
+class TensorLEEDBackend(ABC):
     """Base class for the tensor LEED backends.
 
     These classes have information on the capabilities of a given backend, e.g.
@@ -16,6 +23,7 @@ class TensorLEEDBackend:
         self.name = name
         self._handle_search_block_func = handle_search_block_func
 
+    @abstractmethod
     def replace_search_block(self, offsets_block, search_block):
         """Check if the backend can handle the given search block.
 
