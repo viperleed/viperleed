@@ -60,13 +60,49 @@ installed as described in :ref:`install_tensor_leed_deps`.
 
 If you want to also install the dependencies for running the ViPErLEED
 graphical user interface, which also allows you to :ref:`measure<hardware>`
-|LEED-IV| data, run
+|LEED-IV| data and to simulate LEED patterns, run
 
 .. code-block:: console
 
     python -m pip install viperleed[GUI]
 
 in your terminal.
+
+.. note::
+
+    If you are using the :program:`zsh` shell (default on macOS and some Linux
+    distributions), you need to quote or escape the square brackets as they are
+    otherwise interpreted as a glob pattern:
+
+    .. code-block:: bash
+
+        python -m pip install "viperleed[GUI]"
+        # or
+        python -m pip install viperleed\[GUI\]
+
+.. note::
+
+    On Unix and macOS, installation of the ``mplcairo`` package and its
+    ``pycairo`` dependency may fail if either ``pkg-config`` or ``cairo``
+    are not available on the system. If this is the case, you should
+    manually install the missing dependencies using your preferred
+    package manager:
+
+    .. tab-set::
+
+        .. tab-item:: Linux, Windows Subsystem for Linux
+            :sync: unix
+
+            .. code-block:: bash
+
+                sudo apt install pkg-config cairo
+
+        .. tab-item:: macOS
+            :sync: mac
+
+            .. code-block:: bash
+
+                brew install pkg-config cairo
 
 
 .. _wsl:

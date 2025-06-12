@@ -953,8 +953,7 @@ def search(sl, rp):
 
     # Prepare the command to be run via subprocess
     executable = os.path.join('.', searchname)
-    if usempi:
-        command = ['mpirun', '-n', str(rp.N_CORES)]
+    command = [] if not usempi else ['mpirun', '-n', str(rp.N_CORES)]
     if usempi and is_gfortran:
         # Assume we're using OpenMPI: we need to specify the use of all
         # CPU threads explicitly, otherwise OpenMPI will use only the
@@ -1118,7 +1117,7 @@ def search(sl, rp):
                         # "speed" is actually the inverse of a
                         # speed, in seconds per 1000 generations
                         speed = 1000 * since_started.how_long() / current_gen
-                        logger.debug(
+                        logger.info(
                             f'R = {min(rfacs)} (Generation {current_gen}, '
                             f'{since_last_debug.how_long():.3f} s since '
                             f'gen. {since_last_debug.previous_count}, '

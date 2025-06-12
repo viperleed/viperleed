@@ -54,7 +54,7 @@ def run_calc(
     preset_params=None,
     source=None,
     home=None,
-    ):
+        ):
     """Run a ViPErLEED calculation in the current directory.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
@@ -257,18 +257,18 @@ def _interpret_parameters(rpars, slab, preset_params):
 
 def _preprocess_work(rpars, log_name):
     """Do preliminary cleanup of the work directory.
-    
+
     The following actions are taken:
     - store away previous calc results that may be present in work.
     - save input files to SUPP/original_inputs.
-    
+
     Parameters
     ----------
     rpars : Rparams
         The current run parameters.
     log_name : str
         Name of the current log file.
-    
+
     Returns
     -------
     None.

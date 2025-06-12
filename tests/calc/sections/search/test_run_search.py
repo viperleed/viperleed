@@ -1,4 +1,7 @@
-"""Tests for viperleed.calc section search."""
+"""Tests for viperleed.calc section search.
+
+This module contains tests for actually executing a search.
+"""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
@@ -20,7 +23,7 @@ from viperleed.calc.sections.search import SearchError
 from viperleed.calc.sections.search import SigbusError
 from viperleed.calc.sections.search import _check_search_log
 
-from ...helpers import not_raises
+from ....helpers import not_raises
 
 
 @fixture(name='patch_read')
