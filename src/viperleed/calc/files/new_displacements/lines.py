@@ -82,7 +82,7 @@ class ParsedLine(ABC):
 
 
     @abstractmethod
-    def __repr__(self):
+    def __str__(self):
         """Return the string representation of the line."""
 
     @property
@@ -200,7 +200,7 @@ class GeoDeltaLine(ParsedLine):
         # parse to a range
         self.range = self._parse_range(self._rhs)
 
-    def __repr__(self):
+    def __str__(self):
         """Return the string representation of the line."""
         return f'{self.targets} {self.direction} = {self.range}'
 
@@ -234,7 +234,7 @@ class VibDeltaLine(ParsedLine):
         # parse to a range
         self.range = self._parse_range(self._rhs)
 
-    def __repr__(self):
+    def __str__(self):
         """Return the string representation of the line."""
         return f'{self.targets} = {self.range}'
 
@@ -404,7 +404,7 @@ class ConstraintLine(ParsedLine):
 
         self.linear_operation = self._parse_linear_operation(op_part)
 
-    def __repr__(self):
+    def __str__(self):
         """Return the string representation of the line."""
         txt = f'ConstraintLine({self.targets[0]}'
         for target in self.targets[1:]:
@@ -463,7 +463,7 @@ class OffsetsLine(ParsedLine):
             raise InvalidDisplacementsSyntaxError(
                 self.invalid_format_msg) from err
 
-    def __repr__(self):
+    def __str__(self):
         """Return the string representation of the line."""
         txt = f'{self.type} {self.targets[0]}'
         for target in self.targets[1:]:
