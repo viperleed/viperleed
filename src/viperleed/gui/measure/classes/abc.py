@@ -651,12 +651,12 @@ class DeviceABC(HardwareABC):
         This method must return a list of SettingsInfo instances. Each
         device is represented by a single SettingsInfo instance. The
         SettingsInfo object must contain a .unique_name, a
-        .has_hardware_interface boolean, and can contain .more
-        information as a dict. The information contained within a
-        SettingsInfo must be enough to determine settings files that
-        contain the correct settings for this device. Subclasses should
-        raise a DefaultSettingsError if they fail to create instances
-        from the settings in the DEFAULTS_PATH.
+        .has_hardware_interface bool, and can contain .more information
+        as a dict. The information contained within a SettingsInfo must
+        be enough to determine settings files that contain the correct
+        settings for this device. Subclasses should raise a
+        DefaultSettingsError if they fail to create instances from the
+        settings in the DEFAULTS_PATH.
 
         Returns
         -------
