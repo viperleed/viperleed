@@ -51,10 +51,12 @@ class OffsetToken(DisplacementsFileToken):
     @classmethod
     def from_floats(cls, offset: float) -> 'OffsetToken':
         """Alternate constructor using numeric values directly."""
-        if type(offset) is not float:
-            raise OffsetTokenParserError('from_float require float argument.')
         inst = cls.__new__(cls)
-        inst.offset = offset
+        try:
+            inst.offset = offset = float(offset)
+        except ValueError as err:
+            msg = f'Non-numeric value in offset: "{offset}"'
+            raise OffsetTokenParserError(msg) from err
         return inst
 
     def __eq__(self, other):
