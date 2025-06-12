@@ -18,9 +18,10 @@ class ElementToken(DisplacementsFileToken):
     """Class to parse and represent the <element> token.
 
     The <element> token in the DISPLACEMENTS file is used to specify chemical
-    (occupational) perturbations and ranges. It is used in the OCC_DELTA block
-    and in lines relating to chemical parameters in the OFFSETS and CONSTRAIN
-    blocks.
+    (occupational) perturbations and ranges (not to be confused with site
+    labels such as `Fe_surf` used in <target> tokens which may also contain
+    chemical elements). It is used in the OCC_DELTA block and in lines relating
+    to chemical parameters in the OFFSETS and CONSTRAIN blocks.
     The <element> token is specified by the user as a simple (case-insensitive)
     string corresponding to the Symbol of a element from the periodic table.
 
