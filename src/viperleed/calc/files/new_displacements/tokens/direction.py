@@ -19,10 +19,6 @@ SIMPLE_DIRECTIONS = ('x', 'y', 'z')
 class DirectionTokenParserError(TokenParserError):
     """Exception raised for unsupported direction formats."""
 
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
-
 
 class DirectionToken(DisplacementsFileToken):
     """Class to parse direction specifiers in 3D space.
@@ -123,7 +119,7 @@ class DirectionToken(DisplacementsFileToken):
             self.vectors, other.vectors
         )
 
-    def __repr__(self):
+    def __str__(self):
         """Return a string representation of the DirectionToken object."""
         return f'DirectionToken(vectors={self.vectors}, dof={self.dof})'
 
