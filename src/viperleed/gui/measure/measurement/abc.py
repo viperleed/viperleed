@@ -1706,8 +1706,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         tmp_path = self._temp_dir
         base_path = tmp_path.parent
-        tag = self.settings.get('measurement_info', 'tag', fallback='')
-        name_tag = (' ' + tag) if tag else ''
+        # Backwards compatibility fix                                           # TODO: #242
+        has_option = self.settings.has_option('measurement_info', 'suffix')
+        option = 'suffix' if has_option else 'tag'
+        suffix = self.settings.get('measurement_info', option, fallback='')
+        name_tag = ('_' + suffix) if suffix else ''
         current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         self.settings.set('measurement_info', 'ended', current_time)
         final_path = base_path / (current_time + name_tag)
