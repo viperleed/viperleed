@@ -64,8 +64,8 @@ def test_empty_string_raises():
 
 
 def test_repr():
-    tok = TargetToken('A')
-    repr_str = repr(tok)
+    token = TargetToken('A')
+    repr_str = str(token)
     assert 'TargetToken(target_str=A)' in repr_str
 
 

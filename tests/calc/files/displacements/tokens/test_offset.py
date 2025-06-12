@@ -16,11 +16,11 @@ from viperleed.calc.files.new_displacements.tokens.offset import (
     ],
 )
 def test_init_valid(input_str, exp_offset):
-    tok = OffsetToken(input_str)
-    assert isinstance(tok, OffsetToken)
-    assert tok.offset == pytest.approx(exp_offset)
+    token = OffsetToken(input_str)
+    assert isinstance(token, OffsetToken)
+    assert token.offset == pytest.approx(exp_offset)
     # repr
-    assert repr(tok) == f'OffsetToken(offset={tok.offset})'
+    assert str(token) == f'OffsetToken(offset={token.offset})'
 
 
 def test_init_invalid_count():
