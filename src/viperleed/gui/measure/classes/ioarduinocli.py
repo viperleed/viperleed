@@ -655,10 +655,11 @@ class FirmwareUploader(ArduinoCLI):
         for board in viper_boards:
             port = board['port']['address']
             board = board['matching_boards'][0]
-            ctrl = f'{board["name"]} ({port})'
+            name = board['name'] 
+            ctrl = f'{name} ({port})'
             ctrl_dict[ctrl] = {
                 'port': port,
-                'name': board['name'],
+                'name': name,
                 'fqbn': board['fqbn'],
                 'version': NOT_SET,
                 }

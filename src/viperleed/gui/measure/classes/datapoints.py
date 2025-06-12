@@ -83,7 +83,7 @@ class QuantityInfo(enum.Enum):
                    'Temperature', '')
     AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux', 'Aux', '')
     COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y',
-                     'Temperature', 'Cold junction temperature',
+                     'Temperature', 'Cold-junction temperature',
                      'Reference temperature measured internally in the '
                      'ViPErLEED unit to convert the measured thermocouple '
                      'voltage to a temperature')
@@ -178,7 +178,7 @@ class QuantityInfo(enum.Enum):
     @classmethod
     def get_display_labels(cls):
         """Return a dict {display_label: enum} of all members."""
-        return {l.display_label: l for l in cls}
+        return {q.display_label: q for q in cls}
 
     @classmethod
     def get_labels(cls):

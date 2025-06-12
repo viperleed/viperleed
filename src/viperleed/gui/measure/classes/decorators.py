@@ -1,6 +1,6 @@
 """Module decorators of viperleed.gui.measure.classes
 
-Defines decorators used in the other ViPErLEED modules.
+Defines decorators used in the measure package.
 """
 
 __authors__ = (
