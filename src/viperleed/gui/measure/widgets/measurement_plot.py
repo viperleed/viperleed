@@ -27,7 +27,6 @@ from viperleed.gui.widgets.canvases import MeasurementFigureCanvas as Canvas
 from viperleed.gui.widgets.lib import AllGUIFonts
 
 
-
 # TODO: temporarily one can adjust here the structure in which a
 # measurement will be plotted (flat or step-wise). Will then become
 # a combo box.
@@ -218,7 +217,7 @@ class MeasurementPlot(qtw.QWidget):
 
         for color, quantity in zip(_COLORS, self.plotted_quantities):
             legend_elements.append(
-                Line2D([], [], label=quantity.label,
+                Line2D([], [], label=quantity.display_label,
                        color=color(COLOR_FRACTION), linewidth=4)
                 )
         return legend_elements
