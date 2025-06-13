@@ -17,7 +17,12 @@ from PyQt5 import QtCore as qtc
 
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.classes.settings import SystemSettings
+from viperleed.gui.measure.dialogs.settingsdialog import (
+    SettingsSectionColumnInfo
+    )
 from viperleed.gui.measure.measurement.abc import MeasurementABC
+from viperleed.gui.measure.measurement._meassettings import DeviceEditor
 from viperleed.gui.measure.measurement._meassettings import START_E_NAME
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.gui.widgets.checkboxes import QCheckBoxInvertedSignal
@@ -436,6 +441,13 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             )
         retain_size_when_hidden(interval.handler_widget)
 
+        settings_path = SystemSettings().paths['configuration']
+        second_column = SettingsSectionColumnInfo(position=1)
+        device_section = DeviceEditor(
+            self.settings, default_folder=settings_path,
+            may_have_cameras=True, column_info=second_column,
+            )
+        handler.add_complex_section(device_section)
         return handler
 
     @qtc.pyqtSlot(object)

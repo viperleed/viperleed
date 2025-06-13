@@ -25,10 +25,14 @@ from viperleed import NUMPY2_OR_LATER
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.classes.settings import NotASequenceError
+from viperleed.gui.measure.classes.settings import SystemSettings
+from viperleed.gui.measure.dialogs.settingsdialog import (
+    SettingsSectionColumnInfo
+    )
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement.abc import MeasurementErrors
+from viperleed.gui.measure.measurement._meassettings import DeviceEditor
 from viperleed.gui.measure.measurement._meassettings import START_E_NAME
-
 
 _MEASURED_EGY = QuantityInfo.HV
 
@@ -317,6 +321,13 @@ class MeasureEnergyCalibration(MeasurementABC):
             '<nobr>The energy at which the measurement starts.</nobr> '
             f'The minimum {START_E_NAME} is {self._min_energy} eV.'
             )
+        settings_path = SystemSettings().paths['configuration']
+        second_column = SettingsSectionColumnInfo(position=1)
+        device_section = DeviceEditor(
+            self.settings, default_folder=settings_path,
+            may_have_cameras=False, column_info=second_column,
+            )
+        handler.add_complex_section(device_section)
         return handler
 
     def set_settings(self, new_settings):

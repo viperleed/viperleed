@@ -14,8 +14,13 @@ __license__ = 'GPLv3+'
 from PyQt5 import QtCore as qtc
 
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.classes.settings import SystemSettings
+from viperleed.gui.measure.dialogs.settingsdialog import (
+    SettingsSectionColumnInfo
+    )
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement.abc import MeasurementErrors
+from viperleed.gui.measure.measurement._meassettings import DeviceEditor
 
 
 class IVVideo(MeasurementABC):
@@ -164,11 +169,16 @@ class IVVideo(MeasurementABC):
             cam_time = camera_delay + cam.time_to_image_ready
             print(txt, f"{cam_time:>{30-len(txt)}.2f} ms")
 
-    # We don't have anything to do in get_settings_handler() that is not
-    # already done in the ABC, but get_settings_handler is abstract.
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
         handler = super().get_settings_handler()
+        settings_path = SystemSettings().paths['configuration']
+        second_column = SettingsSectionColumnInfo(position=1)
+        device_section = DeviceEditor(
+            self.settings, default_folder=settings_path,
+            may_have_cameras=True, column_info=second_column,
+            )
+        handler.add_complex_section(device_section)
         return handler
 
     @qtc.pyqtSlot(object)

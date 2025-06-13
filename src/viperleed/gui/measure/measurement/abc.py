@@ -35,7 +35,6 @@ from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.controller.abc import MeasureControllerABC
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsHandler,
-    SettingsSectionColumnInfo,
     SettingsTag,
     )
 from viperleed.gui.measure.measurement import _meassettings as _settings
@@ -520,8 +519,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         self.check_creating_settings_handler_is_possible()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
-        sys_config = SystemSettings()
-        settings_path = sys_config.paths['configuration']
 
         handler.add_section('measurement_info', tags=SettingsTag.REGULAR)
         tip = ('<nobr>This string will be appended </nobr>'
@@ -574,14 +571,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         handler.add_option('energies', 'step_profile',
                            handler_widget=widget, display_name='Step profile',
                            tooltip=tip)
-
-        second_column = SettingsSectionColumnInfo(position=1)
-        device_section = _settings.DeviceEditor(
-            self.settings, default_folder=settings_path,
-            may_have_cameras=True, column_info=second_column,
-            )
-        handler.add_complex_section(device_section)
-
         return handler
 
     @classmethod
