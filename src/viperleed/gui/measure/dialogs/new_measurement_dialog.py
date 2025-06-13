@@ -32,9 +32,19 @@ default = object()
 
 
 class SelectNewMeasurementDialog(qtw.QDialog):
-    """Dialog that handles selecting measurements."""
+    """Dialog that handles selecting measurements.
 
-    measurement_selected = qtc.pyqtSignal(object, ViPErLEEDSettings)
+    Signals
+    -------
+    measurement_selected : type, ViPErLEEDSettings
+        Emitted when a measurement has been selected. Carries
+        the measurement class and the requested settings.
+    settings_not_found : Path, str
+        Emitted when a settings file could not be read. Carries the
+        path to the missing settings and the error message as a str.
+    """
+
+    measurement_selected = qtc.pyqtSignal(type, ViPErLEEDSettings)
     settings_not_found = qtc.pyqtSignal(Path, str)
 
     def __init__(self, parent=None, **kwargs):
@@ -76,7 +86,6 @@ class SelectNewMeasurementDialog(qtw.QDialog):
 
     def _compose_and_connect(self):
         """Place children widgets and connect signals."""
-        # layout = qtw.QVBoxLayout()
         layout = qtw.QFormLayout()
         for name, cls in ALL_MEASUREMENTS.items():
             self._ctrls['type_selection'].addItem(name, userData=cls)

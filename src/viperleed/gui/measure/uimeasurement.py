@@ -651,7 +651,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                              interactions_enabled=False)
                 )
 
-    @qtc.pyqtSlot(object, ViPErLEEDSettings)
+    @qtc.pyqtSlot(type, ViPErLEEDSettings)
     def _create_measurement(self, measurement_class, settings):
         """Create measurement object for use in a measurement."""
         self.measurement = measurement_class(settings)
