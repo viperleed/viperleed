@@ -24,7 +24,7 @@ from viperleed.gui.measure.classes.settings import interpolate_config_path
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.hardwarebase import class_from_name
-from viperleed.gui.measure.hardwarebase import disconnected
+from viperleed.gui.measure.hardwarebase import disconnected_slot
 from viperleed.gui.measure.hardwarebase import emit_error
 from viperleed.gui.measure.hardwarebase import get_devices
 from viperleed.gui.measure.widgets.collapsibleviews import (
@@ -390,10 +390,10 @@ class CollapsibleCameraList(CollapsibleDeviceList):
             settings_info = SettingsInfo(name, present, info)
             correct_view = self.add_new_view(name, (cls, settings_info))
 
-        with disconnected(self._emit_and_update_settings,
-                          self._checkbox(correct_view).stateChanged,
-                          type=qtc.Qt.UniqueConnection
-                          ):
+        with disconnected_slot(self._emit_and_update_settings,
+                               self._checkbox(correct_view).stateChanged,
+                               type=qtc.Qt.UniqueConnection
+                               ):
             correct_view.original_settings = settings.last_file
             self._checkbox(correct_view).setChecked(True)
 
@@ -610,11 +610,11 @@ class CollapsibleControllerList(CollapsibleDeviceList):
             settings_info = SettingsInfo(name, present, info)
             correct_view = self.add_new_view(name, (cls, settings_info))
 
-        with disconnected(self._emit_and_update_settings,
-                          self._checkbox(correct_view).stateChanged,
-                          self.views[correct_view][1].toggled,
-                          type=qtc.Qt.UniqueConnection
-                          ):
+        with disconnected_slot(self._emit_and_update_settings,
+                               self._checkbox(correct_view).stateChanged,
+                               self.views[correct_view][1].toggled,
+                               type=qtc.Qt.UniqueConnection
+                               ):
             correct_view.original_settings = settings.last_file
             self._checkbox(correct_view).setChecked(True)
             correct_view.set_quantities(quantities)

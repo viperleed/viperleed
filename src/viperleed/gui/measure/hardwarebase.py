@@ -212,7 +212,25 @@ def device_name_re(name):
 
 
 @contextmanager
-def disconnected(slot, signal, *more_signals, type=None):
+def disconnected_signal(signal, slot, *more_slots, type=None):
+    """Temporarily disconnect a signal from slots."""
+    reconnect = []
+    for slot in (slot, *more_slots):
+        try:
+            signal.disconnect(slot)
+        except TypeError:  # Not connected
+            continue
+        reconnect.append(slot)
+
+    try:
+        yield
+    finally:
+        for slot in reconnect:
+            safe_connect(signal, slot, type=type)
+
+
+@contextmanager
+def disconnected_slot(slot, signal, *more_signals, type=None):
     """Temporarily disconnect signals from a slot."""
     reconnect = []
     for signal in (signal, *more_signals):
