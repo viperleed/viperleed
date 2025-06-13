@@ -1338,7 +1338,7 @@ class MeasurementSettingsDialog(SettingsDialog):
             try:
                 settings_ok, reason = widget.are_settings_ok()
             except AttributeError:
-                pass
+                continue
             if not settings_ok:
                 self._ctrls['accept'].setToolTip(reason)
                 break
