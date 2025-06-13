@@ -35,7 +35,7 @@ import pytest
 import pytest_cases
 
 from viperleed.calc import psgen
-from viperleed.calc.files import displacements
+from viperleed.calc.files import new_displacements
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.tenserleed import get_tensorleed_path
 from viperleed.calc.lib.context import execute_in_dir
@@ -81,8 +81,8 @@ def ag100_with_displacements_and_offsets(ag100, data_path):
     vibrocc_path = inputs_path / 'VIBROCC'
     displacements_path = inputs_path / 'DISPLACEMENTS_mixed'
     vibrocc.readVIBROCC(param, slab, str(vibrocc_path))
-    displacements.readDISPLACEMENTS(param, str(displacements_path))
-    displacements.readDISPLACEMENTS_block(param, slab, param.disp_blocks[0])
+    new_displacements.readDISPLACEMENTS(param, str(displacements_path))
+    new_displacements.readDISPLACEMENTS_block(param, slab, param.disp_blocks[0])
     return slab, param
 
 
