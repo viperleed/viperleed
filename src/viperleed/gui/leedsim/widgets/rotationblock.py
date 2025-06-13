@@ -16,8 +16,8 @@ import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed.gui.basewidgets import TextBoxWithButtons
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.spinboxes import TextBoxWithButtons
 
 
 class RotationBlock(TextBoxWithButtons):

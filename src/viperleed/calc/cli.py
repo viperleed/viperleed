@@ -18,13 +18,17 @@ from pathlib import Path
 import shutil
 
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
+from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.log import LOGGER as bookie_log
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 from viperleed.calc.constants import DEFAULT_DELTAS
+from viperleed.calc.constants import DEFAULT_HISTORY
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files.manifest import ManifestFile
 from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.log_utils import close_all_handlers
 from viperleed.calc.lib.fs_utils import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
@@ -51,12 +55,15 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         presets = {}  # Replace selected PARAMETERS
         _verbosity_to_log_level(args, presets)
 
+        cwd_was_empty = not _has_history()
+
         bookkeeper = Bookkeeper()
         bookkeeper.run(mode=BookkeeperMode.CLEAR,
                        requires_user_confirmation=not args.skip_confirmation)
 
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
         _copy_input_files_to_work(work_path)
+        cwd_was_empty &= not any(work_path.iterdir())
 
         cwd = Path.cwd()
         exit_code = 2
@@ -71,14 +78,21 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             finally:
                 domains = _copy_files_from_manifest(cwd)
 
-        # Run bookkeeper in archive mode,
-        # propagating to domains if needed
-        bookkeeper.run(mode=BookkeeperMode.ARCHIVE,
-                       requires_user_confirmation=not args.skip_confirmation,
-                       domains=domains)
+        if cwd_was_empty:
+            # Remove the empty history and history.info created by
+            # the first bookkeeper call.
+            _remove_history()
+        else:
+            # Run bookkeeper in archive mode,
+            # propagating to domains if needed
+            bookkeeper.run(
+                mode=BookkeeperMode.ARCHIVE,
+                requires_user_confirmation=not args.skip_confirmation,
+                domains=domains,
+                )
 
         # Finally clean up work if requested
-        keep_workdir = args.keep_workdir or exit_code
+        keep_workdir = args.keep_workdir or (exit_code and not cwd_was_empty)
         if not keep_workdir:
             try:
                 shutil.rmtree(work_path)
@@ -218,12 +232,30 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
         shutil.copy2(local_file, work_path / local_file)
 
 
+def _has_history():
+    """Return whether the current directory was processed by bookkeeper."""
+    cwd = Path.cwd()
+    return (
+        (cwd/DEFAULT_HISTORY).is_dir()
+        or
+        (cwd/HISTORY_INFO_NAME).is_file()
+        )
+
+
 def _make_work_directory(cli_args):
     """Return a suitable 'work' directory from `cli_args`."""
     work_path = Path(cli_args.work or DEFAULT_WORK).resolve()
     work_path.mkdir(parents=True, exist_ok=True)
     # Resolve again, in case it did not exist yet
     return work_path.resolve()
+
+
+def _remove_history():
+    """Delete history[.info] from the current directory."""
+    close_all_handlers(bookie_log)
+    cwd = Path.cwd()
+    shutil.rmtree(cwd/DEFAULT_HISTORY)
+    (cwd/HISTORY_INFO_NAME).unlink()
 
 
 def _verbosity_to_log_level(cli_args, presets):

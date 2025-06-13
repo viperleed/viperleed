@@ -16,7 +16,7 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed.gui.leedsim.widgets.matricespopup import MatricesPopup
 from viperleed.gui.leedsim.widgets.togglebutton import ToggleButton
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.lib import AllGUIFonts
 
 
 class DomsBlock(qtw.QWidget):

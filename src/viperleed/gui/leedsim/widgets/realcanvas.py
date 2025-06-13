@@ -14,7 +14,7 @@ __license__ = 'GPLv3+'
 from matplotlib import colors as mpl_colors
 import numpy as np
 
-from viperleed.gui.basewidgets import MPLFigureCanvas
+from viperleed.gui.widgets.canvases import MPLFigureCanvas
 
 
 class RealCanvas(MPLFigureCanvas):
