@@ -281,18 +281,24 @@ class MathParser:
         """Recursively evaluate a node."""
         if isinstance(node, ast.Expression):
             ret = self._eval(node.body, depth+1)
-        elif isinstance(node, ast.Constant):  # Available since 3.6
-            ret = node.value
-        elif isinstance(node, ast.Str):       # Deprecated since 3.8
-            ret = node.s
-        elif isinstance(node, ast.Num):       # Deprecated since 3.8
-            ret = node.n
         elif isinstance(node, ast.BinOp):
             ret = self._eval_binary_operation(node, depth+1)
         elif isinstance(node, ast.UnaryOp):
             ret = self._eval_unary_operation(node, depth+1)
         elif isinstance(node, ast.Call):
             ret = self._eval_math_function(node, depth+1)
+        else:
+            ret = self._eval_constant(node)
+        return ret
+
+    def _eval_constant(self, node):
+        """Evaluate a node containing a constant value."""
+        if isinstance(node, ast.Constant):    # Available since 3.6
+            ret = node.value
+        elif isinstance(node, ast.Str):       # Deprecated since 3.8
+            ret = node.s
+        elif isinstance(node, ast.Num):       # Deprecated since 3.8
+            ret = node.n
         else:
             raise UnsupportedMathError(node)
         return ret
