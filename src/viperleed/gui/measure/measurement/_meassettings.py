@@ -20,6 +20,7 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes.abc import QMetaABC
+from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
     SettingsTag,
@@ -56,12 +57,14 @@ class DeviceEditor(SettingsDialogSectionBase):
         ----------
         settings : ViPErLEEDSettings
             The settings of the loaded measurement.
-        may_have_cameras : bool
+        may_have_cameras : bool, optional
             Whether a collapsible list for cameras should be added.
-        default_folder : path-like or None
-            Default folder to look for settings in.
-            None if none was given.
-        **kwargs : dict
+            Default is False.
+        default_folder : path-like or None, optional
+            Default folder to look for settings in. Default is None.
+            If None is given, then the base system configuration path
+            will be used.
+        **kwargs : object
             Keyword arguments passed on to super().__init__
             'display_name' : Displayed name of section.
             'tags' : Tags associated with the section.
@@ -80,7 +83,11 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._controllers = CollapsibleControllerList()
         self._cameras = CollapsibleCameraList()
         self._default_settings_folder = None
-        self.default_settings_folder = default_folder
+        settings_path = SystemSettings().paths['configuration']
+        if default_folder:
+            self.default_settings_folder = default_folder
+        else:
+            self.default_settings_folder = settings_path
         self.settings_changed.connect(self._store_device_settings)
         self._compose_and_connect_collapsible_lists(may_have_cameras)
 
