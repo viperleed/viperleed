@@ -453,7 +453,7 @@ def make_device(settings_file, device_cls, settings_info, **kwargs):
     settings_file : dict or ConfigParser or str or Path or ViPErLEEDSettings
         The device settings.
     device_cls : type
-        The class of the device.
+        The class of the device. It should be a subclass of DeviceABC.
     settings_info : SettingsInfo
         The SettingsInfo necessary to determine the settings.
     **kwargs : object
@@ -462,7 +462,7 @@ def make_device(settings_file, device_cls, settings_info, **kwargs):
     Returns
     -------
     device : DeviceABC
-        An instance of an implemented DeviceABC subclass object.
+        An instance of `device_cls`.
     """
     if 'address' in settings_info.more:
         kwargs['address'] = settings_info.more['address']
