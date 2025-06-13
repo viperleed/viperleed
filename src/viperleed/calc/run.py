@@ -115,7 +115,7 @@ def run_calc(
                 + DateTimeFormat.LOG_CONTENTS.now())
     LOGGER.info(f'This is ViPErLEED version {__version__}\n')
 
-    manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT, log_name)
+    manifest = ManifestFile(log_name)
     try:
         # Read input files and load user arguments
         rpars, slab = _make_rpars_and_slab(manifest, preset_params, slab, home)
