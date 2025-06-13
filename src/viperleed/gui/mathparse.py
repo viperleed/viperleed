@@ -24,6 +24,10 @@ from functools import wraps
 import math
 import operator
 import re
+import sys
+
+PY_3_8 = (3, 8)
+
 
 BINARY_OPERATIONS = {
     ast.Add: operator.add,
@@ -37,9 +41,15 @@ BINARY_OPERATIONS = {
 CONST_CLS_TO_ATTR = {
     # Node instance: node attribute for evaluation
     ast.Constant: 'value',  # Available since 3.6
-    ast.Str: 's',           # Deprecated since 3.8
-    ast.Num: 'n',           # Deprecated since 3.8
     }
+if sys.version_info < PY_3_8:
+    # Add deprecated ast classes for early python versions.
+    # Back in Py37 they were not yet aliases for Constant.
+    # They have been subclasses of Constant since Py3.8.
+    CONST_CLS_TO_ATTR.update({
+        ast.Str: 's',
+        ast.Num: 'n',
+        })
 
 UNARY_OPERATIONS = {
     ast.USub: operator.neg,
