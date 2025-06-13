@@ -15,6 +15,7 @@ __license__ = 'GPLv3+'
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.gui.measure.classes.abc import NO_HARDWARE_INTERFACE
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.abc import SettingsInfo
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
@@ -22,7 +23,6 @@ from viperleed.gui.measure.classes.settings import DefaultSettingsError
 from viperleed.gui.measure.classes.settings import interpolate_config_path
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
-from viperleed.gui.measure.controller.abc import NO_HARDWARE_INTERFACE
 from viperleed.gui.measure.hardwarebase import class_from_name
 from viperleed.gui.measure.hardwarebase import disconnected
 from viperleed.gui.measure.hardwarebase import emit_error

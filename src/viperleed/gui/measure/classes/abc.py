@@ -41,6 +41,8 @@ from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 
 _UNIQUE = qtc.Qt.UniqueConnection
 
+NO_HARDWARE_INTERFACE = object()
+
 
 class QMetaABC(ABCMeta, type(qtc.QObject)):
     """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""

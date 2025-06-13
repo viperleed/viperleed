@@ -25,6 +25,7 @@ from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes import settings as _m_settings
 from viperleed.gui.measure.classes.abc import DeviceABC
 from viperleed.gui.measure.classes.abc import DeviceABCErrors
+from viperleed.gui.measure.classes.abc import NO_HARDWARE_INTERFACE
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsTag
@@ -33,8 +34,6 @@ from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 
 _UNIQUE = qtc.Qt.UniqueConnection
 _QUEUED_UNIQUE = qtc.Qt.QueuedConnection | _UNIQUE
-
-NO_HARDWARE_INTERFACE = object()
 
 
 def ensure_connected(method):
