@@ -175,7 +175,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self.data_points = DataPoints(parent=self)
         self.data_points.error_occurred.connect(self.error_occurred)
 
-        self.error_occurred.connect(self._store_delayed_error)
         self.error_occurred.connect(self._on_hardware_error, type=_QUEUED)
 
         self._camera_timer = qtc.QTimer(parent=self)
@@ -190,15 +189,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._force_end_timer.setInterval(4500)
         self._force_end_timer.timeout.connect(self._cleanup_and_end)
 
-        # We do not use the delayed_errors context here because the             # TODO: perhaps we can also store the sender together with the errors? Then we could sender.emit_error again.
-        # device.error_occurred signals are not connected yet and
-        # therefore the MeasurementABC collects those errors and
-        # reports them with its own errors.
-        self.set_settings(self._settings_to_load)
-
-        if self._delayed_errors:
-            self._delay_errors_timer.start(20)
-        self.error_occurred.disconnect(self._store_delayed_error)
+        with self.errors_delayed():
+            self.set_settings(self._settings_to_load)
 
     def __init_subclass__(cls, **kwargs):
         """Ensure display name is set."""
@@ -799,9 +791,18 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if not super().set_settings(new_settings):
             return False
 
+        # Before creating new devices, clean up the old ones
+        for device in self.devices:
+            device_error = device.error_occurred
+            base.safe_disconnect(device_error, self.error_occurred)
+            base.safe_disconnect(device_error, self._on_hardware_error)
+
         if not self._make_primary_ctrl():
             # Something went wrong (already reported in _make_primary).
-            self.primary_controller = None                                      # TODO: probably good to clean up secondaries and cameras!
+            # Clean up all the old devices.
+            self.primary_controller = None
+            self.secondary_controllers = ()
+            self.cameras = ()
             return False
         self.data_points.primary_controller = self.primary_controller
         self._make_secondary_ctrls()
@@ -1354,7 +1355,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 cam = self._make_camera(settings)
             except RuntimeError:
                 continue
-            cam.error_occurred.connect(self._store_delayed_error)
+            # Temporarily connect device.error_occurred to
+            # self.error_occurred in order to report errors that
+            # happen during creation of the device object (which delays
+            # its own errors).
+            cam.error_occurred.connect(self.error_occurred)
+            # Ensure device errors also abort the measurement.
             cam.error_occurred.connect(self._on_hardware_error)
             cam.process_info.count = 1  # Image counter, start at 1
             cameras.append(cam)
@@ -1460,11 +1466,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         controller = cls(settings=config, address=address,
                          sets_energy=is_primary)
-        # Connect error signal. The connection with _store_delayed_error
-        # has any impact only during initialization of self, but it
-        # does not hurt to leave it connected. _on_hardware_error
-        # causes abortion of the measurement.
-        controller.error_occurred.connect(self._store_delayed_error)
+        # Temporarily connect device.error_occurred to
+        # self.error_occurred in order to report errors that
+        # happen during creation of the device object (which delays
+        # its own errors).
+        controller.error_occurred.connect(self.error_occurred)
+        # Ensure device errors also abort the measurement.
         controller.error_occurred.connect(self._on_hardware_error)
         controller.set_measurements(measurements)
         return controller

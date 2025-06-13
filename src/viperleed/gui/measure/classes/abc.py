@@ -129,20 +129,22 @@ class QObjectWithError(qtc.QObject):                                            
     @qtc.pyqtSlot(tuple)
     def _on_error_delayed(self, error):
         """Collect errors to be delayed."""
-        self._store_delayed_error(error)
+        self._store_delayed_error(error, self.sender())
         self._delay_errors_timer.start()
 
     @qtc.pyqtSlot()
     def _report_delayed_errors(self):
         """Emit errors that we have accumulated."""
-        for error in self._delayed_errors:
-            self.emit_error(error)
+        for error, sender in self._delayed_errors:
+            try:
+                sender.emit_error(error)
+            except RuntimeError:
+                self.emit_error(error)
         self._delayed_errors.clear()
 
-    @qtc.pyqtSlot(tuple)
-    def _store_delayed_error(self, error):
+    def _store_delayed_error(self, error, sender):
         """Remember an error to be delayed."""
-        self._delayed_errors.append(error)
+        self._delayed_errors.append((error, sender))
 
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):

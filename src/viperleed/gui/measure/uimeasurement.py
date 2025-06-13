@@ -949,13 +949,19 @@ class Measure(ViPErLEEDPluginBase):                                             
         print("\n\nSTARTING\n")
         dialog = self.sender()
         assert dialog is self._dialogs['measurement_settings']
-        self._connect_measurement()
+        self._connect_measurement()  # For errors from the measurement.
         settings_ok = self.measurement.set_settings(dialog.settings.last_file)
+        self._connect_measurement()  # Again, for the new devices.
+        # We will report errors coming from devices separately from the
+        # one coming from the measurement. Disconnect the signals from
+        # one another here.
+        for device in self.measurement.devices:
+            base.safe_disconnect(device.error_occurred,
+                                 self.measurement.error_occurred)
         # It is necessary to call deleteLater(), otherwise the measurement
         # object will remain alive and the next dialog may attempt to
         # reuse a measurement object for another measurement. This call
         # is done in _cleanup_measurement_settings_dialog().
-        self._connect_measurement()
         self._cleanup_measurement_settings_dialog()
         if not settings_ok:
             return
