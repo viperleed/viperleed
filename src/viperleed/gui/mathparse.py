@@ -34,6 +34,13 @@ BINARY_OPERATIONS = {
     ast.Pow: operator.pow,
     }
 
+CONST_CLS_TO_ATTR = {
+    # Node instance: node attribute for evaluation
+    ast.Constant: 'value',  # Available since 3.6
+    ast.Str: 's',           # Deprecated since 3.8
+    ast.Num: 'n',           # Deprecated since 3.8
+    }
+
 UNARY_OPERATIONS = {
     ast.USub: operator.neg,
     ast.UAdd: operator.pos,
@@ -293,15 +300,12 @@ class MathParser:
 
     def _eval_constant(self, node):
         """Evaluate a node containing a constant value."""
-        if isinstance(node, ast.Constant):    # Available since 3.6
-            ret = node.value
-        elif isinstance(node, ast.Str):       # Deprecated since 3.8
-            ret = node.s
-        elif isinstance(node, ast.Num):       # Deprecated since 3.8
-            ret = node.n
-        else:
+        try:
+            attr = next(v for c, v in CONST_CLS_TO_ATTR.items()
+                        if isinstance(node, c))
+        except StopIteration:
             raise UnsupportedMathError(node)
-        return ret
+        return getattr(node, attr)
 
     @limit_recursion
     def _eval_math_function(self, node, depth):
