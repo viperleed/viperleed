@@ -314,7 +314,7 @@ class MathParser:
             attr = next(v for c, v in CONST_CLS_TO_ATTR.items()
                         if isinstance(node, c))
         except StopIteration:
-            raise UnsupportedMathError(node)
+            raise UnsupportedMathError(node) from None
         return getattr(node, attr)
 
     @limit_recursion
