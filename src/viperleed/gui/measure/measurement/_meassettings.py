@@ -65,7 +65,7 @@ class DeviceEditor(SettingsDialogSectionBase):
             If None is given, then the base system configuration path
             will be used.
         **kwargs : object
-            Keyword arguments passed on to super().__init__
+            Keyword arguments passed on to SettingsDialogSectionBase
             'display_name' : Displayed name of section.
             'tags' : Tags associated with the section.
             'tooltip' : Tooltip displayed with the section.
@@ -94,7 +94,7 @@ class DeviceEditor(SettingsDialogSectionBase):
     @property
     def _device_lists(self):
         """Return the device lists."""
-        return(self._controllers, self._cameras)
+        return (self._controllers, self._cameras)
 
     @property
     def default_settings_folder(self):
@@ -240,7 +240,7 @@ class StepProfileViewer(ButtonWithLabel):
         """Set label and load profile into step profile editor."""
         value = literal_eval(value)
         if not value:
-            value = ('abrupt',)
+            value = AbruptEnergyStepEditor().profile
         if isinstance(value, str):
             value = (value,)
         self.profile_editor.profile = value
@@ -248,7 +248,7 @@ class StepProfileViewer(ButtonWithLabel):
 
 
 class StepProfileEditor(qtw.QDialog):                                           # TODO: visually draw profiles
-    """Editor for setting step profiles.
+    """A dialog for setting step profiles.
 
     Provides a selection of step profiles and allows
     editing of the corresponding settings.
@@ -285,7 +285,8 @@ class StepProfileEditor(qtw.QDialog):                                           
     def profile(self, profile_data):
         """Set the profile from settings."""
         first = profile_data[0]
-        name = (first if isinstance(first, str) else 'custom')
+        name = (first if isinstance(first, str)
+                else FractionalEnergyStepEditor.name)
         index = self.pick_profile.findText(name.capitalize() + ' profile')
         self.pick_profile.setCurrentIndex(index)
         self.pick_profile.currentData().set_profile(profile_data)
@@ -333,7 +334,7 @@ class StepProfileEditor(qtw.QDialog):                                           
     def _populate_profile_options(self):
         """Add profile options to profile selection."""
         for profile_editor in self._profile_editors.values():
-            name = profile_editor.name.capitalize()+' profile'
+            name = profile_editor.name.capitalize() +' profile'
             self.pick_profile.addItem(name, userData=profile_editor)
 
     @qtc.pyqtSlot()
@@ -406,7 +407,7 @@ class AbruptEnergyStepEditor(EnergyStepProfileShapeEditor):
 
     name = 'abrupt'
     description = ('An abrupt energy step that immediately goes from\n'
-                  'the current energy to the next desired energy.')
+                   'the current energy to the next desired energy.')
 
     def __init__(self):
         """Initialise object."""
@@ -495,10 +496,10 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
 
     def update_profile(self):
         """Set the profile to the selected values."""
-        self.profile = ('linear', self._controls['n_steps'].value(),
+        self.profile = (self.name, self._controls['n_steps'].value(),
                         self._controls['duration'].value())
         if any(value == 0 for value in self.profile):
-            self.profile = ('abrupt',)
+            self.profile = AbruptEnergyStepEditor().profile
 
 
 class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
@@ -519,7 +520,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
             }
         # In order to keep track whether a step has properly been removed
         # from the editor, we have to keep track of how many widgets have
-        # been deleted.
+        # been deleted: each step is composed of two widgets.
         self._n_widgets_removed = 0
         self._connect()
         self._compose()
@@ -563,20 +564,17 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose_labels(self):
         """Return a layout of the labels."""
         layout = qtw.QHBoxLayout()
-        fraction_label = qtw.QLabel()
-        fraction_label.setText('Step fraction')
+        fraction_label = qtw.QLabel('Step fraction')
         layout.addWidget(fraction_label)
         info = ('<nobr>The energies to set given as a fraction</nobr> '
-                f'of "{DELTA_E_NAME}". Number of steps cannot exceed '
+                f'of {DELTA_E_NAME}. Number of steps cannot exceed '
                 f'{MAX_NUM_STEPS}. Any value is acceptable. Zero is '
                 'equivalent to the current energy and one to the next '
                 'energy. A fraction of one does not have to be '
-                'explicitly included as the last step as this is added '
+                'explicitly included at the end, as this is added '
                 'automatically with the settle time.')
         layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
-        duration_label = qtw.QLabel()
-        duration_label.setText('Duration')
-        layout.addWidget(duration_label)
+        layout.addWidget(qtw.QLabel('Duration'))
         info = ('<nobr>How long to wait (ms) till </nobr>'
                 'the next intermediate step.')
         layout.addWidget(FieldInfo.for_widget(duration_label, tooltip=info))
@@ -616,7 +614,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
 
         Parameters
         ----------
-        profile : tuple or list
+        profile : Sequence of int
             A tuple or list of int values. Even-numbered values will be
             set as a fraction of the step height, odd-numbered values
             are the delays in milliseconds.
