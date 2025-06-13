@@ -97,6 +97,187 @@ class FWVersionViewer(qtw.QLabel):
         self.setToolTip(tip_txt)
 
 
+class SerialNumberEditor(qtw.QWidget):
+    """A class that allows viewing and setting a serial number."""
+
+    serial_number_changed = qtc.pyqtSignal()
+
+    def __init__(self, controller, **kwargs):
+        """Initialise instance."""
+        super().__init__(**kwargs)
+        self.__ctrl = controller
+
+        self.__edit = qtw.QLineEdit()
+        self.__rand_btn = QNoDefaultPushButton("Generate randomly")
+        self.__set_btn = QNoDefaultPushButton("Set")
+        self.__old_serial = ''
+        self.notify_ = self.serial_number_changed
+
+        self.__compose()
+        self.__connect()
+
+    @staticmethod
+    def get_random_serial():
+        """Return a valid, random serial number."""
+        valid_chars = string.ascii_letters + string.digits
+        return ''.join(random.choices(valid_chars.upper(), k=4))
+
+    def get_(self):
+        """Return the value to be stored in the config."""
+        txt = self.__ctrl.name
+        *_, serial = txt.split()
+        if not self.valid_serial(serial):
+            txt = "ViPErLEED ____"
+        return txt
+
+    def set_(self, device_name):
+        """Set displayed value."""
+        *_, serial = device_name.split()
+        text = serial.upper()
+        if not self.valid_serial(text):
+            # Probably serial number is not set
+            text = _NOT_SET
+        self.__edit.setText(text)
+
+    def valid_serial(self, serial):
+        """Return whether serial is a valid serial number."""
+        validator = self.__edit.validator()
+        return validator.validate(serial, 0) != validator.Invalid
+
+    def __compose(self):
+        """Place children widgets."""
+        self.__edit.setValidator(
+            qtg.QRegExpValidator(qtc.QRegExp("[a-zA-Z0-9]"*4))
+            )
+        width = self.__edit.fontMetrics().boundingRect(_NOT_SET).width()
+        width += 10
+        self.__edit.setMinimumWidth(width)
+        self.__edit.setMaximumWidth(width)
+
+        policy = self.__set_btn.sizePolicy()
+        self.__set_btn.setSizePolicy(policy.Fixed, policy.Fixed)
+        self.__set_btn.setEnabled(False)
+
+        layout = qtw.QHBoxLayout()
+        layout.addWidget(self.__edit)
+        layout.addWidget(self.__rand_btn)
+        layout.addWidget(self.__set_btn)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+    def __connect(self):
+        """Connect children signals."""
+        self.__edit.editingFinished.connect(self.__on_edit_finished)
+        self.__edit.textChanged.connect(self.__on_serial_text_changed)
+        self.__rand_btn.clicked.connect(self.__on_make_random_clicked)
+        self.__set_btn.clicked.connect(self.__on_set_serial_clicked)
+
+    def __on_edit_finished(self):
+        """Make serial number uppercase after editing is over."""
+        self.__edit.setText(self.__edit.text().upper())
+
+    def __on_hardware_info(self):
+        """Update after hardware information arrived."""
+        base.safe_disconnect(self.__ctrl.hardware_info_arrived,
+                             self.__on_hardware_info)
+        _INVOKE(self.__ctrl, 'disconnect_')
+        with self.__ctrl.lock:
+            new_serial = self.__ctrl.hardware.get('serial_nr', _NOT_SET)
+        self.__edit.setText(new_serial)
+        if new_serial == self.__old_serial:
+            return
+        self.serial_number_changed.emit()
+
+        # The config name must change to keep consistency:
+        settings = self.__ctrl.settings
+        old_name = settings.last_file
+        new_name = old_name.with_name(f"{self.__ctrl.name_clean}.ini")
+        with new_name.open('w', encoding='utf-8') as fproxy:
+            settings.write(fproxy)
+
+        # What to do with the old one?
+        msg = _QMSG(_QMSG.Question, "Delete old configuration file?",
+                    f"Serial number changed from {self.__old_serial} to "
+                    f"{new_serial}. The configuration file stored will be "
+                    "renamed. Would you like to keep the old file too?",
+                    parent=self)
+        msg.addButton("Keep both files", _QMSG.YesRole)
+        delete = msg.addButton("Delete old file", _QMSG.NoRole)
+        msg.exec_()
+
+        if msg.clickedButton() == delete:
+            old_name.unlink(missing_ok=True)
+
+    def __on_make_random_clicked(self):
+        """Generate a random number."""
+        self.__edit.setText(self.get_random_serial())
+
+    def __on_serial_text_changed(self):
+        """Activate "Set" if serial is changed."""
+        txt = self.__edit.text().upper()
+        with self.__ctrl.lock:
+            hw_serial = self.__ctrl.hardware.get('serial_nr', None)
+        if hw_serial is None or len(txt) != 4:
+            self.__set_btn.setEnabled(False)
+            return
+        active = self.valid_serial(txt)
+        active &= txt != hw_serial
+        self.__set_btn.setEnabled(active)
+
+    def __on_set_serial_clicked(self):
+        """Set serial number, then update hardware info."""
+        with self.__ctrl.lock:
+            self.__old_serial = self.__ctrl.hardware.get('serial_nr', _NOT_SET)
+        # NB: New and old are different, otherwise "Set" is disabled
+        new_serial = self.__edit.text().upper()
+
+        if self.__old_serial == _NOT_SET:
+            reply = _QMSG.Yes
+        else:
+            reply = _QMSG.question(
+                self, "Set new serial number?",
+                "Are you sure you want to replace your serial number "
+                f"({self.__old_serial}) with {new_serial}?",
+                _QMSG.Yes | _QMSG.Cancel
+                )
+        if reply == _QMSG.Cancel:
+            # Set back the old value
+            self.__edit.setText(self.__old_serial)
+            return
+        _QMSG.information(self, "About to set new serial number",
+                          "Setting new serial number. Do not "
+                          "disconnect the USB cable to the unit.",
+                          _QMSG.Ok)
+
+        # ViPErinoController.set_serial_number also gets hardware
+        # info after successfully setting the new serial number
+        base.safe_connect(self.__ctrl.hardware_info_arrived,
+                          self.__on_hardware_info, type=_UNIQUE)
+        _INVOKE(self.__ctrl, 'set_serial_number', qtc.Q_ARG(str, new_serial))
+
+
+class UpdateRateSelector(qtw.QComboBox):
+    """Combo box to select ADC update-rate values."""
+
+    def __init__(self, controller, **kwargs):
+        """Initialize instance."""
+        super().__init__(**kwargs)
+        for key, frequency in controller.settings.items('adc_update_rate'):
+            self.addItem(f'{round(float(frequency))} Hz', userData=key)
+        self.notify_ = self.currentIndexChanged
+
+    def get_(self):
+        """Return the selected update rate."""
+        return self.currentData()
+
+    def set_(self, value):
+        """Set update rate from the settings file."""
+        for i in range(self.count()):
+            if self.itemData(i) == value:
+                self.setCurrentIndex(i)
+                return
+
+
 class HardwareConfigurationEditor(SettingsDialogSectionBase):
     """Class for viewing and setting ADC inputs.
 
@@ -395,187 +576,6 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
         return super().has_tag(tag)
 
 
-class SerialNumberEditor(qtw.QWidget):
-    """A class that allows viewing and setting a serial number."""
-
-    serial_number_changed = qtc.pyqtSignal()
-
-    def __init__(self, controller, **kwargs):
-        """Initialise instance."""
-        super().__init__(**kwargs)
-        self.__ctrl = controller
-
-        self.__edit = qtw.QLineEdit()
-        self.__rand_btn = QNoDefaultPushButton("Generate randomly")
-        self.__set_btn = QNoDefaultPushButton("Set")
-        self.__old_serial = ''
-        self.notify_ = self.serial_number_changed
-
-        self.__compose()
-        self.__connect()
-
-    @staticmethod
-    def get_random_serial():
-        """Return a valid, random serial number."""
-        valid_chars = string.ascii_letters + string.digits
-        return ''.join(random.choices(valid_chars.upper(), k=4))
-
-    def get_(self):
-        """Return the value to be stored in the config."""
-        txt = self.__ctrl.name
-        *_, serial = txt.split()
-        if not self.valid_serial(serial):
-            txt = "ViPErLEED ____"
-        return txt
-
-    def set_(self, device_name):
-        """Set displayed value."""
-        *_, serial = device_name.split()
-        text = serial.upper()
-        if not self.valid_serial(text):
-            # Probably serial number is not set
-            text = _NOT_SET
-        self.__edit.setText(text)
-
-    def valid_serial(self, serial):
-        """Return whether serial is a valid serial number."""
-        validator = self.__edit.validator()
-        return validator.validate(serial, 0) != validator.Invalid
-
-    def __compose(self):
-        """Place children widgets."""
-        self.__edit.setValidator(
-            qtg.QRegExpValidator(qtc.QRegExp("[a-zA-Z0-9]"*4))
-            )
-        width = self.__edit.fontMetrics().boundingRect(_NOT_SET).width()
-        width += 10
-        self.__edit.setMinimumWidth(width)
-        self.__edit.setMaximumWidth(width)
-
-        policy = self.__set_btn.sizePolicy()
-        self.__set_btn.setSizePolicy(policy.Fixed, policy.Fixed)
-        self.__set_btn.setEnabled(False)
-
-        layout = qtw.QHBoxLayout()
-        layout.addWidget(self.__edit)
-        layout.addWidget(self.__rand_btn)
-        layout.addWidget(self.__set_btn)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(layout)
-
-    def __connect(self):
-        """Connect children signals."""
-        self.__edit.editingFinished.connect(self.__on_edit_finished)
-        self.__edit.textChanged.connect(self.__on_serial_text_changed)
-        self.__rand_btn.clicked.connect(self.__on_make_random_clicked)
-        self.__set_btn.clicked.connect(self.__on_set_serial_clicked)
-
-    def __on_edit_finished(self):
-        """Make serial number uppercase after editing is over."""
-        self.__edit.setText(self.__edit.text().upper())
-
-    def __on_hardware_info(self):
-        """Update after hardware information arrived."""
-        base.safe_disconnect(self.__ctrl.hardware_info_arrived,
-                             self.__on_hardware_info)
-        _INVOKE(self.__ctrl, 'disconnect_')
-        with self.__ctrl.lock:
-            new_serial = self.__ctrl.hardware.get('serial_nr', _NOT_SET)
-        self.__edit.setText(new_serial)
-        if new_serial == self.__old_serial:
-            return
-        self.serial_number_changed.emit()
-
-        # The config name must change to keep consistency:
-        settings = self.__ctrl.settings
-        old_name = settings.last_file
-        new_name = old_name.with_name(f"{self.__ctrl.name_clean}.ini")
-        with new_name.open('w', encoding='utf-8') as fproxy:
-            settings.write(fproxy)
-
-        # What to do with the old one?
-        msg = _QMSG(_QMSG.Question, "Delete old configuration file?",
-                    f"Serial number changed from {self.__old_serial} to "
-                    f"{new_serial}. The configuration file stored will be "
-                    "renamed. Would you like to keep the old file too?",
-                    parent=self)
-        msg.addButton("Keep both files", _QMSG.YesRole)
-        delete = msg.addButton("Delete old file", _QMSG.NoRole)
-        msg.exec_()
-
-        if msg.clickedButton() == delete:
-            old_name.unlink(missing_ok=True)
-
-    def __on_make_random_clicked(self):
-        """Generate a random number."""
-        self.__edit.setText(self.get_random_serial())
-
-    def __on_serial_text_changed(self):
-        """Activate "Set" if serial is changed."""
-        txt = self.__edit.text().upper()
-        with self.__ctrl.lock:
-            hw_serial = self.__ctrl.hardware.get('serial_nr', None)
-        if hw_serial is None or len(txt) != 4:
-            self.__set_btn.setEnabled(False)
-            return
-        active = self.valid_serial(txt)
-        active &= txt != hw_serial
-        self.__set_btn.setEnabled(active)
-
-    def __on_set_serial_clicked(self):
-        """Set serial number, then update hardware info."""
-        with self.__ctrl.lock:
-            self.__old_serial = self.__ctrl.hardware.get('serial_nr', _NOT_SET)
-        # NB: New and old are different, otherwise "Set" is disabled
-        new_serial = self.__edit.text().upper()
-
-        if self.__old_serial == _NOT_SET:
-            reply = _QMSG.Yes
-        else:
-            reply = _QMSG.question(
-                self, "Set new serial number?",
-                "Are you sure you want to replace your serial number "
-                f"({self.__old_serial}) with {new_serial}?",
-                _QMSG.Yes | _QMSG.Cancel
-                )
-        if reply == _QMSG.Cancel:
-            # Set back the old value
-            self.__edit.setText(self.__old_serial)
-            return
-        _QMSG.information(self, "About to set new serial number",
-                          "Setting new serial number. Do not "
-                          "disconnect the USB cable to the unit.",
-                          _QMSG.Ok)
-
-        # ViPErinoController.set_serial_number also gets hardware
-        # info after successfully setting the new serial number
-        base.safe_connect(self.__ctrl.hardware_info_arrived,
-                          self.__on_hardware_info, type=_UNIQUE)
-        _INVOKE(self.__ctrl, 'set_serial_number', qtc.Q_ARG(str, new_serial))
-
-
-class UpdateRateSelector(qtw.QComboBox):
-    """Combo box to select ADC update-rate values."""
-
-    def __init__(self, controller, **kwargs):
-        """Initialize instance."""
-        super().__init__(**kwargs)
-        for key, frequency in controller.settings.items('adc_update_rate'):
-            self.addItem(f'{round(float(frequency))} Hz', userData=key)
-        self.notify_ = self.currentIndexChanged
-
-    def get_(self):
-        """Return the selected update rate."""
-        return self.currentData()
-
-    def set_(self, value):
-        """Set update rate from the settings file."""
-        for i in range(self.count()):
-            if self.itemData(i) == value:
-                self.setCurrentIndex(i)
-                return
-
-
 class _ADCChannelCombo(qtw.QComboBox):
     """A combo for showing/editing quantities measured at an ADC channel.
 
@@ -736,84 +736,6 @@ class _ADCChannelCombo(qtw.QComboBox):
         return _name, _tooltip, _qty_ok
 
 
-class _AUXEditDialog(_EditDialogBase):
-    """Dialog for editing the AUX input.
-
-    Display the input range, and instructions on how to change it.
-    """
-
-    def __init__(self, controller, *args, **kwargs):
-        """Initialise dialog."""
-        kwargs['raw_quantity'] = "AUX"
-        kwargs['help_file'] = (
-            _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - jumpers.pdf'
-            ).resolve()
-        super().__init__(controller, *args, **kwargs)
-
-
-class _EditDialogBase(qtw.QDialog):
-    """Base class for dialogs for editable quantities."""
-
-    settings_changed = qtc.pyqtSignal()
-
-    def __init__(self, controller, *args, quantity='', input_quantity='',
-                 raw_quantity='', tooltips=None, help_file=None, **kwargs):
-        """Initialise dialog."""
-        super().__init__(*args, **kwargs)
-        self._ctrl = controller
-        self.__raw_quantity = raw_quantity
-
-        if not quantity:
-            quantity = raw_quantity
-        if not input_quantity:
-            input_quantity = raw_quantity
-
-        # Input range selector + info on how to change in
-        # case no relay is present for electronic switching
-        self._input_range = _InputRangeSelector(quantity=input_quantity,
-                                                tooltips=tooltips,
-                                                help_file=help_file)
-        self.central_widget = qtw.QWidget()
-        self.__compose_and_connect()
-
-        self.setWindowFlags(self.windowFlags()
-                            & ~qtc.Qt.WindowContextHelpButtonHint)
-        self.setWindowTitle(f"Edit {quantity} measurement")
-
-    def showEvent(self, event):          # pylint: disable=invalid-name
-        """Show dialog and its children."""
-        self.update_widgets()
-        super().showEvent(event)
-
-    def update_widgets(self):
-        """Update widget contents from the controller."""
-        with self._ctrl.lock:
-            hardware = self._ctrl.hardware
-            range_ = hardware.get(f"{self.__raw_quantity}_range".lower(), None)
-        self._input_range.range_ = range_
-        self._input_range.update_widgets()
-
-    def __compose_and_connect(self):
-        """Place children and connect signals."""
-        # Dialog buttons
-        buttons = qtw.QDialogButtonBox()
-        _done = buttons.addButton("Done", buttons.AcceptRole)
-
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-
-        layout = qtw.QVBoxLayout()
-        layout.addWidget(self._input_range)
-        layout.addWidget(self.central_widget)
-        layout.addStretch(1)
-        layout.addWidget(buttons)
-        self.setLayout(layout)
-
-        _done.setAutoDefault(True)
-        _done.setDefault(True)
-        _done.setFocus()
-
-
 class _InputRangeSelector(qtw.QWidget):
     """A widget to show/edit input ranges."""
 
@@ -949,6 +871,69 @@ class _InputRangeSelector(qtw.QWidget):
     def __on_range_changed(self, _):
         """React to the user picking a different range."""
         self.range_changed.emit(self.range_)
+
+
+class _EditDialogBase(qtw.QDialog):
+    """Base class for dialogs for editable quantities."""
+
+    settings_changed = qtc.pyqtSignal()
+
+    def __init__(self, controller, *args, quantity='', input_quantity='',
+                 raw_quantity='', tooltips=None, help_file=None, **kwargs):
+        """Initialise dialog."""
+        super().__init__(*args, **kwargs)
+        self._ctrl = controller
+        self.__raw_quantity = raw_quantity
+
+        if not quantity:
+            quantity = raw_quantity
+        if not input_quantity:
+            input_quantity = raw_quantity
+
+        # Input range selector + info on how to change in
+        # case no relay is present for electronic switching
+        self._input_range = _InputRangeSelector(quantity=input_quantity,
+                                                tooltips=tooltips,
+                                                help_file=help_file)
+        self.central_widget = qtw.QWidget()
+        self.__compose_and_connect()
+
+        self.setWindowFlags(self.windowFlags()
+                            & ~qtc.Qt.WindowContextHelpButtonHint)
+        self.setWindowTitle(f"Edit {quantity} measurement")
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Show dialog and its children."""
+        self.update_widgets()
+        super().showEvent(event)
+
+    def update_widgets(self):
+        """Update widget contents from the controller."""
+        with self._ctrl.lock:
+            hardware = self._ctrl.hardware
+            range_ = hardware.get(f"{self.__raw_quantity}_range".lower(), None)
+        self._input_range.range_ = range_
+        self._input_range.update_widgets()
+
+    def __compose_and_connect(self):
+        """Place children and connect signals."""
+        # Dialog buttons
+        buttons = qtw.QDialogButtonBox()
+        _done = buttons.addButton("Done", buttons.AcceptRole)
+
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        layout = qtw.QVBoxLayout()
+        layout.addWidget(self._input_range)
+        layout.addWidget(self.central_widget)
+        layout.addStretch(1)
+        layout.addWidget(buttons)
+        self.setLayout(layout)
+
+        _done.setAutoDefault(True)
+        _done.setDefault(True)
+        _done.setFocus()
 
 
 class _I0EditDialog(_EditDialogBase):
@@ -1159,3 +1144,18 @@ class _TemperatureEditDialog(_EditDialogBase):                                  
         _thermocouple = self.__thermocouples.itemData(new_idx)
         self._ctrl.thermocouple = _thermocouple
         self.settings_changed.emit()
+
+
+class _AUXEditDialog(_EditDialogBase):
+    """Dialog for editing the AUX input.
+
+    Display the input range, and instructions on how to change it.
+    """
+
+    def __init__(self, controller, *args, **kwargs):
+        """Initialise dialog."""
+        kwargs['raw_quantity'] = "AUX"
+        kwargs['help_file'] = (
+            _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - jumpers.pdf'
+            ).resolve()
+        super().__init__(controller, *args, **kwargs)
