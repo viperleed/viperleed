@@ -18,7 +18,7 @@ class TargetToken(DisplacementsFileToken):
     """Class to handle the <target> token in the DISPLACEMENTS file."""
 
     def __init__(self, target_str):
-        self.target_str = target_str
+        self.target_str = target_str.strip()
         self.nums = None
         self.layers = None
         self._parse_target()
