@@ -8,7 +8,9 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+import inspect
 import os
+import sys
 
 import pytest
 from pytest_cases import fixture
@@ -29,11 +31,43 @@ from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.cli import ViPErLEEDMain
 
 from ..helpers import filesystem_from_dict
 from ..helpers import filesystem_to_dict
 
 _MODULE = 'viperleed.calc.cli'
+
+
+def test_calc_never_loads_graphics(mocker):
+    """Ensure that 'viperleed calc' does not load graphics-related modules."""
+    mocker.patch('viperleed.gui.detect_graphics.has_pyqt',
+                 return_value=True)
+    cli = ViPErLEEDMain()
+    with pytest.raises(SystemExit):
+        cli(['calc', '--version'])
+    should_not_load = {  # NB: QtCore is acceptable
+        'ViPErLEEDSelectPlugin',
+        'qtw',
+        'qtg',
+        'QtWidgets',
+        'QtGui',
+        }
+    gui_modules = {name: module
+                   for name, module in sys.modules.items()
+                   if 'viperleed.gui' in name}
+    graphics_modules = {}
+    for module_name in gui_modules:
+        module = sys.modules[module_name]
+        members = dict(inspect.getmembers(module))
+        unexpected = [
+            gui_obj
+            for gui_obj in should_not_load
+            if any(gui_obj in m for m in members)
+            ]
+        if unexpected:
+            graphics_modules[module_name] = unexpected
+    assert not graphics_modules
 
 
 class TestCalcCliCall:

@@ -65,10 +65,15 @@ def fixture_mock_gui(mocker):
     """Prevent the GUI from opening up."""
     if not has_pyqt():
         return  # Nothing to do here
-    mocker.patch('viperleed.gui.cli.ViPErLEEDSelectPlugin')
-    mocker.patch('viperleed.gui.cli.qtc')
-    mocker.patch('viperleed.gui.cli.qtg')
-    qtw = mocker.patch('viperleed.gui.cli.qtw')
+    mock_graphics_modules = {
+        'qtc': mocker.MagicMock(),
+        'qtg': mocker.MagicMock(),
+        'qtw': mocker.MagicMock(),
+        'ViPErLEEDSelectPlugin': mocker.MagicMock(),
+        }
+    mocker.patch('viperleed.gui.cli.import_graphics_modules',
+                 return_value=mock_graphics_modules.values())
+    qtw = mock_graphics_modules['qtw']
     qtw.QApplication.exec_.return_value = 0
 
 

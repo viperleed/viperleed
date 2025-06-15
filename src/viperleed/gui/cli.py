@@ -11,16 +11,9 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
+from importlib import import_module
 from pathlib import Path
 import sys
-
-try:
-    import PyQt5.QtCore as qtc
-except ImportError:
-    pass
-else:
-    import PyQt5.QtGui as qtg
-    import PyQt5.QtWidgets as qtw
 
 from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.gui.base import catch_gui_crash
@@ -28,9 +21,6 @@ from viperleed.gui.constants import LOGO
 from viperleed.gui.detect_graphics import has_graphics
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.helpers import resources_path
-
-if has_pyqt():
-    from viperleed.gui.selectplugin import ViPErLEEDSelectPlugin
 
 
 class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
@@ -95,6 +85,11 @@ def gui_main():
     Body of the functionality that invokes the ViPErLEED
     Graphical User Interface.
     """
+    (qtc,
+     qtg,
+     qtw,
+     plugin_selector) = import_graphics_modules()
+
     catch_gui_crash()
 
     print('Loading GUI...', flush=True, end='')
@@ -114,7 +109,20 @@ def gui_main():
         str(Path(font_path, 'cmunrm.otf').resolve())
         )
 
-    plugin_selector_window = ViPErLEEDSelectPlugin()
+    plugin_selector_window = plugin_selector()
     plugin_selector_window.show()
     print('Done', flush=True)
     return app.exec_()
+
+
+def import_graphics_modules():
+    """Dynamically import modules for graphical capability."""
+    if not has_pyqt():
+        raise ImportError('PyQt5 is not available.')
+    gui_select = import_module('viperleed.gui.selectplugin')
+    return (
+        import_module('PyQt5.QtCore'),  # Not graphics per-se
+        import_module('PyQt5.QtGui'),
+        import_module('PyQt5.QtWidgets'),
+        gui_select.ViPErLEEDSelectPlugin,
+        )
