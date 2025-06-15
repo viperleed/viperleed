@@ -7,10 +7,10 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-27'
 __license__ = 'GPLv3+'
 
-import importlib
 from pathlib import Path
 import sys
 
+import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
@@ -18,6 +18,7 @@ from viperleed.gui.cli import ViPErLEEDGUICLI
 from viperleed.gui.cli import commandline_main
 from viperleed.gui.cli import is_commandline_mode
 from viperleed.gui.cli import gui_main
+from viperleed.gui.cli import import_graphics_modules
 
 _MODULE = 'viperleed.gui.cli'
 
@@ -60,6 +61,7 @@ class TestViPErLEEDGUICLI:
         mock_cmd.assert_called_once_with()
 
 
+# pylint: disable-next=too-few-public-methods  # It's parametrized
 class TestCommandlineMain:
     """Tests for the commandline_main function."""
 
@@ -86,6 +88,7 @@ class TestCommandlineMain:
         assert stdout == expect_print
 
 
+# pylint: disable-next=too-few-public-methods  # It's parametrized
 class TestIsCommandlineMode:
     """Tests for the is_commandline_mode function."""
 
@@ -132,18 +135,23 @@ class TestGuiMain:
 
     @fixture(name='mocks')
     def fixture_mock_gui_components(self, mocker):
-        mocks = {
+        """Replace implementation details with mocks."""
+        mock_imports = {
+            'qtc': mocker.MagicMock(),
+            'qtg': mocker.MagicMock(),
+            'qtw': mocker.MagicMock(),
+            'select_cls': mocker.MagicMock(name='ViPErLEEDSelectPlugin'),
+            }
+        mocker.patch(f'{_MODULE}.import_graphics_modules',
+                     return_value=mock_imports.values())
+        return {
             'catch_crash': mocker.patch(f'{_MODULE}.catch_gui_crash'),
             'font_path': mocker.patch(f'{_MODULE}.resources_path',
                                       return_value='fake/path/to/fonts'),
-            'qtc': mocker.patch(f'{_MODULE}.qtc'),
-            'qtg': mocker.patch(f'{_MODULE}.qtg'),
-            'qtw': mocker.patch(f'{_MODULE}.qtw'),
-            'select_cls': mocker.patch(f'{_MODULE}.ViPErLEEDSelectPlugin'),
+            **mock_imports,
+            'app': mock_imports['qtw'].QApplication.return_value,
+            'select': mock_imports['select_cls'].return_value,
             }
-        mocks['app'] = mocks['qtw'].QApplication.return_value
-        mocks['select'] = mocks['select_cls'].return_value
-        return mocks
 
     def test_execution(self, mocks, capsys):
         """Check the result of calling gui_main."""
@@ -157,8 +165,9 @@ class TestGuiMain:
         selector.show.assert_called_once_with()
 
         # Check also printing
+        success_load_prints = 'Loading GUI...Done'
         stdout = capsys.readouterr().out
-        assert stdout.rstrip() == 'Loading GUI...Done'
+        assert stdout.rstrip() == success_load_prints
 
     def test_fonts_loaded(self, mocks, mocker):
         """Ensure the font database is updated."""
@@ -194,3 +203,28 @@ class TestGuiMain:
         mocks['catch_crash'].assert_called_once_with()
         mocks['select_cls'].assert_called_once_with()
         mocks['qtw'].QApplication.assert_called_once_with(sys.argv)
+
+
+class TestImportGrpahicsModules:
+    """Tests for the import_graphics_modules function."""
+
+    def test_raises(self, mocker):
+        """Check complaints without PyQt."""
+        mocker.patch(f'{_MODULE}.has_pyqt', return_value=False)
+        with pytest.raises(ImportError):
+            import_graphics_modules()
+
+    def test_success(self, mocker):
+        """Check expected result of importing modules."""
+        mock_import = mocker.patch(f'{_MODULE}.import_module')
+        result = import_graphics_modules()
+        imported_modules = (
+            'viperleed.gui.selectplugin',
+            'PyQt5.QtCore',
+            'PyQt5.QtGui',
+            'PyQt5.QtWidgets',
+            )
+        assert mock_import.mock_calls == [mocker.call(m)
+                                          for m in imported_modules]
+        n_return_values = 4
+        assert len(result) == n_return_values
