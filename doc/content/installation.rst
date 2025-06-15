@@ -80,6 +80,31 @@ in your terminal.
         # or
         python -m pip install viperleed\[GUI\]
 
+.. note::
+
+    On Unix and macOS, installation of the ``mplcairo`` package and its
+    ``pycairo`` dependency may fail if either ``pkg-config`` or ``cairo``
+    are not available on the system. If this is the case, you should
+    manually install the missing dependencies using your preferred
+    package manager:
+
+    .. tab-set::
+
+        .. tab-item:: Linux, Windows Subsystem for Linux
+            :sync: unix
+
+            .. code-block:: bash
+
+                sudo apt install pkg-config libcairo2-dev
+
+        .. tab-item:: macOS
+            :sync: mac
+
+            .. code-block:: bash
+
+                brew install pkg-config cairo
+
+
 .. _wsl:
 
 Windows Subsystem for Linux

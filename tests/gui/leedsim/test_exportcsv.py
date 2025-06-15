@@ -6,10 +6,12 @@ import numpy as np
 import pytest
 from pytest_cases import fixture
 
+from viperleed.gui.leedsim.exportcsv import _format_beams_
 from viperleed.gui.leedsim.exportcsv import _format_header_
+from viperleed.gui.leedsim.exportcsv import LEEDPattern
 
 _MODULE = 'viperleed.gui.leedsim.exportcsv'
-_FRACTION_RE = r'-?\d+(/[1-9]\d+)?'
+_FRACTION_RE = r'-?\d+(/[1-9]\d*)?'
 _FLOAT_RE = r'-?\d+(.\d*)?'
 _DOMAIN_RE = r'\(?\d+\)?'
 _COLUMN_LABELS_RE = re.compile(
@@ -20,9 +22,9 @@ _COLUMN_LABELS_RE = re.compile(
     )
 _COLUMN_CONTENTS_RE = re.compile(
     rf'\(\s*{_FRACTION_RE}\s*[|]\s*{_FRACTION_RE}\s*\),'
-    + rf'\s*{_FLOAT_RE},'*4                # h, k, gx, gy
-    + r'\s*-?\d+,'                         # group index
-    rf'\s*{_DOMAIN_RE}([+]{_DOMAIN_RE})*'  # domains
+    + rf'\s*{_FLOAT_RE},'*4                 # h, k, gx, gy
+    + r'\s*-?\d+,'                          # group index
+    rf'\s*{_DOMAIN_RE}([+]{_DOMAIN_RE})*,'  # domains
     )
 
 
@@ -143,3 +145,29 @@ class TestFormatHeader:
         assert fname in header[1]
         assert any(f'Structure: {struct_name}' in line for line in header)
         self.check_constant_contents(header)
+
+
+def test_beams_format():
+    """Check that beams are formatted as expected."""
+    params_rt5 = {
+        'surfBasis': [[4, 0], [0, 4]],
+        'superlattice': [[2, 1], [-1, 2]],
+        'bulkGroup': 'p4m',
+        'surfGroup': 'p4',
+        'eMax': 250,
+        }
+    leed = LEEDPattern(params_rt5)
+    lines = _format_beams_(leed)
+    header_end, _ = max((i, line)
+                        for i, line in enumerate(lines)
+                        if line.startswith('#'))
+    column_headers = lines[header_end + 1]
+    columns = lines[header_end+2:]
+    # Check format of contents
+    assert all(_COLUMN_CONTENTS_RE.fullmatch(line) for line in columns)
+
+    # And make sure all columns have the same widths
+    headers_widths = [len(item) for item in column_headers.split(',')]
+    for line in columns:
+        columns_widths = [len(item) for item in line.split(',')]
+        assert columns_widths == headers_widths, f'Inconsistent {line!r}'
