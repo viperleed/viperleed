@@ -8,9 +8,6 @@ __license__ = "GPLv3+"
 class DisplacementsFileError(Exception):
     """Base class for all displacement-related errors."""
 
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
 
 class DisplacementsSyntaxError(DisplacementsFileError):
     """Base class for all errors related to the DISPLACEMENTS file."""
