@@ -27,7 +27,6 @@ class LinearOperationToken(DisplacementsFileToken):
         The range string to parse.
     """
 
-    _EPS = 1e-6
 
     def __init__(self, op_str: str):
         """Construct a LinearOperationToken from a string."""

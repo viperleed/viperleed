@@ -6,6 +6,7 @@ __created__ = "2025-05-12"
 __license__ = "GPLv3+"
 
 from .base import DisplacementsFileToken, TokenParserError
+from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
 
 
 class OffsetTokenParserError(TokenParserError):
@@ -27,8 +28,6 @@ class OffsetToken(DisplacementsFileToken):
     OffsetTokenParserError
         If parsing fails.
     """
-
-    _EPS = 1e-6
 
     def __init__(self, offset_str: str):
         """Construct a OffsetToken from a string."""
@@ -63,7 +62,7 @@ class OffsetToken(DisplacementsFileToken):
         """Compare two OffsetToken objects for equality."""
         if not isinstance(other, OffsetToken):
             return False
-        return abs(self.offset - other.offset) < self._EPS
+        return abs(self.offset - other.offset) < DISPLACEMENTS_FILE_EPS
 
     def __str__(self):
         """Return a string representation of the OffsetToken object."""

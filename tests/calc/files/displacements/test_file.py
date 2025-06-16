@@ -19,10 +19,6 @@ from viperleed.calc.files.new_displacements.lines import (
     LoopMarkerLine,
     OffsetsLine,
 )
-from viperleed.calc.files.new_displacements.reader import (
-    LoopMarker,
-)
-
 
 # Mock backend
 class DummyBackend:

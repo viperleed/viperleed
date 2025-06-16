@@ -11,8 +11,8 @@ import re
 import numpy as np
 
 from .base import DisplacementsFileToken, TokenParserError
+from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
 
-COMPARE_EPS = 1E-6
 CART_DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
 
@@ -155,7 +155,7 @@ class CartesianDirectionToken(DirectionToken):
 
     def _normalize(self, vec):
         norm = np.linalg.norm(vec)
-        if norm < COMPARE_EPS:
+        if norm < DISPLACEMENTS_FILE_EPS:
             msg = f'Zero-length vector: {vec}'
             raise ValueError(msg)
         return vec / norm
@@ -176,7 +176,7 @@ class CartesianDirectionToken(DirectionToken):
 def _check_unsupported_directions(direction_str):
     # TODO: remove this function once we support azimuthal and radial directions
     # and instead dispatch the appropriate token parser.
-    
+
     # Azimuthal & radial directions are currently not supported
     azi_rad_labels = ['azi', 'r']
     if any(label in direction_str for label in azi_rad_labels):

@@ -6,6 +6,7 @@ __created__ = "2024-10-15"
 __license__ = "GPLv3+"
 
 from .base import DisplacementsFileToken, TokenParserError
+from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
 
 
 class RangeTokenParserError(TokenParserError):
@@ -26,8 +27,6 @@ class RangeToken(DisplacementsFileToken):
     range_str : str
         The range string to parse.
     """
-
-    _EPS = 1e-6
 
     def __init__(self, range_str: str):
         """Construct a RangeToken from a string."""
@@ -80,14 +79,14 @@ class RangeToken(DisplacementsFileToken):
             return False
         if self.has_step:
             return (
-                abs(self.start - other.start) < self._EPS
-                and abs(self.stop - other.stop) < self._EPS
-                and abs(self.step - other.step) < self._EPS
+                abs(self.start - other.start) < DISPLACEMENTS_FILE_EPS
+                and abs(self.stop - other.stop) < DISPLACEMENTS_FILE_EPS
+                and abs(self.step - other.step) < DISPLACEMENTS_FILE_EPS
             )
 
         return (
-            abs(self.start - other.start) < self._EPS
-            and abs(self.stop - other.stop) < self._EPS
+            abs(self.start - other.start) < DISPLACEMENTS_FILE_EPS
+            and abs(self.stop - other.stop) < DISPLACEMENTS_FILE_EPS
         )
 
     def __str__(self):
