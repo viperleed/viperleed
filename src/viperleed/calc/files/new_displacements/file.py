@@ -21,7 +21,7 @@ from .lines import (
     VibDeltaLine,
 )
 from .reader import (
-    DisplacementFileSections,
+    DISPLACEMENTS_FILE_SECTION,
     DisplacementsReader,
     LoopMarker,
 )
@@ -33,7 +33,7 @@ class SearchBlock:
     def __init__(self, label):
         """Initialize with a label and empty sections."""
         self.label = label
-        self.sections = {s: [] for s in DisplacementFileSections}
+        self.sections = {s: [] for s in DISPLACEMENTS_FILE_SECTION}
 
     def add_line(self, section, line):
         """Add a line to the corresponding section."""
@@ -44,19 +44,19 @@ class SearchBlock:
 
     @property
     def geo_delta(self):
-        return self.sections[DisplacementFileSections.GEO_DELTA]
+        return self.sections['GEO_DELTA']
 
     @property
     def vib_delta(self):
-        return self.sections[DisplacementFileSections.VIB_DELTA]
+        return self.sections['VIB_DELTA']
 
     @property
     def occ_delta(self):
-        return self.sections[DisplacementFileSections.OCC_DELTA]
+        return self.sections['OCC_DELTA']
 
     @property
     def explicit_constraints(self):
-        return self.sections[DisplacementFileSections.CONSTRAIN]
+        return self.sections['CONSTRAIN']
 
     def __str__(self):
         return f'SearchBlock(label={self.label}, sections={self.sections})'
@@ -89,9 +89,9 @@ class DisplacementsFile:
         for block in reversed(self.blocks):
             if not isinstance(block, LoopMarkerLine):
                 continue
-            if block.type == LoopMarker.LOOP_START:
+            if block.kind == 'start':
                 return True
-            if block.type == LoopMarker.LOOP_END:
+            if block.kind == 'end':
                 break
         return False
 
@@ -144,14 +144,14 @@ class DisplacementsFile:
 
                 if isinstance(read, LoopMarkerLine):
                     if (
-                        read.type == LoopMarker.LOOP_START
+                        read.kind == 'start'
                         and self.unclosed_loop()
                     ):
                         raise InvalidSearchLoopError(
                             'Loop started before the previous loop was closed.'
                         )
                     if (
-                        read.type == LoopMarker.LOOP_END
+                        read.kind == LoopMarker.LOOP_END
                         and not self.unclosed_loop()
                     ):
                         raise InvalidSearchLoopError(
@@ -174,9 +174,7 @@ class DisplacementsFile:
                         self.finish_block()
                         self.current_search_block = OffsetsBlock()
                     # Update the current section in the active search block
-                    self.current_section = DisplacementFileSections[
-                        read.section
-                    ]
+                    self.current_section = read.section
 
                 elif isinstance(
                     read,
@@ -192,14 +190,12 @@ class DisplacementsFile:
                     )
 
                 elif isinstance(read, OffsetsLine):
-                    if (
-                        self.current_section
-                        is not DisplacementFileSections.OFFSETS
-                    ):
+                    if self.current_section != 'OFFSETS':
                         raise ValueError(
                             'Offsets line found outside of an OFFSETS block.'
                         )
-                    self.current_search_block.add_line(read)
+                    self.current_search_block.add_line(self.current_section,
+                                                       read)
 
                 else:
                     raise ValueError(f'Unexpected line type: {read}')

@@ -20,7 +20,6 @@ from viperleed.calc.files.new_displacements.lines import (
     OffsetsLine,
 )
 from viperleed.calc.files.new_displacements.reader import (
-    DISPLACEMENTS_FILE_SECTION,
     LoopMarker,
 )
 
@@ -38,14 +37,14 @@ class TestDispalacementsFileSyntax:
     def test_searchblock_add_line_and_access(self):
         sb = SearchBlock('test')
         line = GeoDeltaLine('A_surf z = -0.1 0.1')
-        sb.add_line(DISPLACEMENTS_FILE_SECTION.GEO_DELTA, line)
+        sb.add_line('GEO_DELTA', line)
 
         assert sb.label == 'test'
         assert sb.geo_delta == [line]
         assert sb.vib_delta == []
         assert sb.occ_delta == []
         assert sb.explicit_constraints == []
-        assert 'test' in repr(sb)
+        assert 'test' in str(sb)
 
 
     def test_searchblock_add_line_invalid_section(self):
@@ -73,10 +72,10 @@ class TestDispalacementsFileSyntax:
 
     def test_displacementsfile_loop_marker_detection(self):
         df = DisplacementsFile()
-        df.blocks = [LoopMarkerLine(LoopMarker.LOOP_START)]
+        df.blocks = [LoopMarkerLine('<loop>')]
         assert df.unclosed_loop() is True
 
-        df.blocks.append(LoopMarkerLine(LoopMarker.LOOP_END))
+        df.blocks.append(LoopMarkerLine('</loop>'))
         assert df.unclosed_loop() is False
 
 
@@ -85,7 +84,7 @@ class TestDispalacementsFileSyntax:
         with pytest.raises(InvalidSearchBlocksError):
             df.check_valid()
 
-        df.blocks = [LoopMarkerLine(LoopMarker.LOOP_START)]
+        df.blocks = [LoopMarkerLine('<loop>')]
         with pytest.raises(InvalidSearchLoopError):
             df.check_valid()
 
@@ -101,9 +100,9 @@ class TestDispalacementsFileSyntax:
         df = DisplacementsFile()
         block = SearchBlock('first')
         df.blocks = [
-            LoopMarkerLine(LoopMarker.LOOP_START),
+            LoopMarkerLine('<loop>'),
             block,
-            LoopMarkerLine(LoopMarker.LOOP_END),
+            LoopMarkerLine('</loop>'),
         ]
         assert df.first_block() is block
 
