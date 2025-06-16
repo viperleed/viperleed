@@ -15,6 +15,28 @@ COMPARE_EPS = 1E-6
 DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
 
+# Note,TODO: This parser does not yet support parsing of azimuthal, and radial
+# directions, as well as fractional directions (e.g., 'a', 'b', 'c'). These
+# are supported in th odl viperleed.calc parser.
+# They will need to be added here prior to using this parser for the TensErLEED
+# backend.
+# Comment by @michele-riva:
+#Among the ones we currently support, we are missing in here: ab[i j] (and its
+# [i j] equivalent), azi(ab[i j]) (and its equivalent azi([i j])), azi(xy[k m]),
+# r(ab[i j]) (and its equivalent r([i j])), r(xy[k m]).
+# 
+# Others that we should probably consider (see also #413): a, b, c, ab, bc, ac
+# 
+# In addition, we can introduce some syntax leniency and accept also the
+# following:
+# 
+# - various permutations of the letters when displacing in the 2D plane (i.e.,
+#   ba == ab, zy == yz, etc)
+# - azi[i j] == azi(ab[i j])
+# - azi(i j) == azi(ab[i j])
+# - r[i j] == r(ab[i j])
+# - r(i j) == r(ab[i j])
+
 
 class DirectionTokenParserError(TokenParserError):
     """Exception raised for unsupported direction formats."""
@@ -64,7 +86,17 @@ class DirectionToken(DisplacementsFileToken):
             raise DirectionTokenParserError('Empty direction token.')
         self.direction_str = _dir_str
         vecs, self.dof = self._parse_direction(_dir_str)
-        self.vectors = _to_zxy(vecs)
+        self._vectors = vecs
+
+    @property
+    def vectors_xyz(self):
+        """Return the vectors in xyz convention."""
+        return self._vectors
+
+    @property
+    def vectors_zxy(self):
+        """Return the vectors in zxy convention (LEED convention)."""
+        return _to_zxy(self._vectors)
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
@@ -116,12 +148,12 @@ class DirectionToken(DisplacementsFileToken):
         if not isinstance(other, DirectionToken):
             return False
         return self.dof == other.dof and np.allclose(
-            self.vectors, other.vectors
+            self.vectors_xyz, other.vectors_xyz
         )
 
     def __str__(self):
         """Return a string representation of the DirectionToken object."""
-        return f'DirectionToken(vectors={self.vectors}, dof={self.dof})'
+        return f'DirectionToken(vectors={self.vectors_xyz}, dof={self.dof})'
 
 
 def _check_unsupported_directions(direction_str):

@@ -10,35 +10,36 @@ from viperleed.calc.files.new_displacements.tokens.direction import (
 def test_basis_vector_single():
     d = DirectionToken('x')
     assert d.dof == 1
-    assert d.vectors[0] == pytest.approx([0, 1, 0])
+    assert d.vectors_zxy[0] == pytest.approx([0, 1, 0])
+    assert d.vectors_xyz[0] == pytest.approx([1, 0, 0])
 
 
 def test_basis_vector_plane():
     d = DirectionToken('xy')
     assert d.dof == 2
-    assert d.vectors[0] == pytest.approx([0, 1, 0])
-    assert d.vectors[1] == pytest.approx([0, 0, 1])
+    assert d.vectors_zxy[0] == pytest.approx([0, 1, 0])
+    assert d.vectors_zxy[1] == pytest.approx([0, 0, 1])
 
 
 def test_full_space():
     d = DirectionToken('xyz')
     assert d.dof == 3
     expected = np.eye(3)[:, [2, 0, 1]] # zxy order!
-    assert d.vectors == pytest.approx(expected)
+    assert d.vectors_zxy == pytest.approx(expected)
 
 
 def test_vector_direction_xy():
     d = DirectionToken('xy[1 1]')
     assert d.dof == 1
     expected = np.array([0, 1, 1]) / np.sqrt(2)
-    assert d.vectors[0] == pytest.approx(expected)
+    assert d.vectors_zxy[0] == pytest.approx(expected)
 
 
 def test_vector_direction_xyz():
     d = DirectionToken('xyz[1 2 3]')
     norm = np.linalg.norm([3, 1, 2])
     expected = np.array([3, 1, 2]) / norm
-    assert d.vectors[0] == pytest.approx(expected)
+    assert d.vectors_zxy[0] == pytest.approx(expected)
 
 
 def test_invalid_mismatch_components():
