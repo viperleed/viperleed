@@ -33,16 +33,13 @@ class OffsetToken(DisplacementsFileToken):
         """Construct a OffsetToken from a string."""
         parts = offset_str.strip().split()
         if len(parts) != 1:
-            msg = (
-                f'Invalid offset format: "{offset_str}". Expected format: '
-                '"<offset>".'
-            )
+            msg = 'Invalid offset format: "{offset_str}".'
             raise OffsetTokenParserError(msg)
 
         try:
             offset = float(parts[0])
         except ValueError as err:
-            msg = f'Non-numeric value in offset: "{offset_str}"'
+            msg = f'Non-numeric value in offset: "{offset_str}".'
             raise OffsetTokenParserError(msg) from err
 
         self.offset = offset
