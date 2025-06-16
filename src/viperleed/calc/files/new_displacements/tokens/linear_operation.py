@@ -23,7 +23,7 @@ class LinearOperationToken(DisplacementsFileToken):
 
     Parameters
     ----------
-    range_str : str
+    op_str : str
         The range string to parse.
     """
 
