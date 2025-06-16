@@ -16,7 +16,7 @@ from viperleed.calc.classes.perturbation_mode import PerturbationMode
 
 from .errors import DisplacementsSyntaxError
 from .tokens import (
-    DirectionToken,
+    CartesianDirectionToken,
     ElementToken,
     LinearOperationToken,
     OffsetToken,
@@ -207,7 +207,7 @@ class ParsedLine(ABC):
 
     def _parse_direction(self, dir_str):
         try:
-            return DirectionToken(dir_str)
+            return CartesianDirectionToken(dir_str)
         except TokenParserError as err:
             msg = (
                 'Unable to parse <direction> token from line in '

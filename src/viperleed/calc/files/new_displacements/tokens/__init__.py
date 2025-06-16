@@ -4,7 +4,7 @@ __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-12'
 
 from .base import TokenParserError
-from .direction import DirectionToken
+from .direction import CartesianDirectionToken
 from .element import ElementToken
 from .linear_operation import LinearOperationToken
 from .offset import OffsetToken

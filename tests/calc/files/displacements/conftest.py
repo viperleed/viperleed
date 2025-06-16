@@ -17,7 +17,7 @@ from viperleed.calc.files.new_displacements.lines import (
     VibDeltaLine,
 )
 from viperleed.calc.files.new_displacements.tokens import (
-    DirectionToken,
+    CartesianDirectionToken,
     ElementToken,
     LinearOperationToken,
     RangeToken,
@@ -42,7 +42,7 @@ def mock_displacements_path_and_lines():
             GeoDeltaLine,
             {
                 'targets': (TargetToken('O L(1-2)'),),
-                'direction': DirectionToken('z'),
+                'direction': CartesianDirectionToken('z'),
                 'range': RangeToken('-0.05 0.05 0.005'),
             },
         ),
@@ -50,7 +50,7 @@ def mock_displacements_path_and_lines():
             GeoDeltaLine,
             {
                 'targets': (TargetToken('Ir L(1)'),),
-                'direction': DirectionToken('z'),
+                'direction': CartesianDirectionToken('z'),
                 'range': RangeToken('0.03 -0.03 0.003'),
             },
         ),
@@ -127,7 +127,7 @@ def mock_displacements_cu_111_realistic_path_and_lines():
             GeoDeltaLine,
             {
                 'targets': (TargetToken('Cu_surf'),),
-                'direction': DirectionToken('z'),
+                'direction': CartesianDirectionToken('z'),
                 'range': RangeToken('-0.1 0.1 0.05'),
             },
         ),

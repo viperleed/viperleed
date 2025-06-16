@@ -18,16 +18,16 @@ from viperleed.calc.files.new_displacements.lines import (
     separate_direction_from_targets,
 )
 from viperleed.calc.files.new_displacements.tokens import (
-    DirectionToken,
+    CartesianDirectionToken,
     ElementToken,
     LinearOperationToken,
     OffsetToken,
     RangeToken,
     TargetToken,
     TokenParserError,
-    ModeToken,
+    TypeToken,
 )
-from viperleed.calc.files.new_displacements.tokens.direction import DirectionToken
+from viperleed.calc.files.new_displacements.tokens.direction import CartesianDirectionToken
 
 
 class TestGeoDeltaLine:
@@ -37,35 +37,35 @@ class TestGeoDeltaLine:
             pytest.param(
                 'Fe z = -0.2 0.2',
                 [TargetToken('Fe')],
-                DirectionToken('z'),
+                CartesianDirectionToken('z'),
                 RangeToken.from_floats(-0.2, 0.2),
                 id='single-target-no-step',
             ),
             pytest.param(
                 'Fe xy[1 1] = -0.2 0.2',
                 [TargetToken('Fe')],
-                DirectionToken('xy[1 1]'),
+                CartesianDirectionToken('xy[1 1]'),
                 RangeToken.from_floats(-0.2, 0.2),
                 id='single-target-no-step',
             ),
             pytest.param(
                 'Fe 1 2, Cu_surf xy = -1.5 3.0 0.5',
                 [TargetToken('Fe 1 2'), TargetToken('Cu_surf')],
-                DirectionToken('xy'),
+                CartesianDirectionToken('xy'),
                 RangeToken.from_floats(-1.5, 3.0, 0.5),
                 id='multi-target-with-step',
             ),
             pytest.param(
                 '  Fe_*    xyz=   0.    2E+1   0.25  ',
                 [TargetToken('Fe_*')],
-                DirectionToken('xyz'),
+                CartesianDirectionToken('xyz'),
                 RangeToken.from_floats(0.0, 20.0, 0.25),
                 id='whitespace-scientific',
             ),
             pytest.param(
                 'Fe L(1-3), Ni_sub L(2) z = -0.5 0.5',
                 [TargetToken('Fe L(1-3)'), TargetToken('Ni_sub L(2)')],
-                DirectionToken('z'),
+                CartesianDirectionToken('z'),
                 RangeToken.from_floats(-0.5, 0.5),
                 id='layer-selector',
             ),
@@ -79,7 +79,7 @@ class TestGeoDeltaLine:
         for target, exp_target in zip(geo.targets, exp_targets):
             assert target == exp_target
         # direction
-        assert isinstance(geo.direction, DirectionToken)
+        assert isinstance(geo.direction, CartesianDirectionToken)
         assert geo.direction == exp_direction
         # range
         assert isinstance(geo.range, RangeToken)
@@ -196,8 +196,8 @@ class TestOffsetLine:
     def test_offsets_valid(self, line, exp_type, exp_targets, exp_direction, exp_offset):
         off = OffsetsLine(line)
         # type
-        assert isinstance(off.type, ModeToken)
-        assert off.type == ModeToken(exp_type)
+        assert isinstance(off.type, TypeToken)
+        assert off.type == TypeToken(exp_type)
         # targets
         assert len(off.targets) == len(exp_targets)
         for tok, exp in zip(off.targets, exp_targets):
@@ -207,8 +207,8 @@ class TestOffsetLine:
         if exp_direction is None:
             assert off.direction is None
         else:
-            assert isinstance(off.direction, DirectionToken)
-            assert off.direction == DirectionToken(exp_direction)
+            assert isinstance(off.direction, CartesianDirectionToken)
+            assert off.direction == CartesianDirectionToken(exp_direction)
         # offset
         assert isinstance(off.offset, OffsetToken)
         assert off.offset == OffsetToken.from_floats(exp_offset)
@@ -334,7 +334,7 @@ class TestConstraintLine:
         [
             pytest.param(
                 'geo A_surf, A_def = linked',
-                ModeToken('geo'),
+                TypeToken('geo'),
                 [TargetToken('A_surf'), TargetToken('A_def')],
                 TargetToken('A_surf'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -342,7 +342,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo A = B',
-                ModeToken('geo'),
+                TypeToken('geo'),
                 [TargetToken('A')],
                 TargetToken('B'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -350,7 +350,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo Fe 1 = Fe 2',
-                ModeToken('geo'),
+                TypeToken('geo'),
                 [TargetToken('Fe 1')],
                 TargetToken('Fe 2'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -358,7 +358,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo A = [1 0 0] B',
-                ModeToken('geo'),
+                TypeToken('geo'),
                 [TargetToken('A')],
                 TargetToken('B'),
                 LinearOperationToken('[1 0 0]'),
@@ -366,7 +366,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo Fe_surf, O_surf = [[1 0 0] [0 0 1] [0 1 0]] Fe_surf',
-                ModeToken('geo'),
+                TypeToken('geo'),
                 [TargetToken('Fe_surf'), TargetToken('O_surf')],
                 TargetToken('Fe_surf'),
                 LinearOperationToken('[[1 0 0] [0 0 1] [0 1 0]]'),
@@ -374,7 +374,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'occ A, B = linked',
-                ModeToken('occ'),
+                TypeToken('occ'),
                 [TargetToken('A'), TargetToken('B')],
                 TargetToken('A'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -382,7 +382,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'vib X, Y = 0.5 Z',
-                ModeToken('vib'),
+                TypeToken('vib'),
                 [TargetToken('X'), TargetToken('Y')],
                 TargetToken('Z'),
                 LinearOperationToken.from_array(np.array(0.5)),

@@ -5,6 +5,7 @@ __copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
 __created__ = "2024-10-14"
 __license__ = "GPLv3+"
 
+from abc import abstractmethod
 import re
 
 import numpy as np
@@ -12,30 +13,8 @@ import numpy as np
 from .base import DisplacementsFileToken, TokenParserError
 
 COMPARE_EPS = 1E-6
-DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
+CART_DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
-
-# Note,TODO: This parser does not yet support parsing of azimuthal, and radial
-# directions, as well as fractional directions (e.g., 'a', 'b', 'c'). These
-# are supported in th odl viperleed.calc parser.
-# They will need to be added here prior to using this parser for the TensErLEED
-# backend.
-# Comment by @michele-riva:
-#Among the ones we currently support, we are missing in here: ab[i j] (and its
-# [i j] equivalent), azi(ab[i j]) (and its equivalent azi([i j])), azi(xy[k m]),
-# r(ab[i j]) (and its equivalent r([i j])), r(xy[k m]).
-# 
-# Others that we should probably consider (see also #413): a, b, c, ab, bc, ac
-# 
-# In addition, we can introduce some syntax leniency and accept also the
-# following:
-# 
-# - various permutations of the letters when displacing in the 2D plane (i.e.,
-#   ba == ab, zy == yz, etc)
-# - azi[i j] == azi(ab[i j])
-# - azi(i j) == azi(ab[i j])
-# - r[i j] == r(ab[i j])
-# - r(i j) == r(ab[i j])
 
 
 class DirectionTokenParserError(TokenParserError):
@@ -43,12 +22,50 @@ class DirectionTokenParserError(TokenParserError):
 
 
 class DirectionToken(DisplacementsFileToken):
+    """Abstract base class for direction tokens in the DISPLACEMENTS file.
+
+    This class defines the interface for direction tokens, which are used to
+    specify the allowed directions of movements or constraints for geometric
+    displacements.
+
+
+    We do not yet support parsing of azimuthal, and radial directions, as well
+    as fractional directions (e.g., 'a', 'b', 'c'). These are supported in the
+    old viperleed.calc parser. They will need to be added here prior to using
+    this parser for the TensErLEED backend.
+    Comment by @michele-riva:
+    Among the ones we currently support, we are missing in here: ab[i j] (and
+    its [i j] equivalent), azi(ab[i j]) (and its equivalent azi([i j])),
+    azi(xy[k m]), r(ab[i j]) (and its equivalent r([i j])), r(xy[k m]).
+
+    Others that we should probably consider (see also #413): a, b, c, ab, bc, ac
+
+    In addition, we can introduce some syntax leniency and accept also the
+    following:
+
+    - various permutations of the letters when displacing in the 2D plane (i.e.,
+      ba == ab, zy == yz, etc)
+    - azi[i j] == azi(ab[i j])
+    - azi(i j) == azi(ab[i j])
+    - r[i j] == r(ab[i j])
+    - r(i j) == r(ab[i j])"""
+
+    @abstractmethod
+    def __eq__(self, other):
+        """Compare two DirectionToken objects for equality."""
+
+    @abstractmethod
+    def __str__(self):
+        """Return a string representation of the DirectionToken object."""
+
+
+class CartesianDirectionToken(DirectionToken):
     """Class to parse direction specifiers in 3D space.
 
-    DirectionToken specifiers are used to declare the allowed directions of
-    movements or constraints for geometric displacements. They can specify one,
-    two, or three dimensions of movements. The direction specifier can be given
-    as one of:
+    CartesianDirectionToken specifiers are used to declare cartesian directions
+    of movements or constraints for geometric displacements. They can specify
+    one, two, or three dimensions of movements. The direction specifier can be
+    given as one of:
     - 'xyz'
         Full 3D space.
     - 'xy', 'yz', 'xz'
@@ -75,7 +92,7 @@ class DirectionToken(DisplacementsFileToken):
     ValueError
         If the direction string is invalid or if the number of components does
         not match the number of directions.
-    DirectionTokenParserError
+    CartesianDirectionTokenParserError
         If the direction string contains unsupported components like azimuthal
         or radial directions.
     """
@@ -83,7 +100,7 @@ class DirectionToken(DisplacementsFileToken):
     def __init__(self, direction_str):
         _dir_str = direction_str.strip()
         if not _dir_str:
-            raise DirectionTokenParserError('Empty direction token.')
+            raise CartesianDirectionTokenParserError('Empty direction token.')
         self.direction_str = _dir_str
         vecs, self.dof = self._parse_direction(_dir_str)
         self._vectors = vecs
@@ -96,14 +113,14 @@ class DirectionToken(DisplacementsFileToken):
     @property
     def vectors_zxy(self):
         """Return the vectors in zxy convention (LEED convention)."""
-        return _to_zxy(self._vectors)
+        return _xyz_to_zxy(self._vectors)
 
     def _parse_direction(self, direction_str):
         _check_unsupported_directions(direction_str)
 
         # Vector direction like 'xyz[1 2 3]'
         if '[' in direction_str:
-            match = re.match(DIRECTION_PATTERN, direction_str)
+            match = re.match(CART_DIRECTION_PATTERN, direction_str)
             if not match:
                 msg = f'Invalid direction format: {direction_str}'
                 raise ValueError(msg)
@@ -144,16 +161,16 @@ class DirectionToken(DisplacementsFileToken):
         return vec / norm
 
     def __eq__(self, other):
-        """Compare two DirectionToken objects for equality."""
-        if not isinstance(other, DirectionToken):
+        """Compare two CartesianDirectionToken objects for equality."""
+        if not isinstance(other, CartesianDirectionToken):
             return False
         return self.dof == other.dof and np.allclose(
             self.vectors_xyz, other.vectors_xyz
         )
 
     def __str__(self):
-        """Return a string representation of the DirectionToken object."""
-        return f'DirectionToken(vectors={self.vectors_xyz}, dof={self.dof})'
+        """Return a string representation of the CartesianDirectionToken object."""
+        return f'CartesianDirectionToken(vectors={self.vectors_xyz}, dof={self.dof})'
 
 
 def _check_unsupported_directions(direction_str):
@@ -164,7 +181,7 @@ def _check_unsupported_directions(direction_str):
             'Azimuthal and radial directions are currently not supported. '
             f'Invalid direction: {direction_str}'
         )
-        raise DirectionTokenParserError(msg)
+        raise CartesianDirectionTokenParserError(msg)
 
     # Fractional directions are currently not supported
     fractional_labels = ['a', 'b', 'c']
@@ -173,9 +190,9 @@ def _check_unsupported_directions(direction_str):
             'Fractional directions are currently not supported. '
             f'Invalid direction: {direction_str}'
         )
-        raise DirectionTokenParserError(msg)
+        raise CartesianDirectionTokenParserError(msg)
 
-def _to_zxy(vecs):
+def _xyz_to_zxy(vecs):
     """Convert from xyz to zxy axis (LEED) convention."""
     # Apply axis permutation: x→y, y→z, z→x
     return vecs[:, [2, 0, 1]]  # roll last axis backward
