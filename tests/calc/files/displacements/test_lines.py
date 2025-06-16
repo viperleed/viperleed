@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from viperleed.calc.files.new_displacements.errors import (
-    InvalidDisplacementsSyntaxError,
+    DisplacementsSyntaxError,
 )
 from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
@@ -88,16 +88,16 @@ class TestGeoDeltaLine:
     @pytest.mark.parametrize(
         'bad_line, exp_error',
         [
-            pytest.param('A =', InvalidDisplacementsSyntaxError, id='missing RHS'),
+            pytest.param('A =', DisplacementsSyntaxError, id='missing RHS'),
             pytest.param(
-                'x = 0 1', InvalidDisplacementsSyntaxError, id='missing target'
+                'x = 0 1', DisplacementsSyntaxError, id='missing target'
             ),
             pytest.param(
-                'A x 0 1', InvalidDisplacementsSyntaxError, id='not equal sign'
+                'A x 0 1', DisplacementsSyntaxError, id='not equal sign'
             ),
             pytest.param(
                 'A y = foo bar',
-                InvalidDisplacementsSyntaxError,
+                DisplacementsSyntaxError,
                 id='non-numeric RHS',
             ),
         ],
@@ -139,11 +139,11 @@ class TestVibDeltaLine:
     @pytest.mark.parametrize(
         "bad_line, exp_error",
         [
-            ("A x = 0 1", InvalidDisplacementsSyntaxError),
-            ("A =", InvalidDisplacementsSyntaxError),
-            ("A 0 1", InvalidDisplacementsSyntaxError),
-            ("A = foo bar", InvalidDisplacementsSyntaxError),
-            ("A = 0 1 = 2", InvalidDisplacementsSyntaxError),
+            ("A x = 0 1", DisplacementsSyntaxError),
+            ("A =", DisplacementsSyntaxError),
+            ("A 0 1", DisplacementsSyntaxError),
+            ("A = foo bar", DisplacementsSyntaxError),
+            ("A = 0 1 = 2", DisplacementsSyntaxError),
         ],
     )
     def test_invalid(self, bad_line, exp_error):
@@ -218,19 +218,19 @@ class TestOffsetLine:
         'bad_line, exp_error',
         [
             # Missing direction for geo
-            ('geo A = 1.0', InvalidDisplacementsSyntaxError),
+            ('geo A = 1.0', DisplacementsSyntaxError),
             # Direction not allowed for non-geo
-            ('vib A x = 2.0', InvalidDisplacementsSyntaxError),
+            ('vib A x = 2.0', DisplacementsSyntaxError),
             # Missing type and target
-            ('A = 1.0', InvalidDisplacementsSyntaxError),
+            ('A = 1.0', DisplacementsSyntaxError),
             # No equals sign
-            ('geo A x 1.0', InvalidDisplacementsSyntaxError),
+            ('geo A x 1.0', DisplacementsSyntaxError),
             # Non-numeric offset
-            ('geo A x = foo', InvalidDisplacementsSyntaxError),
+            ('geo A x = foo', DisplacementsSyntaxError),
             # Multiple offset tokens
-            ('geo A x = 1 2', InvalidDisplacementsSyntaxError),
+            ('geo A x = 1 2', DisplacementsSyntaxError),
             # Multiple '=' signs
-            ('geo A x = 1.0 = 2.0', InvalidDisplacementsSyntaxError),
+            ('geo A x = 1.0 = 2.0', DisplacementsSyntaxError),
         ],
     )
     def test_offsets_invalid(self, bad_line, exp_error):
@@ -315,7 +315,7 @@ class TestOccDeltaLine:
         ],
     )
     def test_occ_delta_invalid(self, bad_line):
-        with pytest.raises(InvalidDisplacementsSyntaxError):
+        with pytest.raises(DisplacementsSyntaxError):
             OccDeltaLine(bad_line)
 
 
@@ -418,7 +418,7 @@ class TestConstraintLine:
         ],
     )
     def test_invalid_constraint_lines(self, bad_line):
-        with pytest.raises(InvalidDisplacementsSyntaxError):
+        with pytest.raises(DisplacementsSyntaxError):
             ConstraintLine(bad_line)
 
 

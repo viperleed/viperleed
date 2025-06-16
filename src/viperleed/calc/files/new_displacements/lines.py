@@ -14,7 +14,7 @@ import numpy as np
 
 from viperleed.calc.classes.perturbation_type import PerturbationType
 
-from .errors import InvalidDisplacementsSyntaxError
+from .errors import DisplacementsSyntaxError
 from .tokens import (
     DirectionToken,
     ElementToken,
@@ -75,7 +75,7 @@ class ParsedLine(ABC):
                 f'Invalid DISPLACEMENTS line format: "{self.raw_line}". '
                 'Expected format: "<labels> = <values>".'
             )
-            raise InvalidDisplacementsSyntaxError(msg)
+            raise DisplacementsSyntaxError(msg)
 
         # split the line into raw left and right hand sides
         self._lhs, self._rhs = self.raw_line.split('=')
@@ -104,7 +104,7 @@ class ParsedLine(ABC):
                 'Unable to parse <target> tokens from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
-            raise InvalidDisplacementsSyntaxError(msg) from err
+            raise DisplacementsSyntaxError(msg) from err
 
     def _parse_direction(self, dir_str):
         try:
@@ -114,7 +114,7 @@ class ParsedLine(ABC):
                 'Unable to parse <direction> token from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
-            raise InvalidDisplacementsSyntaxError(msg) from err
+            raise DisplacementsSyntaxError(msg) from err
 
     def _parse_range(self, range_str):
         try:
@@ -124,7 +124,7 @@ class ParsedLine(ABC):
                 'Unable to parse <range> token from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
-            raise InvalidDisplacementsSyntaxError(msg) from err
+            raise DisplacementsSyntaxError(msg) from err
 
     def _parse_type(self, type_str):
         try:
@@ -134,7 +134,7 @@ class ParsedLine(ABC):
                 'Unable to parse <type> information from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
-            raise InvalidDisplacementsSyntaxError(msg) from err
+            raise DisplacementsSyntaxError(msg) from err
 
     def _parse_element(self, element_str):
         try:
@@ -144,7 +144,7 @@ class ParsedLine(ABC):
                 'Unable to parse <element> information from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
-            raise InvalidDisplacementsSyntaxError(msg) from err
+            raise DisplacementsSyntaxError(msg) from err
 
     def _parse_linear_operation(self, operation_str):
         try:
@@ -154,7 +154,7 @@ class ParsedLine(ABC):
                 'Unable to parse <linear_operation> token from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
-            raise InvalidDisplacementsSyntaxError(msg) from err
+            raise DisplacementsSyntaxError(msg) from err
 
     @property
     def invalid_format_msg(self):
@@ -189,7 +189,7 @@ class GeoDeltaLine(ParsedLine):
                 'Expected format: "<targets> [, <target>] <direction> = '
                 '<range>".'
             )
-            raise InvalidDisplacementsSyntaxError(msg)
+            raise DisplacementsSyntaxError(msg)
 
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
@@ -224,7 +224,7 @@ class VibDeltaLine(ParsedLine):
         # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if dir_str:
-            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+            raise AttributeError(self.invalid_format_msg)
 
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
@@ -261,7 +261,7 @@ class OccDeltaLine(ParsedLine):
         # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if dir_str:
-            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+            raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
@@ -280,7 +280,7 @@ class OccDeltaLine(ParsedLine):
                     'Unable to parse chemical ranges from line in '
                     f'{self.block_name} block: {self.raw_line}.'
                 )
-                raise InvalidDisplacementsSyntaxError(msg) from err
+                raise DisplacementsSyntaxError(msg) from err
             element_ranges.append(
                 (
                     self._parse_element(elem_str),
@@ -289,7 +289,7 @@ class OccDeltaLine(ParsedLine):
             )
         if len(element_ranges) < 1:
             # must contain at least one pair
-            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+            raise DisplacementsSyntaxError(self.invalid_format_msg)
         self.element_ranges = tuple(element_ranges)
 
     def __str__(self):
@@ -326,7 +326,7 @@ class ConstraintLine(ParsedLine):
         # Left hand side
         lhs_parts = self._lhs.split()
         if len(lhs_parts) < 2:  # at least type and one target
-            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+            raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         self.type = self._parse_type(lhs_parts[0])
 
@@ -340,8 +340,8 @@ class ConstraintLine(ParsedLine):
             ' '.join(lhs_parts[1:])
         )
         if dir_str:
-            raise InvalidDisplacementsSyntaxError(
-                'Direction tokens are not allowed in CONSTRAIN block.'
+            raise DisplacementsSyntaxError(
+                "Direction tokens are not allowed in CONSTRAIN block."
             )
             # TODO, may be implemented in a future version: Do we want this?
             # It would be generally possible (e.g. link only z, but not xy for
@@ -359,7 +359,7 @@ class ConstraintLine(ParsedLine):
                 'Offset assignment in the CONSTRAIN block is deprecated. '
                 'Use the OFFSETS block instead.'
             )
-            raise InvalidDisplacementsSyntaxError(msg)
+            raise DisplacementsSyntaxError(msg)
 
         # check for 'linked' tag
         if self._rhs.lower().strip() == 'linked':
@@ -383,15 +383,15 @@ class ConstraintLine(ParsedLine):
             try:
                 link_targets = self._parse_targets(target_part)
                 break
-            except InvalidDisplacementsSyntaxError:
+            except DisplacementsSyntaxError:
                 continue
         else:
-            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+            raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         if len(link_targets) != 1:
-            raise InvalidDisplacementsSyntaxError(
-                'The target part of the CONSTRAIN line must contain exactly '
-                'one target.'
+            raise DisplacementsSyntaxError(
+                "The target part of the CONSTRAIN line must contain exactly "
+                "one target."
             )
 
         # If we reach here, we have a valid target part
@@ -436,7 +436,7 @@ class OffsetsLine(ParsedLine):
 
         parts = self._lhs.split()
         if len(parts) < 2:  # at least type and one target
-            raise InvalidDisplacementsSyntaxError(self.invalid_format_msg)
+            raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         self.type = self._parse_type(parts[0])
         targets_str, dir_str = separate_direction_from_targets(
@@ -451,17 +451,16 @@ class OffsetsLine(ParsedLine):
             self.direction = self._parse_direction(dir_str)
 
         if self.type.type is not PerturbationType.GEO and dir_str:
-            raise InvalidDisplacementsSyntaxError(
-                'Direction tokens in the OFFSETS block are only allowed for '
-                'geometric offsets.'
+            raise DisplacementsSyntaxError(
+                "Direction tokens in the OFFSETS block are only allowed for "
+                "geometric offsets."
             )
 
         # parse RHS into offset
         try:
             self.offset = OffsetToken(self._rhs)
         except TokenParserError as err:
-            raise InvalidDisplacementsSyntaxError(
-                self.invalid_format_msg) from err
+            raise DisplacementsSyntaxError(self.invalid_format_msg) from err
 
     def __str__(self):
         """Return the string representation of the line."""
