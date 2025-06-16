@@ -23,6 +23,10 @@ from viperleed.calc.files.new_displacements.tokens.target import (
         ('D L(1)', re.compile(r'^D\w*'), None, [1]),
         # layer range
         ('E L(2-3)', re.compile(r'^E\w*'), None, [2, 3]),
+        # layer with spaces
+        ('F L( 1-3 )', re.compile(r'^F\w*'), None, [1, 2, 3]),
+        # complicated layer numbers
+        ('E L(1 4-5 7)', re.compile(r'^E\w*'), None, [1, 4, 5, 7]),
         # wildcard label
         ('* 1-2', re.compile(r'^\w*\w*'), [1, 2], None),
     ],
