@@ -7,6 +7,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-27'
 __license__ = 'GPLv3+'
 
+from contextlib import nullcontext
 from pathlib import Path
 import sys
 
@@ -16,59 +17,66 @@ from pytest_cases import parametrize
 
 from viperleed.gui.cli import ViPErLEEDGUICLI
 from viperleed.gui.cli import commandline_main
-from viperleed.gui.cli import is_commandline_mode
 from viperleed.gui.cli import gui_main
 from viperleed.gui.cli import import_graphics_modules
 
 _MODULE = 'viperleed.gui.cli'
 
 
-class TestViPErLEEDGUICLI:
-    """Tests for the ViPErLEEDGUICLI class."""
+class TestCheckCanRunGui:
+    """Tests for the check_can_run_gui method of ViPErLEEDGUICLI."""
 
-    _valid_args = (
-        (['--nogui'], {'nogui': True}),
-        )
+    _err_msg = ('Cannot execute the ViPErLEED graphical user '
+                'interface because ')
 
-    @parametrize('args,attrs', _valid_args)
-    def test_parse_args_valid(self, args, attrs):
-        """Check result of successfully parsing command-line arguments."""
+
         cli = ViPErLEEDGUICLI()
-        parsed = cli.parse_cli_args(args)
-        for attr_name, attr_value in attrs.items():
-            assert getattr(parsed, attr_name) == attr_value
+    _can_run = {
+        'normal gui': (
+            {'has_pyqt': True,
+             'has_graphics': True,}
+             '',
+             ),
+        'no qt': (
+            {'has_pyqt': False,
+             'has_graphics': True,}
+            'PyQt5 is not installed.',
+            ),
+        'no graphics': (
+            {'has_pyqt': True,
+             'has_graphics': False,}
+            ('the system appears to have no graphics capability (i.e., '
+             'no monitor was detected). If this is the first time you '
+             'execute the GUI, try once again.'),
+            ),
+        }
 
-    def test_call_commandline_mode(self, mocker):
-        """Check inner calls when running in command-line mode."""
+    @parametrize('mocks,err_msg', _can_run.values(), ids=_can_run)
+    def test_result(self, mocks, err_msg, mocker, capsys):
+        """Check the expected outcome."""
+        for mock_name in ('has_pyqt', 'has_graphics'):
+            mocker.patch(f'{_MODULE}.{mock_name}',
+                         return_value=mocks[mock_name])
         cli = ViPErLEEDGUICLI()
-        mocker.patch(f'{_MODULE}.is_commandline_mode', return_value=True)
-        mock_cmd = mocker.patch(f'{_MODULE}.commandline_main')
-        mocker.patch.object(cli, 'parse_cli_args')
-
-        result = cli([])
-        assert result is mock_cmd.return_value
-        mock_cmd.assert_called_once_with()
-
-    def test_call_gui_mode(self, mocker):
-        """Check inner calls when running in GUI mode."""
-        cli = ViPErLEEDGUICLI()
-        mocker.patch(f'{_MODULE}.is_commandline_mode', return_value=False)
-        mock_cmd = mocker.patch(f'{_MODULE}.gui_main')
-        mocker.patch.object(cli, 'parse_cli_args')
-
-        result = cli([])
-        assert result is mock_cmd.return_value
-        mock_cmd.assert_called_once_with()
+        context = pytest.raises(SystemExit) if err_msg else nullcontext()
+        with context:
+            cli.check_can_run_gui()
+        stderr = capsys.readouterr().err.strip()
+        if not err_msg:
+            assert not stderr
+        else:
+            expect = self._err_msg + err_msg
+            assert stderr.endswith(expect)
 
 
-# pylint: disable-next=too-few-public-methods  # It's parametrized
+# pylint: disable-next=too-few-public-methods  # It's parameterized
 class TestCommandlineMain:
     """Tests for the commandline_main function."""
 
     _print = {
         'no pyqt': (
             False,
-            'Running in command line version because PyQt5 was not found...'
+            'Running in command line version...'
             'Not implemented yet.\n'
             ),
         'with pyqt': (
@@ -86,48 +94,6 @@ class TestCommandlineMain:
         assert not error
         stdout = capsys.readouterr().out
         assert stdout == expect_print
-
-
-# pylint: disable-next=too-few-public-methods  # It's parametrized
-class TestIsCommandlineMode:
-    """Tests for the is_commandline_mode function."""
-
-    _cmd_line_info = {
-        'normal gui': (
-            False,
-            {'has_pyqt': True,
-             'has_graphics': True,
-             'nogui': False},
-             ),
-        'nogui flag': (
-            True,
-            {'has_pyqt': True,
-             'has_graphics': True,
-             'nogui': True},
-            ),
-        'no qt': (
-            True,
-            {'has_pyqt': False,
-             'has_graphics': True,
-             'nogui': False},
-            ),
-        'no graphics': (
-            True,
-            {'has_pyqt': True,
-             'has_graphics': False,
-             'nogui': False},
-            ),
-        }
-
-    @parametrize('expect,mocks', _cmd_line_info.values(), ids=_cmd_line_info)
-    def test_result(self, expect, mocks, mocker):
-        """Check the expected return value."""
-        for mock_name in ('has_pyqt', 'has_graphics'):
-            mocker.patch(f'{_MODULE}.{mock_name}',
-                         return_value=mocks[mock_name])
-        args = mocker.MagicMock(nogui=mocks['nogui'])
-        result = is_commandline_mode(args)
-        assert result == expect
 
 
 class TestGuiMain:
@@ -228,3 +194,43 @@ class TestImportGrpahicsModules:
                                           for m in imported_modules]
         n_return_values = 4
         assert len(result) == n_return_values
+
+
+class TestViPErLEEDGUICLI:
+    """Tests for the ViPErLEEDGUICLI class."""
+
+    _valid_args = (
+        (['--nogui'], {'nogui': True}),
+        )
+
+    @parametrize('args,attrs', _valid_args)
+    def test_parse_args_valid(self, args, attrs):
+        """Check result of successfully parsing command-line arguments."""
+        cli = ViPErLEEDGUICLI()
+        parsed = cli.parse_cli_args(args)
+        for attr_name, attr_value in attrs.items():
+            assert getattr(parsed, attr_name) == attr_value
+
+    def test_call_commandline_mode(self, mocker):
+        """Check inner calls when running in command-line mode."""
+        cli = ViPErLEEDGUICLI()
+        mock_cmd = mocker.patch(f'{_MODULE}.commandline_main')
+        mock_parse = mocker.patch.object(cli, 'parse_cli_args')
+        mock_parse.return_value.nogui = True
+
+        result = cli([])
+        assert result is mock_cmd.return_value
+        mock_cmd.assert_called_once_with()
+
+    def test_call_gui_mode(self, mocker):
+        """Check inner calls when running in GUI mode."""
+        cli = ViPErLEEDGUICLI()
+        mock_cmd = mocker.patch(f'{_MODULE}.gui_main')
+        mock_check_gui = mocker.patch.object(cli, 'check_can_run_gui')
+        mock_parse = mocker.patch.object(cli, 'parse_cli_args')
+        mock_parse.return_value.nogui = False
+
+        result = cli([])
+        assert result is mock_cmd.return_value
+        mock_cmd.assert_called_once_with()
+        mock_check_gui.assert_called_once_with()

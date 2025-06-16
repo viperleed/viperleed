@@ -31,6 +31,7 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
         args = self.parse_cli_args(args)
         if is_commandline_mode(args):
             return commandline_main()
+        self.check_can_run_gui()
         return gui_main()
 
     def add_parser_arguments(self, parser):
@@ -43,38 +44,33 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             action='store_true',
             )
 
+    def check_can_run_gui(self):
+        """Raise SystemExit if the GUI cannot execute.
 
-def is_commandline_mode(args):
-    """Return whether the GUI should run in command line mode.
-
-    This is the case if, e.g., the correct modules are not installed,
-    or if the user asked to run in command line mode via the --nogui
-    command line argument.
-
-    Parameters
-    ----------
-    args : argparse.Namespace
-        Parsed command-line arguments.
-
-    Returns
-    -------
-    bool
-        Whether the GUI should run in command-line mode, i.e.,
-        without any windows.
-    """
-    return (
-        not has_pyqt()
-        or not has_graphics()
-        or args.nogui
-        )
+        Raises
+        ------
+        SystemExit
+            If the GUI cannot execute because
+            - PyQt5 is not installed,
+            - PyQt5 misses any system dependencies,
+            - the current machine has no graphics capability.
+        """
+        err_msg = (
+            'Cannot execute the ViPErLEED graphical user interface because {}'
+            )
+        if not has_pyqt():
+            self.parser.error(err_msg.format('PyQt5 is not installed.'))
+        if not has_graphics():
+            self.parser.error(err_msg.format(
+                'the system appears to have no graphics capability (i.e., '
+                'no monitor was detected). If this is the first time you '
+                'execute the GUI, try once again.'
+                ))
 
 
 def commandline_main():
     """Body of the command-line version of the GUI."""
-    print('Running in command line version', flush=True, end='')
-    if not has_pyqt():
-        print(' because PyQt5 was not found', flush=True, end='')
-    print('...', flush=True, end='')
+    print('Running in command line version...', flush=True, end='')
     print('Not implemented yet.', flush=True)
     return 0
 
