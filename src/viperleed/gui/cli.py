@@ -12,14 +12,18 @@ __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
 from importlib import import_module
+from itertools import chain
 from pathlib import Path
 import sys
 
 from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.gui.base import catch_gui_crash
 from viperleed.gui.constants import LOGO
+from viperleed.gui.detect_graphics import Qt5DependencyFinder
+from viperleed.gui.detect_graphics import find_missing_qt_dependencies
 from viperleed.gui.detect_graphics import has_graphics
 from viperleed.gui.detect_graphics import has_pyqt
+from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.helpers import resources_path
 
 
@@ -29,7 +33,7 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
     def __call__(self, args=None):
         """Call either the CLI or graphical versions of the GUI."""
         args = self.parse_cli_args(args)
-        if is_commandline_mode(args):
+        if args.nogui:
             return commandline_main()
         self.check_can_run_gui()
         return gui_main()
@@ -60,6 +64,21 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             )
         if not has_pyqt():
             self.parser.error(err_msg.format('PyQt5 is not installed.'))
+        missing = tuple(chain.from_iterable(
+            find_missing_qt_dependencies().values()
+            ))
+        if missing:
+            sep = '\n    '
+            fmt_missing = sep.join(missing)
+            fmt_missing = sep + fmt_missing
+            how_to_install = Qt5DependencyFinder.find_install_for_libs(missing)
+            install_msg = 'Try again after installing them'
+            install_msg += ('.' if not how_to_install
+                            else f' via{sep}{how_to_install}')
+            self.parser.error(err_msg.format(
+                'the following PyQt5 dependencies are missing on your system:'
+                f'{fmt_missing}\n{install_msg}'
+                ))
         if not has_graphics():
             self.parser.error(err_msg.format(
                 'the system appears to have no graphics capability (i.e., '

@@ -28,23 +28,59 @@ class TestCheckCanRunGui:
 
     _err_msg = ('Cannot execute the ViPErLEED graphical user '
                 'interface because ')
+    _install = {
+        'not found': '',
+        'found': 'sudo apt install lib_one lib_two',
+        }
 
+    @parametrize(install=_install.values(), ids=_install)
+    def test_missing_dependencies(self, install, mocker, capsys):
+        """Check complaints when dependencies are missing."""
+        mocker.patch(f'{_MODULE}.has_pyqt', return_value=True)
+        missing_dict = {'base_one': ('dep_one', 'dep_two'),
+                        'base_two': ('dep_three', 'dep_four')}
+        mocker.patch(f'{_MODULE}.find_missing_qt_dependencies',
+                     return_value=missing_dict)
+        mock_find_install = mocker.patch(
+            f'{_MODULE}.Qt5DependencyFinder.find_install_for_libs',
+            return_value=install
+            )
 
         cli = ViPErLEEDGUICLI()
+        with pytest.raises(SystemExit):
+            cli.check_can_run_gui()
+        missing = ('dep_one', 'dep_two', 'dep_three', 'dep_four')
+        mock_find_install.assert_called_once_with(missing)
+
+        expect_err = self._err_msg + '''\
+the following PyQt5 dependencies are missing on your system:
+    dep_one
+    dep_two
+    dep_three
+    dep_four
+Try again after installing them'''
+        expect_err += ('.' if not install else ''' via
+    sudo apt install lib_one lib_two''')
+        stderr = capsys.readouterr().err.strip()
+        assert stderr.endswith(expect_err)
+
     _can_run = {
         'normal gui': (
             {'has_pyqt': True,
-             'has_graphics': True,}
+             'has_graphics': True,
+             'find_missing_qt_dependencies': {}},
              '',
              ),
         'no qt': (
             {'has_pyqt': False,
-             'has_graphics': True,}
+             'has_graphics': True,
+             'find_missing_qt_dependencies': {}},
             'PyQt5 is not installed.',
             ),
         'no graphics': (
             {'has_pyqt': True,
-             'has_graphics': False,}
+             'has_graphics': False,
+             'find_missing_qt_dependencies': {}},
             ('the system appears to have no graphics capability (i.e., '
              'no monitor was detected). If this is the first time you '
              'execute the GUI, try once again.'),
