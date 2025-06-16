@@ -13,7 +13,7 @@ from enum import Enum
 from viperleed.calc.files.input_reader import InputFileReader
 from viperleed.calc.lib.string_utils import strip_comments
 
-from .errors import InvalidDisplacementsSyntaxError
+from .errors import DisplacementsSyntaxError
 from .lines import (
     ConstraintLine,
     GeoDeltaLine,
@@ -25,17 +25,19 @@ from .lines import (
     VibDeltaLine,
 )
 
-SEARCH_HEADER_PATTERN = re.compile(r'^=+\s+(?i:search)\s+(.*)$')
 SECTION_HEADER_PATTERN = re.compile(
-    r'^=+\s*(OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
+    r"^=\s*(?P<section>OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$"
 )
 LOOP_START_PATTERN = re.compile(r'<loop>')
 LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
 
-DisplacementFileSections = Enum(
-    'DisplacementFileSections',
-    ['OFFSETS', 'GEO_DELTA', 'VIB_DELTA', 'OCC_DELTA', 'CONSTRAIN'],
-)
+DISPLACEMENTS_FILE_SECTION = {
+        'OFFSETS': OffsetsLine,
+        'GEO_DELTA': GeoDeltaLine,
+        'VIB_DELTA': VibDeltaLine,
+        'OCC_DELTA': OccDeltaLine,
+        'CONSTRAIN': ConstraintLine,
+}
 
 LoopMarker = Enum('LoopMarker', ['LOOP_START', 'LOOP_END'])
 
@@ -60,15 +62,22 @@ class DisplacementsReader(InputFileReader):
         """Initialize instance."""
         super().__init__(filename, noisy)
 
-        self.current_section = None
+        self._current_section = None
 
     def __next__(self):
         """Read the next line from the file."""
         for line in self._file_obj:
             self._current_line += 1
-            line_content = self._read_one_line(line)
-            if line_content is not None:
-                return line_content
+            parsed_line = self._read_one_line(line)
+            if isinstance(parsed_line, (LoopMarkerLine, SearchHeaderLine)):
+                # search headers and loop markers reset the current section
+                self._current_section = None
+            elif isinstance(parsed_line, SectionHeaderLine):
+                # section headers set the current section
+                self._current_section = parsed_line.section
+            if parsed_line is not None:
+                return parsed_line
+
         raise StopIteration
 
     def _read_one_line(self, line):
@@ -81,55 +90,28 @@ class DisplacementsReader(InputFileReader):
         # check for invalid or deprecated syntax
         _check_line_generally_valid(stripped_line)
 
-        # check for loop markers
-        if LOOP_START_PATTERN.match(stripped_line):
-            self.current_section = None
-            return LoopMarkerLine(LoopMarker.LOOP_START)
-        if LOOP_END_PATTERN.match(stripped_line):
-            self.current_section = None
-            return LoopMarkerLine(LoopMarker.LOOP_END)
-
-        # check for search header
-        search_header_match = re.match(SEARCH_HEADER_PATTERN, line)
-        if search_header_match:
-            label = search_header_match.group(1)
-            self.current_section = None
-            return SearchHeaderLine(label)
-
-        # check for section headers
-        section_header_match = re.match(SECTION_HEADER_PATTERN, line)
-        if section_header_match:
-            section = section_header_match.group(1)
-            self.current_section = section
-            return SectionHeaderLine(section)
+        # check for search headers, loop markers and section headers
+        for header in (SearchHeaderLine, LoopMarkerLine, SectionHeaderLine):
+            try:
+                return header(line)
+            except DisplacementsSyntaxError:
+                continue
 
         # parse section lines
+        if self._current_section is None:
+            msg = f'Cannot parse line "{line}" without a section header.'
+            raise DisplacementsSyntaxError(msg)
+
         try:
-            return self._parse_line(line)
+            # call line parsers
+            return DISPLACEMENTS_FILE_SECTION[self._current_section](line)
         except (ValueError, IndexError) as err:
             msg = (
                 f'Cannot parse line "{line}" in section '
-                f'"{self.current_section}".'
+                f'"{self._current_section}".'
             )
-            raise InvalidDisplacementsSyntaxError(msg) from err
+            raise DisplacementsSyntaxError(msg) from err
 
-    def _parse_line(self, line):
-        """Get content from line."""
-        # Decide based on the current section
-        section = DisplacementFileSections[self.current_section]
-        if section is DisplacementFileSections.OFFSETS:
-            return OffsetsLine(line)
-        if section is DisplacementFileSections.GEO_DELTA:
-            return GeoDeltaLine(line)
-        if section is DisplacementFileSections.VIB_DELTA:
-            return VibDeltaLine(line)
-        if section is DisplacementFileSections.OCC_DELTA:
-            return OccDeltaLine(line)
-        if section is DisplacementFileSections.CONSTRAIN:
-            return ConstraintLine(line)
-        # If no section is set, raise an error
-        msg = f'Cannot parse line "{line}" without a section header.'
-        raise InvalidDisplacementsSyntaxError(msg)
 
 def _check_line_generally_valid(line):
     """Check the line for invalid or deprecated syntax."""
