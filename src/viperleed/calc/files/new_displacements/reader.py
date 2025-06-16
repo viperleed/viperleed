@@ -136,9 +136,9 @@ def _check_line_generally_valid(line):
     # check if the line contains at least one '='
     if '=' not in line:
         msg = f"Could not parse line '{line}'."
-        raise InvalidDisplacementsSyntaxError(msg)
+        raise DisplacementsSyntaxError(msg)
 
     if 'sym_delta' in line.lower():
         msg = ('The SYM_DELTA Tag has been deprecated. Use the SYMMETRY_FIX '
                'parameter instead to manually lower the system symmetry.')
-        raise InvalidDisplacementsSyntaxError(msg)
+        raise DisplacementsSyntaxError(msg)
