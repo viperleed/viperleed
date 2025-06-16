@@ -49,7 +49,6 @@ class LinearOperationToken(DisplacementsFileToken):
             msg = f'Could not parse linear operation "{op_str.strip()}".'
             raise LinearOperationTokenParserError(msg) from err
 
-
         try:
             arr = np.array(parsed, dtype=float)
         except ValueError as err:
