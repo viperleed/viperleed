@@ -26,9 +26,14 @@ from .tokens import (
     TypeToken,
 )
 
-LoopMarkerLine = namedtuple('LoopMarkerLine', ['type'])
-SearchHeaderLine = namedtuple('SearchHeaderLine', ['label'])
-SectionHeaderLine = namedtuple('SectionHeaderLine', ['section'])
+
+SEARCH_HEADER_PATTERN = re.compile(r"^==\s+(?i:search)\s+(?P<label>.*)$")
+SECTION_HEADER_PATTERN = re.compile(
+    r"^=\s*(?P<section>OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$"
+)
+LOOP_START_PATTERN = re.compile(r'<loop>')
+LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
+
 
 _BELOW_DEBUG = 2
 
@@ -55,6 +60,100 @@ DIRECTION_PATTERN = (
 _DIR_AT_END = re.compile(
     rf'(?P<dir>{DIRECTION_PATTERN})\s*$'
 )
+
+
+class HeaderLine(ABC):
+    """Base class for header lines in the DISPLACEMENTS file.
+
+    This class is used to parse header and loop marker lines that may contain
+    a label or section name.
+    """
+
+    @abstractmethod
+    def __init__(self, line: str):
+        """Initialize the header line with a line string."""
+        pass
+
+    @abstractmethod
+    def __str__(self):
+        """Return the string representation of the header line."""
+        pass
+
+# TODO: continue here:
+# make base class for simple lines (SearchHeader, SectionHeader, LoopMarker)
+# that does not require the full parsing logic, but only the
+# validation of the line format & storing of the label/section name + __str__
+
+class SearchHeaderLine(HeaderLine):
+    """Class to parse the search header line in the DISPLACEMENTS file.
+
+    The search header line is of the form:
+        == SEARCH <label>
+    where <label> is a string that identifies the search block.
+    """
+
+    def __init__(self, line: str):
+        """Initialize the SearchHeaderLine with a line string."""
+        match = SEARCH_HEADER_PATTERN.match(line.strip())
+        if not match:
+            raise DisplacementsSyntaxError(
+                f'Invalid search header line: "{line}".')
+        self.label = match.group('label').strip()
+
+    def __str__(self):
+        """Return the string representation of the search header."""
+        return f'== SEARCH {self.label}'
+
+
+class SectionHeaderLine(HeaderLine):
+    """Class to parse section header lines in the DISPLACEMENTS file.
+
+    Section header lines are of the form:
+        = <section>
+    where <section> is one of the defined sections in the DISPLACEMENTS file.
+    """
+
+    def __init__(self, section: str):
+        """Initialize the SectionHeaderLine with a section name."""
+        match = SECTION_HEADER_PATTERN.match(section.strip().upper())
+        if not match:
+            raise DisplacementsSyntaxError(
+                f'Invalid section header line: "{section}".')
+        # extract the section name from the match
+        self.section = match.group('section').strip()
+
+    def __str__(self):
+        """Return the string representation of the section header."""
+        return f'= {self.section}'
+
+
+class LoopMarkerLine(HeaderLine):
+    """Class to parse loop marker lines in the DISPLACEMENTS file.
+
+    Loop marker lines are of the form:
+        <loop> or </loop>
+    They indicate the start or end of a loop in the DISPLACEMENTS file.
+    """
+
+    def __init__(self, line: str):
+        """Initialize the LoopMarkerLine with a line string."""
+        stripped_line = line.strip().lower()
+        if LOOP_START_PATTERN.match(stripped_line):
+            self.kind = 'start'
+        elif LOOP_END_PATTERN.match(stripped_line):
+            self.kind = 'end'
+        else:
+            raise DisplacementsSyntaxError(
+                f'Invalid loop marker line: "{line}".'
+            )
+
+    def __str__(self):
+        """Return the string representation of the loop marker."""
+        if self.kind == 'start':
+            return '<loop>'
+        else:
+            return '</loop>'
+
 
 class ParsedLine(ABC):
     """Base class for parsing of non-header lines in the DISPLACEMENTS file.
