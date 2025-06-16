@@ -16,17 +16,19 @@ from viperleed.calc.files.new_displacements.tokens.target import (
         # only label, no nums or layers
         ('A', re.compile(r'^A\w*'), None, None),
         # list of numbers
-        ('B 1 3 5', re.compile(r'^B\w*'), [1, 3, 5], None),
+        ('A 1 3 5', re.compile(r'^A\w*'), [1, 3, 5], None),
         # numeric range
-        ('C 2-4', re.compile(r'^C\w*'), [2, 3, 4], None),
+        ('A 2-4', re.compile(r'^A\w*'), [2, 3, 4], None),
+        # numeric range
+        ('A 1-3 5 7', re.compile(r'^A\w*'), [1, 2, 3, 5, 7], None),
         # single layer
-        ('D L(1)', re.compile(r'^D\w*'), None, [1]),
+        ('A L(1)', re.compile(r'^A\w*'), None, [1]),
         # layer range
-        ('E L(2-3)', re.compile(r'^E\w*'), None, [2, 3]),
+        ('A L(2-3)', re.compile(r'^A\w*'), None, [2, 3]),
         # layer with spaces
-        ('F L( 1-3 )', re.compile(r'^F\w*'), None, [1, 2, 3]),
+        ('A L( 1-3 )', re.compile(r'^A\w*'), None, [1, 2, 3]),
         # complicated layer numbers
-        ('E L(1 4-5 7)', re.compile(r'^E\w*'), None, [1, 4, 5, 7]),
+        ('A L(1 4-5 7)', re.compile(r'^A\w*'), None, [1, 4, 5, 7]),
         # wildcard label
         ('* 1-2', re.compile(r'^\w*\w*'), [1, 2], None),
     ],
