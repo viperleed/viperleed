@@ -463,7 +463,7 @@ class ConstraintLine(ParsedLine):
         # check for 'linked' tag
         if self._rhs.lower().strip() == 'linked':
             logger.log(_BELOW_DEBUG, 'Detected "linked" tag.')
-            # "copy" the last target to the rhs
+            # "copy" the first target to the rhs
             self.link_target = self.targets[0]
             # treat as if array is identity
             self.linear_operation = LinearOperationToken.from_array(np.eye(1))
