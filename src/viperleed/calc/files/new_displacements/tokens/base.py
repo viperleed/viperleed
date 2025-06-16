@@ -7,7 +7,7 @@ __license__ = "GPLv3+"
 
 from abc import ABC, abstractmethod
 
-class TokenParserError(ValueError):
+class TokenParserError(Exception):
     """Base exception for all token‐parser errors in DISPLACEMENTS."""
 
 
