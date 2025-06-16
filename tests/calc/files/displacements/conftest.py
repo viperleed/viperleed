@@ -22,7 +22,7 @@ from viperleed.calc.files.new_displacements.tokens import (
     LinearOperationToken,
     RangeToken,
     TargetToken,
-    TypeToken,
+    ModeToken,
 )
 
 _MOCK_DISPLACEMENTS_PATH = Path('tests/_test_data/DISPLACEMENTS/')
@@ -98,7 +98,7 @@ def mock_displacements_path_and_lines():
         (
             ConstraintLine,
             {
-                'type': TypeToken('vib'),
+                'type': ModeToken('vib'),
                 'targets': (TargetToken('Ir_top'),),
                 'linear_operation': LinearOperationToken.from_array([[1.0]]),
                 'link_target': TargetToken('Ir_top'),
@@ -107,7 +107,7 @@ def mock_displacements_path_and_lines():
         (
             ConstraintLine,
             {
-                'type': TypeToken('geo'),
+                'type': ModeToken('geo'),
                 'targets': (TargetToken('O L(1-2)'), TargetToken('Ir L(1)')),
                 'linear_operation': LinearOperationToken.from_array([[1.0]]),
                 'link_target': TargetToken('O L(1-2)'),

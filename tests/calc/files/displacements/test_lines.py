@@ -25,7 +25,7 @@ from viperleed.calc.files.new_displacements.tokens import (
     RangeToken,
     TargetToken,
     TokenParserError,
-    TypeToken,
+    ModeToken,
 )
 from viperleed.calc.files.new_displacements.tokens.direction import DirectionToken
 
@@ -196,8 +196,8 @@ class TestOffsetLine:
     def test_offsets_valid(self, line, exp_type, exp_targets, exp_direction, exp_offset):
         off = OffsetsLine(line)
         # type
-        assert isinstance(off.type, TypeToken)
-        assert off.type == TypeToken(exp_type)
+        assert isinstance(off.type, ModeToken)
+        assert off.type == ModeToken(exp_type)
         # targets
         assert len(off.targets) == len(exp_targets)
         for tok, exp in zip(off.targets, exp_targets):
@@ -334,7 +334,7 @@ class TestConstraintLine:
         [
             pytest.param(
                 'geo A_surf, A_def = linked',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('A_surf'), TargetToken('A_def')],
                 TargetToken('A_surf'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -342,7 +342,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo A = B',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('A')],
                 TargetToken('B'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -350,7 +350,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo Fe 1 = Fe 2',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('Fe 1')],
                 TargetToken('Fe 2'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -358,7 +358,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo A = [1 0 0] B',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('A')],
                 TargetToken('B'),
                 LinearOperationToken('[1 0 0]'),
@@ -366,7 +366,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo Fe_surf, O_surf = [[1 0 0] [0 0 1] [0 1 0]] Fe_surf',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('Fe_surf'), TargetToken('O_surf')],
                 TargetToken('Fe_surf'),
                 LinearOperationToken('[[1 0 0] [0 0 1] [0 1 0]]'),
@@ -374,7 +374,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'occ A, B = linked',
-                TypeToken('occ'),
+                ModeToken('occ'),
                 [TargetToken('A'), TargetToken('B')],
                 TargetToken('A'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -382,7 +382,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'vib X, Y = 0.5 Z',
-                TypeToken('vib'),
+                ModeToken('vib'),
                 [TargetToken('X'), TargetToken('Y')],
                 TargetToken('Z'),
                 LinearOperationToken.from_array(np.array(0.5)),

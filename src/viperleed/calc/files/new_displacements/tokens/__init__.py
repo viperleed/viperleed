@@ -10,4 +10,4 @@ from .linear_operation import LinearOperationToken
 from .offset import OffsetToken
 from .range import RangeToken
 from .target import TargetToken
-from .type import TypeToken
+from .mode import ModeToken

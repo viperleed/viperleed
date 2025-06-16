@@ -1,4 +1,4 @@
-"""Tests for <type> token of DISPLACEMENTS file."""
+"""Tests for <mode> token of DISPLACEMENTS file."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-13'
@@ -6,7 +6,7 @@ __created__ = '2025-05-13'
 import pytest
 
 from viperleed.calc.classes.perturbation_mode import PerturbationMode
-from viperleed.calc.files.new_displacements.tokens.type import TypeToken
+from viperleed.calc.files.new_displacements.tokens.mode import ModeToken
 
 
 @pytest.mark.parametrize(
@@ -18,21 +18,21 @@ from viperleed.calc.files.new_displacements.tokens.type import TypeToken
         ('dom', PerturbationMode.DOM),
     ],
 )
-def test_valid_type_strings(type_str, expected_enum):
-    token = TypeToken(type_str)
-    assert token.type is expected_enum
+def test_valid_mode_strings(type_str, expected_enum):
+    token = ModeToken(type_str)
+    assert token.mode is expected_enum
     # str representation should mention the enum
     rep = str(token)
-    assert 'TypeToken' in rep
+    assert 'ModeToken' in rep
     assert expected_enum.name in rep or expected_enum.value in rep
 
 
-def test_equality_and_type_mismatch():
-    a = TypeToken('geo')
-    b = TypeToken('geo')
-    c = TypeToken('vib')
+def test_equality_and_mode_mismatch():
+    a = ModeToken('geo')
+    b = ModeToken('geo')
+    c = ModeToken('vib')
     assert a == b
     assert a != c
-    # comparing to non-TypeToken always returns False
+    # comparing to non-ModeToken always returns False
     assert a != 'geo'
     assert a is not None
