@@ -20,7 +20,7 @@ from viperleed.calc.files.new_displacements.lines import (
     OffsetsLine,
 )
 from viperleed.calc.files.new_displacements.reader import (
-    DisplacementFileSections,
+    DISPLACEMENTS_FILE_SECTION,
     LoopMarker,
 )
 
@@ -38,7 +38,7 @@ class TestDispalacementsFileSyntax:
     def test_searchblock_add_line_and_access(self):
         sb = SearchBlock('test')
         line = GeoDeltaLine('A_surf z = -0.1 0.1')
-        sb.add_line(DisplacementFileSections.GEO_DELTA, line)
+        sb.add_line(DISPLACEMENTS_FILE_SECTION.GEO_DELTA, line)
 
         assert sb.label == 'test'
         assert sb.geo_delta == [line]
