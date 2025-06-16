@@ -108,10 +108,10 @@ def test_selection_regex_matching():
 
 
 def test_invalid_number_format_raises():
-    with pytest.raises(ValueError):
+    with pytest.raises(TargetingError):
         # non-integer in numeric list
         TargetToken('A one two')
-    with pytest.raises(ValueError):
+    with pytest.raises(TargetingError):
         # malformed layer spec
         TargetToken('A L()')
 
