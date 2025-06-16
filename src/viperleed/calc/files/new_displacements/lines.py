@@ -362,6 +362,9 @@ class OccDeltaLine(ParsedLine):
         if dir_str:
             raise AttributeError(self.invalid_format_msg)
 
+        # check for deprecated combined element ranges
+        _check_combined_element_ranges(self._rhs)
+
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
 
@@ -608,3 +611,14 @@ def _check_moire_tag(line_rhs):
     if 'moire' in line_rhs.lower():
         msg = ('Moiré structures are not yet supported.')
         raise NotImplementedError(msg)
+
+def _check_combined_element_ranges(line_rhs):
+    """Check if the rhs of the line contains combined element ranges."""
+    if '+' in line_rhs:
+        msg = (
+            'Combined element ranges have been deprecated. Use individual '
+            'element ranges for each element instead, combined with '
+            'constraints in the CONSTRAIN block.'
+        )
+        raise DisplacementsSyntaxError(msg)
+
