@@ -23,11 +23,12 @@ except ImportError:
     _HAS_PYQT = False
 else:
     import PyQt5
-    from PyQt5.QtCore import QT_VERSION_STR
+    from PyQt5 import QtCore as qtc
     _HAS_PYQT = True
 
 # How long (in seconds) to wait before deciding there's no graphics?
 _TIMEOUT = 1
+_UNIX_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR', '')
 
 
 def _init_dummy_qapp():
@@ -41,6 +42,7 @@ def _init_dummy_qapp():
     -------
     None.
     """
+    suppress_file_permission_warnings()
     _ = QApplication([])
     sys.exit(0)
 
@@ -84,6 +86,40 @@ def find_missing_qt_dependencies():
         return Qt5DependencyFinder().find_missing_dependencies()
     except NotImplementedError:
         return {}
+
+
+def suppress_file_permission_warnings():
+    """Silence warnings concerning file permissions by QStandardPaths."""
+    # The source of the warning is a too-permissive file mode on
+    # the default runtime-created (once per reboot cycle) directory,
+    # stored in the XDG_RUNTIME_DIR environment variable. The warning
+    # is emitted since Qt 5.15.3 in the private checkXdgRuntimeDir of
+    # qtbase/src/corelib/io/qstandarpaths_unix.cpp, called in
+    # QStandardPaths.writableLocation(QStandardPaths.RuntimeLocation).
+    # We can't really use that static method to get the path that
+    # will be used, as the return value depends on whether the mode
+    # is correct: a temporary directory is created in case of invalid
+    # permissions. While we could reproduce the C++ code, we would
+    # need to do this in a Qt-version-dependent manner. Instead,
+    # it is simpler to explicitly create a ViPErLEED-GUI-dedicated
+    # directory with the expected permissions (0o0700) and set
+    # the XDG_RUNTIME_DIR environment variable accordingly.
+    if not _UNIX_RUNTIME_DIR:
+        # Not a UNIX platform. Don't bother, all the other
+        # implementations don't care about file permissions
+        return
+    dirname = 'viperleed-gui'
+    new_runtime_dir = Path(_UNIX_RUNTIME_DIR).resolve() / dirname
+    try:
+        new_runtime_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
+    except OSError:
+        # Failed to create. Probably a PermissionError.
+        # Try another location that should be writable.
+        standard_path = qtc.QStandardPaths
+        tmp = Path(standard_path.writableLocation(standard_path.TempLocation))
+        new_runtime_dir = (tmp / dirname).resolve()
+        new_runtime_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
+    os.environ['XDG_RUNTIME_DIR'] = str(new_runtime_dir)
 
 
 class Qt5DependencyFinder:
@@ -191,12 +227,12 @@ class _QtUnixPlatformsGetter:
     @classmethod
     def get(cls):
         """Return a set of platform names for the current Qt version."""
-        version = QT_VERSION_STR.replace('.', '_')
+        version = qtc.QT_VERSION_STR.replace('.', '_')
         try:
             getter = getattr(cls, f'_get_{version}')
         except AttributeError:
             raise NotImplementedError('Unsupported Qt version '
-                                      + QT_VERSION_STR) from None
+                                      + qtc.QT_VERSION_STR) from None
         return getter()
 
     @staticmethod

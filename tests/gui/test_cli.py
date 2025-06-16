@@ -153,6 +153,9 @@ class TestGuiMain:
             **mock_imports,
             'app': mock_imports['qtw'].QApplication.return_value,
             'select': mock_imports['select_cls'].return_value,
+            'suppress_warnings': mocker.patch(
+                f'{_MODULE}.suppress_file_permission_warnings'
+                ),
             }
 
     def test_execution(self, mocks, capsys):
@@ -204,6 +207,7 @@ class TestGuiMain:
         gui_main()
         mocks['catch_crash'].assert_called_once_with()
         mocks['select_cls'].assert_called_once_with()
+        mocks['suppress_warnings'].assert_called_once_with()
         mocks['qtw'].QApplication.assert_called_once_with(sys.argv)
 
 

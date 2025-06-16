@@ -7,8 +7,10 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-22'
 __license__ = 'GPLv3+'
 
+import os
 from pathlib import Path
 from subprocess import SubprocessError
+
 
 import pytest
 from pytest_cases import fixture
@@ -22,6 +24,7 @@ from viperleed.gui.detect_graphics import _init_dummy_qapp
 from viperleed.gui.detect_graphics import find_missing_qt_dependencies
 from viperleed.gui.detect_graphics import has_graphics
 from viperleed.gui.detect_graphics import has_pyqt
+from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 
 _MODULE = 'viperleed.gui.detect_graphics'
 with_pyqt = pytest.mark.skipif(not _HAS_PYQT)
@@ -58,8 +61,12 @@ def test_init_dummy_qapp(mocker):
     """Check calls in _init_dummy_qapp."""
     mock_qapp = mocker.patch(f'{_MODULE}.QApplication',
                              create=not _HAS_PYQT)
+    mock_suppress = mocker.patch(
+        f'{_MODULE}.suppress_file_permission_warnings'
+        )
     with pytest.raises(SystemExit):
         _init_dummy_qapp()
+    mock_suppress.assert_called_once_with()
     mock_qapp.assert_called_once_with([])
 
 
@@ -130,6 +137,69 @@ class TestFindMissingDependencies:
                      return_value=mock_finder)
         missing = find_missing_qt_dependencies()
         assert missing is mock_finder.find_missing_dependencies.return_value
+
+
+class TestSuppressFilePermissionWarnings:
+    """Tests for the suppress_file_permission_warnings function."""
+
+    def test_no_xdg_runtime_dir(self, mocker):
+        """Check no changes if XDG_RUNTIME_DIR is not set (e.g., not UNIX)."""
+        mocker.patch(f'{_MODULE}._UNIX_RUNTIME_DIR', '')
+        mock_mkdir = mocker.patch('pathlib.Path.mkdir')
+        mocker.patch.dict('os.environ', clear=True)
+
+        suppress_file_permission_warnings()
+        mock_mkdir.assert_not_called()
+        # pylint: disable-next=magic-value-comparison
+        assert 'XDG_RUNTIME_DIR' not in os.environ
+
+    def test_xdg_set(self, tmp_path, mocker):
+        """Check implementation when XDG_RUNTIME_DIR is set."""
+        expect_kwargs = {'mode': 0o0700, 'parents': True, 'exist_ok': True}
+        mkdir = Path.mkdir
+        def mock_mkdir(*args, **kwargs):
+            assert kwargs == expect_kwargs
+            mkdir(*args, **kwargs)
+
+        mocker.patch(f'{_MODULE}._UNIX_RUNTIME_DIR', str(tmp_path))
+        mocker.patch('pathlib.Path.mkdir', mock_mkdir)
+        expect_path = (tmp_path / 'viperleed-gui').resolve()
+        assert not expect_path.exists()
+
+        suppress_file_permission_warnings()
+        assert expect_path.is_dir()
+        assert os.environ['XDG_RUNTIME_DIR'] == str(expect_path)
+
+    def test_mkdir_fails(self, tmp_path, mocker):
+        """Check setting of fallback directory if the default fails."""
+        fails = tmp_path/'fails'
+        fallback = tmp_path/'fallback'
+        fallback.mkdir()  # Otherwise kwargs['parents'] is mismatched
+        expect_kwargs = {'mode': 0o0700, 'parents': True, 'exist_ok': True}
+        not_created = fails/'viperleed-gui'
+        expect_path = fallback/'viperleed-gui'
+
+        mocker.patch(f'{_MODULE}._UNIX_RUNTIME_DIR', str(fails))
+        mocker.patch(f'{_MODULE}.qtc.QStandardPaths.writableLocation',
+                     return_value=str(fallback))
+
+        mkdir = Path.mkdir
+        def mkdir_raises(path, *args, **kwargs):
+            check_kwargs = kwargs.copy()
+            if path in (not_created, expect_path):
+                if args:
+                    check_kwargs['mode'] = args[0]
+                assert check_kwargs == expect_kwargs
+            if path == not_created:
+                raise OSError
+            mkdir(path, *args, **kwargs)
+
+        mocker.patch('pathlib.Path.mkdir', mkdir_raises)
+
+        suppress_file_permission_warnings()
+        assert not not_created.exists()
+        assert expect_path.is_dir()
+        assert os.environ['XDG_RUNTIME_DIR'] == str(expect_path)
 
 
 @fixture(name='mock_pyqt_root')
@@ -372,12 +442,12 @@ class TestQtUnixPlatformGetter:
     @parametrize(version=_supported)
     def mock_supported_version(self, version, mocker):
         """Fake a supported PyQt5 version."""
-        mocker.patch(f'{_MODULE}.QT_VERSION_STR', version)
+        mocker.patch(f'{_MODULE}.qtc.QT_VERSION_STR', version)
 
     @parametrize(version=_unsupported)
     def test_unsupported_version(self, version, mocker):
         """Check complaints for unsupported Qt versions."""
-        mocker.patch(f'{_MODULE}.QT_VERSION_STR', version)
+        mocker.patch(f'{_MODULE}.qtc.QT_VERSION_STR', version)
         with pytest.raises(NotImplementedError):
             _QtUnixPlatformsGetter.get()
 
