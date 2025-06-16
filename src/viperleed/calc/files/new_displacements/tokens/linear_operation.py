@@ -46,7 +46,27 @@ class LinearOperationToken(DisplacementsFileToken):
         except (ValueError, SyntaxError) as err:
             msg = f'Could not parse linear operation "{op_str.strip()}".'
             raise LinearOperationTokenParserError(msg) from err
-        self.arr = np.array(parsed, dtype=float)
+
+        # The linear operation must be a linear map between parameters of the
+        # same degree of freedom (1, 2, or 3). I.e. it must be a square (1x1),
+        # (2x2), or (3x3) matrix.
+        arr = np.array(parsed, dtype=float)
+        if arr.size == 1:
+            # single value is a 1x1 matrix
+            arr = arr.reshape((1, 1))
+        elif arr.size == 4:
+            # 2x2 matrix
+            arr = arr.reshape((2, 2))
+        elif arr.size == 9:
+            # 3x3 matrix
+            arr = arr.reshape((3, 3))
+        else:
+            msg = (
+                f'Invalid linear operation format: "{op_str.strip()}". '
+                'Expected a 1x1, 2x2, or 3x3 matrix.'
+            )
+            raise LinearOperationTokenParserError(msg)
+        self.arr = arr
 
     @classmethod
     def from_array(cls, arr) -> 'LinearOperationToken':
