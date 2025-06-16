@@ -10,7 +10,10 @@ import logging
 import re
 from enum import Enum
 
-from viperleed.calc.files.input_reader import InputFileReader
+from viperleed.calc.files.input_reader import (
+    InputFileReader,
+    ShouldSkipLineError,
+)
 from viperleed.calc.lib.string_utils import strip_comments
 
 from .errors import DisplacementsSyntaxError
@@ -64,38 +67,33 @@ class DisplacementsReader(InputFileReader):
 
         self._current_section = None
 
-    def __next__(self):
-        """Read the next line from the file."""
-        for line in self._file_obj:
-            self._current_line += 1
-            parsed_line = self._read_one_line(line)
-            if isinstance(parsed_line, (LoopMarkerLine, SearchHeaderLine)):
-                # search headers and loop markers reset the current section
-                self._current_section = None
-            elif isinstance(parsed_line, SectionHeaderLine):
-                # section headers set the current section
-                self._current_section = parsed_line.section
-            if parsed_line is not None:
-                return parsed_line
-
-        raise StopIteration
-
     def _read_one_line(self, line):
         """Extract section header or data line from a single line."""
         line = strip_comments(line)
         stripped_line = line.strip().lower()
         if not stripped_line:
-            return None
+            raise ShouldSkipLineError
 
         # check for invalid or deprecated syntax
         _check_line_generally_valid(stripped_line)
 
         # check for search headers, loop markers and section headers
+        new_header = None
         for header in (SearchHeaderLine, LoopMarkerLine, SectionHeaderLine):
             try:
-                return header(line)
+                new_header =  header(line)
             except DisplacementsSyntaxError:
                 continue
+
+        # update current section if a new header is found
+        if isinstance(new_header, (LoopMarkerLine, SearchHeaderLine)):
+            # search headers and loop markers reset the current section
+            self._current_section = None
+            return new_header
+        elif isinstance(new_header, SectionHeaderLine):
+            # section headers set the current section
+            self._current_section = new_header.section
+            return new_header
 
         # parse section lines
         if self._current_section is None:
