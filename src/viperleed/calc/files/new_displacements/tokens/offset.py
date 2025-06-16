@@ -61,7 +61,7 @@ class OffsetToken(DisplacementsFileToken):
     def __eq__(self, other):
         """Compare two OffsetToken objects for equality."""
         if not isinstance(other, OffsetToken):
-            return False
+            return NotImplemented
         return abs(self.offset - other.offset) < DISPLACEMENTS_FILE_EPS
 
     def __str__(self):

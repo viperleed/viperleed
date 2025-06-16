@@ -75,7 +75,7 @@ class RangeToken(DisplacementsFileToken):
     def __eq__(self, other):
         """Compare two RangeToken objects for equality."""
         if not isinstance(other, RangeToken):
-            return False
+            return NotImplemented
         if self.has_step != other.has_step:
             return False
         if self.has_step:

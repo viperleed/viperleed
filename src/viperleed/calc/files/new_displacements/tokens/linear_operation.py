@@ -87,7 +87,7 @@ class LinearOperationToken(DisplacementsFileToken):
     def __eq__(self, other):
         """Compare two LinearOperationToken objects for equality."""
         if not isinstance(other, LinearOperationToken):
-            return False
+            return NotImplemented
         if self.arr.shape != other.arr.shape:
             return False
         return np.allclose(self.arr, other.arr)

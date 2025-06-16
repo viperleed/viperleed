@@ -79,7 +79,7 @@ class TargetToken(DisplacementsFileToken):
         should be made using a selection of Atoms.
         """
         if not isinstance(other, TargetToken):
-            return False
+            return NotImplemented
         return (
             (other.nums == self.nums if self.nums is not None else True)
             and (other.layers == self.layers if self.layers is not None else True)

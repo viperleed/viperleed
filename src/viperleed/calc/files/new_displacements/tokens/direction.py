@@ -163,7 +163,7 @@ class CartesianDirectionToken(DirectionToken):
     def __eq__(self, other):
         """Compare two CartesianDirectionToken objects for equality."""
         if not isinstance(other, CartesianDirectionToken):
-            return False
+            return NotImplemented
         return self.dof == other.dof and np.allclose(
             self.vectors_xyz, other.vectors_xyz
         )

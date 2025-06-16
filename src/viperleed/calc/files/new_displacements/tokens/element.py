@@ -46,7 +46,7 @@ class ElementToken(DisplacementsFileToken):
     def __eq__(self, other):
         """Compare two RangeToken objects for equality."""
         if not isinstance(other, ElementToken):
-            return False
+            return NotImplemented
         return other.atomic_number == self.atomic_number
 
     def __str__(self):
