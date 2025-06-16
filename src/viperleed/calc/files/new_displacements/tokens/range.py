@@ -47,9 +47,6 @@ class RangeToken(DisplacementsFileToken):
             msg = f'Non-numeric value in range: "{range_str}"'
             raise RangeTokenParserError(msg) from err
 
-        # check that step is valid
-        _check_step(step)
-
         self.start = start
         self.stop = stop
         self.step = step
@@ -65,7 +62,6 @@ class RangeToken(DisplacementsFileToken):
         cls, start: float, stop: float, step=None
     ) -> 'RangeToken':
         """Alternate constructor using numeric values directly."""
-        _check_step(step)
         inst = cls.__new__(cls)
         inst.start = start
         inst.stop = stop
@@ -96,9 +92,3 @@ class RangeToken(DisplacementsFileToken):
             return (f'RangeToken(start={self.start}, stop={self.stop}, '
                     f'step={self.step})')
         return f'RangeToken(start={self.start}, stop={self.stop})'
-
-def _check_step(step):
-    """Check if the step is positive."""
-    if step is not None and step <= 0:
-        msg = f'Step must be positive: "{step}"'
-        raise RangeTokenParserError(msg)
