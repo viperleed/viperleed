@@ -96,8 +96,7 @@ def _generate_label_match_regex(label):
     # Escape any special characters in the label, except for '*'
     escaped_label = re.escape(label).replace(r'\*', r'\w*')
 
-    # Append `\w*` at the end to match strings starting with the pattern
-    pattern = rf'^{escaped_label}\w*'
+    pattern = rf'^{escaped_label}'
 
     # Compile the final regex pattern
     return re.compile(pattern)

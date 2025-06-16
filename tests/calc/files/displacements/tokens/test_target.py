@@ -14,23 +14,23 @@ from viperleed.calc.files.new_displacements.tokens.target import (
     'raw, expected_regex, expected_nums, expected_layers',
     [
         # only label, no nums or layers
-        ('A', re.compile(r'^A\w*'), None, None),
+        ('A', re.compile(r'^A'), None, None),
         # list of numbers
-        ('A 1 3 5', re.compile(r'^A\w*'), [1, 3, 5], None),
+        ('A 1 3 5', re.compile(r'^A'), [1, 3, 5], None),
         # numeric range
-        ('A 2-4', re.compile(r'^A\w*'), [2, 3, 4], None),
+        ('A 2-4', re.compile(r'^A'), [2, 3, 4], None),
         # numeric range
-        ('A 1-3 5 7', re.compile(r'^A\w*'), [1, 2, 3, 5, 7], None),
+        ('A 1-3 5 7', re.compile(r'^A'), [1, 2, 3, 5, 7], None),
         # single layer
-        ('A L(1)', re.compile(r'^A\w*'), None, [1]),
+        ('A L(1)', re.compile(r'^A'), None, [1]),
         # layer range
-        ('A L(2-3)', re.compile(r'^A\w*'), None, [2, 3]),
+        ('A L(2-3)', re.compile(r'^A'), None, [2, 3]),
         # layer with spaces
-        ('A L( 1-3 )', re.compile(r'^A\w*'), None, [1, 2, 3]),
+        ('A L( 1-3 )', re.compile(r'^A'), None, [1, 2, 3]),
         # complicated layer numbers
-        ('A L(1 4-5 7)', re.compile(r'^A\w*'), None, [1, 4, 5, 7]),
+        ('A L(1 4-5 7)', re.compile(r'^A'), None, [1, 4, 5, 7]),
         # wildcard label
-        ('* 1-2', re.compile(r'^\w*\w*'), [1, 2], None),
+        ('* 1-2', re.compile(r'^\w*'), [1, 2], None),
     ],
 )
 def test_parse_valid_targets(
