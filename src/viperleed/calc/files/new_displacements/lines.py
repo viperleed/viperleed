@@ -323,7 +323,7 @@ class VibDeltaLine(ParsedLine):
         # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if dir_str:
-            raise AttributeError(self.invalid_format_msg)
+            raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
@@ -360,7 +360,7 @@ class OccDeltaLine(ParsedLine):
         # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if dir_str:
-            raise DisplacementsSyntaxError(self.invalid_format_msg)
+            raise AttributeError(self.invalid_format_msg)
 
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
