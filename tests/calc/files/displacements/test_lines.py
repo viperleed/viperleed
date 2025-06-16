@@ -150,10 +150,10 @@ class TestVibDeltaLine:
         with pytest.raises(exp_error):
             VibDeltaLine(bad_line)
 
-    def test_repr_shows_targets_and_range(self):
+    def test_str_shows_targets_and_range(self):
         line = "X,Y = 2 4 1"
         vib = VibDeltaLine(line)
-        rep = repr(vib)
+        rep = str(vib)
         assert "TargetToken" in rep
         assert "=" in rep
         assert "RangeToken" in rep
@@ -319,10 +319,10 @@ class TestOccDeltaLine:
             OccDeltaLine(bad_line)
 
 
-    def test_repr_contains_elements_and_ranges(self):
+    def test_str_contains_elements_and_ranges(self):
         line = 'A,B = Fe 0.0 1.0, Ni 0.0 0.2'
         occ = OccDeltaLine(line)
-        rep = repr(occ)
+        rep = str(occ)
         assert 'A' in rep and 'Fe' in rep and '0.0' in rep
         assert 'B' in rep and 'Ni' in rep and '0.2' in rep
         assert '=' in rep
