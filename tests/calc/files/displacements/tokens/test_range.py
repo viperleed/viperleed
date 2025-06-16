@@ -38,6 +38,8 @@ def test_init_from_string_without_step(input_str, exp_start, exp_stop):
         ('0.1 1e2 1e-1', 0.1, 100.0, 0.1),
         ('-2E1 3e1 0.5', -20.0, 30.0, 0.5),
         ('  7  8.0   0.25  ', 7.0, 8.0, 0.25),
+        # negative step
+        ('0.5 -0.5 -0.1', 0.5, -0.5, -0.1),
     ],
 )
 def test_init_from_string_with_step(input_str, exp_start, exp_stop, exp_step):
@@ -66,12 +68,6 @@ def test_init_non_numeric():
     with pytest.raises(RangeTokenParserError) as excinfo:
         RangeToken('a b c')
     assert 'Non-numeric value' in str(excinfo.value)
-
-
-def test_negative_step():
-    with pytest.raises(RangeTokenParserError) as excinfo:
-        RangeToken('-0.2 0.2 -0.05')
-    assert 'Step must be positive' in str(excinfo.value)
 
 
 def test_from_floats():
