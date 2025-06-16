@@ -589,8 +589,12 @@ def separate_direction_from_targets(targets_and_direction: str):
         A tuple containing the targets string and the direction string. Either
         string may be empty if the corresponding part was not found.
     """
-    match = _DIR_AT_END.search(targets_and_direction)
-    if not match:
+    matches = list(_DIR_AT_END.finditer(targets_and_direction))
+    if len(matches) > 1:
+        raise ValueError("Only one directional specification is allowed.")
+    elif matches:
+        match = matches[0]
+    else:
         # no direction found
         return targets_and_direction.strip(), ''
 
