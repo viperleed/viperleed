@@ -57,8 +57,7 @@ def test_calc_never_loads_graphics(mocker):
                    for name, module in sys.modules.items()
                    if 'viperleed.gui' in name}
     graphics_modules = {}
-    for module_name in gui_modules:
-        module = sys.modules[module_name]
+    for module_name, module in gui_modules.items():
         members = dict(inspect.getmembers(module))
         unexpected = [
             gui_obj
