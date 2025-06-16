@@ -92,7 +92,7 @@ class CartesianDirectionToken(DirectionToken):
     ValueError
         If the direction string is invalid or if the number of components does
         not match the number of directions.
-    CartesianDirectionTokenParserError
+    DirectionTokenParserError
         If the direction string contains unsupported components like azimuthal
         or radial directions.
     """
@@ -100,7 +100,7 @@ class CartesianDirectionToken(DirectionToken):
     def __init__(self, direction_str):
         _dir_str = direction_str.strip()
         if not _dir_str:
-            raise CartesianDirectionTokenParserError('Empty direction token.')
+            raise DirectionTokenParserError('Empty direction token.')
         self.direction_str = _dir_str
         vecs, self.dof = self._parse_direction(_dir_str)
         self._vectors = vecs
@@ -181,7 +181,7 @@ def _check_unsupported_directions(direction_str):
             'Azimuthal and radial directions are currently not supported. '
             f'Invalid direction: {direction_str}'
         )
-        raise CartesianDirectionTokenParserError(msg)
+        raise DirectionTokenParserError(msg)
 
     # Fractional directions are currently not supported
     fractional_labels = ['a', 'b', 'c']
@@ -190,7 +190,7 @@ def _check_unsupported_directions(direction_str):
             'Fractional directions are currently not supported. '
             f'Invalid direction: {direction_str}'
         )
-        raise CartesianDirectionTokenParserError(msg)
+        raise DirectionTokenParserError(msg)
 
 def _xyz_to_zxy(vecs):
     """Convert from xyz to zxy axis (LEED) convention."""
