@@ -95,7 +95,7 @@ in your terminal.
 
             .. code-block:: bash
 
-                sudo apt install pkg-config cairo
+                sudo apt install pkg-config libcairo2-dev
 
         .. tab-item:: macOS
             :sync: mac
