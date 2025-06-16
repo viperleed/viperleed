@@ -247,7 +247,7 @@ bool isAllowedCommand() {
             raise(ERROR_MSG_UNKNOWN);
             return false;
     }
-    return true;                                                                // TODO: check that the received command is one of the commands that initiates one of the defined states
+    return true;
 }
 
 
@@ -262,7 +262,7 @@ void updateState() {
 
     Reads
     -----
-    newMessage, data_received
+    newMessage, data_received, msgLength
 
     Writes
     ------
@@ -396,7 +396,7 @@ void getConfiguration(){
 
 /** Handler of STATE_ERROR */
 void handleErrors(){
-    /**Clean up after an error, and report it to the PC.                    //TODO: handle coils in case of error
+    /**Clean up after an error, and report it to the PC.
 
     Reads
     -----
@@ -420,6 +420,9 @@ void handleErrors(){
         raise(ERROR_RUNTIME);
         return;
     }
+	
+	coil_1.set_duty_cycle(0.0);
+	coil_2.set_duty_cycle(0.0);  
 
     // First, report the error, so the PC knows
     // there may be some cleanup going on
@@ -445,7 +448,7 @@ void handleErrors(){
 
 
 /** Handler of PC_RESET */
-void reset(){                                      //TODO: add reset settings for coils
+void reset(){
     /**
     Reset the Arduino, mimicking as much as possible the state right
     after boot-up or a hardware reset.
@@ -485,6 +488,9 @@ void reset(){                                      //TODO: add reset settings fo
     		calibrationCurve[i][j].asFloat = 0.0;
     	}
     }
+    
+    coilResistance[0] = 0.0;
+    coilResistance[1] = 0.0;
 
     currentState = STATE_IDLE;
     waitingForDataFromPC = false;
@@ -616,9 +622,6 @@ void setDutyCycle(){
         coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1
         coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2
 
-        encodeAndSend(dutyCycle[0].asBytes, 5);			// 5 bytes because the first byte is the position of the float in the array.
-        encodeAndSend(dutyCycle[1].asBytes, 5);
-
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
      }
@@ -749,6 +752,8 @@ void measure(){
     voltage1.asFloat = coil_1.get_voltage();
     voltage2.asFloat = coil_2.get_voltage();
 
+	determineResistance(0, voltage1.asFloat, current1.asFloat);
+	determineResistance(1, voltage2.asFloat, current2.asFloat);
 
     sendFloatToPC(voltage1);
     sendFloatToPC(voltage2);
@@ -774,7 +779,7 @@ void sendFloatToPC(floatOrBytes value){
 
 /** Handler of STATE_SET_TIME_CONSTANT */
 void setTimeConstant(){
-   /** Wait until we get data (time constant) from the PC, convert the received data
+   /** Wait until we get data (time constant) from the PC, convert the received data.
 
     For each coil, we need 4 bytes from the data_received[] buffer.
     Their meaning is:
@@ -845,7 +850,7 @@ void setTimeConstant(){
 
 /** Handler of STATE_SET_ENABLE_DYNAMIC */
 void setEnableDynamic(){
-   /** Wait until we get data from the PC, convert the received data
+   /** Wait until we get data (enable dynamic mode or not) from the PC, convert the received data.
 
     Reads
     -----
@@ -988,8 +993,8 @@ void setTransformationMatrix(){
 void setCalibrationCurve(){
    /** Wait until we get data from the PC, convert the received data in order to set a calibration curve.
    
-   For each coil, we need 48 bytes (12 floats * 4) from the data_received[] buffer and we send these in packages of 6 floats.
-   This is due to serial buffer limitations because the serial buffer can only contain 63 bytes reliably.
+    For each coil, we need 48 bytes (12 floats * 4) from the data_received[] buffer and we send these in packages of 6 floats.
+    This is due to serial buffer limitations because the serial buffer can only contain 63 bytes reliably.
 	
 	The two first bytes of each message contain at what coil we are working and in which region (negative or positive).
 	
@@ -1108,4 +1113,8 @@ void setCalibrationCurve(){
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
      }
+}
+
+void determineResistance(int coilIndex, float voltage, float current){
+	coilResistance[coilIndex] = voltage / current;
 }

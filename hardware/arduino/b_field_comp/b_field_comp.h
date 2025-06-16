@@ -294,4 +294,6 @@ bool enableDynamic;
 floatOrBytes transformationMatrix[3][2];
 // Calibration curve for converting PWM duty cycles to currents.
 floatOrBytes calibrationCurve[2][12];
+// Resistance of the coils in ohms.
+float coilResistance[2];
 #endif  // _VIPERLEED_B_FIELD_COMP
