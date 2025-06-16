@@ -6,30 +6,30 @@ __created__ = '2025-04-10'
 import pytest
 
 from viperleed.calc.classes.perturbation_type import (
-    PerturbationType,
-    PerturbationTypeError,
+    PerturbationMode,
+    PerturbationModeError,
 )
 
 
 @pytest.mark.parametrize(
     'input_str, expected_enum',
     [
-        ('geo', PerturbationType.GEO),
-        ('vib', PerturbationType.VIB),
-        ('occ', PerturbationType.OCC),
+        ('geo', PerturbationMode.GEO),
+        ('vib', PerturbationMode.VIB),
+        ('occ', PerturbationMode.OCC),
     ],
 )
 def test_valid_enum_from_string(input_str, expected_enum):
     """Test valid string-to-enum conversion."""
-    assert PerturbationType.from_string(input_str) is expected_enum
+    assert PerturbationMode.from_string(input_str) is expected_enum
 
 
 @pytest.mark.parametrize(
     'enum_member, expected_str',
     [
-        (PerturbationType.GEO, 'geo'),
-        (PerturbationType.VIB, 'vib'),
-        (PerturbationType.OCC, 'occ'),
+        (PerturbationMode.GEO, 'geo'),
+        (PerturbationMode.VIB, 'vib'),
+        (PerturbationMode.OCC, 'occ'),
     ],
 )
 def test_enum_str_values(enum_member, expected_str):
@@ -50,5 +50,5 @@ def test_enum_str_values(enum_member, expected_str):
 )
 def test_invalid_enum_from_string(invalid_str):
     """Test that invalid strings raise ValueError."""
-    with pytest.raises(PerturbationTypeError, match='Unknown perturbation'):
-        PerturbationType.from_string(invalid_str)
+    with pytest.raises(PerturbationModeError, match='Unknown perturbation'):
+        PerturbationMode.from_string(invalid_str)

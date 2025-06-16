@@ -7,8 +7,8 @@ __license__ = "GPLv3+"
 
 
 from viperleed.calc.classes.perturbation_type import (
-    PerturbationType,
-    PerturbationTypeError,
+    PerturbationMode,
+    PerturbationModeError,
 )
 
 from .base import DisplacementsFileToken, TokenParserError
@@ -23,8 +23,8 @@ class TypeToken(DisplacementsFileToken):
     def __init__(self, type_str):
         self.type_str = type_str
         try:
-            self.type = PerturbationType(type_str)
-        except PerturbationTypeError as err:
+            self.type = PerturbationMode(type_str)
+        except PerturbationModeError as err:
             msg = f'Unable to parse perturbation type {self.type_str}.'
             raise TypeTokenParserError(msg) from err
 

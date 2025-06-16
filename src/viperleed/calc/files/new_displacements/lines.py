@@ -12,7 +12,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from viperleed.calc.classes.perturbation_type import PerturbationType
+from viperleed.calc.classes.perturbation_type import PerturbationMode
 
 from .errors import DisplacementsSyntaxError
 from .tokens import (
@@ -430,7 +430,7 @@ class ConstraintLine(ParsedLine):
         self.type = self._parse_type(lhs_parts[0])
 
         # TODO: Implement Domains here
-        if self.type.type is PerturbationType.DOM:
+        if self.type.type is PerturbationMode.DOM:
             raise NotImplementedError(
                 'Domain constraints are not yet supported.'
             )
@@ -544,12 +544,12 @@ class OffsetsLine(ParsedLine):
         # parse targets
         self.targets = self._parse_targets(targets_str)
 
-        if self.type.type is PerturbationType.GEO:
+        if self.type.type is PerturbationMode.GEO:
             # expect and parse direction specifier
             # will raise if no direction is given
             self.direction = self._parse_direction(dir_str)
 
-        if self.type.type is not PerturbationType.GEO and dir_str:
+        if self.type.type is not PerturbationMode.GEO and dir_str:
             raise DisplacementsSyntaxError(
                 "Direction tokens in the OFFSETS block are only allowed for "
                 "geometric offsets."
@@ -566,7 +566,7 @@ class OffsetsLine(ParsedLine):
         txt = f'{self.type} {self.targets[0]}'
         for target in self.targets[1:]:
             txt += f', {target}'
-        if self.type.type is PerturbationType.GEO:
+        if self.type.type is PerturbationMode.GEO:
             txt += f', {self.direction}'
         txt += f' = {self.offset}'
         return txt

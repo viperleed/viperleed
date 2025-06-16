@@ -9,11 +9,11 @@ from enum import Enum
 from viperleed.calc.lib.string_utils import harvard_commas
 
 
-class PerturbationTypeError(ValueError):
+class PerturbationModeError(ValueError):
     """Error class for unknown perturbation type errors."""
 
 
-class PerturbationType(str, Enum):
+class PerturbationMode(str, Enum):
     """Enum for perturbation types."""
 
     GEO = 'geo'
@@ -32,4 +32,4 @@ class PerturbationType(str, Enum):
             return cls(s)
         except ValueError:
             msg = harvard_commas((repr(e.value) for e in cls), sep='or')
-            raise PerturbationTypeError(msg) from None
+            raise PerturbationModeError(msg) from None
