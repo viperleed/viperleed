@@ -30,6 +30,7 @@ class RangeToken(DisplacementsFileToken):
 
     def __init__(self, range_str: str):
         """Construct a RangeToken from a string."""
+        # TODO: TensErLEED compatibility: backend requires the step to be specified
         parts = range_str.strip().split()
         if len(parts) < 2 or len(parts) > 3:
             msg = (
