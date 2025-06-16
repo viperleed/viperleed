@@ -8,9 +8,10 @@ __license__ = "GPLv3+"
 import re
 
 from .base import DisplacementsFileToken, TokenParserError
+from viperleed.calc.lib.string_utils import read_int_range
 
 
-LAYER_REGEX = r'L\s*\(\s*(\d+)(-(\d+))?\s*\)\s*'
+LAYER_REGEX = r'L\s*\(\s*(?P<ranges>[\d\-:\s]+)\s*\)'
 
 class TargetingError(TokenParserError):
     """Base class for errors in the targeting module."""
@@ -52,33 +53,19 @@ class TargetToken(DisplacementsFileToken):
             if not re.fullmatch(LAYER_REGEX, parts[1]):
                 msg = f'Invalid layer specification: "{parts[1]}".'
                 raise TargetingError(msg)
-            start_layer = int(layer_match.group(1))
-            end_layer = (
-                int(layer_match.group(3))
-                if layer_match.group(3)
-                else start_layer
-            )
-            self.layers = list(range(start_layer, end_layer + 1))
+            int_ranges = read_int_range(layer_match.group('ranges').strip())
+            self.layers = list(int_ranges)
             
             return
 
-        # Check for a range like "1-4"
-        range_match = re.match(r'(\d+)-(\d+)', parts[1])
-        if range_match:
-            start_num = int(range_match.group(1))
-            end_num = int(range_match.group(2))
-            self.nums = list(range(start_num, end_num + 1))
-            return
-
-        # Check for a list of numbers
+        # Check for a list of numbers or range like "1-4"
         try:
-            self.nums = list(map(int, parts[1].split()))
+            self.nums = list(read_int_range(parts[1]))
         except ValueError as err:
             msg = (
                 f'Invalid target specification: "{parts[1]}".'
             )
             raise TargetingError(msg) from err
-
 
 
     def __str__(self):
