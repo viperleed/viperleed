@@ -174,6 +174,9 @@ class CartesianDirectionToken(DirectionToken):
 
 
 def _check_unsupported_directions(direction_str):
+    # TODO: remove this function once we support azimuthal and radial directions
+    # and instead dispatch the appropriate token parser.
+    
     # Azimuthal & radial directions are currently not supported
     azi_rad_labels = ['azi', 'r']
     if any(label in direction_str for label in azi_rad_labels):
