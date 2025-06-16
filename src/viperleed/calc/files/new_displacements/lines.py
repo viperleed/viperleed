@@ -12,7 +12,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from viperleed.calc.classes.perturbation_type import PerturbationMode
+from viperleed.calc.classes.perturbation_mode import PerturbationMode
 
 from .errors import DisplacementsSyntaxError
 from .tokens import (

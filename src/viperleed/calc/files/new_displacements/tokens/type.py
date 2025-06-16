@@ -6,7 +6,7 @@ __created__ = "2025-04-10"
 __license__ = "GPLv3+"
 
 
-from viperleed.calc.classes.perturbation_type import (
+from viperleed.calc.classes.perturbation_mode import (
     PerturbationMode,
     PerturbationModeError,
 )
