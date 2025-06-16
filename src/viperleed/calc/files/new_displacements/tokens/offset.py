@@ -8,6 +8,7 @@ __license__ = "GPLv3+"
 from .base import DisplacementsFileToken, TokenParserError
 from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
 
+import numpy as np
 
 class OffsetTokenParserError(TokenParserError):
     """Class raised by OffsetToken."""
@@ -30,28 +31,37 @@ class OffsetToken(DisplacementsFileToken):
     """
 
     def __init__(self, offset_str: str):
-        """Construct a OffsetToken from a string."""
+        """Construct an OffsetToken from a string."""
         parts = offset_str.strip().split()
-        if len(parts) != 1:
-            msg = 'Invalid offset format: "{offset_str}".'
+        if not (1 <= len(parts) <= 3):
+            msg = f'Invalid offset format (expect 1–3 floats): "{offset_str}".'
             raise OffsetTokenParserError(msg)
 
         try:
-            offset = float(parts[0])
+            offset_values = np.array([float(p) for p in parts], dtype=float)
         except ValueError as err:
             msg = f'Non-numeric value in offset: "{offset_str}".'
             raise OffsetTokenParserError(msg) from err
 
-        self.offset = offset
+        self.offset = offset_values
+
+    @property
+    def dof(self):
+        """Return the number of degrees of freedom (DOF) for the offset."""
+        return self.offset.size
 
     @classmethod
-    def from_floats(cls, offset: float) -> 'OffsetToken':
-        """Alternate constructor using numeric values directly."""
+    def from_floats(cls, *offsets: float) -> "OffsetToken":
+        """Alternate constructor using 1–3 numeric values directly."""
+        if not (1 <= len(offsets) <= 3):
+            msg = f"Expected 1 to 3 offset values, got {len(offsets)}."
+            raise OffsetTokenParserError(msg)
+
         inst = cls.__new__(cls)
         try:
-            inst.offset = offset = float(offset)
+            inst.offset = np.array([float(o) for o in offsets], dtype=float)
         except ValueError as err:
-            msg = f'Non-numeric value in offset: "{offset}"'
+            msg = f'Non-numeric value in offset: "{offsets}"'
             raise OffsetTokenParserError(msg) from err
         return inst
 
@@ -59,6 +69,8 @@ class OffsetToken(DisplacementsFileToken):
         """Compare two OffsetToken objects for equality."""
         if not isinstance(other, OffsetToken):
             return NotImplemented
+        if self.dof != other.dof:
+            return False
         return abs(self.offset - other.offset) < DISPLACEMENTS_FILE_EPS
 
     def __str__(self):
