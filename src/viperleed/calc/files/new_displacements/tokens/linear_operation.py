@@ -39,6 +39,8 @@ class LinearOperationToken(DisplacementsFileToken):
             cleaned = re.sub(r'(?<=\d)\s+(?=\d)', ', ', cleaned)
             # add commas between brackets
             cleaned = re.sub(r'\]\s+\[', '], [', cleaned)
+        # replace round brackets with square brackets
+        cleaned = cleaned.replace('(', '[').replace(')', ']')
 
         # parse to expression
         try:
