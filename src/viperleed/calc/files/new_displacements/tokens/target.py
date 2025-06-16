@@ -10,6 +10,8 @@ import re
 from .base import DisplacementsFileToken, TokenParserError
 
 
+LAYER_REGEX = r'L\s*\(\s*(\d+)(-(\d+))?\s*\)\s*'
+
 class TargetingError(TokenParserError):
     """Base class for errors in the targeting module."""
 
@@ -44,8 +46,12 @@ class TargetToken(DisplacementsFileToken):
             return
 
         # Check if we have a layer specification
-        layer_match = re.match(r'L\((\d+)(-(\d+))?\)', parts[1])
+        layer_match = re.match(LAYER_REGEX, parts[1])
         if layer_match:
+            # make sure there is nothing else after the layer
+            if not re.fullmatch(LAYER_REGEX, parts[1]):
+                msg = f'Invalid layer specification: "{parts[1]}".'
+                raise TargetingError(msg)
             start_layer = int(layer_match.group(1))
             end_layer = (
                 int(layer_match.group(3))
@@ -53,10 +59,7 @@ class TargetToken(DisplacementsFileToken):
                 else start_layer
             )
             self.layers = list(range(start_layer, end_layer + 1))
-            # make sure there is nothing else after the layer
-            if len(parts[1].split()) > 1:
-                msg = f'Invalid target layer specification: "{parts[1]}".'
-                raise TargetingError(msg)
+            
             return
 
         # Check for a range like "1-4"
