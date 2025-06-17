@@ -577,7 +577,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         layout.addWidget(qtw.QLabel('Duration'))
         info = ('<nobr>How long to wait (ms) till </nobr>'
                 'the next intermediate step.')
-        layout.addWidget(FieldInfo.for_widget(duration_label, tooltip=info))
+        layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
         return layout
 
     def _connect(self):
