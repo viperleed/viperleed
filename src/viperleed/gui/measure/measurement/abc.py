@@ -528,13 +528,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         handler.add_option('measurement_info', option,
                            handler_widget=qtw.QLineEdit,
                            display_name='File suffix',
-                           tooltip=tip,)
+                           tooltip=tip)
         # Backwards compatibility fix                                           # TODO: #242
         has_option = self.settings.has_option('measurement_info', 'comments')
         option = 'comments' if has_option else 'info'
         handler.add_option('measurement_info', option,
                            handler_widget=qtw.QTextEdit,
-                           display_name='Comments',)
+                           display_name='Comments')
 
         handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
         type_display = qtw.QLabel(type(self).__name__)
@@ -747,8 +747,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             and wait for emission of devices_disconnected to
             prevent this error.
         TypeError
-            If new_settings has invalid type or if an element of the mandatory_settings is
-            None or has a length greater than 3.
+            If new_settings has invalid type or if an element of the
+            mandatory_settings is None or has a length greater than 3.
 
         Emits
         -----
@@ -1158,7 +1158,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         Raises
         ------
-        RuntimeError
+        ValueError
             In case any error occurs while loading the settings.
         """
         configname = configname.strip()
@@ -1184,8 +1184,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                     cfg_lines = arch.read(configname).decode()
                 except KeyError:
                     raise ValueError(
-                        f"No config file '{configname}' in "
-                        f"archive {self.settings.base_dir}"
+                        f'No config file {configname!r} in '
+                        f'archive {self.settings.base_dir}'
                         ) from None
             device_cfg.read_string(cfg_lines)
             device_cfg.base_dir = self.settings.base_dir
@@ -1195,11 +1195,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # --> attempt reading config from the same folder
         configname = Path(self.settings.base_dir) / configname
         try:
-            device_cfg = device_cfg.from_settings(configname)
+            return device_cfg.from_settings(configname)
         except (ValueError, NoSettingsError):
-            raise RuntimeError(f"No config file '{configname}' in "
-                               f"folder {self.settings.base_dir}") from None
-        return device_cfg
+            raise ValueError(f'No config file {configname!r} in '
+                             f'archive {self.settings.base_dir}') from None
 
     def _get_linear_step(self, *params):
         """Return energies and times for a simple linear step."""
