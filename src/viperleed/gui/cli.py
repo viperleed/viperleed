@@ -12,14 +12,18 @@ __created__ = '2020-01-11'
 __license__ = 'GPLv3+'
 
 from importlib import import_module
+from itertools import chain
 from pathlib import Path
 import sys
 
 from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.gui.base import catch_gui_crash
 from viperleed.gui.constants import LOGO
+from viperleed.gui.detect_graphics import Qt5DependencyFinder
+from viperleed.gui.detect_graphics import find_missing_qt_dependencies
 from viperleed.gui.detect_graphics import has_graphics
 from viperleed.gui.detect_graphics import has_pyqt
+from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 from viperleed.gui.helpers import resources_path
 
 
@@ -29,8 +33,9 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
     def __call__(self, args=None):
         """Call either the CLI or graphical versions of the GUI."""
         args = self.parse_cli_args(args)
-        if is_commandline_mode(args):
+        if args.nogui:
             return commandline_main()
+        self.check_can_run_gui()
         return gui_main()
 
     def add_parser_arguments(self, parser):
@@ -43,38 +48,48 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             action='store_true',
             )
 
+    def check_can_run_gui(self):
+        """Raise SystemExit if the GUI cannot execute.
 
-def is_commandline_mode(args):
-    """Return whether the GUI should run in command line mode.
-
-    This is the case if, e.g., the correct modules are not installed,
-    or if the user asked to run in command line mode via the --nogui
-    command line argument.
-
-    Parameters
-    ----------
-    args : argparse.Namespace
-        Parsed command-line arguments.
-
-    Returns
-    -------
-    bool
-        Whether the GUI should run in command-line mode, i.e.,
-        without any windows.
-    """
-    return (
-        not has_pyqt()
-        or not has_graphics()
-        or args.nogui
-        )
+        Raises
+        ------
+        SystemExit
+            If the GUI cannot execute because
+            - PyQt5 is not installed,
+            - PyQt5 misses any system dependencies,
+            - the current machine has no graphics capability.
+        """
+        err_msg = (
+            'Cannot execute the ViPErLEED graphical user interface because {}'
+            )
+        if not has_pyqt():
+            self.parser.error(err_msg.format('PyQt5 is not installed.'))
+        missing = tuple(chain.from_iterable(
+            find_missing_qt_dependencies().values()
+            ))
+        if missing:
+            sep = '\n    '
+            fmt_missing = sep.join(missing)
+            fmt_missing = sep + fmt_missing
+            how_to_install = Qt5DependencyFinder.find_install_for_libs(missing)
+            install_msg = 'Try again after installing them'
+            install_msg += ('.' if not how_to_install
+                            else f' via{sep}{how_to_install}')
+            self.parser.error(err_msg.format(
+                'the following PyQt5 dependencies are missing on your system:'
+                f'{fmt_missing}\n{install_msg}'
+                ))
+        if not has_graphics():
+            self.parser.error(err_msg.format(
+                'the system appears to have no graphics capability (i.e., no '
+                'monitor was detected). Try once more if this is the first '
+                'time you execute the GUI, or have just updated viperleed.'
+                ))
 
 
 def commandline_main():
     """Body of the command-line version of the GUI."""
-    print('Running in command line version', flush=True, end='')
-    if not has_pyqt():
-        print(' because PyQt5 was not found', flush=True, end='')
-    print('...', flush=True, end='')
+    print('Running in command line version...', flush=True, end='')
     print('Not implemented yet.', flush=True)
     return 0
 
@@ -95,6 +110,7 @@ def gui_main():
     print('Loading GUI...', flush=True, end='')
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_UseHighDpiPixmaps)
+    suppress_file_permission_warnings()  # Next line emits the warnings
     app = qtw.QApplication(sys.argv)
     app.setWindowIcon(qtg.QIcon(LOGO))
 
