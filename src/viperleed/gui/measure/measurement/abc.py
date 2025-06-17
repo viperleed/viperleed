@@ -315,8 +315,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         Parameters
         ----------
-        new_controllers : list
-            List of MeasureControllerABC objects.
+        new_controllers : Sequence of MeasureControllerABC
         """
         self._disconnect_secondary_controllers()
         self.stop_threads()
@@ -748,8 +747,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             and wait for emission of devices_disconnected to
             prevent this error.
         TypeError
-            If new_settings is neither a dict, ConfigParser, string
-            or path and if an element of the mandatory_settings is
+            If new_settings has invalid type or if an element of the mandatory_settings is
             None or has a length greater than 3.
 
         Emits
@@ -1172,7 +1170,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             try:
                 device_cfg = device_cfg.from_settings(configname)
             except (ValueError, NoSettingsError):
-                raise RuntimeError() from None
+                raise ValueError from None
             return device_cfg
 
         # (2) configname begins with './' --> has to be replaced
@@ -1185,7 +1183,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 try:
                     cfg_lines = arch.read(configname).decode()
                 except KeyError:
-                    raise RuntimeError(
+                    raise ValueError(
                         f"No config file '{configname}' in "
                         f"archive {self.settings.base_dir}"
                         ) from None
