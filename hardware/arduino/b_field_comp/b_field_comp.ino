@@ -43,7 +43,7 @@ void setup()
   coil_1.setup();
   coil_2.setup();
 
-  // coil_1.set_duty_cycle(-0.1);
+  // coil_1.set_duty_cycle(0.5);
   // coil_2.set_duty_cycle(0.2);
 
   delay(100);
@@ -615,7 +615,7 @@ void setDutyCycle(){
         }
         for(int j=0; j<2;j++){
             for(int i = 0; i < 4 ;i++){
-                dutyCycle[j].asBytes[4-i] = data_received[i+j*4];
+                dutyCycle[j].asBytes[3-i] = data_received[i+j*4];
              }
         }
                                                                       //TODO: catch errors from coils and report them
