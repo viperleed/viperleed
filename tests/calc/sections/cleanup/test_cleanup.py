@@ -270,7 +270,7 @@ class TestWriteManifest:
         assert all(p in subpaths for p in expect_paths)
 
         # And verify that contents have been written correctly
-        contents = manifest.file.read_text().splitlines()
+        contents = manifest.file.read_text(encoding='utf-8').splitlines()
         headers = [line for line in contents if line.startswith('[')]
         expect_headers = [f'[domain name {i} at dd_{i}]' for i in range(5)]
         assert headers == expect_headers

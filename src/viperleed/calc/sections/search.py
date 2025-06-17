@@ -676,11 +676,24 @@ def search(sl, rp):
     ------
     RuntimeError
         Raised if execution cannot continue.
+    FileNotFoundError
+        If Fortran compilers are not found, or any of the
+        Fortran source files for the search are missing.
+    Exception
+        If preparing the input files for the search fails.
+    Exception
+        If collecting any information other than the compilers
+        or the Fortran source files fails.
+    Exception
+        If compiling the Fortran code fails.
+    Exception
+        If interpreting the results of the search fails.
+    OSError
+        If the compiled search subprocess cannot be started.
 
     Returns
     -------
     None.
-
     """
 
     def kill_process(proc, default_pgid=None):

@@ -273,4 +273,3 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
             painter.translate(0, self.interLine())  # and switch to the new
                                                     # line
         painter.restore()  # and back to the initial state
-

@@ -42,13 +42,18 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
 
     Raises
     ------
+    FileNotFoundError
+        If `filename` is not found on the system.
+    Exception
+        If any other error occurs when opening `filename`.
     RuntimeError
         Raised if unexpected syntax is encountered and cannot be resolved.
+    NoDisplacementsError
+        If `filename` contains no valid displacements.
 
     Returns
     -------
     None.
-
     """
     rp.disp_blocks = []
     copyblock = None
