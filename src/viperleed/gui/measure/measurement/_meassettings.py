@@ -236,7 +236,7 @@ class StepProfileViewer(ButtonWithLabel):
     @qtc.pyqtSlot()
     def _on_settings_changed(self):
         """Update step profile to selected profile."""
-        self._set_label_text(self.profile_editor.profile[0])
+        self._set_label_text(self.profile_editor.profile_name)
         self.settings_changed.emit()
 
     def _set_label_text(self, value):
@@ -277,6 +277,11 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         self._compose_and_connect()
 
     @property
+    def profile_name(self):
+        """Return name of the currently selected profile."""
+        return self.pick_profile.currentData().name
+
+    @property
     def profile(self):
         """Return the currently selected profile."""
         return self.pick_profile.currentData().profile
@@ -293,6 +298,12 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         self._profile_description.setText(
             self.pick_profile.currentData().description
             )
+
+    @qtc.pyqtSlot()
+    def accept(self):
+        """Store selected profile then accept."""
+        self.pick_profile.currentData().update_profile()
+        super().accept()
 
     def _compose_and_connect(self):
         """Compose EnergyStepProfileDialog and connect signals."""
@@ -336,12 +347,6 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         for profile_editor in self._profile_editors.values():
             name = profile_editor.name.capitalize() +' profile'
             self.pick_profile.addItem(name, userData=profile_editor)
-
-    @qtc.pyqtSlot()
-    def accept(self):
-        """Store selected profile then accept."""
-        self.pick_profile.currentData().update_profile()
-        super().accept()
 
 
 class EnergyStepProfileShapeEditor(qtw.QWidget):
@@ -442,6 +447,32 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
             }
         self._compose()
 
+    def set_profile(self, profile):
+        """Set linear profile.
+
+        Parameters
+        ----------
+        profile : tuple or list
+            A tuple or list of a str and two int values. The first value
+            is a str, which should say 'linear' in this case. The second
+            value is an integer, which will be set as the number of
+            steps in the linear profile, the third value is the duration
+            of the delay after each intermediate step in milliseconds.
+
+        Returns
+        -------
+        None.
+        """
+        self._controls['n_steps'].setValue(profile[1])
+        self._controls['duration'].setValue(profile[2])
+
+    def update_profile(self):
+        """Set the profile to the selected values."""
+        self.profile = (self.name, self._controls['n_steps'].value(),
+                        self._controls['duration'].value())
+        if any(value == 0 for value in self.profile):
+            self.profile = AbruptEnergyStepEditor().profile
+
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QFormLayout()
@@ -475,32 +506,6 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         container.setLayout(layout)
         return container
 
-    def set_profile(self, profile):
-        """Set linear profile.
-
-        Parameters
-        ----------
-        profile : tuple or list
-            A tuple or list of a str and two int values. The first value
-            is a str, which should say 'linear' in this case. The second
-            value is an integer, which will be set as the number of
-            steps in the linear profile, the third value is the duration
-            of the delay after each intermediate step in milliseconds.
-
-        Returns
-        -------
-        None.
-        """
-        self._controls['n_steps'].setValue(profile[1])
-        self._controls['duration'].setValue(profile[2])
-
-    def update_profile(self):
-        """Set the profile to the selected values."""
-        self.profile = (self.name, self._controls['n_steps'].value(),
-                        self._controls['duration'].value())
-        if any(value == 0 for value in self.profile):
-            self.profile = AbruptEnergyStepEditor().profile
-
 
 class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     """Editor for the settings of an energy profile with custom steps."""
@@ -524,6 +529,42 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         self._n_widgets_removed = 0
         self._connect()
         self._compose()
+
+    def set_profile(self, profile):
+        """Set fractional profile.
+
+        Parameters
+        ----------
+        profile : Sequence of int
+            A tuple or list of int values. Even-numbered values will be
+            set as a fraction of the step height, odd-numbered values
+            are the delays in milliseconds.
+
+        Returns
+        -------
+        None.
+        """
+        while self.layout().rowCount() > 2:
+            self._remove_step()
+        self.profile = profile
+        for fraction, duration in zip(profile[0::2], profile[1::2]):
+            self._add_step(fraction, duration)
+        self._update_button_states()
+
+    def update_profile(self):
+        """Set the profile to the selected values."""
+        profile = []
+        layout = self.layout()
+        # The first two elements in the layout are the add/remove
+        # buttons and the labels. After that, each step is a separate
+        # item with two widgets.
+        for index in range(2, layout.count()):
+            item = layout.itemAt(index)
+            profile.append(item.itemAt(0).widget().value())
+            profile.append(item.itemAt(1).widget().value())
+        self.profile = tuple(profile)
+        if not self.profile or not any(self.profile):
+            self.profile = ('abrupt',)
 
     @qtc.pyqtSlot()
     def _add_step(self, fraction=None, duration=None):
@@ -608,39 +649,3 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         max_rows = MAX_NUM_STEPS + 2
         self._controls['add_step'].setEnabled(num_rows < max_rows)
         self._controls['remove_step'].setEnabled(num_rows > 2)
-
-    def set_profile(self, profile):
-        """Set fractional profile.
-
-        Parameters
-        ----------
-        profile : Sequence of int
-            A tuple or list of int values. Even-numbered values will be
-            set as a fraction of the step height, odd-numbered values
-            are the delays in milliseconds.
-
-        Returns
-        -------
-        None.
-        """
-        while self.layout().rowCount() > 2:
-            self._remove_step()
-        self.profile = profile
-        for fraction, duration in zip(profile[0::2], profile[1::2]):
-            self._add_step(fraction, duration)
-        self._update_button_states()
-
-    def update_profile(self):
-        """Set the profile to the selected values."""
-        profile = []
-        layout = self.layout()
-        # The first two elements in the layout are the add/remove
-        # buttons and the labels. After that, each step is a separate
-        # item with two widgets.
-        for index in range(2, layout.count()):
-            item = layout.itemAt(index)
-            profile.append(item.itemAt(0).widget().value())
-            profile.append(item.itemAt(1).widget().value())
-        self.profile = tuple(profile)
-        if not self.profile or not any(self.profile):
-            self.profile = ('abrupt',)
