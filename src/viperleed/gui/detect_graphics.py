@@ -224,12 +224,21 @@ class Qt5DependencyFinder:
 class _QtUnixPlatformsGetter:
     """A helper for finding the names of Qt platform plugins on UNIX."""
 
+    # Mapping {version-str: platform-getter-name} for known versions
+    _version_to_getter_name = {
+        **{f'5.15.{minor}': '_get_5_15' for minor in range(18)},
+        }
+
     @classmethod
     def get(cls):
         """Return a set of platform names for the current Qt version."""
-        version = qtc.QT_VERSION_STR.replace('.', '_')
         try:
-            getter = getattr(cls, f'_get_{version}')
+            getter_name = cls._version_to_getter_name[qtc.QT_VERSION_STR]
+        except KeyError:
+            version = qtc.QT_VERSION_STR.replace('.', '_')
+            getter_name = f'_get_{version}'
+        try:
+            getter = getattr(cls, getter_name)
         except AttributeError:
             raise NotImplementedError('Unsupported Qt version '
                                       + qtc.QT_VERSION_STR) from None
@@ -262,22 +271,3 @@ class _QtUnixPlatformsGetter:
             is_gnome = env_desktop and 'gnome' in env_desktop
             return {env_default} if is_gnome else {env_session, env_default}
         return {env_session, env_default}
-
-    _get_5_15_17 = _get_5_15
-    _get_5_15_16 = _get_5_15
-    _get_5_15_15 = _get_5_15
-    _get_5_15_14 = _get_5_15
-    _get_5_15_13 = _get_5_15
-    _get_5_15_12 = _get_5_15
-    _get_5_15_11 = _get_5_15
-    _get_5_15_10 = _get_5_15
-    _get_5_15_9  = _get_5_15
-    _get_5_15_8  = _get_5_15
-    _get_5_15_7  = _get_5_15
-    _get_5_15_6  = _get_5_15
-    _get_5_15_5  = _get_5_15
-    _get_5_15_4  = _get_5_15
-    _get_5_15_3  = _get_5_15
-    _get_5_15_2  = _get_5_15
-    _get_5_15_1  = _get_5_15
-    _get_5_15_0  = _get_5_15
