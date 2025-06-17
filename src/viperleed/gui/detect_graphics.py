@@ -195,7 +195,7 @@ class Qt5DependencyFinder:
         try:
             res = subprocess.run(['apt-cache', 'search', rgx],
                                  capture_output=True,
-                                 timeout=2,  # seconds
+                                 timeout=3,  # seconds
                                  check=True)
         except (FileNotFoundError, subprocess.SubprocessError):
             return []
