@@ -8,7 +8,6 @@ __license__ = 'GPLv3+'
 import logging
 import re
 from abc import ABC, abstractmethod
-from collections import namedtuple
 
 import numpy as np
 
