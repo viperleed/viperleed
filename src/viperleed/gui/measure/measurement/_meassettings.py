@@ -92,11 +92,6 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._compose_and_connect_collapsible_lists(may_have_cameras)
 
     @property
-    def _device_lists(self):
-        """Return the device lists."""
-        return (self._controllers, self._cameras)
-
-    @property
     def default_settings_folder(self):
         """Return the default settings folder."""
         return self._default_settings_folder
@@ -117,6 +112,11 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._default_settings_folder = settings_path
         self._cameras.default_settings_folder = settings_path
         self._controllers.default_settings_folder = settings_path
+
+    @property
+    def _device_lists(self):
+        """Return the device lists."""
+        return (self._controllers, self._cameras)
 
     def _compose_and_connect_collapsible_lists(self, may_have_cameras):
         """Compose the collapsible lists for cameras and controllers.
@@ -205,8 +205,28 @@ class StepProfileViewer(ButtonWithLabel):
         super().__init__(**kwargs)
         self.notify_ = self.settings_changed
         self.set_button_text('Edit')
-        self.profile_editor = StepProfileEditor(parent=self)
+        self.profile_editor = EnergyStepProfileDialog(parent=self)
         self._connect()
+
+    def get_(self):
+        """Return the value to be stored in the config."""
+        return str(self.profile_editor.profile)
+
+    def set_(self, value):
+        """Set label and load profile into step profile editor."""
+        value = literal_eval(value)
+        if not value:
+            value = AbruptEnergyStepEditor().profile
+        if isinstance(value, str):
+            value = (value,)
+        self.profile_editor.profile = value
+        self._set_label_text(value[0])
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Connect finished signal when shown."""
+        base.safe_connect(self.window().finished, self.profile_editor.reject,
+                          type=qtc.Qt.UniqueConnection)
+        super().showEvent(event)
 
     def _connect(self):
         """Connect (only once) relevant signals and slots."""
@@ -226,28 +246,8 @@ class StepProfileViewer(ButtonWithLabel):
             return
         self.set_label_text('Custom profile')
 
-    def get_(self):
-        """Return the value to be stored in the config."""
-        return str(self.profile_editor.profile)
 
-    def showEvent(self, event):          # pylint: disable=invalid-name
-        """Connect finished signal when shown."""
-        base.safe_connect(self.window().finished, self.profile_editor.reject,
-                          type=qtc.Qt.UniqueConnection)
-        super().showEvent(event)
-
-    def set_(self, value):
-        """Set label and load profile into step profile editor."""
-        value = literal_eval(value)
-        if not value:
-            value = AbruptEnergyStepEditor().profile
-        if isinstance(value, str):
-            value = (value,)
-        self.profile_editor.profile = value
-        self._set_label_text(value[0])
-
-
-class StepProfileEditor(qtw.QDialog):                                           # TODO: visually draw profiles
+class EnergyStepProfileDialog(qtw.QDialog):                                     # TODO: visually draw profiles
     """A dialog for setting step profiles.
 
     Provides a selection of step profiles and allows
@@ -268,7 +268,7 @@ class StepProfileEditor(qtw.QDialog):                                           
         self.setWindowFlags(self.windowFlags()
                             & ~qtc.Qt.WindowContextHelpButtonHint)
         # The _adjust_size_timer timer is used to trigger a replot in
-        # case the step count is reduced and the StepProfileEditor
+        # case the step count is reduced and the EnergyStepProfileDialog
         # therefore needs less space to fit all its widgets.
         self._adjust_size_timer = qtc.QTimer()
         self._adjust_size_timer.setSingleShot(True)
@@ -295,7 +295,7 @@ class StepProfileEditor(qtw.QDialog):                                           
             )
 
     def _compose_and_connect(self):
-        """Compose StepProfileEditor and connect signals."""
+        """Compose EnergyStepProfileDialog and connect signals."""
         layout = qtw.QVBoxLayout()
         layout.addLayout(self._compose_editor())
         _bbox = QNoDefaultDialogButtonBox
