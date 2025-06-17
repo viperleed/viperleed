@@ -140,7 +140,7 @@ class QObjectWithError(qtc.QObject):                                            
         for error, sender in self._delayed_errors:
             try:
                 sender.emit_error(error)
-            except RuntimeError:
+            except (RuntimeError, AttributeError):
                 self.emit_error(error)
         self._delayed_errors.clear()
 
