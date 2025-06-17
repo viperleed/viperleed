@@ -2,12 +2,15 @@
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
+import inspect
 import os
+import sys
 
 import pytest
 from pytest_cases import fixture
@@ -20,16 +23,50 @@ from viperleed.calc.cli import ViPErLEEDCalcCLI
 from viperleed.calc.cli import _copy_files_from_manifest
 from viperleed.calc.cli import _copy_input_files_to_work
 from viperleed.calc.cli import _copy_tensors_and_deltas_to_work
+from viperleed.calc.cli import _has_history
+from viperleed.calc.cli import _remove_history
 from viperleed.calc.cli import _verbosity_to_log_level
+from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files.manifest import ManifestFileError
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.cli import ViPErLEEDMain
 
 from ..helpers import filesystem_from_dict
 from ..helpers import filesystem_to_dict
 
 _MODULE = 'viperleed.calc.cli'
+
+
+def test_calc_never_loads_graphics(mocker):
+    """Ensure that 'viperleed calc' does not load graphics-related modules."""
+    mocker.patch('viperleed.gui.detect_graphics.has_pyqt',
+                 return_value=True)
+    cli = ViPErLEEDMain()
+    with pytest.raises(SystemExit):
+        cli(['calc', '--version'])
+    should_not_load = {  # NB: QtCore is acceptable
+        'ViPErLEEDSelectPlugin',
+        'qtw',
+        'qtg',
+        'QtWidgets',
+        'QtGui',
+        }
+    gui_modules = {name: module
+                   for name, module in sys.modules.items()
+                   if 'viperleed.gui' in name}
+    graphics_modules = {}
+    for module_name, module in gui_modules.items():
+        members = dict(inspect.getmembers(module))
+        unexpected = [
+            gui_obj
+            for gui_obj in should_not_load
+            if any(gui_obj in m for m in members)
+            ]
+        if unexpected:
+            graphics_modules[module_name] = unexpected
+    assert not graphics_modules
 
 
 class TestCalcCliCall:
@@ -56,8 +93,83 @@ class TestCalcCliCall:
                 'tensors_deltas': mocker.patch(
                     f'{_MODULE}._copy_tensors_and_deltas_to_work',
                     ),
+                'has_history': mocker.patch(f'{_MODULE}._has_history',
+                                            return_value=True),
                 }
         return _mock
+
+    @staticmethod
+    def check_bookkeeper_calls(mocks, mocker, confirm=True):
+        """Ensure bookkeeper was called as expected."""
+        mocks['bookie'].assert_called_once()  # Made instance
+        bookkeeper = mocks['bookie'].return_value
+        assert bookkeeper.run.mock_calls == [
+            mocker.call(mode=BookkeeperMode.CLEAR,
+                        requires_user_confirmation=confirm),
+            mocker.call(mode=BookkeeperMode.ARCHIVE,
+                        requires_user_confirmation=confirm,
+                        domains=mocks['manifest'].return_value),
+            ]
+
+    def test_cwd_is_empty(self, tmp_path):
+        """Ensure that running in an empty directory only produces the log."""
+        # "Empty" actually means "without any calc input files"
+        tree_before = {
+            'some-file.txt': '',
+            'some_folder': {},
+            }
+        filesystem_from_dict(tree_before, tmp_path)
+        cli = ViPErLEEDCalcCLI()
+        with execute_in_dir(tmp_path):
+            error = cli([])
+        assert error
+
+        # The only file added must be the log
+        tree_after = filesystem_to_dict(tmp_path)
+        log_file, *others = (f for f in tree_after if f not in tree_before)
+        assert not others
+        assert log_file.startswith(LOG_PREFIX)
+
+    @parametrize(tree_before=({'history': {}},
+                              {'history.info': ''}))
+    def test_cwd_has_history(self, tree_before, tmp_path):
+        """Ensure that pre-existing history is not removed."""
+        filesystem_from_dict(tree_before, tmp_path)
+        cli = ViPErLEEDCalcCLI()
+        with execute_in_dir(tmp_path):
+            error = cli([])
+        assert error
+
+        tree_after = filesystem_to_dict(tmp_path).keys()
+        # If a history exists, it should be preserved.
+        assert tree_after & tree_before.keys()
+        # Similarly, work should remain. The log file is always there.
+        diff = tree_after - tree_before.keys()
+        assert DEFAULT_WORK in diff
+        assert any(f.startswith(LOG_PREFIX) for f in diff)
+
+    @parametrize(first_run=(True, False))
+    def test_cwd_not_empty(self,
+                           first_run,
+                           mock_implementation,
+                           tmp_path,
+                           mocker):
+        """Ensure that running in an empty directory only produces the log."""
+        def _copy_inputs(to_path):
+            (to_path/'dummy_input_file').touch()
+
+        mocks = mock_implementation(exit_code=0)
+        mocks['has_history'].return_value = not first_run
+        mocker.patch(f'{_MODULE}._copy_input_files_to_work', _copy_inputs)
+        mock_remove = mocker.patch(f'{_MODULE}._remove_history')
+
+        cli = ViPErLEEDCalcCLI()
+        with execute_in_dir(tmp_path):
+            error = cli([])
+        assert not error
+
+        mock_remove.assert_not_called()
+        self.check_bookkeeper_calls(mocks, mocker)
 
     def test_delete_workdir(self, tmp_path, mock_implementation):
         """Check the successful removal of the work directory."""
@@ -101,15 +213,7 @@ class TestCalcCliCall:
         with execute_in_dir(tmp_path):
             error = cli(['-y'])
         assert not error
-        # Check bookkeeper calls
-        bookkeeper = mocks['bookie'].return_value
-        assert bookkeeper.run.mock_calls == [
-            mocker.call(mode=BookkeeperMode.CLEAR,
-                        requires_user_confirmation=False),
-            mocker.call(mode=BookkeeperMode.ARCHIVE,
-                        requires_user_confirmation=False,
-                        domains=mocks['manifest'].return_value),
-            ]
+        self.check_bookkeeper_calls(mocks, mocker, confirm=False)
 
     def test_keep_workdir(self, tmp_path, mock_implementation):
         """Check that work is not deleted if requested."""
@@ -120,6 +224,27 @@ class TestCalcCliCall:
         assert not error
         mocks['rmtree'].assert_not_called()
 
+    def test_keep_workdir_cwd_empty(self, tmp_path):
+        """Ensure that work is preserved even if cwd is empty, if requested."""
+        # "Empty" actually means "without any calc input files"
+        tree_before = {
+            'some-file.txt': '',
+            'some_folder': {},
+            }
+        filesystem_from_dict(tree_before, tmp_path)
+        cli = ViPErLEEDCalcCLI()
+        with execute_in_dir(tmp_path):
+            error = cli(['-k'])
+        assert error
+
+        # The only file added must be the log
+        tree_after = filesystem_to_dict(tmp_path)
+        diff = {f for f in tree_after if f not in tree_before}
+        assert DEFAULT_WORK in diff
+        log_file, *others = (f for f in diff if f != DEFAULT_WORK)
+        assert not others
+        assert log_file.startswith(LOG_PREFIX)
+
     def test_success(self, tmp_path, mock_implementation, mocker):
         """Check the successful call to ViPErLEEDCalcCLI with default args."""
         cli = ViPErLEEDCalcCLI()
@@ -129,15 +254,7 @@ class TestCalcCliCall:
         assert not error
 
         # Check bookkeeper calls
-        mocks['bookie'].assert_called_once()  # Made instance
-        bookkeeper = mocks['bookie'].return_value
-        assert bookkeeper.run.mock_calls == [
-            mocker.call(mode=BookkeeperMode.CLEAR,
-                        requires_user_confirmation=True),
-            mocker.call(mode=BookkeeperMode.ARCHIVE,
-                        requires_user_confirmation=True,
-                        domains=mocks['manifest'].return_value),
-            ]
+        self.check_bookkeeper_calls(mocks, mocker)
         # As well as calls to other functions. Don't bother specifying
         # the arguments for those functions that require the parsed
         # command-line arguments.
@@ -327,6 +444,58 @@ class TestCopyTensorsDeltas:
         _copy_tensors_and_deltas_to_work(mocker.MagicMock(), all_tensors=False)
         copy.assert_not_called()
         assert not caplog.text
+
+
+class TestHasHistory:
+    """Tests for the _has_history helper."""
+
+    def test_empty(self, tmp_path):
+        """Check expected results for a completely empty directory."""
+        with execute_in_dir(tmp_path):
+            assert not _has_history()
+
+    def test_history_folder(self, tmp_path):
+        """Check expected result when a history folder is present."""
+        (tmp_path/'history').mkdir()
+        with execute_in_dir(tmp_path):
+            assert _has_history()
+
+    def test_history_info(self, tmp_path):
+        """Check expected result when history.info is present."""
+        (tmp_path/'history.info').touch()
+        with execute_in_dir(tmp_path):
+            assert _has_history()
+
+    def test_other_contents(self, tmp_path):
+        """Check expected results for non-bookkeeper contents."""
+        contents = {
+            'dummy_file': '',
+            'PARAMETERS': '',
+            'dummy_folder': {},
+            }
+        filesystem_from_dict(contents, tmp_path)
+        with execute_in_dir(tmp_path):
+            assert not _has_history()
+
+
+def test_remove_history(tmp_path, mocker):
+    """Check implementation of the _remove_history helper function."""
+    mocks = {
+        'logger': mocker.patch(f'{_MODULE}.bookie_log'),
+        'handlers': mocker.patch(f'{_MODULE}.close_all_handlers'),
+        'rmtree': mocker.patch('shutil.rmtree'),
+        'unlink': mocker.patch('pathlib.Path.unlink'),
+        }
+    calls = {
+        'handlers': mocker.call(mocks['logger']),
+        'rmtree': mocker.call(tmp_path/'history'),
+        }
+    with execute_in_dir(tmp_path):
+        _remove_history()
+    for mock_name, call in calls.items():
+        mock = mocks[mock_name]
+        assert mock.mock_calls == [call]
+    (tmp_path/'history.info').unlink.assert_called_once_with()
 
 
 _presets = {  # cli_args: expected_presets

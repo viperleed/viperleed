@@ -15,8 +15,8 @@ import matplotlib as mpl
 #OR
 #from matplotlib.patches import Circle as MplCircle
 
-from viperleed.gui.basewidgets import MPLFigureCanvas
 from viperleed.gui.leedsim.widgets.hoverannot import HoverAnnot
+from viperleed.gui.widgets.canvases import MPLFigureCanvas
 
 TEST = False
 
