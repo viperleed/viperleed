@@ -81,9 +81,9 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
                 ))
         if not has_graphics():
             self.parser.error(err_msg.format(
-                'the system appears to have no graphics capability (i.e., '
-                'no monitor was detected). If this is the first time you '
-                'execute the GUI, try once again.'
+                'the system appears to have no graphics capability (i.e., no '
+                'monitor was detected). Try once more if this is the first '
+                'time you execute the GUI, or have just updated viperleed.'
                 ))
 
 

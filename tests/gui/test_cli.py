@@ -82,8 +82,8 @@ Try again after installing them'''
              'has_graphics': False,
              'find_missing_qt_dependencies': {}},
             ('the system appears to have no graphics capability (i.e., '
-             'no monitor was detected). If this is the first time you '
-             'execute the GUI, try once again.'),
+             'no monitor was detected). Try once more if this is the first '
+             'time you execute the GUI, or have just updated viperleed.'),
             ),
         }
 
