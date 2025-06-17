@@ -476,33 +476,25 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QFormLayout()
-        layout.addRow(self._make_step_nr_label(), self._controls['n_steps'])
-        layout.addRow(self._make_duration_label(), self._controls['duration'])
+        duration_label = qtw.QLabel('Step duration:')
+        step_num_label = qtw.QLabel('Nr. of steps:')
+        duration_info = ('<nobr>How long to wait (ms) till </nobr>'
+                         'the next intermediate step.')
+        step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
+                            f'Cannot be more than {MAX_NUM_STEPS}.')
+        layout.addRow(self._make_info_label(duration_label, duration_info),
+                      self._controls['n_steps'])
+        layout.addRow(self._make_info_label(step_num_label, step_num_info),
+                      self._controls['duration'])
         self.setLayout(layout)
 
-    def _make_step_nr_label(self):
-        """Return a layout of the step-number selection."""
+    def _make_info_label(self, label, info):
+        """Return a widget containing the label and info."""
         container = qtw.QWidget()
         layout = qtw.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        step_number_label = qtw.QLabel('Nr. of steps:')
-        layout.addWidget(step_number_label)
-        info = ('<nobr>The number of intermediate steps.</nobr> '
-                f'Cannot be more than {MAX_NUM_STEPS}.')
-        layout.addWidget(FieldInfo.for_widget(step_number_label, tooltip=info))
-        container.setLayout(layout)
-        return container
-
-    def _make_duration_label(self):
-        """Return a layout of the duration selection."""
-        container = qtw.QWidget()
-        layout = qtw.QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        duration_label = qtw.QLabel('Step duration:')
-        layout.addWidget(duration_label)
-        info = ('<nobr>How long to wait (ms) till </nobr>'
-                'the next intermediate step.')
-        layout.addWidget(FieldInfo.for_widget(duration_label, tooltip=info))
+        layout.addWidget(label)
+        layout.addWidget(FieldInfo.for_widget(label, tooltip=info))
         container.setLayout(layout)
         return container
 
