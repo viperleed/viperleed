@@ -37,3 +37,6 @@ class InvalidSearchLoopError(DisplacementsFileError):
 
 class SymmetryViolationError(DisplacementsFileError):
     """Error raised when the requested displacements violate symmetry."""
+
+class UnknownDisplacementsSegmentError(DisplacementsFileError):
+    """Exception raised when a line does not match any known segment header."""
