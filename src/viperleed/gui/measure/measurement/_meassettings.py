@@ -42,6 +42,8 @@ START_E_NAME = 'E start'
 END_E_NAME = 'E end'
 MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
+N_COLUMNS = 2
+N_HEADER_ROWS = 2
 
 
 class DeviceEditor(SettingsDialogSectionBase):
@@ -452,7 +454,7 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
 
         Parameters
         ----------
-        profile : tuple or list
+        profile : Sequence
             A tuple or list of a str and two int values. The first value
             is a str, which should say 'linear' in this case. The second
             value is an integer, which will be set as the number of
@@ -463,6 +465,8 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         -------
         None.
         """
+        if not profile[1] == self.name or len(profile) != 3:
+            raise ValueError('Unsuitable settings for a linear profile.')       # TODO: Catch error on the outside.
         self._controls['n_steps'].setValue(profile[1])
         self._controls['duration'].setValue(profile[2])
 
@@ -481,7 +485,7 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         duration_info = ('<nobr>How long to wait (ms) till </nobr>'
                          'the next intermediate step.')
         step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
-                            f'Cannot be more than {MAX_NUM_STEPS}.')
+                         f'Cannot be more than {MAX_NUM_STEPS}.')
         layout.addRow(self._make_info_label(duration_label, duration_info),
                       self._controls['n_steps'])
         layout.addRow(self._make_info_label(step_num_label, step_num_info),
@@ -512,8 +516,8 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         """Initialise object."""
         super().__init__()
         self._controls = {
-            'add_step' : QNoDefaultPushButton(),
-            'remove_step' : QNoDefaultPushButton(),
+            'add_step' : QNoDefaultPushButton('Add'),
+            'remove_step' : QNoDefaultPushButton('Remove'),
             }
         # In order to keep track whether a step has properly been removed
         # from the editor, we have to keep track of how many widgets have
@@ -521,6 +525,11 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         self._n_widgets_removed = 0
         self._connect()
         self._compose()
+
+    @property
+    def n_steps(self):
+        """Return the number of intermediate steps."""
+        return max(0, self.layout().rowCount() - N_HEADER_ROWS)
 
     def set_profile(self, profile):
         """Set fractional profile.
@@ -536,7 +545,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         -------
         None.
         """
-        while self.layout().rowCount() > 2:
+        while self.n_steps() > 0:
             self._remove_step()
         self.profile = profile
         for fraction, duration in zip(profile[0::2], profile[1::2]):
@@ -587,9 +596,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose_buttons(self):
         """Return a layout of the add and remove buttons."""
         layout = qtw.QHBoxLayout()
-        self._controls['add_step'].setText('Add')
         layout.addWidget(self._controls['add_step'])
-        self._controls['remove_step'].setText('Remove')
         layout.addWidget(self._controls['remove_step'])
         self._controls['remove_step'].setEnabled(False)
         return layout
@@ -621,7 +628,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _emit_step_count_reduced(self):
         """Emit the step_count_reduced signal once both widgets are deleted."""
         self._n_widgets_removed += 1
-        if self._n_widgets_removed < 2:
+        if self._n_widgets_removed < N_COLUMNS:
             return
         self.step_count_reduced.emit()
         self._n_widgets_removed = 0
@@ -629,15 +636,12 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     @qtc.pyqtSlot()
     def _remove_step(self):
         """Remove a step from the fractional step profile."""
-        # The first 2 rows are the buttons and the labels.
-        if self.layout().rowCount() < 3:
+        if self.n_steps == 0:
             return
         self.layout().removeRow(self.layout().rowCount()-1)
         self._update_button_states()
 
     def _update_button_states(self):
         """Enable/disable add/remove buttons."""
-        num_rows = self.layout().rowCount()
-        max_rows = MAX_NUM_STEPS + 2
-        self._controls['add_step'].setEnabled(num_rows < max_rows)
-        self._controls['remove_step'].setEnabled(num_rows > 2)
+        self._controls['add_step'].setEnabled(self.n_steps < MAX_NUM_STEPS)
+        self._controls['remove_step'].setEnabled(self.n_steps > 0)
