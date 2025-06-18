@@ -33,7 +33,6 @@ class DisplacementsFile(NodeMixin):
         method, which will return the next search block or raise StopIteration if
         there are no more blocks to process.
 
-
         Note
         ----
         Since loop blocks need to check convergence criteria, the next() method
