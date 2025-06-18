@@ -100,6 +100,71 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
     def _render_name(self):
         pass
 
+class LineContainer(DisplacementsSegmentABC):
+    """Base class for units that contain content lines."""
+
+    SUBSEGMENTS = ()  # Line containers do not allow subsegments
+
+    def __init__(self, header_line):
+        self.header = header_line
+        self._lines = []
+
+    @abstractmethod
+    def _belongs_to_me(self, line):
+        """Check if the line belongs to this container."""
+
+    @property
+    def _render_name(self):
+        sep = "\n\t"
+        return (
+            f"{self.header}"
+            + "\n"
+            + f"{sep.join(line.raw_line for line in self._lines)}"
+        )
+
+
+class DeltaBlock(LineContainer):
+    """Base class for blocks that contain delta lines."""
+
+    @property
+    @abstractmethod
+    def LINE_TYPE(self):
+        """Return the line type for this delta block."""
+
+    @property
+    @abstractmethod
+    def HEADER(self):
+        """Return the header for this delta block."""
+
+    @classmethod
+    def is_my_header_line(cls, line):
+        """Check if the line is a header for this DELTA block."""
+        return isinstance(line, SectionHeaderLine) and line.section == cls.HEADER
+
+    def _belongs_to_me(self, line):
+        """Check if the line belongs to this delta block."""
+        return isinstance(line, self.LINE_TYPE) or self.is_my_header_line(line)
+
+
+class GeoDeltaBlock(DeltaBlock):
+    HEADER = "GEO_DELTA"
+    LINE_TYPE = GeoDeltaLine
+
+
+class VibDeltaBlock(DeltaBlock):
+    HEADER = "VIB_DELTA"
+    LINE_TYPE = VibDeltaLine
+
+
+class OccDeltaBlock(DeltaBlock):
+    HEADER = "OCC_DELTA"
+    LINE_TYPE = OccDeltaLine
+
+
+class ConstraintBlock(DeltaBlock):
+    HEADER = "CONSTRAIN"
+    LINE_TYPE = ConstraintLine
+
 
 class SearchBlock(DisplacementsSegmentABC):
     """Class to hold all information for a search block in the DISPLACEMENTS file."""
@@ -143,9 +208,6 @@ class SearchBlock(DisplacementsSegmentABC):
         return str(self._header)
 
 
-class LineContainer(DisplacementsSegmentABC):
-    """Base class for units that contain content lines."""
-    SUBSEGMENTS = ()  # Line containers do not allow subsegments
 
     def __init__(self, header_line):
         self.header = header_line
@@ -184,51 +246,4 @@ class OffsetsBlock(LineContainer):
     def _belongs_to_me(self, line):
         """Check if the line belongs to this delta block."""
         return isinstance(line, OffsetsLine)
-
-
-
-class DeltaBlock(LineContainer):
-    """Base class for blocks that contain delta lines."""
-
-
-    @property
-    @abstractmethod
-    def LINE_TYPE(self):
-        """Return the line type for this delta block."""
-
-    @property
-    @abstractmethod
-    def HEADER(self):
-        """Return the header for this delta block."""
-
-    @classmethod
-    def is_my_header_line(cls, line):
-        """Check if the line is a header for this DELTA block."""
-        return isinstance(line, SectionHeaderLine) and line.section == cls.HEADER
-
-    def _belongs_to_me(self, line):
-        """Check if the line belongs to this delta block."""
-        return isinstance(line, self.LINE_TYPE) or self.is_my_header_line(line)
-
-    @property
-    def _render_name(self):
-        return f'{self.header}\n{'\n\t'.join(line.raw_line for line in self._lines)}'
-
-
-class GeoDeltaBlock(DeltaBlock):
-    HEADER = 'GEO_DELTA' 
-    LINE_TYPE = GeoDeltaLine
-
-class VibDeltaBlock(DeltaBlock):
-    HEADER = 'VIB_DELTA'
-    LINE_TYPE = VibDeltaLine
-
-class OccDeltaBlock(DeltaBlock):
-    HEADER = 'OCC_DELTA'
-    LINE_TYPE = OccDeltaLine
-
-class ConstraintBlock(DeltaBlock):
-    HEADER = 'CONSTRAIN'
-    LINE_TYPE = ConstraintLine
-
 
