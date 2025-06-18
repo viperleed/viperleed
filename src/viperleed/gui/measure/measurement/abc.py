@@ -757,6 +757,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         QObjectSettingsErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
+
+        Notes
+        -----
+        Calling this method will clear any previous data_points,
+            irrespective of whether `new_settings` is acceptable.
         """
         if any(device.connected for device in self.devices):
             raise MeasurementDevicesConnectedError(
