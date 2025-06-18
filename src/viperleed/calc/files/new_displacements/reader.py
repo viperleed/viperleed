@@ -22,6 +22,7 @@ from .lines import (
     GeoDeltaLine,
     LoopMarkerLine,
     OccDeltaLine,
+    OffsetsHeaderLine,
     OffsetsLine,
     SearchHeaderLine,
     SectionHeaderLine,
@@ -79,9 +80,14 @@ class DisplacementsReader(InputFileReader):
 
         # check for search headers, loop markers and section headers
         new_header = None
-        for header in (SearchHeaderLine, LoopMarkerLine, SectionHeaderLine):
+        for header in (
+            OffsetsHeaderLine,
+            SearchHeaderLine,
+            LoopMarkerLine,
+            SectionHeaderLine,
+        ):
             try:
-                new_header =  header(line)
+                new_header = header(line)
             except DisplacementsSyntaxError:
                 continue
 
@@ -90,7 +96,7 @@ class DisplacementsReader(InputFileReader):
             # search headers and loop markers reset the current section
             self._current_section = None
             return new_header
-        elif isinstance(new_header, SectionHeaderLine):
+        elif isinstance(new_header, (SectionHeaderLine, OffsetsHeaderLine)):
             # section headers set the current section
             self._current_section = new_header.section
             return new_header

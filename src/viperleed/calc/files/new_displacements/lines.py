@@ -28,8 +28,9 @@ from .tokens import (
 
 SEARCH_HEADER_PATTERN = re.compile(r"^==\s+(?i:search)\s+(?P<label>.*)$")
 SECTION_HEADER_PATTERN = re.compile(
-    r"^=\s*(?P<section>OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$"
+    r"^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$"
 )
+OFFSETS_HEADER_PATTERN = re.compile(r"^=+\s*(?i:OFFSET[S]?)$")
 LOOP_START_PATTERN = re.compile(r'<loop>')
 LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
 
@@ -77,10 +78,24 @@ class HeaderLine(ABC):
         """Return the string representation of the header line."""
         pass
 
-# TODO: continue here:
-# make base class for simple lines (SearchHeader, SectionHeader, LoopMarker)
-# that does not require the full parsing logic, but only the
-# validation of the line format & storing of the label/section name + __str__
+class OffsetsHeaderLine(HeaderLine):
+    """Class to parse the offsets header line in the DISPLACEMENTS file.
+
+    The offsets header line is of the form:
+        = OFFSETS
+    """
+
+    def __init__(self, line: str):
+        """Initialize the OffsetsHeaderLine with a line string."""
+        if not OFFSETS_HEADER_PATTERN.match(line.strip()):
+            raise DisplacementsSyntaxError(
+                f'Invalid offsets header line: "{line}".')
+        self.line = line.strip()
+        self.section = 'OFFSETS'
+
+    def __str__(self):
+        """Return the string representation of the offsets header."""
+        return self.line
 
 class SearchHeaderLine(HeaderLine):
     """Class to parse the search header line in the DISPLACEMENTS file.

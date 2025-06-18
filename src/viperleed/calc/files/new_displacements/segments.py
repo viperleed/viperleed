@@ -28,6 +28,7 @@ from .lines import (
     SearchHeaderLine,
     SectionHeaderLine,
     VibDeltaLine,
+    OffsetsHeaderLine,
 )
 from .errors import UnknownDisplacementsSegmentError, DisplacementsSyntaxError
 
@@ -263,20 +264,10 @@ LoopBlock.SUBSEGMENTS = (SearchBlock, LoopBlock)
 class OffsetsBlock(LineContainer):
     """Base class for blocks that contain offsets lines."""
 
-    @property
-    @abstractmethod
-    def LINE_TYPE(self):
-        """Return the line type for this delta block."""
-
-    @property
-    @abstractmethod
-    def HEADER(self):
-        """Return the header for this delta block."""
-
     @classmethod
     def is_my_header_line(cls, line):
         """Check if the line is a header for this DELTA block."""
-        return isinstance(line, SectionHeaderLine) and line.section == 'OFFSETS'
+        return isinstance(line, OffsetsHeaderLine)
 
     def _belongs_to_me(self, line):
         """Check if the line belongs to this delta block."""
@@ -285,4 +276,3 @@ class OffsetsBlock(LineContainer):
     def _validate_segment(self):
         if not self._lines:
             raise DisplacementsSyntaxError("Empty OFFSETS block.")
-
