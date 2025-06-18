@@ -9,6 +9,7 @@ __license__ = "GPLv3+"
 from abc import ABC, abstractmethod
 import itertools
 
+import numpy as np
 
 from anytree import NodeMixin
 from anytree import RenderTree
@@ -227,6 +228,13 @@ class SearchBlock(DisplacementsSegmentABC):
 class LoopBlock(DisplacementsSegmentABC):
     """Class to hold all information for a search block in the DISPLACEMENTS file."""
 
+    def __init__(self, header_line):
+        super().__init__(header_line)
+    
+        # attributes related to iterating over the search blocks
+        self._last_rfac = np.inf  # start with large value; loop will always
+        self._current_child_id = 0
+
     @staticmethod
     def is_my_header_line(line):
         """Loops are started by Loop start lines."""
@@ -256,6 +264,34 @@ class LoopBlock(DisplacementsSegmentABC):
             raise DisplacementsSyntaxError(
                 "Loop block cannot contain only another loop block."
             )
+
+    def next(self, current_rfac, r_fac_eps=1e-4):
+        """Check convergence criteria and return the next search block."""
+
+        if self._current_child_id >= len(self.children):
+            # if all children have been processed, check convergence
+            # specifically do not use abs() here – break if we increased
+            if self._last_rfac - current_rfac <= r_fac_eps:
+                # if converged, reset the child index and call next() again
+                self._current_child_id = 0
+                self._last_rfac = current_rfac
+                return self.next(current_rfac, r_fac_eps)
+            raise StopIteration
+
+        next_block = self.children[self._current_child_id]
+        # if the current child is a loop block, delegate to it
+        if isinstance(next_block, LoopBlock):
+            # call the loop block's next method to get the next search block
+            try:
+                return self.children[self.child_id].next(current_rfac)
+            except StopIteration:
+                # if the loop block is exhausted, move to the next child
+                self.child_id += 1
+                return self.next(current_rfac, r_fac_eps=r_fac_eps)
+
+        # otherwise, return the next search block
+        self._current_child_id += 1
+        return next_block
 
 
 # assign the subsegments for LoopBlock
