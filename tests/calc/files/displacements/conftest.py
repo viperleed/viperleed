@@ -6,7 +6,7 @@ __created__ = '2025-05-15'
 from pathlib import Path
 
 import pytest
-from pytest_cases import fixture
+from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
@@ -31,6 +31,20 @@ MOCK_DISPLACEMENTS_PATH = Path(
 )
 _CU_111_DISPLACEMENTS_PATH = _MOCK_DISPLACEMENTS_PATH / 'Cu_111'
 _CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / 'DISPLACEMENTS_simple'
+
+DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob("*/DISPLACEMENTS*")
+
+
+@fixture
+@pytest.mark.parametrize(
+    "file_path",
+    DISPLACEMENTS_FILES,
+    ids=lambda p: p.name,
+)
+def displacements_file_path(file_path):
+    """Fixture to provide a path to a DISPLACEMENTS file."""
+    return file_path
+
 
 @pytest.fixture
 def mock_displacements_path_and_lines():
