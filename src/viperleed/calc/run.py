@@ -20,8 +20,6 @@ import shutil
 
 from viperleed import __version__
 from viperleed.calc.classes.rparams.rparams import Rparams
-from viperleed.calc.constants import DEFAULT_OUT
-from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
