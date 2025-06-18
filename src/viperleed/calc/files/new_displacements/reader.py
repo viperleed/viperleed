@@ -88,7 +88,7 @@ class DisplacementsReader(InputFileReader):
         ):
             try:
                 new_header = header(line)
-            except DisplacementsSyntaxError:
+            except DisplacementsSyntaxError: 
                 continue
 
         # update current section if a new header is found
