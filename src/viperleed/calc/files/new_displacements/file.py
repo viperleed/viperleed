@@ -5,14 +5,16 @@ __copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
 __created__ = "2024-10-04"
 __license__ = "GPLv3+"
 
+import logging
 
-from anytree import Node, RenderTree
+from anytree import NodeMixin, RenderTree
 from anytree.render import ContStyle
 
 from .errors import DisplacementsSyntaxError
 from .reader import DisplacementsReader
 from .segments import OffsetsBlock, SearchBlock, LoopBlock
 
+logger = logging.getLogger(__name__)
 
 TOP_LEVEL_SEGMENTS = (
     OffsetsBlock,
@@ -20,10 +22,11 @@ TOP_LEVEL_SEGMENTS = (
     LoopBlock,
 )
 
-class DisplacementsFile(Node):
+class DisplacementsFile(NodeMixin):
     def __init__(self):
+        self.name = self._render_name
         self.has_been_read = False
-        self.has_been_parsed = False
+        #self.has_been_parsed = False
         # an OFFSETS block is only allowed at the very beginning of the file
         # we check this by setting this flag to False after the first block
 
@@ -53,12 +56,18 @@ class DisplacementsFile(Node):
                         pass
                     new_segment = segment_class(header_line)
                     reader = new_segment.read_lines(reader)
+                    new_segment.parent = self
                     processed = True
                 if processed:
+                    logger.debug('Parsed line: ' + str(new_segment))
                     continue
                 # if we reach here, the line was not processed
                 raise DisplacementsSyntaxError(
-                    f'Unknown segment header: {header_line!r}.')
+                    f'Unable to parse line: {header_line!r}.')
+
+        if not self.children:
+            raise DisplacementsSyntaxError(
+                'The file does not contain any valid segments.')
 
     @property
     def _render_name(self):
