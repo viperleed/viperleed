@@ -198,7 +198,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT)
+        self.manifest = ManifestFile()
         self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,

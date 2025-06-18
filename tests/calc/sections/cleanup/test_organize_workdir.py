@@ -163,11 +163,28 @@ class TestCollectSuppOut:
         }
 
     @parametrize(which=_ordered.values(), ids=_ordered)
-    def test_success(self, which, run, caplog):
+    def test_success(self, rpars, which, run, caplog):
         """Check a successful copy of contents to SUPP/OUT."""
+        in_manifest = DEFAULT_SUPP, DEFAULT_OUT
+        assert not any(f in rpars.manifest for f in in_manifest)
         expect, organized = run(*which)
         assert organized == expect
         assert not caplog.text
+        assert all(f in rpars.manifest for f in in_manifest)
+
+    _folder_to_collector = {
+        DEFAULT_SUPP: _collect_supp_contents,
+        DEFAULT_OUT: _collect_out_contents,
+        }
+
+    @parametrize('folder,which', _folder_to_collector.items())
+    def test_empty(self, folder, which, rpars, tmp_path):
+        """Check that folder is not added to manifest if it is empty."""
+        (tmp_path/'original_inputs').mkdir()
+        (tmp_path/'compile_logs').mkdir()
+        with execute_in_dir(tmp_path):
+            which(rpars)
+        assert folder not in rpars.manifest
 
 
 class TestCopyFilesAndDirectories:
@@ -185,8 +202,8 @@ class TestCopyFilesAndDirectories:
             if make_tree:
                 filesystem_from_dict(self.tree, workdir)
             with execute_in_dir(workdir):
-                _copy_files_and_directories(*args)
-            return filesystem_to_dict(workdir)
+                result = _copy_files_and_directories(*args)
+            return filesystem_to_dict(workdir), result
         return _run
 
     def test_copy_directories(self, run, workdir):
@@ -194,10 +211,12 @@ class TestCopyFilesAndDirectories:
         target = workdir / 'test_target'
         target.mkdir()
         dirs = [workdir/d for d, c in self.tree.items() if isinstance(c, dict)]
-        copied = run([], dirs, target)
+        copied, (copied_files, copied_dirs) = run([], dirs, target)
         expect = self.tree.copy()
         expect[target.name] = {d.name: self.tree[d.name] for d in dirs}
         assert copied == expect
+        assert not copied_files
+        assert copied_dirs == set(dirs)
 
     def test_copy_fails(self, run, workdir, caplog, mocker):
         """Check logging messages when copying fails."""
@@ -209,7 +228,7 @@ class TestCopyFilesAndDirectories:
         expect[target.name] = {}
         files = [workdir/f for f, c in self.tree.items() if isinstance(c, str)]
         dirs = [workdir/d for d, c in self.tree.items() if isinstance(c, dict)]
-        copied = run(files, dirs, target)
+        copied, result = run(files, dirs, target)
         assert copied == expect
         assert copy_file.call_count == len(files)
         assert copy_dir.call_count == len(dirs)
@@ -218,15 +237,18 @@ class TestCopyFilesAndDirectories:
         log = caplog.text
         assert all(log_msg_file.format(f.name) in log for f in files)
         assert all(log_msg_dir.format(d.name) in log for d in dirs)
+        assert not any(result)
 
     def test_copy_files(self, run, workdir):
         """Check a successful copy of files."""
         target = workdir / 'test_target'
         files = [workdir/f for f, c in self.tree.items() if isinstance(c, str)]
-        copied = run(files, [], target)
+        copied, (copied_files, copied_dirs) = run(files, [], target)
         expect = self.tree.copy()
         expect[target.name] = {f.name: self.tree[f.name] for f in files}
         assert copied == expect
+        assert not copied_dirs
+        assert copied_files == set(files)
 
     def test_copy_non_existing(self, run, workdir):
         """Check no complaints when copying non-existing files/folders."""
@@ -234,8 +256,9 @@ class TestCopyFilesAndDirectories:
         expect = {target.name: {}}
         files = (workdir/'non_existing_file.txt',)
         dirs = (workdir/'non_existing_dir',)
-        copied = run(files, dirs, target, make_tree=False)
+        copied, result = run(files, dirs, target, make_tree=False)
         assert copied == expect
+        assert not any(result)
 
     def test_mkdir_fails(self, run, workdir, caplog, mocker):
         """Check warnings when making the target fails."""
@@ -244,9 +267,10 @@ class TestCopyFilesAndDirectories:
         filesystem_from_dict(self.tree, workdir)  # BEFORE patching
         mocker.patch('pathlib.Path.mkdir', side_effect=OSError)
         expect_log = 'Error creating test_target folder'
-        unchanged = run(files, (), target, make_tree=False)
+        unchanged, result = run(files, (), target, make_tree=False)
         assert unchanged == self.tree
         assert expect_log in caplog.text
+        assert not any(result)
 
 
 class TestOrganizeWorkdir:
