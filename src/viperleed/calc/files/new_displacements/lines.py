@@ -71,7 +71,6 @@ class HeaderLine(ABC):
     @abstractmethod
     def __init__(self, line: str):
         """Initialize the header line with a line string."""
-        pass
 
     @abstractmethod
     def __str__(self):
