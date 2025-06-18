@@ -498,7 +498,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     @qtc.pyqtSlot()
     def _cleanup_measurement_settings_dialog(self):
-        """Remove settings dialog from dialogs and delete."""
+        """Destroy the settings dialog for the current measurement."""
         try:
             self._dialogs['measurement_settings'].deleteLater()
         except AttributeError:
