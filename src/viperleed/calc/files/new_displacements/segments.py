@@ -73,7 +73,6 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
                 return iter([])  # No more lines to read
 
             processed = False
-            print("current line:", line, flush=True)
             if self._belongs_to_me(line):
                 self._lines.append(line)
                 continue
@@ -86,7 +85,6 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
                     processed = True
                     break  # after child consumes what it needs, continue outer loop
             if processed:
-                print("done: ", line, flush=True)
                 continue
             else:
                 # done reading this segment, return to parent
@@ -287,3 +285,4 @@ class OffsetsBlock(LineContainer):
     def _validate_segment(self):
         if not self._lines:
             raise DisplacementsSyntaxError("Empty OFFSETS block.")
+
