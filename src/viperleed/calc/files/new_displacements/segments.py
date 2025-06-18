@@ -252,6 +252,11 @@ class LoopBlock(DisplacementsSegmentABC):
             raise DisplacementsSyntaxError(
                 "Loop block must contain at least one search block."
             )
+        # a loop cannot contain only one other loop block
+        if len(self.children) == 1 and isinstance(self.children[0], LoopBlock):
+            raise DisplacementsSyntaxError(
+                "Loop block cannot contain only another loop block."
+            )
 
 
 # assign the subsegments for LoopBlock
