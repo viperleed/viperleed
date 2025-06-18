@@ -240,3 +240,130 @@ class DisplacementsFile:
         # finally, replace the blocks with the new ones
         self.blocks = new_blocks
         self.has_been_parsed = True
+
+
+class UnknownDisplacementsSegmentError(Exception):
+    """Exception raised when a line does not match any known segment header."""
+    pass
+
+
+
+class DeltaBlock(DisplacementsSegmentABC):
+    """Class to hold all information for the DELTA block."""
+
+    required_class_attrs = ['HEADER', 'LINE_TYPE']
+
+    def __init_subclass__(cls, **kwargs):
+            super().__init_subclass__(**kwargs)
+            for attr in cls.required_class_attrs:
+                if not hasattr(cls, attr):
+                    raise TypeError(f"Can't instantiate subclass {cls.__name__} without required class attribute '{attr}'")
+
+    @staticmethod
+    def is_my_header_line(line):
+        """Check if the line is a header for this DELTA block."""
+        return isinstance(line, LoopMarker) and line.label == 'DELTA'
+
+    def _belongs_to_me(self, line):
+        """Check if the line belongs to this DELTA block."""
+        try:
+            self.LINE_TYPE(line)
+        except AttributeError:
+            return False
+        return True
+
+    def _parse_block(self):
+        """Parse the DELTA block."""
+        # Implementation of parsing logic goes here
+        self.header_line = SectionHeaderLine(self.HEADER)
+        self.lines = [self.LINE_TYPE(line) for line in self._lines]
+
+
+class GeoDeltaBlock(DeltaBlock):
+    HEADER = 'GEO_DELTA'
+    LINE_TYPE = GeoDeltaLine
+
+class VibDeltaBlock(DeltaBlock):
+    HEADER = 'VIB_DELTA'
+    LINE_TYPE = VibDeltaLine
+
+class OccDeltaBlock(DeltaBlock):
+    HEADER = 'OCC_DELTA'
+    LINE_TYPE = OccDeltaLine
+
+class ConstraintBlock(DeltaBlock):
+    HEADER = 'CONSTRAIN'
+    LINE_TYPE = ConstraintLine
+
+
+class UnknownDisplacementsSegmentError(Exception):
+    """Exception raised when a line does not match any known segment header."""
+
+
+class DisplacementsSegmentABC(ABC, NodeMixin):
+    """Base class for logical segments in a DISPLACEMENTS file."""
+
+    SUBSEGMENTS = ()  # override in subclasses
+    _subclasses = set()
+
+    def __init_subclass__(cls):
+        """Register known search segments."""
+        cls._subclasses.add(cls)
+
+    def __init__(self, header_line):  # subclasses may use the varargs
+        """Initialize instance."""
+        self._header = header_line
+        self._lines = []
+
+    @classmethod
+    def from_header_line(cls, line):
+        """Return the a subclass instance for a given header `line`."""
+        for subsegment in cls._subclasses:
+            if subsegment.is_my_header_line(line):
+                return subsegment(line)
+        raise UnknownDisplacementsSegmentError(line)
+
+    @staticmethod
+    @abstractmethod
+    def is_my_header_line(line):
+        """Return whether `line` is a header for this segment."""
+
+    @staticmethod
+    @abstractmethod
+    def _belongs_to_me(line):
+        """Return whether `line` is a header for this segment."""
+
+    def read_lines(self, lines):
+        while True:
+            try:
+                line = next(lines)
+            except StopIteration:
+                return iter([])  # No more lines to read
+
+            processed = False
+            print("current line:", line, flush=True)
+            if self._belongs_to_me(line):
+                self._lines.append(line)
+                continue
+            # Check if this line starts one of *my* direct subsegments
+            for subsegment in self.SUBSEGMENTS:
+                if subsegment.is_my_header_line(line):
+                    child = subsegment(line)
+                    child.parent = self
+                    lines = child.read_lines(lines)
+                    processed = True
+                    break  # after child consumes what it needs, continue outer loop
+            if processed:
+                print("done: ", line, flush=True)
+                continue
+            else:
+                print("giving up on this line:", line, flush=True)
+                return itertools.chain([line], lines)
+
+    def __str__(self):
+        return str(RenderTree(self, style=ContStyle()).by_attr("_render_name"))
+
+    @property
+    @abstractmethod
+    def _render_name(self):
+        pass
