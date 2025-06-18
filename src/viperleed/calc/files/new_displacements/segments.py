@@ -121,7 +121,7 @@ class LineContainer(DisplacementsSegmentABC):
         sep = "\n\t"
         return (
             f"{self.header}"
-            + "\n"
+            + sep
             + f"{sep.join(line.raw_line for line in self._lines)}"
         )
 
