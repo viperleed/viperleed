@@ -197,21 +197,32 @@ class SearchBlock(DisplacementsSegmentABC):
         """Check if the line belongs to this search block."""
         return False
 
-    @property
-    def geo_delta(self):
-        return self.sections["GEO_DELTA"]
+    def _get_block_lines(self, block_type):
+        """Return the first block of the given type."""
+        for child in self.children:
+            if isinstance(child, block_type):
+                return child._lines
+        return []
 
     @property
-    def vib_delta(self):
-        return self.sections["VIB_DELTA"]
+    def geo_delta_lines(self):
+        """Return the GeoDeltaBlock if it exists, otherwise None."""
+        return self._get_block_lines(GeoDeltaBlock)
 
     @property
-    def occ_delta(self):
-        return self.sections["OCC_DELTA"]
+    def vib_delta_lines(self):
+        """Return the VibDeltaBlock if it exists, otherwise None."""
+        return self._get_block_lines(VibDeltaBlock)
 
     @property
-    def explicit_constraints(self):
-        return self.sections["CONSTRAIN"]
+    def occ_delta_lines(self):
+        """Return the OccDeltaBlock if it exists, otherwise None."""
+        return self._get_block_lines(OccDeltaBlock)
+
+    @property
+    def explicit_constraint_lines(self):
+        """Return the ConstraintBlock if it exists, otherwise None."""
+        return self._get_block_lines(ConstraintBlock)
 
     @property
     def _render_name(self):
@@ -224,6 +235,14 @@ class SearchBlock(DisplacementsSegmentABC):
                 f"Empty search block: '{self.label}'."
             )
 
+        # check that there is at most one block of each type
+        for block_type in self.SUBSEGMENTS:
+            blocks = [child for child in self.children if isinstance(child, block_type)]
+            if len(blocks) > 1:
+                raise DisplacementsSyntaxError(
+                    f"Multiple {block_type.HEADER} blocks found in search "
+                    f"block: '{self.label}'."
+                )
 
 class LoopBlock(DisplacementsSegmentABC):
     """Class to hold all information for a search block in the DISPLACEMENTS file."""
