@@ -44,7 +44,7 @@ class DisplacementsFile(NodeMixin):
     """
     def __init__(self):
         self.name = self._render_name
-        self.has_been_read = False
+        self._has_been_read = False
         #self.has_been_parsed = False
         # an OFFSETS block is only allowed at the very beginning of the file
         # we check this by setting this flag to False after the first block
@@ -52,8 +52,15 @@ class DisplacementsFile(NodeMixin):
         # attributes related to iterating over the search blocks
         self.child_id = 0
 
+    def check_has_been_read(self):
+        """Check if the file has been read."""
+        if not self._has_been_read:
+            raise ValueError('File has not been read yet. Call read() first.')
+
+    @property
     def offsets(self):
         """Return the OFFSETS block if present, else None."""
+        self.check_has_been_read()
         if isinstance(self.children[0], OffsetsBlock):
             return self.children[0]
         return None
@@ -78,9 +85,9 @@ class DisplacementsFile(NodeMixin):
         OffsetsNotAtBeginningError
             If a OFFSETS block is found to not be at the beginning of the file.
         """
-        if self.has_been_read:
+        if self._has_been_read:
             raise ValueError('read() has already been called.')
-        self.has_been_read = True
+        self._has_been_read = True
 
         with DisplacementsReader(filename) as reader:
             while True:
@@ -159,8 +166,7 @@ class DisplacementsFile(NodeMixin):
         StopIteration
             If there are no more search blocks to process.
         """
-        if not self.has_been_read:
-            raise ValueError('File has not been read yet. Call read() first.')
+        self.check_has_been_read()
 
         if self.child_id == 0 and isinstance(self.children[0], OffsetsBlock):
             # if the first child is an OFFSETS block, ignore it
