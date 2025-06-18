@@ -6,7 +6,8 @@ __created__ = "2024-10-04"
 __license__ = "GPLv3+"
 
 
-from anytree import Node
+from anytree import Node, RenderTree
+from anytree.render import ContStyle
 
 from .errors import DisplacementsSyntaxError
 from .reader import DisplacementsReader
