@@ -587,7 +587,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Connect signals to appropriate slots."""
         # CONTROLS
         self._ctrls['measure'].clicked.connect(
-            self._on_start_measurement_pressed
+            self._on_new_measurement_pressed
             )
         self._ctrls['set_energy'].clicked.connect(self._on_set_energy)
 
@@ -929,7 +929,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Set energy on primary controller."""
                                                                                 # TODO: implement
 
-    def _on_start_measurement_pressed(self):
+    def _on_new_measurement_pressed(self):
         """Prepare to begin a measurement."""
         if self.measurement:
             self._on_measurement_finished()                                     # TODO: necessary?
