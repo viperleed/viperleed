@@ -30,7 +30,7 @@ class DisplacementsFile(NodeMixin):
         # an OFFSETS block is only allowed at the very beginning of the file
         # we check this by setting this flag to False after the first block
 
-    def offsets_block(self):
+    def offsets(self):
         """Return the OFFSETS block if present, else None."""
         if isinstance(self.children[0], OffsetsBlock):
             return self.children[0]
