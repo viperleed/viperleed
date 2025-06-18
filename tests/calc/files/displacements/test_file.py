@@ -15,9 +15,9 @@ def test_read_from_file(displacements_file_path, subtests):
     """Test reading a file and checking its validity."""
 
     df = DisplacementsFile()
-    assert df.has_been_read is False
+    assert df._has_been_read is False
     df.read(displacements_file_path)
-    assert df.has_been_read is True
+    assert df._has_been_read is True
 
     with subtests.test("read() called again"):
         with pytest.raises(ValueError):
