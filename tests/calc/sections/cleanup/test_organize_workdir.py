@@ -234,9 +234,8 @@ class TestCopyFilesAndDirectories:
         assert copy_dir.call_count == len(dirs)
         log_msg_file = 'Error moving test_target file {}'
         log_msg_dir = 'Error moving test_target directory {}'
-        log = caplog.text
-        assert all(log_msg_file.format(f.name) in log for f in files)
-        assert all(log_msg_dir.format(d.name) in log for d in dirs)
+        assert all(log_msg_file.format(f.name) in caplog.text for f in files)
+        assert all(log_msg_dir.format(d.name) in caplog.text for d in dirs)
         assert not any(result)
 
     def test_copy_files(self, run, workdir):
