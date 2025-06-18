@@ -482,7 +482,7 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         layout = qtw.QFormLayout()
         duration_label = qtw.QLabel('Step duration:')
         step_num_label = qtw.QLabel('Nr. of steps:')
-        duration_info = ('<nobr>How long to wait (ms) till </nobr>'
+        duration_info = ('<nobr>How long to wait until </nobr>'
                          'the next intermediate step.')
         step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
                          f'Cannot be more than {MAX_NUM_STEPS}.')
@@ -537,9 +537,9 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         Parameters
         ----------
         profile : Sequence of int
-            A tuple or list of int values. Even-numbered values will be
-            set as a fraction of the step height, odd-numbered values
-            are the delays in milliseconds.
+            Items at even indices will be set as a fraction
+            of the step height, items at odd indices are the
+            delays in milliseconds.
 
         Returns
         -------
@@ -565,7 +565,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
             profile.append(item.itemAt(1).widget().value())
         self.profile = tuple(profile)
         if not self.profile or not any(self.profile):
-            self.profile = ('abrupt',)
+            self.profile = AbruptEnergyStepEditor().profile
 
     @qtc.pyqtSlot()
     def _add_step(self, fraction=None, duration=None):
@@ -615,7 +615,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
                 'automatically with the settle time.')
         layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
         layout.addWidget(qtw.QLabel('Duration'))
-        info = ('<nobr>How long to wait (ms) till </nobr>'
+        info = ('<nobr>How long to wait until </nobr>'
                 'the next intermediate step.')
         layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
         return layout
