@@ -10,7 +10,7 @@ import logging
 from anytree import NodeMixin, RenderTree
 from anytree.render import ContStyle
 
-from .errors import DisplacementsSyntaxError
+from .errors import DisplacementsSyntaxError, OffsetsNotAtBeginningError
 from .reader import DisplacementsReader
 from .segments import OffsetsBlock, SearchBlock, LoopBlock
 
@@ -65,9 +65,31 @@ class DisplacementsFile(NodeMixin):
                 raise DisplacementsSyntaxError(
                     f'Unable to parse line: {header_line!r}.')
 
+        self._validate()
+        logger.info('DISPLACEMENTS file read successfully using new parser.')
+
+    def _validate(self):
+        """Validate the file structure."""
         if not self.children:
-            raise DisplacementsSyntaxError(
-                'The file does not contain any valid segments.')
+            raise DisplacementsSyntaxError('The file is empty.')
+
+        # check if there is more than one OFFSETS block
+        if len(list(block for block in self.descendants
+                    if isinstance(block, OffsetsBlock))) > 1:
+            raise OffsetsNotAtBeginningError(
+                "There can only be one OFFSETS block at the beginning of the file."
+            )
+
+        # Check if the first segment is an OFFSETS block
+        if any(isinstance(child, OffsetsBlock) for child in self.children):
+            if not isinstance(self.children[0], OffsetsBlock):
+                raise OffsetsNotAtBeginningError(
+                    "The OFFSETS block must be at the beginning of the file."
+                )
+
+        # Validate each segment
+        for child in self.children:
+            child._validate_segment()
 
     @property
     def _render_name(self):
