@@ -23,6 +23,25 @@ TOP_LEVEL_SEGMENTS = (
 )
 
 class DisplacementsFile(NodeMixin):
+    """Class representing the DISPLACEMENTS file.
+
+        This class is responsible for reading and parsing the DISPLACEMENTS file,
+        validating its structure, and providing an interface to access the parsed
+        segments.
+        Use the `read` method to read the file and parse its content.
+        After reading, you can access the next search block using the `next`
+        method, which will return the next search block or raise StopIteration if
+        there are no more blocks to process.
+
+
+        Note
+        ----
+        Since loop blocks need to check convergence criteria, the next() method
+        requires the current R-factor to be passed as an argument. This means that
+        this class cannot be used as a standard Python iterator. Instead, it
+        provides a `next` method that takes the current R-factor as an argument
+        and returns the next search block.
+    """
     def __init__(self):
         self.name = self._render_name
         self.has_been_read = False
@@ -40,7 +59,25 @@ class DisplacementsFile(NodeMixin):
         return None
 
     def read(self, filename):
-        """Read the file using the DisplacementsReader."""
+        """Read the file using the DisplacementsReader.
+        
+        This method reads the DISPLACEMENTS file and parses its content into
+        structured data using the DisplacementsReader.
+        
+        Parameters
+        ----------
+        filename : path-like
+            The path to the DISPLACEMENTS file to be read.
+        
+        Raises
+        ------
+        ValueError
+            If the file has already been read.
+        DisplacementsSyntaxError
+            If the file cannot be parsed or has an invalid structure.
+        OffsetsNotAtBeginningError
+            If a OFFSETS block is found to not be at the beginning of the file.
+        """
         if self.has_been_read:
             raise ValueError('read() has already been called.')
         self.has_been_read = True
@@ -103,7 +140,25 @@ class DisplacementsFile(NodeMixin):
 
 
     def next(self, current_rfac, r_fac_eps=1e-4):
-        """Return the next search to be executed or raise StopIteration."""
+        """Return the next search to be executed or raise StopIteration.
+
+        Parameters
+        ----------
+        current_rfac : float
+            The current R-factor value to check convergence criteria.
+        r_fac_eps : float, optional
+            The tolerance for the R-factor convergence check (default is 1e-4).
+
+        Returns
+        -------
+        SearchBlock
+            The next search block to be executed if there is one available.
+
+        Raises
+        ------
+        StopIteration
+            If there are no more search blocks to process.
+        """
         if not self.has_been_read:
             raise ValueError('File has not been read yet. Call read() first.')
 
