@@ -208,22 +208,24 @@ class SearchBlock(DisplacementsSegmentABC):
         return str(self._header)
 
 
+class LoopBlock(DisplacementsSegmentABC):
+    """Class to hold all information for a search block in the DISPLACEMENTS file."""
 
-    def __init__(self, header_line):
-        self.header = header_line
-        self._lines = []
+    @staticmethod
+    def is_my_header_line(line):
+        """Loops are started by Loop start lines."""
+        return isinstance(line, LoopMarkerLine) and line.kind == 'start'
 
-    @abstractmethod
     def _belongs_to_me(self, line):
-        """Check if the line belongs to this container."""
+        """Loop end lines belong to this block."""
+        return isinstance(line, LoopMarkerLine) and line.kind == 'end'
 
     @property
     def _render_name(self):
-        return (
-            f'{self.header}\n'
-            f'{'\n\t'.join(line.raw_line for line in self._lines)}'
-        )
+        return 'Loop Block'
 
+# assign the subsegments for LoopBlock
+LoopBlock.SUBSEGMENTS = (SearchBlock, LoopBlock)
 
 class OffsetsBlock(LineContainer):
     """Base class for blocks that contain offsets lines."""
