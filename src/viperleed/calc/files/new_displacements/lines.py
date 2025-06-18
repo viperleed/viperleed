@@ -296,12 +296,7 @@ class GeoDeltaLine(ParsedLine):
         # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if not targets_str or not dir_str:
-            msg = (
-                f'Invalid GEO_DELTA line format: "{self._lhs}". '
-                'Expected format: "<targets> [, <target>] <direction> = '
-                '<range>".'
-            )
-            raise DisplacementsSyntaxError(msg)
+            raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         # parse the into targets and direction
         self.targets = self._parse_targets(targets_str)
