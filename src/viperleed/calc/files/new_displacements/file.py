@@ -30,6 +30,9 @@ class DisplacementsFile(NodeMixin):
         # an OFFSETS block is only allowed at the very beginning of the file
         # we check this by setting this flag to False after the first block
 
+        # attributes related to iterating over the search blocks
+        self.child_id = 0
+
     def offsets(self):
         """Return the OFFSETS block if present, else None."""
         if isinstance(self.children[0], OffsetsBlock):
@@ -97,3 +100,31 @@ class DisplacementsFile(NodeMixin):
 
     def __str__(self):
         return str(RenderTree(self, style=ContStyle()).by_attr("_render_name"))
+
+
+    def next(self, current_rfac, r_fac_eps=1e-4):
+        """Return the next search to be executed or raise StopIteration."""
+        if not self.has_been_read:
+            raise ValueError('File has not been read yet. Call read() first.')
+
+        if self.child_id == 0 and isinstance(self.children[0], OffsetsBlock):
+            # if the first child is an OFFSETS block, ignore it
+            self.child_id += 1
+
+        if self.child_id >= len(self.children):
+            raise StopIteration
+
+        # if the current child is a loop block, handle it
+        if isinstance(self.children[self.child_id], LoopBlock):
+            # call the loop block's next method to get the next search block
+            try:
+                return self.children[self.child_id].next(current_rfac)
+            except StopIteration:
+                # if the loop block is exhausted, move to the next child
+                self.child_id += 1
+                return self.next(current_rfac, r_fac_eps=r_fac_eps)
+
+        # otherwise, return the next search block
+        search_block = self.children[self.child_id]
+        self.child_id += 1
+        return search_block
