@@ -20,9 +20,9 @@ from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.abc import SettingsInfo
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
-from viperleed.gui.measure.classes.settings import interpolate_config_path
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
+from viperleed.gui.measure.classes.settings import interpolate_config_path
 from viperleed.gui.measure.hardwarebase import class_from_name
 from viperleed.gui.measure.hardwarebase import disconnected_slot
 from viperleed.gui.measure.hardwarebase import emit_error
@@ -33,17 +33,17 @@ from viperleed.gui.measure.widgets.collapsibleviews import (
     CollapsibleDeviceView,
     )
 from viperleed.gui.measure.widgets.pathselector import PathSelector
-from viperleed.gui.widgets.collapsible import CollapsibleList
-from viperleed.gui.widgets.collapsible import _PIXEL_SPACING
 from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 from viperleed.gui.widgets.buttons import QUncheckableButtonGroup
+from viperleed.gui.widgets.collapsible import CollapsibleList
+from viperleed.gui.widgets.collapsible import _PIXEL_SPACING
 from viperleed.gui.widgets.lib import remove_spacing_and_margins
 
 
 class CollapsibleDeviceList(CollapsibleList):
     """A widget containing an arbitrary number of CollapsibleDeviceViews."""
 
-    _top_labels = ('Device', 'Use',)
+    _top_labels = ('Device', 'Use')
     _device_label = 'device'
     _view_type = CollapsibleDeviceView
 
@@ -61,7 +61,7 @@ class CollapsibleDeviceList(CollapsibleList):
 
         Parameters
         ----------
-        parent : QObject
+        parent : QObject, optional
             The parent QObject of this widget.
 
         Returns
@@ -261,7 +261,7 @@ class CollapsibleDeviceList(CollapsibleList):
 class CollapsibleCameraList(CollapsibleDeviceList):
     """A CollapsibleList for cameras."""
 
-    _top_labels = ('Cameras', 'Use',)
+    _top_labels = ('Cameras', 'Use')
     _device_label = 'camera'
     _view_type = CollapsibleCameraView
 
