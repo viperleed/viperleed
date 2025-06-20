@@ -17,6 +17,7 @@ def test_manifest(manifest):
     """Check the return value when a ManifestFile object is given."""
     rpars = get(manifest)
     assert rpars.manifest is manifest
+    assert rpars.TENSOR_INDEX is not None
     # pylint: disable-next=protected-access               # OK in tests
     assert rpars.timer._stopped
 

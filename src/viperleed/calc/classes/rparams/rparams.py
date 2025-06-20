@@ -123,6 +123,7 @@ class Rparams:
         self.LMAX = self.get_default('LMAX')
         self.LOG_LEVEL = DEFAULTS['LOG_LEVEL'][NO_VALUE]
         self.LOG_SEARCH = True
+        self.MAX_TL_DISPLACEMENT = self.get_default('MAX_TL_DISPLACEMENT')
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
         # OPTIMIZE: settings for fd optimization
@@ -197,7 +198,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT)
+        self.manifest = ManifestFile()
         self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
@@ -211,6 +212,7 @@ class Rparams:
         self.ivbeams_sorted = False
         self.last_R = None
         self.stored_R = {'refcalc': None, 'superpos': None}
+        self.last_refcalc_time = None    # duration of last refcalc in seconds
         self.checklist = []  # output strings of things to check at program end
 
         # domains
