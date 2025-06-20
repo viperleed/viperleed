@@ -31,7 +31,7 @@ class CollapsibleList(qtw.QScrollArea):
 
         Parameters
         ----------
-        parent : QObject
+        parent : QObject, optional
             The parent QObject of this widget.
 
         Returns
@@ -69,7 +69,7 @@ class CollapsibleList(qtw.QScrollArea):
         self._make_scroll_area()
 
     def insert_view(self, view):
-        """Insert new view at the bottom of the list.
+        """Append a new `view` at the bottom of the list.
 
         Parameters
         ----------
@@ -133,7 +133,7 @@ class CollapsibleView(qtw.QWidget):
     def __init__(self, parent=None):
         """Initialise widget.
 
-        parent : QObject
+        parent : QObject, optional
             The parent QObject of this widget.
 
         Returns
@@ -152,7 +152,7 @@ class CollapsibleView(qtw.QWidget):
         return self._button
 
     def add_collapsible_item(self, item):
-        """Add widget to the widgets in the inner collapsible layout.
+        """Add `item` to the widgets in the inner collapsible layout.
 
         Parameters
         ----------
@@ -243,8 +243,8 @@ class CollapsibleView(qtw.QWidget):
         ----------
         widget : QWidget
             The widget in the outer top layout whose geometry should be
-            changed. (One of the widgets that have been added via
-            add_top_widget.)
+            changed. It must be one of the widgets that have been added via
+            add_top_widget.
         width : int or None, optional
             The pixel width the widget should be displayed with.
             Default is None, which means the widget itself
