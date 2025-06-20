@@ -82,6 +82,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
             The suffix of the SpinBox. Default is '', no suffix.
         **kwargs : object, optional
             Keyword arguments passed on to the parent class.
+
         Returns
         -------
         None.
