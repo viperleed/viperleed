@@ -56,6 +56,11 @@ class CollapsibleList(qtw.QScrollArea):
         """Return views."""
         return self._views
 
+    @property
+    def enabled_views(self):
+        """Return enabled."""
+        return (view for view in self.views if view.is_enabled())
+
     def clear(self):
         """Clear all views in the list and delete references to them."""
         self._views = {}

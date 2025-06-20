@@ -108,27 +108,23 @@ class CollapsibleDeviceList(CollapsibleList):
     def are_settings_ok(self):
         """Return whether the device selection is acceptable.
 
-        If a selected device is either a dummy (disconnected) device,
-        or does not have any settings, the return value must be False
-        because a measurement with such a device will fail. If
-        requires_device is False after the first check, then the return
-        value will be True because the settings do not have to contain
-        a selected device. If requires_device is True, then the return
-        value will only be True if at least one device has been
-        selected.
-
         Returns
         -------
         settings_ok : bool
             Whether the settings selected in the CollapsibleDeviceList
-            are acceptable or not.
+            are acceptable or not. If a selected device is either a
+            dummy (disconnected) device, or does not have any settings,
+            the return value must be False because a measurement with
+            such a device will fail. If requires_device is False after
+            the first check, then the return value will be True because
+            the settings do not have to contain a selected device. If
+            requires_device is True, then the return value will only be
+            True if at least one device has been selected.
         reason : str
             A descriptive string elaborating why the settings
             are not acceptable.
         """
-        for view in self.views:
-            if not view.is_enabled():
-                continue
+        for view in self.enabled_views:
             if not view.has_hardware_interface:
                 # The selected device is not connected.
                 reason = (f'At least one of the selected {self._device_label}s'
@@ -141,8 +137,7 @@ class CollapsibleDeviceList(CollapsibleList):
                 return False, reason
         # Check if any device has been selected, if a selected device
         # is required.
-        if not self.requires_device or any(view.is_enabled()
-                                           for view in self.views):
+        if not self.requires_device or any(self.enabled_views):
             return True, ''
         return False , f'At least one {self._device_label} must be selected.'
 
@@ -155,9 +150,8 @@ class CollapsibleDeviceList(CollapsibleList):
 
     def store_settings(self):
         """Store the settings of the selected devices."""
-        for view in self.views:
-            if self._checkbox(view).isChecked():
-                view.store_settings()
+        for view in self.enabled_views:
+            view.store_settings()
 
     def _checkbox(self, view):
         """Return the QCheckBox of a specific view."""
@@ -286,8 +280,7 @@ class CollapsibleCameraList(CollapsibleDeviceList):
     def get_camera_settings(self):
         """Return a tuple of camera settings."""
         settings_files = [self._get_relative_path(view.settings_file)
-                          for view in self.views
-                          if self._checkbox(view).isChecked()]
+                          for view in self.enabled_views]
         return tuple(settings_files)
 
     def set_cameras_from_settings(self, meas_settings):
@@ -405,7 +398,7 @@ class CollapsibleCameraList(CollapsibleDeviceList):
 class CollapsibleControllerList(CollapsibleDeviceList):
     """A CollapsibleList for controllers."""
 
-    _top_labels = ('Controllers', 'Use', 'Primary',)
+    _top_labels = ('Controllers', 'Use', 'Sets energy')
     _device_label = 'controller'
     _view_type = CollapsibleControllerView
 
@@ -432,8 +425,8 @@ class CollapsibleControllerList(CollapsibleDeviceList):
 
     def get_primary_settings(self):
         """Return a tuple of primary controller settings."""
-        for view, widgets in self.views.items():
-            if not widgets[0].isChecked() or not widgets[1].isChecked():
+        for view in self.enabled_views:
+            if not self._radiobutton(view).isChecked():
                 continue
             rel_path = self._get_relative_path(view.settings_file)
             return (rel_path, view.selected_quantities)
@@ -442,8 +435,8 @@ class CollapsibleControllerList(CollapsibleDeviceList):
     def get_secondary_settings(self):
         """Return a tuple of secondary controller settings."""
         settings_files = []
-        for view, widgets in self.views.items():
-            if not widgets[0].isChecked() or widgets[1].isChecked():
+        for view in self.enabled_views:
+            if self._radiobutton(view).isChecked():
                 continue
             settings_files.append((self._get_relative_path(view.settings_file),
                                    view.selected_quantities))
