@@ -428,8 +428,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         for view in self.enabled_views:
             if not self._radiobutton(view).isChecked():
                 continue
-            rel_path = self._get_relative_path(view.settings_file)
-            return (rel_path, view.selected_quantities)
+            return self._get_selected_controller_settings(view)
         return ()
 
     def get_secondary_settings(self):
@@ -438,8 +437,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         for view in self.enabled_views:
             if self._radiobutton(view).isChecked():
                 continue
-            settings_files.append((self._get_relative_path(view.settings_file),
-                                   view.selected_quantities))
+            settings_files.append(self._get_selected_controller_settings(view))
         return tuple(settings_files)
 
     def set_controllers_from_settings(self, meas_settings):
@@ -477,21 +475,19 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         None.
         """
         super()._add_top_widgets_to_view(view)
-        self._checkbox(view).stateChanged.connect(view.set_expanded_state)
-        self._checkbox(view).stateChanged.connect(self._set_a_primary)
-        self._checkbox(view).stateChanged.connect(
-            self._emit_and_update_settings
-            )
-        view.set_top_widget_geometry(
-            self._checkbox(view), width=self._widths[self._top_labels[1]]
-            )
-        self._radio_buttons.addButton(self._radiobutton(view))
-        self._radiobutton(view).toggled.connect(view.set_primary)
-        view.set_top_widget_geometry(
-            self._radiobutton(view), width=self._widths[self._top_labels[2]]
-            )
-        self._radiobutton(view).setEnabled(False)
-        self._radiobutton(view).toggled.connect(self._emit_and_update_settings)
+        selected = self._checkbox(view)
+        is_primary = self._radiobutton(view)
+        selected.stateChanged.connect(view.set_expanded_state)
+        selected.stateChanged.connect(self._set_a_primary)
+        selected.stateChanged.connect(self._emit_and_update_settings)
+        view.set_top_widget_geometry(selected,
+                                     width=self._widths[self._top_labels[1]])
+        self._radio_buttons.addButton(is_primary)
+        is_primary.toggled.connect(view.set_primary)
+        view.set_top_widget_geometry(is_primary,
+                                     width=self._widths[self._top_labels[2]])
+        is_primary.setEnabled(False)
+        is_primary.toggled.connect(self._emit_and_update_settings)
 
     @qtc.pyqtSlot()
     def _detect_and_add_devices(self):
@@ -507,6 +503,15 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         self._set_primary_from_settings()
         self._set_secondary_from_settings()
         self.settings_ok_changed.emit()
+
+    def _get_selected_controller_settings(self, view):
+        """Return the settings for the selected controller."""
+        rel_path = self._get_relative_path(view.settings_file)
+        return (rel_path, view.selected_quantities)
+
+    def _radiobutton(self, view):
+        """Return the QRadioButton of a specific view."""
+        return self.views[view][1]
 
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
@@ -550,10 +555,6 @@ class CollapsibleControllerList(CollapsibleDeviceList):
                 if radio.isEnabled():
                     radio.setChecked(True)
                     break
-
-    def _radiobutton(self, view):
-        """Return the QRadioButton of a specific view."""
-        return self.views[view][1]
 
     def _set_controller_settings(self, controller_settings):
         """Set settings of controller.
