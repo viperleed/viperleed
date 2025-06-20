@@ -47,11 +47,11 @@ time_utils
     Timers for code execution monitoring.
 """
 # NB: woods_notation is undocumented on purpose, as it will be
-# replaced with functionality in guilib.
+# replaced with functionality in gui.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-03-21'
 __license__ = 'GPLv3+'

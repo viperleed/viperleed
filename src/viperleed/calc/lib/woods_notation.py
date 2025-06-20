@@ -106,7 +106,7 @@ def writeWoodsNotation(ucell):
     """Takes a unit cell (as a (2x2) matrix) and attempts to write it in Woods
     Notation. Returns empty string if no Woods notation is found."""
     # !!! VERY INCOMPLETE, should at least detect simple c(a x b) cases
-    # !!! Same functionality exists in guilib; replace at some point
+    # !!! Same functionality exists in gui; replace at some point
     if ucell[1, 0] == 0 and ucell[0, 1] == 0:
         return("(" + str(int(ucell[0, 0])) + "x" + str(int(ucell[1, 1])) + ")")
     else:

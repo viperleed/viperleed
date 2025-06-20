@@ -160,6 +160,10 @@ be treated as a 'name' for the block (in the above example ``z`` and ``x``).
 The name will be referenced in the log files, but does not have any influence
 on the behavior of the program.
 
+.. note:: See :ref:`max_tl_displacement` for options to automatically insert
+    reference calculations between searches if displacements become unreasonably
+    large.
+
 
 In-plane optimization shorthand
 -------------------------------
@@ -260,3 +264,9 @@ optimization to get optimal |x| and |y| for that |z|, then start again with
 
    </loop>
    </loop>
+
+.. note:: 
+    If looped searches are interrupted by :ref:`max_tl_displacement` for
+    a reference calculation and then continued, the previous |R factor| to
+    compare to will be discarded, as very different values may be obtained. Each
+    looped block will therefore again be evaluated at least twice.

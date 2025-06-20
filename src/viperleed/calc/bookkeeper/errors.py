@@ -15,6 +15,10 @@ class BookkeeperError(Exception):
     """Base class of all bookkeeper-related errors."""
 
 
+class BookkeeperUnexpectedError(BookkeeperError):
+    """Something went wrong. Probably a bug in bookkeeper."""
+
+
 class FileOperationFailedError(BookkeeperError):
     """Something went wrong when moving/copying files."""
 
@@ -23,6 +27,10 @@ class FileOperationFailedError(BookkeeperError):
         self.failures = files_and_info
         msgs = (f'{file}: {reason}' for file, reason in self.failures.items())
         super().__init__('\n'.join(msgs))
+
+
+class NotAnInteractiveShellError(BookkeeperError):
+    """Tried to prompt the user in a non-interactive shell."""
 
 
 class _FileNotOlderError(BookkeeperError):

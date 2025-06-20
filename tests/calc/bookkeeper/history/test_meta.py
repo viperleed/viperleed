@@ -16,11 +16,12 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 from pytest_cases import parametrize_with_cases
 
+from viperleed.calc.bookkeeper.history.errors import MetadataError
 from viperleed.calc.bookkeeper.history.meta import BookkeeperMetaFile
-from viperleed.calc.bookkeeper.history.meta import _read_chunked
 from viperleed.calc.bookkeeper.history.meta import _HEADER
 from viperleed.calc.bookkeeper.history.meta import _METADATA_NAME
 from viperleed.calc.bookkeeper.history.meta import _SECTIONS
+from viperleed.calc.bookkeeper.history.meta import _read_chunked
 
 from ....helpers import filesystem_from_dict
 
@@ -113,6 +114,24 @@ class TestBookkeeperMetaFile:
         assert isinstance(parser, ConfigParser)
         assert parser.has_section('archived')
         assert meta.parent is None
+        assert not meta.domains
+
+    _domains = {  # parser['domains'], expected result
+        'no domains': ({}, {}),
+        'subdomain': ({'main': '(\'path/to/main\', \'hash_of_main\')'},
+                      {'main': ('path/to/main', 'hash_of_main')}),
+        'main': (
+            {'domains': ('((\'one\', \'hash_1\'), (\'two\', \'hash_2\'))')},
+            {'domains': (('one', 'hash_1'), ('two', 'hash_2'))},
+            ),
+        }
+
+    @parametrize('parser_contents,expect', _domains.values(), ids=_domains)
+    def test_domains_property(self, parser_contents, expect, meta):
+        """Check the value of the domains property."""
+        # pylint: disable-next=protected-access           # OK in tests
+        meta._parser['domains'].update(parser_contents)
+        assert meta.domains == expect
 
     def test_file_property(self, meta, mock_path):
         """Test file property."""
@@ -172,8 +191,56 @@ class TestBookkeeperMetaFile:
         assert contents_before == contents_after
 
 
+class TestBookkeeperMetaFileDomains:
+    """Tests for marking a metadata file with domain information."""
+
+    _domains = {
+        'no domain': ((), {}),
+        'with domains': (
+            (('path_1', 'hash_1'), ('path_2', 'hash_2')),
+            {'domains': (('path_1', 'hash_1'), ('path_2', 'hash_2'))}
+            ),
+        }
+    _subdomain = {
+        'no main': ((), {}),
+        'with main': (('path/to/main', 'hash_of_main'),
+                      {'main': ('path/to/main', 'hash_of_main')}),
+        }
+
+    @parametrize('domains,expect', _domains.values(), ids=_domains)
+    def test_mark_main(self, domains, expect, meta):
+        """Check the correct outcome of marking the main folder."""
+        meta.mark_as_domains_main(domains)
+        assert meta.domains == expect
+
+    @parametrize('main,expect', _subdomain.values(), ids=_subdomain)
+    def test_mark_submain(self, main, expect, meta):
+        """Check the correct outcome of marking a subdomain."""
+        meta.mark_as_domain(main)
+        assert meta.domains == expect
+
+
 class TestBookkeeperMetaFileRaises:
     """Tests for complaints raised by BookkeeperMetaFile."""
+
+    _domains = {
+        'main and domains': {
+            'main': '(\'p\', \'h\')',
+            'domains': '((\'p_1\', \'h_1\'), (\'p_2\', \'h_2\'))'
+            },
+        'main misses end parenthesis': {'main': '(\'p\', \'h\''},
+        'domain misses end parenthesis': {
+            'domains': '((\'p_1\', \'h_1\', (\'p_2\', \'h_2\'))'
+            },
+        }
+
+    @parametrize(parser_contents=_domains.values(), ids=_domains)
+    def test_domains_raises(self, parser_contents, meta):
+        """Check expected errors for a corrupt 'domains' section."""
+        # pylint: disable-next=protected-access           # OK in tests
+        meta._parser['domains'].update(parser_contents)
+        with pytest.raises(MetadataError):
+            _ = meta.domains
 
     def test_hash_property_before_computation(self, meta):
         """Test accessing hash_ before compute_hash is called."""

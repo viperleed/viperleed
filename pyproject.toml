@@ -14,6 +14,10 @@ description = 'Tools for quantitative low-energy electron diffraction'
 requires-python = '>=3.7'
 dynamic = ['version']
 license = {file = 'LICENSE.md'}
+# TODO: the next lines will be needed in 2026 when setuptools will
+# raise exceptions instead of issuing warnings. See also #364.
+# license = 'GPL-3.0-or-later'
+# license-files = ['LICENSE.md']
 readme = 'README.md'
 dependencies = [
     'fortranformat',
@@ -48,7 +52,6 @@ maintainers = [
     ]
 classifiers = [
     'Intended Audience :: Science/Research',
-    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
     'Natural Language :: English',
     'Operating System :: MacOS',
     'Operating System :: Microsoft :: Windows',
@@ -83,7 +86,7 @@ classifiers = [
     [project.optional-dependencies]
     GUI = [
         'PyQt5',
-        'mplcairo; python_version<"3.11"',  # See mplcairo #51
+        'mplcairo; python_version<"3.14"',  # v0.6 supports up to 3.13
         ]
     hardware = [
         'requests',
@@ -107,12 +110,16 @@ classifiers = [
     viperleed = ['*.mplstyle']
     'viperleed.calc.lib' = ['*.dat']
     'viperleed.extensions' = ['**/*.f*', 'Make*', 'make*']
-    'viperleed.guilib.icons' = ['*.png', '*.svg']
-    'viperleed.guilib.fonts' = [
+    'viperleed.gui.icons' = ['*.png', '*.svg']
+    'viperleed.gui.fonts' = [
         'DejaVuSans.ttf',
         'cmunrm.otf',
         'LICENSE*',
         'FontLog*',
+        ]
+    'viperleed.gui.leedsim' = [
+        'input examples/*.tlm',
+        'exported/*.csv',
         ]
 
 

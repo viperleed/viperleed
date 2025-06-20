@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
+from collections import defaultdict
 from contextlib import nullcontext
 from datetime import datetime
 from functools import partial
@@ -22,6 +23,7 @@ import shutil
 from viperleed.calc.bookkeeper.constants import EDITED_SUFFIX
 from viperleed.calc.bookkeeper.constants import ORI_SUFFIX
 from viperleed.calc.bookkeeper.constants import STATE_FILES
+from viperleed.calc.bookkeeper.domain_finder import DomainFinder
 from viperleed.calc.bookkeeper.errors import FileOperationFailedError
 from viperleed.calc.bookkeeper.history.explorer import HistoryExplorer
 from viperleed.calc.bookkeeper.history.workhistory import WorkhistoryHandler
@@ -35,8 +37,10 @@ from viperleed.calc.constants import DEFAULT_OUT
 from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.lib.log_utils import logging_silent
+from viperleed.calc.lib.string_utils import harvard_commas
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
 
@@ -52,11 +56,12 @@ class RootExplorer:
     def __init__(self, path, bookkeeper):
         """Initialize this explorer at `path` for a `bookkeeper`."""
         self._path = Path(path).resolve()
+        self.has_domains = False       # Is this the root of a DOMAINS?
         self._logs = None              # LogFiles, set in collect_info
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
         self.history = HistoryExplorer(self.path)
-        self.workhistory = WorkhistoryHandler(root=self.path,
+        self.workhistory = WorkhistoryHandler(root=self,
                                               bookkeeper=bookkeeper)
 
     # Simple read-only properties
@@ -105,6 +110,52 @@ class RootExplorer:
             self.tensors.collect()
             self._collect_files_to_archive()
             self.history.collect_subfolders()
+            # TODO: consider whether we can partly undo the changes
+            # that fixed #344 when we fix #215. Then we would likely
+            # be reading the PARAMETERS file and know whether we're
+            # running in a DOMAINS tree without the need of having
+            # Bookkeeper let us know by setting .has_domains.
+            # self._find_potential_domain_subfolders()
+
+    def complain_about_edited_files(self):
+        """Log warnings if any _edited file is found in root."""
+        edited_files = tuple(f'{self._relative_path(f)}'
+                             for f in self.path.glob(f'*{EDITED_SUFFIX}*'))
+        if not edited_files:
+            return
+        edited = ', '.join(edited_files)
+        inputs = ', '.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
+        LOGGER.warning(f'Found user-edited files {edited}. Make sure to port '
+                       'any desired changes to the corresponding input files '
+                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
+                       'files.')
+
+    def ensure_has_unlabled_inputs(self):
+        """Make sure there is always unlabeled versions of any _ori file.
+
+        The unlabeled versions are created as copies of the _ori-suffixed
+        ones (unless there is also an _edited version).
+
+        Returns
+        -------
+        any_missing : bool
+            Whether any unlabeled file was added.
+        """
+        any_missing = False
+        for ori_file in self.path.glob(f'*{ORI_SUFFIX}'):
+            unlabeled = ori_file.name.replace(ORI_SUFFIX, '')
+            unlabeled_file = ori_file.with_name(unlabeled)
+            edited_file = ori_file.with_name(f'{unlabeled}{EDITED_SUFFIX}')
+            if edited_file.is_file() or unlabeled_file.is_file():
+                continue
+            any_missing = True
+            try:
+                shutil.copy2(ori_file, unlabeled_file)
+            except OSError as exc:
+                LOGGER.error(f'Could not create file '
+                             f'{self._relative_path(unlabeled_file)} '
+                             f'from its *{ORI_SUFFIX} version: {exc}')
+        return any_missing
 
     def infer_run_info(self):
         """Return a dictionary of information read from the newest calc log."""
@@ -161,14 +212,16 @@ class RootExplorer:
             if file_contents_identical(cwd_file, ori_path / filename):
                 continue
             edited = filename + EDITED_SUFFIX
-            LOGGER.warning(f'File {filename} was modified after calc '
-                           f'started. Renaming it to {edited}.')
+            LOGGER.warning(f'File {self._relative_path(cwd_file)} was modified'
+                           f' after calc started. Renaming it to {edited}.')
             try:
                 cwd_file.replace(self.path / edited)
             except OSError:
-                LOGGER.error(f'Failed to rename {filename} to {edited}. '
-                             'It may be overwritten by the corresponding '
-                             f'file in {DEFAULT_OUT}.')
+                LOGGER.error(
+                    f'Failed to rename {self._relative_path(cwd_file)} to '
+                    f'{edited}. It may be overwritten by the corresponding '
+                    f'file in {DEFAULT_OUT}.'
+                    )
 
     def prepare_for_next_calc_run(self):
         """Rename inputs to _ori, pull new ones from OUT or original_inputs."""
@@ -186,7 +239,7 @@ class RootExplorer:
         except FileOperationFailedError as exc:
             errors.append(exc)
 
-        self._complain_about_edited_files()
+        self.complain_about_edited_files()
         if errors:
             raise OSError('\n'.join(str(e) for e in errors))
 
@@ -198,19 +251,24 @@ class RootExplorer:
         try:
             notes = notes_path.read_text(encoding='utf-8')
         except OSError:
-            LOGGER.error(f'Error: Failed to read {notes_path.name} file.',
-                         exc_info=True)
+            LOGGER.error(
+                f'Failed to read {self._relative_path(notes_path)} file.',
+                exc_info=True,
+                )
             return ''
         try:
             notes_path.write_text('', encoding='utf-8')
         except OSError:
-            LOGGER.error(f'Failed to clear the {notes_path.name} '
-                         'file after reading.', exc_info=True)
+            LOGGER.error(
+                f'Failed to clear file {self._relative_path(notes_path)} '
+                'after reading.',
+                exc_info=True,
+                )
         return notes
 
-    def remove_tensors_and_deltas(self):
-        """Delete relevant Tensors and Deltas archives."""
-        self.tensors.discard(self.history)
+    def remove_tensors_and_deltas(self, history_folders):
+        """Delete Tensors and Deltas archives related to `history_folders`."""
+        self.tensors.discard(self.history, history_folders)
 
     def revert_to_previous_calc_run(self):
         """Remove files generated by the previous calc run in self.path.
@@ -252,7 +310,7 @@ class RootExplorer:
         deleted_logs = self.logs.discard()
         deleted_out_supp = self._remove_out_and_supp()
         dealt_with_ori = deal_with_ori_files()
-        self._complain_about_edited_files()
+        self.complain_about_edited_files()
         # Let's not complain again about funny stuff. We have already
         # done so when collect_info was called the first time. Notice
         # that this must have happened, as this method relies on the
@@ -274,19 +332,6 @@ class RootExplorer:
             )
         self._files_to_archive = tuple(p for p in to_archive
                                        if p.is_file() or p.is_dir())
-
-    def _complain_about_edited_files(self):
-        """Log warnings if any _edited file is found in root."""
-        edited_files = tuple(str(f.relative_to(self.path))
-                             for f in self.path.glob(f'*{EDITED_SUFFIX}*'))
-        if not edited_files:
-            return
-        edited = ', '.join(edited_files)
-        inputs = ', '.join(f.split(EDITED_SUFFIX)[0] for f in edited_files)
-        LOGGER.warning(f'Found user-edited files {edited}. Make sure to port '
-                       'any desired changes to the corresponding input files '
-                       f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
-                       'files.')
 
     def _copy_state_files_from(self, source, *name_fmts, only_files=None):
         """Copy input files from `source` to the root directory.
@@ -318,6 +363,7 @@ class RootExplorer:
         name_fmts = name_fmts or ('{}',)
         if only_files is None:
             only_files = STATE_FILES
+        dont_complain = set(SKIP_IN_DOMAIN_MAIN if self.has_domains else ())
         for file in only_files:
             cwd_file = self.path / file
             patterns = [fmt.format(file) for fmt in name_fmts]
@@ -325,6 +371,8 @@ class RootExplorer:
             try:
                 new_input = next(f for f in new_inputs if f.is_file())
             except StopIteration:
+                if file in dont_complain:
+                    continue
                 failed[file] = [source/p for p in patterns]
                 continue
             try:
@@ -372,6 +420,11 @@ class RootExplorer:
             self._log_failures_when_copying_input_files(failed)
             raise FileOperationFailedError(failed)
 
+    def _find_potential_domain_subfolders(self):
+        """Find all subfolders of self.path that look like subdomains."""
+        finder = DomainFinder(self.workhistory.bookkeeper)
+        self.has_domains = any(finder.find_potential_domains())
+
     def _log_failures_when_copying_input_files(self, failed):
         """Emit logging errors about failures to pull input files.
 
@@ -392,8 +445,10 @@ class RootExplorer:
             if isinstance(info, Exception):
                 reason = f'raised {type(info).__name__} - {info}'
             else:  # List of paths to files that were tried
-                files = ' or '.join(str(f.relative_to(self.path))
-                                    for f in info)
+                files = harvard_commas(
+                    *(f'{self._relative_path(f)}' for f in info),
+                    sep='or',
+                    )
                 reason = f'No {files} found'
             LOGGER.error(f'    {file}: {reason}')
 
@@ -408,10 +463,17 @@ class RootExplorer:
             except FileNotFoundError:  # May have been _edited
                 continue
             except OSError as exc:
-                LOGGER.error(f'Failed to rename {file} to {file_ori}.')
+                LOGGER.error(
+                    f'Failed to rename {self._relative_path(cwd_file)} '
+                    f'to {file_ori}.'
+                    )
                 failed[file] = exc
         if failed:
             raise FileOperationFailedError(failed)
+
+    def _relative_path(self, path):
+        """Return a version of `path` relative to this root folder."""
+        return path.relative_to(self.path).as_posix()
 
     def _remove_ori_files(self):
         """Delete '_ori'-suffixed files from root."""
@@ -429,10 +491,57 @@ class RootExplorer:
             try:
                 ori_file.replace(state_file)
             except OSError:
-                LOGGER.error(f'Failed to rename {ori_file.name} '
-                             f'to {state_file.name}.')
+                LOGGER.error(
+                    f'Failed to rename {self._relative_path(ori_file)} '
+                    f'to {state_file.name}.'
+                    )
                 raise
         return any(to_replace)
+
+
+class DomainRootExplorer(RootExplorer):
+    """A RootExplorer for a domain subfolder."""
+
+    def __init__(self, path, bookkeeper, main):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        path : Pathlike
+            Path to the domain subfolder handled.
+        bookkeeper : Bookkeeper
+            A Bookkeeper instance. May be the one running in the
+            main folder, or the one running in this domain subfolder.
+        main : RootExplorer
+            The handler of the root folder of the "main" calculation,
+            i.e., the one in which calc was started during a DOMAINS
+            calculation.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(path, bookkeeper)
+        self._main = main
+
+    @property
+    def calc_timestamp(self):
+        """Return the timestamp of the main calc log file."""
+        # There usually is no calc log file in the domain subfolders,
+        # unless calc was explicitly invoked in this subfolder.
+        return super().calc_timestamp or self._main.calc_timestamp
+
+    def infer_run_info(self):
+        """Return a dictionary of information read from the newest calc log."""
+        return super().infer_run_info() or self._main.infer_run_info()
+
+    def _relative_path(self, path):
+        """Return a relative version of `path`."""
+        try:
+            return path.relative_to(self._main.path).as_posix()
+        except ValueError:
+            pass
+        return super()._relative_path(path)
 
 
 class TensorAndDeltaInfo:
@@ -451,20 +560,67 @@ class TensorAndDeltaInfo:
         """Collect Tensor/Deltas information from self.path."""
         self._most_recent = getMaxTensorIndex(home=self._root, zip_only=True)
 
-    def discard(self, history):
-        """Delete the most recent Tensor and Delta zip files."""
-        discard_files(*self.list_paths_to_discard(history))
+    def discard(self, history, history_folders):
+        """Delete Tensor and Delta zip files related to `history_folders`.
+
+        Parameters
+        ----------
+        history : HistoryExplorer
+            The handler of the history folder. Tensor/Delta files are
+            removed only if they have: (i) at most one history run left
+            for existing `history_folders`, or (ii) no run at all for
+            non-existing (i.e., typically already deleted) ones.
+        history_folders : Sequence of HistoryFolder
+            The history folders whose Tensor/Delta files may be
+            removed. Only the files with Tensor indices included
+            in `history_folders` are considered.
+
+        Returns
+        -------
+        None.
+        """
+        to_discard = self._list_tensors_deltas_to_discard(history,
+                                                          history_folders)
+        discard_files(*to_discard)
 
     def list_paths_to_discard(self, history):
         """Return a tuple of paths to Tensor/Delta files to be discarded."""
         # The tensors that may be removed are those of
         # the last run archived in the history folder
-        tensor_nums = (f.tensor_num for f in history.last_folder_and_siblings)
+        last_run = history.last_folder_and_siblings
+        return self._list_tensors_deltas_to_discard(history, last_run)
 
-        # However, we should only discard those that have only one run,
-        # otherwise we may be loosing info from previous calculations.
+    def _list_tensors_deltas_to_discard(self, history, history_folders):
+        """Return paths to Tensor/Delta files to be discarded.
+
+        Parameters
+        ----------
+        history : HistoryExplorer
+            The handler of the history folder.
+        history_folders : Sequence of HistoryFolder
+            The history folders whose Tensor/Delta files may be
+            removed. Only the files with Tensor indices included
+            in `history_folders` are considered.
+
+        Returns
+        -------
+        paths_to_discard : tuple
+            Absolute path to Tensor/Delta archives to be deleted.
+        """
+        tensors_to_folders = defaultdict(list)
+        for folder in history_folders:
+            tensors_to_folders[folder.tensor_num].append(folder)
+
+        # However, we should only discard the "new" ones, i.e., those
+        # created during the last calc execution. These will have only
+        # one run left (if the history folders have not been deleted
+        # yet) or zero (if they have been deleted already).
         max_run = history.max_run_per_tensor
-        tensor_nums = {t for t in tensor_nums if max_run[t] <= 1}
+        tensor_nums = [
+            t
+            for t, folders in tensors_to_folders.items()
+            if max_run[t] <= (1 if any(f.exists for f in folders) else 0)
+            ]
 
         tensor_fmt = f'{DEFAULT_TENSORS}/{DEFAULT_TENSORS}_{{ind:03d}}.zip'
         delta_fmt = f'{DEFAULT_DELTAS}/{DEFAULT_DELTAS}_{{ind:03d}}.zip'
