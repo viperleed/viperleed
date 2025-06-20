@@ -385,8 +385,7 @@ class CollapsibleCameraList(CollapsibleDeviceList):
 
         with disconnected_slot(self._emit_and_update_settings,
                                self._checkbox(correct_view).stateChanged,
-                               type=qtc.Qt.UniqueConnection
-                               ):
+                               type=qtc.Qt.UniqueConnection):
             correct_view.original_settings = settings.last_file
             self._checkbox(correct_view).setChecked(True)
 
@@ -566,10 +565,6 @@ class CollapsibleControllerList(CollapsibleDeviceList):
             controller and another tuple containing the quantities
             measured by the controller for this measurement.
 
-        Returns
-        -------
-        None.
-
         Emits
         -----
         error_occurred
@@ -607,8 +602,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         with disconnected_slot(self._emit_and_update_settings,
                                self._checkbox(correct_view).stateChanged,
                                self.views[correct_view][1].toggled,
-                               type=qtc.Qt.UniqueConnection
-                               ):
+                               type=qtc.Qt.UniqueConnection):
             correct_view.original_settings = settings.last_file
             self._checkbox(correct_view).setChecked(True)
             correct_view.set_quantities(quantities)
