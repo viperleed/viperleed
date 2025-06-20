@@ -1,0 +1,22 @@
+"""Package dialogs of viperleed.gui.measure.
+
+This package contains dialogs used in the measurement UI
+of the ViPErLEED graphical user interface.
+
+Modules
+-------
+badpxfinderdialog
+    Dialog for guiding users through the detection of bad-pixels
+    for cameras.
+firmwareupgradedialog
+    Dialog for uploading (a new) firmware version to Arduino boards.
+settingsdialog
+    Classes for displaying configuration of objects.
+"""
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2021-11-20'
+__license__ = 'GPLv3+'
