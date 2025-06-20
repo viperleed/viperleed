@@ -80,7 +80,8 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
             The increment of the SpinBox value. Default is 1.
         suffix : str, optional
             The suffix of the SpinBox. Default is '', no suffix.
-
+        **kwargs : object, optional
+            Keyword arguments passed on to the parent class.
         Returns
         -------
         None.
@@ -112,12 +113,12 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
 
     @property
     def soft_maximum(self):
-        """Return soft maximum."""
+        """Return the maximum value for coercing."""
         return self._soft_max
 
     @soft_maximum.setter
     def soft_maximum(self, new_maximum):
-        """Set soft maximum."""
+        """Set the maximum value for coercing."""
         if new_maximum < self.soft_minimum:
             raise ValueError('The maximum cannot be smaller than the minimum.')
         self._soft_max = new_maximum
