@@ -66,7 +66,7 @@ class QNoDefaultDialogButtonBox(qtw.QDialogButtonBox):
         """Overwrite event to skip setting default."""
         if event.type() == qtc.QEvent.Show:
             self._unset_default_buttons()
-            return qtw.QWidget().event(event)
+            return qtw.QWidget.event(self, event)
         return super().event(event)
 
     def _unset_default_buttons(self):
