@@ -333,8 +333,8 @@ class CollapsibleView(qtw.QWidget):
         layout.addLayout(frame_layout)
 
         layout.addItem(self._bottom_space)
-        # outer_layout is the main layout which holds button,
-        # frame, and the top widgets.
+        # outer_layout is the main layout which holds button, frame, and
+        # the top widgets. The top widgets are added at a later time.
         outer_layout = qtw.QHBoxLayout()
         remove_spacing_and_margins(outer_layout)
         outer_layout.addLayout(layout)
