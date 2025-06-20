@@ -276,6 +276,8 @@ class CollapsibleView(qtw.QWidget):
             policy.setHorizontalPolicy(policy.Fixed)
             lay_widget.setSizePolicy(policy)
             return
+        else:
+            raise ValueError(f'{widget} is not one of the top-level widgets.')
 
     def _adjust_bottom_space(self):
         """Update spacing below the QFrame depending on frame visibility."""
