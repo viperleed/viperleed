@@ -406,7 +406,7 @@ class MeasurementPlot(qtw.QWidget):
 
 
 class PlotComboBox(CheckComboBox):
-    """A CheckComboBox which can QuantityInfo objects."""
+    """A CheckComboBox which can hold QuantityInfo objects."""
 
     @property
     def selected_quantities(self):
