@@ -32,7 +32,7 @@ class CollapsibleList(qtw.QScrollArea):
         Parameters
         ----------
         parent : QObject, optional
-            The parent QObject of this widget.
+            The parent QObject of this widget. Default is None.
 
         Returns
         -------
@@ -134,7 +134,7 @@ class CollapsibleView(qtw.QWidget):
         """Initialise widget.
 
         parent : QObject, optional
-            The parent QObject of this widget.
+            The parent QObject of this widget. Default is None.
 
         Returns
         -------
