@@ -100,12 +100,12 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
 
     @property
     def soft_minimum(self):
-        """Return soft minimum."""
+        """Return the minimum value for coercing."""
         return self._soft_min
 
     @soft_minimum.setter
     def soft_minimum(self, new_minimum):
-        """Set soft minimum."""
+        """Set the minimum value for coercing."""
         if new_minimum > self.soft_maximum:
             raise ValueError('The minimum cannot be larger than the maximum.')
         self._soft_min = new_minimum
@@ -138,7 +138,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
 
     @qtc.pyqtSlot(int)
     def stepBy(self, steps):    # pylint: disable=invalid-name
-        """Adjust set value through steps according to soft limits."""
+        """Modify value by `steps` increments, coercing to soft limits."""
         _, value, _ = sorted((*self.soft_range,
                               self.value() + steps*self.singleStep()))
         self.setValue(value)
