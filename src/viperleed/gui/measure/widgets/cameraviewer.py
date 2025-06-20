@@ -722,7 +722,9 @@ class CameraViewer(qtw.QScrollArea):
 
     def __connect(self):
         """Connect signals."""
-        self.camera.camera_connected.connect(self.__on_camera_connected)
+        self.camera.connection_changed.connect(
+            self._on_camera_connection_changed
+            )
         self.image_size_changed.connect(self.__update_title)
         self.__img_view.image_scaling_changed.connect(self.__on_image_scaled)
         self.camera.started.connect(self.__on_camera_started)
@@ -831,7 +833,7 @@ class CameraViewer(qtw.QScrollArea):
         return dlg
 
     @qtc.pyqtSlot(bool)
-    def __on_camera_connected(self, connected):
+    def _on_camera_connection_changed(self, connected):
         """React to a connection status change of the camera."""
         # Enable/disable stuff that should only be accessed when a
         # camera is currently connected. Also, store information

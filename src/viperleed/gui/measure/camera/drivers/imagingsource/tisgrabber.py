@@ -1,4 +1,4 @@
-"""Module tisgrabber of viperleed.gui.camera.drivers.imagingsource.
+"""Module tisgrabber of viperleed.gui.measure.camera.drivers.imagingsource.
 
 This is an extension of the original tisgrabber.py module available
 in the original form at:

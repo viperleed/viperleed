@@ -13,8 +13,8 @@ __license__ = 'GPLv3+'
 
 import ast
 
-from PyQt5 import (QtCore as qtc,
-                   QtWidgets as qtw)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 
 class ROIEditor(qtw.QWidget):
