@@ -26,6 +26,7 @@ from viperleed.calc.classes.beam import Beam
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import parseMathSqrt
 from viperleed.gui.base import project_to_first_domain
+from viperleed.gui.classes.beamindex import BeamIndex
 
 
 logger = logging.getLogger(__name__)
@@ -74,60 +75,41 @@ def readBEAMLIST(filename='BEAMLIST'):
 
 
 def readIVBEAMS(filename='IVBEAMS'):
-    """Reads an IVBEAMS file and returns a list of beams (using Beam class)"""
-    # open input file
-    try:
-        with open(filename, 'r') as rf:
-            ivbeamlines = rf.readlines()
-    except Exception:
-        raise
-    linenum = 1		# iterates the current line being read
-    hklist = []
-    # TODO: skip commented out lines (same as PARAMETERS, etc.)
-    for line in ivbeamlines:
-        # ignore brackets and vbars, except as spacers
-        line = line.replace("(", " ")
-        line = line.replace(")", " ")
-        line = line.replace("|", " ")
-        llist = line.split()
-        if len(llist) == 1 and linenum != 1:
+    """Return a list of Beam objects read from an IVBEAMS file."""
+    with open(filename, 'r', encoding='utf-8') as file:
+        ivbeamlines = file.readlines()
+    spacer_chars = '(|)'  # Use brackets and vbars as spacers
+    all_indices = {}      # Use a dict to remove duplicates
+    for linenum, raw_line in enumerate(ivbeamlines, start=1):
+        line = raw_line
+        for spacer in spacer_chars:
+            line = line.replace(spacer, ' ')
+        indices = line.split()
+        if len(indices) == 1 and linenum != 1:
             logger.warning('A line with only one element was found in '
-                           'IVBEAMS and will be skipped: '+line)
-        elif len(llist) >= 2:
-            f = [None, None]
-            for i in range(0, 2):
-                try:
-                    f[i] = float(llist[i])
-                except ValueError:
-                    if '/' in llist[i]:
-                        try:
-                            f[i] = (float(llist[i].split('/')[0])
-                                    / float(llist[i].split('/')[1]))
-                        except ValueError:
-                            if linenum != 1:
-                                logger.error('Error reading IVBEAMS line: '
-                                             + line)
-                                raise
-                    else:
-                        if linenum != 1:
-                            logger.error('Error reading IVBEAMS line: '+line)
-                            raise
-            if linenum != 1:
-                if not (f[0], f[1]) in hklist and None not in f:
-                    hklist.append((f[0], f[1]))
-            else:
-                # check whether there is data in first line by mistake
-                if None not in f:  # data was read
-                    logger.warning(
-                        'It looks like the first line in the '
-                        'IVBEAMS file may contain data. Note that the first '
-                        'line should be a header line, so the data will not '
-                        'be read.')
-        linenum += 1
+                           f'IVBEAMS and will be skipped: {raw_line.rstrip()}')
+            continue
+        if len(indices) < 2:
+            continue
+        try:
+            beam_index = BeamIndex(','.join(indices[:2]))
+        except ValueError:
+            if linenum == 1:
+                continue
+            logger.error(f'Error reading IVBEAMS line: {raw_line.rstrip()}')
+            raise
+        if linenum == 1:  # Header line has some data
+            logger.warning(
+                'It looks like the first line in the IVBEAMS file may contain '
+                'data. Note that the first line should be a header line, so '
+                'the data will not be read.'
+                )
+            continue
+        all_indices[beam_index] = None  # Don't care about dict value
     beams = []
-    for hk in hklist:
-        beams.append(Beam(hk))
-    logger.debug("IVBEAMS file was read successfully")
+    for hk_indices in all_indices:
+        beams.append(Beam(hk_indices))
+    logger.debug('IVBEAMS file was read successfully')
     return beams
 
 
