@@ -623,8 +623,31 @@ def getLEEDdict(sl, rp):
 
 
 def getSymEqBeams(sl, rp):
-    """Returns a list of tuples ((hf,kf), index), where (hf,kf) are beams and
-    index is the group of other beams they are equivalent to"""
+    """Return a list of beams labeled by symmetry equivalence.
+
+    Parameters
+    ----------
+    sl : Slab
+        The main slab. Not used for a multi-domain calculation.
+    rp : Rparams
+        The main run parameters.
+
+    Returns
+    -------
+    beam_equivalence : list of tuples
+        Each tuple has the form (hk, group_index), where hk is a tuple
+        of beam indices and group_index is a progressive index labeling
+        symmetry-equivalent beams (all beams equivalent to one another
+        share the same group_index). The list is empty if averaging of
+        theoretical beams is turned off (via rp.AVERAGE_BEAMS) or if
+        any of the SUPERLATTICE matrices contain non-integer-valued
+        elements.
+
+    Raises
+    ------
+    ValueError
+        If one of the beam indices cannot be converted to a fraction.
+    """
     if rp.AVERAGE_BEAMS is False:
         return []
     if not rp.domainParams:
