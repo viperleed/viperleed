@@ -19,7 +19,7 @@ from viperleed.calc.files.beams import readIVBEAMS
 _MODULE = 'viperleed.calc.files.beams'
 
 
-class MockBeam:
+class MockBeam:  # pylint: disable=too-few-public-methods
     """A replacement for the Beam class."""
 
     def __init__(self, *indices):

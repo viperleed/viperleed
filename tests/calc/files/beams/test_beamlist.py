@@ -39,7 +39,7 @@ class TestReadBEAMLIST:
         assert expect_log in caplog.text
 
     @parametrize(fname=('BEAMLIST', 'other_beamlist'))
-    def test_success(self, fname, tmp_path, mocker, caplog):
+    def test_success(self, fname, tmp_path, caplog):
         """Check the successful reading of the BEAMLIST file."""
         caplog.set_level(0)  # All messages
         beamlist_path = tmp_path / fname
