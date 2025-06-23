@@ -116,16 +116,11 @@ def readIVBEAMS(filename='IVBEAMS'):
 def sortIVBEAMS(sl, rp):
     """Sorts the beams in IVBEAMS such that they appear in the same order as
     in the BEAMLIST. Returns the sorted list."""
-    # read BEAMLIST
-    if rp.beamlist == []:
-        logger.warning("sortIVBEAMS routine: no beamlist passed, "
-                       "attempting to read BEAMLIST directly.")
-        try:
-            with open('BEAMLIST', 'r') as rf:
-                rp.beamlist = rf.readlines()
-        except FileNotFoundError:
-            logger.error("BEAMLIST not found.")
-            raise
+    if not rp.beamlist:
+        # read BEAMLIST
+        logger.warning('sortIVBEAMS: no beam list available, '
+                       'attempting to read BEAMLIST directly.')
+        rp.beamlist = readBEAMLIST()
     err = 1e-3          # since beams are saved as floats, give error tolerance
     symeq = leedbase.getSymEqBeams(sl, rp)
     # first, get beamlist as floats
