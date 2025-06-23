@@ -11,8 +11,6 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-26'
 __license__ = 'GPLv3+'
 
-from ast import literal_eval
-
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
@@ -21,7 +19,7 @@ from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
 from viperleed.gui.widgets.buttons import QUncheckableButtonGroup
 
 
-class QuantitySelector(qtw.QFrame):
+class QuantitySelector(qtw.QGroupBox):
     """A widget that allows selection of quantities from settings."""
 
     # This signal is emitted when the quantity selection changes.
@@ -46,50 +44,14 @@ class QuantitySelector(qtw.QFrame):
         None.
         """
         super().__init__(parent=parent)
-        self.setMidLineWidth(1)
-        self.setFrameStyle(self.Panel | self.Raised)
-        self._selections = []
-        self._quantities = literal_eval(
-            settings.get('controller', 'measurement_devices', fallback=())
-            )
-        self._compose()
-
-    def _compose(self):
-        """Compose quantity widgets."""
-        main_layout = qtw.QVBoxLayout()
-        label_layout = qtw.QHBoxLayout()
-        label = qtw.QLabel('Measured Quantities')
-        info = ('<nobr>Quantities in the same column cannot </nobr>'
-                'be measured at the same time.')
-        label_layout.addWidget(label)
-        label_layout.addWidget(FieldInfo.for_widget(label ,tooltip=info))
-        label_layout.addStretch(1)
-        main_layout.addLayout(label_layout)
-        quantity_layout = qtw.QHBoxLayout()
-        for selections in self._quantities:
-            layout = qtw.QVBoxLayout()
-            group = QUncheckableButtonGroup()
-            group.buttonClicked.connect(group.uncheck_if_clicked)
-            group.buttonClicked.connect(self.settings_changed)
-            for quantity in selections:
-                button_layout = qtw.QHBoxLayout()
-                button = qtw.QCheckBox()
-                group.addButton(button)
-                q = QuantityInfo.from_label(quantity)
-                button.setText(q.display_label)
-                button_layout.addWidget(button)
-                button_layout.addWidget(FieldInfo.for_widget(button,tooltip=QuantityInfo.from_label(quantity).description))
-                button_layout.addStretch(1)
-                layout.addLayout(button_layout)
-            layout.addStretch(1)
-            self._selections.append(group)
-            quantity_layout.addLayout(layout)
-            if selections != self._quantities[-1]:
-                line = qtw.QFrame()
-                line.setFrameShape(qtw.QFrame.VLine)
-                quantity_layout.addWidget(line)
-        main_layout.addLayout(quantity_layout)
-        self.setLayout(main_layout)
+        self.setFlat(True)
+        self.setTitle('Measured Quantities')
+        self._selections = {}
+        self._groups = []
+        quantities = self._parse_quantities(settings.getsequence(
+            'controller', 'measurement_devices', fallback=()
+            ))
+        self._compose(quantities)
 
     def get_selected_quantities(self):
         """Return the selected quantities.
@@ -99,13 +61,8 @@ class QuantitySelector(qtw.QFrame):
         quantities : tuple
             The selected quantities.
         """
-        quantities = []
-        for group in self._selections:
-            if group.checkedButton():
-                display_label = group.checkedButton().text()
-                q = QuantityInfo.from_display_label(display_label)
-                quantities.append(q.label)
-        return tuple(quantities)
+        return tuple(q.label for q, btn in self._selections.items()
+                     if btn.isChecked())
 
     def set_quantities(self, quantities):
         """Set quantities from settings.
@@ -119,14 +76,83 @@ class QuantitySelector(qtw.QFrame):
         -------
         None.
         """
-        buttons = tuple(btn for group in self._selections
-                        for btn in group.buttons())
+        quantities = [QuantityInfo.from_label(name) for name in quantities]
         for quantity in quantities:
-            q = QuantityInfo.from_label(quantity)
-            for button in buttons:
-                if button.text() == q.display_label:
-                    button.click()
-                    break
-            else:
-                raise ValueError(f'{quantity!r} is not an '
-                                 'acceptable quantity.')
+            try:
+                button = self._selections[quantity]
+            except KeyError:
+                raise ValueError(f'{quantity.label!r} is not '
+                                 'an acceptable quantity.') from None
+            button.click()
+
+    def _compose(self, quantities):
+        """Compose quantity widgets.
+
+        Parameters
+        ----------
+        quantities : Sequence
+            Elements are squences of QuantityInfo objects. Each element
+            represents one measuring device installed on the controller,
+            with each QuantityInfo being one of the quantities that
+            measuring device in particular can acquire.
+
+        Returns
+        -------
+        None.
+        """
+        main_layout = qtw.QVBoxLayout()
+        quantity_layout = self._make_quantity_layout(quantities)
+        main_layout.addLayout(quantity_layout)
+        main_layout.addItem(qtw.QSpacerItem(0, 5))
+        label = qtw.QLabel('Quantities in the same column cannot '
+                           'be measured at the same time.')
+        label.setWordWrap(True)
+        main_layout.addWidget(label)
+        self.setLayout(main_layout)
+
+    def _make_quantity_layout(self, quantities):
+        """Return a layout containing the quantity selection.
+
+        Parameters
+        ----------
+        quantities : Sequence
+            Elements are squences of QuantityInfo objects. Each element
+            represents one measuring device installed on the controller,
+            with each QuantityInfo being one of the quantities that
+            measuring device in particular can acquire.
+
+        Returns
+        -------
+        None.
+        """
+        quantity_layout = qtw.QHBoxLayout()
+        for selections in quantities:
+            layout = qtw.QVBoxLayout()
+            group = QUncheckableButtonGroup()
+            group.buttonClicked.connect(group.uncheck_if_clicked)
+            group.buttonClicked.connect(self.settings_changed)
+            # Without a reference to the groups, the groups would be deleted.
+            self._groups.append(group)
+            for quantity in selections:
+                btn_layout = qtw.QHBoxLayout()
+                button = qtw.QCheckBox()
+                group.addButton(button)
+                button.setText(quantity.display_label)
+                btn_layout.addWidget(button)
+                tip = quantity.description
+                btn_layout.addWidget(FieldInfo.for_widget(button, tooltip=tip))
+                btn_layout.addStretch(1)
+                layout.addLayout(btn_layout)
+                self._selections[quantity] = button
+            layout.addStretch(1)
+            quantity_layout.addLayout(layout)
+            if selections != quantities[-1]:
+                line = qtw.QFrame()
+                line.setFrameShape(qtw.QFrame.VLine)
+                quantity_layout.addWidget(line)
+        return quantity_layout
+
+    @staticmethod
+    def _parse_quantities(quantity_name_by_device):
+        return [[QuantityInfo.from_label(name) for name in device]
+                for device in quantity_name_by_device]
