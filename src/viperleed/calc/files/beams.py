@@ -25,6 +25,7 @@ import numpy as np
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import parseMathSqrt
+from viperleed.calc.lib.string_utils import strip_comments
 from viperleed.gui.base import project_to_first_domain
 from viperleed.gui.classes.beamindex import BeamIndex
 
@@ -81,7 +82,7 @@ def readIVBEAMS(filename='IVBEAMS'):
     spacer_chars = '(|)'  # Use brackets and vbars as spacers
     all_indices = {}      # Use a dict to remove duplicates
     for linenum, raw_line in enumerate(ivbeamlines, start=1):
-        line = raw_line
+        line = strip_comments(raw_line)
         for spacer in spacer_chars:
             line = line.replace(spacer, ' ')
         indices = line.split()
