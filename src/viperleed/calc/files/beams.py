@@ -15,7 +15,6 @@ __license__ = 'GPLv3+'
 import copy
 from io import StringIO
 import logging
-import os
 from pathlib import Path
 import re
 
