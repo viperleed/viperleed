@@ -53,10 +53,21 @@ class TestReadIVBEAMS:
         """Replace the Beam class with a mock."""
         mocker.patch(f'{_MODULE}.Beam', MockBeam)
 
-    def test_empty_file(self, make_ivbeams, caplog):
+    _empty = {
+        'truly empty': '',
+        'comments only': '''
+!Commented header
+#(1 | 0) commented beam
+%(-5/2 2) another commented beam
+''',
+        'header only': 'header line',
+        }
+
+    @parametrize(contents=_empty.values(), ids=_empty)
+    def test_empty_file(self, contents, make_ivbeams, caplog):
         """Check that no beams are read from an empty file."""
         caplog.set_level(logging.INFO)  # Except debug
-        result = readIVBEAMS(make_ivbeams(''))
+        result = readIVBEAMS(make_ivbeams(contents))
         assert not result
         assert not caplog.text
 
