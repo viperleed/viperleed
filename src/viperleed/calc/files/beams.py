@@ -192,9 +192,9 @@ def sortIVBEAMS(sl, rp):
 def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
     #TODO: this need some optimizing; use csv and dict reader class
     """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file.
-    
+
     The beams are returned as a list of Beam objects.
-    
+
     Parameters
     ----------
     filename : str, StringIO, optional
@@ -208,7 +208,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
         data within the range will be filtered out before returning.
         If given and not None, it should be a Sequence with two elements
         (min and max).
-    
+
     Returns
     -------
     beams : list of Beam
@@ -284,13 +284,13 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                         beams[i].intens[en] = f
                 except (ValueError, IndexError):
                     pass
-                
+
     # cleanup of beams
     threshold_intes = 1e-8  # threshold value of TensErLEED (rfacsb.f in subroutine grid)
     lowest_real_en = 0
     for beam in beams:
 
-        unfiltered_intens = copy.deepcopy(list(beam.intens.items())) 
+        unfiltered_intens = copy.deepcopy(list(beam.intens.items()))
         # find first intensity > threshold
         for en, intensity in unfiltered_intens:
             if intensity > threshold_intes:
@@ -619,14 +619,14 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
         output += bformatter.write([n+1 for n in range(0, len(beams))]) + "\n"
         if len(beams) % 25 == 0:
             output += "\n"
-    # Standard format used to be 12F6.2, but this may 
+    # Standard format used to be 12F6.2, but this may
     # have too little dynamic range for theory-theory comparisons.
     # Instead we can use 12E14.5 which is the same as used everywhere else.
     if output_format not in ("12F6.2", "12E14.5"):
         logger.error(f"Incompatible format requested for AUXEXPEBAMS: {output_format}\n"
                      f"Possible are '12F6.2' and '12E14.5'.")
         raise RuntimeError
-    
+
     output += f" ({output_format})\n"
     decimal_writer = ff.FortranRecordWriter(output_format)
     integer_writer = ff.FortranRecordWriter('I4')
