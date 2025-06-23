@@ -6,6 +6,7 @@ This includes: BEAMLIST, IVBEAMS, EXPBEAMS and AUXEXPBEAMS.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
