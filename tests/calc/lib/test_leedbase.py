@@ -9,6 +9,7 @@ __license__ = 'GPLv3+'
 
 from fnmatch import fnmatch  # To simulate globbing
 from pathlib import Path
+import re
 
 import pytest
 from pytest_cases import fixture
@@ -16,6 +17,7 @@ from pytest_cases import fixture
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.leedbase import get_tensor_indices
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
+from viperleed.calc.lib.leedbase import getSymEqBeams
 
 
 _MODULE = 'viperleed.calc.lib.leedbase'
@@ -166,3 +168,103 @@ class TestGetTensorIndices:
             )
         result = set(get_tensor_indices(zip_only=True))
         assert result == {1, 2}
+
+
+class TestGetSymEqBeams:
+    """Tests for the getSymEqBeams function."""
+
+    @fixture(name='mock_slab')
+    def fixture_mock_slab(self, mocker):
+        """Return a fake Slab."""
+        return mocker.MagicMock(name='slab')
+
+    @fixture(name='make_rpars')
+    def fixture_make_rpars(self, mocker):
+        """Return a fake Rparams object."""
+        def _make(**kwargs):
+            kwargs.setdefault('AVERAGE_BEAMS', True)
+            kwargs.setdefault('domainParams', ())
+            return mocker.MagicMock(**kwargs)
+        return _make
+
+    def test_invalid_beam_name(self, make_rpars, mock_slab, mocker, caplog):
+        """Check handling of invalid beam names from get_equivalent_beams."""
+        mock_rpars = make_rpars()
+        mocker.patch(f'{_MODULE}.getLEEDdict')
+        mocker.patch(f'{_MODULE}.get_equivalent_beams',
+                     return_value=[('invalid-beam', 0)])
+        result = getSymEqBeams(mock_slab, mock_rpars)
+        assert not any(result)
+        assert re.search(r'Beam.*not recognized: invalid-beam', caplog.text)
+
+    def test_invalid_fraction(self, make_rpars, mock_slab, mocker, caplog):
+        """Check complaints if a beam index can't be converted to Fraction."""
+        mock_rpars = make_rpars()
+        mocker.patch(f'{_MODULE}.getLEEDdict')
+        mocker.patch(f'{_MODULE}.get_equivalent_beams',
+                     return_value=[('1/2/3, 1/2', 0)])
+        with pytest.raises(ValueError):
+            getSymEqBeams(mock_slab, mock_rpars)
+        assert re.search(r'Could not convert beam.*float', caplog.text)
+
+    def test_leed_dict_none(self, make_rpars, mock_slab, mocker, caplog):
+        """Check handling of None values from getLEEDdict."""
+        mock_rpars = make_rpars()
+        mocker.patch(f'{_MODULE}.getLEEDdict', return_value=None)
+        result = getSymEqBeams(mock_slab, mock_rpars)
+        expect_log = 'Failed to get beam equivalence list'
+        assert not any(result)
+        assert expect_log in caplog.text
+
+    def test_multi_domains(self, make_rpars, mocker, caplog):
+        """Check implementation for a multi-domain calculation."""
+        caplog.set_level(0)  # All messages
+        domains = [
+            mocker.MagicMock(slab=mocker.MagicMock(), rpars=mocker.MagicMock())
+            for _ in range(3)
+            ]
+        mock_rpars = make_rpars(domainParams=domains)
+        mock_leed_dicts = [mocker.MagicMock() for _ in enumerate(domains)]
+        mock_get_leed_dict = mocker.patch(f'{_MODULE}.getLEEDdict',
+                                          side_effect=mock_leed_dicts)
+        mock_get_equivalent_beams = mocker.patch(
+            f'{_MODULE}.get_equivalent_beams',
+            return_value=[('1,2', 0)],
+            )
+        result = getSymEqBeams('ignored_slab', mock_rpars)
+        expect = [((1.0, 2.0), 0)]
+        assert result == expect
+        assert not caplog.text
+
+        # Check the expected calls
+        leed_dict_calls = [mocker.call(d.slab, d.rpars) for d in domains]
+        assert mock_get_leed_dict.mock_calls == leed_dict_calls
+        mock_get_equivalent_beams.assert_called_once_with(*mock_leed_dicts)
+
+    def test_no_beam_averaging(self, make_rpars, mock_slab):
+        """Check result when averaging of theoretical beams is turned off."""
+        mock_rpars = make_rpars(AVERAGE_BEAMS=False)
+        result = getSymEqBeams(mock_slab, mock_rpars)
+        assert not any(result)
+
+    def test_single_domain(self, make_rpars, mock_slab, mocker, caplog):
+        """Check implementation for a single-domain system."""
+        caplog.set_level(0)  # All messages
+        mock_rpars = make_rpars()
+        mock_get_leed_dict = mocker.patch(f'{_MODULE}.getLEEDdict',
+                                          return_value=mocker.MagicMock())
+        mock_get_equivalent_beams = mocker.patch(
+            f'{_MODULE}.get_equivalent_beams',
+            return_value=[
+                ('1/2, 3/4', 0),
+                ('-1, 0', 1),
+                ],
+            )
+        result = getSymEqBeams(mock_slab, mock_rpars)
+        expect = [((0.5, 0.75), 0), ((-1.0, 0.0), 1)]
+        assert result == expect
+        mock_get_leed_dict.assert_called_once_with(mock_slab, mock_rpars)
+        mock_get_equivalent_beams.assert_called_once_with(
+            mock_get_leed_dict.return_value,
+            )
+        assert not caplog.text
