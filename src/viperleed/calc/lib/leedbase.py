@@ -622,14 +622,14 @@ def getLEEDdict(sl, rp):
     return d
 
 
-def getSymEqBeams(sl, rp):
+def getSymEqBeams(slab, rpars):
     """Return a list of beams labeled by symmetry equivalence.
 
     Parameters
     ----------
-    sl : Slab
+    slab : Slab
         The main slab. Not used for a multi-domain calculation.
-    rp : Rparams
+    rpars : Rparams
         The main run parameters.
 
     Returns
@@ -648,32 +648,33 @@ def getSymEqBeams(sl, rp):
     ValueError
         If one of the beam indices cannot be converted to a fraction.
     """
-    if rp.AVERAGE_BEAMS is False:
+    if rpars.AVERAGE_BEAMS is False:
         return []
-    if not rp.domainParams:
-        d = [getLEEDdict(sl, rp)]
-    else:
-        d = [getLEEDdict(dp.slab, dp.rpars) for dp in rp.domainParams]
-    if any([v is None for v in d]):
-        logger.error("Failed to get beam equivalence list")
+    args = (
+        [getLEEDdict(slab, rpars)] if not rpars.domainParams
+        else [getLEEDdict(domain.slab, domain.rpars)
+              for domain in rpars.domainParams]
+        )
+    if any(a is None for a in args):
+        logger.error('Failed to get beam equivalence list')
         return []
-    symeqnames = get_equivalent_beams(*d)
+    symeqnames = get_equivalent_beams(*args)
     symeq = []
     rgx = re.compile(r'(?P<h>[-0-9/]+)\s*,\s*(?P<k>[-0-9/]+)')
-    for (name, index) in symeqnames:
-        m = rgx.match(name)
-        if m:
-            h, k = m.group("h"), m.group("k")
-            try:
-                hf, kf = float(Fraction(h)), float(Fraction(k))
-            except ValueError:
-                logger.error("getBeamCorrespondence: Could not convert beam "
-                             "names from getEquivalentBeams to h,k floats")
-                raise
-            symeq.append(((hf, kf), index))
-        else:
-            logger.warning("getBeamCorrespondence: Beam name from "
-                           "getEquivalentBeams not recognized: "+name)
+    for name, group_index in symeqnames:
+        match_ = rgx.match(name)
+        if not match_:
+            logger.warning('getSymEqBeams: Beam name from '
+                           f'get_equivalent_beams not recognized: {name}')
+            continue
+        try:
+            beam_indices = tuple(float(Fraction(match_[k]))
+                                 for k in ('h', 'k'))
+        except ValueError:
+            logger.error('getSymEqBeams: Could not convert beam '
+                         'names from get_equivalent_beams to h,k floats')
+            raise
+        symeq.append((beam_indices, group_index))
     return symeq
 
 
