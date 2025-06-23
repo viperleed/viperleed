@@ -123,7 +123,7 @@ def sortIVBEAMS(sl, rp):
                        'attempting to read BEAMLIST directly.')
         rp.beamlist = readBEAMLIST()
     err = 1e-3          # since beams are saved as floats, give error tolerance
-    symeq = leedbase.getSymEqBeams(sl, rp)
+    symeq = leedbase.get_symmetry_equivalent_beams(sl, rp)
     # first, get beamlist as floats
     blfs = []
     for line in rp.beamlist:
@@ -343,7 +343,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
 
 def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
-    symeq = leedbase.getSymEqBeams(sl, rp)
+    symeq = leedbase.get_symmetry_equivalent_beams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue

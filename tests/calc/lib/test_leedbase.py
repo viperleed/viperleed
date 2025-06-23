@@ -16,8 +16,8 @@ from pytest_cases import fixture
 
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.leedbase import get_tensor_indices
+from viperleed.calc.lib.leedbase import get_symmetry_equivalent_beams
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
-from viperleed.calc.lib.leedbase import getSymEqBeams
 
 
 _MODULE = 'viperleed.calc.lib.leedbase'
@@ -170,8 +170,8 @@ class TestGetTensorIndices:
         assert result == {1, 2}
 
 
-class TestGetSymEqBeams:
-    """Tests for the getSymEqBeams function."""
+class TestGetSymmetryEquivalentBeams:
+    """Tests for the get_symmetry_equivalent_beams function."""
 
     @fixture(name='mock_slab')
     def fixture_mock_slab(self, mocker):
@@ -193,7 +193,7 @@ class TestGetSymEqBeams:
         mocker.patch(f'{_MODULE}.getLEEDdict')
         mocker.patch(f'{_MODULE}.get_equivalent_beams',
                      return_value=[('invalid-beam', 0)])
-        result = getSymEqBeams(mock_slab, mock_rpars)
+        result = get_symmetry_equivalent_beams(mock_slab, mock_rpars)
         assert not any(result)
         assert re.search(r'Beam.*not recognized: invalid-beam', caplog.text)
 
@@ -204,14 +204,14 @@ class TestGetSymEqBeams:
         mocker.patch(f'{_MODULE}.get_equivalent_beams',
                      return_value=[('1/2/3, 1/2', 0)])
         with pytest.raises(ValueError):
-            getSymEqBeams(mock_slab, mock_rpars)
+            get_symmetry_equivalent_beams(mock_slab, mock_rpars)
         assert re.search(r'Could not convert beam.*float', caplog.text)
 
     def test_leed_dict_none(self, make_rpars, mock_slab, mocker, caplog):
         """Check handling of None values from getLEEDdict."""
         mock_rpars = make_rpars()
         mocker.patch(f'{_MODULE}.getLEEDdict', return_value=None)
-        result = getSymEqBeams(mock_slab, mock_rpars)
+        result = get_symmetry_equivalent_beams(mock_slab, mock_rpars)
         expect_log = 'Failed to get beam equivalence list'
         assert not any(result)
         assert expect_log in caplog.text
@@ -231,7 +231,7 @@ class TestGetSymEqBeams:
             f'{_MODULE}.get_equivalent_beams',
             return_value=[('1,2', 0)],
             )
-        result = getSymEqBeams('ignored_slab', mock_rpars)
+        result = get_symmetry_equivalent_beams('ignored_slab', mock_rpars)
         expect = [((1.0, 2.0), 0)]
         assert result == expect
         assert not caplog.text
@@ -244,7 +244,7 @@ class TestGetSymEqBeams:
     def test_no_beam_averaging(self, make_rpars, mock_slab):
         """Check result when averaging of theoretical beams is turned off."""
         mock_rpars = make_rpars(AVERAGE_BEAMS=False)
-        result = getSymEqBeams(mock_slab, mock_rpars)
+        result = get_symmetry_equivalent_beams(mock_slab, mock_rpars)
         assert not any(result)
 
     def test_single_domain(self, make_rpars, mock_slab, mocker, caplog):
@@ -260,7 +260,7 @@ class TestGetSymEqBeams:
                 ('-1, 0', 1),
                 ],
             )
-        result = getSymEqBeams(mock_slab, mock_rpars)
+        result = get_symmetry_equivalent_beams(mock_slab, mock_rpars)
         expect = [((0.5, 0.75), 0), ((-1.0, 0.0), 1)]
         assert result == expect
         mock_get_leed_dict.assert_called_once_with(mock_slab, mock_rpars)

@@ -622,7 +622,7 @@ def getLEEDdict(sl, rp):
     return d
 
 
-def getSymEqBeams(slab, rpars):
+def get_symmetry_equivalent_beams(slab, rpars):
     """Return a list of beams labeled by symmetry equivalence.
 
     Parameters
@@ -664,14 +664,14 @@ def getSymEqBeams(slab, rpars):
     for name, group_index in symeqnames:
         match_ = rgx.match(name)
         if not match_:
-            logger.warning('getSymEqBeams: Beam name from '
+            logger.warning('get_symmetry_equivalent_beams: Beam name from '
                            f'get_equivalent_beams not recognized: {name}')
             continue
         try:
             beam_indices = tuple(float(Fraction(match_[k]))
                                  for k in ('h', 'k'))
         except ValueError:
-            logger.error('getSymEqBeams: Could not convert beam '
+            logger.error('get_symmetry_equivalent_beams: Could not convert beam '
                          'names from get_equivalent_beams to h,k floats')
             raise
         symeq.append((beam_indices, group_index))
@@ -686,7 +686,7 @@ def getBeamCorrespondence(sl, rp):
     #   make dictionary {theoretical_beam: experimental_beam}
     beamcorr = {}
     # get symmetry-equivalence list:
-    symeq = getSymEqBeams(sl, rp)
+    symeq = get_symmetry_equivalent_beams(sl, rp)
     # first, go through experimental beams and assign theoreticals if clear:
     remlist = []
     for eb in rp.expbeams:
