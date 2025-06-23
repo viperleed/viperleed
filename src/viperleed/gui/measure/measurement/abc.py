@@ -1299,7 +1299,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         try:
             config = self._get_device_settings(camera_settings)
-        except RuntimeError as err:
+        except (RuntimeError, ValueError) as err:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/path to camera configuration', err)
             raise
@@ -1344,7 +1344,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         for settings in cam_settings:
             try:
                 cam = self._make_camera(settings)
-            except RuntimeError:
+            except (RuntimeError, ValueError):
                 continue
             # Temporarily connect device.error_occurred to
             # self.error_occurred in order to report errors that
@@ -1400,7 +1400,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         try:
             config = self._get_device_settings(configname)
-        except RuntimeError as err:
+        except (RuntimeError, ValueError) as err:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/path to controller configuration', err)
             raise
@@ -1481,7 +1481,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         try:
             ctrl = self._make_controller(*info, is_primary=True)
-        except RuntimeError:
+        except (RuntimeError, ValueError):
             # Something went wrong with instantiating, and is
             # already reported by emitting in _make_controller.
             return False
@@ -1511,7 +1511,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 continue
             try:
                 ctrl = self._make_controller(*info, is_primary=False)
-            except RuntimeError:
+            except (RuntimeError, ValueError):
                 continue
             if not isinstance(ctrl, MeasureControllerABC):
                 self.emit_error(MeasurementErrors.WRONG_CONTROLLER_CLASS,
