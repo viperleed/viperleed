@@ -27,7 +27,7 @@ class TestReadBEAMLIST:
         """Check complaints when the BEAMLIST file is not found."""
         with pytest.raises(FileNotFoundError):
             self.read()
-        expect_log = 'Error opening BEAMLIST file.'
+        expect_log = 'BEAMLIST not found.'
         assert expect_log in caplog.text
 
     def test_os_error(self, mocker, caplog):

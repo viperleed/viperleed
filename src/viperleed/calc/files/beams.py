@@ -58,18 +58,19 @@ def averageBeams(beams, weights=None):
     return avbeams
 
 
-def readBEAMLIST(filename="BEAMLIST"):
-    """Reads the BEAMLIST file and returns the contents as a list of the
-    lines as strings."""
-    beamlist = []
+def readBEAMLIST(filename='BEAMLIST'):
+    """Return the lines of the BEAMLIST file as a list of strings."""
     try:
-        with open(filename, "r") as rf:
-            beamlist = rf.readlines()
-        logger.debug("BEAMLIST file was read successfully")
-    except Exception:
-        logger.error("Error opening BEAMLIST file.")
+        with open(filename, 'r', encoding='utf-8') as file:
+            beams = file.readlines()
+    except FileNotFoundError:
+        logger.error('BEAMLIST not found.')
         raise
-    return beamlist
+    except Exception:
+        logger.error('Error opening BEAMLIST file.')
+        raise
+    logger.debug('BEAMLIST file was read successfully.')
+    return beams
 
 
 def readIVBEAMS(filename='IVBEAMS'):
