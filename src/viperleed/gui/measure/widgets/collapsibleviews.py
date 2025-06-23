@@ -43,15 +43,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
     settings_changed = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
-        """Initialise widget.
-
-        parent : QObject
-            The parent QObject of this widget.
-
-        Returns
-        -------
-        None.
-        """
+        """Initialise widget."""
         self._settings_folder = PathSelector(select_file=False, max_chars=25)
         self._settings_file_selector = qtw.QComboBox()
         super().__init__(parent=parent)
@@ -79,7 +71,8 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
 
         Returns
         -------
-        _original_settings : path-like
+        Path or None
+            None if the _original_settings has naver been set.
         """
         return self._original_settings
 
@@ -96,19 +89,6 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         if not self.has_hardware_interface:
             return self._original_settings
         return self._settings_file_selector.currentData()
-
-    @property
-    def _can_make_device(self):
-        """Check if required settings to make a device are present.
-
-        Returns
-        -------
-        can_make_device : bool
-            True if making a device is possible.
-        """
-        return bool(self.settings_file
-                    and self._device_cls
-                    and self._device_info)
 
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
@@ -130,7 +110,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         if not self._expanded:
             self._remove_handler()
         else:
-            self._check_for_handler()
+            self._try_fetching_handler()
         super().set_expanded_state(expanded)
 
     def set_device(self, device_cls, device_info):
@@ -174,6 +154,19 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
             # The file must have been moved before the settings could be saved.
             pass
 
+    @property
+    def _can_make_device(self):
+        """Check if required settings to make a device are present.
+
+        Returns
+        -------
+        can_make_device : bool
+            True if making a device is possible.
+        """
+        return bool(self.settings_file
+                    and self._device_cls
+                    and self._device_info)
+
     def _build_device_settings_widgets(self):
         """Get the handler widgets for the device settings.
 
@@ -205,7 +198,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
-    def _check_for_handler(self):
+    def _try_fetching_handler(self):
         """Check if creating a handler is possible."""
         enabled = self._expanded and self._settings_file_selector.isEnabled()
         if enabled:
@@ -232,11 +225,11 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         settings_changed
             If the device settings have changed.
         """
-        if self.settings_file != self._original_settings:
-            # Setting the _original_settings is necessary here in order
+        if self.settings_file != self.original_settings:
+            # Setting the original_settings is necessary here in order
             # to correctly emit the settings_changed signal if one
             # switches back and forth between two settings files.
-            self._original_settings = self.settings_file
+            self.original_settings = self.settings_file
             self.settings_changed.emit()
 
     def _compose_and_connect(self):
@@ -250,7 +243,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
             )
         self._settings_file_selector.setEnabled(False)
         self._settings_file_selector.currentIndexChanged.connect(
-            self._check_for_handler
+            self._try_fetching_handler
             )
 
     @abstractmethod
@@ -259,9 +252,9 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
 
         The reimplementation of this method must first check if it
         _can_make_device. If it can, then it must make_device and
-        _make_handler_for_device. When the devices has been
-        connected, it must _update_widgets_from_device_settings
-        and disconnect the device afterwards.
+        _make_handler_for_device. When the device has been connected,
+        it must _update_widgets_from_device_settings and disconnect
+        the device afterwards.
 
         Returns
         -------
@@ -306,7 +299,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         self._remove_handler()
         if any(matching_settings):
             self._settings_file_selector.setEnabled(True)
-            self._check_for_handler()
+            self._try_fetching_handler()
 
     @qtc.pyqtSlot()
     def _remove_handler(self):
@@ -343,7 +336,7 @@ class CollapsibleCameraView(CollapsibleDeviceView):
     def _get_settings_handler(self):
         """Get the settings handler of the handled camera.
 
-        Get and updage settings handler widgets and
+        Get and update settings handler widgets and
         populate the collapsible view with them.
 
         Returns
@@ -415,7 +408,7 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         if self._trying_to_get_settings:
             self._primary_changed = True
         else:
-            self._check_for_handler()
+            self._try_fetching_handler()
 
     def set_quantities(self, quantities):
         """Set the quantities to measure.
@@ -463,7 +456,7 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         self._trying_to_get_settings = False
         if self._primary_changed:
             self._primary_changed = False
-            self._check_for_handler()
+            self._try_fetching_handler()
 
     @qtc.pyqtSlot()
     def _check_if_quantities_changed(self):
@@ -481,7 +474,7 @@ class CollapsibleControllerView(CollapsibleDeviceView):
     def _get_settings_handler(self):
         """Get the settings handler of the handled controller.
 
-        Get and updage settings handler widgets and
+        Get and update settings handler widgets and
         populate the collapsible view with them.
 
         Returns
