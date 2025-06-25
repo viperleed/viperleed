@@ -105,7 +105,6 @@ class DisplacementsFile(NodeMixin):
                     new_segment.parent = self
                     processed = True
                 if processed:
-                    logger.debug('Parsed line: ' + str(new_segment))
                     continue
                 # if we reach here, the line was not processed
                 raise DisplacementsSyntaxError(
