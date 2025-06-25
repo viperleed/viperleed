@@ -18,7 +18,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 try:
     from viperleed_jax.from_objects import calculator_from_objects
     from viperleed_jax import optimization
-except ModuleNotFoundError:
+except (ModuleNotFoundError, ImportError):
     VLJ_AVAILABLE = False
 else:
     VLJ_AVAILABLE = True
