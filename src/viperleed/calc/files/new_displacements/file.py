@@ -44,7 +44,6 @@ class DisplacementsFile(NodeMixin):
     def __init__(self):
         self.name = self._render_name
         self._has_been_read = False
-        #self.has_been_parsed = False
         # an OFFSETS block is only allowed at the very beginning of the file
         # we check this by setting this flag to False after the first block
 
