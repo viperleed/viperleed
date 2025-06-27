@@ -61,8 +61,15 @@ class QuantitySelector(qtw.QGroupBox):
         quantities : tuple
             The selected quantities.
         """
-        return tuple(q.label for q, btn in self._selections.items()
-                     if btn.isChecked())
+        try:
+            return tuple(q.label for q, btn in self._selections.items()
+                         if btn.isChecked())
+        except RuntimeError:
+            # The quantities were requested while the handler was about
+            # to be destroyed. This is necessary to catch as this
+            # happens when switching one controller to the primary
+            # from another.
+            return tuple()
 
     def set_quantities(self, quantities):
         """Set quantities from settings.
