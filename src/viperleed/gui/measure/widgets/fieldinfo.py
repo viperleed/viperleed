@@ -37,6 +37,18 @@ class FieldInfo(qtw.QLabel):
         self.__tooltip_timer.setInterval(150)
         self.__tooltip_timer.timeout.connect(self.__show_tooltip)
 
+    @classmethod
+    def for_widget(cls, widget, **kwargs):
+        """Return an instance of FieldInfo properly sized for a widget."""
+        if 'size' in kwargs:
+            raise ValueError('for_widget method does not accept a size.')
+        try:
+            # Get an appropriate size for the info object
+            size = widget.fontMetrics().boundingRect(widget.text()).height()
+        except AttributeError as exc:
+            raise TypeError('Invalid widget for FieldInfo.for_widget') from exc
+        return cls(size=size, **kwargs)
+
     def mouseDoubleClickEvent(self, event):  # pylint: disable=invalid-name
         """Show info on mouse double click."""
         timer = self.__tooltip_timer

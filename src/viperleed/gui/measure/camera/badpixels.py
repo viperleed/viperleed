@@ -240,8 +240,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         sec = self.__current_section
         if not self.__frame_acceptable(frame):
             if 'DARK' in sec.name:
-                base.emit_error(
-                    self, _calib.CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT
+                self.emit_error(
+                    _calib.CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT
                     )
             else:
                 self.__adjust_exposure_and_gain(frame)
@@ -603,12 +603,12 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         min_gain, max_gain = self._limits['gain']
         if gain < min_gain:
             # Too much intensity
-            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+            self.emit_error(BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
                             'bright')
             return None, 0
         if gain > max_gain:
             # Too little intensity
-            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+            self.emit_error(BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
                             'dark')
             return None, 0
         return exposure, gain

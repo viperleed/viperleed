@@ -302,13 +302,13 @@ class ViPErLEEDSerial(SerialABC):
                         'err_details': current_error[1]}
         except KeyError:
             # error_state is not present in the config file.
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             f'arduino_states with code {error_state}', '')
             fmt_data = {'error_name': current_error.name,
                         'state': f"state with code {error_state}",
                         'err_details': current_error[1]}
         # Emit error and clear errors.
-        base.emit_error(self, (error_code, msg_to_format), **fmt_data)
+        self.emit_error((error_code, msg_to_format), **fmt_data)
         self.clear_errors()
 
     def is_decoded_message_acceptable(self, message):
@@ -338,12 +338,11 @@ class ViPErLEEDSerial(SerialABC):
         msg_length, *msg_data = message
         # Check if message length greater than zero
         if not msg_length:
-            base.emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
+            self.emit_error(ExtraSerialErrors.NO_MESSAGE_ERROR)
             return False
         # Check if message length consistent with sent length
         if msg_length != len(msg_data):
-            base.emit_error(self,
-                            ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT)
+            self.emit_error(ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT)
             return False
 
         if self.firmware_version >= "0.7":
@@ -352,13 +351,12 @@ class ViPErLEEDSerial(SerialABC):
                 self.__is_waiting_for_debug_msg = False
                 return True
             if msg_length == 1 and msg_data[0] == _debug:
-               self.__is_waiting_for_debug_msg = True
-               return True
+                self.__is_waiting_for_debug_msg = True
+                return True
 
         # Check if message length is one of the expected lengths
         if msg_length not in (1, 2, 4, 8, 9):
-            base.emit_error(self,
-                            ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
+            self.emit_error(ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
             return False
         return True
 
@@ -434,14 +432,13 @@ class ViPErLEEDSerial(SerialABC):
 
         if command not in available_commands:
             # The first message must be a command
-            base.emit_error(self, ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR,
+            self.emit_error(ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR,
                             command)
             return False
         if any(message in available_commands for message in data):
             # Only the fist message can be a command; the others (if
             # any) can only be data to accompany the command itself.
-            base.emit_error(self,
-                            ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS)
+            self.emit_error(ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS)
             return False
 
         _need_data = self.commands_requiring_data
@@ -553,7 +550,7 @@ class ViPErLEEDSerial(SerialABC):
                 for i, elem in enumerate(data.copy()):
                     data[2*i:2*i+1] = elem.to_bytes(2, self.byte_order)
             elif message == commands['PC_CHANGE_MEAS_MODE']:
-                # Here the data is [mode, time] where time                      TODO: time is not used at this point.
+                # Here the data is [mode, time] where time                      # TODO: time is not used at this point.
                 # has to be turned into 2 bytes. We do not convert
                 # mode as it is hardcoded to 0 (off) or 1 (on).
                 data[1:] = data[1].to_bytes(2, self.byte_order)
@@ -631,9 +628,7 @@ class ViPErLEEDSerial(SerialABC):
         elif len(message) == 2:
             # If the message is 2 bytes long, then it is most likely
             # the identifier for an error and ended up here somehow
-            base.emit_error(
-                self, ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH
-                )
+            self.emit_error(ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH)
         elif len(message) == 1 and message[0] == pc_debug:
             # If the message we received is a PC_DEBUG, then
             # the next message will be a debug message.
@@ -641,9 +636,7 @@ class ViPErLEEDSerial(SerialABC):
         else:
             # If the message does not fit one of the lengths above, it
             # is no known message type.
-            base.emit_error(
-                self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID
-                )
+            self.emit_error(ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
 
     def _process_debug_message(self, message):
         """Emit debug message."""
@@ -792,8 +785,7 @@ class ViPErLEEDSerial(SerialABC):
             # the firmware version of the PC, then we have to emit an
             # error as the controller may respond with messages we
             # cannot interpret.
-            base.emit_error(self,
-                            ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
+            self.emit_error(ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
                             arduino_version=firmware_version,
                             local_version=local_version)
         # TODO: We may want to report a (non fatal) warning in
@@ -813,12 +805,11 @@ class ViPErLEEDSerial(SerialABC):
                 key = 'i0_range' if 'i0' in key else 'aux_range'
             info[key] = present_or_closed
         if not (info['adc_0'] or info['adc_1']):
-            base.emit_error(self,
-                            ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
+            self.emit_error(ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
         if info['adc_1'] and not info['adc_0']:
             # It cannot be that ADC1 is active while zero isn't.
             # Probably a hardware fault.
-            base.emit_error(self, ViPErLEEDHardwareError.ADC_POWER_FAULT)
+            self.emit_error(ViPErLEEDHardwareError.ADC_POWER_FAULT)
 
         try:
             serial_nr = message[4:].decode('utf-8')
@@ -828,4 +819,3 @@ class ViPErLEEDSerial(SerialABC):
             info['serial_nr'] = serial_nr
         info['firmware'] = firmware_version
         return info
-
