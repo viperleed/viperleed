@@ -280,7 +280,8 @@ class CollapsibleCameraList(CollapsibleDeviceList):
     def get_camera_settings(self):
         """Return a tuple of camera settings."""
         settings_files = [self._get_relative_path(view.settings_file)
-                          for view in self.enabled_views]
+                          for view in self.enabled_views
+                          if view.settings_file]
         return tuple(settings_files)
 
     def set_cameras_from_settings(self, meas_settings):
@@ -434,7 +435,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         """Return a tuple of secondary controller settings."""
         settings_files = []
         for view in self.enabled_views:
-            if self._radiobutton(view).isChecked():
+            if self._radiobutton(view).isChecked() or not view.settings_file:
                 continue
             settings_files.append(self._get_selected_controller_settings(view))
         return tuple(settings_files)
@@ -505,6 +506,8 @@ class CollapsibleControllerList(CollapsibleDeviceList):
 
     def _get_selected_controller_settings(self, view):
         """Return the settings for the selected controller."""
+        if not view.settings_file:
+            return tuple()
         rel_path = self._get_relative_path(view.settings_file)
         return (rel_path, view.selected_quantities)
 
