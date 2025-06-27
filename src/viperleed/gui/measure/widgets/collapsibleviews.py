@@ -373,6 +373,7 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         -------
         None.
         """
+        self.loading_measurement_settings = False
         self._is_primary = False
         self._trying_to_get_settings = False
         self._primary_changed = False
@@ -451,6 +452,10 @@ class CollapsibleControllerView(CollapsibleDeviceView):
                      self._check_if_quantities_changed,
                      type=qtc.Qt.UniqueConnection)
         layout.addWidget(self._quantity_selector)
+        if not self.loading_measurement_settings:
+            self.settings_changed.emit()
+        else:
+            self.loading_measurement_settings = False
 
     @qtc.pyqtSlot()
     def _check_if_primary_changed(self):

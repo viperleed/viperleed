@@ -479,7 +479,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         is_primary = self._radiobutton(view)
         selected.stateChanged.connect(view.set_expanded_state)
         selected.stateChanged.connect(self._set_a_primary)
-        selected.stateChanged.connect(self._emit_and_update_settings)
+        selected.stateChanged.connect(self._on_unchecked)
         view.set_top_widget_geometry(selected,
                                      width=self._widths[self._top_labels[1]])
         self._radio_buttons.addButton(is_primary)
@@ -510,6 +510,26 @@ class CollapsibleControllerList(CollapsibleDeviceList):
             return tuple()
         rel_path = self._get_relative_path(view.settings_file)
         return (rel_path, view.selected_quantities)
+
+    @qtc.pyqtSlot(int)
+    def _on_unchecked(self, state):
+        """Emit settings changed, check and update settings if unchecked.
+
+        Parameters
+        ----------
+        state : int
+            The state the checkbox is in now.
+            0 (qtc.Qt.Unchecked) means unchecked.
+
+        Emits
+        -----
+        settings_changed
+            To notify other widgets of a settings change.
+        settings_ok_changed
+            To trigger a settings check.
+        """
+        if state == qtc.Qt.Unchecked:
+            self._emit_and_update_settings()
 
     def _radiobutton(self, view):
         """Return the QRadioButton of a specific view."""
@@ -606,6 +626,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
                                self._checkbox(correct_view).stateChanged,
                                self.views[correct_view][1].toggled,
                                type=qtc.Qt.UniqueConnection):
+            correct_view.loading_measurement_settings = True
             correct_view.original_settings = settings.last_file
             self._checkbox(correct_view).setChecked(True)
             correct_view.set_quantities(quantities)
