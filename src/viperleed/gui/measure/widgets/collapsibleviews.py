@@ -46,12 +46,12 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         """Initialise widget."""
         self._settings_folder = PathSelector(select_file=False, max_chars=25)
         self._settings_file_selector = qtw.QComboBox()
-        super().__init__(parent=parent)
         self._device_cls = None
         self._device_info = None
         self._handler = None
         self._expanded = False
         self._original_settings = None
+        super().__init__(parent=parent)
 
     @property
     def device_info(self):
@@ -143,6 +143,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         None.
         """
         self._settings_folder.path = settings_folder_path
+        self._on_settings_folder_changed()
 
     def store_settings(self):
         """Store the edited settings."""
@@ -229,13 +230,14 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
             # Setting the original_settings is necessary here in order
             # to correctly emit the settings_changed signal if one
             # switches back and forth between two settings files.
-            self.original_settings = self.settings_file
+            # Using _original_settings because we do not want to
+            # trigger a _on_settings_folder_changed().
+            self._original_settings = self.settings_file
             self.settings_changed.emit()
 
     def _compose_and_connect(self):
         """Compose and connect."""
         super()._compose_and_connect()
-        self._settings_folder.path = Path().resolve()
         self.add_collapsible_item(self._settings_folder)
         self.add_collapsible_item(self._settings_file_selector)
         self._settings_folder.path_changed.connect(
@@ -371,12 +373,12 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         -------
         None.
         """
-        super().__init__(parent=parent)
         self._is_primary = False
         self._trying_to_get_settings = False
         self._primary_changed = False
         self._quantity_selector = None
         self._quantities_to_set = ()
+        super().__init__(parent=parent)
 
     @property
     def selected_quantities(self):
