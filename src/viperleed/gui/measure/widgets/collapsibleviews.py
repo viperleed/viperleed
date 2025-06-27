@@ -25,6 +25,7 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsTag,
     )
 from viperleed.gui.measure.hardwarebase import DEFAULTS_PATH
+from viperleed.gui.measure.hardwarebase import disconnected_slot
 from viperleed.gui.measure.hardwarebase import make_device
 from viperleed.gui.measure.hardwarebase import safe_connect
 from viperleed.gui.measure.hardwarebase import safe_disconnect
@@ -428,12 +429,10 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         self._quantities_to_set = quantities
         if not self._quantity_selector:
             return
-        safe_disconnect(self._quantity_selector.settings_changed,
-                        self._check_if_quantities_changed)
-        self._quantity_selector.set_quantities(quantities)
-        self._quantity_selector.settings_changed.connect(
-            self._check_if_quantities_changed, type=qtc.Qt.UniqueConnection
-            )
+        with disconnected_slot(self._check_if_quantities_changed,
+                               self._quantity_selector.settings_changed,
+                               type=qtc.Qt.UniqueConnection):
+            self._quantity_selector.set_quantities(quantities)
 
     @qtc.pyqtSlot()
     def _build_device_settings_widgets(self):
