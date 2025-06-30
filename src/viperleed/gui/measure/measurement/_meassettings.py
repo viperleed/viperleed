@@ -465,7 +465,7 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         -------
         None.
         """
-        if not profile[1] == self.name or len(profile) != 3:
+        if not profile[0] == self.name or len(profile) != 3:
             raise ValueError('Unsuitable settings for a linear profile.')       # TODO: Catch error on the outside.
         self._controls['n_steps'].setValue(profile[1])
         self._controls['duration'].setValue(profile[2])
@@ -545,7 +545,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         -------
         None.
         """
-        while self.n_steps() > 0:
+        while self.n_steps > 0:
             self._remove_step()
         self.profile = profile
         for fraction, duration in zip(profile[0::2], profile[1::2]):
