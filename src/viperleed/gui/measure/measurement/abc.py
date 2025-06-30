@@ -1058,9 +1058,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     def _connect_secondary_controllers(self):
         """Connect necessary controller signals."""
-        about_to_trigger = self.primary_controller.about_to_trigger
+        about_to_trigger = getattr(self.primary_controller,
+                                   'about_to_trigger',
+                                   None)  # No primary yet
         for ctrl in self.secondary_controllers:
-            base.safe_connect(about_to_trigger, ctrl.measure_now, type=_UNIQUE)
+            if about_to_trigger:
+                base.safe_connect(about_to_trigger, ctrl.measure_now,
+                                  type=_UNIQUE)
             self._connect_controller(ctrl)
 
     def _disconnect_cameras(self):
