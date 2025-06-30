@@ -290,7 +290,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             and an exact match was asked for.
         """
         settings = self.find_matching_settings_files(
-            find_from, base.DEFAULTS_PATH, match_exactly,
+            obj_info=find_from, directory=base.DEFAULTS_PATH,
+            match_exactly=match_exactly,
             )
         if not settings:
             # No default settings was found.
@@ -308,29 +309,31 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         return settings[0]
 
     @classmethod
-    def find_matching_settings_files(cls, obj_info, directory, match_exactly):
+    def find_matching_settings_files(cls, obj_info=None, directory=None,
+                                     match_exactly=None):
         """Find .ini files for obj_info in the tree starting at directory.
 
         Parameters
         ----------
-        obj_info : SettingsInfo or None
+        obj_info : SettingsInfo or None, optional
             The additional information that should be used to find
             appropriate settings. If it is None, subclasses must attempt
             to determine suitable settings without additional
             information when searching for default settings via
             is_matching_default_settings(). When looking for user
             settings with is_matching_user_settings(), a TypeError will
-            be raised if obj_info is None.
-        directory : str or Path
+            be raised if obj_info is None. Default is None.
+        directory : str or Path or None
             The location in which to look for configuration files.
             Settings files are searched in directory and all its
             subfolders. If directory is the directory containing the
             default settings, is_matching_default_settings is used to
             determine whether a configuration file is appropriate. If it
             is a different folder, is_matching_user_settings is used
-            instead.
-        match_exactly : bool
-            Whether obj_info should be matched exactly.
+            instead. Raises RuntimeError if None. Default is None.
+        match_exactly : bool or None
+            Whether obj_info should be matched exactly. Raises
+            RuntimeError if None. Default is None.
 
         Returns
         -------
@@ -338,7 +341,17 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             A list of the paths to settings files that contain appropriate
             settings sorted by how well the settings match from best to
             worst.
+
+        Raises
+        ------
+        RuntimeError
+            If directory or match_exactly were not given.
         """
+        if directory is None or match_exactly is None:
+            raise RuntimeError(
+                'directory and match_exactly keyword arguments must be '
+                'passed on to the find_matching_settings_files method.'
+                )
         directory = Path(directory).resolve()
         default = directory == base.DEFAULTS_PATH
         settings_files = directory.glob('**/*.ini')

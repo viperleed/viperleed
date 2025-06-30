@@ -373,7 +373,8 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
     parent_widget = kwargs.get('parent_widget', None)
 
     device_config_files = obj_cls.find_matching_settings_files(
-        obj_info, directory, match_exactly,
+        obj_info=obj_info, directory=directory,
+        match_exactly=match_exactly,
         )
 
     if device_config_files and len(device_config_files) == 1:
