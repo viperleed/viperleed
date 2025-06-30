@@ -478,6 +478,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                     settings.update_file()
                     invalid_settings.remove('/'.join(new_setting))
 
+        # Backwards compatibility fix                                           # TODO: #242
+        if ('energies/step_profile') in invalid_settings:
+            settings.set('energies', 'step_profile', "('abrupt',)")
+            invalid_settings.remove('energies/step_profile')
         return [(invalid,) for invalid in invalid_settings]
 
     def disconnect_devices_and_notify(self):
