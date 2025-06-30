@@ -437,10 +437,10 @@ class CollapsibleControllerView(CollapsibleDeviceView):
     @qtc.pyqtSlot()
     def _build_device_settings_widgets(self):
         """Get the handler and quantity widgets for the device settings."""
-        if not self.has_hardware_interface:
-            settings = ViPErLEEDSettings.from_settings(self.original_settings)
-        else:
-            settings = self.sender().settings
+        settings = (
+            self.sender().settings if self.has_hardware_interface
+            else ViPErLEEDSettings.from_settings(self.original_settings)
+            )
         super()._build_device_settings_widgets()
         # Get the layout in which the SettingsHandler widgets are contained.
         layout = self._frame.layout().itemAt(2).widget().layout()
