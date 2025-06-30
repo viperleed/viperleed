@@ -176,9 +176,9 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         """
         cls = self.selected_type
         settings_path = self.selected_file
-        default_path = cls.find_matching_settings_files(
+        default_path, *_ = cls.find_matching_settings_files(
             directory=DEFAULTS_PATH, match_exactly=False,
-            )[0]
+            )
 
         if not settings_path or settings_path in (default, default_path):
             settings_path = self._duplicate_settings_file(cls, default_path)
