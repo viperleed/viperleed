@@ -1,10 +1,35 @@
-# viperleed
 
-Documentation of the API and how to use the package can be found at: https://www.iap.tuwien.ac.at/www/protected/surface/leediv/index
+# ViPErLEED
 
-If you do not have access, please contact michele.riva@tuwien.ac.at
+ViPErLEED is an open-source package for quantitative low-energy electron
+diffraction, also known as LEED-*I*(*V*). It comprises tools for measurement,
+processing, and analysis of LEED-*I*(*V*) results, calculation of theoretical
+*I*(*V*) curves based on a structural model of a surface, and optimization of
+such a model to best fit the experimental results.
 
-This repository includes the following main executables:
-- GUI: offers a LEED pattern preview, and exports a "pattern file" required by the spot tracker
-- tleedm: the "TensErLEED Manager". Performs LEED-IV calculations based on the TensErLEED package from input files as documented in the wiki. This creates quite a lot of files, so it is recommended to have an additional job script (see e.g. example-job.sh or job.py) moving the input files and tleedm executable into a work folder and executing it there. When exiting, tleedm will create a "manifest" file, which is a list of files and folders that should be copied back.
-- bookkeeper: a helper utility that copies output from a previous tleedm run into a directory "history", and collects information about previous runs in a file "history.info". See example-job.sh for an example of bookkeeper usage. Execute bookkeeper with flag "-c" for continuation jobs, i.e. to overwrite the POSCAR and VIBROCC input files in the main folder with the latest POSCAR_OUT and VIBROCC_OUT from the OUT folder.
+You can find the full documentation under <https://www.viperleed.org>.
+
+This repository contains the `viperleed.calc` package, the graphical user
+interface (GUI) and the software related to the ViPErLEED electronics.
+
+The ViPErLEED ImageJ plugins are available under
+<https://github.com/viperleed/viperleed-imagej>
+
+The TensErLEED back-end code used by `viperleed.calc` is available under
+<https://github.com/viperleed/viperleed-tensorleed>
+
+For installation instructions see
+<https://www.viperleed.org/stable/content/installation.html>
+
+For a documentation of the `viperleed` Python API see
+<https://www.viperleed.org/stable/content/api.html>
+
+[![Documentation Status](https://readthedocs.org/projects/viperleed/badge/?version=stable)](https://viperleed.readthedocs.io/stable/?badge=stable)
+
+
+#### Reporting bugs
+You can ask questions, report bugs, and propose new features by creating
+a new issue under <https://github.com/viperleed/viperleed/issues>. This
+is the preferred means of communication with us.
+
+Alternatively, you can contact us via email at <riva@iap.tuwien.ac.at>.

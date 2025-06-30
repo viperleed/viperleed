@@ -1,0 +1,26 @@
+! ####### GLOBAL PARAMETERS #######
+
+RUN = 0
+LOG_DEBUG = True
+THEO_ENERGIES =   50 350 3
+
+
+! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
+
+N_BULK_LAYERS = 1
+BULK_REPEAT = abc[0.50  0.50 -0.10]
+
+SUPERLATTICE = (1x1)
+
+! Test renaming atom
+ELEMENT_RENAME Ax = Au
+
+! ####### PARAMETERS FOR REFCALC #######
+
+V0_IMAG = 5.0
+LMAX = 8-12
+
+T_DEBYE = 330                      ! create VIBROCC
+T_EXPERIMENT = 100                 ! create VIBROCC
+VIBR_AMP_SCALE = *surf 1.3         ! create VIBROCC
+
