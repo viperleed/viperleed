@@ -277,7 +277,8 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
     def get_bspline_coeffs(self, rhs):
         """Return the coefficients of the B-spline interpolant.
 
-        Solves the linear system lhs * coeffs = rhs for coeffs."""
+        Solves the linear system lhs * coeffs = rhs for coeffs.
+        """
         # TODO: we could do this more efficiently. One easy improvement would be to
         # pre-factorize lhs by splitting .solve() into .lu_factor() and .lu_solve()
         # parts. Only the solve part depends on the right hand side.
@@ -294,7 +295,6 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
     @partial(jax.vmap, in_axes=(None, 1))
     def convert_b_to_pp_spline_coeffs(self, bspline_coeffs):
         """Converts B-spline to piecewise polynomial coefficents."""
-
         # pad with knot values
         _bspline_coeffs = jnp.pad(bspline_coeffs[1:], (3, 3), 'edge')
 
@@ -373,7 +373,7 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
             return (
                 3 * a[_intervals] * x2 + 2 * b[_intervals] * x + c[_intervals]
             )
-        elif deriv == 2:
+        if deriv == 2:
             return 6 * a[_intervals] * x + 2 * b[_intervals]
 
     def translate_bspline_coeffs(self, bspline_coeffs, shift):

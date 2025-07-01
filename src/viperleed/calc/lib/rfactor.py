@@ -3,17 +3,12 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-02-21'
 
-from functools import partial
 
-import jax
 from jax import numpy as jnp
-
-from viperleed_jax import interpolation
 
 
 def pendry_R(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
     """Calculate the R-factor for two beams"""
-
     # Experimental data
     exp_deriv_spline = exp_spline.derivative()
 
@@ -76,7 +71,8 @@ def nansum_trapezoid(y, dx, axis=-1):
 
 def integer_shift_v0r(array, n_steps):
     """Applies a v0r shift to the array by shifting the values n_steps up or
-    down the first axis (energy) and padding with NaNs."""
+    down the first axis (energy) and padding with NaNs.
+    """
     # NB, TODO: This only allows for integer shifts (multiples of the set
     # energy step). This is a limitation of the current implementation.
     # In principle, we could implement a more general shift and allow real
