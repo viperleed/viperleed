@@ -29,7 +29,7 @@ from viperleed.gui.measure.widgets.collapsiblelists import (
     CollapsibleCameraList,
     CollapsibleControllerList,
     )
-from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
+from viperleed.gui.measure.widgets.fieldinfo import InfoLabel
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.gui.widgets.buttons import ButtonWithLabel
@@ -480,27 +480,19 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QFormLayout()
-        duration_label = qtw.QLabel('Step duration:')
-        step_num_label = qtw.QLabel('Nr. of steps:')
         duration_info = ('<nobr>How long to wait until </nobr>'
                          'the next intermediate step.')
         step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
                          f'Cannot be more than {MAX_NUM_STEPS}.')
-        layout.addRow(self._make_info_label(duration_label, duration_info),
-                      self._controls['n_steps'])
-        layout.addRow(self._make_info_label(step_num_label, step_num_info),
-                      self._controls['duration'])
+        layout.addRow(
+            InfoLabel(label_text='Step duration:', tooltip=duration_info),
+            self._controls['n_steps']
+            )
+        layout.addRow(
+            InfoLabel(label_text='Nr. of steps:', tooltip=step_num_info),
+            self._controls['duration']
+            )
         self.setLayout(layout)
-
-    def _make_info_label(self, label, info):
-        """Return a widget containing the label and info."""
-        container = qtw.QWidget()
-        layout = qtw.QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(label)
-        layout.addWidget(FieldInfo.for_widget(label, tooltip=info))
-        container.setLayout(layout)
-        return container
 
 
 class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
@@ -604,8 +596,6 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose_labels(self):
         """Return a layout of the labels."""
         layout = qtw.QHBoxLayout()
-        fraction_label = qtw.QLabel('Step fraction')
-        layout.addWidget(fraction_label)
         info = ('<nobr>The energies to set given as a fraction</nobr> '
                 f'of {DELTA_E_NAME}. Number of steps cannot exceed '
                 f'{MAX_NUM_STEPS}. Any value is acceptable. Zero is '
@@ -613,11 +603,10 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
                 'energy. A fraction of one does not have to be '
                 'explicitly included at the end, as this is added '
                 'automatically with the settle time.')
-        layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
-        layout.addWidget(qtw.QLabel('Duration'))
+        layout.addWidget(InfoLabel(label_text='Step fraction', tooltip=info))
         info = ('<nobr>How long to wait until </nobr>'
                 'the next intermediate step.')
-        layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
+        layout.addWidget(InfoLabel(label_text='Duration', tooltip=info))
         return layout
 
     def _connect(self):

@@ -3,6 +3,8 @@
 Defines the FieldInfo class: a QLabel with icon, used for displaying
 extra information in a tooltip. Less conspicuous than just having a
 tooltip appear on mouse hover.
+Defines the InfoLabel class: a QWidget composed of a label and a
+FieldInfo.
 """
 
 __authors__ = (
@@ -91,3 +93,33 @@ class FieldInfo(qtw.QLabel):
         if qtw.QToolTip.isVisible():
             return
         qtw.QToolTip.showText(qtg.QCursor.pos(), self.toolTip())
+
+class InfoLabel(qtw.QWidget):
+    """A label with an attached FieldInfo."""
+
+    def __init__(self, label_text='', tooltip='', parent=None):
+        """Initialize instance."""
+        super().__init__(parent=parent)
+        self._field_info = None
+        self._label = None
+        self._compose(label_text, tooltip)
+
+    @property
+    def field_info(self):
+        """Return FieldInfo."""
+        return self._field_info
+
+    @property
+    def label(self):
+        """Return QLabel."""
+        return self._label
+
+    def _compose(self, label_text, tooltip):
+        """Compase label and FieldInfo."""
+        layout = qtw.QHBoxLayout()
+        self._label = qtw.QLabel(label_text)
+        layout.addWidget(self._label)
+        self._field_info = FieldInfo.for_widget(self._label, tooltip=tooltip)
+        layout.addWidget(self._field_info)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)

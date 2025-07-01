@@ -44,7 +44,7 @@ import warnings
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
+from viperleed.gui.measure.widgets.fieldinfo import InfoLabel
 from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
@@ -578,7 +578,7 @@ class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
             handler_widget = handler_widget(*args, **kwargs)
 
         self._handler_widget = handler_widget
-        self._label = qtw.QLabel()
+        self._label = None
         self._info = None
         self._check_handler()
         self._connect_handler()
@@ -673,22 +673,19 @@ class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
         label_text = label_text.strip()
         if not label_text.endswith(':'):
             label_text += ':'
-        self.label.setText(label_text)
+
+        info_label = InfoLabel(label_text=label_text, tooltip=info_text)
+        self._label = info_label.label
+        self._info = info_label.field_info
 
         # Prepare a container widget and its layout
         container = qtw.QWidget()
         container.setLayout(qtw.QVBoxLayout())
         v_align_layout = container.layout()
-        h_align_layout = qtw.QHBoxLayout()
         v_align_layout.setContentsMargins(0, 0, 0, 0)
-        h_align_layout.setContentsMargins(0, 0, 0, 0)
-
-        self._info = FieldInfo.for_widget(self.label, tooltip=info_text)
 
         # Fill layout
-        h_align_layout.addWidget(self.label)
-        h_align_layout.addWidget(self._info)
-        v_align_layout.addLayout(h_align_layout)
+        v_align_layout.addWidget(info_label)
 
         # Sort out vertical alignment, using stretches. "Top"
         # is the default for QFormLayout, i.e., nothing to do
@@ -704,7 +701,7 @@ class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
         # Now horizontal alignment: Decide where to
         # place a stretch to keep text & info together
         is_left_align = qtw.QFormLayout().labelAlignment() == qtc.Qt.AlignLeft
-        h_align_layout.insertStretch(-1 if is_left_align else 0, 1)
+        info_label.layout().insertStretch(-1 if is_left_align else 0, 1)
 
         self.set_info_text(info_text)
         return container
