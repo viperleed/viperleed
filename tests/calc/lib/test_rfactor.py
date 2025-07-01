@@ -3,7 +3,6 @@
 import interpax
 import numpy as np
 import pytest
-from jax import numpy as jnp
 from pytest_cases import case, fixture, parametrize_with_cases
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.iorfactor import beamlist_to_array
