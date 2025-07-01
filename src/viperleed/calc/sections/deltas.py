@@ -360,8 +360,8 @@ def deltas(sl, rp, subdomain=False):
     if rp.BACKEND["search"] == SearchBackend.VLJ:
         raise RuntimeError(
             'Delta calculations are not supported with the viperleed-jax '
-            'backend. Please use the TensorCalculator.delta_amplitudes() '
-            'method instead.')
+            'backend. To sample amplitude changes use the '
+            'TensorCalculator.delta_amplitudes() method instead.')
 
     if rp.domainParams:
         deltas_domains(rp)
