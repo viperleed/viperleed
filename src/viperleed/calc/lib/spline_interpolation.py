@@ -176,7 +176,7 @@ class CardinalSplineInterpolator(ABC):
         # raise if knots are not sorted
         if not jnp.all(self.knots[:-1] <= self.knots[1:]):
             raise ValueError('knots must be sorted')
-        intervals = (
+        return (
             jnp.clip(
                 jnp.searchsorted(self.knots, self.target_grid, side='left'),
                 a_min=self.intpol_deg + 1,
@@ -184,7 +184,6 @@ class CardinalSplineInterpolator(ABC):
             )
             - 1
         )
-        return intervals
 
     def _banded_colloc_matrix_to_full(self, banded_colloc_matrix):
         kl = self.intpol_deg
@@ -287,10 +286,9 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
         # solve the linear system
         raw_spline_coeffs = self.inv_colloc_matrix @ jnp.nan_to_num(rhs, 0)
         # mask NaN values in the result such that they are not used in the interpolation
-        masked_bspline_coeffs = jnp.where(
+        return jnp.where(
             rhs_nan_mask, jnp.nan, raw_spline_coeffs
         )
-        return masked_bspline_coeffs
 
     @partial(jax.vmap, in_axes=(None, 1))
     def convert_b_to_pp_spline_coeffs(self, bspline_coeffs):
@@ -332,11 +330,10 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
             _bspline_coeffs, B_TO_PP_SPLINE_BASIS_TRANSFORMATION[0, :], 'same'
         )
         d = d - a - b - c
-        pp_spline_coeffs = jnp.array([a, b, c, d])[
+        return jnp.array([a, b, c, d])[
             :, :
         ]  # cut off last three coeffs from convolution
         # pp_spline_coeffs = jnp.pad(pp_spline_coeffs, ((0,0), (3,3)), 'edge')
-        return pp_spline_coeffs
 
     from functools import partial
 
@@ -344,7 +341,6 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
     def evaluate_pp_spline_coeffs(self, pp_spline_coeffs, deriv=0, shift=0.0):
         knot_shift, frac_shift = divmod(shift, self.intpol_step)
         knot_shift = int(knot_shift)
-        print(knot_shift)
 
         # a,b,c,d = pp_spline_coeffs
         shift_matrix = translate_cubic_pp_spline_coeffs(-frac_shift)
@@ -375,9 +371,10 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
             )
         if deriv == 2:
             return 6 * a[_intervals] * x + 2 * b[_intervals]
+        return None
 
     def translate_bspline_coeffs(self, bspline_coeffs, shift):
-        """Somehow this doesn't work"""
+        """Somehow this doesn't work."""
         piecewise_translator = translate_cubic_pp_spline_coeffs(shift)
 
         transformation = (
@@ -397,8 +394,7 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
             ]
         ).swapaxes(0, 1)
         # remove added dummy coeffs from convolution
-        translated_bspline_coeffs = translated_bspline_coeffs[1:-2]
-        return translated_bspline_coeffs
+        return translated_bspline_coeffs[1:-2]
 
     def evaluate_bspline_coeffs(self, bspline_coeffs, deriv_order=0):
         """Evaluate spline using the De Boor and the B-spline coefficients"""
@@ -417,21 +413,19 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
 
 
 def not_a_knot_rhs(values):
-    values = jnp.asarray(values)
-    return values
+    return jnp.asarray(values)
 
 
 # TODO: implement natural knot interpolator
 ## Natural knots spline boundary condition – currently unused –
 def get_natural_knots(x, deg):
-    knots = np.concatenate(
+    return np.concatenate(
         [
             np.full(shape=(deg,), fill_value=x[0]),
             x,
             np.full(shape=(deg,), fill_value=x[-1]),
         ]
     )
-    return knots
 
 
 def natural_derivative_bc(deg):
@@ -452,5 +446,6 @@ def natural_derivative_bc(deg):
         derivs_r_val = np.array([0, 0])
 
     else:
-        raise ValueError(f'unsupported degree {deg}')
+        msg = f'unsupported degree {deg}'
+        raise ValueError(msg)
     return derivs_l_ord, derivs_l_val, derivs_r_ord, derivs_r_val
