@@ -160,7 +160,7 @@ class CardinalSplineInterpolator(ABC):
         raise NotImplementedError
 
     def _calc_de_boor_coeffs(self, deriv_order):
-        """Calculate the De Boor coeffs for the given knots and target grid"""
+        """Calculate the De Boor coeffs for the given knots and target grid."""
         de_boor_coeffs = np.zeros((self.intpol_deg + 1, self.target_grid.size))
         for i, (interval, new_x) in enumerate(
             zip(self.intervals, self.target_grid)
@@ -172,7 +172,7 @@ class CardinalSplineInterpolator(ABC):
         return de_boor_coeffs
 
     def _find_intervals(self):
-        """Return index of interval in knots that contains x_val"""
+        """Return index of interval in knots that contains x_val."""
         # raise if knots are not sorted
         if not jnp.all(self.knots[:-1] <= self.knots[1:]):
             raise ValueError('knots must be sorted')
@@ -397,7 +397,7 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
         return translated_bspline_coeffs[1:-2]
 
     def evaluate_bspline_coeffs(self, bspline_coeffs, deriv_order=0):
-        """Evaluate spline using the De Boor and the B-spline coefficients"""
+        """Evaluate spline using the De Boor and the B-spline coefficients."""
         # Extract the relevant coefficients for each interval
         lower_indices = self.intervals - self.intpol_deg
         coeff_indices = lower_indices.reshape(-1, 1) + jnp.arange(

@@ -1,4 +1,4 @@
-"""Module R-factor"""
+"""Module R-factor."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-02-21'
@@ -8,7 +8,7 @@ from jax import numpy as jnp
 
 
 def pendry_R(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
-    """Calculate the R-factor for two beams"""
+    """Calculate the R-factor for two beams."""
     # Experimental data
     exp_deriv_spline = exp_spline.derivative()
 
