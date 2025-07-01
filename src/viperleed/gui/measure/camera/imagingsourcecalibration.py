@@ -16,17 +16,17 @@ from copy import deepcopy
 from PyQt5 import QtCore as qtc
 import numpy as np
 
-from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera import cameracalibration as _calib
 from viperleed.gui.measure.classes.calibrationtask import (
     CalibrationTaskOperation,
     )
+from viperleed.gui.measure.hardwarebase import ViPErLEEDErrorEnum
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
 
 
-class ImagingSourceCalibrationError(base.ViPErLEEDErrorEnum):
+class ImagingSourceCalibrationError(ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
 
     MAXIMUM_DARK_LEVEL_REACHED = (
@@ -154,8 +154,8 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         intensity = mean_ - 6*stdev
 
         if mean_ > 0.5*int_range:  # Too much for a dark frame
-            base.emit_error(
-                self, _calib.CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT
+            self.emit_error(
+                _calib.CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT
                 )
             return
 
@@ -269,8 +269,7 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         if self.__dark_delta > _drk_range:
             # We have increased dark level all the way up
             # but we're still not getting anything reasonable
-            base.emit_error(
-                self,
+            self.emit_error(
                 ImagingSourceCalibrationError.MAXIMUM_DARK_LEVEL_REACHED,
                 self.camera.name
                 )
