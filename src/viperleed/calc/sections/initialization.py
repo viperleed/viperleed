@@ -30,6 +30,7 @@ from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
 from viperleed.calc.constants import DEFAULT_DOMAIN_FOLDER_PREFIX
 from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.files.new_displacements.file import DisplacementsFile
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files import experiment_symmetry
@@ -45,6 +46,8 @@ from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections.cleanup import preserve_original_inputs
+from viperleed.calc.vlj import VLJ_AVAILABLE
+
 
 logger = logging.getLogger(__name__)
 
@@ -393,7 +396,21 @@ def initialization(sl, rp, subdomain=False):
     # Create directory compile_logs in which logs from compilation will be saved
     make_compile_logs_dir(rp)
 
-    return
+    if not VLJ_AVAILABLE:
+        if rp.BACKEND['search'] == 'viperleed-jax':
+            logger.error('The viperleed_jax plugin is not available. '
+                         'Please install it to use the viperleed-jax backend.')
+            rp.setHaltingLevel(3)
+        return
+
+    # viperleed_jax Plugin related initialization
+    if rp.BACKEND['search'] == 'viperleed-jax':
+        logger.debug("Initializing viperleed-jax backend")
+
+    # read the DISPLACEMENTS file using the new parser and store it in rpars
+    rp.vlj_displacements = DisplacementsFile()
+    rp.vlj_displacements.read(rp.paths.home / 'DISPLACEMENTS')
+    logger.debug('DISPLACEMENTS file read successfully')
 
 
 def init_domains(rp):
