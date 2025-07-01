@@ -39,6 +39,8 @@ from viperleed.calc.sections import rfactor
 from viperleed.calc.sections import search
 from viperleed.calc.sections import superpos
 from viperleed.calc.sections.cleanup import cleanup, move_oldruns
+from viperleed.calc.vlj.lib import check_vlj_dependencies
+from viperleed.calc.vlj.search import vlj_search
 
 
 logger = logging.getLogger(__name__)
@@ -215,7 +217,14 @@ def run_section(index, sl, rp):
         elif index == 2:
             deltas.deltas(sl, rp)
         elif index == 3:
-            search.search(sl, rp)
+            if rp.BACKEND['search'] == 'viperleed-jax':
+                # check dependencies
+                check_vlj_dependencies()
+
+                # initialize the TensorLEED calculator
+                vlj_search(sl, rp)
+            else:
+                search.search(sl, rp)
         elif index == 31:
             superpos.superpos(sl, rp)
         elif index == 5:
@@ -305,6 +314,14 @@ def section_loop(rp, sl):
             elif sec == 31 and rp.fileLoaded["EXPBEAMS"]:
                 if next_section != 12:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
+            elif (sec == 12 and not rp.STOP
+                  and rp.BACKEND['search'] == 'viperleed-jax'):
+                # everything should be handled via the iterator in the
+                # vlj_search function
+                # TODO: the one thing that will not yet be handled is the
+                # MAX_TL_DISPLACEMENT – but we can implement this when we
+                # implement the general search iterator interface
+                pass
             elif sec == 12 and not rp.STOP:
                 # check for max. displacement condition:
                 exceeds_tl_limit = _check_exceeds_tl_limit(rp, sl)
