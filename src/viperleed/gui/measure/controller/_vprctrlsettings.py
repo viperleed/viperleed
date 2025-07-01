@@ -27,12 +27,13 @@ from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.classes import thermocouple
 from viperleed.gui.measure.dialogs.settingsdialog import (
-    FieldInfo,
     SettingsDialogSectionBase,
     SettingsTag,
     )
 from viperleed.gui.measure.serial.viperleedserial import ExtraSerialErrors
 from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDHardwareError
+from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
+from viperleed.gui.measure.widgets.fieldinfo import InfoLabel
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 from viperleed.gui.widgets.lib import change_control_text_color
@@ -972,7 +973,7 @@ class _I0EditDialog(_EditDialogBase):
         super().__init__(controller, *args, **kwargs)
 
         self.__gain = CoercingDoubleSpinBox(decimals=8)
-        self.__gain_info = None
+        self._gain_info = None
 
         self.__compose()
         self.__connect()
@@ -998,19 +999,14 @@ class _I0EditDialog(_EditDialogBase):
 
     def __compose(self):
         """Place children widgets."""
-        _label = qtw.QLabel("I\u2080 gain")
-        _policy = _label.sizePolicy()
-        _label.setSizePolicy(_policy.Fixed, _policy.Preferred)
-        self.__gain_info = FieldInfo.for_widget(_label)
-        self.__gain_info.setSizePolicy(_policy.Fixed, _policy.Fixed)
+        info_label = InfoLabel(label_text='I\u2080 gain')
+        self._gain_info = info_label.field_info
+        _policy = info_label.label.sizePolicy()
+        info_label.label.setSizePolicy(_policy.Fixed, _policy.Preferred)
+        info_label.field_info.setSizePolicy(_policy.Fixed, _policy.Fixed)
         self.__update_gain_info()
-
-        layout = qtw.QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(_label)
-        layout.addWidget(self.__gain_info)
+        layout = info_label.layout()
         layout.addWidget(self.__gain)
-
         self.central_widget.setLayout(layout)
 
     def __connect(self):
@@ -1043,7 +1039,7 @@ class _I0EditDialog(_EditDialogBase):
         """Update tooltip text for the gain widgets."""
         range_ = self._input_range.range_
         _tip = self._gain_tip_base.format(self._gains[range_])
-        self.__gain_info.set_info_text(_tip)
+        self._gain_info.set_info_text(_tip)
 
 
 class _TemperatureEditDialog(_EditDialogBase):                                  # TODO: after check of TC, add offset correction
