@@ -55,7 +55,7 @@ def vlj_search(slab, rpars):
     tensor_path = (rpars.paths.home / DEFAULT_TENSORS
                     / f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}.zip')
     if not tensor_path.exists():
-        raise RuntimeError(f'Tensor {tensor_path} not found.')
+        raise FileNotFoundError(f'Tensor {tensor_path} not found.')
 
     # path to DISPLACEMENTS file
     displacements_file = Path() / 'DISPLACEMENTS'
