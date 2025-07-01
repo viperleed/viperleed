@@ -102,6 +102,7 @@ class Rparams:
         # FROM PARAMETERS FILE
         self.ATTENUATION_EPS = 0.001
         self.AVERAGE_BEAMS = None
+        self.BACKEND = self.get_default("BACKEND")
         self.BULKDOUBLING_EPS = 0.001
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
@@ -144,7 +145,6 @@ class Rparams:
         self.R_FACTOR_SMOOTH = 0
         self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD
         self.SCREEN_APERTURE = 110.
-        self.SEARCH_BACKEND = self.get_default('SEARCH_BACKEND')
         self.SEARCH_BEAMS = 0   # 0: average, 1: integer, 2: fractional
         # SEARCH_CULL: fraction of population, or absolute nr. if >1
         # SEARCH_CULL.type_: clone, genetic, random

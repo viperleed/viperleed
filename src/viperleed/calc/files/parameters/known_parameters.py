@@ -38,6 +38,7 @@ _LOGGER = logging.getLogger(parent_name(__name__))
 KNOWN_PARAMS = (
     'ATTENUATION_EPS',
     'AVERAGE_BEAMS',
+    'BACKEND',
     'BEAM_INCIDENCE',
     'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX',
@@ -71,7 +72,6 @@ KNOWN_PARAMS = (
     'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE',
     'SCREEN_APERTURE',
-    'SEARCH_BACKEND',
     'SEARCH_BEAMS',
     'SEARCH_CONVERGENCE',
     'SEARCH_CULL',

@@ -82,7 +82,7 @@ DEFAULTS = {
     'THEO_ENERGIES - no experiments': (20, 800, 3),
 
     # Parameters for ViPErLEED JAX plugin
-    'SEARCH_BACKEND': SearchBackend.TENSERLEED,
+    'BACKEND': {'search': SearchBackend.TENSERLEED},
     'SEARCH_RECALC_TMATRICES': False,
 
     }

@@ -700,7 +700,7 @@ def search(sl, rp):
     """
 
     # brach off to viperleed-jax
-    if rp.SEARCH_BACKEND == SearchBackend.VLJ:
+    if rp.BACKEND['search'] == SearchBackend.VLJ:
         # check dependencies
         check_vlj_dependencies()
 

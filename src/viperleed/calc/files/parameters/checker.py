@@ -91,14 +91,14 @@ class ParametersChecker:
                 )
 
     def _check_search_backend_and_run_segments(self):
-        """Check SEARCH_BACKEND and RUN for consistency.
+        """Check BACKEND['search'] and RUN for consistency.
 
         When using the ViPErLEED JAX plugin for the search, delta-amplitude
         calculations become moot. In this method, we check for any delta-
         amplitude calculations in the RUN parameter and remove them if
         necessary. We also warn the user that this is the case.
         """
-        if self._rpars.SEARCH_BACKEND != 'viperleed-jax':
+        if self._rpars.BACKEND["search"] != "viperleed-jax":
             # ignore for TensErLEED backend
             return
 
