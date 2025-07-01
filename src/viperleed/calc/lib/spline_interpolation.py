@@ -286,9 +286,7 @@ class CardinalNotAKnotSplineInterpolator(CardinalSplineInterpolator):
         # solve the linear system
         raw_spline_coeffs = self.inv_colloc_matrix @ jnp.nan_to_num(rhs, 0)
         # mask NaN values in the result such that they are not used in the interpolation
-        return jnp.where(
-            rhs_nan_mask, jnp.nan, raw_spline_coeffs
-        )
+        return jnp.where(rhs_nan_mask, jnp.nan, raw_spline_coeffs)
 
     @partial(jax.vmap, in_axes=(None, 1))
     def convert_b_to_pp_spline_coeffs(self, bspline_coeffs):
