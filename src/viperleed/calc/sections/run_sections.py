@@ -21,6 +21,7 @@ from viperleed.calc.classes.rparams.defaults import NO_VALUE
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
     )
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
@@ -217,7 +218,7 @@ def run_section(index, sl, rp):
         elif index == 2:
             deltas.deltas(sl, rp)
         elif index == 3:
-            if rp.BACKEND['search'] == 'viperleed-jax':
+            if rp.BACKEND['search'] is SearchBackend.VLJ:
                 # check dependencies
                 check_vlj_dependencies()
 
@@ -315,7 +316,7 @@ def section_loop(rp, sl):
                 if next_section != 12:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
             elif (sec == 12 and not rp.STOP
-                  and rp.BACKEND['search'] == 'viperleed-jax'):
+                  and rp.BACKEND['search'] is SearchBackend.VLJ):
                 # everything should be handled via the iterator in the
                 # vlj_search function
                 # TODO: the one thing that will not yet be handled is the

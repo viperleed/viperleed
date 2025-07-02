@@ -21,6 +21,7 @@ import numpy as np
 
 from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams.domain_params import DomainParameters
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import NoBulkRepeatError
@@ -54,6 +55,9 @@ logger = logging.getLogger(__name__)
 
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
+
+    logger.info(f'Running with backend {rp.BACKEND["search"]}.')
+
     if not subdomain:
         rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
@@ -397,14 +401,14 @@ def initialization(sl, rp, subdomain=False):
     make_compile_logs_dir(rp)
 
     if not VLJ_AVAILABLE:
-        if rp.BACKEND['search'] == 'viperleed-jax':
+        if rp.BACKEND['search'] == SearchBackend.VLJ:
             logger.error('The viperleed_jax plugin is not available. '
                          'Please install it to use the viperleed-jax backend.')
             rp.setHaltingLevel(3)
         return
 
     # viperleed_jax Plugin related initialization
-    if rp.BACKEND['search'] == 'viperleed-jax':
+    if rp.BACKEND['search'] == SearchBackend.VLJ:
         logger.debug("Initializing viperleed-jax backend")
 
     # read the DISPLACEMENTS file using the new parser and store it in rpars
