@@ -27,7 +27,7 @@ if VLJ_AVAILABLE:
 logger = logging.getLogger(__name__)
 
 
-def vlj_search(slab, rpars, search_block):
+def vlj_search(slab, rpars):
     """Perform a search using the ViPErLEED-JAX backend.
 
     Parameters
@@ -87,8 +87,8 @@ def vlj_search(slab, rpars, search_block):
         slab,
         rpars,
         tensor_path=tensor_path,
-        phaseshifts_path=rpars.home / 'PHASESHIFTS',
-        t_leed_l_max=rpars.L_MAX,
+        phaseshifts_path=rpars.paths.home / 'PHASESHIFTS',
+        t_leed_l_max=rpars.LMAX.max,
         recalculate_ref_t_matrices=False,
         use_symmetry=True
     )
