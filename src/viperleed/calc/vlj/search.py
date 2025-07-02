@@ -125,6 +125,9 @@ def vlj_search(slab, rpars):
     poscar.write(slab, "POSCAR_TL_optimized_CMAES", comments="all")
     writeVIBROCC(slab, "VIBROCC_TL_optimized_CMAES")
 
+    # write result to file
+    cmaes_result.write_to_file('CMAES_result.npz')
+
     slsqp_opt = optimization.SLSQPOptimizer(
         fun=calculator.R(x),
         grad=calculator.grad_R(x),
@@ -146,3 +149,6 @@ def vlj_search(slab, rpars):
     poscar.write(slab, 'POSCAR_TL_optimized_SLSQP', comments='all')
     # VIBROCC
     writeVIBROCC(slab, 'VIBROCC_TL_optimized_SLSQP')
+
+    # write result to file
+    slsqp_result.write_to_file('SLSQP_result.npz')
