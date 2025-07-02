@@ -13,6 +13,8 @@ import logging
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.vlj import VLJ_AVAILABLE
 
+import numpy as np
+
 if VLJ_AVAILABLE:
     from viperleed_jax.from_objects import (
         setup_tl_parameter_space,
