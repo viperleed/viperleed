@@ -3,7 +3,7 @@
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-10-25'
 __license__ = 'GPLv3+'
 
@@ -97,6 +97,9 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
     if which in ["a", "b", "c", "ab", "abc"]:
         title += " scaling"
 
+    # Pylint can't tell that we will not execute this,
+    # as per decorator, if we fail to import matplotlib
+    # pylint: disable-next=possibly-used-before-assignment
     fig = plt.figure(figsize=(5.8, 4.1))
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel(title)
@@ -122,6 +125,9 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
 
     # write
     try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         pdf = PdfPages(filename)
         pdf.savefig(fig)
     except PermissionError:
@@ -203,6 +209,9 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
               for b in rp.expbeams]
     formatting = copy.deepcopy(rp.PLOT_IV)  # use to set colors
     formatting['colors'] = (
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
         list(cm.get_cmap('viridis', len(points)).colors)
         + [np.array([0, 0, 0, 1])])
     formatting['curve_line_widths'] = [0.5] * len(points) + [1.]

@@ -20,7 +20,7 @@ oxide surface with medium complexity and will compare experimental |LEED-IV|
 data with a theory calculation in ViPErLEED.
 
 This example is a simplified version of the example calculation shown in the
-main ViPErLEED paper :cite:p:`viperleedCalc`. For more details on the full
+main ViPErLEED paper :cite:p:`kraushoferViPErLEEDPackageCalculation2025`. For more details on the full
 calculation, see the paper and the supplementary information.
 
 .. todo:: add citation for supplementary information
@@ -143,7 +143,7 @@ section :ref:`sec_fe2o3_init` below.
 We also use the :ref:`sitedef` parameter to define which sites should be 
 treated separately by ViPErLEED. In this case, we declare two ``surf``\ ace
 sites for iron and oxygen, selecting the two topmost atoms of each species.
-These atoms will be assigned dedicated vibrational amplitudes and electron–atom
+These atoms will be assigned dedicated vibration amplitudes and electron–atom
 scattering phase shifts (see file :ref:`PHASESHIFTS`). All remaining atoms
 are automatically given a ``def``\ :spelling:ignore:`ault` label instead.
 
@@ -153,7 +153,7 @@ This setting won't have any effect initially, since the polar angle is set to
 :math:`\theta = 0°`. However, we will optimize :math:`\theta` later on, at 
 which point the value of :math:`\phi` will be important.
 
-To set initial vibrational amplitudes for the surface atoms, we can either
+To set initial vibration amplitudes for the surface atoms, we can either
 supply a :ref:`VIBROCC` file, or let ViPErLEED calculate them based on the
 Debye temperature of the sample.
 In this case, we set the Debye temperature and experiment temperature via the 
@@ -200,7 +200,7 @@ The detected layers and bulk repeat vector are also shown in
    Visualization of the crystal structure with highlighted layers, and the bulk
    repeat vector. Fe atoms are depicted as large yellow spheres, O atoms as
    small red ones. This figure is taken from the first ViPErLEED paper
-   :cite:p:`viperleedCalc`.
+   :cite:p:`kraushoferViPErLEEDPackageCalculation2025`.
 
 
 At this stage, before proceeding, you should always check the detected bulk
@@ -224,7 +224,7 @@ what happens in each section of a ViPErLEED |LEED-IV| calculation
 
 In short, the :ref:`reference calculation<ref-calc>` performs a full-dynamic
 LEED calculation to generate |IV| curves for the input structure. |IV| curves
-are very sensitive to the exact atomic positions and vibrational amplitudes.
+are very sensitive to the exact atomic positions and vibration amplitudes.
 Because of this, it is necessary to optimize the structure to get the best fit
 to the experimental |IV| data. The reference calculation is the starting point
 for this optimization, but full-dynamic calculations are computationally too
@@ -247,7 +247,7 @@ file, as in :numref:`list_fe2o3_displacements_1`.
 Here, we specify that we want to optimize the atomic out-of-plane positions
 of all atoms in the first and second layer from −0.05 Å to
 +0.05 Å in steps of 0.01 Å. At the same time, we also optimize the
-vibrational amplitudes of the surface atoms. We subsequently turn to the
+vibration amplitudes of the surface atoms. We subsequently turn to the
 in-plane position of the atoms in the first two layers. Note also the
 ``<loop>`` and ``</loop>`` tags at the beginning and end of the file,
 which indicate that these steps should be repeated until convergence.

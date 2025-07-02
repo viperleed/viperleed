@@ -4,7 +4,7 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
@@ -164,7 +164,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
         return
     # in case of domains, now split blocks to domains
     for dp in rp.domainParams:
-        dp.rp.disp_blocks = []
+        dp.rpars.disp_blocks = []
     for (lines, blockname) in rp.disp_blocks:
         d = ""
         dlines = {}
@@ -209,7 +209,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
                 else:
                     dlines[d].append(line)
         for dp in rp.domainParams:
-            dp.rp.disp_blocks.append((dlines[dp.name], blockname))
+            dp.rpars.disp_blocks.append((dlines[dp.name], blockname))
     return
 
 
@@ -602,7 +602,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             rp.setHaltingLevel(1)
             continue
         if mode == 2 or (mode == 1 and "offset" not in dr):
-            # geometrical or vibrational displacement, get range:
+            # geometric or vibration displacement, get range:
             try:
                 fl = [float(s) for s in llist]
             except ValueError:
@@ -672,7 +672,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     for (at, targetel) in targetAtEls:
                         at.clearOffset(1, targetel)
                     continue
-            # geometrical displacement, get direction vector:
+            # geometric displacement, get direction vector:
             drvec = np.array([0., 0., 0.])
             if "azi" not in dr and "r" not in dr:
                 if "z" in dr:
@@ -780,7 +780,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                 'to allow symmetry breaking for this atom.'
                                 )
         elif mode == 2:
-            # vibrational displacement, apply:
+            # vibration displacement, apply:
             for (at, targetel) in targetAtEls:
                 if "offset" in pside:
                     at.clearOffset(mode, targetel)

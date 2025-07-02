@@ -2,96 +2,97 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-10-22'
 __license__ = 'GPLv3+'
 
 import copy
 import logging
-import os
 from pathlib import Path
 import shutil
 
 import numpy as np
 from numpy.polynomial import Polynomial
 
-from viperleed.calc import psgen
 from viperleed.calc.files import iofdopt
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
+from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.sections.initialization import make_compile_logs_dir
 from viperleed.calc.sections.refcalc import refcalc as section_refcalc
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 
+
+_FD_COMMON_INPUT_FILES = (
+    # Input files common to all the full-dynamic calculation runs.
+    # Collected from the main work directory into the subfolders
+    # for each parameter variation.
+    'BEAMLIST',
+    'PHASESHIFTS',
+    )
 logger = logging.getLogger(__name__)
 
 
 class FullDynamicCalculationError(Exception):
     """Base class for exceptions raised by the full dynamic calculation."""
 
-    def __init__(self, message):
-        super().__init__(message)
 
 class FullDynamicOptimizationOutOfBoundsError(FullDynamicCalculationError):
     """Raised when the optimization is out of bounds."""
-    def __init__(self, message):
-        super().__init__(message)
 
-def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
-    """
-    Runs reference calculation and r-factor calculation, returns R.
+
+def get_fd_r(slab, rpars, workdir):
+    """Run reference and R-factor calculations.
 
     Parameters
     ----------
-    sl : Slab
+    slab : Slab
         Object containing atomic configuration
-    rp : Rparams
+    rpars : Rparams
         Object containing run parameters
-    work_dir : pathlike, optional
-        The directory to execute the calculations in. The default is ".".
-    home_dir : pathlike, optional
-        The directory to return to after finishing. The default is the current
-        working directory.
+    workdir : Path
+        Path in which the calculations should be executed
+        before returning to the current directory.
 
     Returns
     -------
     rfactor : float
-        The r-factor obtained for the sl, rp combination
+        The overall R-factor obtained for the (`slab`, `rpars`)
+        combination.
+    rfactor_per_beam : list
+        R-factor for each individual beam.
     """
-    rp.TENSOR_OUTPUT = [0]
-    rp.workdir = Path(work_dir).resolve()
+    rpars.TENSOR_OUTPUT = [0]
     # internally transform theta, phi to within range
-    if rp.THETA < 0:
-        rp.THETA = abs(rp.THETA)
-        rp.PHI += 180
-    rp.THETA = min(rp.THETA, 90.)
-    rp.PHI = rp.PHI % 360
-    # create work directory, go there, execute
-    try:
-        if work_dir != ".":
-            os.makedirs(work_dir, exist_ok=True)
-            os.chdir(work_dir)
-        for fn in ["BEAMLIST", "PHASESHIFTS"]:
+    if rpars.THETA < 0:
+        rpars.THETA = abs(rpars.THETA)
+        rpars.PHI += 180
+    rpars.THETA = min(rpars.THETA, 90.)
+    rpars.PHI = rpars.PHI % 360
+    main_work = Path.cwd()
+    with execute_in_dir(workdir, mkdir=True):
+        make_compile_logs_dir(rpars)
+        for input_file in _FD_COMMON_INPUT_FILES:
             try:
-                shutil.copy2(home_dir / fn, fn)
-            except Exception:
-                logger.error(f"Error copying {fn} to subfolder.")
+                shutil.copy2(main_work / input_file, workdir)
+            except OSError:
+                logger.error(f'Error copying {input_file} to subfolder.')
                 raise
-        logger.info("Starting full-dynamic calculation")
+        logger.info('Starting full-dynamic calculation')
         try:
-            section_refcalc(sl, rp, parent_dir=home_dir)
+            section_refcalc(slab, rpars, parent_dir=main_work)
         except Exception:
-            logger.error("Error running reference calculation")
+            logger.error('Error running reference calculation')
             raise
-        logger.info("Starting R-factor calculation...")
+        logger.info('Starting R-factor calculation...')
         try:
-            rfaclist = section_rfactor(sl, rp, 11)
+            rfaclist = section_rfactor(slab, rpars, 11)
         except Exception:
-            logger.error("Error running rfactor calculation")
+            logger.error('Error running R-factor calculation')
             raise
-    finally:
-        os.chdir(home_dir)
-    return rp.last_R, rfaclist
+        return rpars.last_R, rfaclist
 
 
 def apply_scaling(sl, rp, which, scale):
@@ -291,10 +292,10 @@ def fd_optimization(sl, rp):
             dname = f"{which}_{x}"
         else:
             dname = f"{which}_{x:.4f}"
-        workdir = rp.workdir / dname
+        workdir = Path(dname).resolve()
         tmpdirs.append(workdir)
         logger.info(f"STARTING CALCULATION AT {which} = {x:.4f}")
-        r, rfaclist = get_fd_r(tsl, trp, work_dir=workdir, home_dir=rp.workdir)
+        r, rfaclist = get_fd_r(tsl, trp, workdir)
         known_points = np.append(known_points, np.array([[x, r]]), 0)
         rfactor_lists.append(rfaclist)
         if not best_explicit_r or r < best_explicit_r[0]:
@@ -344,7 +345,8 @@ def fd_optimization(sl, rp):
         apply_scaling(sl, rp, which, new_min)
         if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
             parameters.modify(rp, "BULK_REPEAT", comment=comment)
-        poscar.write(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
+        poscar.write(sl, filename='POSCAR', comments='all')
+        rp.files_to_out.add('POSCAR')
 
     # fetch I(V) data from all, plot together
     best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]

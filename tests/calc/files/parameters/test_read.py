@@ -3,7 +3,7 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
-__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-10-17'
 __license__ = 'GPLv3+'
 
@@ -12,7 +12,7 @@ import logging
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files.parameters.errors import ParameterHasNoValueError
 from viperleed.calc.files.parameters.errors import ParameterNotRecognizedError
 from viperleed.calc.files.parameters.read import read, update
@@ -184,11 +184,16 @@ class TestReader:
     def test_raw_reader(self, path_to_params):
         """Check the lines returned by a RawLineParametersReader."""
         expected_lines = (
-            ('', '! ####### GLOBAL PARAMETERS #######\n'),
-            ('', '\n'),
-            ('RUN', 'RUN = 1-3\n'),
-            ('THEO_ENERGIES', 'THEO_ENERGIES =   50 700 3\n'),
+            ('', None, '! ####### GLOBAL PARAMETERS #######\n'),
+            ('', None, '\n'),
+            ('RUN', Assignment('1-3', 'RUN'), 'RUN = 1-3\n'),
             )
+        expected_lines += ((
+            'THEO_ENERGIES',
+            Assignment('50 700 3', 'THEO_ENERGIES'),
+            'THEO_ENERGIES =   50 700 3\n'
+            ),)
+
         with RawLineParametersReader(path_to_params) as reader:
             # pylint: disable=protected-access
             for i, (expected, _read) in enumerate(zip(expected_lines, reader)):
