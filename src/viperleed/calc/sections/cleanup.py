@@ -83,34 +83,35 @@ OPTIONAL_INPUT_FILES = (
 
 # Files to go in OUT
 _OUT_FILES = (
-    'Complex_amplitudes_imag.csv',
-    'Complex_amplitudes_real.csv',
-    'control.chem',
-    'Errors_summary.csv',
-    'Errors.pdf',
-    'Errors.zip',
-    'FD_Optimization_beams.pdf',
-    'FD_Optimization.csv',
-    'FD_Optimization.pdf',
-    'FITBEAMS_norm.csv',
-    'FITBEAMS.csv',
-    'PatternInfo.tlm',
-    'refcalc-amp.out',
-    'Rfactor_analysis_refcalc.pdf',
-    'Rfactor_analysis_superpos.pdf',
-    'Rfactor_plots_refcalc.pdf',
-    'Rfactor_plots_superpos.pdf',
-    'SD.TL',
-    'refcalc-fd.out',
-    'Search-progress.csv',
-    'Search-progress.pdf',
-    'Search-report.csv',
-    'Search-report.pdf',
-    'superpos-spec.out',
-    'THEOBEAMS_norm.csv',
-    'THEOBEAMS.csv',
-    'THEOBEAMS.pdf',
+    'Complex_amplitudes_imag.csv',    # refcalc
+    'Complex_amplitudes_real.csv',    # refcalc
+    'control.chem',                   # search
+    'Errors.pdf',                     # error calc
+    'Errors.zip',                     # error calc
+    'Errors_summary.csv',             # error calc
+    'experiment_symmetry.ini',        # inizialization
+    'FD_Optimization.csv',            # FD optimization
+    'FD_Optimization.pdf',            # FD optimization
+    'FD_Optimization_beams.pdf',      # FD optimization
+    'FITBEAMS.csv',                   # superpos
+    'FITBEAMS_norm.csv',              # superpos
+    'refcalc-amp.out',                # TensErLEED refcalc
+    'refcalc-fd.out',                 # TensErLEED refcalc
+    'Rfactor_analysis_refcalc.pdf',   # R factor after refcalc
+    'Rfactor_analysis_superpos.pdf',  # R factor after superpos
+    'Rfactor_plots_refcalc.pdf',      # R factor after refcalc
+    'Rfactor_plots_superpos.pdf',     # R factor after superpos
+    'SD.TL',                          # TensErLEED search
+    'Search-progress.csv',            # search
+    'Search-progress.pdf',            # search
+    'Search-report.csv',              # search
+    'Search-report.pdf',              # search
+    'superpos-spec.out',              # TensErLEED superpos
+    'THEOBEAMS.csv',                  # refcalc
+    'THEOBEAMS.pdf',                  # refcalc
+    'THEOBEAMS_norm.csv',             # refcalc
     )
+
 
 # Label given to workhistory folders when cleaning up stray remains
 # from previous viperleed.calc executions from the work directory
@@ -120,12 +121,14 @@ PREVIOUS_LABEL = 'previous'
 # log file was found
 MOVED_LABEL = 'moved-'
 
+
 # Output files that may be inputs in future runs - keep during prerun
 _IOFILES = (
     'control.chem',
     'refcalc-fd.out',
     'superpos-spec.out',
     )
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -274,14 +277,21 @@ def _collect_supp_contents(rpars):
         )
     files_to_copy.update(logs_to_supp)
 
-    _copy_files_and_directories(files_to_copy,
-                                directories_to_copy,
-                                Path(DEFAULT_SUPP))
+    copied_files, copied_dirs = _copy_files_and_directories(
+        files_to_copy,
+        directories_to_copy,
+        Path(DEFAULT_SUPP),
+        )
+    has_files = (
+        any(copied_files)
+        or any(any(d.iterdir()) for d in copied_dirs)
+        )
+    if has_files:
+        rpars.manifest.add(DEFAULT_SUPP)
 
 
 def _collect_out_contents(rpars):
     """Store relevant files/folder from the current directory to OUT."""
-    out_path = Path(DEFAULT_OUT)
     out_files = set(Path(f) for f in _OUT_FILES)
     # Add R-factor output files
     out_files.update(Path().glob('R_*R=*'))
@@ -289,19 +299,25 @@ def _collect_out_contents(rpars):
     # They may be the ones created at initialization, or those from
     # an optimization.
     out_files.update(Path(f) for f in rpars.files_to_out)
-    _copy_files_and_directories(out_files, (), out_path)
+    copied_files, _ = _copy_files_and_directories(out_files,
+                                                  (),
+                                                  Path(DEFAULT_OUT))
+    if any(copied_files):
+        rpars.manifest.add(DEFAULT_OUT)
 
 
 def _copy_files_and_directories(files, directories, target):
     """Copy files and directories to target, creating it if not existing."""
+    copied_files, copied_directories = set(), set()
     try:
         target.mkdir(parents=True, exist_ok=True)
     except OSError:
         _LOGGER.error(f'Error creating {target.name} folder: ', exc_info=True)
-        return
+        return copied_files, copied_directories
 
     for item in (*files, *directories):
         _copy = shutil.copy2 if item.is_file() else fs_utils.copytree_exists_ok
+        container = copied_files if item.is_file() else copied_directories
         try:
             _copy(item, target/item.name)
         except FileNotFoundError:
@@ -310,6 +326,9 @@ def _copy_files_and_directories(files, directories, target):
             which = 'file' if item.is_file() else 'directory'
             _LOGGER.error(f'Error moving {target.name} {which} {item.name}: ',
                           exc_info=True)
+        else:
+            container.add(item)
+    return copied_files, copied_directories
 
 
 def _zip_subfolders(at_path, archive, delete_unzipped, compression_level):
@@ -601,6 +620,37 @@ def cleanup(rpars_or_manifest):
     None.
     """
     _LOGGER.info('\nStarting cleanup...')
+    rpars = get_rpars_from_manifest(rpars_or_manifest)
+
+    _organize_all_work_directories(rpars)
+    _write_manifest_file(rpars)
+    _write_final_log_messages(rpars)
+
+
+def get_rpars_from_manifest(rpars_or_manifest):
+    """Return an Rparams object, potentially from a ManifestFile.
+
+    Parameters
+    ----------
+    rpars_or_manifest : Rparams or ManifestFile
+        The run parameters, or information about the files and
+        directories that should be preserved from the work folder.
+        If a ManifestFile, it is assumed that the run crashed
+        before an Rparams object existed.
+
+    Returns
+    -------
+    rpars : Rparams
+        An Rparams object created from `rpars_or_manifest`. It
+        is the same object as `rpars_or_manifest` if an Rparams
+        object was given, a dummy Rparams with its manifest set
+        to `rpars_or_manifest` otherwise.
+
+    Raises
+    ------
+    TypeError
+        If `rpars_or_manifest` is neither an Rparams not a ManifestFile
+    """
     try:
         rpars_or_manifest.add_manifest
     except AttributeError:      # Not a ManifestFile
@@ -611,16 +661,14 @@ def cleanup(rpars_or_manifest):
                 'Expected Rparams or ManifestFile, got '
                 f'{type(rpars_or_manifest).__name__!r} instead.'
                 ) from None
-        rpars = rpars_or_manifest
-    else:
-        # Make a dummy, essentially empty Rparams
-        rpars = Rparams()
-        rpars.manifest = rpars_or_manifest
-        rpars.timer = None  # To print the correct final message
+        return rpars_or_manifest
 
-    _organize_all_work_directories(rpars)
-    _write_manifest_file(rpars)
-    _write_final_log_messages(rpars)
+    # Make a dummy, essentially empty Rparams
+    rpars = Rparams()
+    rpars.manifest = rpars_or_manifest
+    rpars.TENSOR_INDEX = -1  # To avoid TypeError when formatting None
+    rpars.timer.stop()  # To print the correct final message
+    return rpars
 
 
 def preserve_original_inputs(rpars):
@@ -774,11 +822,9 @@ def _silently_remove_files(*files):
 
 def _write_final_log_messages(rpars):
     """Emit the last logging messages concerning the calculation."""
-    elapsed = ('unknown' if not rpars.timer
-               else rpars.timer.how_long(as_string=True))
     _LOGGER.info(
         f'\nFinishing execution at {DateTimeFormat.LOG_CONTENTS.now()}'
-        f'\nTotal elapsed time: {elapsed}\n'
+        f'\nTotal elapsed time: {rpars.timer.how_long(as_string=True)}\n'
         )
 
     # Write information about executed sections

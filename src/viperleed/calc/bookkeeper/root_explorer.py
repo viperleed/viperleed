@@ -56,7 +56,7 @@ class RootExplorer:
     def __init__(self, path, bookkeeper):
         """Initialize this explorer at `path` for a `bookkeeper`."""
         self._path = Path(path).resolve()
-        self._has_domains = False      # Is this the root of a DOMAINS?
+        self.has_domains = False       # Is this the root of a DOMAINS?
         self._logs = None              # LogFiles, set in collect_info
         self._files_to_archive = None  # See _collect_files_to_archive
         self.tensors = TensorAndDeltaInfo(self.path)
@@ -110,7 +110,12 @@ class RootExplorer:
             self.tensors.collect()
             self._collect_files_to_archive()
             self.history.collect_subfolders()
-            self._find_potential_domain_subfolders()
+            # TODO: consider whether we can partly undo the changes
+            # that fixed #344 when we fix #215. Then we would likely
+            # be reading the PARAMETERS file and know whether we're
+            # running in a DOMAINS tree without the need of having
+            # Bookkeeper let us know by setting .has_domains.
+            # self._find_potential_domain_subfolders()
 
     def complain_about_edited_files(self):
         """Log warnings if any _edited file is found in root."""
@@ -124,6 +129,33 @@ class RootExplorer:
                        'any desired changes to the corresponding input files '
                        f'(i.e., {inputs}) or to delete the *{EDITED_SUFFIX} '
                        'files.')
+
+    def ensure_has_unlabled_inputs(self):
+        """Make sure there is always unlabeled versions of any _ori file.
+
+        The unlabeled versions are created as copies of the _ori-suffixed
+        ones (unless there is also an _edited version).
+
+        Returns
+        -------
+        any_missing : bool
+            Whether any unlabeled file was added.
+        """
+        any_missing = False
+        for ori_file in self.path.glob(f'*{ORI_SUFFIX}'):
+            unlabeled = ori_file.name.replace(ORI_SUFFIX, '')
+            unlabeled_file = ori_file.with_name(unlabeled)
+            edited_file = ori_file.with_name(f'{unlabeled}{EDITED_SUFFIX}')
+            if edited_file.is_file() or unlabeled_file.is_file():
+                continue
+            any_missing = True
+            try:
+                shutil.copy2(ori_file, unlabeled_file)
+            except OSError as exc:
+                LOGGER.error(f'Could not create file '
+                             f'{self._relative_path(unlabeled_file)} '
+                             f'from its *{ORI_SUFFIX} version: {exc}')
+        return any_missing
 
     def infer_run_info(self):
         """Return a dictionary of information read from the newest calc log."""
@@ -331,7 +363,7 @@ class RootExplorer:
         name_fmts = name_fmts or ('{}',)
         if only_files is None:
             only_files = STATE_FILES
-        dont_complain = set(SKIP_IN_DOMAIN_MAIN if self._has_domains else ())
+        dont_complain = set(SKIP_IN_DOMAIN_MAIN if self.has_domains else ())
         for file in only_files:
             cwd_file = self.path / file
             patterns = [fmt.format(file) for fmt in name_fmts]
@@ -391,7 +423,7 @@ class RootExplorer:
     def _find_potential_domain_subfolders(self):
         """Find all subfolders of self.path that look like subdomains."""
         finder = DomainFinder(self.workhistory.bookkeeper)
-        self._has_domains = any(finder.find_potential_domains())
+        self.has_domains = any(finder.find_potential_domains())
 
     def _log_failures_when_copying_input_files(self, failed):
         """Emit logging errors about failures to pull input files.

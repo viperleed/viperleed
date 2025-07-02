@@ -18,6 +18,7 @@ from viperleed.calc.bookkeeper import log
 from viperleed.calc.bookkeeper.domain_finder import DomainFinder
 from viperleed.calc.bookkeeper.domain_finder import MainPathNotFoundError
 from viperleed.calc.bookkeeper.errors import _FileNotOlderError
+from viperleed.calc.bookkeeper.errors import BookkeeperUnexpectedError
 from viperleed.calc.bookkeeper.errors import NotAnInteractiveShellError
 from viperleed.calc.bookkeeper.exit_code import BookkeeperExitCode
 from viperleed.calc.bookkeeper.history.constants import HISTORY_INFO_NAME
@@ -65,6 +66,14 @@ documentation at https://viperleed.org/content/calc/sections/bookkeeper.html
 for details on the changes introduced in bookkeeper since v{_MIN_CALC_WARN}.'''
 
 
+# TODO: this module is pretty long with more than 1000 lines. It would
+# perhaps be better to split off all the methods that concern archiving
+# the contents of current directory into a dedicated class (e.g.,
+# RootArchiver). This way, Bookkeeper would only concern itself
+# with what to do in which mode. Portions of this class that would go
+# there:
+# _make_and_copy_to_history
+# _archive_*
 class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
 
@@ -141,6 +150,10 @@ class Bookkeeper:
         OSError
             If creation of the history folder or any of the subfolders
             where results are to be stored fails.
+        BookkeeperUnexpectedError
+            If, when running in ARCHIVE mode, no unlabeled version
+            is found for any of the _ori-suffixed files. This should
+            never happen. See also Issue #353.
         """
         try:
             mode = BookkeeperMode(mode)
@@ -169,8 +182,10 @@ class Bookkeeper:
                 self._root = DomainRootExplorer(self.cwd, self, main_root)
 
         if domains:
-            return self._run_in_root_and_subdomains(domains, **kwargs)
-        exit_code, _ = self._run_one_domain(**kwargs)
+            exit_code = self._run_in_root_and_subdomains(domains, **kwargs)
+        else:
+            exit_code, _ = self._run_one_domain(**kwargs)
+        self._check_exit_code(exit_code, domains)
         return exit_code
 
     def update_from_cwd(self, silent=False):
@@ -353,6 +368,23 @@ class Bookkeeper:
         self._add_history_info_entry(tensor_nums)
         LOGGER.info('Done archiving the current directory '
                     f'to {self.history.path.name}.')
+
+    def _check_exit_code(self, exit_code, domains):
+        """Raise if exit_code signals bugs in bookkeeper."""
+        if exit_code is BookkeeperExitCode.MISSING_UNLABELED_FILES:
+            err_msg = (
+                'Some input files that have been renamed to *_ori do not have '
+                'a corresponding unlabeled version. This is most likely a bug '
+                'in bookkeeper. Please report this to the ViPErLEED team by '
+                'opening an issue under '
+                'https://github.com/viperleed/viperleed/issues attaching the '
+                'contents of the most recent history folder'
+                )
+            if domains:
+                err_msg += ' of both the main as well as all domain subfolders'
+            err_msg += '.'
+            LOGGER.error(err_msg)
+            raise BookkeeperUnexpectedError(err_msg)
 
     def _check_may_discard_full(self):
         """Log and raise if it is not possible to DISCARD_FULL."""
@@ -619,7 +651,13 @@ class Bookkeeper:
             self._root.prepare_for_next_calc_run()
         except OSError:
             return BookkeeperExitCode.FAIL, last_folder
-        return BookkeeperExitCode.SUCCESS, last_folder
+
+        # Finally, make sure we always have unlabeled files for all
+        # _ori suffixed ones.
+        misses_unlabeled = self._root.ensure_has_unlabled_inputs()
+        exit_code = (BookkeeperExitCode.SUCCESS if not misses_unlabeled
+                     else BookkeeperExitCode.MISSING_UNLABELED_FILES)
+        return exit_code, last_folder
 
     def _run_clear_mode(self):
         """Execute bookkeeper in CLEAR mode."""
@@ -731,6 +769,14 @@ class Bookkeeper:
         # as clear_for_next_calc_run does internally re-collect info.
         main_root = RootExplorer(self.cwd, self)
         main_root.collect_info(silent=True)
+
+        # Store information in the root explorers about the presence
+        # of domains. This has impact on which input files we may store
+        # in history as well as which ones will be kept as non-suffixed
+        # in the root directory. We should not rely on DomainFinder,
+        # whose find_potential_domains is bugged. See also #344.
+        self._root.has_domains = True
+        main_root.has_domains = True
         main_exit_code, main_folder = self._run_one_domain(mode, **kwargs)
         exit_codes = [
             main_exit_code,
@@ -958,6 +1004,15 @@ class DomainBookkeeper(Bookkeeper):
         archived_folder : HistoryFolder or None
             The "main" folder that was added to the history of
             this subdomain as a result of running bookkeeper.
+
+        Raises
+        ------
+        NotImplementedError
+            If `mode` is a valid bookkeeper mode, but
+            there is no method named _run_<mode>_mode.
+        OSError
+            If creation of the history folder or any of the subfolders
+            where results are to be stored fails.
         """
         try:
             exit_code, archived_folder = self._run_one_domain(*args, **kwargs)

@@ -48,16 +48,11 @@ class TestCleanup:
         return {f: mocker.patch(f'{_MODULE}.{f}')
                 for f in (*self.mocked, *self.not_called)}
 
-    @fixture(name='manifest')
-    def mock_manifest(self):
-        """Return the contents of a sample manifest file."""
-        return ManifestFile('file1.txt', 'file2.txt', 'dir1')
-
     def test_no_rpars(self, manifest, mock_implementation, mocker):
         """Check calls when no Rparams is passed."""
         # Create a "singleton" that we can use to check that
         # cleanup creates an empty Rparams in this case
-        fake_rpars = mocker.MagicMock(spec=Rparams)
+        fake_rpars = Rparams()
         mocker.patch(f'{_MODULE}.Rparams', return_value=fake_rpars)
 
         cleanup(manifest)
@@ -192,7 +187,7 @@ class TestWriteFinalLogMessages:
     def test_crashed_early(self, rpars, check_log_records, caplog):
         """Check logging messages when cleanup is called early."""
         caplog.set_level(0)  # All messages
-        rpars.timer = None   # Like cleanup if called with None
+        rpars.timer.stop()   # Like cleanup if called with None
         _write_final_log_messages(rpars)
         expect = (
             re.compile(r'\nFinishing execution at .*'
@@ -275,7 +270,7 @@ class TestWriteManifest:
         assert all(p in subpaths for p in expect_paths)
 
         # And verify that contents have been written correctly
-        contents = manifest.file.read_text().splitlines()
+        contents = manifest.file.read_text(encoding='utf-8').splitlines()
         headers = [line for line in contents if line.startswith('[')]
         expect_headers = [f'[domain name {i} at dd_{i}]' for i in range(5)]
         assert headers == expect_headers

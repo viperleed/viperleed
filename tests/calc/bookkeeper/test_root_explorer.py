@@ -34,6 +34,7 @@ from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.lib.time_utils import DateTimeFormat
 
 from ...helpers import filesystem_from_dict
+from ...helpers import filesystem_to_dict
 from ...helpers import make_obj_raise
 from ...helpers import not_raises
 from ...helpers import raises_exception
@@ -216,8 +217,7 @@ class TestRootExplorer:
         # pylint: disable-next=protected-access           # OK in tests
         explorer._find_potential_domain_subfolders()
         mock_finder.find_potential_domains.assert_called_once()
-        # pylint: disable-next=protected-access           # OK in tests
-        assert explorer._has_domains == has_domains
+        assert explorer.has_domains == has_domains
 
     _remove_files = {
         '_remove_ori_files': [f'{file}{ORI_SUFFIX}' for file in STATE_FILES],
@@ -402,8 +402,7 @@ class TestRootExplorerCopyStateFilesFrom:
                                            info,
                                            call_copy):
         """Test the _copy_state_files_from method for the main domain root."""
-        # pylint: disable-next=protected-access           # OK in tests
-        explorer._has_domains = True
+        explorer.has_domains = True
         failures, exc_info = call_copy(info.missing, info.fail, None)
         for file in info.no_complain:
             try:
@@ -790,6 +789,51 @@ class TestRootExplorerRaises:
         with pytest.raises(AttributeError,
                            match=r'.*collect_(info|subfolders).*'):
             method()
+
+
+class TestRootExplorerUnlabledFiles:
+    """Tests for the ensure_has_unlabled_inputs method."""
+
+    def test_no_ori_files(self, explorer, mocker):
+        """Check no file operations happen if no _ori files exist."""
+        mock_copy = mocker.patch('shutil.copy2')
+        missing = explorer.ensure_has_unlabled_inputs()
+        assert not missing
+        mock_copy.assert_not_called()
+
+    def test_oserror(self, explorer, mocker, caplog):
+        """Check that failure to copy files emits log messages."""
+        mocker.patch('pathlib.Path.glob',
+                     return_value=(explorer.path/'input_file_ori',))
+        mocker.patch('pathlib.Path.is_file', return_value=False)
+        mock_copy = mocker.patch('shutil.copy2', side_effect=OSError)
+        missing = explorer.ensure_has_unlabled_inputs()
+        assert missing
+        mock_copy.assert_called_once()  # One "fake" _ori file
+        assert caplog.text
+
+    def test_expected_files(self, tmp_path, mocker):
+        """Ensure the expected unlabeled files are created."""
+        tree_before = {
+            'file_1': 'contents of file_1',
+            'file_1_ori': 'file_1 exists already ',
+            'file_2_ori': 'file_2 instead is missing',
+            # NB: given the current implementation of bookkeeper there
+            # should never be both _ori and _edited files. However,
+            # better be sure that we handle correctly this case too.
+            'file_3_edited': 'contents of the edited version of file_3',
+            'file_3_ori': 'file_3 has been edited instead',
+            }
+        expect_tree = {
+            **tree_before,
+            'file_2': tree_before['file_2_ori'],  # Only file_2 created
+            }
+        filesystem_from_dict(tree_before, tmp_path)
+        explorer = RootExplorer(tmp_path, mocker.MagicMock())
+        missing = explorer.ensure_has_unlabled_inputs()
+        assert missing
+        tree_after = filesystem_to_dict(tmp_path)
+        assert tree_after == expect_tree
 
 
 class TestDomainRootExplorer:

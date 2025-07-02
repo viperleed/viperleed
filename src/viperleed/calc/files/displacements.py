@@ -21,6 +21,13 @@ from viperleed.calc.symmetry import setSymmetry
 
 logger = logging.getLogger(__name__)
 
+class DisplacementsError(Exception):
+    """Base exception for DISPLACEMENTS-related errors."""
+
+
+class NoDisplacementsError(DisplacementsError):
+    """No valid displacements were found in DISPLACEMENTS."""
+
 
 def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            # TODO: This should probably set rp.fileLoaded['DISPLACEMENTS'] = True
     """
@@ -35,13 +42,18 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
 
     Raises
     ------
+    FileNotFoundError
+        If `filename` is not found on the system.
+    Exception
+        If any other error occurs when opening `filename`.
     RuntimeError
         Raised if unexpected syntax is encountered and cannot be resolved.
+    NoDisplacementsError
+        If `filename` contains no valid displacements.
 
     Returns
     -------
     None.
-
     """
     rp.disp_blocks = []
     copyblock = None
@@ -154,12 +166,15 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
         rp.disp_blocks[-1][0].append(line)
     if copyblock:
         rp.disp_blocks.append(copyblock)
-    if len(rp.disp_blocks[-1][0]) == 0 and len(rp.disp_blocks) > 1:
+    if len(rp.disp_blocks) > 1 and len(rp.disp_blocks[-1][0]) == 0:
         rp.disp_blocks = rp.disp_blocks[:-1]
     if len(loopStarts) != 0:
         logger.warning("DISPLACEMENTS file: Unmatched <loop> flags found, "
                        "loops are still open at end of file.")
         rp.setHaltingLevel(2)
+    if not rp.disp_blocks:
+        raise NoDisplacementsError(f'File {filename} contains '
+                                   'no valid displacements.')
     if not rp.domainParams:
         return
     # in case of domains, now split blocks to domains
@@ -208,9 +223,12 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):                            
                         "of a domain block, line will be skipped: "+line)
                 else:
                     dlines[d].append(line)
-        for dp in rp.domainParams:
-            dp.rpars.disp_blocks.append((dlines[dp.name], blockname))
-    return
+        for domain in rp.domainParams:
+            domain.rpars.disp_blocks.append((dlines[domain.name], blockname))
+    if not any(lines for domain in rp.domainParams
+               for lines, _ in domain.rpars.disp_blocks):
+        raise NoDisplacementsError(f'File {filename} contains '
+                                   'no valid displacements.')
 
 
 def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
@@ -319,7 +337,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             grouplist = [
                 "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg",
                 "cmm", "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m",
-                "p6", "p6m"]  # TODO: use guilib or put as const in leedbase
+                "p6", "p6m"]  # TODO: use gui or put as const in leedbase
             targetsym = ""
             if s[0] == "t":
                 # True - go to highest symmetry

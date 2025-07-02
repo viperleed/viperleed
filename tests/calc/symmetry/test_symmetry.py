@@ -42,26 +42,6 @@ def hermann(group):
     return group.split('[', maxsplit=1)[0]
 
 
-@fixture(name='first_case')
-def fixture_first_case(current_cases):
-    """Return the first of the current cases."""
-    def _find_case(cases_dict):
-        for value in cases_dict.values():
-            if isinstance(value, dict):
-                try:
-                    return _find_case(value)
-                except ValueError:
-                    pass
-            try:
-                value.id
-            except AttributeError:
-                pass
-            else:
-                return value
-        raise ValueError('No case found')
-    return _find_case(current_cases)
-
-
 def _reconstruct_case_id(case):
     """Return a full pytest-cases-style id for case."""
     base_id = case.id
@@ -110,7 +90,7 @@ class TestPlaneGroupFinding:
         slab, *_ = with_plane_group()
         assert slab.foundplanegroup != 'unknown'
 
-    _known_incorrect_groups = {
+    known_incorrect_groups = {
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
@@ -121,7 +101,7 @@ class TestPlaneGroupFinding:
         slab, *_, info = with_plane_group()
         if not info.symmetry.hermann:
             pytest.skip('No symmetry information available')
-        with may_fail(first_case, self._known_incorrect_groups, strict=True):
+        with may_fail(first_case, self.known_incorrect_groups, strict=True):
             assert hermann(slab.planegroup) == info.symmetry.hermann
 
     _known_incorrect_rotations = {
