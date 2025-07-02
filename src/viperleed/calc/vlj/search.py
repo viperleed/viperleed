@@ -96,7 +96,12 @@ def vlj_search(slab, rpars):
     # apply the parameter space to the calculator
     calculator.set_parameter_space(parameter_space)
 
-    benchmark_results = benchmark_calculator(calculator)
+    benchmark_results = benchmark_calculator(calculator, use_grad=False)
+    logger.info(
+        "\nBenchmark results\n"
+        "-----------------\n"
+        f"{benchmark_results}"
+)
 
     cmaes_optimizer = optimization.CMAESOptimizer(
         fun=calculator.R,
