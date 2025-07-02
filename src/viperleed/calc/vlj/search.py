@@ -54,8 +54,6 @@ def vlj_search(slab, rpars):
         logger.error(err_msg)
         raise RuntimeError(err_msg)
 
-    unaltered_slab = copy.deepcopy(slab)
-
     # select tensors based on the tensor index
     tensor_path = (rpars.paths.home / DEFAULT_TENSORS
                     / f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}.zip')
@@ -119,6 +117,13 @@ def vlj_search(slab, rpars):
     cmaes_result = cmaes_optimizer(x0)
 
     logger.info(cmaes_result)
+
+    # write to a copy of the slab object
+    tmp_slab = copy.deepcopy(slab)
+    calculator.apply_to_slab(tmp_slab, rpars, cmaes_result.best_x)
+    # write output files
+    poscar.write(slab, "POSCAR_TL_optimized_CMAES", comments="all")
+    writeVIBROCC(slab, "VIBROCC_TL_optimized_CMAES")
 
     slsqp_opt = optimization.SLSQPOptimizer(
         fun=calculator.R(x),
