@@ -8,8 +8,11 @@ __copyright__ = "Copyright (c) 2019-2024 ViPErLEED developers"
 __created__ = "2025-04-17"
 __license__ = "GPLv3+"
 
+import copy
 import logging
 
+from viperleed.calc.files import poscar
+from viperleed.calc.files.vibrocc import writeVIBROCC
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.vlj import VLJ_AVAILABLE
 
@@ -51,6 +54,7 @@ def vlj_search(slab, rpars):
         logger.error(err_msg)
         raise RuntimeError(err_msg)
 
+    unaltered_slab = copy.deepcopy(slab)
 
     # select tensors based on the tensor index
     tensor_path = (rpars.paths.home / DEFAULT_TENSORS
@@ -92,9 +96,10 @@ def vlj_search(slab, rpars):
         recalculate_ref_t_matrices=False,
         use_symmetry=True
     )
-    
+
     # apply the parameter space to the calculator
     calculator.set_parameter_space(parameter_space)
+    logger.info('Calculator initialized with parameter space.')
 
     benchmark_results = benchmark_calculator(calculator, use_grad=False)
     logger.info(
@@ -109,7 +114,7 @@ def vlj_search(slab, rpars):
             pop_size=30,
             ftol=1e-3,
     )
-    
+
     x0 = np.array([0.50]*calculator.n_free_parameters)
     cmaes_result = cmaes_optimizer(x0)
 
@@ -124,5 +129,15 @@ def vlj_search(slab, rpars):
 
     logger.info(slsqp_result)
 
-    # set last R # TODO
+    # set last R
+
     rpars.last_R = slsqp_result.best_R
+
+    # write the result to the slab object
+    calculator.apply_to_slab(slab, rpars, slsqp_result.best_x)
+
+    # write output files
+    # POSCAR
+    poscar.write(slab, 'POSCAR_TL_optimized_SLSQP', comments='all')
+    # VIBROCC
+    writeVIBROCC(slab, 'VIBROCC_TL_optimized_SLSQP')
