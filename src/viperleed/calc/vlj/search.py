@@ -130,8 +130,8 @@ def vlj_search(slab, rpars):
     cmaes_result.write_to_file('CMAES_result.npz')
 
     slsqp_opt = optimization.SLSQPOptimizer(
-        fun=calculator.R(x),
-        grad=calculator.grad_R(x),
+        fun=calculator.R,
+        grad=calculator.grad_R,
     )
     slsqp_result = slsqp_opt(x0=cmaes_result.best_x)
 
