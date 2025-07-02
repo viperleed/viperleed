@@ -309,10 +309,12 @@ def section_loop(rp, sl):
                 if (next_section != 11 and          # r-factor after refcalc
                         (not rp.domainParams or 3 in rp.runHistory)):
                     rp.RUN.insert(0, 11)
-            elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
+            elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]
+                  and rp.BACKEND['search'] is not SearchBackend.VLJ):
                 if next_section != 31:  # superpos after search
                     rp.RUN.insert(0, 31)
-            elif sec == 31 and rp.fileLoaded["EXPBEAMS"]:
+            elif (sec == 31 and rp.fileLoaded["EXPBEAMS"]
+                  and rp.BACKEND['search'] is not SearchBackend.VLJ):
                 if next_section != 12:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
             elif (sec == 12 and not rp.STOP
