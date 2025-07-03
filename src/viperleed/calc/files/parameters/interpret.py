@@ -87,7 +87,6 @@ _SIMPLE_BOOL_PARAMS = {
     'PHASESHIFTS_CALC_OLD' : (),
     'PHASESHIFTS_OUT_OLD' : (),
     'R_FACTOR_LEGACY' : (),
-    'SEARCH_RECALC_TMATRICES' : (),
     'STOP': (),
     'SUPPRESS_EXECUTION' : (),
     'SYMMETRIZE_INPUT' : (),
@@ -129,6 +128,8 @@ _SIMPLE_NUMERICAL_PARAMS = {
 # parameters that can be optimized in FD optimization
 _OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i', 'a', 'b', 'c', 'ab', 'abc',}
 
+# algorithms available for the viperleed-jax plugin
+_VLJ_ALGOS = {'CMAES', 'SLSQP', 'BFGS'}
 
 def interpret(rpars, slab=None, silent=False):
     """Interpret rpars.readParams to actual values.
@@ -1128,6 +1129,109 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterRangeError(param, given_value=ps_eps,
                                       allowed_range=(0, 1))
 
+    def interpret_vlj_algorithm(self, assignment):
+        """Assign parameter VLJ_ALGORITHM.
+
+        If no flag is given, sets the used algorithms. If an algorithm name is
+        given as a flag , set the settings for that algorithm.
+        """
+        param = 'VLJ_ALGORITHM'
+
+        flag = assignment.flag.lower()
+        if not flag:  # No flag given, set the used algorithms
+            self._interpret_vlj_algorithm_set_algos(assignment)
+        else:  # Flag given, set the settings for that algorithm
+            self._ensure_single_flag_assignment(assignment, param)
+            algo = flag.upper()
+            if algo == 'CMAES':
+                for flag_value_pair in assignment.values_str.split(','):
+                    self._interpret_vlj_algo_cmaes(param, flag_value_pair)
+
+                self._interpret_vlj_algorithm_cmaes(assignment)
+            elif algo == 'SLSQP':
+                self._interpret_vlj_algorithm_slsqp(assignment)
+            elif algo == 'BFGS':
+                self._interpret_vlj_algorithm_bfgs(assignment)
+            else:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterUnknownFlagError(param, flag)
+
+    def _interpret_vlj_algorithm_set_algos(self, assignment):
+        """Set the used VLJ algorithms."""
+        param = 'VLJ_ALGORITHM'
+        self._ensure_no_flags_assignment(assignment, param)
+        if not assignment.values:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterHasNoValueError(param)
+
+        # Algorithms to be used are given as single strings, separated by ','
+        algos = [algo.strip().upper() for algo in assignment.values_str.split(',')]
+        for algo in algos:
+            if algo not in _VLJ_ALGOS:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterValueError(
+                    param, message=f'Unknown algorithm {algo!r}')
+
+        # For now, allow a maximum of two algorithms
+        if len(algos) > 2:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(
+                param,
+                message=f'Only one or two algorithms allowed, got {len(algos)}.'
+            )
+
+        # Set the algorithms
+        self.rpars.VLJ_ALGO = algos
+
+    def __interpret_vlj_algorithm(self, flag_value_pair, algo, param_types, flag_aliases):
+        """Generic interpreter for VLJ_ALGORITHM flags."""
+        param = "VLJ_ALGORITHM"
+        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
+        value_error = f"Value {value!r} is invalid for flag {flag!r}"
+        
+        flag = flag_aliases.get(flag, flag)
+        
+        try:
+            numeric = param_types[flag](value)
+        except ValueError as exc:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message=value_error) from exc
+        except KeyError:
+            self.rpars.setHaltingLevel(2)
+            raise ParameterUnknownFlagError(param, f"{flag!r}") from None
+        
+        self.rpars.vlj_algo_settings[algo][flag] = numeric
+
+    def _interpret_vlj_algorithm_cmaes(self, flag_value_pair):
+        """Interpret one 'flag value' pair for VLJ_ALGO CMAES."""
+        param_types = {'pop': int, 'max_gens': int, 'ftol': int}
+        flag_aliases = {
+            'population': 'pop', 'pop_size': 'pop',
+            'gens': 'max_gens', 'generations': 'max_gens',
+            'tolerance': 'ftol', 'tol': 'ftol',
+        }
+        self.__interpret_vlj_algorithm(
+            flag_value_pair, 'CMAES', param_types, flag_aliases)
+
+    def _interpret_vlj_algorithm_slsqp(self, flag_value_pair):
+        """Interpret one 'flag value' pair for VLJ_ALGO SLSQP."""
+        param_types = {'grad': bool, 'grad_damping': float}
+        flag_aliases = {
+            'use_grad': 'grad',
+            'gradient': 'grad',
+            'gradient_damping': 'grad_damping',
+        }
+        self.__interpret_vlj_algorithm(
+            flag_value_pair, 'SLSQP', param_types, flag_aliases)
+
+    def _interpret_vlj_algorithm_bfgs(self, flag_value_pair):
+        """Interpret one 'flag value' pair for VLJ_ALGO SLSQP."""
+        param_types = {'grad': bool, 'grad_damping': float}
+        flag_aliases = {
+            'use_grad': 'grad',
+        }
+        self.__interpret_vlj_algorithm(
+            flag_value_pair, 'BFGS', param_types, flag_aliases)
 
     def interpret_vlj_batch(self, assignment):
         """Assign parameter VLJ_BATCH."""
@@ -1162,6 +1266,17 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.setHaltingLevel(1)
             raise ParameterRangeError(param, message=value_error)
         self.rpars.VLJ_BATCH[flag] = numeric
+
+    def interpret_vlj_config(self, assignment):
+        """Assign parameter VLJ_CONFIG.
+        
+        VLJ_CONFIG has several switches that alter the inner workings of the
+        viperleed-jax plugin."""
+        param = 'VLJ_CONFIG'
+        self._ensure_no_flags_assignment(assignment, param)
+        partypes = {'precondition': bool, 'recalc_ref_t_matrices': bool,
+                    't-leed-l_max': int}
+        # TODO: implementation
 
     @skip_without_matplotlib
     def interpret_plot_iv(self, assignment):

@@ -77,7 +77,6 @@ KNOWN_PARAMS = (
     'SEARCH_CULL',
     'SEARCH_MAX_GEN',
     'SEARCH_POPULATION',
-    'SEARCH_RECALC_TMATRICES',
     'SEARCH_START',
     'SITE_DEF',
     'SUPERLATTICE',
@@ -103,7 +102,9 @@ KNOWN_PARAMS = (
     'ZIP_COMPRESSION_LEVEL',
 
     # Parameters for ViPErLEED JAX plugin
+    'VLJ_ALGO',  # algorithms to be used
     'VLJ_BATCH',  # batch size for VLJ
+    'VLJ_CONFIG',  # configuration for VLJ
     )
 
 
