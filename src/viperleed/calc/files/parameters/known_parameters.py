@@ -101,6 +101,9 @@ KNOWN_PARAMS = (
     'V0_Z_ONSET',
     'VIBR_AMP_SCALE',
     'ZIP_COMPRESSION_LEVEL',
+
+    # Parameters for ViPErLEED JAX plugin
+    'VLJ_BATCH',  # batch size for VLJ
     )
 
 

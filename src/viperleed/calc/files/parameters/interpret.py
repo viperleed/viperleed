@@ -1128,6 +1128,41 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterRangeError(param, given_value=ps_eps,
                                       allowed_range=(0, 1))
 
+
+    def interpret_vlj_batch(self, assignment):
+        """Assign parameter VLJ_BATCH."""
+        param = 'VLJ_BATCH'
+        self._ensure_no_flags_assignment(assignment)
+
+        for flag_value_pair in assignment.values_str.split(','):
+            self._interpret_vlj_batch_flag_value_pair(param, flag_value_pair)
+
+    def _interpret_vlj_batch_flag_value_pair(self, param, flag_value_pair):
+        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
+
+        value_error = f'Value {value!r} is invalid for flag {flag!r}'
+        partype = {'energies': int, 'atoms': int}
+        flag_aliases = {
+            'e': 'energies', 'energy': 'energies',
+            'a': 'atoms', 'atom': 'atoms',
+        }
+        if flag in flag_aliases:
+            flag = flag_aliases[flag]
+        try:
+            numeric = partype[flag](value)
+        except ValueError as exc:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message=value_error) from exc
+        except KeyError:
+            self.rpars.setHaltingLevel(2)
+            raise ParameterUnknownFlagError(param, f"{flag!r}") from None
+
+        # check if valid (positive int or -1 for default)
+        if numeric < -1 or numeric == 0:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterRangeError(param, message=value_error)
+        self.rpars.VLJ_BATCH[flag] = numeric
+
     @skip_without_matplotlib
     def interpret_plot_iv(self, assignment):
         """Assign parameter PLOT_IV."""
