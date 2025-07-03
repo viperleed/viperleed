@@ -413,7 +413,7 @@ def initialization(sl, rp, subdomain=False):
 
     # read the DISPLACEMENTS file using the new parser and store it in rpars
     rp.vlj_displacements = DisplacementsFile()
-    rp.vlj_displacements.read(rp.paths.home / 'DISPLACEMENTS')
+    rp.vlj_displacements.read('DISPLACEMENTS')
     logger.debug('DISPLACEMENTS file read successfully')
 
 
