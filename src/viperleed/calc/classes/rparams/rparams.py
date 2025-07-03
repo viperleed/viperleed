@@ -186,6 +186,10 @@ class Rparams:
         self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
 
         # ViPErLEED JAX plugin parameters
+        self.VLJ_ALGO = DEFAULTS['VLJ_ALGO']  # algorithms to be used
+        self.VLJ_BATCH = DEFAULTS['VLJ_BATCH']  # batch size for VLJ
+        self.VLJ_CONFIG = DEFAULTS['VLJ_CONFIG']  # configuration for VLJ
+        self.vlj_algo_settings = DEFAULTS['vlj_algo_settings']  # settings for each algorithm
         self.SEARCH_RECALC_TMATRICES = False
 
         # RUN VARIABLES

@@ -84,5 +84,13 @@ DEFAULTS = {
     # Parameters for ViPErLEED JAX plugin
     'BACKEND': {'search': SearchBackend.TENSERLEED},
     'SEARCH_RECALC_TMATRICES': False,
-
+    'VLJ_ALGO': ['CMAES', 'SLSQP'],  # algorithms to be used
+    'VLJ_BATCH': {'energies': -1, 'atoms': -1},
+    'VLJ_CONFIG': {'precondition': True, 
+                   'recalc_ref_t_matrices': False,},
+    'vlj_algo_settings': {
+        'CMAES': {'pop': 30, 'max_gens': 200, 'ftol': 1e-3},
+        'SLSQP': {'grad': True, 'grad_damping': 0.1},
+        'BFGS': {'grad': True},
+    },
     }
