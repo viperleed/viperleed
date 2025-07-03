@@ -283,6 +283,13 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             if p in self.rpars.readParams and p not in self._param_names
             )
 
+    def _parse_simple_bool(self, val):
+        val_lower = val.lower()
+        for key, values in self.bool_synonyms.items():
+            if val_lower in values:
+                return key
+        raise ValueError(f"Unrecognized boolean value: {val!r}")
+
     # ---------- Methods for interpreting simple parameters -----------
     # Disable pylint warning since, while 6 is a bit many, we can't
     # really do much better than this. Merging some in a container
@@ -1129,34 +1136,34 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterRangeError(param, given_value=ps_eps,
                                       allowed_range=(0, 1))
 
-    def interpret_vlj_algorithm(self, assignment):
-        """Assign parameter VLJ_ALGORITHM.
+    def interpret_vlj_algo(self, assignment):
+        """Assign parameter VLJ_ALGO.
 
         If no flag is given, sets the used algorithms. If an algorithm name is
         given as a flag , set the settings for that algorithm.
         """
-        param = 'VLJ_ALGORITHM'
+        param = 'VLJ_ALGO'
 
         flag = assignment.flag.lower()
         if not flag:  # No flag given, set the used algorithms
-            self._interpret_vlj_algorithm_set_algos(assignment)
+            self._interpret_vlj_algo_set_algos(assignment)
         else:  # Flag given, set the settings for that algorithm
             self._ensure_single_flag_assignment(assignment, param)
             algo = flag.upper()
             if algo == 'CMAES':
                 for flag_value_pair in assignment.values_str.split(','):
-                    self._interpret_vlj_algo_cmaes(param, flag_value_pair)
-
-                self._interpret_vlj_algorithm_cmaes(assignment)
+                    self._interpret_vlj_algo_cmaes(flag_value_pair)
             elif algo == 'SLSQP':
-                self._interpret_vlj_algorithm_slsqp(assignment)
+                for flag_value_pair in assignment.values_str.split(','):
+                    self._interpret_vlj_algo_slsqp(flag_value_pair)
             elif algo == 'BFGS':
-                self._interpret_vlj_algorithm_bfgs(assignment)
+                for flag_value_pair in assignment.values_str.split(','):
+                    self._interpret_vlj_algo_bfgs(flag_value_pair)
             else:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterUnknownFlagError(param, flag)
 
-    def _interpret_vlj_algorithm_set_algos(self, assignment):
+    def _interpret_vlj_algo_set_algos(self, assignment):
         """Set the used VLJ algorithms."""
         param = 'VLJ_ALGORITHM'
         self._ensure_no_flags_assignment(assignment, param)
@@ -1183,37 +1190,41 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         # Set the algorithms
         self.rpars.VLJ_ALGO = algos
 
-    def __interpret_vlj_algorithm(self, flag_value_pair, algo, param_types, flag_aliases):
+    def __interpret_vlj_algo(self, flag_value_pair, algo, param_types, flag_aliases):
         """Generic interpreter for VLJ_ALGORITHM flags."""
         param = "VLJ_ALGORITHM"
         flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
         value_error = f"Value {value!r} is invalid for flag {flag!r}"
-        
+
         flag = flag_aliases.get(flag, flag)
-        
+        print(flag, value, param_types, flag_aliases)  # Debugging line
+
         try:
-            numeric = param_types[flag](value)
+            if param_types[flag] is bool:
+                parsed_value = self._parse_simple_bool(value)
+            else:
+                parsed_value = param_types[flag](value)
         except ValueError as exc:
             self.rpars.setHaltingLevel(1)
             raise ParameterValueError(param, message=value_error) from exc
         except KeyError:
             self.rpars.setHaltingLevel(2)
             raise ParameterUnknownFlagError(param, f"{flag!r}") from None
-        
-        self.rpars.vlj_algo_settings[algo][flag] = numeric
+        print(parsed_value)  # Debugging line
+        self.rpars.vlj_algo_settings[algo][flag] = parsed_value
 
-    def _interpret_vlj_algorithm_cmaes(self, flag_value_pair):
+    def _interpret_vlj_algo_cmaes(self, flag_value_pair):
         """Interpret one 'flag value' pair for VLJ_ALGO CMAES."""
-        param_types = {'pop': int, 'max_gens': int, 'ftol': int}
+        param_types = {'pop': int, 'max_gens': int, 'ftol': float}
         flag_aliases = {
             'population': 'pop', 'pop_size': 'pop',
             'gens': 'max_gens', 'generations': 'max_gens',
             'tolerance': 'ftol', 'tol': 'ftol',
         }
-        self.__interpret_vlj_algorithm(
+        self.__interpret_vlj_algo(
             flag_value_pair, 'CMAES', param_types, flag_aliases)
 
-    def _interpret_vlj_algorithm_slsqp(self, flag_value_pair):
+    def _interpret_vlj_algo_slsqp(self, flag_value_pair):
         """Interpret one 'flag value' pair for VLJ_ALGO SLSQP."""
         param_types = {'grad': bool, 'grad_damping': float}
         flag_aliases = {
@@ -1221,16 +1232,16 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             'gradient': 'grad',
             'gradient_damping': 'grad_damping',
         }
-        self.__interpret_vlj_algorithm(
+        self.__interpret_vlj_algo(
             flag_value_pair, 'SLSQP', param_types, flag_aliases)
 
-    def _interpret_vlj_algorithm_bfgs(self, flag_value_pair):
-        """Interpret one 'flag value' pair for VLJ_ALGO SLSQP."""
+    def _interpret_vlj_algo_bfgs(self, flag_value_pair):
+        """Interpret one 'flag value' pair for VLJ_ALGO BFGS."""
         param_types = {'grad': bool, 'grad_damping': float}
         flag_aliases = {
             'use_grad': 'grad',
         }
-        self.__interpret_vlj_algorithm(
+        self.__interpret_vlj_algo(
             flag_value_pair, 'BFGS', param_types, flag_aliases)
 
     def interpret_vlj_batch(self, assignment):
@@ -1275,13 +1286,13 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         param = 'VLJ_CONFIG'
         self._ensure_no_flags_assignment(assignment, param)
         for flag_value_pair in assignment.values_str.split(","):
-            self._interpret_vlj_batch_flag_value_pair(param, flag_value_pair)
+            self._interpret_vlj_config_flag_value_pair(param, flag_value_pair)
 
     def _interpret_vlj_config_flag_value_pair(self, param, flag_value_pair):
         flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
 
         value_error = f'Value {value!r} is invalid for flag {flag!r}'
-        partype = {'precondition': bool, 'recalc_ref_t_matrices': bool,
+        param_types = {'precondition': bool, 'recalc_ref_t_matrices': bool,
                     't-leed-l_max': int}
         flag_aliases = {
             'precon': 'precondition',
@@ -1289,10 +1300,14 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             'l_max': 't-leed-l_max', 't_leed_lmax': 't-leed-l_max',
             'lmax': 't-leed-l_max',
         }
+
         if flag in flag_aliases:
             flag = flag_aliases[flag]
         try:
-            parsed_value = partype[flag](value)
+            if param_types[flag] is bool:
+                parsed_value = self._parse_simple_bool(value)
+            else:
+                parsed_value = param_types[flag](value)
         except ValueError as exc:
             self.rpars.setHaltingLevel(1)
             raise ParameterValueError(param, message=value_error) from exc
