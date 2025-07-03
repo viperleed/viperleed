@@ -113,3 +113,14 @@ class ParametersChecker:
                 'ViPErLEED JAX backend. The delta-amplitude calculation '
                 'segments have been removed from the RUN parameter.'
                 )
+        superpos_removed = [sec for sec in deltas_removed
+                            if sec is not Section.SUPERPOS]
+        if len(superpos_removed) < len(deltas_removed):
+            # warn that we removed the superposition calculation
+            _LOGGER.warning(
+                'Superposition calculations are not supported with the '
+                'ViPErLEED JAX backend. The superposition calculation '
+                'segments have been removed from the RUN parameter.'
+                )
+        self._rpars.RUN = superpos_removed
+
