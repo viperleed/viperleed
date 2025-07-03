@@ -90,7 +90,9 @@ class ParametersChecker:
                 'impossible. Consider reducing N_CORES.'
                 )
 
-    def _check_search_backend_and_run_segments(self):
+    ##### Methods related to the viperleed-jax plugin #####
+
+    def _check_backend_search_and_run_segments(self):
         """Check BACKEND['search'] and RUN for consistency.
 
         When using the ViPErLEED JAX plugin for the search, delta-amplitude
