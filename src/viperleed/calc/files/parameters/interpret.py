@@ -1269,14 +1269,37 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
 
     def interpret_vlj_config(self, assignment):
         """Assign parameter VLJ_CONFIG.
-        
+
         VLJ_CONFIG has several switches that alter the inner workings of the
         viperleed-jax plugin."""
         param = 'VLJ_CONFIG'
         self._ensure_no_flags_assignment(assignment, param)
-        partypes = {'precondition': bool, 'recalc_ref_t_matrices': bool,
+        for flag_value_pair in assignment.values_str.split(","):
+            self._interpret_vlj_batch_flag_value_pair(param, flag_value_pair)
+
+    def _interpret_vlj_config_flag_value_pair(self, param, flag_value_pair):
+        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
+
+        value_error = f'Value {value!r} is invalid for flag {flag!r}'
+        partype = {'precondition': bool, 'recalc_ref_t_matrices': bool,
                     't-leed-l_max': int}
-        # TODO: implementation
+        flag_aliases = {
+            'precon': 'precondition',
+            'recalc': 'recalc_ref_t_matrices',
+            'l_max': 't-leed-l_max', 't_leed_lmax': 't-leed-l_max',
+            'lmax': 't-leed-l_max',
+        }
+        if flag in flag_aliases:
+            flag = flag_aliases[flag]
+        try:
+            parsed_value = partype[flag](value)
+        except ValueError as exc:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message=value_error) from exc
+        except KeyError:
+            self.rpars.setHaltingLevel(2)
+            raise ParameterUnknownFlagError(param, f"{flag!r}") from None
+        self.rpars.VLJ_CONFIG[flag] = parsed_value
 
     @skip_without_matplotlib
     def interpret_plot_iv(self, assignment):
