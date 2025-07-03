@@ -122,9 +122,9 @@ def vlj_search(slab, rpars):
     # write to a copy of the slab object
     tmp_slab = copy.deepcopy(slab)
     calculator.apply_to_slab(tmp_slab, rpars, cmaes_result.best_x)
-    # write output files
-    poscar.write(slab, "POSCAR_TL_optimized_CMAES", comments="all")
-    writeVIBROCC(slab, "VIBROCC_TL_optimized_CMAES")
+    # write intermediate results to files
+    poscar.write(slab, "POSCAR_TL_intermediate", comments="all")
+    writeVIBROCC(slab, "VIBROCC_TL_intermediate")
 
     # write result to file
     cmaes_result.write_to_file('CMAES_result.npz')
@@ -145,11 +145,10 @@ def vlj_search(slab, rpars):
     # write the result to the slab object
     calculator.apply_to_slab(slab, rpars, slsqp_result.best_x)
 
-    # write output files
-    # POSCAR
-    poscar.write(slab, 'POSCAR_TL_optimized_SLSQP', comments='all')
-    # VIBROCC
-    writeVIBROCC(slab, 'VIBROCC_TL_optimized_SLSQP')
+
+    # write the updated POSCAR and VIBROCC files to work
+    poscar.write(slab, 'POSCAR', comments='all')
+    writeVIBROCC(slab, 'VIBROCC')
 
     # write result to file
     slsqp_result.write_to_file('SLSQP_result.npz')
