@@ -413,97 +413,10 @@ def deltas(sl, rp, subdomain=False):
     if not phaseshifts.endswith('\n'):
         phaseshifts += '\n'
 
-    # go through atoms, remove those that have no variation whatsoever:
-    attodo = [at for at in sl if not at.is_bulk]
-    j = 0
-    while j < len(attodo):
-        found = False
-        at = attodo[j]
-        for el in at.disp_occ.keys():
-            at.mergeDisp(el)
-        for d in [at.disp_occ, at.disp_geo, at.disp_vib]:
-            for el in d:
-                if len(d[el]) > 1:
-                    found = True
-                    break
-        if not found:
-            for el in at.disp_vib:
-                if abs(at.disp_vib[el][0]) >= 1e-4:
-                    found = True
-                    break
-        if not found:
-            for el in at.disp_geo:
-                if np.linalg.norm(at.disp_geo[el][0]) >= 1e-4:
-                    found = True
-                    break
-        if not found:
-            occlists = []
-            for k in at.disp_occ:
-                occlists.append(at.disp_occ[k])
-            for i in range(0, len(occlists[0])):
-                totalocc = 0.
-                for ol in occlists:
-                    if len(ol) <= i:
-                        break  # error - will pop up again later...
-                    else:
-                        totalocc += ol[i]
-                if totalocc < 1 - 1e-4:
-                    found = True
-                    break
-        if not found:
-            attodo.pop(j)
-        else:
-            j += 1
-
-    vaclist = []    # atoms for which a vacancy delta file is needed
-    for at in attodo:
-        occlists = []
-        for k in at.disp_occ:
-            occlists.append(at.disp_occ[k])
-        for i in range(0, len(occlists[0])):
-            totalocc = 0.
-            for ol in occlists:
-                if len(ol) <= i:
-                    logger.error("Inconsistent occupancy lists for {} "
-                                 .format(at))
-                    raise ValueError("Inconsistent occupancy lists for {}"
-                                     .format(at))
-                else:
-                    totalocc += ol[i]
-            if totalocc < 1 - 1e-4:
-                vaclist.append(at)
-                break
-
-    # check existing delta files
-    countExisting = 0
-    atElTodo = []
-    for at in attodo:
-        checkEls = list(at.disp_occ.keys())
-        if at in vaclist:
-            checkEls.append("vac")
-        for el in checkEls:
-            dfiles = [f for f in os.listdir(".")
-                      if f.startswith(f'DEL_{at.num}_{el}')]
-            found = False
-            for df in dfiles:
-                if iodeltas.checkDelta(df, at, el, rp):
-                    found = True
-                    at.known_deltas.append(df)
-                    countExisting += 1
-                    break
-            if not found:
-                atElTodo.append((at, el))
-
-    if len(atElTodo) == 0:
-        logger.info("All Delta files specified in DISPLACEMENTS are "
-                    "already present in the Deltas.zip file. Skipping new "
-                    "calculations.")
+    attodo, atElTodo, vaclist = _find_atoms_that_need_deltas(sl, rp)
+    if not atElTodo:  # Nothing to calculate
         return
-    if countExisting > 0:
-        logger.info("{} of {} required Delta-files are already present. "
-                    "Generating remaining {} files..."
-                    .format(countExisting, len(atElTodo) + countExisting,
-                            len(atElTodo)))
+
     # create log file:
     deltaname = "delta-"+rp.timestamp
     deltalogname = deltaname+".log"
@@ -733,3 +646,118 @@ def deltas_domains(rp):
         except Exception:
             logger.warning('Error deleting delta '
                            f'compile folder {ct.foldername}')
+
+
+def _find_atoms_that_need_deltas(sl, rp):
+    """Return information about atoms that need delta calculations.
+
+    Parameters
+    ----------
+    sl : Slab
+        The slab for which delta-amplitudes are being calculated.
+    rp : Rparams
+        The current PARAMETERS.
+
+    Returns
+    -------
+    attodo : list of Atom
+        All atoms in `sl` that have some sort of variation, and that
+        thus require delta-amplitudes to be available.
+    atElTodo : list of tuples
+        (Atom, element) pairs of all atoms in `sl` that require a
+        new delta-amplitude calculation.
+    vaclist : list of Atom
+        All atoms in `attodo` that have partial occupation.
+    """
+    # go through atoms, remove those that have no variation whatsoever:
+    attodo = [at for at in sl if not at.is_bulk]
+    j = 0
+    while j < len(attodo):
+        found = False
+        at = attodo[j]
+        for el in at.disp_occ.keys():
+            at.mergeDisp(el)
+        for d in [at.disp_occ, at.disp_geo, at.disp_vib]:
+            for el in d:
+                if len(d[el]) > 1:
+                    found = True
+                    break
+        if not found:
+            for el in at.disp_vib:
+                if abs(at.disp_vib[el][0]) >= 1e-4:
+                    found = True
+                    break
+        if not found:
+            for el in at.disp_geo:
+                if np.linalg.norm(at.disp_geo[el][0]) >= 1e-4:
+                    found = True
+                    break
+        if not found:
+            occlists = []
+            for k in at.disp_occ:
+                occlists.append(at.disp_occ[k])
+            for i in range(0, len(occlists[0])):
+                totalocc = 0.
+                for ol in occlists:
+                    if len(ol) <= i:
+                        break  # error - will pop up again later...
+                    else:
+                        totalocc += ol[i]
+                if totalocc < 1 - 1e-4:
+                    found = True
+                    break
+        if not found:
+            attodo.pop(j)
+        else:
+            j += 1
+
+    vaclist = []    # atoms for which a vacancy delta file is needed
+    for at in attodo:
+        occlists = []
+        for k in at.disp_occ:
+            occlists.append(at.disp_occ[k])
+        for i in range(0, len(occlists[0])):
+            totalocc = 0.
+            for ol in occlists:
+                if len(ol) <= i:
+                    logger.error("Inconsistent occupancy lists for {} "
+                                 .format(at))
+                    raise ValueError("Inconsistent occupancy lists for {}"
+                                     .format(at))
+                else:
+                    totalocc += ol[i]
+            if totalocc < 1 - 1e-4:
+                vaclist.append(at)
+                break
+
+    # check existing delta files
+    countExisting = 0
+    atElTodo = []
+    for at in attodo:
+        checkEls = list(at.disp_occ.keys())
+        if at in vaclist:
+            checkEls.append("vac")
+        for el in checkEls:
+            dfiles = [f for f in os.listdir(".")
+                      if f.startswith(f'DEL_{at.num}_{el}')]
+            found = False
+            for df in dfiles:
+                if iodeltas.checkDelta(df, at, el, rp):
+                    found = True
+                    at.known_deltas.append(df)
+                    countExisting += 1
+                    break
+            if not found:
+                atElTodo.append((at, el))
+
+    if len(atElTodo) == 0:
+        logger.info("All Delta files specified in DISPLACEMENTS are "
+                    "already present in the Deltas.zip file. Skipping new "
+                    "calculations.")
+        return attodo, atElTodo, vaclist
+    if countExisting > 0:
+        logger.info("{} of {} required Delta-files are already present. "
+                    "Generating remaining {} files..."
+                    .format(countExisting, len(atElTodo) + countExisting,
+                            len(atElTodo)))
+    return attodo, atElTodo, vaclist
