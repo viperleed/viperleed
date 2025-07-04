@@ -125,7 +125,8 @@ def vlj_search(slab, rpars):
 
         poscar.write(slab, f'POSCAR_TL_{optimizer.name}_intermediate',
                      comments='all')
-        writeVIBROCC(slab, f'VIBROCC_TL_{optimizer.name}_intermediate')
+        writeVIBROCC(slab, f'VIBROCC_TL_{optimizer.name}_intermediate',
+                     silent=True)
 
         # write result to file
         result.write_to_file(f'{optimizer.name}_result.npz')
@@ -148,4 +149,4 @@ def vlj_search(slab, rpars):
 
     # write the updated POSCAR and VIBROCC files to work
     poscar.write(slab, "POSCAR", comments="all")
-    writeVIBROCC(slab, "VIBROCC")
+    writeVIBROCC(slab, "VIBROCC", silent=True)
