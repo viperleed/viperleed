@@ -111,11 +111,13 @@ def vlj_search(slab, rpars):
     logger.debug(
         f'Initial parameter vector:\n{x}')
 
-    for optimizer in optimizer_iterator:
-        logger.info(f'Using optimizer: {optimizer.name}')
+    for optimizer, result in optimizer_iterator:
 
-        # run the optimizer
-        result = optimizer(x)
+        logger.info(
+            f'Optimizer {optimizer.name} finished with best '
+            'R = {result.best_R:.4f}'
+        )
+        logger.debug(f'Optimizer result:\n{result}')
 
         # write intermediate results to files
         tmp_slab = copy.deepcopy(slab)
@@ -131,11 +133,6 @@ def vlj_search(slab, rpars):
         # update the last_R parameter
         rpars.last_R = result.best_R
 
-        logger.info(
-            f'Optimizer {optimizer.name} finished with best '
-            'R = {result.best_R:.4f}'
-        )
-        logger.debug(f'Optimizer result:\n{result}')
 
     # Finished optimization
     logger.info(
