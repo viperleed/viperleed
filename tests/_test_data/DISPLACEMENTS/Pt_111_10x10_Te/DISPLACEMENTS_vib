@@ -1,0 +1,19 @@
+== SEARCH vib
+
+= VIB_DELTA
+
+Pt_sub     = -0.07 0.07 0.005
+Pt_surf    = -0.07 0.07 0.005
+Te  1-30   = -0.07 0.07 0.005
+Te 31-36   = -0.07 0.07 0.005
+Te 37-43   = -0.07 0.07 0.005
+Te 44-49   = -0.07 0.07 0.005
+
+= CONSTRAIN
+
+vib Pt_sub     = linked
+vib Pt_surf    = linked
+vib Te  1-30   = linked
+vib Te 31-36   = linked
+vib Te 37-43   = linked
+vib Te 44-49   = linked

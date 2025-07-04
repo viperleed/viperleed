@@ -55,6 +55,7 @@ _SUPP_FILES = (
     'POSCAR_bulk',
     'POSCAR_mincell',
     'POSCAR_oricell',
+    'POSCAR_TL_intermediate',
     'POSCAR_vacuum_corrected',
     'refcalc-FIN',
     'refcalc-PARAM',
@@ -68,6 +69,7 @@ _SUPP_FILES = (
     'superpos-CONTRIN',
     'superpos-PARAM',
     'VIBROCC_generated',
+    'VIBROCC_TL_intermediate',
     )
 
 _SUPP_DIRS = (
