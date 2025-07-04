@@ -23,7 +23,7 @@ if VLJ_AVAILABLE:
         setup_tl_parameter_space,
         setup_tl_calculator,
     )
-    from viperleed_jax import optimization
+    from viperleed_jax.optimization.iterator import OptimizerIterator
     from viperleed_jax.utils import benchmark_calculator
 
 
@@ -102,49 +102,53 @@ def vlj_search(slab, rpars):
         "-----------------\n"
         f"{benchmark_results}"
 )
+    optimizer_iterator = OptimizerIterator(
+        calculator=calculator,
+        rpars=rpars,)
 
-    cmaes_optimizer = optimization.CMAESOptimizer(
-        fun=calculator.R,
-            n_generations=200,
-            pop_size=30,
-            ftol=1e-3,
+    # initial parameter vector
+    x = optimizer_iterator.suggested_starting_point
+    logger.debug(
+        f'Initial parameter vector:\n{x}')
+
+    for optimizer in optimizer_iterator:
+        logger.info(f'Using optimizer: {optimizer.name}')
+
+        # run the optimizer
+        result = optimizer(x)
+
+        # write intermediate results to files
+        tmp_slab = copy.deepcopy(slab)
+        calculator.apply_to_slab(tmp_slab, rpars, result.best_x)
+
+        poscar.write(slab, f'POSCAR_TL_{optimizer.name}_intermediate',
+                     comments='all')
+        writeVIBROCC(slab, f'VIBROCC_TL_{optimizer.name}_intermediate')
+
+        # write result to file
+        result.write_to_file(f'{optimizer.name}_result.npz')
+
+        # update the last_R parameter
+        rpars.last_R = result.best_R
+
+        logger.info(
+            f'Optimizer {optimizer.name} finished with best '
+            'R = {result.best_R:.4f}'
+        )
+        logger.debug(f'Optimizer result:\n{result}')
+
+    # Finished optimization
+    logger.info(
+        f'Finished optimization with best R = {result.best_R:.4f}'
+    )
+    logger.debug(
+        f'Best parameter vector:\n{result.best_x}'
     )
 
-    x0 = np.array([0.50]*calculator.n_free_parameters)
-    cmaes_result = cmaes_optimizer(x0)
-
-    logger.info(cmaes_result)
-
-    # write to a copy of the slab object
-    tmp_slab = copy.deepcopy(slab)
-    calculator.apply_to_slab(tmp_slab, rpars, cmaes_result.best_x)
-    # write intermediate results to files
-    poscar.write(slab, "POSCAR_TL_intermediate", comments="all")
-    writeVIBROCC(slab, "VIBROCC_TL_intermediate")
-
-    # write result to file
-    cmaes_result.write_to_file('CMAES_result.npz')
-
-    slsqp_opt = optimization.SLSQPOptimizer(
-        fun=calculator.R,
-        grad=calculator.grad_R,
-    )
-    slsqp_result = slsqp_opt(x0=cmaes_result.best_x)
-
-
-    logger.info(slsqp_result)
-
-    # set last R
-
-    rpars.last_R = slsqp_result.best_R
-
-    # write the result to the slab object
-    calculator.apply_to_slab(slab, rpars, slsqp_result.best_x)
-
+    # apply the final result to the slab object
+    logger.debug("Applying final result to slab object.")
+    calculator.apply_to_slab(slab, rpars, result.best_x)
 
     # write the updated POSCAR and VIBROCC files to work
-    poscar.write(slab, 'POSCAR', comments='all')
-    writeVIBROCC(slab, 'VIBROCC')
-
-    # write result to file
-    slsqp_result.write_to_file('SLSQP_result.npz')
+    poscar.write(slab, "POSCAR", comments="all")
+    writeVIBROCC(slab, "VIBROCC")
