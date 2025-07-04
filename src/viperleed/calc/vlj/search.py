@@ -90,10 +90,6 @@ def vlj_search(slab, rpars):
         rpars,
         tensor_path=tensor_path,
         phaseshifts_path=rpars.paths.home / 'PHASESHIFTS',
-        t_leed_l_max=rpars.LMAX.max,
-        recalculate_ref_t_matrices=False,
-        batch_energies=104,
-        use_symmetry=True
     )
 
     # apply the parameter space to the calculator
