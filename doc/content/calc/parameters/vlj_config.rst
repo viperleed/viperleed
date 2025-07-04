@@ -52,3 +52,8 @@ Available setting are:
 -  ``t-leed-l_max``: Maximum value of the angular momentum quantum number
    :math:`\ell` to be used in the tensor-LEED calculation. 
    **Default**: Use the maximum value of :ref:`LMAX`.
+
+-  ``use_symmetry`` (experimental): Toggle whether to use the advanced symmetry
+   based calculation of t-matrices and propagtors. This can significantly
+   improve performance.
+   **Default**: True.
