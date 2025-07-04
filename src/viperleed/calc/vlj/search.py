@@ -24,7 +24,10 @@ if VLJ_AVAILABLE:
         setup_tl_calculator,
     )
     from viperleed_jax.optimization.iterator import OptimizerIterator
-    from viperleed_jax.utils import benchmark_calculator
+    from viperleed_jax.utils import (
+        benchmark_calculator,
+        format_benchmark_results,
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -96,12 +99,10 @@ def vlj_search(slab, rpars):
     calculator.set_parameter_space(parameter_space)
     logger.info('Calculator initialized with parameter space.')
 
+    # run benchmarks
     benchmark_results = benchmark_calculator(calculator, use_grad=False)
-    logger.info(
-        "\nBenchmark results\n"
-        "-----------------\n"
-        f"{benchmark_results}"
-)
+    logger.info(format_benchmark_results(benchmark_results))
+
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
         rpars=rpars,)
