@@ -85,7 +85,7 @@ DEFAULTS = {
     'BACKEND': {'search': SearchBackend.TENSERLEED},
     'VLJ_ALGO': ['CMAES', 'SLSQP'],  # algorithms to be used
     'VLJ_BATCH': {'energies': -1, 'atoms': -1},
-    'VLJ_CONFIG': {'precondition': True, 
+    'VLJ_CONFIG': {'precondition': True, 'use_symmetry': True,
                    'recalc_ref_t_matrices': False,
                    't-leed-l_max': -1},
     'vlj_algo_settings': {
