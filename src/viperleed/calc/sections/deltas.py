@@ -399,7 +399,7 @@ def deltas(sl, rp, subdomain=False):
     try:
         auxbeams = auxbeams_file.read_text(encoding='utf-8')
     except OSError:
-        logger.error('Could not read {auxbeams_file.name} for delta input')
+        logger.error(f'Could not read {auxbeams_file.name} for delta input')
         raise
     if not auxbeams.endswith('\n'):
         auxbeams += '\n'
