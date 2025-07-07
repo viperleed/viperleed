@@ -539,20 +539,20 @@ def deltas_domains(rp):
     deltaCompTasks = []
     deltaRunTasks = []
     # get input for all domains
-    for dp in rp.domainParams:
-        logger.info(f'Getting input for delta calculations: {dp}')
-        with execute_in_dir(dp.workdir):
+    for domain in rp.domainParams:
+        logger.info(f'Getting input for delta calculations: {domain}')
+        with execute_in_dir(domain.workdir):
             try:
-                r = deltas(dp.slab, dp.rpars, subdomain=True)
+                r = deltas(domain.slab, domain.rpars, subdomain=True)
             except Exception:
-                logger.error(f'Error while creating delta input for {dp}')
+                logger.error(f'Error while creating delta input for {domain}')
                 raise
         if type(r) == tuple:  # if no deltas need to be calculated returns None
             deltaCompTasks.extend(r[0])
             deltaRunTasks.extend(r[1])
         elif r is not None:
             raise RuntimeError('Unknown error while creating '
-                               f'delta input for {dp}')
+                               f'delta input for {domain}')
 
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION:
