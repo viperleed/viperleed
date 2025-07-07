@@ -399,7 +399,7 @@ def deltas(sl, rp, subdomain=False):
     try:
         auxbeams = auxbeams_file.read_text(encoding='utf-8')
     except OSError:
-        logger.error('Could not read {auxbeams_file.name} for delta input')
+        logger.error(f'Could not read {auxbeams_file.name} for delta input')
         raise
     if not auxbeams.endswith('\n'):
         auxbeams += '\n'
@@ -413,97 +413,10 @@ def deltas(sl, rp, subdomain=False):
     if not phaseshifts.endswith('\n'):
         phaseshifts += '\n'
 
-    # go through atoms, remove those that have no variation whatsoever:
-    attodo = [at for at in sl if not at.is_bulk]
-    j = 0
-    while j < len(attodo):
-        found = False
-        at = attodo[j]
-        for el in at.disp_occ.keys():
-            at.mergeDisp(el)
-        for d in [at.disp_occ, at.disp_geo, at.disp_vib]:
-            for el in d:
-                if len(d[el]) > 1:
-                    found = True
-                    break
-        if not found:
-            for el in at.disp_vib:
-                if abs(at.disp_vib[el][0]) >= 1e-4:
-                    found = True
-                    break
-        if not found:
-            for el in at.disp_geo:
-                if np.linalg.norm(at.disp_geo[el][0]) >= 1e-4:
-                    found = True
-                    break
-        if not found:
-            occlists = []
-            for k in at.disp_occ:
-                occlists.append(at.disp_occ[k])
-            for i in range(0, len(occlists[0])):
-                totalocc = 0.
-                for ol in occlists:
-                    if len(ol) <= i:
-                        break  # error - will pop up again later...
-                    else:
-                        totalocc += ol[i]
-                if totalocc < 1 - 1e-4:
-                    found = True
-                    break
-        if not found:
-            attodo.pop(j)
-        else:
-            j += 1
-
-    vaclist = []    # atoms for which a vacancy delta file is needed
-    for at in attodo:
-        occlists = []
-        for k in at.disp_occ:
-            occlists.append(at.disp_occ[k])
-        for i in range(0, len(occlists[0])):
-            totalocc = 0.
-            for ol in occlists:
-                if len(ol) <= i:
-                    logger.error("Inconsistent occupancy lists for {} "
-                                 .format(at))
-                    raise ValueError("Inconsistent occupancy lists for {}"
-                                     .format(at))
-                else:
-                    totalocc += ol[i]
-            if totalocc < 1 - 1e-4:
-                vaclist.append(at)
-                break
-
-    # check existing delta files
-    countExisting = 0
-    atElTodo = []
-    for at in attodo:
-        checkEls = list(at.disp_occ.keys())
-        if at in vaclist:
-            checkEls.append("vac")
-        for el in checkEls:
-            dfiles = [f for f in os.listdir(".")
-                      if f.startswith(f'DEL_{at.num}_{el}')]
-            found = False
-            for df in dfiles:
-                if iodeltas.checkDelta(df, at, el, rp):
-                    found = True
-                    at.known_deltas.append(df)
-                    countExisting += 1
-                    break
-            if not found:
-                atElTodo.append((at, el))
-
-    if len(atElTodo) == 0:
-        logger.info("All Delta files specified in DISPLACEMENTS are "
-                    "already present in the Deltas.zip file. Skipping new "
-                    "calculations.")
+    attodo, atElTodo, vaclist = _find_atoms_that_need_deltas(sl, rp)
+    if not atElTodo:  # Nothing to calculate
         return
-    if countExisting > 0:
-        logger.info("{} of {} required Delta-files are already present. "
-                    "Generating remaining {} files..."
-                    .format(countExisting, len(atElTodo) + countExisting,
-                            len(atElTodo)))
+
     # create log file:
     deltaname = "delta-"+rp.timestamp
     deltalogname = deltaname+".log"
@@ -611,62 +524,13 @@ def deltas(sl, rp, subdomain=False):
         rp.setHaltingLevel(3)
         return
 
-    # make sure there's a compiler ready:
-    if rp.FORTRAN_COMP[0] == "" and not subdomain:                              # TODO: this may mask problems of PARAMETERS settings when running a delta without a refcalc if the specified compiler does not exist.
-        try:
-            rp.getFortranComp()
-        except Exception:
-            logger.error("No fortran compiler found, cancelling...")
-            raise RuntimeError("No Fortran compiler")
-
-    for ct in deltaCompTasks:
-        ct.fortran_comp = rp.FORTRAN_COMP
-
     if subdomain and deltaRunTasks:
         rp.manifest.add(DEFAULT_DELTAS)
 
     if subdomain:  # Actual calculations done in deltas_domains
         return deltaCompTasks, deltaRunTasks
 
-    rp.updateCores()
-
-    # Validate TensErLEED checksums
-    if not rp.TL_IGNORE_CHECKSUM:
-        validate_multiple_files(deltaCompTasks[0].get_source_files(),
-                                logger, "delta calculations",
-                                rp.TL_VERSION)
-
-    # compile files
-    logger.info("Compiling fortran files...")
-    poolsize = min(len(deltaCompTasks), rp.N_CORES)
-    try:
-        parallelization.monitoredPool(rp, poolsize,
-                                      compile_delta,
-                                      deltaCompTasks)
-    except Exception:
-        # save log files in case of error:
-        for ct in deltaCompTasks:
-            leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
-        raise
-    if rp.STOP:
-        return
-
-    # run executions
-    logger.info("Running delta calculations...")
-    poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
-    if rp.STOP:
-        return
-    logger.info("Delta calculations finished.")
-
-    # clean up compile folders
-    for ct in deltaCompTasks:
-        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
-        try:
-            shutil.rmtree(ct.foldername)
-        except Exception:
-            logger.warning("Error deleting delta compile folder "
-                           + ct.foldername)
+    _compile_and_run_deltas_in_parallel(rp, deltaCompTasks, deltaRunTasks)
     rp.manifest.add(DEFAULT_DELTAS)
 
 
@@ -675,61 +539,210 @@ def deltas_domains(rp):
     deltaCompTasks = []
     deltaRunTasks = []
     # get input for all domains
-    for dp in rp.domainParams:
-        logger.info(f'Getting input for delta calculations: {dp}')
-        with execute_in_dir(dp.workdir):
+    for domain in rp.domainParams:
+        logger.info(f'Getting input for delta calculations: {domain}')
+        with execute_in_dir(domain.workdir):
             try:
-                r = deltas(dp.slab, dp.rpars, subdomain=True)
+                r = deltas(domain.slab, domain.rpars, subdomain=True)
             except Exception:
-                logger.error(f'Error while creating delta input for {dp}')
+                logger.error(f'Error while creating delta input for {domain}')
                 raise
         if type(r) == tuple:  # if no deltas need to be calculated returns None
             deltaCompTasks.extend(r[0])
             deltaRunTasks.extend(r[1])
         elif r is not None:
             raise RuntimeError('Unknown error while creating '
-                               f'delta input for {dp}')
+                               f'delta input for {domain}')
 
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION:
         rp.setHaltingLevel(3)
         return
+    _compile_and_run_deltas_in_parallel(rp, deltaCompTasks, deltaRunTasks)
 
-    # make sure there's a compiler ready, and we know the number of cores:
-    if rp.FORTRAN_COMP[0] == "":
+
+def _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks):
+    """Compile and run multiple delta-amplitude calculations in parallel."""
+    rpars.updateCores()  # In case it was not known yet
+    _compile_deltas_in_parallel(rpars, compile_tasks)
+    if rpars.STOP:
+        return
+    ran_anything = _run_deltas_in_parallel(rpars, run_tasks)
+    if rpars.STOP:
+        return
+    if ran_anything:
+        logger.info('Delta calculations finished.')
+
+    # Clean up compile folders
+    for comp_task in compile_tasks:
+        leedbase.copy_compile_log(rpars,
+                                  comp_task.logfile,
+                                  comp_task.compile_log_name)
         try:
-            rp.getFortranComp()
+            shutil.rmtree(comp_task.foldername)
+        except Exception:
+            logger.warning('Error deleting delta '
+                           f'compile folder {comp_task.foldername}')
+
+
+def _compile_deltas_in_parallel(rpars, compile_tasks):
+    """Compile multiple delta-amplitudes in a parallelized manner."""
+    if not compile_tasks:  # Nothing to compile
+        return False
+
+    # Make sure there's a compiler ready
+    if rpars.FORTRAN_COMP[0] == "":                                             # TODO: this may mask problems of PARAMETERS settings when running a delta without a refcalc if the specified compiler does not exist.
+        try:
+            rpars.getFortranComp()
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    for ct in deltaCompTasks:
-        ct.fortran_comp = rp.FORTRAN_COMP
-    rp.updateCores()  # if number of cores is not defined, try to find it
 
-    # compile files
-    if len(deltaCompTasks) > 0:
-        logger.info("Compiling fortran files...")
-        poolsize = min(len(deltaCompTasks), rp.N_CORES)
-        parallelization.monitoredPool(rp, poolsize,
+    for task in compile_tasks:
+        task.fortran_comp = rpars.FORTRAN_COMP
+
+    # Validate TensErLEED checksums
+    if not rpars.TL_IGNORE_CHECKSUM:
+        validate_multiple_files(compile_tasks[0].get_source_files(),
+                                logger, "delta calculations",
+                                rpars.TL_VERSION)
+
+    # Compile files
+    logger.info('Compiling fortran files...')
+    poolsize = min(len(compile_tasks), rpars.N_CORES)
+    try:
+        parallelization.monitoredPool(rpars, poolsize,
                                       compile_delta,
-                                      deltaCompTasks)
-        if rp.STOP:
-            return
+                                      compile_tasks)
+    except Exception:  # Save log files in case of error
+        for task in compile_tasks:
+            leedbase.copy_compile_log(rpars,
+                                      task.logfile,
+                                      task.compile_log_name)
+        raise
+    return True
 
-    # run executions
-    if len(deltaRunTasks) > 0:
-        logger.info("Running delta calculations...")
-        poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
-        if rp.STOP:
-            return
-        logger.info("Delta calculations finished.")
 
-    # clean up
-    for ct in deltaCompTasks:
-        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name) # copy compile folder
-        try:
-            shutil.rmtree(ct.foldername)
-        except Exception:
-            logger.warning('Error deleting delta '
-                           f'compile folder {ct.foldername}')
+def _find_atoms_that_need_deltas(sl, rp):
+    """Return information about atoms that need delta calculations.
+
+    Parameters
+    ----------
+    sl : Slab
+        The slab for which delta-amplitudes are being calculated.
+    rp : Rparams
+        The current PARAMETERS.
+
+    Returns
+    -------
+    attodo : list of Atom
+        All atoms in `sl` that have some sort of variation, and that
+        thus require delta-amplitudes to be available.
+    atElTodo : list of tuples
+        (Atom, element) pairs of all atoms in `sl` that require a
+        new delta-amplitude calculation.
+    vaclist : list of Atom
+        All atoms in `attodo` that have partial occupation.
+    """
+    # go through atoms, remove those that have no variation whatsoever:
+    attodo = [at for at in sl if not at.is_bulk]
+    j = 0
+    while j < len(attodo):
+        found = False
+        at = attodo[j]
+        for el in at.disp_occ.keys():
+            at.mergeDisp(el)
+        for d in [at.disp_occ, at.disp_geo, at.disp_vib]:
+            for el in d:
+                if len(d[el]) > 1:
+                    found = True
+                    break
+        if not found:
+            for el in at.disp_vib:
+                if abs(at.disp_vib[el][0]) >= 1e-4:
+                    found = True
+                    break
+        if not found:
+            for el in at.disp_geo:
+                if np.linalg.norm(at.disp_geo[el][0]) >= 1e-4:
+                    found = True
+                    break
+        if not found:
+            occlists = []
+            for k in at.disp_occ:
+                occlists.append(at.disp_occ[k])
+            for i in range(0, len(occlists[0])):
+                totalocc = 0.
+                for ol in occlists:
+                    if len(ol) <= i:
+                        break  # error - will pop up again later...
+                    else:
+                        totalocc += ol[i]
+                if totalocc < 1 - 1e-4:
+                    found = True
+                    break
+        if not found:
+            attodo.pop(j)
+        else:
+            j += 1
+
+    vaclist = []    # atoms for which a vacancy delta file is needed
+    for at in attodo:
+        occlists = []
+        for k in at.disp_occ:
+            occlists.append(at.disp_occ[k])
+        for i in range(0, len(occlists[0])):
+            totalocc = 0.
+            for ol in occlists:
+                if len(ol) <= i:
+                    logger.error("Inconsistent occupancy lists for {} "
+                                 .format(at))
+                    raise ValueError("Inconsistent occupancy lists for {}"
+                                     .format(at))
+                else:
+                    totalocc += ol[i]
+            if totalocc < 1 - 1e-4:
+                vaclist.append(at)
+                break
+
+    # check existing delta files
+    countExisting = 0
+    atElTodo = []
+    for at in attodo:
+        checkEls = list(at.disp_occ.keys())
+        if at in vaclist:
+            checkEls.append("vac")
+        for el in checkEls:
+            dfiles = [f for f in os.listdir(".")
+                      if f.startswith(f'DEL_{at.num}_{el}')]
+            found = False
+            for df in dfiles:
+                if iodeltas.checkDelta(df, at, el, rp):
+                    found = True
+                    at.known_deltas.append(df)
+                    countExisting += 1
+                    break
+            if not found:
+                atElTodo.append((at, el))
+
+    if len(atElTodo) == 0:
+        logger.info("All Delta files specified in DISPLACEMENTS are "
+                    "already present in the Deltas.zip file. Skipping new "
+                    "calculations.")
+        return attodo, atElTodo, vaclist
+    if countExisting > 0:
+        logger.info("{} of {} required Delta-files are already present. "
+                    "Generating remaining {} files..."
+                    .format(countExisting, len(atElTodo) + countExisting,
+                            len(atElTodo)))
+    return attodo, atElTodo, vaclist
+
+
+def _run_deltas_in_parallel(rpars, run_tasks):
+    """Execute multiple delta-amplitude calculations in parallel."""
+    if not run_tasks:  # Nothing to run
+        return False
+    logger.info('Running delta calculations...')
+    poolsize = min(len(run_tasks), rpars.N_CORES)
+    parallelization.monitoredPool(rpars, poolsize, run_delta, run_tasks)
+    return True
