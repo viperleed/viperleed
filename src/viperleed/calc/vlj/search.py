@@ -97,7 +97,6 @@ def vlj_search(slab, rpars):
 
     # apply the parameter space to the calculator
     calculator.set_parameter_space(parameter_space)
-    logger.info('Calculator initialized with parameter space.')
 
     # run benchmarks
     benchmark_results = benchmark_calculator(calculator, use_grad=False)
