@@ -524,62 +524,13 @@ def deltas(sl, rp, subdomain=False):
         rp.setHaltingLevel(3)
         return
 
-    # make sure there's a compiler ready:
-    if rp.FORTRAN_COMP[0] == "" and not subdomain:                              # TODO: this may mask problems of PARAMETERS settings when running a delta without a refcalc if the specified compiler does not exist.
-        try:
-            rp.getFortranComp()
-        except Exception:
-            logger.error("No fortran compiler found, cancelling...")
-            raise RuntimeError("No Fortran compiler")
-
-    for ct in deltaCompTasks:
-        ct.fortran_comp = rp.FORTRAN_COMP
-
     if subdomain and deltaRunTasks:
         rp.manifest.add(DEFAULT_DELTAS)
 
     if subdomain:  # Actual calculations done in deltas_domains
         return deltaCompTasks, deltaRunTasks
 
-    rp.updateCores()
-
-    # Validate TensErLEED checksums
-    if not rp.TL_IGNORE_CHECKSUM:
-        validate_multiple_files(deltaCompTasks[0].get_source_files(),
-                                logger, "delta calculations",
-                                rp.TL_VERSION)
-
-    # compile files
-    logger.info("Compiling fortran files...")
-    poolsize = min(len(deltaCompTasks), rp.N_CORES)
-    try:
-        parallelization.monitoredPool(rp, poolsize,
-                                      compile_delta,
-                                      deltaCompTasks)
-    except Exception:
-        # save log files in case of error:
-        for ct in deltaCompTasks:
-            leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
-        raise
-    if rp.STOP:
-        return
-
-    # run executions
-    logger.info("Running delta calculations...")
-    poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
-    if rp.STOP:
-        return
-    logger.info("Delta calculations finished.")
-
-    # clean up compile folders
-    for ct in deltaCompTasks:
-        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
-        try:
-            shutil.rmtree(ct.foldername)
-        except Exception:
-            logger.warning("Error deleting delta compile folder "
-                           + ct.foldername)
+    _compile_and_run_deltas_in_parallel(rp, deltaCompTasks, deltaRunTasks)
     rp.manifest.add(DEFAULT_DELTAS)
 
 
@@ -607,45 +558,69 @@ def deltas_domains(rp):
     if rp.SUPPRESS_EXECUTION:
         rp.setHaltingLevel(3)
         return
+    _compile_and_run_deltas_in_parallel(rp, deltaCompTasks, deltaRunTasks)
 
-    # make sure there's a compiler ready, and we know the number of cores:
-    if rp.FORTRAN_COMP[0] == "":
+
+def _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks):
+    """Compile and run multiple delta-amplitude calculations in parallel."""
+    rpars.updateCores()  # In case it was not known yet
+    _compile_deltas_in_parallel(rpars, compile_tasks)
+    if rpars.STOP:
+        return
+    ran_anything = _run_deltas_in_parallel(rpars, run_tasks)
+    if rpars.STOP:
+        return
+    if ran_anything:
+        logger.info('Delta calculations finished.')
+
+    # Clean up compile folders
+    for comp_task in compile_tasks:
+        leedbase.copy_compile_log(rpars,
+                                  comp_task.logfile,
+                                  comp_task.compile_log_name)
         try:
-            rp.getFortranComp()
+            shutil.rmtree(comp_task.foldername)
+        except Exception:
+            logger.warning('Error deleting delta '
+                           f'compile folder {comp_task.foldername}')
+
+
+def _compile_deltas_in_parallel(rpars, compile_tasks):
+    """Compile multiple delta-amplitudes in a parallelized manner."""
+    if not compile_tasks:  # Nothing to compile
+        return False
+
+    # Make sure there's a compiler ready
+    if rpars.FORTRAN_COMP[0] == "":                                             # TODO: this may mask problems of PARAMETERS settings when running a delta without a refcalc if the specified compiler does not exist.
+        try:
+            rpars.getFortranComp()
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    for ct in deltaCompTasks:
-        ct.fortran_comp = rp.FORTRAN_COMP
-    rp.updateCores()  # if number of cores is not defined, try to find it
 
-    # compile files
-    if len(deltaCompTasks) > 0:
-        logger.info("Compiling fortran files...")
-        poolsize = min(len(deltaCompTasks), rp.N_CORES)
-        parallelization.monitoredPool(rp, poolsize,
+    for task in compile_tasks:
+        task.fortran_comp = rpars.FORTRAN_COMP
+
+    # Validate TensErLEED checksums
+    if not rpars.TL_IGNORE_CHECKSUM:
+        validate_multiple_files(compile_tasks[0].get_source_files(),
+                                logger, "delta calculations",
+                                rpars.TL_VERSION)
+
+    # Compile files
+    logger.info('Compiling fortran files...')
+    poolsize = min(len(compile_tasks), rpars.N_CORES)
+    try:
+        parallelization.monitoredPool(rpars, poolsize,
                                       compile_delta,
-                                      deltaCompTasks)
-        if rp.STOP:
-            return
-
-    # run executions
-    if len(deltaRunTasks) > 0:
-        logger.info("Running delta calculations...")
-        poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
-        if rp.STOP:
-            return
-        logger.info("Delta calculations finished.")
-
-    # clean up
-    for ct in deltaCompTasks:
-        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name) # copy compile folder
-        try:
-            shutil.rmtree(ct.foldername)
-        except Exception:
-            logger.warning('Error deleting delta '
-                           f'compile folder {ct.foldername}')
+                                      compile_tasks)
+    except Exception:  # Save log files in case of error
+        for task in compile_tasks:
+            leedbase.copy_compile_log(rpars,
+                                      task.logfile,
+                                      task.compile_log_name)
+        raise
+    return True
 
 
 def _find_atoms_that_need_deltas(sl, rp):
@@ -761,3 +736,13 @@ def _find_atoms_that_need_deltas(sl, rp):
                     .format(countExisting, len(atElTodo) + countExisting,
                             len(atElTodo)))
     return attodo, atElTodo, vaclist
+
+
+def _run_deltas_in_parallel(rpars, run_tasks):
+    """Execute multiple delta-amplitude calculations in parallel."""
+    if not run_tasks:  # Nothing to run
+        return False
+    logger.info('Running delta calculations...')
+    poolsize = min(len(run_tasks), rpars.N_CORES)
+    parallelization.monitoredPool(rpars, poolsize, run_delta, run_tasks)
+    return True

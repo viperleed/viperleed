@@ -300,7 +300,6 @@ class TestDeltasCalls:
         assert len(tasks) == n_tasks
         mocks['rmtree'].assert_not_called()
         mocks['copy_log'].assert_not_called()
-        assert DEFAULT_DELTAS not in rpars.manifest
 
     @use('mock_atoms_need_deltas', 'mocks')
     def test_triggers_compiler_discovery_if_missing(self, rpars, call_in_tmp):

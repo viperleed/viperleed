@@ -61,18 +61,20 @@ def fixture_mock_implementation(mocker):
         'pool': mocker.patch(f'{_MODULE}.parallelization.monitoredPool'),
         'copy_log': mocker.patch(f'{_MODULE}.leedbase.copy_compile_log'),
         'rmtree': mocker.patch('shutil.rmtree'),
+        'checksums': mocker.patch(f'{_MODULE}.validate_multiple_files'),
         }
 
 
 @fixture(name='mock_tasks')
-def fixture_mock_domain_tasks(mocks, mocker):
+def fixture_mock_domain_tasks(mocks, rpars):
     """Make the single-domain implementation return given tasks."""
     def _make(n_comptasks, n_runtasks):
         if len(n_comptasks) != len(n_runtasks):
             raise ValueError('Inconsistent number of domains from '
                              'comp_tasks and run_tasks.')
+        src_dir = rpars.get_tenserleed_directory.return_value.path
         comp_tasks = (
-            [DeltaCompileTask(f'param for domain {d}', 'hash', 'tl_source', i)
+            [DeltaCompileTask(f'param for domain {d}', 'hash', src_dir, i)
              for i in range(n_comptask_domain)]
             for d, n_comptask_domain in enumerate(n_comptasks)
             )
@@ -108,8 +110,9 @@ class TestDeltasDomains:
         assert mocks['pool'].call_count == n_parallel
         assert mocks['copy_log'].call_count == n_comptasks_total
         assert mocks['rmtree'].call_count == n_comptasks_total
+        mocks['checksums'].assert_called_once()
         rpars.updateCores.assert_called_once()
-        assert all(c.compiler is rpars.FORTRAN_COMP for c in comp_tasks)
+        assert all(c.fortran_comp is rpars.FORTRAN_COMP for c in comp_tasks)
 
         expect_log = (
             'Getting input for delta calculations:',
@@ -126,18 +129,22 @@ class TestDeltasDomains:
                    for msg, expect in zip(log_info, expect_log))
 
     @use('mocks')
-    def test_fortran_comp_known(self, make_rpars):
+    def test_fortran_comp_known(self, make_rpars, mock_tasks):
         """Check that no compiler is searched if already available."""
-        rpars = make_rpars(n_domains=5)
+        n_domains = 5
+        rpars = make_rpars(n_domains)
         rpars.FORTRAN_COMP[0] = 'some compiler'
+        mock_tasks(n_comptasks=(1,)*n_domains, n_runtasks=(1,)*n_domains)
         deltas_domains(rpars)
         rpars.getFortranComp.assert_not_called()
 
     @use('mocks')
-    def test_fortran_comp_unknown(self, make_rpars):
+    def test_fortran_comp_unknown(self, make_rpars, mock_tasks):
         """Check that no compiler is searched if already available."""
+        n_domains = 5
         rpars = make_rpars(n_domains=5)
         rpars.FORTRAN_COMP[0] = ''
+        mock_tasks(n_comptasks=(1,)*n_domains, n_runtasks=(1,)*n_domains)
         deltas_domains(rpars)
         rpars.getFortranComp.assert_called_once()
 
@@ -164,6 +171,7 @@ class TestDeltasDomains:
         mocks['pool'].assert_not_called()
         mocks['copy_log'].assert_not_called()
         mocks['rmtree'].assert_not_called()
+        mocks['checksums'].assert_not_called()
         expect_log = 'Getting input for delta calculations:'
         assert expect_log in caplog.text
         not_in_log = (
@@ -186,6 +194,7 @@ class TestDeltasDomains:
         assert mocks['pool'].call_count == n_parallel
         mocks['copy_log'].assert_not_called()
         mocks['rmtree'].assert_not_called()
+        mocks['checksums'].assert_not_called()
         not_in_log = (
             'Compiling fortran files...',
             )
@@ -204,6 +213,7 @@ class TestDeltasDomains:
         assert mocks['pool'].call_count == n_parallel
         assert mocks['copy_log'].call_count == n_domains  # 1 task each
         assert mocks['rmtree'].call_count == n_domains    # 1 task each
+        mocks['checksums'].assert_called_once()
         not_in_log = (
             'Running delta calculations...',
             'Delta calculations finished.',
@@ -216,7 +226,8 @@ class TestDeltasDomains:
         deltas_domains(rpars)
         mocks['pool'].assert_not_called()
         mocks['copy_log'].assert_not_called()
-        mocks['copy_log'].assert_not_called()
+        mocks['rmtree'].assert_not_called()
+        mocks['checksums'].assert_not_called()
 
     def test_stop_after_compile(self, make_rpars, mocks, mock_tasks, caplog):
         """Check effect of stopping right after compilation."""
@@ -229,6 +240,7 @@ class TestDeltasDomains:
         mocks['pool'].side_effect = _set_stop
         deltas_domains(rpars)
         assert mocks['pool'].call_count == 1  # Only compilation
+        mocks['checksums'].assert_called_once()
         mocks['copy_log'].assert_not_called()
         mocks['rmtree'].assert_not_called()
         expect_log = 'Compiling fortran files...'
@@ -252,6 +264,7 @@ class TestDeltasDomains:
         deltas_domains(rpars)
         n_parallel = 2
         assert mocks['pool'].call_count == n_parallel
+        mocks['checksums'].assert_called_once()
         mocks['copy_log'].assert_not_called()
         mocks['rmtree'].assert_not_called()
         expect_log = (
@@ -269,10 +282,12 @@ class TestDeltasDomainsRaises:
     """Tests for conditions that cause the deltas_domains function to fail."""
 
     @use('mocks')
-    def test_find_compiler_fails(self, make_rpars, caplog):
+    def test_find_compiler_fails(self, make_rpars, mock_tasks, caplog):
         """Check complaints if no compiler is available."""
-        rpars = make_rpars(5)
+        n_domains = 5
+        rpars = make_rpars(n_domains)
         rpars.getFortranComp.side_effect = Exception('find compiler failed')
+        mock_tasks(n_comptasks=(1,)*n_domains, n_runtasks=(2,)*n_domains)
         exc_msg = 'No Fortran compiler'
         with pytest.raises(RuntimeError, match=exc_msg):
             deltas_domains(rpars)
