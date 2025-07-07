@@ -32,6 +32,9 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer
 #define PC_SET_TRANSFORMATION_MATRIX	      116
 // PC requested to set calibration curve (ASCII 'c')
 #define PC_SET_CALIBRATION_CURVE	      99
+// PC_SET_UP_ADCS: PC requested to prepare the
+// ADCs for a measurement (ASCII 'S').
+#define PC_SET_UP_ADCS       83 
 
 /** ------------------------- Finite state machine ------------------------- **/
 // Set duty cycle for the coil using PWM.
@@ -48,6 +51,8 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer
 #define STATE_SET_TRANSFORMATION_MATRIX	  55
 // Set calibration curve.
 #define STATE_SET_CALIBRATION_CURVE  56
+// STATE_SET_UP_ADCS: Pick correct ADC channels and no. of measurement points.
+#define STATE_SET_UP_ADCS          1
 
 
 // The pins belonging to 'COIL_1_PWM' and 'COIL_2_PWM' should not be changed.
@@ -296,4 +301,28 @@ floatOrBytes transformationMatrix[3][2];
 floatOrBytes calibrationCurve[2][12];
 // Resistance of the coils in ohms.
 float coilResistance[2];
+
+/**
+bool measureResistance1 = false;
+bool measureResistance2 = false;
+**/
+float current_max;
+unsigned long current_time = 0;
+unsigned long last_current_time = 0;
+
+/**
+float new_current1;
+float last_current1;
+float new_current2;
+float last_current2;
+float new_voltage1;
+float new_voltage2;
+**/
+
+float new_current[2];
+float last_current[2];
+float new_voltage[2];
+
+bool measured = false;
+
 #endif  // _VIPERLEED_B_FIELD_COMP

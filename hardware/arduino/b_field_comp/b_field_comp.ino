@@ -128,6 +128,9 @@ void loop()
         case STATE_SET_CALIBRATION_CURVE:
             setCalibrationCurve();
             break;
+        case STATE_SET_UP_ADCS:
+            prepareADCsForMeasurement();
+            break;
     }
 
 
@@ -242,6 +245,7 @@ bool isAllowedCommand() {
         case PC_SET_ENABLE_DYNAMIC: break;
         case PC_SET_TRANSFORMATION_MATRIX: break;
         case PC_SET_CALIBRATION_CURVE: break;
+        case PC_SET_UP_ADCS: break;
        // case PC_: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
@@ -327,6 +331,9 @@ void updateState() {
             initialTime = millis();
             currentState = STATE_SET_CALIBRATION_CURVE;
             break;
+        case PC_SET_UP_ADCS:
+            currentState = STATE_SET_UP_ADCS;
+            break;
         /*case PC_:
             currentState = STATE_;
             break;*/
@@ -348,6 +355,37 @@ void compensateForThermalDrift(){
     // If target current:
     // Only if enough time has passed/not too much current change happened
     // Is change small enough -> calculate resistance
+    
+    if (not measured){
+    	return;
+    }
+
+	for(int j=0; j<2;j++){
+		bool measureResistance = false;
+		floatOrBytes resistance;
+		float delta_current = new_current[j] - last_current[j];
+		
+		unsigned long delta_t = current_time - last_current_time;
+		
+		if (delta_current > current_max){
+			if (delta_t > timeConstant[j].asFloat){
+				measureResistance = true;
+			}
+		}
+		
+		if (delta_current < current_max){
+			measureResistance = true;
+		}
+	
+		if (measureResistance == true){
+			resistance.asFloat = (new_voltage[j] * dutyCycle[j].asFloat) / new_current[j];
+			coilResistance[j] = resistance.asFloat;
+			sendFloatToPC(resistance);
+		}
+	}
+	
+	measured = false;
+
 }
 
 
@@ -621,6 +659,8 @@ void setDutyCycle(){
                                                                       //TODO: catch errors from coils and report them
         coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1
         coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2
+        
+        sendFloatToPC(dutyCycle[0]);
 
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
@@ -744,22 +784,34 @@ void measure(){
     floatOrBytes current2;
 
 
+	last_current_time = current_time;
+	current_time = millis();
+
+
     //Measure the current of the respective coil
     current1.asFloat = coil_1.get_current();
     current2.asFloat = coil_2.get_current();
+    
+    last_current[0] = new_current[0];
+    new_current[0] = current1.asFloat;
+    
+    last_current[1] = new_current[1];
+    new_current[1] = current2.asFloat;
 
     //Measure the voltage at pin8 (motor driver's supply voltage) of the respective coil
     voltage1.asFloat = coil_1.get_voltage();
     voltage2.asFloat = coil_2.get_voltage();
+    
+    new_voltage[0] = voltage1.asFloat;
+    new_voltage[1] = voltage2.asFloat;
 
-	determineResistance(0, voltage1.asFloat, current1.asFloat);
-	determineResistance(1, voltage2.asFloat, current2.asFloat);
 
     sendFloatToPC(voltage1);
     sendFloatToPC(voltage2);
     sendFloatToPC(current1);
     sendFloatToPC(current2);
-
+    
+    measured = true;
     currentState = STATE_IDLE;
 }
 
@@ -1115,6 +1167,29 @@ void setCalibrationCurve(){
      }
 }
 
-void determineResistance(int coilIndex, float voltage, float current){
-	coilResistance[coilIndex] = voltage / current;
+
+/** Handler of STATE_SET_UP_ADCS */
+void prepareADCsForMeasurement(){
+	/** 
+	Msg to PC
+    ---------
+    PC_OK
+
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_UP_ADCS
+    STATE_IDLE
+        Successfully finished
+    **/
+    if (currentState != STATE_SET_UP_ADCS){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+	coil_1.measurement.initialize_ADC();
+	coil_2.measurement.initialize_ADC();
+
+	encodeAndSend(PC_OK);
+    currentState = STATE_IDLE;
 }
