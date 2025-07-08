@@ -61,7 +61,7 @@ class TestEnsureTensorsLoaded:
     def test_raises_without_tensors_folder(self, mocks, caplog):
         """Check complaints when deltas is called without a Tensors folder."""
         mocks['is_dir'].return_value = False
-        with pytest.raises(RuntimeError, match='Tensors not found'):
+        with pytest.raises(FileNotFoundError):
             _ensure_tensors_loaded('mock_slab', 'mock_rpars')
         expect_log = 'No Tensors directory found.'
         assert expect_log in caplog.text

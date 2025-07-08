@@ -590,13 +590,13 @@ def _compile_deltas_in_parallel(rpars, compile_tasks):
 
 def _ensure_tensors_loaded(slab, rpars):
     """Unpack the current Tensors and ensure `slab` is up to date with them."""
-    if not Path(DEFAULT_TENSORS).is_dir():
-        logger.error(f'No {DEFAULT_TENSORS} directory found.')
-        raise RuntimeError(f'{DEFAULT_TENSORS} not found')                      # TODO: FileNotFoundError?
+    tensors_dir = Path(DEFAULT_TENSORS)
+    if not tensors_dir.is_dir():
+        logger.error(f'No {tensors_dir} directory found.')
+        raise FileNotFoundError(f'{tensors_dir} not found')
     iotensors.fetch_unpacked_tensor(rpars.TENSOR_INDEX)
     if 1 not in rpars.runHistory:
-        load_from = Path(DEFAULT_TENSORS)
-        load_from /= f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
+        load_from = tensors_dir / f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
         logger.debug(
             'Running without reference calculation, checking input files '
             f'in {load_from.name} to determine original configuration.'
