@@ -735,16 +735,20 @@ def _prepare_log_file(rpars, subdomain):
 
 def _remove_old_param_file():
     """Rename or delete a PARAM file in the current directory."""
-    if os.path.isfile('PARAM'):
-        try:
-            os.rename('PARAM', 'PARAM-old')
-        except Exception:
-            try:
-                os.remove(os.path.join('.', 'PARAM'))
-            except Exception:
-                logger.warning(
-                    'Section Delta-Amplitudes: Cannot rename/remove old PARAM '
-                    'file. This might cause the Delta generation to fail!')
+    param = Path('PARAM')
+    try:
+        param.replace('PARAM-old')
+    except FileNotFoundError:
+        return  # Nothing to do
+    except OSError:
+        pass
+    try:
+        param.unlink()
+    except OSError:
+        logger.warning(
+            'Section Delta-Amplitudes: Cannot rename/remove old PARAM file. '
+            'This might cause the Delta generation to fail!'
+            )
 
 
 def _run_deltas_in_parallel(rpars, run_tasks):

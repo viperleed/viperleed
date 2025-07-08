@@ -91,7 +91,7 @@ class TestRemoveOldParamFile:
 
     def test_deletes_param_if_rename_fails(self, call, mocker):
         """Check deletion of an existing PARAM when renaming fails."""
-        mocker.patch('os.rename', side_effect=OSError)
+        mocker.patch('pathlib.Path.replace', side_effect=OSError)
         param, renamed, _ = call()
         assert not param.exists()
         assert not renamed.exists()
@@ -112,8 +112,9 @@ class TestRemoveOldParamFile:
 
     def test_warns_if_remove_fails(self, call, mocker, caplog):
         """Check warnings are emitted if removal of PARAM fails."""
-        mocker.patch('os.rename', side_effect=OSError)
-        mocker.patch('os.remove', side_effect=OSError)
+        mocker.patch('pathlib.Path.replace', side_effect=OSError)
+        mocker.patch('pathlib.Path.unlink', side_effect=OSError)
         param, *_ = call()
-        assert 'Cannot rename/remove old PARAM file' in caplog.text
+        expect_log = 'Cannot rename/remove old PARAM file'
+        assert expect_log in caplog.text
         assert param.exists()
