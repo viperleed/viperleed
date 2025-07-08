@@ -115,7 +115,7 @@ def vlj_search(slab, rpars):
 
         logger.info(
             f'Optimizer {optimizer.name} finished with best '
-            'R = {result.best_R:.4f}'
+            f'R = {result.best_R:.4f}'
         )
         logger.debug(f'Optimizer result:\n{result}')
 
