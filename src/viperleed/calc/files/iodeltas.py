@@ -14,17 +14,79 @@ __created__ = '2020-08-19'
 __license__ = 'GPLv3+'
 
 import logging
-import os
+from pathlib import Path
 import shutil
 
 import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.files.beams import writeAUXBEAMS
+from viperleed.calc.files import beams
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
+
+
+def collect_static_input_files(slab, rpars):
+    """Read the contents of input files common to all deltas for `slab`.
+
+    Parameters
+    ----------
+    slab : Slab
+        The slab for which delta calculations are to be performed.
+    rpars : Rparams
+        The parameters corresponding to `slab`.
+
+    Returns
+    -------
+    delta_basic : str
+        The contents of the input file common to all deltas for `slab`
+        and `rpars`.
+    auxbeams : str
+        The contents of the AUXBEAMS file.
+    phaseshifts
+        The contents of the PHASESHIFTS file.
+
+    Raises
+    ------
+    Exception
+        If AUXBEAMS is not present and writing it anew fails.
+    OSError
+        If reading AUXBEAMS of PHASESHIFTS fails.
+    """
+    delta_basic = generateDeltaBasic(slab, rpars)
+
+    # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
+    auxbeams_file = Path('AUXBEAMS')
+    if not auxbeams_file.is_file() and (DEFAULT_SUPP/auxbeams_file).is_file():
+        try:
+            shutil.copy2(DEFAULT_SUPP/auxbeams_file, auxbeams_file.name)
+        except OSError:
+            logger.warning(f'Failed to copy {auxbeams_file.name} from '
+                           f'{DEFAULT_SUPP} folder. Generating new file...')
+    if not auxbeams_file.is_file():
+        try:
+            beams.writeAUXBEAMS(ivbeams=rpars.ivbeams, beamlist=rpars.beamlist)
+        except Exception:                                                       # TODO: better exception
+            logger.error('Exception during writeAUXBEAMS: ')
+            raise
+    try:
+        auxbeams = auxbeams_file.read_text(encoding='utf-8')
+    except OSError:
+        logger.error(f'Could not read {auxbeams_file.name} for delta input')
+        raise
+    if not auxbeams.endswith('\n'):
+        auxbeams += '\n'
+
+    # get PHASESHIFTS
+    try:
+        phaseshifts = Path('PHASESHIFTS').read_text(encoding='utf-8')
+    except OSError:
+        logger.error('Could not read PHASESHIFTS for delta-input')
+        raise
+    if not phaseshifts.endswith('\n'):
+        phaseshifts += '\n'
+    return delta_basic, auxbeams, phaseshifts
 
 
 def checkDelta(filename, at, el, rp):
@@ -169,8 +231,8 @@ def checkDelta(filename, at, el, rp):
     return True
 
 
-def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
-                       phaseshifts=""):
+def generateDeltaInput(atom, targetel, sl, rp, deltaBasic, auxbeams,
+                       phaseshifts):
     """
     Generates a PARAM file and delta input for one element of one atom.
 
@@ -186,14 +248,12 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     rp : Rparams
         The run parameters object.
     deltaBasic : str, optional
-        Part of delta input that is the same for all atoms. If not passed,
-        will call generateDeltaBasic directly.
-    auxbeams : str, optional
-        The contents of the AUXBEAMS file. If not passed, will attempt to find
-        the AUXBEAMS file and read it.
-    phaseshifts : str, optional
-        The contents of the PHASESHIFTS file. If not passed, will attempt to
-        find the PHASESHIFTS file and read it.
+        Part of delta input that is the same for all atoms. Use
+        generateDeltaBasic for creating this.
+    auxbeams : str
+        The contents of the AUXBEAMS file. Should end with a newline.
+    phaseshifts : str
+        The contents of the PHASESHIFTS file. Should end with a newline
 
     Returns
     -------
@@ -201,44 +261,12 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         The delta input, a shortened version of that input for logging, and
         the contents of the required PARAM file.
     """
-
-    if deltaBasic == "":
-        deltaBasic = generateDeltaBasic(sl, rp)
-    if auxbeams == "":
-        # if AUXBEAMS is not in work folder, check SUPP folder
-        if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
-            if os.path.isfile(os.path.join(".", DEFAULT_SUPP, "AUXBEAMS")):
-                try:
-                    shutil.copy2(os.path.join(".", DEFAULT_SUPP, "AUXBEAMS"),
-                                 "AUXBEAMS")
-                except Exception:
-                    logger.warning(
-                        f"Failed to copy AUXBEAMS from {DEFAULT_SUPP} folder"
-                        )
-            else:
-                logger.warning("generateDeltaInput: AUXBEAMS not found")
-        try:
-            with open("AUXBEAMS", "r") as rf:
-                auxbeams = rf.read()
-            if auxbeams[-1] != "\n":
-                auxbeams += "\n"
-        except Exception:
-            logger.error("generateDeltaInput: Could not read AUXBEAMS")
-            raise
-    if phaseshifts == "":
-        try:
-            with open("PHASESHIFTS", "r") as rf:
-                phaseshifts = rf.read()
-            if phaseshifts[-1] != "\n":
-                phaseshifts += "\n"
-        except Exception:
-            logger.error("generateDeltaInput: Could not read PHASESHIFTS")
-            raise
     MNLMB = [19, 126, 498, 1463, 3549, 7534, 14484, 25821, 43351, 69322,
              106470, 158067, 227969, 320664, 441320, 595833, 790876, 1033942]
     try:
-        beamlist, _, _ = writeAUXBEAMS(ivbeams=rp.ivbeams,
-                                       beamlist=rp.beamlist, write=False)
+        beamlist, _, _ = beams.writeAUXBEAMS(ivbeams=rp.ivbeams,
+                                             beamlist=rp.beamlist,
+                                             write=False)
     except Exception:
         logger.error("writeDeltaInput: Exception while getting data from "
                      "writeAUXBEAMS")
@@ -273,7 +301,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     i4 = ff.FortranRecordWriter("I4")
     f74x3 = ff.FortranRecordWriter('3F7.4')
     ol = i4.write([iel])
-    din += ol.ljust(29) + "IEL  - element in PHASESHIFT list"    
+    din += ol.ljust(29) + "IEL  - element in PHASESHIFT list"
     if rp.TL_VERSION < Version('1.7.0'):
         din += """
 -------------------------------------------------------------------

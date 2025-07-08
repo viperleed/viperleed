@@ -20,7 +20,6 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_DELTAS
-from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.deltas import DeltaCompileTask
 from viperleed.calc.sections.deltas import DeltaRunTask
@@ -84,30 +83,16 @@ def fixture_mock_atoms_need_deltas(mocker):
 @fixture(name='mocks')
 def fixture_mock_implementation(mocker):
     """Replace implementation details of the deltas function with mocks."""
-    files_read = []
-    def _mock_read_text(path, **kwargs):
-        # pylint: disable-next=magic-value-comparison
-        assert kwargs['encoding'] == 'utf-8'
-        files_read.append(path)
-        return 'fake text\n'
-    read_orig = Path.read_text
-    mocker.patch('pathlib.Path.read_text', _mock_read_text)
-
     return {
         'read_disp': mocker.patch(f'{_MODULE}.readDISPLACEMENTS_block'),
         'fetch tensor': mocker.patch(f'{_MODULE}._ensure_tensors_loaded'),
         'fetch deltas': mocker.patch(f'{_MODULE}.leedbase.getDeltas'),
-        'copy': mocker.patch('shutil.copy2'),
         'rmtree': mocker.patch('shutil.rmtree'),
         'is_dir': mocker.patch('pathlib.Path.is_dir', return_value=True),
-        'is_file_orig': Path.is_file,  # Before mocking it
-        'is_file': mocker.patch('pathlib.Path.is_file', return_value=True),
-        'read_orig': read_orig,
-        'files_read': files_read,
         'os.listdir': mocker.patch('os.listdir', return_value=[]),
-        'delta input base': mocker.patch(
-            f'{_MODULE}.iodeltas.generateDeltaBasic',
-            return_value='dbasic',
+        'collect_inputs': mocker.patch(
+            f'{_MODULE}.iodeltas.collect_static_input_files',
+            return_value=(mocker.MagicMock(),)*3,
             ),
         'delta input': mocker.patch(
             f'{_MODULE}.iodeltas.generateDeltaInput',
@@ -115,7 +100,6 @@ def fixture_mock_implementation(mocker):
             ),
         'check delta': mocker.patch(f'{_MODULE}.iodeltas.checkDelta',
                                     return_value=False),
-        'writeAUXBEAMS': mocker.patch(f'{_MODULE}.writeAUXBEAMS'),
         'checksums': mocker.patch(f'{_MODULE}.validate_multiple_files'),
         'pool': mocker.patch(f'{_MODULE}.parallelization.monitoredPool'),
         'copy_log': mocker.patch(f'{_MODULE}.leedbase.copy_compile_log'),
@@ -211,14 +195,13 @@ class TestDeltasCalls:
         deltas(mock_slab, rpars)
         not_called = (
             'read_disp',
-            'copy',           # No missing input files copied
             'delta input',    # No deltas to calculate
             'remove_param',
             )
         called = {
             'fetch tensor': mocker.call(mock_slab, rpars),
             'fetch deltas': mocker.call(rpars.TENSOR_INDEX, required=False),
-            'delta input base': mocker.call(mock_slab, rpars),
+            'collect_inputs': mocker.call(mock_slab, rpars),
             'find_varied_atoms': mocker.call(mock_slab, rpars),
             }
         for mock_name in not_called:
@@ -324,6 +307,18 @@ class TestDeltasGenerateInput:
         call_in_tmp()
         rpars.setHaltingLevel.assert_called_once_with(3)
 
+    @use('mock_atoms_need_deltas')
+    def test_static_input_files_used(self, mocks, call_in_tmp):
+        """Check that input files are passed on to the generation of inputs."""
+        call_in_tmp()
+        gen_delta_static_args = [
+            args[0][-3:]  # The last three positional arguments
+            for args in mocks['delta input'].call_args_list
+            ]
+        assert all(args == gen_delta_static_args[0]
+                   for args in gen_delta_static_args)
+        assert gen_delta_static_args[0] == mocks['collect_inputs'].return_value
+
     def test_generates_tasks_based_on_hash(self,
                                            mocks,
                                            call_in_tmp,
@@ -354,8 +349,7 @@ class TestDeltasGenerateInput:
         assert instance_counts[DeltaCompileTask] == len(set(ids))
         assert instance_counts[DeltaRunTask] == len(ids)
 
-        # Restore Path methods, and check the delta input file
-        Path.read_text = mocks['read_orig']
+        # Check the delta input file
         input_contents = (tmp_path/'delta-input').read_text(encoding='utf-8')
         expect_contents = '''\
 # ABOUT THIS FILE:
@@ -445,75 +439,6 @@ short 8
         """Ensure that a delta log file is written."""
         call_in_tmp()
         assert any(tmp_path.glob('*.log'))
-
-
-class TestDeltasLoadInputFiles:
-    """Tests for loading of preexisting input files."""
-
-    @use('no_deltas_to_do')
-    def test_auxbeams_from_supp(self, rpars, mocks, mocker):
-        """Check pulling AUXBEAMS from SUPP."""
-        def _root_missing(path):
-            return path.parent.name == DEFAULT_SUPP
-
-        mocker.patch('pathlib.Path.is_file', _root_missing)
-        deltas('mock_slab', rpars)
-        mocks['copy'].assert_called_once()
-        # writeAUXBEAMS is called because is_file()
-        # returns False twice for Path('AUXBEAMS')
-        mocks['writeAUXBEAMS'].assert_called_once_with(ivbeams=rpars.ivbeams,
-                                                       beamlist=rpars.beamlist)
-
-    @use('no_deltas_to_do')
-    def test_auxbeams_from_supp_fails(self, rpars, mocks, mocker, caplog):
-        """Check failing to copy AUXBEAMS from SUPP causes log warnings."""
-        mocks['copy'].side_effect = OSError
-        self.test_auxbeams_from_supp(rpars, mocks, mocker)
-        expect_log = 'Failed to copy AUXBEAMS from SUPP'
-        assert expect_log in caplog.text
-
-    @use('mocks', 'no_deltas_to_do')
-    @parametrize(file=('AUXBEAMS', 'PHASESHIFTS'))
-    def test_cant_read_needed_file(self, file, rpars, mocker, caplog):
-        """Check that failures to read a necessary file are propagated."""
-        old_read_text = Path.read_text
-        def _fail_to_read_file(path, **kwargs):
-            if path.name == file:
-                raise OSError
-            return old_read_text(path, **kwargs)
-        mocker.patch('pathlib.Path.read_text', _fail_to_read_file)
-        with pytest.raises(OSError):
-            deltas('mock_slab', rpars)
-        expect_log = f'Could not read {file}'
-        assert expect_log in caplog.text
-
-    @use('no_deltas_to_do')
-    def test_files_exist(self, rpars, mocks):
-        """Check that deltas reads existing static input files."""
-        deltas('mock_slab', rpars)
-        expect_files_read = [Path(f) for f in ('AUXBEAMS', 'PHASESHIFTS')]
-        assert expect_files_read == mocks['files_read']
-        mocks['writeAUXBEAMS'].assert_not_called()
-
-    @use('mock_atoms_need_deltas')
-    def test_files_read_ends_with_newline(self, rpars, mocks, mocker):
-        """Check that static input files always end with a newline."""
-        no_newline = '''
-Missing
-newline
-at the end'''
-        mocker.patch('pathlib.Path.read_text', return_value=no_newline)
-        deltas('mock_slab', rpars)
-        gen_delta_input_args = mocks['delta input'].call_args[0]
-        expect_args = (no_newline + '\n',) * 2
-        assert gen_delta_input_args[-2:] == expect_args
-
-    @use('no_deltas_to_do')
-    def test_write_auxbeams_fails(self, rpars, mocks, mocker):
-        """Check that failures in writeAUXBEAMS are propagated."""
-        mocks['writeAUXBEAMS'].side_effect = Exception('writeAUXBEAMS failed')
-        with pytest.raises(Exception, match='writeAUXBEAMS failed'):
-            self.test_auxbeams_from_supp(rpars, mocks, mocker)
 
 
 class TestDeltasRaises:

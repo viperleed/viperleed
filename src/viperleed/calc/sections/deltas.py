@@ -364,41 +364,10 @@ def deltas(sl, rp, subdomain=False):
         rp.disp_block_read = True
 
     _ensure_tensors_loaded(sl, rp)
+    static_files_contents = iodeltas.collect_static_input_files(sl, rp)
 
-    # if there are old deltas, fetch them
+    # If there are old deltas, pull them in here
     leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
-    dbasic = iodeltas.generateDeltaBasic(sl, rp)
-
-    # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
-    auxbeams_file = Path('AUXBEAMS')
-    if not auxbeams_file.is_file() and (DEFAULT_SUPP/auxbeams_file).is_file():
-        try:
-            shutil.copy2(DEFAULT_SUPP/auxbeams_file, auxbeams_file.name)
-        except OSError:
-            logger.warning(f'Failed to copy {auxbeams_file.name} from '
-                           f'{DEFAULT_SUPP} folder. Generating new file...')
-    if not auxbeams_file.is_file():
-        try:
-            writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
-        except Exception:                                                       # TODO: better exception
-            logger.error('Exception during writeAUXBEAMS: ')
-            raise
-    try:
-        auxbeams = auxbeams_file.read_text(encoding='utf-8')
-    except OSError:
-        logger.error(f'Could not read {auxbeams_file.name} for delta input')
-        raise
-    if not auxbeams.endswith('\n'):
-        auxbeams += '\n'
-
-    # get PHASESHIFTS
-    try:
-        phaseshifts = Path('PHASESHIFTS').read_text(encoding='utf-8')
-    except OSError:
-        logger.error('Could not read PHASESHIFTS for delta-input')
-        raise
-    if not phaseshifts.endswith('\n'):
-        phaseshifts += '\n'
 
     attodo, atElTodo, vaclist = _find_atoms_that_need_deltas(sl, rp)
     if not atElTodo:  # Nothing to calculate
@@ -417,7 +386,7 @@ def deltas(sl, rp, subdomain=False):
     tl_path = tl_source.path
     for (at, el) in atElTodo:
         din, din_short, param = iodeltas.generateDeltaInput(
-            at, el, sl, rp, dbasic, auxbeams, phaseshifts)
+            at, el, sl, rp, *static_files_contents)
         h = hashlib.md5(param.encode()).digest()
         found = False
         for ct in deltaCompTasks:
