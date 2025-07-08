@@ -363,20 +363,7 @@ def deltas(sl, rp, subdomain=False):
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
         rp.disp_block_read = True
 
-    # get Tensors
-    if not Path(DEFAULT_TENSORS).is_dir():
-        logger.error(f'No {DEFAULT_TENSORS} directory found.')
-        raise RuntimeError(f'{DEFAULT_TENSORS} not found')                      # TODO: FileNotFoundError?
-    iotensors.fetch_unpacked_tensor(rp.TENSOR_INDEX)
-    if 1 not in rp.runHistory:
-        load_from = Path(DEFAULT_TENSORS)
-        load_from /= f'{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}'
-        logger.debug(
-            'Running without reference calculation, checking input files '
-            f'in {load_from.name} to determine original configuration.'
-            )
-        iotensors.getTensorOriStates(sl, load_from)
-        sl.restoreOriState(keepDisp=True)
+    _ensure_tensors_loaded(sl, rp)
 
     # if there are old deltas, fetch them
     leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
@@ -599,6 +586,23 @@ def _compile_deltas_in_parallel(rpars, compile_tasks):
                                       task.compile_log_name)
         raise
     return True
+
+
+def _ensure_tensors_loaded(slab, rpars):
+    """Unpack the current Tensors and ensure `slab` is up to date with them."""
+    if not Path(DEFAULT_TENSORS).is_dir():
+        logger.error(f'No {DEFAULT_TENSORS} directory found.')
+        raise RuntimeError(f'{DEFAULT_TENSORS} not found')                      # TODO: FileNotFoundError?
+    iotensors.fetch_unpacked_tensor(rpars.TENSOR_INDEX)
+    if 1 not in rpars.runHistory:
+        load_from = Path(DEFAULT_TENSORS)
+        load_from /= f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
+        logger.debug(
+            'Running without reference calculation, checking input files '
+            f'in {load_from.name} to determine original configuration.'
+            )
+        iotensors.getTensorOriStates(slab, load_from)
+        slab.restoreOriState(keepDisp=True)
 
 
 def _find_atoms_that_need_deltas(sl, rp):

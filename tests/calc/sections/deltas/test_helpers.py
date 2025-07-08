@@ -11,14 +11,70 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-07-08'
 __license__ = 'GPLv3+'
 
+from pathlib import Path
 import logging
 
+import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.sections.deltas import _ensure_tensors_loaded
 from viperleed.calc.sections.deltas import _prepare_log_file
 from viperleed.calc.sections.deltas import _remove_old_param_file
+
+
+class TestEnsureTensorsLoaded:
+    """Tests for the _ensure_tensors_loaded helper function."""
+
+    @fixture(name='mocks')
+    def fixture_mocks(self, mocker):
+        """Replace implementation details with mocks."""
+        return {
+            'is_dir': mocker.patch('pathlib.Path.is_dir', return_value=True),
+            'fetch tensor': mocker.patch(
+                'viperleed.calc.files.iotensors.fetch_unpacked_tensor'
+                ),
+            'load refcalc': mocker.patch(
+                'viperleed.calc.files.iotensors.getTensorOriStates',
+                ),
+            }
+
+    def test_loads_refacalc_state(self, rpars, mocks, mocker, caplog):
+        """Check loading of the most recent refcalc state into the slab."""
+        caplog.set_level(logging.DEBUG)
+        mock_slab = mocker.MagicMock()
+        rpars.runHistory = [0, 2, 3, 12, 99, 57]  # No refcalc (== 1)
+        _ensure_tensors_loaded(mock_slab, rpars)
+
+        tensor_path = (
+            Path(DEFAULT_TENSORS)
+            / f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX}'
+            )
+        mocks['fetch tensor'].assert_called_once_with(rpars.TENSOR_INDEX)
+        mocks['load refcalc'].assert_called_once_with(mock_slab, tensor_path)
+        mock_slab.restoreOriState.assert_called_once_with(keepDisp=True)
+        expect_log = 'Running without reference calculation'
+        assert expect_log in caplog.text
+
+    def test_raises_without_tensors_folder(self, mocks, caplog):
+        """Check complaints when deltas is called without a Tensors folder."""
+        mocks['is_dir'].return_value = False
+        with pytest.raises(RuntimeError, match='Tensors not found'):
+            _ensure_tensors_loaded('mock_slab', 'mock_rpars')
+        expect_log = 'No Tensors directory found.'
+        assert expect_log in caplog.text
+
+    def test_refcalc_already_done(self, rpars, mocks, caplog):
+        """Check that tensors are not reloaded when a refcalc was done."""
+        caplog.set_level(0)   # All messages
+        rpars.runHistory.append(1)
+        _ensure_tensors_loaded('mock_slab', rpars)
+        assert not caplog.text
+        mocks['fetch tensor'].assert_called_once_with(rpars.TENSOR_INDEX)
+        mocks['load refcalc'].assert_not_called()
+
 
 
 class TestPrepareLogFile:
