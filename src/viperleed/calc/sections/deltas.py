@@ -418,20 +418,7 @@ def deltas(sl, rp, subdomain=False):
         return
 
     # create log file:
-    deltaname = "delta-"+rp.timestamp
-    deltalogname = deltaname+".log"
-    if not subdomain:
-        logger.info(
-            "Generating delta files...\n"
-            "Delta log will be written to local subfolders, and collected in "
-            + deltalogname)
-    try:
-        with open(deltalogname, "w") as wf:
-            wf.write("Logs from multiple delta calculations are collected "
-                     "here. Their order may not be preserved.\n")
-    except Exception:
-        logger.warning("Error creating delta log file. This will not "
-                       "affect execution, proceeding...")
+    deltalogname = _prepare_log_file(rp, subdomain)
 
     # move PARAM file
     if os.path.isfile("PARAM"):
@@ -736,6 +723,24 @@ def _find_atoms_that_need_deltas(sl, rp):
                     .format(countExisting, len(atElTodo) + countExisting,
                             len(atElTodo)))
     return attodo, atElTodo, vaclist
+
+
+def _prepare_log_file(rp, subdomain):
+    deltaname = "delta-"+rp.timestamp
+    deltalogname = deltaname+".log"
+    if not subdomain:
+        logger.info(
+            "Generating delta files...\n"
+            "Delta log will be written to local subfolders, and collected in "
+            + deltalogname)
+    try:
+        with open(deltalogname, "w") as wf:
+            wf.write("Logs from multiple delta calculations are collected "
+                     "here. Their order may not be preserved.\n")
+    except Exception:
+        logger.warning("Error creating delta log file. This will not "
+                       "affect execution, proceeding...")
+    return deltalogname
 
 
 def _run_deltas_in_parallel(rpars, run_tasks):
