@@ -18,9 +18,7 @@ from pytest_cases import parametrize
 
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.deltas import _prepare_log_file
-
-LOG_HEADER = ('Logs from multiple delta calculations are collected here. '
-              'Their order may not be preserved.\n')
+from viperleed.calc.sections.deltas import _remove_old_param_file
 
 
 class TestPrepareLogFile:
@@ -28,8 +26,10 @@ class TestPrepareLogFile:
 
     def check_file_contents(self, file_path):
         """Ensure the delta log file has the expected contents."""
+        log_header = ('Logs from multiple delta calculations are collected '
+                      'here. Their order may not be preserved.\n')
         contents = file_path.read_text(encoding='utf-8')
-        assert contents == LOG_HEADER
+        assert contents == log_header
 
     @fixture(name='mock_rpars')
     def fixture_rpars(self, mocker):
@@ -71,3 +71,49 @@ class TestPrepareLogFile:
             'will not affect execution',
             )
         assert all(msg in caplog.text for msg in expect_log)
+
+
+class TestRemoveOldParamFile:
+    """Tests for the _remove_old_param_file helper function."""
+
+    @fixture(name='call')
+    def fixture_call(self, tmp_path):
+        """Call _remove_old_param_file in a temporary directory."""
+        def _call():
+            old_param = tmp_path/'PARAM'
+            renamed = old_param.with_name('PARAM-old')
+            contents = 'test'
+            old_param.write_text(contents)
+            with execute_in_dir(tmp_path):
+                _remove_old_param_file()
+            return old_param, renamed, contents
+        return _call
+
+    def test_deletes_param_if_rename_fails(self, call, mocker):
+        """Check deletion of an existing PARAM when renaming fails."""
+        mocker.patch('os.rename', side_effect=OSError)
+        param, renamed, _ = call()
+        assert not param.exists()
+        assert not renamed.exists()
+
+    def test_does_nothing_if_no_param_file(self, tmp_path):
+        """Check that no action is take if PARAM does not exist."""
+        with execute_in_dir(tmp_path):
+            _remove_old_param_file()
+        assert not (tmp_path / 'PARAM').exists()
+        assert not (tmp_path / 'PARAM-old').exists()
+
+    def test_renames_existing_param_file(self, call):
+        """Check successful renaming of a PARAM file."""
+        param, renamed, contents = call()
+        assert not param.exists()
+        assert renamed.exists()
+        assert renamed.read_text() == contents
+
+    def test_warns_if_remove_fails(self, call, mocker, caplog):
+        """Check warnings are emitted if removal of PARAM fails."""
+        mocker.patch('os.rename', side_effect=OSError)
+        mocker.patch('os.remove', side_effect=OSError)
+        param, *_ = call()
+        assert 'Cannot rename/remove old PARAM file' in caplog.text
+        assert param.exists()

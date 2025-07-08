@@ -417,20 +417,11 @@ def deltas(sl, rp, subdomain=False):
     if not atElTodo:  # Nothing to calculate
         return
 
+    # move PARAM file
+    _remove_old_param_file()
+
     # create log file:
     deltalogname = _prepare_log_file(rp, subdomain)
-
-    # move PARAM file
-    if os.path.isfile("PARAM"):
-        try:
-            os.rename("PARAM", "PARAM-old")
-        except Exception:
-            try:
-                os.remove(os.path.join(".", "PARAM"))
-            except Exception:
-                logger.warning(
-                    "Section Delta-Amplitudes: Cannot rename/remove old PARAM "
-                    "file. This might cause the Delta generation to fail!")
     # assemble tasks
     deltaCompTasks = []  # keep track of what versions to compile
     deltaRunTasks = []   # which deltas to run
@@ -740,6 +731,20 @@ def _prepare_log_file(rpars, subdomain):
         logger.warning('Error creating delta log file. This will not '
                        'affect execution, proceeding...')
     return log_name
+
+
+def _remove_old_param_file():
+    """Rename or delete a PARAM file in the current directory."""
+    if os.path.isfile('PARAM'):
+        try:
+            os.rename('PARAM', 'PARAM-old')
+        except Exception:
+            try:
+                os.remove(os.path.join('.', 'PARAM'))
+            except Exception:
+                logger.warning(
+                    'Section Delta-Amplitudes: Cannot rename/remove old PARAM '
+                    'file. This might cause the Delta generation to fail!')
 
 
 def _run_deltas_in_parallel(rpars, run_tasks):

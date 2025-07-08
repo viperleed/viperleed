@@ -125,6 +125,7 @@ def fixture_mock_implementation(mocker):
         'checksums': mocker.patch(f'{_MODULE}.validate_multiple_files'),
         'pool': mocker.patch(f'{_MODULE}.parallelization.monitoredPool'),
         'copy_log': mocker.patch(f'{_MODULE}.leedbase.copy_compile_log'),
+        'remove_param': mocker.patch(f'{_MODULE}._remove_old_param_file'),
         }
 
 
@@ -158,6 +159,7 @@ class TestDeltasCalls:
             )
         for mock_name in not_called:
             mocks[mock_name].assert_not_called()
+        mocks['remove_param'].assert_called_once()
 
     @use('mock_atoms_need_deltas')
     @parametrize(enable=(True, False))
@@ -182,6 +184,7 @@ class TestDeltasCalls:
         assert mocks['pool'].call_count == n_parallel_calls
         mocks['copy_log'].assert_called()
         mocks['rmtree'].assert_called()
+        mocks['remove_param'].assert_called_once()
         expect_log = (
             r'Generating delta files\.\.\.',
             r'Delta log will be written to local subfolders, and collected in',
@@ -215,6 +218,7 @@ class TestDeltasCalls:
             'load refcalc',
             'copy',           # No missing input files copied
             'delta input',    # No deltas to calculate
+            'remove_param',
             )
         called = {
             'fetch tensor': mocker.call(rpars.TENSOR_INDEX),
@@ -279,6 +283,7 @@ class TestDeltasCalls:
         n_tasks = len(mock_atoms_need_deltas.return_value[1])
         assert static_args == [rpars, rpars.N_CORES, compile_delta]
         assert len(tasks) == n_tasks
+        mocks['remove_param'].assert_called_once()
 
     def test_stop_after_run(self,
                             rpars,
@@ -300,6 +305,7 @@ class TestDeltasCalls:
         assert len(tasks) == n_tasks
         mocks['rmtree'].assert_not_called()
         mocks['copy_log'].assert_not_called()
+        mocks['remove_param'].assert_called_once()
 
     @use('mock_atoms_need_deltas', 'mocks')
     def test_triggers_compiler_discovery_if_missing(self, rpars, call_in_tmp):
