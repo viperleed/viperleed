@@ -1293,13 +1293,15 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
 
         value_error = f'Value {value!r} is invalid for flag {flag!r}'
         param_types = {'precondition': bool, 'use_symmetry': bool,
-                       'recalc_ref_t_matrices': bool, 't-leed-l_max': int}
+                       'recalc_ref_t_matrices': bool, 't-leed-l_max': int,
+                       'occ_norm': str}
         flag_aliases = {
             'precon': 'precondition',
             'symmetry': 'use_symmetry',
             'recalc': 'recalc_ref_t_matrices',
             'l_max': 't-leed-l_max', 't_leed_lmax': 't-leed-l_max',
             'lmax': 't-leed-l_max',
+            'occ': 'occ_norm', 'occupation': 'occ_norm',
         }
 
         if flag in flag_aliases:
@@ -1315,6 +1317,12 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except KeyError:
             self.rpars.setHaltingLevel(2)
             raise ParameterUnknownFlagError(param, f"{flag!r}") from None
+        if flag == 'occ_norm':
+            if parsed_value not in {'mirror', 'project'}:
+                self.rpars.setHaltingLevel(1)
+                message = (f'Invalid value {parsed_value!r} for flag {flag!r}. '
+                           'Valid values are "mirror" and "project".')
+                raise ParameterValueError(param, message=message)
         self.rpars.VLJ_CONFIG[flag] = parsed_value
 
     @skip_without_matplotlib
