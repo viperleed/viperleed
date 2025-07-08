@@ -21,7 +21,6 @@ from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.deltas import DeltaCompileTask
 from viperleed.calc.sections.deltas import DeltaRunTask
@@ -96,12 +95,7 @@ def fixture_mock_implementation(mocker):
 
     return {
         'read_disp': mocker.patch(f'{_MODULE}.readDISPLACEMENTS_block'),
-        'fetch tensor': mocker.patch(
-            f'{_MODULE}.iotensors.fetch_unpacked_tensor'
-            ),
-        'load refcalc': mocker.patch(
-            f'{_MODULE}.iotensors.getTensorOriStates'
-            ),
+        'fetch tensor': mocker.patch(f'{_MODULE}._ensure_tensors_loaded'),
         'fetch deltas': mocker.patch(f'{_MODULE}.leedbase.getDeltas'),
         'copy': mocker.patch('shutil.copy2'),
         'rmtree': mocker.patch('shutil.rmtree'),
@@ -160,6 +154,7 @@ class TestDeltasCalls:
         for mock_name in not_called:
             mocks[mock_name].assert_not_called()
         mocks['remove_param'].assert_called_once()
+        mocks['fetch tensor'].assert_called_once()
 
     @use('mock_atoms_need_deltas')
     @parametrize(enable=(True, False))
@@ -185,6 +180,7 @@ class TestDeltasCalls:
         mocks['copy_log'].assert_called()
         mocks['rmtree'].assert_called()
         mocks['remove_param'].assert_called_once()
+        mocks['fetch tensor'].assert_called_once()
         expect_log = (
             r'Generating delta files\.\.\.',
             r'Delta log will be written to local subfolders, and collected in',
@@ -215,13 +211,12 @@ class TestDeltasCalls:
         deltas(mock_slab, rpars)
         not_called = (
             'read_disp',
-            'load refcalc',
             'copy',           # No missing input files copied
             'delta input',    # No deltas to calculate
             'remove_param',
             )
         called = {
-            'fetch tensor': mocker.call(rpars.TENSOR_INDEX),
+            'fetch tensor': mocker.call(mock_slab, rpars),
             'fetch deltas': mocker.call(rpars.TENSOR_INDEX, required=False),
             'delta input base': mocker.call(mock_slab, rpars),
             'find_varied_atoms': mocker.call(mock_slab, rpars),
@@ -248,24 +243,11 @@ class TestDeltasCalls:
         assert rpars.disp_block_read
 
     @use('no_deltas_to_do')
-    def test_run_without_refcalc(self, rpars, mocks, mocker, caplog):
+    def test_run_without_refcalc(self, rpars, mocks):
         """Check calls when deltas execute as the first segment."""
-        caplog.set_level(logging.DEBUG)
-        mock_slab = mocker.MagicMock()
         rpars.runHistory = [0, 2, 3, 12, 99, 57]  # No refcalc (== 1)
-        deltas(mock_slab, rpars)
-        tensor_path = (
-            Path(DEFAULT_TENSORS)
-            / f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX}'
-            )
-        assert mocks['load refcalc'].mock_calls == [
-            mocker.call(mock_slab, tensor_path),
-            ]
-        assert mock_slab.restoreOriState.mock_calls == [
-            mocker.call(keepDisp=True),
-            ]
-        expect_log = 'Running without reference calculation'
-        assert expect_log in caplog.text
+        deltas('mock_slab', rpars)
+        mocks['fetch tensor'].assert_called_once_with('mock_slab', rpars)
 
     def test_stop_after_compile(self,
                                 rpars,
@@ -536,19 +518,6 @@ at the end'''
 
 class TestDeltasRaises:
     """Tests for conditions that cause exceptions when deltas is called."""
-
-    def test_no_tensors_folder(self, rpars, mocks, mocker, caplog):
-        """Check complaints when deltas is called without a Tensors folder."""
-        def _missing_tensors(path):
-            if path.name == DEFAULT_TENSORS:
-                return False
-            return True
-
-        mocks['is_dir'] = mocker.patch('pathlib.Path.is_dir', _missing_tensors)
-        with pytest.raises(RuntimeError, match='Tensors not found'):
-            deltas('mock_slab', rpars)
-        expect_log = 'No Tensors directory found.'
-        assert expect_log in caplog.text
 
     def test_compilation_fails(self,
                                rpars,
