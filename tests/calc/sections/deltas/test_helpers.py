@@ -64,7 +64,7 @@ class TestPrepareLogFile:
     def test_oserror_warns(self, call, mocker, caplog):
         """Check that failure to create the log file does not raise."""
         caplog.set_level(logging.WARNING)
-        mocker.patch('builtins.open', side_effect=OSError)
+        mocker.patch('pathlib.Path.write_text', side_effect=OSError)
         call(subdomain=False)
         expect_log = (
             'Error creating delta log file',

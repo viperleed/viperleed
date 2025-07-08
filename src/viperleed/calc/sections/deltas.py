@@ -725,22 +725,21 @@ def _find_atoms_that_need_deltas(sl, rp):
     return attodo, atElTodo, vaclist
 
 
-def _prepare_log_file(rp, subdomain):
-    deltaname = "delta-"+rp.timestamp
-    deltalogname = deltaname+".log"
+def _prepare_log_file(rpars, subdomain):
+    """Create a log file for collating those of multiple calculations."""
+    log_name = f'delta-{rpars.timestamp}.log'
     if not subdomain:
-        logger.info(
-            "Generating delta files...\n"
-            "Delta log will be written to local subfolders, and collected in "
-            + deltalogname)
+        logger.info('Generating delta files...\n'
+                    'Delta log will be written to local subfolders, '
+                    f'and collected in {log_name}')
+    log_header = ('Logs from multiple delta calculations are collected '
+                  'here. Their order may not be preserved.\n')
     try:
-        with open(deltalogname, "w") as wf:
-            wf.write("Logs from multiple delta calculations are collected "
-                     "here. Their order may not be preserved.\n")
-    except Exception:
-        logger.warning("Error creating delta log file. This will not "
-                       "affect execution, proceeding...")
-    return deltalogname
+        Path(log_name).write_text(log_header, encoding='utf-8')
+    except OSError:
+        logger.warning('Error creating delta log file. This will not '
+                       'affect execution, proceeding...')
+    return log_name
 
 
 def _run_deltas_in_parallel(rpars, run_tasks):
