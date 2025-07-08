@@ -57,3 +57,14 @@ Available setting are:
    based calculation of t-matrices and propagtors. This can significantly
    improve performance.
    **Default**: True.
+
+-  ``occ_norm``: Select the method used to normalize occupational parameters
+   that ensures the total occupation of all elements on one site is
+   :math:`\leq 1`. Available options are:
+
+   - ``mirror``: If the total occupation is larger than 1, mirror the occupation
+     parameters on the :math:`\sum_i c_i = 1` (hyper-)plane.
+   - ``project``: If the total occupation is larger than 1, project the
+     occupation parameters onto the :math:`\sum_i c_i = 1` (hyper-)plane.
+
+   **Default**: ``mirror``.
