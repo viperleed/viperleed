@@ -266,8 +266,14 @@ def organize_workdir(rpars,
 
 def _collect_supp_contents(rpars):
     """Store relevant files/folder from the current directory to SUPP."""
-    files_to_copy = set(Path(f) for f in _SUPP_FILES
-                        if f not in rpars.files_to_out)
+    files_to_copy = set()
+
+    # Expand wildcards in _SUPP_FILES
+    for pattern in _SUPP_FILES:
+        for f in Path().glob(pattern):
+            if str(f) not in rpars.files_to_out:
+                files_to_copy.add(f)
+
     directories_to_copy = (Path(d) for d in _SUPP_DIRS)
 
     # Also add log files into SUPP: skip calc logs (they go to
@@ -294,7 +300,9 @@ def _collect_supp_contents(rpars):
 
 def _collect_out_contents(rpars):
     """Store relevant files/folder from the current directory to OUT."""
-    out_files = set(Path(f) for f in _OUT_FILES)
+    out_files = set()
+    for pattern in _OUT_FILES:
+        out_files.update(Path().glob(pattern))
     # Add R-factor output files
     out_files.update(Path().glob('R_*R=*'))
     # And POSCAR, PARAMETERS, VIBROCC files that we generated/edited.
@@ -508,13 +516,29 @@ def _find_next_workistory_contents(rpars, prerun):
         # may have already been copied to SUPP/OUT: the sole purpose
         # is **removing them** from the root directory (via
         # fs_utils.move in _collect_worhistory_contents).
+
+        # glob for any wildcards
+        supp_files_resolved = set()
+        for pattern in _SUPP_FILES:
+            supp_files_resolved.update(Path().glob(pattern))
+
+        # glob for any wildcards
+        out_files_resolved = set()
+        for pattern in _OUT_FILES:
+            out_files_resolved.update(Path().glob(pattern))
+
         files = [
-            f for f in all_files
+            f
+            for f in all_files
             if f not in rpars.manifest
             and f not in rpars.files_to_out
             and f not in _IOFILES
-            and (f.endswith('.log') or f in _OUT_FILES or f in _SUPP_FILES)
-            ]
+            and (
+                f.endswith(".log")
+                or f in out_files_resolved
+                or f in supp_files_resolved
+            )
+        ]
         directories = [d for d in all_dirs if d in (DEFAULT_SUPP, DEFAULT_OUT)]
     else:
         # Take only files from manifest, and all directories
