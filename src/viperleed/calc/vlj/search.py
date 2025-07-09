@@ -107,6 +107,11 @@ def vlj_search(slab, rpars):
     benchmark_results = benchmark_calculator(calculator, use_grad=False)
     logger.info(format_benchmark_results(benchmark_results))
 
+    # evaluate the initial R-factor
+    unperturbed_x = np.array([0.5] * calculator.n_free_parameters)
+    unperturbed_R = calculator.R(unperturbed_x)
+    logger.info(f'R-factor for unperturbed structure: {unperturbed_R:.4f}')
+
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
         rpars=rpars,)
