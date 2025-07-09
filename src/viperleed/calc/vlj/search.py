@@ -9,6 +9,7 @@ __created__ = "2025-04-17"
 __license__ = "GPLv3+"
 
 import copy
+from pathlib import Path
 import logging
 
 from viperleed.calc.files import poscar
@@ -58,8 +59,12 @@ def vlj_search(slab, rpars):
         raise RuntimeError(err_msg)
 
     # select tensors based on the tensor index
-    tensor_path = (rpars.paths.home / DEFAULT_TENSORS
-                    / f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}.zip')
+    tensor_name = f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}.zip'
+    # try inside the work dir
+    tensor_path = Path() / DEFAULT_TENSORS / tensor_name
+    if not tensor_path.exists():
+        # try inside the home dir
+        tensor_path = rpars.paths.home / DEFAULT_TENSORS / tensor_name
     if not tensor_path.exists():
         raise FileNotFoundError(f'Tensor {tensor_path} not found.')
 
