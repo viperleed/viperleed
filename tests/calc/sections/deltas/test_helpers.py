@@ -23,6 +23,7 @@ from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.deltas import _ensure_tensors_loaded
 from viperleed.calc.sections.deltas import _prepare_log_file
 from viperleed.calc.sections.deltas import _remove_old_param_file
+from viperleed.calc.sections.deltas import _sort_current_deltas_by_element
 
 
 class TestEnsureTensorsLoaded:
@@ -174,3 +175,83 @@ class TestRemoveOldParamFile:
         expect_log = 'Cannot rename/remove old PARAM file'
         assert expect_log in caplog.text
         assert param.exists()
+
+
+class TestSortCurrentDeltasByElement:
+    """Tests for the _sort_current_deltas_by_element helper."""
+
+    @staticmethod
+    def check_raises(mock_atoms, caplog):
+        with pytest.raises(RuntimeError, match='Inconsistent delta files'):
+            _sort_current_deltas_by_element(*mock_atoms)
+        expect_log = 'Failed to sort delta files'
+        assert expect_log in caplog.text
+
+    @fixture(name='mock_atoms')
+    def fixture_mock_atoms(self, mocker):
+        """Return a few fake Atoms."""
+        fake_atom_1 = mocker.MagicMock(
+            disp_occ=dict.fromkeys(('A', 'B', '00c')),
+            current_deltas=[
+                'DEL_1_00C_02',
+                'DEL_1_B_01',
+                # TODO: Current implementation seems to assume there
+                # always only is one delta file for each element among
+                # the current_deltas.
+                # 'DEL_1_00c_01',
+                'DEL_1_a_01',
+                # 'DEL_1_00C_03',
+                ],
+            )
+        fake_atom_2 = mocker.MagicMock(
+            disp_occ=dict.fromkeys(('O', 'fe')),
+            current_deltas=[
+                'DEL_2_vac_1',
+                'DEL_2_O_1',
+                'DEL_2_Fe_2',
+                ],
+            )
+        return [fake_atom_1, fake_atom_2], [fake_atom_2]
+
+    def test_sucess(self, mock_atoms):
+        """Check the expected result of sorting atoms."""
+        (atom_1, atom_2), _ = mock_atoms
+        _sort_current_deltas_by_element(*mock_atoms)
+        assert atom_1.current_deltas == [
+            'DEL_1_a_01',
+            'DEL_1_B_01',
+            'DEL_1_00C_02',
+            # 'DEL_1_00c_01',
+            # 'DEL_1_00C_03',
+            ]
+        assert atom_2.current_deltas == [
+            'DEL_2_O_1',
+            'DEL_2_Fe_2',
+            'DEL_2_vac_1',
+            ]
+
+    @pytest.mark.xfail(reason='raises IndexError instead')
+    def test_raises_without_delta(self, mock_atoms, caplog):
+        """Ensure complaints when an element has no known delta."""
+        (failing_atom, _), _ = mock_atoms
+        failing_atom.disp_occ['NoDeltasForThis'] = None
+        self.check_raises(mock_atoms, caplog)
+
+    @pytest.mark.xfail(reason='raises IndexError instead')
+    def test_raises_without_vacancy_delta(self, mock_atoms, caplog):
+        """Ensure complaints when a vacancy has no known delta."""
+        (_, failing_atom), _ = mock_atoms
+        failing_atom.current_deltas.remove('DEL_2_vac_1')
+        self.check_raises(mock_atoms, caplog)
+
+    def test_raises_multiple_deltas(self, mock_atoms, caplog):
+        """Ensure complaints when there are multiple deltas for one element."""
+        (failing_atom, _), _ = mock_atoms
+        failing_atom.current_deltas.append('DEL_1_a_another')
+        self.check_raises(mock_atoms, caplog)
+
+    def test_raises_multiple_vacancy_deltas(self, mock_atoms, caplog):
+        """Ensure complaints when there are multiple deltas for a vacancy."""
+        (_, failing_atom), _ = mock_atoms
+        failing_atom.current_deltas.append('DEL_2_vac_another')
+        self.check_raises(mock_atoms, caplog)

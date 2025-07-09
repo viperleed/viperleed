@@ -417,21 +417,6 @@ def deltas(sl, rp, subdomain=False):
         rt.deltalogname = deltalogname
         at.current_deltas.append(rt.deltaname)
 
-    # sort current_deltas
-    for at in attodo:
-        checkEls = list(at.disp_occ.keys())
-        if at in vaclist:
-            checkEls.append("vac")
-        copydel = at.current_deltas[:]
-        at.current_deltas = []
-        for el in checkEls:
-            at.current_deltas.append(
-                [df for df in copydel
-                 if df.split("_")[-2].lower() == el.lower()][0])
-        if len(at.current_deltas) != len(copydel):
-            logger.error("Failed to sort delta files for {}".format(at))
-            raise RuntimeError("Inconsistent delta files")
-
     # write delta-input file
     dinput = ("""# ABOUT THIS FILE:
 # Input for the delta-calculations is collected here. The blocks of data are
@@ -452,6 +437,7 @@ def deltas(sl, rp, subdomain=False):
     except Exception:
         logger.warning("Failed to write file 'delta-input'. This will "
                        "not affect TensErLEED execution, proceeding...")
+    _sort_current_deltas_by_element(attodo, vaclist)
 
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION and not subdomain:
@@ -732,3 +718,20 @@ def _run_deltas_in_parallel(rpars, run_tasks):
     poolsize = min(len(run_tasks), rpars.N_CORES)
     parallelization.monitoredPool(rpars, poolsize, run_delta, run_tasks)
     return True
+
+
+def _sort_current_deltas_by_element(atoms, atoms_with_vacancies):
+    """Re-sort the current_deltas for each `atoms` by element."""
+    for at in atoms:
+        checkEls = list(at.disp_occ.keys())
+        if at in atoms_with_vacancies:
+            checkEls.append("vac")
+        copydel = at.current_deltas[:]
+        at.current_deltas = []
+        for el in checkEls:
+            at.current_deltas.append(
+                [df for df in copydel
+                 if df.split("_")[-2].lower() == el.lower()][0])
+        if len(at.current_deltas) != len(copydel):
+            logger.error("Failed to sort delta files for {}".format(at))
+            raise RuntimeError("Inconsistent delta files")
