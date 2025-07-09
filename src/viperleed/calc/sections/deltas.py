@@ -415,20 +415,20 @@ def deltas(sl, rp, subdomain=False):
             n = max(nums) + 1
         rt.deltaname = nameBase + "_{}".format(n)
         rt.deltalogname = deltalogname
-        at.known_deltas.append(rt.deltaname)
+        at.current_deltas.append(rt.deltaname)
 
-    # sort known_deltas
+    # sort current_deltas
     for at in attodo:
         checkEls = list(at.disp_occ.keys())
         if at in vaclist:
             checkEls.append("vac")
-        copydel = at.known_deltas[:]
-        at.known_deltas = []
+        copydel = at.current_deltas[:]
+        at.current_deltas = []
         for el in checkEls:
-            at.known_deltas.append(
+            at.current_deltas.append(
                 [df for df in copydel
                  if df.split("_")[-2].lower() == el.lower()][0])
-        if len(at.known_deltas) != len(copydel):
+        if len(at.current_deltas) != len(copydel):
             logger.error("Failed to sort delta files for {}".format(at))
             raise RuntimeError("Inconsistent delta files")
 
@@ -670,7 +670,7 @@ def _find_atoms_that_need_deltas(sl, rp):
             for df in dfiles:
                 if iodeltas.checkDelta(df, at, el, rp):
                     found = True
-                    at.known_deltas.append(df)
+                    at.current_deltas.append(df)
                     countExisting += 1
                     break
             if not found:

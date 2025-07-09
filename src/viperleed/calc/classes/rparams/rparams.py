@@ -976,7 +976,7 @@ class Rparams:
         if (2 in self.runHistory or 42 in self.runHistory
                 or sl.deltas_initialized):
             # if delta has been run, information what deltas exist is stored
-            atlist = [at for at in sl if not at.is_bulk and at.known_deltas]
+            atlist = [at for at in sl if not at.is_bulk and at.current_deltas]
         else:
             _LOGGER.debug('Delta-amplitudes were not calculated in current '
                           'run; looking for delta files by name.')
@@ -1018,7 +1018,7 @@ class Rparams:
                                if f.split('_')[2] == el]:
                         if checkDelta(df, at, el, self):
                             found = True
-                            at.known_deltas.append(df)
+                            at.current_deltas.append(df)
                             break
                     if not found:
                         _LOGGER.error('No appropriate Delta file found '
@@ -1075,9 +1075,9 @@ class Rparams:
         splToRestrict = []
         indep = []
         for at in atlist:
-            if len(at.known_deltas) > self.search_maxfiles:
-                self.search_maxfiles = len(at.known_deltas)
-            for fn in at.known_deltas:
+            if len(at.current_deltas) > self.search_maxfiles:
+                self.search_maxfiles = len(at.current_deltas)
+            for fn in at.current_deltas:
                 el = fn.split('_')[2]
                 if el == 'vac':
                     self.searchpars.append(SearchPar(at, 'geo', 'vac', fn))
