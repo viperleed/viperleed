@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def collect_static_input_files(slab, rpars):
-    """Read the contents of input files common to all deltas for `slab`.
+    """Collect the contents of input files common to all delta calculations.
 
     Parameters
     ----------
@@ -40,8 +40,8 @@ def collect_static_input_files(slab, rpars):
     Returns
     -------
     delta_basic : str
-        The contents of the input file common to all deltas for `slab`
-        and `rpars`.
+        The contents of the input file in common to all deltas for
+        `slab` and `rpars`.
     auxbeams : str
         The contents of the AUXBEAMS file.
     phaseshifts
@@ -55,37 +55,8 @@ def collect_static_input_files(slab, rpars):
         If reading AUXBEAMS of PHASESHIFTS fails.
     """
     delta_basic = generateDeltaBasic(slab, rpars)
-
-    # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
-    auxbeams_file = Path('AUXBEAMS')
-    if not auxbeams_file.is_file() and (DEFAULT_SUPP/auxbeams_file).is_file():
-        try:
-            shutil.copy2(DEFAULT_SUPP/auxbeams_file, auxbeams_file.name)
-        except OSError:
-            logger.warning(f'Failed to copy {auxbeams_file.name} from '
-                           f'{DEFAULT_SUPP} folder. Generating new file...')
-    if not auxbeams_file.is_file():
-        try:
-            beams.writeAUXBEAMS(ivbeams=rpars.ivbeams, beamlist=rpars.beamlist)
-        except Exception:                                                       # TODO: better exception
-            logger.error('Exception during writeAUXBEAMS: ')
-            raise
-    try:
-        auxbeams = auxbeams_file.read_text(encoding='utf-8')
-    except OSError:
-        logger.error(f'Could not read {auxbeams_file.name} for delta input')
-        raise
-    if not auxbeams.endswith('\n'):
-        auxbeams += '\n'
-
-    # get PHASESHIFTS
-    try:
-        phaseshifts = Path('PHASESHIFTS').read_text(encoding='utf-8')
-    except OSError:
-        logger.error('Could not read PHASESHIFTS for delta-input')
-        raise
-    if not phaseshifts.endswith('\n'):
-        phaseshifts += '\n'
+    auxbeams = _read_file_with_newline(_fetch_auxbeams(rpars))
+    phaseshifts = _read_file_with_newline('PHASESHIFTS')
     return delta_basic, auxbeams, phaseshifts
 
 
@@ -441,3 +412,36 @@ def generateDeltaBasic(sl, rp):
         output += (formatter['int'].write([1]).ljust(lj)
                    + 'PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7\n')
     return output
+
+
+def _fetch_auxbeams(rpars):
+    """Collect an existing AUXBEAMS file, or write a new one."""
+    auxbeams = Path('AUXBEAMS')
+    if not auxbeams.is_file():  # Try fetching it from SUPP
+        try:
+            shutil.copy2(DEFAULT_SUPP/auxbeams, auxbeams)
+        except FileNotFoundError:
+            pass  # Will write a new one below
+        except OSError:
+            logger.warning(f'Failed to copy {auxbeams} from {DEFAULT_SUPP} '
+                           'folder. Generating new file...')
+    if not auxbeams.is_file():
+        try:
+            beams.writeAUXBEAMS(ivbeams=rpars.ivbeams, beamlist=rpars.beamlist)
+        except Exception:                                                       # TODO: better exception
+            logger.error('Exception during writeAUXBEAMS: ')
+            raise
+    return auxbeams
+
+
+def _read_file_with_newline(file_path):
+    """Return the contents of `file_path`, with a terminating newline."""
+    file_path = Path(file_path)
+    try:
+        contents = file_path.read_text(encoding='utf-8')
+    except OSError:
+        logger.error(f'Could not read {file_path.name} for delta input')
+        raise
+    if not contents.endswith('\n'):
+        contents += '\n'
+    return contents
