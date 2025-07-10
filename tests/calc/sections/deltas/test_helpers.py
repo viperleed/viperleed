@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-07-08'
 __license__ = 'GPLv3+'
 
+from collections import Counter
 from pathlib import Path
 import logging
 
@@ -20,11 +21,142 @@ from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.sections.deltas import DeltaCompileTask
+from viperleed.calc.sections.deltas import DeltaRunTask
 from viperleed.calc.sections.deltas import DeltasError
+from viperleed.calc.sections.deltas import _assemble_tasks
 from viperleed.calc.sections.deltas import _ensure_tensors_loaded
 from viperleed.calc.sections.deltas import _prepare_log_file
 from viperleed.calc.sections.deltas import _remove_old_param_file
 from viperleed.calc.sections.deltas import _sort_current_deltas_by_element
+
+
+use = pytest.mark.usefixtures
+
+
+class TestAssembleTasks:
+    """Tests for the _assemble_tasks function."""
+
+    @fixture(name='make_at_el_pairs')
+    def factory_atom_element_pairs(self, mocker):
+        """Return pairs of fake atoms and their elements."""
+        def _mock(*elements):
+            return [
+                (mocker.MagicMock(num=i, current_deltas=[]), element)
+                for i, element in enumerate(elements, start=1)
+                ]
+        return _mock
+
+    @fixture(name='mocks')
+    def fixture_mocks(self, mocker):
+        """Replace implementation details with mocks."""
+        def _mock_make_delta_input(atom, element, *_):
+            return (f'din_{atom.num}_{element}',
+                    f'dinshort_{atom.num}_{element}',
+                    f'param_{element}')
+        return {
+            'collect_inputs': mocker.patch(
+                'viperleed.calc.files.iodeltas.collect_static_input_files',
+                return_value=[mocker.MagicMock() for _ in range(5)],
+                ),
+            'make_delta_input': mocker.patch(
+                'viperleed.calc.files.iodeltas.generateDeltaInput',
+                side_effect=_mock_make_delta_input,
+                ),
+            'listdir':  mocker.patch(
+                'os.listdir',
+                return_value=['DEL_1_Fe_1', 'DEL_2_Co_2', 'DEL_1_Fe_notanint'],
+                ),
+            }
+
+    @staticmethod
+    def _check_calls_to_generate_delta_input(mocks, args, at_el_pairs, mocker):
+        """Ensure generateDeltaInput was called with the expected arguments."""
+        delta_input_calls = [
+            mocker.call(*at_el,
+                        *args,
+                        *mocks['collect_inputs'].return_value)
+            for at_el in at_el_pairs
+            ]
+        assert mocks['make_delta_input'].mock_calls == delta_input_calls
+
+    @staticmethod
+    def _check_task_attributes(comp_tasks, run_tasks, at_el_pairs, mock_log):
+        """Ensure the tasks created have the expected attributes."""
+        expect_attrs = {
+            task: {'param': f'param_{el}',
+                   'foldername': f'Delta_Compile_{ind}'}
+            for ind, (task, (_, el)) in enumerate(zip(comp_tasks, at_el_pairs))
+            }
+        expect_attrs.update({
+            run_task: {'comptask': comp_task,
+                       'din': f'din_{at.num}_{el}',
+                       'din_short': f'dinshort_{at.num}_{el}',
+                       'deltalogname': mock_log}
+            for run_task, comp_task, (at, el) in zip(run_tasks,
+                                                     comp_tasks,
+                                                     at_el_pairs)
+            })
+        for obj, attrs in expect_attrs.items():
+            for attr_name, value in attrs.items():
+                assert getattr(obj, attr_name) == value
+
+    def test_implementation(self, rpars, mocks, make_at_el_pairs, mocker):
+        """Check calls to mocked functions."""
+        atom_element_pairs = make_at_el_pairs('A', 'B', 'C')
+        args = mocker.MagicMock('mock_slab'), rpars
+        mock_log = mocker.MagicMock()
+        comp_tasks, run_tasks = _assemble_tasks(*args,
+                                                atom_element_pairs,
+                                                mock_log)
+        assert all(isinstance(t, DeltaCompileTask) for t in comp_tasks)
+        assert all(isinstance(t, DeltaRunTask) for t in run_tasks)
+        mocks['collect_inputs'].assert_called_once_with(*args)
+
+        self._check_calls_to_generate_delta_input(mocks,
+                                                  args,
+                                                  atom_element_pairs,
+                                                  mocker)
+        self._check_task_attributes(comp_tasks,
+                                    run_tasks,
+                                    atom_element_pairs,
+                                    mock_log)
+
+    @use('mocks')
+    def test_creates_tasks(self, rpars, make_at_el_pairs, mocker):
+        """Ensure creation of the expected tasks."""
+        atom_element_pairs = make_at_el_pairs('Fe', 'Co')
+        comp_tasks, run_tasks = _assemble_tasks(
+            mocker.MagicMock(name='slab'),
+            rpars,
+            atom_element_pairs,
+            mocker.MagicMock(name='log file'),
+            )
+        assert len(comp_tasks) == len(set(el for _, el in atom_element_pairs))
+        assert len(run_tasks) == len(atom_element_pairs)
+        expect_delta_names = 'DEL_1_Fe_2', 'DEL_2_Co_3'
+        for (atom, _), task, deltaname in zip(atom_element_pairs,
+                                              run_tasks,
+                                              expect_delta_names):
+            assert atom.current_deltas == [deltaname]
+            assert task.deltaname == deltaname
+
+    @use('mocks')
+    def test_compile_tasks_by_hash(self, rpars, make_at_el_pairs, mocker):
+        """Ensure that compile tasks are reused if PARAM hashes match."""
+        # Both have same element, which forces same param
+        # in the mocked make_delta_input, hence same hash
+        atom_element_pairs = make_at_el_pairs('Fe', 'Fe', 'Ni', 'Fe')
+        comp_tasks, run_tasks = _assemble_tasks(
+            mocker.MagicMock(name='slab'),
+            rpars,
+            atom_element_pairs,
+            mocker.MagicMock(name='log file'),
+            )
+        assert len(comp_tasks) == len(set(el for _, el in atom_element_pairs))
+        assert len(run_tasks) == len(atom_element_pairs)
+        count_comptasks = Counter(rt.comptask for rt in run_tasks)
+        assert count_comptasks == {comp_tasks[0]: 3, comp_tasks[1]: 1}
 
 
 class TestEnsureTensorsLoaded:

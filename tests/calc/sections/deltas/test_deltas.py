@@ -21,8 +21,6 @@ from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.lib.context import execute_in_dir
-from viperleed.calc.sections.deltas import DeltaCompileTask
-from viperleed.calc.sections.deltas import DeltaRunTask
 from viperleed.calc.sections.deltas import compile_delta
 from viperleed.calc.sections.deltas import deltas
 from viperleed.calc.sections.deltas import run_delta
@@ -47,14 +45,18 @@ def fixture_call_in_tmp(rpars, mocks, tmp_path, mocker):
         todo, at_el_todo, vacancies = mocks['find_varied_atoms'].return_value
         if at_el_todo:
             mocks['remove_param'].assert_called_once_with()
-            mocks['collect_inputs'].assert_called_once_with(*args),
-            mocks['make_delta_input'].assert_called()
+            mocks['make_tasks'].assert_called_once_with(
+                *args,
+                at_el_todo,
+                f'delta-{rpars.timestamp}.log',
+                )
             mocks['sort_deltas'].assert_called_once_with(todo, vacancies)
-            mocks['write_input'].assert_called_once()
+            mocks['write_input'].assert_called_once_with(
+                *mocks['make_tasks'].return_value,
+                )
         else:
             mocks['remove_param'].assert_not_called()
-            mocks['collect_inputs'].assert_not_called(),
-            mocks['make_delta_input'].assert_not_called()
+            mocks['make_tasks'].assert_not_called()
             mocks['sort_deltas'].assert_not_called()
             mocks['pool'].assert_not_called()
             mocks['write_input'].assert_not_called()
@@ -65,38 +67,9 @@ def fixture_call_in_tmp(rpars, mocks, tmp_path, mocker):
 @fixture(name='mock_atoms_need_deltas')
 def fixture_mock_atoms_need_deltas(mocks, mocker):
     """Replace the _find_atoms_that_need_deltas function with a mock."""
-    atoms_todo = [
-        # Fake Atom objects with bare-bone attributes
-        mocker.MagicMock(name=f'Fake Atom {i}', known_deltas=[], num=i)
-        for i in range(6)
-        ]
-    atoms_todo[0].disp_occ = {'ElementOne': None,
-                              'ElementTwo': None}
-    atoms_todo[1].disp_occ = {'OnlyOneElement': None}
-    atoms_todo[2].disp_occ = {'ElementOne': None,
-                              'ElementTwo': None,
-                              'ElementThree': None}
-    atoms_todo[3].disp_occ = {'ElementOne': None}
-    atoms_todo[4].disp_occ = {'OnlyOneElement': None}
-    atoms_todo[5].disp_occ = {'OnlyOneElement': None}
-
-    at_el_todo = [
-        (atoms_todo[0], 'ElementOne'),
-        (atoms_todo[0], 'ElementTwo'),
-        (atoms_todo[1], 'OnlyOneElement'),
-        (atoms_todo[2], 'ElementOne'),
-        (atoms_todo[2], 'ElementTwo'),
-        (atoms_todo[2], 'ElementThree'),
-        (atoms_todo[2], 'Vac'),   # Auto-added
-        (atoms_todo[3], 'Vac'),   # Auto-added
-        (atoms_todo[3], 'ElementOne'),
-        (atoms_todo[4], 'OnlyOneElement'),
-        (atoms_todo[5], 'OnlyOneElement'),
-        ]
-    at_with_vacancies = [atoms_todo[2], atoms_todo[3]]
     mocks['find_varied_atoms'] = mocker.patch(
         f'{_MODULE}._find_atoms_that_need_deltas',
-        return_value=(atoms_todo, at_el_todo, at_with_vacancies),
+        return_value=tuple(mocker.MagicMock() for _ in range(3)),
         )
 
 
@@ -130,6 +103,10 @@ def fixture_mock_implementation(mocker):
         'write_input': mocker.patch(
             'viperleed.calc.files.iodeltas.write_delta_input_file',
             ),
+        'make_tasks': mocker.patch(
+            f'{_MODULE}._assemble_tasks',
+            return_value=[(mocker.MagicMock(),) for _ in range(2)],
+            )
         }
 
 
@@ -238,13 +215,16 @@ class TestDeltasCalls:
         call_in_tmp()
 
     @staticmethod
-    def _check_stopped_exec_calls(rpars, mocks, n_parallel_calls, pool_run):
+    def _check_stopped_exec_calls(rpars,
+                                  mocks,
+                                  n_parallel_calls,
+                                  pool_run,
+                                  expect_tasks):
         """Ensure calls during execution are as expected."""
         assert mocks['pool'].call_count == n_parallel_calls
-        *static_args, tasks = mocks['pool'].call_args[0]
-        n_tasks = len(mocks['find_varied_atoms'].return_value[1])
-        assert static_args == [rpars, rpars.N_CORES, pool_run]
-        assert len(tasks) == n_tasks
+        args = mocks['pool'].call_args[0]
+        size = min(rpars.N_CORES, len(expect_tasks))
+        assert args == (rpars, size, pool_run, expect_tasks)
         mocks['rmtree'].assert_not_called()
         mocks['copy_log'].assert_not_called()
 
@@ -261,6 +241,7 @@ class TestDeltasCalls:
             mocks,
             n_parallel_calls=1,  # compile only
             pool_run=compile_delta,
+            expect_tasks=mocks['make_tasks'].return_value[0],
             )
 
     @use('mock_atoms_need_deltas')
@@ -277,6 +258,7 @@ class TestDeltasCalls:
             mocks,
             n_parallel_calls=2,  # compile, then run
             pool_run=run_delta,
+            expect_tasks=mocks['make_tasks'].return_value[1],
             )
 
     @use('mock_atoms_need_deltas', 'mocks')
@@ -301,52 +283,6 @@ class TestDeltasGenerateInput:
         call_in_tmp()
         rpars.setHaltingLevel.assert_called_once_with(3)
 
-    @use('mock_atoms_need_deltas')
-    def test_static_input_files_used(self, mocks, call_in_tmp):
-        """Check that input files are passed on to the generation of inputs."""
-        call_in_tmp()
-        gen_delta_static_args = [
-            args[0][-3:]  # The last three positional arguments
-            for args in mocks['make_delta_input'].call_args_list
-            ]
-        assert all(args == gen_delta_static_args[0]
-                   for args in gen_delta_static_args)
-        assert gen_delta_static_args[0] == mocks['collect_inputs'].return_value
-
-    def test_generates_tasks_based_on_hash(self,
-                                           mocks,
-                                           call_in_tmp,
-                                           mocker):
-        """Check that compile tasks are created using the hash of PARAM."""
-        ids = (0, 1, 2, 2, 3, 5, 7, 8, 7, 3, 2)
-        mocks['make_delta_input'].side_effect = tuple(
-            ('din', f'short {i}', f'param {i}')
-            for i in ids
-            )
-
-        instances = {}
-        def count_instance_creations(klass):
-            old_init = klass.__init__
-            instances[klass] = []
-            def _mock_init(obj, *args, **kwargs):
-                instances[klass].append(obj)
-                return old_init(obj, *args, **kwargs)
-            return _mock_init
-
-        mocker.patch(f'{_MODULE}.DeltaCompileTask.__init__',
-                     count_instance_creations(DeltaCompileTask))
-        mocker.patch(f'{_MODULE}.DeltaRunTask.__init__',
-                     count_instance_creations(DeltaRunTask))
-        call_in_tmp()
-        assert mocks['make_delta_input'].call_count == len(ids)
-        assert len(instances[DeltaCompileTask]) == len(set(ids))
-        assert len(instances[DeltaRunTask]) == len(ids)
-
-        mocks['write_input'].assert_called_once_with(
-            instances[DeltaCompileTask],
-            instances[DeltaRunTask],
-            )
-
     @use('mocks')
     def test_writes_log_file(self, call_in_tmp, tmp_path):
         """Ensure that a delta log file is written."""
@@ -367,7 +303,7 @@ class TestDeltasRaises:
         mocks['pool'].side_effect = RuntimeError('compile fail')
         with pytest.raises(RuntimeError, match='compile fail'):
             call_in_tmp()
-        n_tasks = len(mocks['find_varied_atoms'].return_value[1])
+        n_tasks = len(mocks['make_tasks'].return_value[0])
         assert mocks['copy_log'].call_count == n_tasks
 
     @use('mock_atoms_need_deltas', 'mocks')
@@ -413,8 +349,7 @@ class TestExceptionsPropagated:
     _before_suppress = (
         *_preliminary,
         'remove_param',
-        'collect_inputs',
-        'make_delta_input',
+        'make_tasks',
         'sort_deltas',
         'write_input',
         )
