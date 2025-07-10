@@ -49,9 +49,10 @@ Available setting are:
    thus the :math:`R`-factor.
    **Default**: *False*.
 
--  ``t-leed-l_max``: Maximum value of the angular momentum quantum number
-   :math:`\ell` to be used in the tensor-LEED calculation. 
-   **Default**: Use the maximum value of :ref:`LMAX`.
+-  ``t-leed-l_max``: Cutoff value of the angular momentum quantum number
+   :math:`\ell` to be used in the tensor-LEED calculation.
+   **Default**: Use the highest value used in the reference calculation (as
+   determined by :ref:`LMAX` and :ref:`phaseshiftmin`).
 
 -  ``use_symmetry`` (experimental): Toggle whether to use the advanced symmetry
    based calculation of t-matrices and propagtors. This can significantly
