@@ -578,29 +578,29 @@ def _ensure_tensors_loaded(slab, rpars):
         slab.restoreOriState(keepDisp=True)
 
 
-def _find_atoms_that_need_deltas(sl, rp):
+def _find_atoms_that_need_deltas(slab, rpars):
     """Return information about atoms that need delta calculations.
 
     Parameters
     ----------
-    sl : Slab
+    slab : Slab
         The slab for which delta-amplitudes are being calculated.
-    rp : Rparams
+    rpars : Rparams
         The current PARAMETERS.
 
     Returns
     -------
     attodo : list of Atom
-        All atoms in `sl` that have some sort of variation, and that
+        All atoms in `slab` that have some sort of variation, and that
         thus require delta-amplitudes to be available.
     atElTodo : list of tuples
-        (Atom, element) pairs of all atoms in `sl` that require a
+        (Atom, element) pairs of all atoms in `slab` that require a
         new delta-amplitude calculation.
     vaclist : list of Atom
         All atoms in `attodo` that have partial occupation.
     """
     # go through atoms, remove those that have no variation whatsoever:
-    attodo = [at for at in sl if not at.is_bulk]
+    attodo = [at for at in slab if not at.is_bulk]
     j = 0
     while j < len(attodo):
         found = False
@@ -631,8 +631,7 @@ def _find_atoms_that_need_deltas(sl, rp):
                 for ol in occlists:
                     if len(ol) <= i:
                         break  # error - will pop up again later...
-                    else:
-                        totalocc += ol[i]
+                    totalocc += ol[i]
                 if totalocc < 1 - 1e-4:
                     found = True
                     break
@@ -650,12 +649,10 @@ def _find_atoms_that_need_deltas(sl, rp):
             totalocc = 0.
             for ol in occlists:
                 if len(ol) <= i:
-                    logger.error("Inconsistent occupancy lists for {} "
-                                 .format(at))
-                    raise ValueError("Inconsistent occupancy lists for {}"
-                                     .format(at))
-                else:
-                    totalocc += ol[i]
+                    err_msg = f'Inconsistent occupancy lists for {at}'
+                    logger.error(err_msg)
+                    raise ValueError(err_msg)
+                totalocc += ol[i]
             if totalocc < 1 - 1e-4:
                 vaclist.append(at)
                 break
@@ -666,13 +663,12 @@ def _find_atoms_that_need_deltas(sl, rp):
     for at in attodo:
         checkEls = list(at.disp_occ.keys())
         if at in vaclist:
-            checkEls.append("vac")
+            checkEls.append('vac')
         for el in checkEls:
-            dfiles = [f for f in os.listdir(".")
-                      if f.startswith(f'DEL_{at.num}_{el}')]
+            dfiles = (f.name for f in Path.cwd().glob(f'DEL_{at.num}_{el}*'))
             found = False
             for df in dfiles:
-                if iodeltas.checkDelta(df, at, el, rp):
+                if iodeltas.checkDelta(df, at, el, rpars):
                     found = True
                     at.current_deltas.append(df)
                     countExisting += 1
@@ -681,15 +677,14 @@ def _find_atoms_that_need_deltas(sl, rp):
                 atElTodo.append((at, el))
 
     if len(atElTodo) == 0:
-        logger.info("All Delta files specified in DISPLACEMENTS are "
-                    "already present in the Deltas.zip file. Skipping new "
-                    "calculations.")
+        logger.info('All Delta files specified in DISPLACEMENTS are '
+                    'already present in the Deltas.zip file. Skipping new '
+                    'calculations.')
         return attodo, atElTodo, vaclist
     if countExisting > 0:
-        logger.info("{} of {} required Delta-files are already present. "
-                    "Generating remaining {} files..."
-                    .format(countExisting, len(atElTodo) + countExisting,
-                            len(atElTodo)))
+        logger.info(f'{countExisting} of {len(atElTodo) + countExisting} '
+                    'required Delta-files are already present. '
+                    'Generating remaining {len(atElTodo)} files...')
     return attodo, atElTodo, vaclist
 
 
