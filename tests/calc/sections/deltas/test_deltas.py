@@ -316,7 +316,6 @@ class TestDeltasGenerateInput:
     def test_generates_tasks_based_on_hash(self,
                                            mocks,
                                            call_in_tmp,
-                                           tmp_path,
                                            mocker):
         """Check that compile tasks are created using the hash of PARAM."""
         ids = (0, 1, 2, 2, 3, 5, 7, 8, 7, 3, 2)
@@ -433,7 +432,8 @@ class TestExceptionsPropagated:
     @use('mock_atoms_need_deltas')
     @with_exceptions
     @parametrize(mock_name=_before_suppress)
-    def test_suppressed(self, exc, rpars, mock_name, call_in_tmp, mocks):
+    # pylint: disable-next=too-many-arguments  # 3/6 fixtures
+    def test_suppressed(self, exc, mock_name, rpars, call_in_tmp, mocks):
         """Ensure propagation of exceptions in helpers before early return."""
         rpars.SUPPRESS_EXECUTION = True
         self.check_propagates(exc, call_in_tmp, mocks, mock_name)
@@ -441,7 +441,8 @@ class TestExceptionsPropagated:
     @use('mock_atoms_need_deltas')
     @with_exceptions
     @parametrize(mock_name=_execution)
-    def test_execution(self, exc, rpars, mock_name, call_in_tmp, mocks):
+    # pylint: disable-next=too-many-arguments  # 3/6 fixtures
+    def test_execution(self, exc, mock_name, rpars, call_in_tmp, mocks):
         """Ensure propagation of exceptions in helpers before early return."""
         rpars.SUPPRESS_EXECUTION = False
         self.check_propagates(exc, call_in_tmp, mocks, mock_name)
