@@ -354,25 +354,27 @@ def compile_delta(comptask):
     return ''
 
 
-def deltas(sl, rp, subdomain=False):
+def deltas(slab, rpars, subdomain=False):
     """Runs the delta-amplitudes calculation."""
 
-    if rp.domainParams:
-        deltas_domains(rp)
+    if rpars.domainParams:
+        deltas_domains(rpars)
         return
 
     # read DISPLACEMENTS block
-    if not rp.disp_block_read:
-        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
-        rp.disp_block_read = True
+    if not rpars.disp_block_read:
+        readDISPLACEMENTS_block(rpars,
+                                slab,
+                                rpars.disp_blocks[rpars.search_index])
+        rpars.disp_block_read = True
 
-    _ensure_tensors_loaded(sl, rp)
-    static_files_contents = iodeltas.collect_static_input_files(sl, rp)
+    _ensure_tensors_loaded(slab, rpars)
+    static_files_contents = iodeltas.collect_static_input_files(slab, rpars)
 
     # If there are old deltas, pull them in here
-    leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
+    leedbase.getDeltas(rpars.TENSOR_INDEX, required=False)
 
-    attodo, atElTodo, vaclist = _find_atoms_that_need_deltas(sl, rp)
+    attodo, atElTodo, vaclist = _find_atoms_that_need_deltas(slab, rpars)
     if not atElTodo:  # Nothing to calculate
         return
 
@@ -380,16 +382,16 @@ def deltas(sl, rp, subdomain=False):
     _remove_old_param_file()
 
     # create log file:
-    deltalogname = _prepare_log_file(rp, subdomain)
+    deltalogname = _prepare_log_file(rpars, subdomain)
     # assemble tasks
     deltaCompTasks = []  # keep track of what versions to compile
     deltaRunTasks = []   # which deltas to run
-    tensordir = f"{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}"
-    tl_source = rp.get_tenserleed_directory()
+    tensordir = f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
+    tl_source = rpars.get_tenserleed_directory()
     tl_path = tl_source.path
     for (at, el) in atElTodo:
         din, din_short, param = iodeltas.generateDeltaInput(
-            at, el, sl, rp, *static_files_contents)
+            at, el, slab, rpars, *static_files_contents)
         h = hashlib.md5(param.encode()).digest()
         found = False
         for ct in deltaCompTasks:
@@ -424,45 +426,46 @@ def deltas(sl, rp, subdomain=False):
     iodeltas.write_delta_input_file(deltaCompTasks, deltaRunTasks)
 
     # if execution is suppressed, stop here
-    if rp.SUPPRESS_EXECUTION and not subdomain:
-        rp.setHaltingLevel(3)
+    if rpars.SUPPRESS_EXECUTION and not subdomain:
+        rpars.setHaltingLevel(3)
         return
 
     if subdomain and deltaRunTasks:
-        rp.manifest.add(DEFAULT_DELTAS)
+        rpars.manifest.add(DEFAULT_DELTAS)
 
     if subdomain:  # Actual calculations done in deltas_domains
         return deltaCompTasks, deltaRunTasks
 
-    _compile_and_run_deltas_in_parallel(rp, deltaCompTasks, deltaRunTasks)
-    rp.manifest.add(DEFAULT_DELTAS)
+    _compile_and_run_deltas_in_parallel(rpars, deltaCompTasks, deltaRunTasks)
+    rpars.manifest.add(DEFAULT_DELTAS)
 
 
-def deltas_domains(rp):
+def deltas_domains(rpars):
     """Define and run delta calculations for all domains."""
     deltaCompTasks = []
     deltaRunTasks = []
     # get input for all domains
-    for domain in rp.domainParams:
+    for domain in rpars.domainParams:
         logger.info(f'Getting input for delta calculations: {domain}')
         with execute_in_dir(domain.workdir):
             try:
-                r = deltas(domain.slab, domain.rpars, subdomain=True)
+                result = deltas(domain.slab, domain.rpars, subdomain=True)
             except Exception:
                 logger.error(f'Error while creating delta input for {domain}')
                 raise
-        if type(r) == tuple:  # if no deltas need to be calculated returns None
-            deltaCompTasks.extend(r[0])
-            deltaRunTasks.extend(r[1])
-        elif r is not None:
+        if type(result) == tuple:
+            # if no deltas need to be calculated returns None
+            deltaCompTasks.extend(result[0])
+            deltaRunTasks.extend(result[1])
+        elif result is not None:
             raise RuntimeError('Unknown error while creating '
                                f'delta input for {domain}')
 
     # if execution is suppressed, stop here
-    if rp.SUPPRESS_EXECUTION:
-        rp.setHaltingLevel(3)
+    if rpars.SUPPRESS_EXECUTION:
+        rpars.setHaltingLevel(3)
         return
-    _compile_and_run_deltas_in_parallel(rp, deltaCompTasks, deltaRunTasks)
+    _compile_and_run_deltas_in_parallel(rpars, deltaCompTasks, deltaRunTasks)
 
 
 def _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks):
