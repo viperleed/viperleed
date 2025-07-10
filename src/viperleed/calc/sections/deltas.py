@@ -453,12 +453,12 @@ def _assemble_tasks(slab, rpars, atom_element_pairs, deltalogname):
 
     Returns
     -------
-    deltaCompTasks : list of DeltaCompileTask
+    compile_tasks : list of DeltaCompileTask
         Information about which executables need to be compiled
         to calculate delta amplitudes for `atom_element_pairs`.
         May have fewer items than `atom_element_pairs`.
-    deltaRunTasks : list of DeltaRunTask
-        Information about which executions of `deltaCompTasks` are
+    run_tasks : list of DeltaRunTask
+        Information about which executions of `compile_tasks` are
         needed to produce delta amplitudes for `atom_element_pairs`.
         As many items as there are `atom_element_pairs`.
     """
@@ -479,7 +479,7 @@ def _assemble_tasks(slab, rpars, atom_element_pairs, deltalogname):
         hash_ = hashlib.md5(param.encode()).digest()
         compile_task = comp_tasks_by_hash.setdefault(
             hash_,
-            DeltaCompileTask(param, tl_path, len(comp_tasks_by_hash))
+            DeltaCompileTask(param, tl_path, len(comp_tasks_by_hash)),
             )
         run_tasks.append(
             _create_runtask(atom, element, compile_task, din, tensordir)
