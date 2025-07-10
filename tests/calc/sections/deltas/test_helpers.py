@@ -65,7 +65,10 @@ class TestAssembleTasks:
                 ),
             'listdir':  mocker.patch(
                 'os.listdir',
-                return_value=['DEL_1_Fe_1', 'DEL_2_Co_2', 'DEL_1_Fe_notanint'],
+                return_value=['DEL_1_Fe_1',
+                              'DEL_2_Co_2',
+                              'DEL_1_Fe_notanint',
+                              'DEL_2_Co_'],
                 ),
             }
 
@@ -125,7 +128,7 @@ class TestAssembleTasks:
     @use('mocks')
     def test_creates_tasks(self, rpars, make_at_el_pairs, mocker):
         """Ensure creation of the expected tasks."""
-        atom_element_pairs = make_at_el_pairs('Fe', 'Co')
+        atom_element_pairs = make_at_el_pairs('Fe', 'Co', 'Ni')
         comp_tasks, run_tasks = _assemble_tasks(
             mocker.MagicMock(name='slab'),
             rpars,
@@ -134,7 +137,7 @@ class TestAssembleTasks:
             )
         assert len(comp_tasks) == len(set(el for _, el in atom_element_pairs))
         assert len(run_tasks) == len(atom_element_pairs)
-        expect_delta_names = 'DEL_1_Fe_2', 'DEL_2_Co_3'
+        expect_delta_names = 'DEL_1_Fe_2', 'DEL_2_Co_3', 'DEL_3_Ni_1'
         for (atom, _), task, deltaname in zip(atom_element_pairs,
                                               run_tasks,
                                               expect_delta_names):
