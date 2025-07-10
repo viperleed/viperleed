@@ -59,14 +59,21 @@ def vlj_search(slab, rpars):
         raise RuntimeError(err_msg)
 
     # select tensors based on the tensor index
-    tensor_name = f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}.zip'
-    # try inside the work dir
-    tensor_path = Path() / DEFAULT_TENSORS / tensor_name
-    if not tensor_path.exists():
-        # try inside the home dir
-        tensor_path = rpars.paths.home / DEFAULT_TENSORS / tensor_name
-    if not tensor_path.exists():
-        raise FileNotFoundError(f'Tensor {tensor_path} not found.')
+    tensor_dir_name = f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
+    tensor_zip_name = tensor_dir_name + '.zip'
+
+    # try unzipped in work dir
+    if (Path() / DEFAULT_TENSORS/ tensor_dir_name).is_dir():
+        tensor_path = Path() / DEFAULT_TENSORS / tensor_dir_name
+    # try zipped in work dir
+    elif (Path() / DEFAULT_TENSORS / tensor_zip_name).is_file():
+        tensor_path = Path() / DEFAULT_TENSORS / tensor_zip_name
+    # try zipped in home dir
+    elif (rpars.paths.home / DEFAULT_TENSORS / tensor_zip_name).is_file():
+        tensor_path = rpars.paths.home / DEFAULT_TENSORS / tensor_zip_name
+    else:
+        # if no tensor file is found, raise an error
+        raise FileNotFoundError(f"Tensors {tensor_dir_name}(.zip) not found.")
 
     # get the next block from the displacements file – or return if we are done
     if rpars.last_R is None:
