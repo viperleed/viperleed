@@ -9,7 +9,7 @@ BACKEND
 .. warning:: The use of the viperleed-jax backend is experimental.
 
 BACKEND selects the backend used by viperleed.calc for calculations. Currently
-only the :ref:sec_search: supports different backends (TensErLEED and
+only the :ref:`sec_search` supports different backends (TensErLEED and
 viperleed-jax).
 
 **Syntax**:
