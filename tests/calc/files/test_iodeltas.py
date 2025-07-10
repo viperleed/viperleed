@@ -17,6 +17,8 @@ from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files.iodeltas import _fetch_auxbeams
 from viperleed.calc.files.iodeltas import _read_file_with_newline
 from viperleed.calc.files.iodeltas import collect_static_input_files
+from viperleed.calc.files.iodeltas import write_delta_input_file
+from viperleed.calc.lib.context import execute_in_dir
 
 
 _MODULE = 'viperleed.calc.files.iodeltas'
@@ -156,3 +158,76 @@ at the end'''
         result = _read_file_with_newline('file')
         expect = no_newline + '\n'
         assert result == expect
+
+
+class TestWriteDeltaInputFile:
+    """Tests for the write_delta_input_file function."""
+
+    @fixture(name='mock_tasks')
+    def fixture_mock_tasks(self, mocker):
+        """Return fake compile and run tasks."""
+        compile_tasks = (
+            mocker.MagicMock(param='param 1. Has one runtaks'),
+            mocker.MagicMock(param='param 2. Has multiple runtasks'),
+            mocker.MagicMock(param='param 3. Has no runtasks'),
+            )
+        run_tasks = (
+            mocker.MagicMock(comptask=compile_tasks[0],
+                             deltaname='DEL_runtask_1',
+                             din_short='comp 1, short 1'),
+            mocker.MagicMock(comptask=compile_tasks[1],
+                             deltaname='DEL_runtask_2',
+                             din_short='comp 2, short 1'),
+            mocker.MagicMock(comptask=compile_tasks[1],
+                             deltaname='DEL_runtask_3',
+                             din_short='comp 2, short 2'),
+            )
+        return compile_tasks, run_tasks
+
+    def test_success(self, tmp_path, mock_tasks):
+        """Check the successful writing of a delta-input file."""
+        with execute_in_dir(tmp_path):
+            write_delta_input_file(*mock_tasks)
+        contents = (tmp_path/'delta-input').read_text(encoding='utf-8')
+        expect_contents = '''\
+# ABOUT THIS FILE:
+# Input for the delta-calculations is collected here. The blocks of data are
+# new 'PARAM' files, which are used to recompile the fortran code, and input
+# for generation of specific DELTA files. Lines starting with '#' are comments
+# on the function of the next block of data.
+# In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
+# entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
+
+#### NEW 'PARAM' FILE: ####
+
+param 1. Has one runtaks
+
+#### INPUT for new DELTA file DEL_runtask_1: ####
+
+comp 1, short 1
+
+#### NEW 'PARAM' FILE: ####
+
+param 2. Has multiple runtasks
+
+#### INPUT for new DELTA file DEL_runtask_2: ####
+
+comp 2, short 1
+
+#### INPUT for new DELTA file DEL_runtask_3: ####
+
+comp 2, short 2
+
+#### NEW 'PARAM' FILE: ####
+
+param 3. Has no runtasks
+'''
+        assert contents == expect_contents
+
+    def test_write_fails(self, mock_tasks, mocker, caplog):
+        """Check that failure to write the input file is tolerated."""
+        input_file_name = 'delta-input'
+        mocker.patch('builtins.open', side_effect=Exception)
+        write_delta_input_file(*mock_tasks)
+        expect_log = f'Failed to write file {input_file_name!r}'
+        assert expect_log in caplog.text

@@ -420,27 +420,8 @@ def deltas(sl, rp, subdomain=False):
         rt.deltalogname = deltalogname
         at.current_deltas.append(rt.deltaname)
 
-    # write delta-input file
-    dinput = ("""# ABOUT THIS FILE:
-# Input for the delta-calculations is collected here. The blocks of data are
-# new 'PARAM' files, which are used to recompile the fortran code, and input
-# for generation of specific DELTA files. Lines starting with '#' are comments
-# on the function of the next block of data.
-# In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
-# entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
-""")
-    for ct in deltaCompTasks:
-        dinput += ("\n#### NEW 'PARAM' FILE: ####\n\n" + ct.param + "\n")
-        for rt in [t for t in deltaRunTasks if t.comptask == ct]:
-            dinput += ("\n#### INPUT for new DELTA file {}: ####\n\n"
-                       .format(rt.deltaname) + rt.din_short + "\n")
-    try:
-        with open("delta-input", "w") as wf:
-            wf.write(dinput)
-    except Exception:
-        logger.warning("Failed to write file 'delta-input'. This will "
-                       "not affect TensErLEED execution, proceeding...")
     _sort_current_deltas_by_element(attodo, vaclist)
+    iodeltas.write_delta_input_file(deltaCompTasks, deltaRunTasks)
 
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION and not subdomain:

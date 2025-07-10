@@ -414,6 +414,49 @@ def generateDeltaBasic(sl, rp):
     return output
 
 
+def write_delta_input_file(deltaCompTasks, deltaRunTasks):
+    """Write a collection of the inputs for all delta calculations.
+
+    The delta-input file is meant for users' debug purposes (or
+    manual execution of a delta calculation). It collated the
+    PARAM files (i.e., array dimensions) for the delta-amplitude
+    executables that are compiled, as well as a short version of
+    the input piped to these executables when called to produce
+    single delta files.
+
+    Parameters
+    ----------
+    deltaCompTasks : Sequence of DeltaCompileTask
+        Information about which executables need to be compiled.
+    deltaRunTasks : Sequence of DeltaRunTask
+        Information about which delta calculations should be
+        executed.
+
+    Returns
+    -------
+    None.
+    """
+    dinput = ("""# ABOUT THIS FILE:
+# Input for the delta-calculations is collected here. The blocks of data are
+# new 'PARAM' files, which are used to recompile the fortran code, and input
+# for generation of specific DELTA files. Lines starting with '#' are comments
+# on the function of the next block of data.
+# In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
+# entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
+""")
+    for ct in deltaCompTasks:
+        dinput += ("\n#### NEW 'PARAM' FILE: ####\n\n" + ct.param + "\n")
+        for rt in [t for t in deltaRunTasks if t.comptask == ct]:
+            dinput += ("\n#### INPUT for new DELTA file {}: ####\n\n"
+                       .format(rt.deltaname) + rt.din_short + "\n")
+    try:
+        with open("delta-input", "w") as wf:
+            wf.write(dinput)
+    except Exception:
+        logger.warning("Failed to write file 'delta-input'. This will "
+                       "not affect TensErLEED execution, proceeding...")
+
+
 def _fetch_auxbeams(rpars):
     """Collect an existing AUXBEAMS file, or write a new one."""
     auxbeams = Path('AUXBEAMS')
