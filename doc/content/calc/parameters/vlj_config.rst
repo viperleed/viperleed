@@ -35,10 +35,10 @@ Available setting are:
 
    Preconditioning can help improve the convergence of the second phase
    optimization.
-   **Default**: True.
+   **Default**: *True*.
 
--  ``recalc_ref_t_matrices``: Toggle whether to re-calculate the t-matrices for
-   the reference structure or to use the t-matrices as read in from the tensor
+-  ``recalc_ref_t_matrices``: If *True*, re-calculate the t-matrices for
+   the reference structure, else use the t-matrices as read in from the tensor
    files (calculated in the :ref:`ref-calc`).
    The t-matrix calculation in viperleed-jax is uses different (more efficient
    and accurate) algorithms than the TensErLEED reference calculation. This
@@ -47,7 +47,7 @@ Available setting are:
    between the t-matrices of the reference structure and the perturbed
    structure, this can lead to slightly different results for the amplitude and
    thus the :math:`R`-factor.
-   **Default**: False.
+   **Default**: *False*.
 
 -  ``t-leed-l_max``: Maximum value of the angular momentum quantum number
    :math:`\ell` to be used in the tensor-LEED calculation. 
@@ -56,7 +56,7 @@ Available setting are:
 -  ``use_symmetry`` (experimental): Toggle whether to use the advanced symmetry
    based calculation of t-matrices and propagtors. This can significantly
    improve performance.
-   **Default**: True.
+   **Default**: *True*.
 
 -  ``occ_norm``: Select the method used to normalize occupational parameters
    that ensures the total occupation of all elements on one site is
