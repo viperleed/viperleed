@@ -527,8 +527,16 @@ void reset(){
     	}
     }
     
+    current_max = 0.0;
     coilResistance[0] = 0.0;
     coilResistance[1] = 0.0;
+    new_current[0] = 0.0;
+    new_current[1] = 0.0;
+    last_current[0] = 0.0;
+    last_current[0] = 0.0;
+    new_voltage[0] = 0.0;
+    new_voltage[1] = 0.0;
+    measured = false;
 
     currentState = STATE_IDLE;
     waitingForDataFromPC = false;
