@@ -411,10 +411,10 @@ def initialization(sl, rp, subdomain=False):
     if rp.BACKEND['search'] == SearchBackend.VLJ:
         logger.debug("Initializing viperleed-jax backend")
 
-    # read the DISPLACEMENTS file using the new parser and store it in rpars
-    rp.vlj_displacements = DisplacementsFile()
-    rp.vlj_displacements.read('DISPLACEMENTS')
-    logger.debug('DISPLACEMENTS file read successfully')
+        # read the DISPLACEMENTS file using the new parser and store it in rpars
+        rp.vlj_displacements = DisplacementsFile()
+        rp.vlj_displacements.read('DISPLACEMENTS')
+        logger.debug('DISPLACEMENTS file read successfully')
 
 
 def init_domains(rp):
