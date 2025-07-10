@@ -21,34 +21,34 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer
 // PC requested to set a specific duty cycle (ASCII 'D')
 #define PC_SET_DUTY_CYCLE         68
 // PC requested to set a specific current (ASCII 'I')
-#define PC_SET_CURRENT		 	  73
+#define PC_SET_CURRENT               73
 // PC requested measurement (ASCII 'M')
-#define PC_MEASURE	              77
+#define PC_MEASURE                  77
 // PC requested time constant (ASCII 'T')
-#define PC_SET_TIME_CONSTANT	      84
+#define PC_SET_TIME_CONSTANT          84
 // PC requested enable dynamic (ASCII 'E')
-#define PC_SET_ENABLE_DYNAMIC	      69
+#define PC_SET_ENABLE_DYNAMIC          69
 // PC requested to set transformation matrix (ASCII 't')
-#define PC_SET_TRANSFORMATION_MATRIX	      116
+#define PC_SET_TRANSFORMATION_MATRIX          116
 // PC requested to set calibration curve (ASCII 'c')
-#define PC_SET_CALIBRATION_CURVE	      99
+#define PC_SET_CALIBRATION_CURVE          99
 // PC_SET_UP_ADCS: PC requested to prepare the
 // ADCs for a measurement (ASCII 'S').
-#define PC_SET_UP_ADCS       83 
+#define PC_SET_UP_ADCS       83
 
 /** ------------------------- Finite state machine ------------------------- **/
 // Set duty cycle for the coil using PWM.
-#define STATE_SET_DUTY_CYCLE	  50
-// Set current for the coil. 
-#define STATE_SET_CURRENT		  51
+#define STATE_SET_DUTY_CYCLE      50
+// Set current for the coil.
+#define STATE_SET_CURRENT          51
 // Measure the current and voltage of the respective coil.
-#define STATE_MEASURE		      52
+#define STATE_MEASURE              52
 // Set the time constant.
-#define STATE_SET_TIME_CONSTANT		  53
+#define STATE_SET_TIME_CONSTANT          53
 // Enable/disable dynamic magnetic field compensation.
-#define STATE_SET_ENABLE_DYNAMIC	  54
+#define STATE_SET_ENABLE_DYNAMIC      54
 // Set transformation matrix.
-#define STATE_SET_TRANSFORMATION_MATRIX	  55
+#define STATE_SET_TRANSFORMATION_MATRIX      55
 // Set calibration curve.
 #define STATE_SET_CALIBRATION_CURVE  56
 // STATE_SET_UP_ADCS: Pick correct ADC channels and no. of measurement points.
@@ -309,15 +309,6 @@ bool measureResistance2 = false;
 float current_max;
 unsigned long current_time = 0;
 unsigned long last_current_time = 0;
-
-/**
-float new_current1;
-float last_current1;
-float new_current2;
-float last_current2;
-float new_voltage1;
-float new_voltage2;
-**/
 
 float new_current[2];
 float last_current[2];
