@@ -10,6 +10,7 @@ __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
 import hashlib
+import itertools
 import logging
 import os
 from pathlib import Path
@@ -33,6 +34,10 @@ from viperleed.calc.lib.context import execute_in_dir
 logger = logging.getLogger(__name__)
 
 # TODO: would be nice to replace all os.path with pathlib
+
+
+class DeltasError(Exception):
+    """Base exception for delta-amplitudes-related errors."""
 
 
 # TODO: see note in refcalc. #43
@@ -722,16 +727,43 @@ def _run_deltas_in_parallel(rpars, run_tasks):
 
 def _sort_current_deltas_by_element(atoms, atoms_with_vacancies):
     """Re-sort the current_deltas for each `atoms` by element."""
-    for at in atoms:
-        checkEls = list(at.disp_occ.keys())
-        if at in atoms_with_vacancies:
-            checkEls.append("vac")
-        copydel = at.current_deltas[:]
-        at.current_deltas = []
-        for el in checkEls:
-            at.current_deltas.append(
-                [df for df in copydel
-                 if df.split("_")[-2].lower() == el.lower()][0])
-        if len(at.current_deltas) != len(copydel):
-            logger.error("Failed to sort delta files for {}".format(at))
-            raise RuntimeError("Inconsistent delta files")
+    # See bf776a37e14ece851cc8c783a7c376a44e55145f for details on
+    # why sorting is needed.
+    # Each (atom, element) pair should have, by now, exactly one delta
+    # file. In fact, .current_deltas is cleared (i) before each refcalc
+    # (in refcalc._reinitialize_deltas) and (ii) after each search
+    # segment (in run_sections, after each SUPERPOS R, via calls to
+    # slab.restoreOriState(keepDisp=False). The sorting we do here
+    # would not be needed if we would fix #447. However, we would
+    # still probably want to raise if some elements have no delta.
+
+    def _by_element(delta_file):
+        """Extract the "element" from a `delta_file` name."""
+        return delta_file.split('_')[-2].lower()
+
+    for atom in atoms:
+        current_deltas = sorted(atom.current_deltas, key=_by_element)
+        deltas_by_element = {
+            el: tuple(fnames)
+            for el, fnames in itertools.groupby(current_deltas,
+                                                key=_by_element)
+            }
+        duplicate_deltas = {el: fnames
+                            for el, fnames in deltas_by_element.items()
+                            if len(fnames) > 1}
+        if duplicate_deltas:
+            raise DeltasError(
+                f'Found multiple delta files for {atom}, elements '
+                + ', '.join(duplicate_deltas)
+                )
+        element_names = list(atom.disp_occ)
+        if atom in atoms_with_vacancies:
+            element_names.append('vac')
+        sorted_by_element = []
+        for element in element_names:
+            try:
+                sorted_by_element.append(deltas_by_element[element.lower()][0])
+            except KeyError:
+                raise DeltasError(f'Found no delta files for {atom}, '
+                                  f'element {element}')
+        atom.current_deltas = sorted_by_element
