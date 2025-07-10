@@ -40,7 +40,6 @@ def fixture_call_in_tmp(rpars, mocks, tmp_path, mocker):
         args = mocker.MagicMock(name='slab'), rpars
         with execute_in_dir(tmp_path):
             result = deltas(*args, **kwargs)
-        mocks['collect_inputs'].assert_called_once_with(*args),
         mocks['fetch_deltas'].assert_called_once_with(rpars.TENSOR_INDEX,
                                                       required=False)
         mocks['fetch_tensor'].assert_called_once_with(*args)
@@ -48,11 +47,13 @@ def fixture_call_in_tmp(rpars, mocks, tmp_path, mocker):
         todo, at_el_todo, vacancies = mocks['find_varied_atoms'].return_value
         if at_el_todo:
             mocks['remove_param'].assert_called_once_with()
+            mocks['collect_inputs'].assert_called_once_with(*args),
             mocks['make_delta_input'].assert_called()
             mocks['sort_deltas'].assert_called_once_with(todo, vacancies)
             mocks['write_input'].assert_called_once()
         else:
             mocks['remove_param'].assert_not_called()
+            mocks['collect_inputs'].assert_not_called(),
             mocks['make_delta_input'].assert_not_called()
             mocks['sort_deltas'].assert_not_called()
             mocks['pool'].assert_not_called()
@@ -407,13 +408,13 @@ class TestExceptionsPropagated:
 
     _preliminary = (
         'fetch_tensor',
-        'collect_inputs',
         'fetch_deltas',
         'find_varied_atoms',
         )
     _before_suppress = (
         *_preliminary,
         'remove_param',
+        'collect_inputs',
         'make_delta_input',
         'sort_deltas',
         'write_input',

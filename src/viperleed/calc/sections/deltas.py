@@ -369,7 +369,6 @@ def deltas(slab, rpars, subdomain=False):
         rpars.disp_block_read = True
 
     _ensure_tensors_loaded(slab, rpars)
-    static_files_contents = iodeltas.collect_static_input_files(slab, rpars)
 
     # If there are old deltas, pull them in here
     leedbase.getDeltas(rpars.TENSOR_INDEX, required=False)
@@ -378,12 +377,96 @@ def deltas(slab, rpars, subdomain=False):
     if not atElTodo:  # Nothing to calculate
         return
 
-    # move PARAM file
     _remove_old_param_file()
 
-    # create log file:
-    deltalogname = _prepare_log_file(rpars, subdomain)
-    # assemble tasks
+    # Create compilation and running tasks, as well as a log
+    # file for collating the runtime information of the latter.
+    collated_logs_name = _prepare_log_file(rpars, subdomain)
+    delta_tasks = _assemble_tasks(slab,
+                                  rpars,
+                                  atElTodo,
+                                  collated_logs_name)
+    # Ensure stable sorting of the stored delta files. Do so
+    # only after assembling the tasks, as this modifies the
+    # current_deltas of atElTodo.
+    _sort_current_deltas_by_element(attodo, vaclist)
+    iodeltas.write_delta_input_file(*delta_tasks)
+
+    # if execution is suppressed, stop here
+    if rpars.SUPPRESS_EXECUTION and not subdomain:
+        rpars.setHaltingLevel(3)
+        return
+
+    _, run_tasks = delta_tasks
+    if subdomain and run_tasks:
+        rpars.manifest.add(DEFAULT_DELTAS)
+
+    if subdomain:  # Actual calculations done in deltas_domains
+        return delta_tasks
+
+    _compile_and_run_deltas_in_parallel(rpars, *delta_tasks)
+    rpars.manifest.add(DEFAULT_DELTAS)
+
+
+def deltas_domains(rpars):
+    """Define and run delta calculations for all domains."""
+    deltaCompTasks = []
+    deltaRunTasks = []
+    # get input for all domains
+    for domain in rpars.domainParams:
+        logger.info(f'Getting input for delta calculations: {domain}')
+        with execute_in_dir(domain.workdir):
+            try:
+                result = deltas(domain.slab, domain.rpars, subdomain=True)
+            except Exception:
+                logger.error(f'Error while creating delta input for {domain}')
+                raise
+        if type(result) == tuple:
+            # if no deltas need to be calculated returns None
+            deltaCompTasks.extend(result[0])
+            deltaRunTasks.extend(result[1])
+        elif result is not None:
+            raise RuntimeError('Unknown error while creating '
+                               f'delta input for {domain}')
+
+    # if execution is suppressed, stop here
+    if rpars.SUPPRESS_EXECUTION:
+        rpars.setHaltingLevel(3)
+        return
+    _compile_and_run_deltas_in_parallel(rpars, deltaCompTasks, deltaRunTasks)
+
+
+def _assemble_tasks(slab, rpars, atElTodo, deltalogname):
+    """Return compilation/execution tasks for atoms that need deltas.
+
+    Parameters
+    ----------
+    slab : Slab
+        The slab for which delta amplitudes should be calculated.
+    rpars : Rparams
+        The run parameters corresponding to `slab`.
+    atElTodo : Sequence of (Atom, str)
+        Atoms and the corresponding element names for which delta
+        amplitudes should be calculated.
+    deltalogname : str
+        Name of the log file where runtime information from the
+        execution tasks should be collected.
+
+    Returns
+    -------
+    deltaCompTasks : list of DeltaCompileTask
+        Information about which executables need to be compiled
+        to calculate delta amplitudes for `atElTodo`. May have
+        fewer items than `atElTodo`.
+    deltaRunTasks : list of DeltaRunTask
+        Information about which executions of `deltaCompTasks`
+        are needed to produce delta amplitudes for `atElTodo`.
+        As many items as there are `atElTodo`.
+    """
+    # Collect input files that are common to all deltas
+    static_files_contents = iodeltas.collect_static_input_files(slab, rpars)
+
+    # Assemble tasks
     deltaCompTasks = []  # keep track of what versions to compile
     deltaRunTasks = []   # which deltas to run
     tensordir = f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
@@ -421,51 +504,7 @@ def deltas(slab, rpars, subdomain=False):
         rt.deltaname = nameBase + "_{}".format(n)
         rt.deltalogname = deltalogname
         at.current_deltas.append(rt.deltaname)
-
-    _sort_current_deltas_by_element(attodo, vaclist)
-    iodeltas.write_delta_input_file(deltaCompTasks, deltaRunTasks)
-
-    # if execution is suppressed, stop here
-    if rpars.SUPPRESS_EXECUTION and not subdomain:
-        rpars.setHaltingLevel(3)
-        return
-
-    if subdomain and deltaRunTasks:
-        rpars.manifest.add(DEFAULT_DELTAS)
-
-    if subdomain:  # Actual calculations done in deltas_domains
-        return deltaCompTasks, deltaRunTasks
-
-    _compile_and_run_deltas_in_parallel(rpars, deltaCompTasks, deltaRunTasks)
-    rpars.manifest.add(DEFAULT_DELTAS)
-
-
-def deltas_domains(rpars):
-    """Define and run delta calculations for all domains."""
-    deltaCompTasks = []
-    deltaRunTasks = []
-    # get input for all domains
-    for domain in rpars.domainParams:
-        logger.info(f'Getting input for delta calculations: {domain}')
-        with execute_in_dir(domain.workdir):
-            try:
-                result = deltas(domain.slab, domain.rpars, subdomain=True)
-            except Exception:
-                logger.error(f'Error while creating delta input for {domain}')
-                raise
-        if type(result) == tuple:
-            # if no deltas need to be calculated returns None
-            deltaCompTasks.extend(result[0])
-            deltaRunTasks.extend(result[1])
-        elif result is not None:
-            raise RuntimeError('Unknown error while creating '
-                               f'delta input for {domain}')
-
-    # if execution is suppressed, stop here
-    if rpars.SUPPRESS_EXECUTION:
-        rpars.setHaltingLevel(3)
-        return
-    _compile_and_run_deltas_in_parallel(rpars, deltaCompTasks, deltaRunTasks)
+    return deltaCompTasks, deltaRunTasks
 
 
 def _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks):
