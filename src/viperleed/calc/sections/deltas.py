@@ -410,8 +410,8 @@ def deltas(slab, rpars, subdomain=False):
 
 def deltas_domains(rpars):
     """Define and run delta calculations for all domains."""
-    deltaCompTasks = []
-    deltaRunTasks = []
+    compile_tasks = []
+    run_tasks = []
     # get input for all domains
     for domain in rpars.domainParams:
         logger.info(f'Getting input for delta calculations: {domain}')
@@ -423,8 +423,8 @@ def deltas_domains(rpars):
                 raise
         if type(result) == tuple:
             # if no deltas need to be calculated returns None
-            deltaCompTasks.extend(result[0])
-            deltaRunTasks.extend(result[1])
+            compile_tasks.extend(result[0])
+            run_tasks.extend(result[1])
         elif result is not None:
             raise RuntimeError('Unknown error while creating '
                                f'delta input for {domain}')
@@ -433,7 +433,7 @@ def deltas_domains(rpars):
     if rpars.SUPPRESS_EXECUTION:
         rpars.setHaltingLevel(3)
         return
-    _compile_and_run_deltas_in_parallel(rpars, deltaCompTasks, deltaRunTasks)
+    _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks)
 
 
 def _assemble_tasks(slab, rpars, atElTodo, deltalogname):
