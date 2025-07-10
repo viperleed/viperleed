@@ -369,8 +369,11 @@ def deltas(slab, rpars, subdomain=False):
     # If there are old deltas, pull them in here
     leedbase.getDeltas(rpars.TENSOR_INDEX, required=False)
 
-    attodo, atElTodo, vaclist = _find_atoms_that_need_deltas(slab, rpars)
-    if not atElTodo:  # Nothing to calculate
+    (atoms_with_displacements,
+     atom_element_pairs_requiring_new_deltas,
+     atoms_with_vacancies) = _find_atoms_that_need_deltas(slab, rpars)
+    if not atom_element_pairs_requiring_new_deltas:
+        # Nothing to calculate
         return
 
     _remove_old_param_file()
@@ -380,12 +383,13 @@ def deltas(slab, rpars, subdomain=False):
     collated_logs_name = _prepare_log_file(rpars, subdomain)
     delta_tasks = _assemble_tasks(slab,
                                   rpars,
-                                  atElTodo,
+                                  atom_element_pairs_requiring_new_deltas,
                                   collated_logs_name)
     # Ensure stable sorting of the stored delta files. Do so
     # only after assembling the tasks, as this modifies the
-    # current_deltas of atElTodo.
-    _sort_current_deltas_by_element(attodo, vaclist)
+    # current_deltas of atom_elements_todo.
+    _sort_current_deltas_by_element(atoms_with_displacements,
+                                    atoms_with_vacancies)
     iodeltas.write_delta_input_file(*delta_tasks)
 
     # if execution is suppressed, stop here
