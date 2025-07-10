@@ -237,7 +237,7 @@ class TestDeltasCalls:
         call_in_tmp()
 
     @staticmethod
-    def _check_exec_calls(rpars, mocks, n_parallel_calls, pool_run):
+    def _check_stopped_exec_calls(rpars, mocks, n_parallel_calls, pool_run):
         """Ensure calls during execution are as expected."""
         assert mocks['pool'].call_count == n_parallel_calls
         *static_args, tasks = mocks['pool'].call_args[0]
@@ -255,10 +255,12 @@ class TestDeltasCalls:
 
         mocks['pool'].side_effect = _set_stop
         call_in_tmp()
-        self._check_exec_calls(rpars,
-                               mocks,
-                               n_parallel_calls=1,  # compile only
-                               pool_run=compile_delta)
+        self._check_stopped_exec_calls(
+            rpars,
+            mocks,
+            n_parallel_calls=1,  # compile only
+            pool_run=compile_delta,
+            )
 
     @use('mock_atoms_need_deltas')
     def test_stop_after_run(self, rpars, call_in_tmp, mocks):
@@ -269,10 +271,12 @@ class TestDeltasCalls:
 
         mocks['pool'].side_effect = _set_stop_after_run
         call_in_tmp()
-        self._check_exec_calls(rpars,
-                               mocks,
-                               n_parallel_calls=2,  # compile, then run
-                               pool_run=run_delta)
+        self._check_stopped_exec_calls(
+            rpars,
+            mocks,
+            n_parallel_calls=2,  # compile, then run
+            pool_run=run_delta,
+            )
 
     @use('mock_atoms_need_deltas', 'mocks')
     def test_triggers_compiler_discovery_if_missing(self, rpars, call_in_tmp):
