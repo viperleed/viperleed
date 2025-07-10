@@ -458,14 +458,16 @@ void handleErrors(){
         raise(ERROR_RUNTIME);
         return;
     }
-	
-	coil_1.set_duty_cycle(0.0);
-	coil_2.set_duty_cycle(0.0);  
 
     // First, report the error, so the PC knows
     // there may be some cleanup going on
     encodeAndSend(PC_ERROR);
     encodeAndSend(errorTraceback, LENGTH(errorTraceback));
+
+    // Disable dynamic compensation and set coil voltages to zero.
+    enableDynamic = false;
+    coil_1.set_duty_cycle(0.0);
+    coil_2.set_duty_cycle(0.0);
 
     // Then clean up possible mess that caused the error
     switch(errorTraceback[1]){
