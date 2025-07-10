@@ -20,11 +20,9 @@ import subprocess
 import numpy as np
 
 from viperleed.calc.constants import DEFAULT_DELTAS
-from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iodeltas
 from viperleed.calc.files import iotensors
-from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
