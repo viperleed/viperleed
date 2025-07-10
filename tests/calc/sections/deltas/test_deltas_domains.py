@@ -74,7 +74,7 @@ def fixture_mock_domain_tasks(mocks, rpars):
                              'comp_tasks and run_tasks.')
         src_dir = rpars.get_tenserleed_directory.return_value.path
         comp_tasks = (
-            [DeltaCompileTask(f'param for domain {d}', 'hash', src_dir, i)
+            [DeltaCompileTask(f'param for domain {d}', src_dir, i)
              for i in range(n_comptask_domain)]
             for d, n_comptask_domain in enumerate(n_comptasks)
             )

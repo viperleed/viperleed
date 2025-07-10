@@ -21,6 +21,8 @@ from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.sections.deltas import DeltaCompileTask
+from viperleed.calc.sections.deltas import DeltaRunTask
 from viperleed.calc.sections.deltas import compile_delta
 from viperleed.calc.sections.deltas import deltas
 from viperleed.calc.sections.deltas import run_delta
@@ -74,8 +76,9 @@ def fixture_mock_atoms_need_deltas(mocks, mocker):
 
 
 @fixture(name='mocks')
-def fixture_mock_implementation(mocker):
+def fixture_mock_implementation(rpars, mocker):
     """Replace implementation details of the deltas function with mocks."""
+    tl_path = rpars.get_tenserleed_directory.return_value.path
     return {
         'read_disp': mocker.patch(f'{_MODULE}.readDISPLACEMENTS_block'),
         'fetch_tensor': mocker.patch(f'{_MODULE}._ensure_tensors_loaded'),
@@ -105,7 +108,10 @@ def fixture_mock_implementation(mocker):
             ),
         'make_tasks': mocker.patch(
             f'{_MODULE}._assemble_tasks',
-            return_value=[(mocker.MagicMock(),) for _ in range(2)],
+            return_value=(
+                [DeltaCompileTask('param', tl_path, 'index')],
+                [DeltaRunTask('comptask')],
+                ),
             )
         }
 

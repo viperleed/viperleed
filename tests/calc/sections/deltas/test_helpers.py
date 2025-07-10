@@ -54,6 +54,18 @@ class TestAssembleTasks:
             return (f'din_{atom.num}_{element}',
                     f'dinshort_{atom.num}_{element}',
                     f'param_{element}')
+        deltas_by_pattern = {
+            'DEL_1_Fe_*': ('DEL_1_Fe_1', 'DEL_1_Fe_notanint'),
+            'DEL_2_Co_*': ('DEL_2_Co_2', 'DEL_2_Co_'),
+            'DEL_3_Ni_*': (),
+            }
+        def mock_glob(_, pattern):
+            try:
+                delta_names = deltas_by_pattern[pattern]
+            except KeyError:
+                delta_names = ()
+            yield from (Path(f) for f in delta_names)
+
         return {
             'collect_inputs': mocker.patch(
                 'viperleed.calc.files.iodeltas.collect_static_input_files',
@@ -63,13 +75,7 @@ class TestAssembleTasks:
                 'viperleed.calc.files.iodeltas.generateDeltaInput',
                 side_effect=_mock_make_delta_input,
                 ),
-            'listdir':  mocker.patch(
-                'os.listdir',
-                return_value=['DEL_1_Fe_1',
-                              'DEL_2_Co_2',
-                              'DEL_1_Fe_notanint',
-                              'DEL_2_Co_'],
-                ),
+            'glob': mocker.patch('pathlib.Path.glob', mock_glob),
             }
 
     @staticmethod

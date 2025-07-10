@@ -62,7 +62,7 @@ class DeltaCompileTask:
         source files to be compiled.
     """
 
-    def __init__(self, param, hash_, source_dir, index):
+    def __init__(self, param, source_dir, index):
         """Initialize instance.
 
         Parameters
@@ -70,9 +70,6 @@ class DeltaCompileTask:
         param : str
             Contents of the PARAM file, defining array dimensions
             for compilation.
-        hash_ : str
-            A unique identifier for this task. Usually calculated
-            from `param`.
         source_dir : Path
             Path to the folder containing the static Fortran
             source files to be compiled.
@@ -88,7 +85,6 @@ class DeltaCompileTask:
         self.exename = f'delta-{index}'
         self.foldername = f'Delta_Compile_{index}'
         self.fortran_comp = ['', '']
-        self.hash = hash_
         self.param = param
         self.source_dir = Path(source_dir).resolve()  # where the fortran files are
 
@@ -436,7 +432,7 @@ def deltas_domains(rpars):
     _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks)
 
 
-def _assemble_tasks(slab, rpars, atElTodo, deltalogname):
+def _assemble_tasks(slab, rpars, atom_element_pairs, deltalogname):
     """Return compilation/execution tasks for atoms that need deltas.
 
     Parameters
@@ -445,7 +441,7 @@ def _assemble_tasks(slab, rpars, atElTodo, deltalogname):
         The slab for which delta amplitudes should be calculated.
     rpars : Rparams
         The run parameters corresponding to `slab`.
-    atElTodo : Sequence of (Atom, str)
+    atom_element_pairs : Sequence of (Atom, str)
         Atoms and the corresponding element names for which delta
         amplitudes should be calculated.
     deltalogname : str
@@ -456,55 +452,47 @@ def _assemble_tasks(slab, rpars, atElTodo, deltalogname):
     -------
     deltaCompTasks : list of DeltaCompileTask
         Information about which executables need to be compiled
-        to calculate delta amplitudes for `atElTodo`. May have
-        fewer items than `atElTodo`.
+        to calculate delta amplitudes for `atom_element_pairs`.
+        May have fewer items than `atom_element_pairs`.
     deltaRunTasks : list of DeltaRunTask
-        Information about which executions of `deltaCompTasks`
-        are needed to produce delta amplitudes for `atElTodo`.
-        As many items as there are `atElTodo`.
+        Information about which executions of `deltaCompTasks` are
+        needed to produce delta amplitudes for `atom_element_pairs`.
+        As many items as there are `atom_element_pairs`.
     """
     # Collect input files that are common to all deltas
     static_files_contents = iodeltas.collect_static_input_files(slab, rpars)
 
     # Assemble tasks
-    deltaCompTasks = []  # keep track of what versions to compile
-    deltaRunTasks = []   # which deltas to run
-    tensordir = f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
-    tl_source = rpars.get_tenserleed_directory()
-    tl_path = tl_source.path
-    for (at, el) in atElTodo:
-        din, din_short, param = iodeltas.generateDeltaInput(
-            at, el, slab, rpars, *static_files_contents)
-        h = hashlib.md5(param.encode()).digest()
-        found = False
-        for ct in deltaCompTasks:
-            if ct.hash == h:
-                found = True
-                rt = DeltaRunTask(ct)
-                break
-        if not found:
-            index = len(deltaCompTasks)
-            ct = DeltaCompileTask(param, h, tl_path, index)
-            deltaCompTasks.append(ct)
-            rt = DeltaRunTask(ct)
-        deltaRunTasks.append(rt)
-        rt.din = din
-        rt.din_short = din_short
-        rt.tensorname = os.path.join(tensordir, f'T_{at.num}')
-        nameBase = f'DEL_{at.num}_{el}'
-        n = 1
-        nums = []
-        for fn in [f for f in os.listdir(".") if f.startswith(nameBase)]:
-            try:
-                nums.append(int(fn.split("_")[-1]))
-            except Exception:
-                pass
-        if nums:
-            n = max(nums) + 1
-        rt.deltaname = nameBase + "_{}".format(n)
-        rt.deltalogname = deltalogname
-        at.current_deltas.append(rt.deltaname)
-    return deltaCompTasks, deltaRunTasks
+    comp_tasks_by_hash = {}  # Which versions to compile
+    run_tasks = []           # Which deltas to run
+    tensordir = Path(f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}')
+    tl_path = rpars.get_tenserleed_directory().path
+    for atom, element in atom_element_pairs:
+        *din, param = iodeltas.generateDeltaInput(atom,
+                                                  element,
+                                                  slab,
+                                                  rpars,
+                                                  *static_files_contents)
+        hash_ = hashlib.md5(param.encode()).digest()
+        compile_task = comp_tasks_by_hash.setdefault(
+            hash_,
+            DeltaCompileTask(param, tl_path, len(comp_tasks_by_hash))
+            )
+        run_tasks.append(
+            _create_runtask(atom, element, compile_task, din, tensordir)
+            )
+        run_tasks[-1].deltalogname = deltalogname
+    return list(comp_tasks_by_hash.values()), run_tasks
+
+
+def _create_runtask(atom, element, compile_task, din, tensordir):
+    """Return a new DeltaRunTask for an (atom, element) pair."""
+    run_task = DeltaRunTask(compile_task)
+    run_task.din, run_task.din_short = din
+    run_task.tensorname = str(tensordir / f'T_{atom.num}')
+    run_task.deltaname = _get_unique_delta_file_name(atom, element)
+    atom.current_deltas.append(run_task.deltaname)
+    return run_task
 
 
 def _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks):
@@ -699,6 +687,20 @@ def _find_atoms_that_need_deltas(sl, rp):
                     .format(countExisting, len(atElTodo) + countExisting,
                             len(atElTodo)))
     return attodo, atElTodo, vaclist
+
+
+def _get_unique_delta_file_name(atom, element):
+    """Return a unique name for a delta file for an (atom, element) pair."""
+    def _get_delta_index(file):
+        try:
+            return int(file.name.split('_')[-1])
+        except ValueError:
+            return 0
+
+    delta_name_prefix = f'DEL_{atom.num}_{element}'
+    delta_indices = (_get_delta_index(f)
+                     for f in Path.cwd().glob(f'{delta_name_prefix}_*'))
+    return f'{delta_name_prefix}_{max(delta_indices, default=0) + 1}'
 
 
 def _prepare_log_file(rpars, subdomain):
