@@ -373,3 +373,70 @@ class TestDeltasRaises:
         rpars.getFortranComp.side_effect = Exception('no compiler')
         with pytest.raises(RuntimeError):
             call_in_tmp()
+
+
+class TestExceptionsPropagated:
+    """Test that exceptions in helpers are not caught."""
+
+    with_exceptions = parametrize(exc=(Exception, BaseException))
+
+    @staticmethod
+    def check_propagates(exc, call_in_tmp, mocks, mock_name):
+        """Ensure that exceptions in a given mock are propagated."""
+        mocks[mock_name].side_effect = exc
+        with pytest.raises(exc):
+            call_in_tmp()
+
+    @with_exceptions
+    def test_deltas_domains(self, exc, rpars, mocker):
+        """Check propagation of exceptions in deltas_domains."""
+        mocker.patch(f'{_MODULE}.deltas_domains', side_effect=exc)
+        rpars.domainParams = ['some domain']
+        with pytest.raises(exc):
+            deltas('mock_slab', rpars)
+
+    @with_exceptions
+    def test_read_displacements(self, exc, rpars, call_in_tmp, mocks):
+        """Check propagation of exceptions in readDISPLACEMENTS_block."""
+        rpars.disp_block_read = False
+        self.check_propagates(exc, call_in_tmp, mocks, 'read_disp')
+
+    _preliminary = (
+        'fetch_tensor',
+        'collect_inputs',
+        'fetch_deltas',
+        'find_varied_atoms',
+        )
+    _before_suppress = (
+        *_preliminary,
+        'remove_param',
+        'make_delta_input',
+        'sort_deltas',
+        'write_input',
+        )
+    _execution = (
+        *_before_suppress,
+        )
+
+    @use('no_deltas_to_do')
+    @with_exceptions
+    @parametrize(mock_name=_preliminary)
+    def test_preliminary_call(self, exc, mock_name, call_in_tmp, mocks):
+        """Check propagation of exceptions in helpers called before tasks."""
+        self.check_propagates(exc, call_in_tmp, mocks, mock_name)
+
+    @use('mock_atoms_need_deltas')
+    @with_exceptions
+    @parametrize(mock_name=_before_suppress)
+    def test_suppressed(self, exc, rpars, mock_name, call_in_tmp, mocks):
+        """Ensure propagation of exceptions in helpers before early return."""
+        rpars.SUPPRESS_EXECUTION = True
+        self.check_propagates(exc, call_in_tmp, mocks, mock_name)
+
+    @use('mock_atoms_need_deltas')
+    @with_exceptions
+    @parametrize(mock_name=_execution)
+    def test_execution(self, exc, rpars, mock_name, call_in_tmp, mocks):
+        """Ensure propagation of exceptions in helpers before early return."""
+        rpars.SUPPRESS_EXECUTION = False
+        self.check_propagates(exc, call_in_tmp, mocks, mock_name)
