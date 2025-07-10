@@ -787,5 +787,5 @@ def _sort_current_deltas_by_element(atoms, atoms_with_vacancies):
                 sorted_by_element.append(deltas_by_element[element.lower()][0])
             except KeyError:
                 raise DeltasError(f'Found no delta files for {atom}, '
-                                  f'element {element}')
+                                  f'element {element}') from None
         atom.current_deltas = sorted_by_element
