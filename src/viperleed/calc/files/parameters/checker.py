@@ -104,8 +104,8 @@ class ParametersChecker:
             # ignore for TensErLEED backend
             return
 
-        deltas_removed = [sec for sec in self._rpars.RUN
-                          if sec is not Section.DELTAS]
+        # TODO: replace with section.DELTAS when segments are full implemented
+        deltas_removed = [sec for sec in self._rpars.RUN if sec != 2]
         if len(deltas_removed) < len(self._rpars.RUN):
             # warn that we removed the delta-amplitude calculation
             _LOGGER.warning(
@@ -113,8 +113,8 @@ class ParametersChecker:
                 'ViPErLEED JAX backend. The delta-amplitude calculation '
                 'segments have been removed from the RUN parameter.'
                 )
-        superpos_removed = [sec for sec in deltas_removed
-                            if sec is not Section.SUPERPOS]
+        # TODO: replace with section.SUPERPOS when segments are full implemented
+        superpos_removed = [sec for sec in deltas_removed if sec != 31]
         if len(superpos_removed) < len(deltas_removed):
             # warn that we removed the superposition calculation
             _LOGGER.warning(
@@ -123,4 +123,3 @@ class ParametersChecker:
                 'segments have been removed from the RUN parameter.'
                 )
         self._rpars.RUN = superpos_removed
-
