@@ -227,7 +227,7 @@ param 3. Has no runtasks
     def test_write_fails(self, mock_tasks, mocker, caplog):
         """Check that failure to write the input file is tolerated."""
         input_file_name = 'delta-input'
-        mocker.patch('builtins.open', side_effect=Exception)
+        mocker.patch('pathlib.Path.write_text', side_effect=OSError)
         write_delta_input_file(*mock_tasks)
         expect_log = f'Failed to write file {input_file_name!r}'
         assert expect_log in caplog.text

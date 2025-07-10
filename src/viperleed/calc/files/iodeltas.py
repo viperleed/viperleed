@@ -414,7 +414,7 @@ def generateDeltaBasic(sl, rp):
     return output
 
 
-def write_delta_input_file(deltaCompTasks, deltaRunTasks):
+def write_delta_input_file(compile_tasks, run_tasks):
     """Write a collection of the inputs for all delta calculations.
 
     The delta-input file is meant for users' debug purposes (or
@@ -426,9 +426,9 @@ def write_delta_input_file(deltaCompTasks, deltaRunTasks):
 
     Parameters
     ----------
-    deltaCompTasks : Sequence of DeltaCompileTask
+    compile_tasks : Sequence of DeltaCompileTask
         Information about which executables need to be compiled.
-    deltaRunTasks : Sequence of DeltaRunTask
+    run_tasks : Sequence of DeltaRunTask
         Information about which delta calculations should be
         executed.
 
@@ -436,25 +436,35 @@ def write_delta_input_file(deltaCompTasks, deltaRunTasks):
     -------
     None.
     """
-    dinput = ("""# ABOUT THIS FILE:
+    fpath = Path('delta-input')
+    dinput = '''\
+# ABOUT THIS FILE:
 # Input for the delta-calculations is collected here. The blocks of data are
 # new 'PARAM' files, which are used to recompile the fortran code, and input
 # for generation of specific DELTA files. Lines starting with '#' are comments
 # on the function of the next block of data.
 # In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
 # entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
-""")
-    for ct in deltaCompTasks:
-        dinput += ("\n#### NEW 'PARAM' FILE: ####\n\n" + ct.param + "\n")
-        for rt in [t for t in deltaRunTasks if t.comptask == ct]:
-            dinput += ("\n#### INPUT for new DELTA file {}: ####\n\n"
-                       .format(rt.deltaname) + rt.din_short + "\n")
+'''
+    for compile_task in compile_tasks:
+        dinput += f'''
+#### NEW 'PARAM' FILE: ####
+
+{compile_task.param}
+'''
+        for run_task in run_tasks:
+            if run_task.comptask is not compile_task:
+                continue
+            dinput += f'''
+#### INPUT for new DELTA file {run_task.deltaname}: ####
+
+{run_task.din_short}
+'''
     try:
-        with open("delta-input", "w") as wf:
-            wf.write(dinput)
-    except Exception:
-        logger.warning("Failed to write file 'delta-input'. This will "
-                       "not affect TensErLEED execution, proceeding...")
+        fpath.write_text(dinput, encoding='utf-8')
+    except OSError:
+        logger.warning(f'Failed to write file {fpath.name!r}. This will '
+                       'not affect TensErLEED execution, proceeding...')
 
 
 def _fetch_auxbeams(rpars):
