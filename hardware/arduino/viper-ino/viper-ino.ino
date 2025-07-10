@@ -310,7 +310,7 @@ void getConfiguration(){
     The serial number is read from the EEPROM.
 
     Writes
-    -----
+    ------
     hardwareDetected
 
     Msg to PC
