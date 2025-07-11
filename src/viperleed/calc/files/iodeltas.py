@@ -218,7 +218,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic, auxbeams,
         The Slab object containing atom information.
     rp : Rparams
         The run parameters object.
-    deltaBasic : str, optional
+    deltaBasic : str
         Part of delta input that is the same for all atoms. Use
         generateDeltaBasic for creating this.
     auxbeams : str
@@ -418,7 +418,7 @@ def write_delta_input_file(compile_tasks, run_tasks):
     """Write a collection of the inputs for all delta calculations.
 
     The delta-input file is meant for users' debug purposes (or
-    manual execution of a delta calculation). It collated the
+    manual execution of a delta calculation). It collates the
     PARAM files (i.e., array dimensions) for the delta-amplitude
     executables that are compiled, as well as a short version of
     the input piped to these executables when called to produce
