@@ -20,8 +20,6 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_DELTAS
-from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.sections.deltas import DeltaCompileTask
 from viperleed.calc.sections.deltas import DeltaRunTask
@@ -36,128 +34,99 @@ use = pytest.mark.usefixtures
 
 
 @fixture(name='call_in_tmp')
-def fixture_call_in_tmp(rpars, tmp_path):
+def fixture_call_in_tmp(rpars, mocks, tmp_path, mocker):
     """Call deltas in a temporary directory."""
     def _call(**kwargs):
+        args = mocker.MagicMock(name='slab'), rpars
         with execute_in_dir(tmp_path):
-            return deltas('mock_slab', rpars, **kwargs)
+            result = deltas(*args, **kwargs)
+        assert result is None
+        mocks['fetch_deltas'].assert_called_once_with(rpars.TENSOR_INDEX,
+                                                      required=False)
+        mocks['fetch_tensor'].assert_called_once_with(*args)
+        mocks['find_varied_atoms'].assert_called_once_with(*args)
+        todo, at_el_todo, vacancies = mocks['find_varied_atoms'].return_value
+        if at_el_todo:
+            mocks['remove_param'].assert_called_once_with()
+            mocks['make_tasks'].assert_called_once_with(
+                *args,
+                at_el_todo,
+                f'delta-{rpars.timestamp}.log',
+                )
+            mocks['sort_deltas'].assert_called_once_with(todo, vacancies)
+            mocks['write_input'].assert_called_once_with(
+                *mocks['make_tasks'].return_value,
+                )
+        else:
+            mocks['remove_param'].assert_not_called()
+            mocks['make_tasks'].assert_not_called()
+            mocks['sort_deltas'].assert_not_called()
+            mocks['pool'].assert_not_called()
+            mocks['write_input'].assert_not_called()
     return _call
 
 
 @fixture(name='mock_atoms_need_deltas')
-def fixture_mock_atoms_need_deltas(mocker):
+def fixture_mock_atoms_need_deltas(mocks, mocker):
     """Replace the _find_atoms_that_need_deltas function with a mock."""
-    atoms_todo = [
-        # Fake Atom objects with bare-bone attributes
-        mocker.MagicMock(name=f'Fake Atom {i}', known_deltas=[], num=i)
-        for i in range(6)
-        ]
-    atoms_todo[0].disp_occ = {'ElementOne': None,
-                              'ElementTwo': None}
-    atoms_todo[1].disp_occ = {'OnlyOneElement': None}
-    atoms_todo[2].disp_occ = {'ElementOne': None,
-                              'ElementTwo': None,
-                              'ElementThree': None}
-    atoms_todo[3].disp_occ = {'ElementOne': None}
-    atoms_todo[4].disp_occ = {'OnlyOneElement': None}
-    atoms_todo[5].disp_occ = {'OnlyOneElement': None}
-
-    at_el_todo = [
-        (atoms_todo[0], 'ElementOne'),
-        (atoms_todo[0], 'ElementTwo'),
-        (atoms_todo[1], 'OnlyOneElement'),
-        (atoms_todo[2], 'ElementOne'),
-        (atoms_todo[2], 'ElementTwo'),
-        (atoms_todo[2], 'ElementThree'),
-        (atoms_todo[2], 'Vac'),   # Auto-added
-        (atoms_todo[3], 'Vac'),   # Auto-added
-        (atoms_todo[3], 'ElementOne'),
-        (atoms_todo[4], 'OnlyOneElement'),
-        (atoms_todo[5], 'OnlyOneElement'),
-        ]
-    at_with_vacancies = [atoms_todo[2], atoms_todo[3]]
-    return mocker.patch(
+    mocks['find_varied_atoms'] = mocker.patch(
         f'{_MODULE}._find_atoms_that_need_deltas',
-        return_value=(atoms_todo, at_el_todo, at_with_vacancies),
+        return_value=tuple(mocker.MagicMock() for _ in range(3)),
         )
 
 
 @fixture(name='mocks')
-def fixture_mock_implementation(mocker):
+def fixture_mock_implementation(rpars, mocker):
     """Replace implementation details of the deltas function with mocks."""
-    files_read = []
-    def _mock_read_text(path, **kwargs):
-        # pylint: disable-next=magic-value-comparison
-        assert kwargs['encoding'] == 'utf-8'
-        files_read.append(path)
-        return 'fake text\n'
-    read_orig = Path.read_text
-    mocker.patch('pathlib.Path.read_text', _mock_read_text)
-
+    tl_path = rpars.get_tenserleed_directory.return_value.path
     return {
         'read_disp': mocker.patch(f'{_MODULE}.readDISPLACEMENTS_block'),
-        'fetch tensor': mocker.patch(
-            f'{_MODULE}.iotensors.fetch_unpacked_tensor'
-            ),
-        'load refcalc': mocker.patch(
-            f'{_MODULE}.iotensors.getTensorOriStates'
-            ),
-        'fetch deltas': mocker.patch(f'{_MODULE}.leedbase.getDeltas'),
-        'copy': mocker.patch('shutil.copy2'),
+        'fetch_tensor': mocker.patch(f'{_MODULE}._ensure_tensors_loaded'),
+        'fetch_deltas': mocker.patch(f'{_MODULE}.leedbase.getDeltas'),
         'rmtree': mocker.patch('shutil.rmtree'),
         'is_dir': mocker.patch('pathlib.Path.is_dir', return_value=True),
-        'is_file_orig': Path.is_file,  # Before mocking it
-        'is_file': mocker.patch('pathlib.Path.is_file', return_value=True),
-        'read_orig': read_orig,
-        'files_read': files_read,
         'os.listdir': mocker.patch('os.listdir', return_value=[]),
-        'delta input base': mocker.patch(
-            f'{_MODULE}.iodeltas.generateDeltaBasic',
-            return_value='dbasic',
+        'collect_inputs': mocker.patch(
+            'viperleed.calc.files.iodeltas.collect_static_input_files',
+            return_value=(mocker.MagicMock(),)*3,
             ),
-        'delta input': mocker.patch(
-            f'{_MODULE}.iodeltas.generateDeltaInput',
+        'make_delta_input': mocker.patch(
+            'viperleed.calc.files.iodeltas.generateDeltaInput',
             side_effect=(('din', 'short', f'param {i}') for i in range(99999)),
             ),
         'check delta': mocker.patch(f'{_MODULE}.iodeltas.checkDelta',
                                     return_value=False),
-        'writeAUXBEAMS': mocker.patch(f'{_MODULE}.writeAUXBEAMS'),
         'checksums': mocker.patch(f'{_MODULE}.validate_multiple_files'),
         'pool': mocker.patch(f'{_MODULE}.parallelization.monitoredPool'),
         'copy_log': mocker.patch(f'{_MODULE}.leedbase.copy_compile_log'),
+        'remove_param': mocker.patch(f'{_MODULE}._remove_old_param_file'),
+        'sort_deltas': mocker.patch(
+            f'{_MODULE}._sort_current_deltas_by_element',
+            ),
+        'write_input': mocker.patch(
+            'viperleed.calc.files.iodeltas.write_delta_input_file',
+            ),
+        'make_tasks': mocker.patch(
+            f'{_MODULE}._assemble_tasks',
+            return_value=(
+                [DeltaCompileTask('param', tl_path, 'index')],
+                [DeltaRunTask('comptask')],
+                ),
+            )
         }
 
 
 @fixture(name='no_deltas_to_do')
-def fixture_no_atoms_need_deltas(mocker):
+def fixture_no_atoms_need_deltas(mocks, mocker):
     """Replace the _find_atoms_that_need_deltas function with a mock."""
-    return mocker.patch(f'{_MODULE}._find_atoms_that_need_deltas',
-                        return_value=([], [], []))
+    mocks['find_varied_atoms'] = mocker.patch(
+        f'{_MODULE}._find_atoms_that_need_deltas',
+        return_value=([], [], []),
+        )
 
 
 class TestDeltasCalls:
     """Tests for implementation calls by the deltas function."""
-
-    @use('mock_atoms_need_deltas')
-    def test_called_for_subdomain(self, rpars, mocks, call_in_tmp, mocker):
-        """Check differences between calls as "main" or as subdomain."""
-        rpars.SUPPRESS_EXECUTION = True  # Skipped for subdomain
-        rpars.FORTRAN_COMP[0] = ''
-        log_info = mocker.patch(f'{_MODULE}.logger.info')
-        result = call_in_tmp(subdomain=True)
-        assert result is not None
-        log_info.assert_not_called()
-        rpars.getFortranComp.assert_not_called()
-        rpars.setHaltingLevel.assert_not_called()
-        rpars.updateCores.assert_not_called()
-        assert DEFAULT_DELTAS in rpars.manifest
-        not_called = (
-            'checksums',
-            'pool',
-            'copy_log',
-            )
-        for mock_name in not_called:
-            mocks[mock_name].assert_not_called()
 
     @use('mock_atoms_need_deltas')
     @parametrize(enable=(True, False))
@@ -174,8 +143,7 @@ class TestDeltasCalls:
     def test_compile_and_run(self, rpars, mocks, call_in_tmp, caplog):
         """Check a full, clean execution for a single domain."""
         caplog.set_level(logging.INFO)
-        result = call_in_tmp(subdomain=False)
-        assert result is None
+        call_in_tmp()
         rpars.updateCores.assert_called_once()
         assert DEFAULT_DELTAS in rpars.manifest
         n_parallel_calls = 2  # compile, then run
@@ -192,43 +160,23 @@ class TestDeltasCalls:
         log = caplog.text
         assert all(re.search(pattern, log) for pattern in expect_log)
 
+    @use('no_deltas_to_do')
+    def test_displacements_already_read(self, rpars, call_in_tmp, mocks):
+        """Check expected calls when deltas are calculated after refcalc."""
+        rpars.disp_block_read = True
+        call_in_tmp()
+        mocks['read_disp'].assert_not_called()
+
+        # Ensure no log file is present in the current directory
+        assert not any(Path.cwd().glob('*.log'))
+
     def test_domains_main(self, rpars, mocker):
         """Check calls when deltas is called in a multi-domain calculation."""
         rpars.domainParams = ['Domain 1']
         domains_impl = mocker.patch(f'{_MODULE}.deltas_domains')
-        result = deltas(mocker.MagicMock(name='slab'), rpars)
+        result = deltas(None, rpars)
         domains_impl.assert_called_once_with(rpars)
         assert result is None
-
-    def test_prerun_calls_when_run_after_refcalc(self,
-                                                 rpars,
-                                                 no_deltas_to_do,
-                                                 mocks,
-                                                 mocker):
-        """Check expected calls when deltas are calculated after refcalc."""
-        rpars.disp_block_read = True
-        mock_slab = mocker.MagicMock(name='slab')
-        mocks['find_varied_atoms'] = no_deltas_to_do
-        deltas(mock_slab, rpars)
-        not_called = (
-            'read_disp',
-            'load refcalc',
-            'copy',           # No missing input files copied
-            'delta input',    # No deltas to calculate
-            )
-        called = {
-            'fetch tensor': mocker.call(rpars.TENSOR_INDEX),
-            'fetch deltas': mocker.call(rpars.TENSOR_INDEX, required=False),
-            'delta input base': mocker.call(mock_slab, rpars),
-            'find_varied_atoms': mocker.call(mock_slab, rpars),
-            }
-        for mock_name in not_called:
-            mocks[mock_name].assert_not_called()
-        for mock_name, expect_call in called.items():
-            assert mocks[mock_name].mock_calls == [expect_call]
-
-        # Ensure no log file is present in the current directory
-        assert not any(Path.cwd().glob('*.log'))
 
     @use('no_deltas_to_do')
     def test_reads_most_recent_displacements_block(self, rpars, mocks, mocker):
@@ -244,47 +192,43 @@ class TestDeltasCalls:
         assert rpars.disp_block_read
 
     @use('no_deltas_to_do')
-    def test_run_without_refcalc(self, rpars, mocks, mocker, caplog):
+    def test_run_without_refcalc(self, rpars, call_in_tmp):
         """Check calls when deltas execute as the first segment."""
-        caplog.set_level(logging.DEBUG)
-        mock_slab = mocker.MagicMock()
         rpars.runHistory = [0, 2, 3, 12, 99, 57]  # No refcalc (== 1)
-        deltas(mock_slab, rpars)
-        tensor_path = (
-            Path(DEFAULT_TENSORS)
-            / f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX}'
-            )
-        assert mocks['load refcalc'].mock_calls == [
-            mocker.call(mock_slab, tensor_path),
-            ]
-        assert mock_slab.restoreOriState.mock_calls == [
-            mocker.call(keepDisp=True),
-            ]
-        expect_log = 'Running without reference calculation'
-        assert expect_log in caplog.text
+        call_in_tmp()
 
-    def test_stop_after_compile(self,
-                                rpars,
-                                call_in_tmp,
-                                mock_atoms_need_deltas,
-                                mocks):
+    @staticmethod
+    def _check_stopped_exec_calls(rpars,
+                                  mocks,
+                                  n_parallel_calls,
+                                  pool_run,
+                                  expect_tasks):
+        """Ensure calls during execution are as expected."""
+        assert mocks['pool'].call_count == n_parallel_calls
+        args = mocks['pool'].call_args[0]
+        size = min(rpars.N_CORES, len(expect_tasks))
+        assert args == (rpars, size, pool_run, expect_tasks)
+        mocks['rmtree'].assert_not_called()
+        mocks['copy_log'].assert_not_called()
+
+    @use('mock_atoms_need_deltas')
+    def test_stop_after_compile(self, rpars, call_in_tmp, mocks):
         """Check expected calls when deltas are only compiled."""
         def _set_stop(*_, **__):
             rpars.STOP = True
 
         mocks['pool'].side_effect = _set_stop
         call_in_tmp()
-        mocks['pool'].assert_called_once()
-        *static_args, tasks = mocks['pool'].call_args[0]
-        n_tasks = len(mock_atoms_need_deltas.return_value[1])
-        assert static_args == [rpars, rpars.N_CORES, compile_delta]
-        assert len(tasks) == n_tasks
+        self._check_stopped_exec_calls(
+            rpars,
+            mocks,
+            n_parallel_calls=1,  # compile only
+            pool_run=compile_delta,
+            expect_tasks=mocks['make_tasks'].return_value[0],
+            )
 
-    def test_stop_after_run(self,
-                            rpars,
-                            call_in_tmp,
-                            mock_atoms_need_deltas,
-                            mocks):
+    @use('mock_atoms_need_deltas')
+    def test_stop_after_run(self, rpars, call_in_tmp, mocks):
         """Check expected calls when deltas are only compiled."""
         def _set_stop_after_run(*args, **__):
             if args[2] is run_delta:
@@ -292,14 +236,13 @@ class TestDeltasCalls:
 
         mocks['pool'].side_effect = _set_stop_after_run
         call_in_tmp()
-        n_parallel_calls = 2  # compile, then run
-        assert mocks['pool'].call_count == n_parallel_calls
-        *static_args, tasks = mocks['pool'].call_args[0]
-        n_tasks = len(mock_atoms_need_deltas.return_value[1])
-        assert static_args == [rpars, rpars.N_CORES, run_delta]
-        assert len(tasks) == n_tasks
-        mocks['rmtree'].assert_not_called()
-        mocks['copy_log'].assert_not_called()
+        self._check_stopped_exec_calls(
+            rpars,
+            mocks,
+            n_parallel_calls=2,  # compile, then run
+            pool_run=run_delta,
+            expect_tasks=mocks['make_tasks'].return_value[1],
+            )
 
     @use('mock_atoms_need_deltas', 'mocks')
     def test_triggers_compiler_discovery_if_missing(self, rpars, call_in_tmp):
@@ -318,139 +261,10 @@ class TestDeltasGenerateInput:
         rpars.SUPPRESS_EXECUTION = True
 
     @use('mocks')
-    def test_fails_to_write_delta_input(self, rpars, mocker, caplog):
-        """Check that failure to write the input file is tolerated."""
-        input_file_name = 'delta-input'
-        def _fail_to_open_delta_input(fname, *_, **__):
-            if fname == input_file_name:
-                # pylint: disable-next=broad-exception-raised
-                raise Exception('open failed')
-        mocker.patch('builtins.open', side_effect=_fail_to_open_delta_input)
-        deltas('mock_slab', rpars)
-        expect_log = f'Failed to write file {input_file_name!r}'
-        assert expect_log in caplog.text
-
-    @use('mocks')
     def test_raises_halting_level(self, rpars, call_in_tmp):
         """Check setting of halting level upon SUPPRESS_EXECUTION."""
         call_in_tmp()
         rpars.setHaltingLevel.assert_called_once_with(3)
-
-    def test_generates_tasks_based_on_hash(self,
-                                           mocks,
-                                           call_in_tmp,
-                                           tmp_path,
-                                           mocker):
-        """Check that compile tasks are created using the hash of PARAM."""
-        ids = (0, 1, 2, 2, 3, 5, 7, 8, 7, 3, 2)
-        mocks['delta input'].side_effect = tuple(
-            ('din', f'short {i}', f'param {i}')
-            for i in ids
-            )
-
-        instance_counts = {}
-        def count_instance_creations(klass):
-            old_init = klass.__init__
-            instance_counts[klass] = 0
-            def _mock_init(obj, *args, **kwargs):
-                instance_counts[klass] += 1
-                return old_init(obj, *args, **kwargs)
-            return _mock_init
-
-        mocker.patch(f'{_MODULE}.DeltaCompileTask.__init__',
-                     count_instance_creations(DeltaCompileTask))
-        mocker.patch(f'{_MODULE}.DeltaRunTask.__init__',
-                     count_instance_creations(DeltaRunTask))
-        call_in_tmp()
-        assert mocks['delta input'].call_count == len(ids)
-        assert instance_counts[DeltaCompileTask] == len(set(ids))
-        assert instance_counts[DeltaRunTask] == len(ids)
-
-        # Restore Path methods, and check the delta input file
-        Path.read_text = mocks['read_orig']
-        input_contents = (tmp_path/'delta-input').read_text(encoding='utf-8')
-        expect_contents = '''\
-# ABOUT THIS FILE:
-# Input for the delta-calculations is collected here. The blocks of data are
-# new 'PARAM' files, which are used to recompile the fortran code, and input
-# for generation of specific DELTA files. Lines starting with '#' are comments
-# on the function of the next block of data.
-# In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
-# entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
-
-#### NEW 'PARAM' FILE: ####
-
-param 0
-
-#### INPUT for new DELTA file DEL_0_ElementOne_1: ####
-
-short 0
-
-#### NEW 'PARAM' FILE: ####
-
-param 1
-
-#### INPUT for new DELTA file DEL_0_ElementTwo_1: ####
-
-short 1
-
-#### NEW 'PARAM' FILE: ####
-
-param 2
-
-#### INPUT for new DELTA file DEL_1_OnlyOneElement_1: ####
-
-short 2
-
-#### INPUT for new DELTA file DEL_2_ElementOne_1: ####
-
-short 2
-
-#### INPUT for new DELTA file DEL_5_OnlyOneElement_1: ####
-
-short 2
-
-#### NEW 'PARAM' FILE: ####
-
-param 3
-
-#### INPUT for new DELTA file DEL_2_ElementTwo_1: ####
-
-short 3
-
-#### INPUT for new DELTA file DEL_4_OnlyOneElement_1: ####
-
-short 3
-
-#### NEW 'PARAM' FILE: ####
-
-param 5
-
-#### INPUT for new DELTA file DEL_2_ElementThree_1: ####
-
-short 5
-
-#### NEW 'PARAM' FILE: ####
-
-param 7
-
-#### INPUT for new DELTA file DEL_2_Vac_1: ####
-
-short 7
-
-#### INPUT for new DELTA file DEL_3_ElementOne_1: ####
-
-short 7
-
-#### NEW 'PARAM' FILE: ####
-
-param 8
-
-#### INPUT for new DELTA file DEL_3_Vac_1: ####
-
-short 8
-'''
-        assert input_contents == expect_contents
 
     @use('mocks')
     def test_writes_log_file(self, call_in_tmp, tmp_path):
@@ -459,102 +273,20 @@ short 8
         assert any(tmp_path.glob('*.log'))
 
 
-class TestDeltasLoadInputFiles:
-    """Tests for loading of preexisting input files."""
-
-    @use('no_deltas_to_do')
-    def test_auxbeams_from_supp(self, rpars, mocks, mocker):
-        """Check pulling AUXBEAMS from SUPP."""
-        def _root_missing(path):
-            return path.parent.name == DEFAULT_SUPP
-
-        mocker.patch('pathlib.Path.is_file', _root_missing)
-        deltas('mock_slab', rpars)
-        mocks['copy'].assert_called_once()
-        # writeAUXBEAMS is called because is_file()
-        # returns False twice for Path('AUXBEAMS')
-        mocks['writeAUXBEAMS'].assert_called_once_with(ivbeams=rpars.ivbeams,
-                                                       beamlist=rpars.beamlist)
-
-    @use('no_deltas_to_do')
-    def test_auxbeams_from_supp_fails(self, rpars, mocks, mocker, caplog):
-        """Check failing to copy AUXBEAMS from SUPP causes log warnings."""
-        mocks['copy'].side_effect = OSError
-        self.test_auxbeams_from_supp(rpars, mocks, mocker)
-        expect_log = 'Failed to copy AUXBEAMS from SUPP'
-        assert expect_log in caplog.text
-
-    @use('mocks', 'no_deltas_to_do')
-    @parametrize(file=('AUXBEAMS', 'PHASESHIFTS'))
-    def test_cant_read_needed_file(self, file, rpars, mocker, caplog):
-        """Check that failures to read a necessary file are propagated."""
-        old_read_text = Path.read_text
-        def _fail_to_read_file(path, **kwargs):
-            if path.name == file:
-                raise OSError
-            return old_read_text(path, **kwargs)
-        mocker.patch('pathlib.Path.read_text', _fail_to_read_file)
-        with pytest.raises(OSError):
-            deltas('mock_slab', rpars)
-        expect_log = f'Could not read {file}'
-        assert expect_log in caplog.text
-
-    @use('no_deltas_to_do')
-    def test_files_exist(self, rpars, mocks):
-        """Check that deltas reads existing static input files."""
-        deltas('mock_slab', rpars)
-        expect_files_read = [Path(f) for f in ('AUXBEAMS', 'PHASESHIFTS')]
-        assert expect_files_read == mocks['files_read']
-        mocks['writeAUXBEAMS'].assert_not_called()
-
-    @use('mock_atoms_need_deltas')
-    def test_files_read_ends_with_newline(self, rpars, mocks, mocker):
-        """Check that static input files always end with a newline."""
-        no_newline = '''
-Missing
-newline
-at the end'''
-        mocker.patch('pathlib.Path.read_text', return_value=no_newline)
-        deltas('mock_slab', rpars)
-        gen_delta_input_args = mocks['delta input'].call_args[0]
-        expect_args = (no_newline + '\n',) * 2
-        assert gen_delta_input_args[-2:] == expect_args
-
-    @use('no_deltas_to_do')
-    def test_write_auxbeams_fails(self, rpars, mocks, mocker):
-        """Check that failures in writeAUXBEAMS are propagated."""
-        mocks['writeAUXBEAMS'].side_effect = Exception('writeAUXBEAMS failed')
-        with pytest.raises(Exception, match='writeAUXBEAMS failed'):
-            self.test_auxbeams_from_supp(rpars, mocks, mocker)
-
-
 class TestDeltasRaises:
     """Tests for conditions that cause exceptions when deltas is called."""
 
-    def test_no_tensors_folder(self, rpars, mocks, mocker, caplog):
-        """Check complaints when deltas is called without a Tensors folder."""
-        def _missing_tensors(path):
-            if path.name == DEFAULT_TENSORS:
-                return False
-            return True
-
-        mocks['is_dir'] = mocker.patch('pathlib.Path.is_dir', _missing_tensors)
-        with pytest.raises(RuntimeError, match='Tensors not found'):
-            deltas('mock_slab', rpars)
-        expect_log = 'No Tensors directory found.'
-        assert expect_log in caplog.text
-
+    @use('mock_atoms_need_deltas')
     def test_compilation_fails(self,
                                rpars,
                                mocks,
-                               mock_atoms_need_deltas,
                                call_in_tmp):
         """Check failure when compilation fails."""
         rpars.FORTRAN_COMP = ['failing compiler', '']
         mocks['pool'].side_effect = RuntimeError('compile fail')
         with pytest.raises(RuntimeError, match='compile fail'):
             call_in_tmp()
-        n_tasks = len(mock_atoms_need_deltas.return_value[1])
+        n_tasks = len(mocks['make_tasks'].return_value[0])
         assert mocks['copy_log'].call_count == n_tasks
 
     @use('mock_atoms_need_deltas', 'mocks')
@@ -564,3 +296,71 @@ class TestDeltasRaises:
         rpars.getFortranComp.side_effect = Exception('no compiler')
         with pytest.raises(RuntimeError):
             call_in_tmp()
+
+
+class TestExceptionsPropagated:
+    """Test that exceptions in helpers are not caught."""
+
+    with_exceptions = parametrize(exc=(Exception, BaseException))
+
+    @staticmethod
+    def check_propagates(exc, call_in_tmp, mocks, mock_name):
+        """Ensure that exceptions in a given mock are propagated."""
+        mocks[mock_name].side_effect = exc
+        with pytest.raises(exc):
+            call_in_tmp()
+
+    @with_exceptions
+    def test_deltas_domains(self, exc, rpars, mocker):
+        """Check propagation of exceptions in deltas_domains."""
+        mocker.patch(f'{_MODULE}.deltas_domains', side_effect=exc)
+        rpars.domainParams = ['some domain']
+        with pytest.raises(exc):
+            deltas('mock_slab', rpars)
+
+    @with_exceptions
+    def test_read_displacements(self, exc, rpars, call_in_tmp, mocks):
+        """Check propagation of exceptions in readDISPLACEMENTS_block."""
+        rpars.disp_block_read = False
+        self.check_propagates(exc, call_in_tmp, mocks, 'read_disp')
+
+    _preliminary = (
+        'fetch_tensor',
+        'fetch_deltas',
+        'find_varied_atoms',
+        )
+    _before_suppress = (
+        *_preliminary,
+        'remove_param',
+        'make_tasks',
+        'sort_deltas',
+        'write_input',
+        )
+    _execution = (
+        *_before_suppress,
+        )
+
+    @use('no_deltas_to_do')
+    @with_exceptions
+    @parametrize(mock_name=_preliminary)
+    def test_preliminary_call(self, exc, mock_name, call_in_tmp, mocks):
+        """Check propagation of exceptions in helpers called before tasks."""
+        self.check_propagates(exc, call_in_tmp, mocks, mock_name)
+
+    @use('mock_atoms_need_deltas')
+    @with_exceptions
+    @parametrize(mock_name=_before_suppress)
+    # pylint: disable-next=too-many-arguments  # 3/6 fixtures
+    def test_suppressed(self, exc, mock_name, rpars, call_in_tmp, mocks):
+        """Ensure propagation of exceptions in helpers before early return."""
+        rpars.SUPPRESS_EXECUTION = True
+        self.check_propagates(exc, call_in_tmp, mocks, mock_name)
+
+    @use('mock_atoms_need_deltas')
+    @with_exceptions
+    @parametrize(mock_name=_execution)
+    # pylint: disable-next=too-many-arguments  # 3/6 fixtures
+    def test_execution(self, exc, mock_name, rpars, call_in_tmp, mocks):
+        """Ensure propagation of exceptions in helpers before early return."""
+        rpars.SUPPRESS_EXECUTION = False
+        self.check_propagates(exc, call_in_tmp, mocks, mock_name)

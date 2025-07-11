@@ -837,7 +837,7 @@ def _reinitialize_deltas(slab):
 
     Delete old delta files in main work folder, if necessary
     (there should not be any, unless there was an error). Also,
-    empty all atom.known_deltas because they would refer to
+    empty all atom.current_deltas because they would refer to
     previous tensors.
 
     Parameters
@@ -855,9 +855,9 @@ def _reinitialize_deltas(slab):
                 "cause the delta file to incorrectly be labelled as belonging "
                 "with the new set of tensors.")
 
-    # empty atom.known_deltas, reset displacements and constraints
+    # empty atom.current_deltas, reset displacements and constraints
     for at in slab:
-        at.known_deltas = []
+        at.current_deltas = []
         at.initDisp(force=True)
         at.constraints = {1: {}, 2: {}, 3: {}}
 

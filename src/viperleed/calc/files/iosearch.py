@@ -662,9 +662,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             output += (formatter['int'].write([dlind]).ljust(16)
                        + "Atom number\n")
             output += (
-                formatter['int'].write([len(at.known_deltas)]).ljust(16)
+                formatter['int'].write([len(at.current_deltas)]).ljust(16)
                 + "No. of different files for Atom no. {}\n".format(i+1))
-            for (j, deltafile) in enumerate(at.known_deltas):
+            for (j, deltafile) in enumerate(at.current_deltas):
                 name = deltafile
                 if frompath:  # need to get the file; if True frompath is Path
                     name = "D{}_".format(k+1) + deltafile
