@@ -361,15 +361,10 @@ def deltas(slab, rpars, subdomain=False):
         rpars.setHaltingLevel(3)
         return
 
-    _, run_tasks = delta_tasks
-    if subdomain and run_tasks:
-        rpars.manifest.add(DEFAULT_DELTAS)
-
     if subdomain:  # Actual calculations done in deltas_domains
         return delta_tasks
 
     _compile_and_run_deltas_in_parallel(rpars, *delta_tasks)
-    rpars.manifest.add(DEFAULT_DELTAS)
 
 
 def deltas_domains(rpars):
@@ -668,7 +663,7 @@ def _get_unique_delta_file_name(atom, element):
 
 def _prepare_deltas_for_one_domain(slab, rpars, subdomain):
     """Prepare input files and return compile/run tasks for a single slab.
-    
+
     Parameters
     ----------
     slab : Slab
@@ -677,7 +672,7 @@ def _prepare_deltas_for_one_domain(slab, rpars, subdomain):
         The parameters corresponding to `slab`.
     subdomain : bool
         Whether `slab` is a domain of a multi-domain calculation.
-    
+
     Returns
     -------
     comp_tasks : list of DeltaCompileTask
@@ -721,6 +716,11 @@ def _prepare_deltas_for_one_domain(slab, rpars, subdomain):
     _sort_current_deltas_by_element(atoms_with_displacements,
                                     atoms_with_vacancies)
     iodeltas.write_delta_input_file(*delta_tasks)
+
+    _, run_tasks = delta_tasks
+    if run_tasks and not rpars.SUPPRESS_EXECUTION:
+        rpars.manifest.add(DEFAULT_DELTAS)
+
     return delta_tasks
 
 
