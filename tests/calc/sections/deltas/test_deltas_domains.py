@@ -35,7 +35,7 @@ def factory_make_domain(mocker, tmp_path):
         work = tmp_path/name
         mock_attrs = {
             'slab': mocker.MagicMock(name='slab'),
-            'rpars': mocker.MagicMock(name='rpars'),
+            'rpars': mocker.MagicMock(name='rpars', domainParams=[]),
             'workdir': work,
             }
         work.mkdir()
@@ -57,7 +57,8 @@ def factory_rpars(make_domain, rpars):
 def fixture_mock_implementation(mocker):
     """Replace implementation details with mocks."""
     return {
-        'one_domain': mocker.patch(f'{_MODULE}.deltas', return_value=None),
+        'one_domain': mocker.patch(f'{_MODULE}._prepare_deltas_for_one_domain',
+                                   return_value=([], [])),
         'pool': mocker.patch(f'{_MODULE}.parallelization.monitoredPool'),
         'copy_log': mocker.patch(f'{_MODULE}.leedbase.copy_compile_log'),
         'rmtree': mocker.patch('shutil.rmtree'),
@@ -180,6 +181,43 @@ class TestDeltasDomains:
             'Delta calculations finished.',
             )
         assert not any(msg in caplog.text for msg in not_in_log)
+
+    # pylint: disable-next=too-many-arguments  # All fixtures
+    def test_nested_domains(self,
+                            make_rpars,
+                            make_domain,
+                            mock_tasks,
+                            mocks,
+                            mocker,
+                            caplog):
+        """Ensure correct propagation to nested domains."""
+        caplog.set_level(logging.INFO)
+        rpars = make_rpars(n_domains=2)
+        rpars.domainParams[0].rpars.domainParams = [
+            make_domain('subdomain_one'),
+            make_domain('subdomain_two'),
+            ]
+        n_domains_total = 3  # Two subdomains of the 1st, plus the 2nd
+        mock_tasks((1,)*n_domains_total, (1,)*n_domains_total)
+        deltas_domains(rpars)
+        assert mocks['one_domain'].call_count == n_domains_total
+        expect_log = (
+            # There's 4 log messages: two for the top-level
+            # domains, two for those nested in the first one
+            'Getting input for delta calculations:',
+            'Getting input for delta calculations:',
+            'Getting input for delta calculations:',
+            'Getting input for delta calculations:',
+            'Compiling fortran files...',
+            'Running delta calculations...',
+            'Delta calculations finished.',
+            )
+        log_info = [r.getMessage()
+                    for r in caplog.records
+                    if r.levelno == logging.INFO]
+        assert len(log_info) == len(expect_log)
+        assert all(msg.startswith(expect)
+                   for msg, expect in zip(log_info, expect_log))
 
     def test_nothing_to_compile(self, make_rpars, mocks, mock_tasks, caplog):
         """Check that no compilation occurs if no domain requires it."""
