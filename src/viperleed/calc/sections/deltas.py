@@ -9,6 +9,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
+import functools
 import hashlib
 import itertools
 import logging
@@ -349,27 +350,18 @@ def compile_delta(comptask):
 
 
 def deltas(slab, rpars):
-    """Runs the delta-amplitudes calculation."""
+    """Run the delta-amplitudes calculation."""
     if rpars.domainParams:
         deltas_domains(rpars)
         return
-
-    delta_tasks = _prepare_deltas_for_one_domain(slab, rpars)
-    # If execution is suppressed, stop here
-    if rpars.SUPPRESS_EXECUTION:
-        rpars.setHaltingLevel(3)
-        return
-    _compile_and_run_deltas_in_parallel(rpars, *delta_tasks)
+    prepare_tasks_for_slab = functools.partial(_prepare_deltas_for_one_domain,
+                                               slab=slab)
+    _execute_deltas(rpars, prepare_delta_tasks=prepare_tasks_for_slab)
 
 
 def deltas_domains(rpars):
     """Define and run delta calculations for all domains."""
-    tasks = _prepare_deltas_for_domains(rpars)
-    # If execution is suppressed, stop here
-    if rpars.SUPPRESS_EXECUTION:
-        rpars.setHaltingLevel(3)
-        return
-    _compile_and_run_deltas_in_parallel(rpars, *tasks)
+    _execute_deltas(rpars, prepare_delta_tasks=_prepare_deltas_for_domains)
 
 
 def _assemble_tasks(slab, rpars, atom_element_pairs, deltalogname):
@@ -512,6 +504,32 @@ def _ensure_tensors_loaded(slab, rpars):
             )
         iotensors.getTensorOriStates(slab, load_from)
         slab.restoreOriState(keepDisp=True)
+
+
+def _execute_deltas(rpars, prepare_delta_tasks):
+    """Actually execute a delta-amplitude calculation.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The **main** run parameters of the calculation, i.e., not
+        the ones of subdomains for a multi-domain calculation.
+        The actual calculation (compilation and execution) is
+        skipped if rpars.SUPPRESS_EXECUTION is True. However,
+        input files are prepared as needed.
+    prepare_delta_tasks : callable
+        A function that takes `rpars` as its only argument (passed
+        by keyword) and returns compile/run tasks to be executed.
+
+    Returns
+    -------
+    None.
+    """
+    delta_tasks = prepare_delta_tasks(rpars=rpars)
+    if rpars.SUPPRESS_EXECUTION:
+        rpars.setHaltingLevel(3)
+        return
+    _compile_and_run_deltas_in_parallel(rpars, *delta_tasks)
 
 
 def _find_atoms_that_need_deltas(slab, rpars):
