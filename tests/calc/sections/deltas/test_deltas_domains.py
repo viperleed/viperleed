@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 from pytest_cases import fixture
+from pytest_cases import parametrize
 
 from viperleed.calc.sections.deltas import DeltaCompileTask
 from viperleed.calc.sections.deltas import DeltaRunTask
@@ -116,8 +117,8 @@ class TestDeltasDomains:
         assert all(c.fortran_comp is rpars.FORTRAN_COMP for c in comp_tasks)
 
         expect_log = (
-            'Getting input for delta calculations:',
-            'Getting input for delta calculations:',
+            'Collecting input for delta calculations:',
+            'Collecting input for delta calculations:',
             'Compiling fortran files...',
             'Running delta calculations...',
             'Delta calculations finished.',
@@ -156,6 +157,7 @@ class TestDeltasDomains:
         directories = []
         def _register_directory(*_, **__):
             directories.append(Path.cwd())
+            return [], []
         mocks['one_domain'].side_effect = _register_directory
         deltas_domains(rpars)
         assert directories == expect_directories
@@ -173,7 +175,7 @@ class TestDeltasDomains:
         mocks['copy_log'].assert_not_called()
         mocks['rmtree'].assert_not_called()
         mocks['checksums'].assert_not_called()
-        expect_log = 'Getting input for delta calculations:'
+        expect_log = 'Collecting input for delta calculations:'
         assert expect_log in caplog.text
         not_in_log = (
             'Compiling fortran files...',
@@ -204,10 +206,10 @@ class TestDeltasDomains:
         expect_log = (
             # There's 4 log messages: two for the top-level
             # domains, two for those nested in the first one
-            'Getting input for delta calculations:',
-            'Getting input for delta calculations:',
-            'Getting input for delta calculations:',
-            'Getting input for delta calculations:',
+            'Collecting input for delta calculations:',
+            'Collecting input for delta calculations:',
+            'Collecting input for delta calculations:',
+            'Collecting input for delta calculations:',
             'Compiling fortran files...',
             'Running delta calculations...',
             'Delta calculations finished.',
@@ -356,10 +358,11 @@ class TestDeltasDomainsRaises:
         expect_log = 'Error while creating delta input for'
         assert expect_log in caplog.text
 
-    def test_inner_call_unexpected_return(self, make_rpars, mocks):
+    @parametrize(bad_return=('bad value', None))
+    def test_inner_call_unexpected_return(self, bad_return, make_rpars, mocks):
         """Check complaints if single-domain runs fail unexpectedly."""
         rpars = make_rpars(4)
-        mocks['one_domain'].return_value = 'bad value'
+        mocks['one_domain'].return_value = bad_return
         exc_msg = 'Unknown error while creating delta input'
         with pytest.raises(RuntimeError, match=exc_msg):
             deltas_domains(rpars)

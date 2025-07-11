@@ -40,6 +40,7 @@ def fixture_call_in_tmp(rpars, mocks, tmp_path, mocker):
         args = mocker.MagicMock(name='slab'), rpars
         with execute_in_dir(tmp_path):
             result = deltas(*args, **kwargs)
+        assert result is None
         mocks['fetch_deltas'].assert_called_once_with(rpars.TENSOR_INDEX,
                                                       required=False)
         mocks['fetch_tensor'].assert_called_once_with(*args)
@@ -62,7 +63,6 @@ def fixture_call_in_tmp(rpars, mocks, tmp_path, mocker):
             mocks['sort_deltas'].assert_not_called()
             mocks['pool'].assert_not_called()
             mocks['write_input'].assert_not_called()
-        return result
     return _call
 
 
@@ -141,8 +141,7 @@ class TestDeltasCalls:
         rpars.SUPPRESS_EXECUTION = suppress  # Only determines manifest
         rpars.FORTRAN_COMP[0] = ''
         log_info = mocker.patch(f'{_MODULE}.logger.info')
-        result = call_in_tmp(subdomain=True)
-        assert result is not None
+        call_in_tmp(subdomain=True)
         log_info.assert_not_called()
         rpars.getFortranComp.assert_not_called()
         rpars.setHaltingLevel.assert_not_called()
@@ -172,8 +171,7 @@ class TestDeltasCalls:
     def test_compile_and_run(self, rpars, mocks, call_in_tmp, caplog):
         """Check a full, clean execution for a single domain."""
         caplog.set_level(logging.INFO)
-        result = call_in_tmp(subdomain=False)
-        assert result is None
+        call_in_tmp(subdomain=False)
         rpars.updateCores.assert_called_once()
         assert DEFAULT_DELTAS in rpars.manifest
         n_parallel_calls = 2  # compile, then run
@@ -204,7 +202,7 @@ class TestDeltasCalls:
         """Check calls when deltas is called in a multi-domain calculation."""
         rpars.domainParams = ['Domain 1']
         domains_impl = mocker.patch(f'{_MODULE}.deltas_domains')
-        result = deltas(mocker.MagicMock(name='slab'), rpars)
+        result = deltas(None, rpars)
         domains_impl.assert_called_once_with(rpars)
         assert result is None
 

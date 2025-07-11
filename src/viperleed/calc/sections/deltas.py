@@ -356,7 +356,7 @@ def deltas(slab, rpars, subdomain=False):
 
     delta_tasks = _prepare_deltas_for_one_domain(slab, rpars, subdomain)
     if subdomain:  # Actual calculations done in deltas_domains
-        return delta_tasks
+        return
 
     # If execution is suppressed, stop here
     if rpars.SUPPRESS_EXECUTION:
@@ -367,30 +367,12 @@ def deltas(slab, rpars, subdomain=False):
 
 def deltas_domains(rpars):
     """Define and run delta calculations for all domains."""
-    compile_tasks = []
-    run_tasks = []
-    # get input for all domains
-    for domain in rpars.domainParams:
-        logger.info(f'Getting input for delta calculations: {domain}')
-        with execute_in_dir(domain.workdir):
-            try:
-                result = deltas(domain.slab, domain.rpars, subdomain=True)
-            except Exception:
-                logger.error(f'Error while creating delta input for {domain}')
-                raise
-        if type(result) == tuple:
-            # if no deltas need to be calculated returns None
-            compile_tasks.extend(result[0])
-            run_tasks.extend(result[1])
-        elif result is not None:
-            raise RuntimeError('Unknown error while creating '
-                               f'delta input for {domain}')
-
-    # if execution is suppressed, stop here
+    tasks = _prepare_deltas_for_domains(rpars)
+    # If execution is suppressed, stop here
     if rpars.SUPPRESS_EXECUTION:
         rpars.setHaltingLevel(3)
         return
-    _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks)
+    _compile_and_run_deltas_in_parallel(rpars, *tasks)
 
 
 def _assemble_tasks(slab, rpars, atom_element_pairs, deltalogname):
@@ -657,6 +639,36 @@ def _get_unique_delta_file_name(atom, element):
     delta_indices = (_get_delta_index(f)
                      for f in Path.cwd().glob(f'{delta_name_prefix}_*'))
     return f'{delta_name_prefix}_{max(delta_indices, default=0) + 1}'
+
+
+def _prepare_deltas_for_domains(rpars):
+    """Return compile/run tasks for a multi-domain calculation."""
+    compile_tasks = []
+    run_tasks = []
+    for domain in rpars.domainParams:
+        logger.info(f'Collecting input for delta calculations: {domain}')
+        if domain.rpars.domainParams:  # Nested domain
+            domain_tasks = _prepare_deltas_for_domains(domain.rpars)
+        else:
+            with execute_in_dir(domain.workdir):
+                try:
+                    domain_tasks = _prepare_deltas_for_one_domain(
+                        domain.slab,
+                        domain.rpars,
+                        subdomain=True,
+                        )
+                except Exception:
+                    logger.error('Error while creating delta '
+                                 f'input for {domain}')
+                    raise
+        try:
+            domain_compile_tasks, domain_run_tasks = domain_tasks
+        except (ValueError, TypeError) as exc:
+            raise RuntimeError('Unknown error while creating '
+                               f'delta input for {domain}') from exc
+        compile_tasks.extend(domain_compile_tasks)
+        run_tasks.extend(domain_run_tasks)
+    return compile_tasks, run_tasks
 
 
 def _prepare_deltas_for_one_domain(slab, rpars, subdomain):
