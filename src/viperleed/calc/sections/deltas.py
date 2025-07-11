@@ -31,8 +31,6 @@ from viperleed.calc.lib.context import execute_in_dir
 
 logger = logging.getLogger(__name__)
 
-# TODO: would be nice to replace all os.path with pathlib
-
 
 class DeltasError(Exception):
     """Base exception for delta-amplitudes-related errors."""
