@@ -12,6 +12,7 @@ __license__ = 'GPLv3+'
 import hashlib
 import itertools
 import logging
+import os
 from pathlib import Path
 import shutil
 import subprocess
