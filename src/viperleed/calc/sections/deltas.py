@@ -355,15 +355,13 @@ def deltas(slab, rpars, subdomain=False):
         return
 
     delta_tasks = _prepare_deltas_for_one_domain(slab, rpars, subdomain)
-
-    # if execution is suppressed, stop here
-    if rpars.SUPPRESS_EXECUTION and not subdomain:
-        rpars.setHaltingLevel(3)
-        return
-
     if subdomain:  # Actual calculations done in deltas_domains
         return delta_tasks
 
+    # If execution is suppressed, stop here
+    if rpars.SUPPRESS_EXECUTION:
+        rpars.setHaltingLevel(3)
+        return
     _compile_and_run_deltas_in_parallel(rpars, *delta_tasks)
 
 
