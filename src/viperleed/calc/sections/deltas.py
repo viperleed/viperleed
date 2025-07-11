@@ -351,45 +351,11 @@ def compile_delta(comptask):
 
 def deltas(slab, rpars, subdomain=False):
     """Runs the delta-amplitudes calculation."""
-
     if rpars.domainParams:
         deltas_domains(rpars)
         return
 
-    # read DISPLACEMENTS block
-    if not rpars.disp_block_read:
-        readDISPLACEMENTS_block(rpars,
-                                slab,
-                                rpars.disp_blocks[rpars.search_index])
-        rpars.disp_block_read = True
-
-    _ensure_tensors_loaded(slab, rpars)
-
-    # If there are old deltas, pull them in here
-    leedbase.getDeltas(rpars.TENSOR_INDEX, required=False)
-
-    (atoms_with_displacements,
-     atom_element_pairs_requiring_new_deltas,
-     atoms_with_vacancies) = _find_atoms_that_need_deltas(slab, rpars)
-    if not atom_element_pairs_requiring_new_deltas:
-        # Nothing to calculate
-        return
-
-    _remove_old_param_file()
-
-    # Create compilation and running tasks, as well as a log
-    # file for collating the runtime information of the latter.
-    collated_logs_name = _prepare_log_file(rpars, subdomain)
-    delta_tasks = _assemble_tasks(slab,
-                                  rpars,
-                                  atom_element_pairs_requiring_new_deltas,
-                                  collated_logs_name)
-    # Ensure stable sorting of the stored delta files. Do so
-    # only after assembling the tasks, as this modifies the
-    # current_deltas of atom_elements_todo.
-    _sort_current_deltas_by_element(atoms_with_displacements,
-                                    atoms_with_vacancies)
-    iodeltas.write_delta_input_file(*delta_tasks)
+    delta_tasks = _prepare_deltas_for_one_domain(slab, rpars, subdomain)
 
     # if execution is suppressed, stop here
     if rpars.SUPPRESS_EXECUTION and not subdomain:
@@ -699,6 +665,64 @@ def _get_unique_delta_file_name(atom, element):
     delta_indices = (_get_delta_index(f)
                      for f in Path.cwd().glob(f'{delta_name_prefix}_*'))
     return f'{delta_name_prefix}_{max(delta_indices, default=0) + 1}'
+
+
+def _prepare_deltas_for_one_domain(slab, rpars, subdomain):
+    """Prepare input files and return compile/run tasks for a single slab.
+    
+    Parameters
+    ----------
+    slab : Slab
+        The slab for which delta-amplitude calculations should be done.
+    rpars : Rparams
+        The parameters corresponding to `slab`.
+    subdomain : bool
+        Whether `slab` is a domain of a multi-domain calculation.
+    
+    Returns
+    -------
+    comp_tasks : list of DeltaCompileTask
+        Information about which executables need to be compiled
+        to calculate delta amplitudes for `slab`.
+    run_tasks : list of DeltaRunTask
+        Information about which executions of `compile_tasks`
+        are needed to produce delta amplitudes for `slab`.
+    """
+    # read DISPLACEMENTS block
+    if not rpars.disp_block_read:
+        readDISPLACEMENTS_block(rpars,
+                                slab,
+                                rpars.disp_blocks[rpars.search_index])
+        rpars.disp_block_read = True
+
+    _ensure_tensors_loaded(slab, rpars)
+
+    # If there are old deltas, pull them in here
+    leedbase.getDeltas(rpars.TENSOR_INDEX, required=False)
+
+    (atoms_with_displacements,
+     atom_element_pairs_requiring_new_deltas,
+     atoms_with_vacancies) = _find_atoms_that_need_deltas(slab, rpars)
+    if not atom_element_pairs_requiring_new_deltas:
+        # Nothing to calculate
+        return [], []
+
+    _remove_old_param_file()
+
+    # Create compilation and running tasks, as well as a log
+    # file for collating the runtime information of the latter.
+    collated_logs_name = _prepare_log_file(rpars, subdomain)
+    delta_tasks = _assemble_tasks(slab,
+                                  rpars,
+                                  atom_element_pairs_requiring_new_deltas,
+                                  collated_logs_name)
+    # Ensure stable sorting of the stored delta files. Do so
+    # only after assembling the tasks, as this modifies the
+    # current_deltas of atom_elements_todo.
+    _sort_current_deltas_by_element(atoms_with_displacements,
+                                    atoms_with_vacancies)
+    iodeltas.write_delta_input_file(*delta_tasks)
+    return delta_tasks
 
 
 def _prepare_log_file(rpars, subdomain):
