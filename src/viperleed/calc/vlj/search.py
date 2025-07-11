@@ -167,3 +167,5 @@ def vlj_search(slab, rpars):
     # write the updated POSCAR and VIBROCC files to work
     poscar.write(slab, "POSCAR", comments="all")
     writeVIBROCC(slab, "VIBROCC", silent=True)
+
+    del calculator
