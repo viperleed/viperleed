@@ -110,11 +110,6 @@ def vlj_search(slab, rpars):
     # apply the parameter space to the calculator
     calculator.set_parameter_space(parameter_space)
 
-    # evaluate the initial R-factor
-    unperturbed_x = np.array([0.5] * calculator.n_free_parameters)
-    unperturbed_R = calculator.R(unperturbed_x)
-    logger.info(f'R-factor for unperturbed structure: {unperturbed_R:.4f}')
-
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
         rpars=rpars,)
@@ -123,6 +118,11 @@ def vlj_search(slab, rpars):
     benchmark_results = benchmark_calculator(
         calculator, use_grad=optimizer_iterator.scheduled_gradients)
     logger.info(format_benchmark_results(benchmark_results))
+
+    # evaluate the initial R-factor
+    unperturbed_x = np.array([0.5] * calculator.n_free_parameters)
+    unperturbed_R = calculator.R(unperturbed_x)
+    logger.info(f'R-factor for unperturbed structure: {unperturbed_R:.4f}')
 
     # initial parameter vector
     x = optimizer_iterator.suggested_starting_point
