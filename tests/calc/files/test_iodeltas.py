@@ -13,7 +13,6 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.files.iodeltas import _fetch_auxbeams
 from viperleed.calc.files.iodeltas import _read_file_with_newline
 from viperleed.calc.files.iodeltas import collect_static_input_files
@@ -84,6 +83,7 @@ class TestFetchAuxbeams:
             }
 
     @fixture(name='call')
+    # pylint: disable-next=unused-argument  # Cannot .mark fixtures
     def fixture_call(self, rpars, mocks):
         """Call _fetch_auxbeams and check the return value."""
         def _call():
@@ -131,6 +131,7 @@ class TestFetchAuxbeams:
 
 
 class TestReadFileWithNewline:
+    """Tests for the _read_file_with_newline helper."""
 
     def test_cant_read_file(self, mocker, caplog):
         """Check that failures to read a necessary file are propagated."""
