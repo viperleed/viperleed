@@ -128,33 +128,33 @@ def fixture_no_atoms_need_deltas(mocks, mocker):
 class TestDeltasCalls:
     """Tests for implementation calls by the deltas function."""
 
-    @use('mock_atoms_need_deltas')
-    @parametrize(suppress=(True, False))
-    # pylint: disable-next=too-many-arguments  # 4/6 fixtures
-    def test_called_for_subdomain(self,
-                                  suppress,
-                                  rpars,
-                                  mocks,
-                                  call_in_tmp,
-                                  mocker):
-        """Check differences between calls as "main" or as subdomain."""
-        rpars.SUPPRESS_EXECUTION = suppress  # Only determines manifest
-        rpars.FORTRAN_COMP[0] = ''
-        log_info = mocker.patch(f'{_MODULE}.logger.info')
-        call_in_tmp(subdomain=True)
-        log_info.assert_not_called()
-        rpars.getFortranComp.assert_not_called()
-        rpars.setHaltingLevel.assert_not_called()
-        rpars.updateCores.assert_not_called()
-        assert (DEFAULT_DELTAS in rpars.manifest) != suppress
-        not_called = (  # Because deltas_domains does so
-            'checksums',
-            'pool',
-            'copy_log',
-            'rmtree',
-            )
-        for mock_name in not_called:
-            mocks[mock_name].assert_not_called()
+    # @use('mock_atoms_need_deltas')
+    # @parametrize(suppress=(True, False))
+    # # pylint: disable-next=too-many-arguments  # 4/6 fixtures
+    # def test_called_for_subdomain(self,
+                                  # suppress,
+                                  # rpars,
+                                  # mocks,
+                                  # call_in_tmp,
+                                  # mocker):
+        # """Check differences between calls as "main" or as subdomain."""
+        # rpars.SUPPRESS_EXECUTION = suppress  # Only determines manifest
+        # rpars.FORTRAN_COMP[0] = ''
+        # log_info = mocker.patch(f'{_MODULE}.logger.info')
+        # call_in_tmp(subdomain=True)
+        # log_info.assert_not_called()
+        # rpars.getFortranComp.assert_not_called()
+        # rpars.setHaltingLevel.assert_not_called()
+        # rpars.updateCores.assert_not_called()
+        # assert (DEFAULT_DELTAS in rpars.manifest) != suppress
+        # not_called = (  # Because deltas_domains does so
+            # 'checksums',
+            # 'pool',
+            # 'copy_log',
+            # 'rmtree',
+            # )
+        # for mock_name in not_called:
+            # mocks[mock_name].assert_not_called()
 
     @use('mock_atoms_need_deltas')
     @parametrize(enable=(True, False))
@@ -171,7 +171,7 @@ class TestDeltasCalls:
     def test_compile_and_run(self, rpars, mocks, call_in_tmp, caplog):
         """Check a full, clean execution for a single domain."""
         caplog.set_level(logging.INFO)
-        call_in_tmp(subdomain=False)
+        call_in_tmp()
         rpars.updateCores.assert_called_once()
         assert DEFAULT_DELTAS in rpars.manifest
         n_parallel_calls = 2  # compile, then run

@@ -348,16 +348,13 @@ def compile_delta(comptask):
     return ''
 
 
-def deltas(slab, rpars, subdomain=False):
+def deltas(slab, rpars):
     """Runs the delta-amplitudes calculation."""
     if rpars.domainParams:
         deltas_domains(rpars)
         return
 
-    delta_tasks = _prepare_deltas_for_one_domain(slab, rpars, subdomain)
-    if subdomain:  # Actual calculations done in deltas_domains
-        return
-
+    delta_tasks = _prepare_deltas_for_one_domain(slab, rpars)
     # If execution is suppressed, stop here
     if rpars.SUPPRESS_EXECUTION:
         rpars.setHaltingLevel(3)
@@ -671,7 +668,7 @@ def _prepare_deltas_for_domains(rpars):
     return compile_tasks, run_tasks
 
 
-def _prepare_deltas_for_one_domain(slab, rpars, subdomain):
+def _prepare_deltas_for_one_domain(slab, rpars, subdomain=False):
     """Prepare input files and return compile/run tasks for a single slab.
 
     Parameters
@@ -680,8 +677,9 @@ def _prepare_deltas_for_one_domain(slab, rpars, subdomain):
         The slab for which delta-amplitude calculations should be done.
     rpars : Rparams
         The parameters corresponding to `slab`.
-    subdomain : bool
+    subdomain : bool, optional
         Whether `slab` is a domain of a multi-domain calculation.
+        The default is False.
 
     Returns
     -------
