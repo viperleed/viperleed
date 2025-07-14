@@ -293,27 +293,35 @@ floatOrBytes dutyCycle[2];
 floatOrBytes targetCurrent[2];
 // Two floats which represent the time constants of the coils.
 floatOrBytes timeConstant[2];
-// Enable/disable dynamic magnetic field compensation.
-bool enableDynamic;
 // Transformation matrix which converts external field to field on sample.
 floatOrBytes transformationMatrix[3][2];
 // Calibration curve for converting PWM duty cycles to currents.
 floatOrBytes calibrationCurve[2][12];
+
+// When the most recent current measurement has been acquired.
+unsigned long current_time = 0;
+// When the previous current measurement was acquired.
+unsigned long last_current_time = 0;
+
 // Resistance of the coils in ohms.
 float coilResistance[2];
+// The current delta limit below which a thermal compensation may be done
+// without waiting for the time constant of the coils.                          # TODO: this is wrong, fix
+float current_max;
+// Most recent coil current measurement.
+float new_current[2];
+// Previous coil current measurement.
+float last_current[2];
+// Most recent coil voltage measurement.
+float new_voltage[2];
 
+// Enable/disable dynamic magnetic field compensation.
+bool enableDynamic;
+// Remember if a measurement was done since the last thermal compensation.
+bool measured = false;
 /**
 bool measureResistance1 = false;
 bool measureResistance2 = false;
 **/
-float current_max;
-unsigned long current_time = 0;
-unsigned long last_current_time = 0;
-
-float new_current[2];
-float last_current[2];
-float new_voltage[2];
-
-bool measured = false;
 
 #endif  // _VIPERLEED_B_FIELD_COMP
