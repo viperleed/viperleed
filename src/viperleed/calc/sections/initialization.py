@@ -16,6 +16,7 @@ import copy
 import logging
 import os
 from pathlib import Path
+import multiprocessing as mp
 
 import numpy as np
 
@@ -57,6 +58,8 @@ def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
 
     logger.info(f'Running with backend {rp.BACKEND["search"]}.')
+
+    logger.debug(f'Using multiprocessing start method: {mp.get_start_method()}')
 
     if not subdomain:
         rp.try_loading_expbeams_file()
@@ -410,6 +413,16 @@ def initialization(sl, rp, subdomain=False):
     # viperleed_jax Plugin related initialization
     if rp.BACKEND['search'] == SearchBackend.VLJ:
         logger.debug("Initializing viperleed-jax backend")
+
+        if mp.get_start_method() != 'spawn':
+            msg = ('The viperleed-jax backend expects the '
+                   'multiprocessing start method to be "spawn". '
+                   f'Current method is: {mp.get_start_method()}. This can '
+                   'raise several warnings and may lead to unexpected '
+                   'behaviour. Consider setting the start method to "spawn" '
+                   'before running.')
+            logger.warning(msg)
+            rp.setHaltingLevel(1)
 
         # read the DISPLACEMENTS file using the new parser and store it in rpars
         rp.vlj_displacements = DisplacementsFile()
