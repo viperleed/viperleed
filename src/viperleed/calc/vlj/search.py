@@ -149,8 +149,9 @@ def vlj_search(slab, rpars):
         # write result to file
         result.write_to_file(f'{optimizer.name}_result.npz')
 
-        # update the last_R parameter
+        # udate rpars with the best R
         rpars.last_R = result.best_R
+        rpars.stored_R["viperleed-jax"] = (result.best_R, -1, -1)               # TODO: calc integer and fractional parts
 
 
     # Finished optimization
