@@ -48,5 +48,14 @@ __created__ = '2020-08-03'
 __license__ = 'GPLv3+'
 
 import logging
+import multiprocessing as mp
+
 
 LOGGER = logging.getLogger(__name__)
+
+if not mp.parent_process():  # Only in the main process
+    try:
+        mp.set_start_method("spawn", force=False)                               # TODO: we could add a command-line option that allows the use of force=True
+    except RuntimeError:
+        # don't do anything for now, will be checked later
+        pass
