@@ -16,7 +16,6 @@ import os
 from pathlib import Path
 import re
 import shutil
-import signal
 import subprocess
 import sys
 import time
@@ -761,32 +760,6 @@ def search(sl, rp):
     None.
 
     """
-
-    def kill_process(proc, default_pgid=None):
-        """Cleanly kill the mpirun subprocess and its children. If the process
-        is not alive any more (and therefore the pgid cannot be determined),
-        will instead try to terminate the default_pgid, if passed."""
-        # determine pgid
-        try:
-            pgid = os.getpgid(proc.pid)                                         # TODO: only UNIX!
-        except ProcessLookupError:
-            pgid = default_pgid
-        # kill main process
-        try:
-            proc.kill()
-            proc.wait()
-        except ProcessLookupError:
-            pass   # already dead
-        if pgid is not None:
-            # kill children
-            try:
-                os.killpg(pgid, signal.SIGTERM)                                 # TODO: only UNIX
-                if os.name == "nt":
-                    os.waitpid(pgid)
-                else:
-                    os.waitpid(-pgid, 0)
-            except (ProcessLookupError, ChildProcessError):
-                pass  # already dead or no children
 
     rp.searchResultConfig = None
     if rp.domainParams:
