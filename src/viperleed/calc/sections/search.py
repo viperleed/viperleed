@@ -1286,12 +1286,12 @@ def search(sl, rp):
                     pass   # user insisted, give up
             interrupted = True
             rp.STOP = True
-            kill_process(proc, default_pgid=pgid)
+            search_job.terminate()
             logger.warning("Search interrupted by user. Attempting "
                            "analysis of results...")
         except Exception:
             logger.error("Error during search. Check SD.TL file.")
-            kill_process(proc, default_pgid=pgid)
+            search_job.terminate()
             raise
         finally:
             # close open input and log files
@@ -1316,11 +1316,9 @@ def search(sl, rp):
                     logger.warning("Failed to delete old SD.TL file. "
                                    "This may cause errors in the "
                                    "interpretation of search progress.")
-    if proc is not None:
-        try:     # should generally not be necessary, but just to make sure
-            kill_process(proc, default_pgid=pgid)
-        except Exception:
-            pass
+    # terminate job again to be sure
+    search_job.terminate()
+
     if not interrupted:
         logger.info("Finished search. Processing files...")
     else:
