@@ -1,4 +1,4 @@
-"""Module widgetdecorators of viperleed.gui.
+"""Module decorators of viperleed.gui.widgets.
 
 This module provides decorators that can be used to decorate QWidget
 subclasses.
@@ -16,15 +16,15 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from viperleed.gui.widgetslib import get_all_children_widgets
 from viperleed.gui.decorators import ensure_decorates_class
+from viperleed.gui.widgets.lib import get_all_children_widgets
 
 mouse_event_types = (
     qtc.QEvent.MouseButtonPress,
     qtc.QEvent.MouseButtonRelease,
     qtc.QEvent.MouseButtonDblClick,
     qtc.QEvent.MouseMove,
-    qtc.QEvent.Wheel
+    qtc.QEvent.Wheel,
     )
 
 @ensure_decorates_class(qtw.QWidget)

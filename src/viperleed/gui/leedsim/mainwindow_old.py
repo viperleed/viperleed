@@ -42,8 +42,8 @@ from viperleed.gui.leedsim.widgets.leedcanvas import LEEDCanvas
 from viperleed.gui.leedsim.widgets.realcanvas import RealCanvas
 from viperleed.gui.leedsim.widgets.rotationblock import RotationBlock
 from viperleed.gui.pluginsbase import ViPErLEEDPluginBase
-from viperleed.gui.widgetdecorators import broadcast_mouse
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.decorators import broadcast_mouse
+from viperleed.gui.widgets.lib import AllGUIFonts
 
 
 @broadcast_mouse
@@ -87,19 +87,19 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         # File -> New
         newF = qtw.QAction('&New...', self)
         newF.setShortcut('Ctrl+N')
-        newF.setStatusTip('New LEED pattern file')
+        newF.setStatusTip('New/Edit experiment symmetry')
         newF.triggered.connect(self.fileNewDialog)
 
         # File -> Open
         openF = qtw.QAction('&Open...', self)
         openF.setShortcut('Ctrl+O')
-        openF.setStatusTip('Open LEED pattern file')
+        openF.setStatusTip('Open an experiment-symmetry file')
         openF.triggered.connect(self.fileOpenDialog)
 
         # File -> Save
         saveF = qtw.QAction('&Save', self)
         saveF.setShortcut('Ctrl+S')
-        saveF.setStatusTip('Save LEED pattern file')
+        saveF.setStatusTip('Save experiment-symmetry file')
         saveF.triggered.connect(self.fileSavePressed)
 
         self.actionsToEnable.append(saveF)
@@ -107,7 +107,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         # File -> Save As...
         svAs = qtw.QAction('&Save As...', self)
         svAs.setShortcut('Ctrl+Shift+S')
-        svAs.setStatusTip('Save LEED pattern file as...')
+        svAs.setStatusTip('Save experiment-symmetry file as...')
         svAs.triggered.connect(self.fileSaveAsPressed)
         self.actionsToEnable.append(svAs)
 
@@ -117,9 +117,9 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
 
         # ...and its contents:
         # * Export list of beams to *.csv
-        exportCSV = qtw.QAction('&Export Beam List...', self)
+        exportCSV = qtw.QAction('&Export spot-pattern file...', self)
         exportCSV.setShortcut('Ctrl+E')
-        exportCSV.setStatusTip('Export list of LEED beams to *.csv')
+        exportCSV.setStatusTip('Export spot-pattern file to *.csv')
         exportCSV.triggered.connect(self.exportBeamsPressed)
         self.actionsToEnable.append(exportCSV)
 
@@ -148,27 +148,34 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.tBar.setIconSize(0.7*self.tBar.iconSize())
 
         newF = qtw.QAction(self.style().standardIcon(qtw.QStyle.SP_FileIcon),
-                       'New LEED pattern', self)
-        newF.setStatusTip('New LEED pattern file (Ctrl+N)')
+                           'New structure', self)
+        newF.setStatusTip(
+            'Create a new experiment symmetry or edit the current one (Ctrl+N)'
+            )
         newF.triggered.connect(self.fileNewDialog)
 
         openF = qtw.QAction(
             self.style().standardIcon(qtw.QStyle.SP_DialogOpenButton),
-            'Open LEED pattern', self)
-        openF.setStatusTip('Open LEED pattern file (Ctrl+O)')
+            'Open an experiment-symmetry file', self)
+        openF.setStatusTip(
+            'Load an experiment-symmetry file (Ctrl+O)'
+            )
         openF.triggered.connect(self.fileOpenDialog)
 
         saveF = qtw.QAction(
             self.style().standardIcon(qtw.QStyle.SP_DialogSaveButton),
-            'Save LEED pattern', self)
-        saveF.setStatusTip('Save LEED pattern file (Ctrl+S)')
+            'Save experiment-symmetry to file', self)
+        saveF.setStatusTip(
+            'Save current experiment-symmetry to file (Ctrl+S)'
+            )
         saveF.triggered.connect(self.fileSavePressed)
 
         exportAct = qtw.QAction(
             self.style().standardIcon(qtw.QStyle.SP_DriveFDIcon),
-            'Export LEED pattern', self)
-        exportAct.setStatusTip('Export list of LEED beams to '
-                               'comma-separated file (Ctrl+E)')
+            'Export spot-pattern file', self)
+        exportAct.setStatusTip(
+            'Export a spot-pattern file (Ctrl+E)'
+            )
         exportAct.triggered.connect(self.exportBeamsPressed)
 
         self.tBar.addAction(newF)
@@ -180,9 +187,12 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         self.actionsToEnable.append(exportAct)
 
     def fileOpenDialog(self):
-        fname = qtw.QFileDialog.getOpenFileName(self, 'Open LEED pattern',
-                                                self.default_open[0],
-                                                self.extStr)
+        fname = qtw.QFileDialog.getOpenFileName(
+            self,
+            'Open experiment-symmetry file',
+            self.default_open[0],
+            self.extStr
+            )
         loadedParams = self.parseLEEDFile(fname)
         if loadedParams is not None:
             self.openedFile = fname
@@ -211,8 +221,12 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             self.isSaved = True
 
     def fileSaveAsPressed(self):
-        fname = qtw.QFileDialog.getSaveFileName(self, 'Save TLM input', '',
-                                                self.extStr)
+        fname = qtw.QFileDialog.getSaveFileName(
+            self,
+            'Save experiment-symmetry file',
+            '',
+            self.extStr
+            )
         if fname is not None and fname[0]:
             # file selected correctly
             self.saveToFile(fname[0])
@@ -234,7 +248,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                 params[key] = str(val)
             elif key in ('bulkGroup', 'surfGroup'):
                 params[key] = val.group
-            elif key == 'bulk3Dsym' and val is None:
+            elif key == 'bulk3Dsym' and not val:
                 del params[key]
         # now params contains correctly formatted strings
         paramsTxt = '\n'.join(f'{k}={v}' for k, v in params.items())
@@ -384,9 +398,12 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             self.unsavedPopup()
 
         # Then open a normal file dialog to save the data to file
-        fname = qtw.QFileDialog.getSaveFileName(self, 'Export list of beams',
-                                                self.default_export[0],
-                                                'Comma-separated file (*.csv)')
+        fname = qtw.QFileDialog.getSaveFileName(
+            self,
+            'Export spot-pattern file',
+            self.default_export[0],
+            'Comma-separated file (*.csv)',
+            )
         if not fname[0]:
             return
 

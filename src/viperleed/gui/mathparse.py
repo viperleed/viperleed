@@ -24,6 +24,10 @@ from functools import wraps
 import math
 import operator
 import re
+import sys
+
+PY_3_8 = (3, 8)
+
 
 BINARY_OPERATIONS = {
     ast.Add: operator.add,
@@ -33,6 +37,19 @@ BINARY_OPERATIONS = {
     ast.Mod: operator.mod,
     ast.Pow: operator.pow,
     }
+
+CONST_CLS_TO_ATTR = {
+    # Node instance: node attribute for evaluation
+    ast.Constant: 'value',  # Available since 3.6
+    }
+if sys.version_info < PY_3_8:
+    # Add deprecated ast classes for early python versions.
+    # Back in Py37 they were not yet aliases for Constant.
+    # They have been subclasses of Constant since Py3.8.
+    CONST_CLS_TO_ATTR.update({
+        ast.Str: 's',
+        ast.Num: 'n',
+        })
 
 UNARY_OPERATIONS = {
     ast.USub: operator.neg,
@@ -281,12 +298,6 @@ class MathParser:
         """Recursively evaluate a node."""
         if isinstance(node, ast.Expression):
             ret = self._eval(node.body, depth+1)
-        elif isinstance(node, ast.Constant):  # Available since 3.6
-            ret = node.value
-        elif isinstance(node, ast.Str):       # Deprecated since 3.8
-            ret = node.s
-        elif isinstance(node, ast.Num):       # Deprecated since 3.8
-            ret = node.n
         elif isinstance(node, ast.BinOp):
             ret = self._eval_binary_operation(node, depth+1)
         elif isinstance(node, ast.UnaryOp):
@@ -294,8 +305,17 @@ class MathParser:
         elif isinstance(node, ast.Call):
             ret = self._eval_math_function(node, depth+1)
         else:
-            raise UnsupportedMathError(node)
+            ret = self._eval_constant(node)
         return ret
+
+    def _eval_constant(self, node):
+        """Evaluate a node containing a constant value."""
+        try:
+            attr = next(v for c, v in CONST_CLS_TO_ATTR.items()
+                        if isinstance(node, c))
+        except StopIteration:
+            raise UnsupportedMathError(node) from None
+        return getattr(node, attr)
 
     @limit_recursion
     def _eval_math_function(self, node, depth):
