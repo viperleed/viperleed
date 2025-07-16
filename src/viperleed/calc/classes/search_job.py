@@ -92,7 +92,7 @@ class SearchJob:
             try:
                 SearchJob._kill_proc_tree(ps_proc)
             except Exception as ke:
-            raise
+                raise
 
         finally:
             print("[SearchJob] Cleaning up.")
