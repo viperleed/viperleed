@@ -155,20 +155,13 @@ class SearchJob:
     @staticmethod
     def _run_worker(command, input_data, log_path, kill_flag):
         """Run the search command in a separate process."""
-        print("[SearchJob] Worker started.")
-        print(f"[SearchJob] Command: {command}")
-        print(f"[SearchJob] Input data length: {len(input_data)}")
-        print(f"[SearchJob] Log path: {log_path}")
-        print(f"[SearchJob] Kill flag at start: {kill_flag.value}")
 
         try:
             log_f = open(log_path, "a") if log_path else subprocess.DEVNULL
         except Exception as e:
-            print(f"[SearchJob] Failed to open log file: {e}")
             return
 
         try:
-            print("[SearchJob] Launching subprocess...")
             proc = subprocess.Popen(
                 command,
                 stdin=subprocess.PIPE,
@@ -190,15 +183,12 @@ class SearchJob:
             except (OSError, subprocess.SubprocessError):
                 logger.error(
                     "Error starting search. Check files SD.TL and rf.info.")
-            print("[SearchJob] Input data written.")
 
             while proc.poll() is None:
                 if kill_flag.value:
                     SearchJob._kill_proc_tree(ps_proc)
                     return
                 time.sleep(0.5)
-
-            print(f"[SearchJob] Subprocess exited with return code: {proc.returncode}")
 
         except KeyboardInterrupt:
             logger.info("Killing process due to Keyboard interrupt.")
@@ -215,7 +205,6 @@ class SearchJob:
             print("[SearchJob] Cleaning up.")
             if log_path and log_f != subprocess.DEVNULL:
                 log_f.close()
-
 
     @staticmethod
     def _kill_proc_tree(ps_proc):
