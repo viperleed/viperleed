@@ -150,6 +150,7 @@ class SearchJob:
         self.log_path = Path(log_path) if log_path else None
         self._proc = None
         self._mp_proc = None
+        self._kill_me_flag = mp.Value("b", False)  # shared bool
 
     def _run(self):
         """Run the search command in a separate process."""
@@ -170,13 +171,19 @@ class SearchJob:
             self._proc.stdin.close()
 
             while self._proc.poll() is None:
-                # could add monitoring here (this is NOT the main process!)
+                if self._kill_me_flag.value:
+                    print("Termination requested, killing subprocess tree.")
+                    self._kill_proc_tree(ps_proc)
+                    return  # or raise, or exit
                 time.sleep(0.5)
 
         except (OSError, subprocess.SubprocessError):
             logger.error(
                 "Error starting search. Check files SD.TL and rf.info.")
-
+        except KeyboardInterrupt:
+            logger.info("Killing process due to Keyboard interrupt.")
+            self._kill_proc_tree(ps_proc)
+            raise
         except Exception as e:
             self._kill_proc_tree(ps_proc)
             raise e
@@ -208,11 +215,11 @@ class SearchJob:
         self._mp_proc.join()
 
     def terminate(self):
-        if self._proc:
-            ps_proc = psutil.Process(self._proc.pid)
-            self._kill_proc_tree(ps_proc)
+        self._kill_me_flag.value = True
         if self._mp_proc:
-            self._mp_proc.terminate()
+            self._mp_proc.join(timeout=5)
+            if self._mp_proc.is_alive():
+                self._mp_proc.terminate()  # hard kill if graceful didn't work
 
     @property
     def returncode(self):
