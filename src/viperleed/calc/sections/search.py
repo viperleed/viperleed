@@ -16,12 +16,10 @@ import os
 from pathlib import Path
 import re
 import shutil
-import subprocess
 import sys
 import time
-import psutil
-import multiprocessing as mp
 
+from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iosearch
@@ -31,11 +29,11 @@ from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.parabola_fit import parabolaFit
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
 from viperleed.calc.lib.version import Version
-from viperleed.calc.lib.parabola_fit import parabolaFit
 
 logger = logging.getLogger(__name__)
 
@@ -141,136 +139,6 @@ class SigbusError(TensErLEEDSearchError):
     log_records = ('received signal SIGBUS',
                    'undefined portion of a memory object')
 
-
-
-class SearchJob:
-    """Launch and manage a the MPI-based search job in a separate
-    multiprocessing.Process, taking care of directing the input to stdin, and
-    logging the output. Handles graceful termination of all MPI-subprocesses
-    KeyBoardInterrupt and monitoring.
-
-    This is compatible with the "spawn" multiprocessing method.
-    """
-
-
-    def __init__(self, command, input_data, log_path=None):
-        """Initialize a SearchJob instance.
-
-        Parameters
-        ----------
-        command : list of str
-            The command to execute, e.g. ['mpirun', '-n', '4', './binary']
-        input_data : str
-            Input data to send to the subprocess's stdin (rf.info contents).
-        log_path : str or Path, optional
-            File to which stdout and stderr should be redirected.
-        """
-        self.command = command
-        self.input_data = input_data
-        self.log_path = Path(log_path) if log_path else None
-        self._proc = None
-        self._mp_proc = None
-        self._kill_me_flag = mp.Value("b", False)  # shared bool
-
-    @staticmethod
-    def _run_worker(command, input_data, log_path, kill_flag):
-        """Run the search command in a separate process."""
-
-        try:
-            log_f = open(log_path, "a") if log_path else subprocess.DEVNULL
-        except Exception as e:
-            return
-
-        try:
-            proc = subprocess.Popen(
-                command,
-                stdin=subprocess.PIPE,
-                stdout=log_f,
-                stderr=log_f,
-                encoding="ascii",
-                start_new_session=True,
-            )
-        except Exception as e:
-            return
-
-        try:
-            ps_proc = psutil.Process(proc.pid)
-
-            try:
-                proc.communicate(input=input_data, timeout=0.2)
-            except subprocess.TimeoutExpired:
-                pass
-            except (OSError, subprocess.SubprocessError):
-                logger.error(
-                    "Error starting search. Check files SD.TL and rf.info.")
-
-            while proc.poll() is None:
-                if kill_flag.value:
-                    SearchJob._kill_proc_tree(ps_proc)
-                    return
-                time.sleep(0.5)
-
-        except KeyboardInterrupt:
-            logger.info("Killing process due to Keyboard interrupt.")
-            SearchJob._kill_proc_tree(ps_proc)
-            raise
-
-        except Exception as e:
-            try:
-                SearchJob._kill_proc_tree(ps_proc)
-            except Exception as ke:
-            raise
-
-        finally:
-            print("[SearchJob] Cleaning up.")
-            if log_path and log_f != subprocess.DEVNULL:
-                log_f.close()
-
-    @staticmethod
-    def _kill_proc_tree(ps_proc):
-        """Kill the given process and all of its children."""
-        for child in ps_proc.children(recursive=True):
-            try:
-                child.kill()
-            except psutil.NoSuchProcess:
-                pass
-        try:
-            ps_proc.kill()
-        except psutil.NoSuchProcess:
-            pass
-
-    def start(self):
-        """Start the search subprocess inside a multiprocessing.Process."""
-        logger.debug('Starting search process with command '
-                     f'"{" ".join(self.command)}".')
-        self._mp_proc = mp.Process(
-            target=SearchJob._run_worker,
-            args=(self.command,
-                  self.input_data,
-                  str(self.log_path) if self.log_path else None,
-                  self._kill_me_flag)
-        )
-        self._mp_proc.start()
-
-    def is_running(self):
-        """Return True if the job is still running."""
-        return self._mp_proc.is_alive() if self._mp_proc else False
-
-    def wait(self):
-        """Block until the job is complete."""
-        self._mp_proc.join()
-
-    def terminate(self):
-        """Request the job to terminate (including the called subprocess)."""
-        self._kill_me_flag.value = True
-        if self._mp_proc:
-            self._mp_proc.join(timeout=5)
-            if self._mp_proc.is_alive():
-                self._mp_proc.terminate()  # hard kill if graceful didn't work
-
-    @property
-    def returncode(self):
-        return self._mp_proc.exitcode if self._mp_proc else None
 
 
 def processSearchResults(sl, rp, search_log_path, final=True):
