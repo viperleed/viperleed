@@ -999,7 +999,6 @@ def search(sl, rp):
             count_start=0,
             )
     tried_repeat = False  # if SD.TL is not written, try restarting
-    pgid = None
     logger.info("Starting search. See files Search-progress.pdf "
                 "and SD.TL for progress information.")
 
@@ -1018,7 +1017,6 @@ def search(sl, rp):
     while repeat:                                                               # TODO: all this mess would be nicer to handle with a state machine approach. This would at least help readability on the various ways things are handled
         repeat = False
         interrupted = False
-        proc = None
         # if LOG_SEARCH -> log search
         if search_log_path:
             log_exists = search_log_path.is_file()
