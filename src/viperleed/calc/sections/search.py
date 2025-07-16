@@ -152,11 +152,12 @@ class SearchJob:
         self._mp_proc = None
         self._kill_me_flag = mp.Value("b", False)  # shared bool
 
-    def _run(self):
+    @staticmethod
+    def _run_worker(command, input_data, log_path, kill_flag):
         """Run the search command in a separate process."""
-        log_f = open(self.log_path, "a") if self.log_path else subprocess.DEVNULL
+        log_f = open(log_path, "a") if log_path else subprocess.DEVNULL
 
-        self._proc = subprocess.Popen(
+        proc = subprocess.Popen(
             self.command,
             stdin=subprocess.PIPE,
             stdout=log_f,
@@ -164,16 +165,16 @@ class SearchJob:
             encoding="ascii",
             start_new_session=True,
         )
-        ps_proc = psutil.Process(self._proc.pid)
+        ps_proc = psutil.Process(proc.pid)
 
         try:
-            self._proc.stdin.write(self.input_data)
-            self._proc.stdin.close()
+            proc.stdin.write(input_data)
+            proc.stdin.close()
 
-            while self._proc.poll() is None:
-                if self._kill_me_flag.value:
+            while proc.poll() is None:
+                if kill_flag.value:
                     print("Termination requested, killing subprocess tree.")
-                    self._kill_proc_tree(ps_proc)
+                    SearchJob._kill_proc_tree(ps_proc)
                     return  # or raise, or exit
                 time.sleep(0.5)
 
@@ -182,16 +183,16 @@ class SearchJob:
                 "Error starting search. Check files SD.TL and rf.info.")
         except KeyboardInterrupt:
             logger.info("Killing process due to Keyboard interrupt.")
-            self._kill_proc_tree(ps_proc)
+            SearchJob._kill_proc_tree(ps_proc)
             raise
         except Exception as e:
-            self._kill_proc_tree(ps_proc)
+            SearchJob._kill_proc_tree(ps_proc)
             raise e
         finally:
-            if self.log_path:
+            if log_path:
                 log_f.close()
 
-    def _kill_proc_tree(self, ps_proc):
+    def _kill_proc_tree(ps_proc):
         for child in ps_proc.children(recursive=True):
             try:
                 child.kill()
@@ -205,7 +206,13 @@ class SearchJob:
     def start(self):
         logger.debug('Starting search process with command '
                      f'"{" ".join(self.command)}".')
-        self._mp_proc = mp.Process(target=self._run)
+        self._mp_proc = mp.Process(
+            target=SearchJob._run_worker,
+            args=(self.command,
+                  self.input_data,
+                  str(self.log_path) if self.log_path else None,
+                  self._kill_me_flag)
+        )
         self._mp_proc.start()
 
     def is_running(self):
