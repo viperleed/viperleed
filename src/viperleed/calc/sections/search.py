@@ -155,43 +155,69 @@ class SearchJob:
     @staticmethod
     def _run_worker(command, input_data, log_path, kill_flag):
         """Run the search command in a separate process."""
-        log_f = open(log_path, "a") if log_path else subprocess.DEVNULL
-
-        proc = subprocess.Popen(
-            self.command,
-            stdin=subprocess.PIPE,
-            stdout=log_f,
-            stderr=log_f,
-            encoding="ascii",
-            start_new_session=True,
-        )
-        ps_proc = psutil.Process(proc.pid)
+        print("[SearchJob] Worker started.")
+        print(f"[SearchJob] Command: {command}")
+        print(f"[SearchJob] Input data length: {len(input_data)}")
+        print(f"[SearchJob] Log path: {log_path}")
+        print(f"[SearchJob] Kill flag at start: {kill_flag.value}")
 
         try:
-            proc.stdin.write(input_data)
-            proc.stdin.close()
+            log_f = open(log_path, "a") if log_path else subprocess.DEVNULL
+        except Exception as e:
+            print(f"[SearchJob] Failed to open log file: {e}")
+            return
+
+        try:
+            print("[SearchJob] Launching subprocess...")
+            proc = subprocess.Popen(
+                command,
+                stdin=subprocess.PIPE,
+                stdout=log_f,
+                stderr=log_f,
+                encoding="ascii",
+                start_new_session=True,
+            )
+        except Exception as e:
+            return
+
+        try:
+            ps_proc = psutil.Process(proc.pid)
+
+            try:
+                proc.communicate(input=input_data, timeout=0.2)
+            except subprocess.TimeoutExpired:
+                pass
+            except (OSError, subprocess.SubprocessError):
+                logger.error(
+                    "Error starting search. Check files SD.TL and rf.info.")
+            print("[SearchJob] Input data written.")
 
             while proc.poll() is None:
                 if kill_flag.value:
-                    print("Termination requested, killing subprocess tree.")
                     SearchJob._kill_proc_tree(ps_proc)
-                    return  # or raise, or exit
+                    return
                 time.sleep(0.5)
 
-        except (OSError, subprocess.SubprocessError):
-            logger.error(
-                "Error starting search. Check files SD.TL and rf.info.")
+            print(f"[SearchJob] Subprocess exited with return code: {proc.returncode}")
+
         except KeyboardInterrupt:
             logger.info("Killing process due to Keyboard interrupt.")
             SearchJob._kill_proc_tree(ps_proc)
             raise
+
         except Exception as e:
-            SearchJob._kill_proc_tree(ps_proc)
-            raise e
+            try:
+                SearchJob._kill_proc_tree(ps_proc)
+            except Exception as ke:
+            raise
+
         finally:
-            if log_path:
+            print("[SearchJob] Cleaning up.")
+            if log_path and log_f != subprocess.DEVNULL:
                 log_f.close()
 
+
+    @staticmethod
     def _kill_proc_tree(ps_proc):
         for child in ps_proc.children(recursive=True):
             try:
