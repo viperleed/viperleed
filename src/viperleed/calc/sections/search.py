@@ -1051,39 +1051,13 @@ def search(sl, rp):
             search_log_f = search_log_path.open("a")
             if log_exists:  # log file existed before
                 search_log_f.write("\n\n-------\nRESTARTING\n-------\n\n")
-        else:
-            search_log_f = subprocess.DEVNULL
-        # NB: log file may be open and must be closed!
-        # Create search process
-        logger.debug(f'Starting search process with command "{" ".join(command)}".')
-        try:
-            proc = subprocess.Popen(
-                command, encoding="ascii",
-                stdout=search_log_f,  # if LOG_SEARCH is False, this is DEVNULL
-                stderr=search_log_f,  # same as above
-                preexec_fn=os.setsid                                            # TODO: setsid only POSIX; os comments suggest NOT TO USE THIS as it is unsafe against deadlocks. Suggestion is to use start_new_session keyword [UNIX only!] instead of setsid. For a Windows solution see https://stackoverflow.com/questions/47016723. Probably even better: do not use python subprocess, but QProcess (which can run with its own event loop, and has a .kill(), or perhaps .terminate()). QProcess may have some issues with OpenMPI v<=1.7 due to a bug there (see www.qtcentre.org/threads/19636-Qprocess-and-mpi-not-finishing).
-                )
-        except OSError:  # This should not fail unless the shell is very broken.
-            logger.error("Error starting search. Check SD.TL file.")
-            if search_log_path:
-                search_log_f.close()
-            raise
-        else:
-            pgid = os.getpgid(proc.pid)                                         # TODO: getpgid only POSIX
-        if proc is None:
-            logger.error("Error starting search subprocess... Stopping.")
-            if search_log_path:
-                search_log_f.close()
-            raise RuntimeError("Error running search."
-                               f'Could not start process using "{command}".')
-        # FEED INPUT
-        try:
-            proc.communicate(input=rf_info_content, timeout=0.2)
-        except subprocess.TimeoutExpired:
-            pass  # started successfully; monitoring below
-        except (OSError, subprocess.SubprocessError):
-            logger.error("Error feeding input to search process. "
-                         "Check files SD.TL and rf.info.")
+
+        search_job = SearchJob(
+            command=command,
+            input_data=rf_info_content,
+            log_path=search_log_path,
+        )
+        search_job.start()
 
         # MONITOR SEARCH
         search_eval_timer = ExpiringTimerWithDeadline(                          # TODO: would be nicer with a QTimer, or even a QFileSystemWatcher
@@ -1099,7 +1073,7 @@ def search(sl, rp):
         gaussianWidthOri = rp.GAUSSIAN_WIDTH
         check_datafiles = False
         try:
-            while proc.poll() is None:  # proc is running
+            while search_job.is_running():
                 time.sleep(timestep)
                 parameters.update(rp)                                           # TODO: Would be way nicer with a QFileSystemWatcher
                 # check convergence criteria
@@ -1253,7 +1227,7 @@ def search(sl, rp):
                                            f"and VIBROCC: {exc}")
                 if stop:
                     logger.info("Stopping search...")
-                    kill_process(proc, default_pgid=pgid)
+                    search_job.terminate()
                     if (not repeat and not rp.GAUSSIAN_WIDTH_SCALING == 1
                             and checkrepeat):
                         repeat = True
