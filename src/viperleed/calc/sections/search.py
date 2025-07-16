@@ -144,7 +144,27 @@ class SigbusError(TensErLEEDSearchError):
 
 
 class SearchJob:
+    """Launch and manage a the MPI-based search job in a separate
+    multiprocessing.Process, taking care of directing the input to stdin, and
+    logging the output. Handles graceful termination of all MPI-subprocesses
+    KeyBoardInterrupt and monitoring.
+
+    This is compatible with the "spawn" multiprocessing method.
+    """
+
+
     def __init__(self, command, input_data, log_path=None):
+        """Initialize a SearchJob instance.
+
+        Parameters
+        ----------
+        command : list of str
+            The command to execute, e.g. ['mpirun', '-n', '4', './binary']
+        input_data : str
+            Input data to send to the subprocess's stdin (rf.info contents).
+        log_path : str or Path, optional
+            File to which stdout and stderr should be redirected.
+        """
         self.command = command
         self.input_data = input_data
         self.log_path = Path(log_path) if log_path else None
@@ -208,6 +228,7 @@ class SearchJob:
 
     @staticmethod
     def _kill_proc_tree(ps_proc):
+        """Kill the given process and all of its children."""
         for child in ps_proc.children(recursive=True):
             try:
                 child.kill()
@@ -219,6 +240,7 @@ class SearchJob:
             pass
 
     def start(self):
+        """Start the search subprocess inside a multiprocessing.Process."""
         logger.debug('Starting search process with command '
                      f'"{" ".join(self.command)}".')
         self._mp_proc = mp.Process(
@@ -231,12 +253,15 @@ class SearchJob:
         self._mp_proc.start()
 
     def is_running(self):
+        """Return True if the job is still running."""
         return self._mp_proc.is_alive() if self._mp_proc else False
 
     def wait(self):
+        """Block until the job is complete."""
         self._mp_proc.join()
 
     def terminate(self):
+        """Request the job to terminate (including the called subprocess)."""
         self._kill_me_flag.value = True
         if self._mp_proc:
             self._mp_proc.join(timeout=5)
