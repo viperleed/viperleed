@@ -20,8 +20,6 @@ import shutil
 
 from viperleed import __version__
 from viperleed.calc.classes.rparams.rparams import Rparams
-from viperleed.calc.constants import DEFAULT_OUT
-from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
@@ -115,7 +113,7 @@ def run_calc(
                 + DateTimeFormat.LOG_CONTENTS.now())
     LOGGER.info(f'This is ViPErLEED version {__version__}\n')
 
-    manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT, log_name)
+    manifest = ManifestFile(log_name)
     try:
         # Read input files and load user arguments
         rpars, slab = _make_rpars_and_slab(manifest, preset_params, slab, home)

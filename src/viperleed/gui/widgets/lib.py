@@ -1,4 +1,4 @@
-"""Module widgetslib of viperleed.gui.
+"""Module lib of viperleed.gui.widgets.
 
 Library of functions that are common to several Qt objects.
 """
@@ -10,7 +10,6 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
-import inspect
 import re
 
 import PyQt5.QtCore as qtc
@@ -122,7 +121,7 @@ def drawText(painter, text, transform=None, combine=False):
     rawFont = qtg.QRawFont.fromFont(painter.font())
     indexes = rawFont.glyphIndexesForString(text)
 
-    painter.save();
+    painter.save()
     paths = [rawFont.pathForGlyph(index) for index in indexes]
     advances = rawFont.advancesForGlyphIndexes(indexes,
                                                qtg.QRawFont.UseDesignMetrics
@@ -213,6 +212,12 @@ def screen_fraction(obj, size):
 ################################################################################
 #                                   CLASSES                                    #
 ################################################################################
+
+
+class QDoubleValidatorNoDot(qtg.QDoubleValidator):
+    def validate(self, text:str, cursor_pos:int):
+        text = text.replace(',', '.')
+        return super().validate(text, cursor_pos)
 
 
 class AllGUIFonts():  ## > Will handle in a different way!
