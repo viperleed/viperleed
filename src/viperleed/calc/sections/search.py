@@ -10,7 +10,7 @@ __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
 from collections import Counter
-import copy
+import numpy as np
 import logging
 import os
 from pathlib import Path
