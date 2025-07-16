@@ -20,6 +20,7 @@ import signal
 import subprocess
 import sys
 import time
+import psutil
 
 import numpy as np
 import scipy
@@ -147,6 +148,83 @@ class SigbusError(TensErLEEDSearchError):
         )
     log_records = ('received signal SIGBUS',
                    'undefined portion of a memory object')
+
+
+
+class SearchJob:
+    def __init__(self, command, input_data, log_path=None):
+        self.command = command
+        self.input_data = input_data
+        self.log_path = Path(log_path) if log_path else None
+        self._proc = None
+        self._mp_proc = None
+
+    def _run(self):
+        """Run the search command in a separate process."""
+        log_f = open(self.log_path, "a") if self.log_path else subprocess.DEVNULL
+
+        self._proc = subprocess.Popen(
+            self.command,
+            stdin=subprocess.PIPE,
+            stdout=log_f,
+            stderr=log_f,
+            encoding="ascii",
+            start_new_session=True,
+        )
+        ps_proc = psutil.Process(self._proc.pid)
+
+        try:
+            self._proc.stdin.write(self.input_data)
+            self._proc.stdin.close()
+
+            while self._proc.poll() is None:
+                # could add monitoring here (this is NOT the main process!)
+                time.sleep(0.5)
+
+        except (OSError, subprocess.SubprocessError):
+            logger.error(
+                "Error starting search. Check files SD.TL and rf.info.")
+
+        except Exception as e:
+            self._kill_proc_tree(ps_proc)
+            raise e
+        finally:
+            if self.log_path:
+                log_f.close()
+
+    def _kill_proc_tree(self, ps_proc):
+        for child in ps_proc.children(recursive=True):
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+        try:
+            ps_proc.kill()
+        except psutil.NoSuchProcess:
+            pass
+
+    def start(self):
+        logger.debug('Starting search process with command '
+                     f'"{" ".join(self.command)}".')
+        self._mp_proc = mp.Process(target=self._run)
+        self._mp_proc.start()
+
+    def is_running(self):
+        return self._mp_proc.is_alive() if self._mp_proc else False
+
+    def wait(self):
+        self._mp_proc.join()
+
+    def terminate(self):
+        if self._proc:
+            ps_proc = psutil.Process(self._proc.pid)
+            self._kill_proc_tree(ps_proc)
+        if self._mp_proc:
+            self._mp_proc.terminate()
+
+    @property
+    def returncode(self):
+        return self._mp_proc.exitcode if self._mp_proc else None
 
 
 def processSearchResults(sl, rp, search_log_path, final=True):
