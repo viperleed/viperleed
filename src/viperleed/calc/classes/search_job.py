@@ -1,11 +1,9 @@
 """Class SearchJob."""
 
-__authors__ = (
-    'Alexander M. Imre (@amimre)',
-    )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
-__created__ = '2025-07-17'
-__license__ = 'GPLv3+'
+__authors__ = ("Alexander M. Imre (@amimre)",)
+__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
+__created__ = "2025-07-17"
+__license__ = "GPLv3+"
 
 from contextlib import contextmanager
 import logging
@@ -19,14 +17,13 @@ logger = logging.getLogger(__name__)
 
 class SearchJob:
     """Launch and manage a the MPI-based search job in a separate process.
-    
+
     This takes care of directing the input to stdin, and logging the stdout and
     stderr. It also gracefully handles termination of all MPI-subprocesses in
     case of a request to terminate the job, including KeyBoardInterrupt.
 
     This is compatible with the "spawn" multiprocessing method.
     """
-
 
     def __init__(self, command, input_data, log_path=None):
         """Initialize a SearchJob instance.
@@ -48,14 +45,17 @@ class SearchJob:
 
     def start(self):
         """Start the search subprocess inside a multiprocessing.Process."""
-        logger.debug('Starting search process with command '
-                     f'"{" ".join(self.command)}".')
+        logger.debug(
+            'Starting search process with command ' f'"{" ".join(self.command)}".'
+        )
         self._mp_proc = mp.Process(
             target=_run_search_worker,
-            args=(self.command,
-                  self.input_data,
-                  str(self.log_path),
-                  self._kill_me_flag)
+            args=(
+                self.command,
+                self.input_data,
+                str(self.log_path),
+                self._kill_me_flag,
+            ),
         )
         self._mp_proc.start()
 
@@ -116,8 +116,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag):
         except subprocess.TimeoutExpired:
             pass
         except (OSError, subprocess.SubprocessError):
-            logger.error(
-                "Error starting search. Check files SD.TL and rf.info.")
+            logger.error("Error starting search. Check files SD.TL and rf.info.")
 
         # get the process info using psutil
         try:
