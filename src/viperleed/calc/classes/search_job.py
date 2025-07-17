@@ -89,10 +89,7 @@ class SearchJob:
             raise
 
         except Exception as e:
-            try:
-                SearchJob._kill_proc_tree(ps_proc)
-            except Exception as ke:
-                raise
+            SearchJob._kill_proc_tree(ps_proc)
 
         finally:
             print("[SearchJob] Cleaning up.")
@@ -127,7 +124,7 @@ class SearchJob:
 
     def is_running(self):
         """Return True if the job is still running."""
-        return self._mp_proc.is_alive() if self._mp_proc else False
+        return self._mp_proc and self._mp_proc.is_alive()
 
     def wait(self):
         """Block until the job is complete."""
