@@ -6,6 +6,7 @@ __created__ = "2025-07-17"
 __license__ = "GPLv3+"
 
 from contextlib import contextmanager
+from pathlib import Path
 import logging
 import multiprocessing as mp
 import psutil
@@ -40,8 +41,9 @@ class SearchJob:
         self.command = command
         self.input_data = input_data
         self._mp_proc = None
-        self.log_path = log_path
+        self.log_path = Path(log_path) if log_path else None
         self._kill_me_flag = mp.Value("b", False)  # shared bool
+        self._return_code = mp.Value("i", -999)  # shared int for return code
 
     def start(self):
         """Start the search subprocess inside a multiprocessing.Process."""
@@ -55,6 +57,7 @@ class SearchJob:
                 self.input_data,
                 str(self.log_path),
                 self._kill_me_flag,
+                self._return_code,
             ),
         )
         self._mp_proc.start()
@@ -77,7 +80,7 @@ class SearchJob:
 
     @property
     def returncode(self):
-        return self._mp_proc.exitcode if self._mp_proc else None
+        return self._return_code.value
 
 
 @contextmanager
@@ -93,7 +96,7 @@ def _optional_log_file_path(log_path):
         yield subprocess.DEVNULL
 
 
-def _run_search_worker(command, input_data, log_path, kill_flag):
+def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
     """Run the search command in a separate process."""
 
     with _optional_log_file_path(log_path) as log_f:
@@ -108,6 +111,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag):
             )
         except Exception:
             # failed to start the process
+            return_code.value = 127  # mimic "command not found"
             return
 
         # send input data to the process
@@ -117,12 +121,15 @@ def _run_search_worker(command, input_data, log_path, kill_flag):
             pass
         except (OSError, subprocess.SubprocessError):
             logger.error("Error starting search. Check files SD.TL and rf.info.")
+            return_code.value = 1
+            return
 
         # get the process info using psutil
         try:
             ps_proc = psutil.Process(proc.pid)
         except Exception:
             # failed to get process info
+            return_code.value = 1
             raise
 
         # Monitoring loop
@@ -139,9 +146,14 @@ def _run_search_worker(command, input_data, log_path, kill_flag):
         except KeyboardInterrupt:
             logger.info("Killing process due to Keyboard interrupt.")
             _kill_proc_tree(ps_proc)
+            return_code.value = 1
             raise
         except Exception:
+            return_code.value = 1
             _kill_proc_tree(ps_proc)
+
+        # pass the return code back to the main process
+        return_code.value = proc.returncode
 
 
 def _kill_proc_tree(ps_proc):
