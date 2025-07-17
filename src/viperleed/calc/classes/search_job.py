@@ -17,10 +17,11 @@ import time
 logger = logging.getLogger(__name__)
 
 class SearchJob:
-    """Launch and manage a the MPI-based search job in a separate
-    multiprocessing.Process, taking care of directing the input to stdin, and
-    logging the output. Handles graceful termination of all MPI-subprocesses
-    KeyBoardInterrupt and monitoring.
+    """Launch and manage a the MPI-based search job in a separate process.
+    
+    This takes care of directing the input to stdin, and logging the stdout and
+    stderr. It also gracefully handles termination of all MPI-subprocesses in
+    case of a request to terminate the job, including KeyBoardInterrupt.
 
     This is compatible with the "spawn" multiprocessing method.
     """
