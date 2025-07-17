@@ -166,6 +166,7 @@ classifiers = [
         'pytest-cov>=2.5',      # Added --cov-branch
         'pytest-mock>=3',
         'pytest-subtests',
+        'pytest-timeout',
         ]
     xfail_strict = true
 
