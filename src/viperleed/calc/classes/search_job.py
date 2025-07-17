@@ -42,7 +42,6 @@ class SearchJob:
         self.command = command
         self.input_data = input_data
         self.log_path = Path(log_path) if log_path else None
-        self._proc = None
         self._mp_proc = None
         self._kill_me_flag = mp.Value("b", False)  # shared bool
 
@@ -89,7 +88,7 @@ class SearchJob:
             SearchJob._kill_proc_tree(ps_proc)
             raise
 
-        except Exception as e:
+        except Exception:
             SearchJob._kill_proc_tree(ps_proc)
 
         finally:
