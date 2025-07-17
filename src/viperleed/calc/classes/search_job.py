@@ -92,7 +92,6 @@ class SearchJob:
             SearchJob._kill_proc_tree(ps_proc)
 
         finally:
-            print("[SearchJob] Cleaning up.")
             if log_path and log_f != subprocess.DEVNULL:
                 log_f.close()
 
