@@ -22,6 +22,7 @@ from .tokens import (
     RangeToken,
     TargetToken,
     TokenParserError,
+    TotalOccupationToken,
     ModeToken,
 )
 
@@ -425,6 +426,13 @@ class ConstraintLine(ParsedLine):
     It will be treated as equivalent to
         <type> <target_1> [, <target_2> ...] = <target_1>
     where the linear operation implicitly is the identity matrix.
+
+    Additionally, for occupational parameters, the syntax
+        <type> <target_1> [, <target_2> ...] = total <total_occupation>
+    is allowed, which will set a constant sum of the occupations, i.e. it holds
+    the amount of vacancies constant, but allows the individual occupations to
+    vary freely. This can, for example, be used to vary the occupation in an
+    alloy, without introducing vacancies.
     """
 
     block_name = 'CONSTRAIN'
@@ -478,6 +486,24 @@ class ConstraintLine(ParsedLine):
             self.link_target = self.targets[0]
             # treat as if array is identity
             self.linear_operation = LinearOperationToken.from_array(np.eye(1))
+            return
+
+        # check for 'total' tag
+        if self._rhs.lower().startswith('total '):
+            logger.log(_BELOW_DEBUG, 'Detected "total" tag.')
+
+            if self.type.mode is not PerturbationMode.OCC:
+                raise DisplacementsSyntaxError(
+                    'The "total" tag is only allowed for occupational '
+                    'constraints.'
+                )
+
+            # parse the total occupation value
+            total_occupation_str = self._rhs[len('total '):].strip()
+
+            # this is a special case, where the linear operation is
+            self.linear_operation = TotalOccupationToken(total_occupation_str)
+            self.link_target = None
             return
 
         # The default case is to treat it as [<linear_operation>] <target>
