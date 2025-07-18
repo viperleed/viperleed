@@ -22,6 +22,7 @@ from .tokens import (
     RangeToken,
     TargetToken,
     TokenParserError,
+    TotalOccupationToken,
     ModeToken,
 )
 
@@ -485,6 +486,24 @@ class ConstraintLine(ParsedLine):
             self.link_target = self.targets[0]
             # treat as if array is identity
             self.linear_operation = LinearOperationToken.from_array(np.eye(1))
+            return
+
+        # check for 'total' tag
+        if self._rhs.lower().startswith('total '):
+            logger.log(_BELOW_DEBUG, 'Detected "total" tag.')
+
+            if self.type.mode is not PerturbationMode.OCC:
+                raise DisplacementsSyntaxError(
+                    'The "total" tag is only allowed for occupational '
+                    'constraints.'
+                )
+
+            # parse the total occupation value
+            total_occupation_str = self._rhs[len('total '):].strip()
+
+            # this is a special case, where the linear operation is
+            self.linear_operation = TotalOccupationToken(total_occupation_str)
+            self.link_target = None
             return
 
         # The default case is to treat it as [<linear_operation>] <target>
