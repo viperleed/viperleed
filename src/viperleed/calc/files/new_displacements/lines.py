@@ -425,6 +425,13 @@ class ConstraintLine(ParsedLine):
     It will be treated as equivalent to
         <type> <target_1> [, <target_2> ...] = <target_1>
     where the linear operation implicitly is the identity matrix.
+
+    Additionally, for occupational parameters, the syntax
+        <type> <target_1> [, <target_2> ...] = total <total_occupation>
+    is allowed, which will set a constant sum of the occupations, i.e. it holds
+    the amount of vacancies constant, but allows the individual occupations to
+    vary freely. This can, for example, be used to vary the occupation in an
+    alloy, without introducing vacancies.
     """
 
     block_name = 'CONSTRAIN'
