@@ -7,7 +7,8 @@ from .base import TokenParserError
 from .direction import CartesianDirectionToken
 from .element import ElementToken
 from .linear_operation import LinearOperationToken
+from .mode import ModeToken
 from .offset import OffsetToken
 from .range import RangeToken
 from .target import TargetToken
-from .mode import ModeToken
+from .total_occupation import TotalOccupationToken
