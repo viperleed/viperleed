@@ -489,7 +489,7 @@ class ConstraintLine(ParsedLine):
             return
 
         # check for 'total' tag
-        if self._rhs.lower().startswith('total '):
+        if self._rhs.lower().strip().startswith('total '):
             logger.log(_BELOW_DEBUG, 'Detected "total" tag.')
 
             if self.type.mode is not PerturbationMode.OCC:
@@ -497,6 +497,9 @@ class ConstraintLine(ParsedLine):
                     'The "total" tag is only allowed for occupational '
                     'constraints.'
                 )
+
+            # set flag for special treatment
+            self.is_total_occupation = True
 
             # parse the total occupation value
             total_occupation_str = self._rhs[len('total '):].strip()
