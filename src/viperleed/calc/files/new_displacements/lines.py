@@ -239,12 +239,12 @@ class ParsedLine(ABC):
             )
             raise DisplacementsSyntaxError(msg) from err
 
-    def _parse_type(self, type_str):
+    def _parse_mode(self, mode_str):
         try:
-            return ModeToken(type_str)
+            return ModeToken(mode_str)
         except TokenParserError as err:
             msg = (
-                'Unable to parse <type> information from line in '
+                'Unable to parse <mode> information from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
             raise DisplacementsSyntaxError(msg) from err
@@ -418,17 +418,17 @@ class ConstraintLine(ParsedLine):
     """Class to parse lines in the CONSTRAIN block of DISPLACEMENTS.
 
     Lines in the CONSTRAIN block are given in the form of :
-        <type> <target> [, <target> ...] = [<linear_operation>] <target>
+        <mode> <target> [, <target> ...] = [<linear_operation>] <target>
     Alternatively, for geometric, vibrational or occupational parameters the
     syntax
-        <type> <target_1> [, <target_2> ...] = linked
+        <mode> <target_1> [, <target_2> ...] = linked
     is an allowed shorthand notation to easily create direct link.
     It will be treated as equivalent to
-        <type> <target_1> [, <target_2> ...] = <target_1>
+        <mode> <target_1> [, <target_2> ...] = <target_1>
     where the linear operation implicitly is the identity matrix.
 
     Additionally, for occupational parameters, the syntax
-        <type> <target_1> [, <target_2> ...] = total <total_occupation>
+        <mode> <target_1> [, <target_2> ...] = total <total_occupation>
     is allowed, which will set a constant sum of the occupations, i.e. it holds
     the amount of vacancies constant, but allows the individual occupations to
     vary freely. This can, for example, be used to vary the occupation in an
@@ -436,20 +436,21 @@ class ConstraintLine(ParsedLine):
     """
 
     block_name = 'CONSTRAIN'
-    expected_format = '<type> <target> [, <target>] = [<linear_operation>] <target>'
+    expected_format = '<mode> <target> [, <target>] = [<linear_operation>] <target>'
 
     def __init__(self, line: str):
         super().__init__(line)
+        self.is_total_occupation = False
 
         # Left hand side
         lhs_parts = self._lhs.split()
-        if len(lhs_parts) < 2:  # at least type and one target
+        if len(lhs_parts) < 2:  # at least mode and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        self.type = self._parse_type(lhs_parts[0])
+        self.mode = self._parse_mode(lhs_parts[0])
 
         # TODO: Implement Domains here
-        if self.type.mode is PerturbationMode.DOM:
+        if self.mode.mode is PerturbationMode.DOM:
             raise NotImplementedError(
                 'Domain constraints are not yet supported.'
             )
@@ -492,7 +493,7 @@ class ConstraintLine(ParsedLine):
         if self._rhs.lower().strip().startswith('total '):
             logger.log(_BELOW_DEBUG, 'Detected "total" tag.')
 
-            if self.type.mode is not PerturbationMode.OCC:
+            if self.mode.mode is not PerturbationMode.OCC:
                 raise DisplacementsSyntaxError(
                     'The "total" tag is only allowed for occupational '
                     'constraints.'
@@ -557,14 +558,14 @@ class OffsetsLine(ParsedLine):
     """Class to parse lines in the OFFSETS block of DISPLACEMENTS.
 
     Lines in the OFFSETS block are of the form:
-        <type> <target> [, <target> ...] [<direction>] = <offset>
+        <mode> <target> [, <target> ...] [<direction>] = <offset>
     where <target>, ... are tokens that are parsed by the OffsetToken class.
-    A direction token must be specified if and only if the type of the offset
+    A direction token must be specified if and only if the mode of the offset
     is geometric.
     """
 
     block_name = 'OFFSET'
-    expected_format = ('<type> <target> [, <target> ...] [<direction>] '
+    expected_format = ('<mode> <target> [, <target> ...] [<direction>] '
                        '= <offset>')
 
     def __init__(self, line):
@@ -574,22 +575,22 @@ class OffsetsLine(ParsedLine):
         # parse LHS
 
         parts = self._lhs.split()
-        if len(parts) < 2:  # at least type and one target
+        if len(parts) < 2:  # at least mode and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        self.type = self._parse_type(parts[0])
+        self.mode = self._parse_mode(parts[0])
         targets_str, dir_str = separate_direction_from_targets(
             ' '.join(parts[1:]))
 
         # parse targets
         self.targets = self._parse_targets(targets_str)
 
-        if self.type.mode is PerturbationMode.GEO:
+        if self.mode.mode is PerturbationMode.GEO:
             # expect and parse direction specifier
             # will raise if no direction is given
             self.direction = self._parse_direction(dir_str)
 
-        if self.type.mode is not PerturbationMode.GEO and dir_str:
+        if self.mode.mode is not PerturbationMode.GEO and dir_str:
             raise DisplacementsSyntaxError(
                 "Direction tokens in the OFFSETS block are only allowed for "
                 "geometric offsets."
@@ -603,10 +604,10 @@ class OffsetsLine(ParsedLine):
 
     def __str__(self):
         """Return the string representation of the line."""
-        txt = f'{self.type} {self.targets[0]}'
+        txt = f'{self.mode} {self.targets[0]}'
         for target in self.targets[1:]:
             txt += f', {target}'
-        if self.type.mode is PerturbationMode.GEO:
+        if self.mode.mode is PerturbationMode.GEO:
             txt += f', {self.direction}'
         txt += f' = {self.offset}'
         return txt

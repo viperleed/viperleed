@@ -1,4 +1,4 @@
-"""Module for the <type> token in the DISPLACEMENTS file."""
+"""Module for the <mode> token in the DISPLACEMENTS file."""
 
 __authors__ = ("Alexander M. Imre (@amimre)",)
 __copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
@@ -20,12 +20,12 @@ class ModeTokenParserError(TokenParserError):
 class ModeToken(DisplacementsFileToken):
     """Class for the ModeToken."""
 
-    def __init__(self, type_str):
-        self.mode_str = type_str
+    def __init__(self, mode_str):
+        self.mode_str = mode_str
         try:
-            self.mode = PerturbationMode(type_str)
+            self.mode = PerturbationMode(mode_str)
         except PerturbationModeError as err:
-            msg = f'Unable to parse perturbation type {self.mode_str}.'
+            msg = f'Unable to parse perturbation mode {self.mode_str}.'
             raise ModeTokenParserError(msg) from err
 
     def __eq__(self, other):
