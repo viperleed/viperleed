@@ -93,12 +93,6 @@ def vlj_search(slab, rpars):
     # (generates constraints and bounds)
     parameter_space.apply_search_segment(search_block)
 
-    logger.info(
-        "\nParameter space created\n"
-        "-----------------------\n"
-        f"{parameter_space.info}"
-    )
-
     # initialize the calculator
     calculator = setup_tl_calculator(
         slab,
