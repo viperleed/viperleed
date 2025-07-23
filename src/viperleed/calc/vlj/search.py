@@ -164,5 +164,9 @@ def vlj_search(slab, rpars):
     poscar.write(slab, "POSCAR", comments="all")
     writeVIBROCC(slab, "VIBROCC", silent=True)
 
+    # ensure the output files are written to the output directory
+    rpars.files_to_out.add("POSCAR")
+    rpars.files_to_out.add("VIBROCC")
+
     # delete the calculator to make sure resources are freed asap
     del calculator
