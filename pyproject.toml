@@ -243,3 +243,44 @@ classifiers = [
     [tool.pylint.reports]
     output-format = 'colorized'
     msg-template = '"{module} - L{line:4d}: {msg_id:5s}: {msg} ({symbol})"'
+
+
+[tool.ruff]
+    target-version = 'py37'
+    line-length = 80
+    indent-width = 4
+
+
+    [tool.ruff.lint]
+    # Enable all rules by default and then disable as needed
+    select = ['ALL']
+
+    ignore = [
+        'ANN',      # do not require annotations
+        'Q000',     # do not highlight quotes in check, as format can fix it
+        'TD',       # allow todo comments
+        'FA100',    # don't suggest for 'from __future__ import annotations'
+        'G004',     # allow f-strings in logging
+        'COM812',   # avoids conflicts with formatter
+        'ISC001',   # avoids conflicts with formatter
+        'TRY003',   # allow long error messages
+        'EM101',    # allow string literals in errors
+    ]
+    flake8-quotes.inline-quotes='single'
+
+    [tool.ruff.lint.per-file-ignores]
+    # Ignore specific rules in tests
+    'tests/*' = [
+        'D',        # ignore docstring checks in tests
+        'S101',     # allow asserts
+        'PLR2004',  # allow magic value comparison in tests
+        'SLF001',   # allow checking private members
+    ]
+
+    [tool.ruff.lint.pydocstyle]
+    # Numpy style docstrings
+    convention = 'numpy'
+
+    [tool.ruff.format]
+    quote-style = 'single'
+    docstring-code-format = true
