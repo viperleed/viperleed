@@ -104,6 +104,12 @@ def vlj_search(slab, rpars):
     # apply the parameter space to the calculator
     calculator.set_parameter_space(parameter_space)
 
+    # log the parameter space
+    logger.debug(str(parameter_space))
+
+    # export the tree view of the parameter space to a PDF file
+    parameter_space.export_tree_view(f"parameter_space_{search_block.name}.pdf")
+
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
         rpars=rpars,)
