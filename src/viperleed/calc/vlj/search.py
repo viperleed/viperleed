@@ -1,12 +1,9 @@
-"""Module viperleed.calc.vlj.search.
-"""
+"""Module viperleed.calc.vlj.search."""
 
-__authors__ = (
-    "Alexander M. Imre (@amimre)",
-)
-__copyright__ = "Copyright (c) 2019-2024 ViPErLEED developers"
-__created__ = "2025-04-17"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2025-04-17'
+__license__ = 'GPLv3+'
 
 import copy
 from pathlib import Path
@@ -52,8 +49,8 @@ def vlj_search(slab, rpars):
 
     if not VLJ_AVAILABLE:
         err_msg = (
-            "ViPErLEED-JAX is not available. Please install it to use this "
-            "function."
+            'ViPErLEED-JAX is not available. Please install it to use this '
+            'function.'
         )
         logger.error(err_msg)
         raise RuntimeError(err_msg)
@@ -63,7 +60,7 @@ def vlj_search(slab, rpars):
     tensor_zip_name = tensor_dir_name + '.zip'
 
     # try unzipped in work dir
-    if (Path() / DEFAULT_TENSORS/ tensor_dir_name).is_dir():
+    if (Path() / DEFAULT_TENSORS / tensor_dir_name).is_dir():
         tensor_path = Path() / DEFAULT_TENSORS / tensor_dir_name
     # try zipped in work dir
     elif (Path() / DEFAULT_TENSORS / tensor_zip_name).is_file():
@@ -108,15 +105,17 @@ def vlj_search(slab, rpars):
     logger.debug(str(parameter_space))
 
     # export the tree view of the parameter space to a PDF file
-    parameter_space.export_tree_view(f"parameter_space_{search_block.name}.pdf")
+    parameter_space.export_tree_view(f'parameter_space_{search_block.name}.pdf')
 
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
-        rpars=rpars,)
+        rpars=rpars,
+    )
 
     # run benchmarks
     benchmark_results = benchmark_calculator(
-        calculator, use_grad=optimizer_iterator.scheduled_gradients)
+        calculator, use_grad=optimizer_iterator.scheduled_gradients
+    )
     logger.info(format_benchmark_results(benchmark_results))
 
     # evaluate the initial R-factor
@@ -126,11 +125,9 @@ def vlj_search(slab, rpars):
 
     # initial parameter vector
     x = optimizer_iterator.suggested_starting_point
-    logger.debug(
-        f'Initial parameter vector:\n{x}')
+    logger.debug(f'Initial parameter vector:\n{x}')
 
     for optimizer, result in optimizer_iterator:
-
         logger.info(
             f'Optimizer {optimizer.name} finished with best '
             f'R = {result.best_R:.4f}'
@@ -141,38 +138,39 @@ def vlj_search(slab, rpars):
         tmp_slab = copy.deepcopy(slab)
         calculator.apply_to_slab(tmp_slab, rpars, result.best_x)
 
-        poscar.write(slab, f'POSCAR_TL_{optimizer.name}_intermediate',
-                     comments='all')
-        writeVIBROCC(slab, f'VIBROCC_TL_{optimizer.name}_intermediate',
-                     silent=True)
+        poscar.write(
+            slab, f'POSCAR_TL_{optimizer.name}_intermediate', comments='all'
+        )
+        writeVIBROCC(
+            slab, f'VIBROCC_TL_{optimizer.name}_intermediate', silent=True
+        )
 
         # write result to file
         result.write_to_file(f'{optimizer.name}_result.npz')
 
         # udate rpars with the best R
         rpars.last_R = result.best_R
-        rpars.stored_R["viperleed-jax"] = (result.best_R, -1, -1)               # TODO: calc integer and fractional parts
-
+        rpars.stored_R['viperleed-jax'] = (
+            result.best_R,
+            -1,
+            -1,
+        )  # TODO: calc integer and fractional parts
 
     # Finished optimization
-    logger.info(
-        f'Finished optimization with best R = {result.best_R:.4f}'
-    )
-    logger.debug(
-        f'Best parameter vector:\n{result.best_x}'
-    )
+    logger.info(f'Finished optimization with best R = {result.best_R:.4f}')
+    logger.debug(f'Best parameter vector:\n{result.best_x}')
 
     # apply the final result to the slab object
-    logger.debug("Applying final result to slab object.")
+    logger.debug('Applying final result to slab object.')
     calculator.apply_to_slab(slab, rpars, result.best_x)
 
     # write the updated POSCAR and VIBROCC files to work
-    poscar.write(slab, "POSCAR", comments="all")
-    writeVIBROCC(slab, "VIBROCC", silent=True)
+    poscar.write(slab, 'POSCAR', comments='all')
+    writeVIBROCC(slab, 'VIBROCC', silent=False)
 
     # ensure the output files are written to the output directory
-    rpars.files_to_out.add("POSCAR")
-    rpars.files_to_out.add("VIBROCC")
+    rpars.files_to_out.add('POSCAR')
+    rpars.files_to_out.add('VIBROCC')
 
     # delete the calculator to make sure resources are freed asap
     del calculator
