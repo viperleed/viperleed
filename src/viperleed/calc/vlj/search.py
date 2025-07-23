@@ -6,20 +6,20 @@ __created__ = '2025-04-17'
 __license__ = 'GPLv3+'
 
 import copy
-from pathlib import Path
 import logging
-
-from viperleed.calc.files import poscar
-from viperleed.calc.files.vibrocc import writeVIBROCC
-from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.vlj import VLJ_AVAILABLE
+from pathlib import Path
 
 import numpy as np
 
+from viperleed.calc.constants import DEFAULT_TENSORS
+from viperleed.calc.files import poscar
+from viperleed.calc.files.vibrocc import writeVIBROCC
+from viperleed.calc.vlj import VLJ_AVAILABLE
+
 if VLJ_AVAILABLE:
     from viperleed_jax.from_objects import (
-        setup_tl_parameter_space,
         setup_tl_calculator,
+        setup_tl_parameter_space,
     )
     from viperleed_jax.optimization.iterator import OptimizerIterator
     from viperleed_jax.utils import (
