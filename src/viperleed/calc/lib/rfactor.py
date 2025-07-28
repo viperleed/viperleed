@@ -7,7 +7,7 @@ __created__ = '2024-02-21'
 from jax import numpy as jnp
 
 
-def pendry_R(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
+def pendry_R(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False):
     """Calculate the R-factor for two beams."""
     # Experimental data
     exp_deriv_spline = exp_spline.derivative()
@@ -24,11 +24,11 @@ def pendry_R(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
     exp_y = pendry_y(exp_intensity, exp_derivative, v0_imag)
     theo_y = pendry_y(theo_intensity, theo_derivative, v0_imag)
 
-    return pendry_R_from_y(exp_y, theo_y, energy_step)
+    return pendry_R_from_y(exp_y, theo_y, energy_step, per_beam=per_beam))
 
 
 def pendry_R_from_intensity_and_derivative(
-    intens_deriv_1, intens_deriv_2, v0_real_steps, v0_imag, energy_step
+    intens_deriv_1, intens_deriv_2, v0_real_steps, v0_imag, energy_step, per_beam=False
 ):
     intens_1, deriv_1 = intens_deriv_1
     intens_2, deriv_2 = intens_deriv_2
@@ -39,10 +39,10 @@ def pendry_R_from_intensity_and_derivative(
     # shift y_1 by v0_real_steps
     y_1 = integer_shift_v0r(y_1, v0_real_steps)
 
-    return pendry_R_from_y(y_1, y_2, energy_step)
+    return pendry_R_from_y(y_1, y_2, energy_step, per_beam=per_beam)
 
 
-def pendry_R_from_y(y_1, y_2, energy_step):
+def pendry_R_from_y(y_1, y_2, energy_step, per_beam=False):
     # mask out NaNs for this calculation
     y_1_mask = jnp.isnan(y_1)
     y_2_mask = jnp.isnan(y_2)
@@ -54,6 +54,9 @@ def pendry_R_from_y(y_1, y_2, energy_step):
     # TODO?: potentially, one could do these integrals analytically based on the spline coefficients
     numerators = nansum_trapezoid((y_1 - y_2) ** 2, dx=energy_step, axis=0)
     denominators = nansum_trapezoid((y_1**2 + y_2**2), dx=energy_step, axis=0)
+    if per_beam:
+        # return R factor for each beam
+        return numerators / denominators
     # R factor for all beams
     return jnp.sum(numerators) / jnp.sum(denominators)
 
