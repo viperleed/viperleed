@@ -7,7 +7,9 @@ __created__ = '2024-02-21'
 from jax import numpy as jnp
 
 
-def pendry_R(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False):
+def pendry_R(
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+):
     """Calculate the R-factor for two beams."""
     # Experimental data
     exp_deriv_spline = exp_spline.derivative()
@@ -24,11 +26,16 @@ def pendry_R(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_bea
     exp_y = pendry_y(exp_intensity, exp_derivative, v0_imag)
     theo_y = pendry_y(theo_intensity, theo_derivative, v0_imag)
 
-    return pendry_R_from_y(exp_y, theo_y, energy_step, per_beam=per_beam))
+    return pendry_R_from_y(exp_y, theo_y, energy_step, per_beam=per_beam)
 
 
 def pendry_R_from_intensity_and_derivative(
-    intens_deriv_1, intens_deriv_2, v0_real_steps, v0_imag, energy_step, per_beam=False
+    intens_deriv_1,
+    intens_deriv_2,
+    v0_real_steps,
+    v0_imag,
+    energy_step,
+    per_beam=False,
 ):
     intens_1, deriv_1 = intens_deriv_1
     intens_2, deriv_2 = intens_deriv_2
