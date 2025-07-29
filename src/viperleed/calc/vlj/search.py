@@ -121,7 +121,12 @@ def vlj_search(slab, rpars):
     # evaluate the initial R-factor
     unperturbed_x = np.array([0.5] * calculator.n_free_parameters)
     unperturbed_R = calculator.R(unperturbed_x)
-    logger.info(f'R-factor for unperturbed structure: {unperturbed_R:.4f}')
+
+    used_v0r = calculator.parameter_space.meta_tree(unperturbed_x[0])
+    logger.info(
+        f'R-factor for unperturbed structure: {unperturbed_R:.4f} with inner '
+        f' potential shift of {used_v0r:.2f}'
+    )
 
     # initial parameter vector
     x = optimizer_iterator.suggested_starting_point
