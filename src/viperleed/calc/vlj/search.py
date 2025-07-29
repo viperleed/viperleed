@@ -105,7 +105,7 @@ def vlj_search(slab, rpars):
     logger.debug(str(parameter_space))
 
     # export the tree view of the parameter space to a PDF file
-    parameter_space.export_tree_view(f'parameter_space_{search_block.name}.pdf')
+    parameter_space.graphical_export(f'parameter_space_{search_block.name}.pdf')
 
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
