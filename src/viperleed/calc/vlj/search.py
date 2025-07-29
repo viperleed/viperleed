@@ -70,7 +70,8 @@ def vlj_search(slab, rpars):
         tensor_path = rpars.paths.home / DEFAULT_TENSORS / tensor_zip_name
     else:
         # if no tensor file is found, raise an error
-        raise FileNotFoundError(f'{tensor_dir_name}(.zip) not found.')
+        msg = f'{tensor_dir_name}(.zip) not found.'
+        raise FileNotFoundError(msg)
 
     # get the next block from the displacements file – or return if we are done
     if rpars.last_R is None:
@@ -105,7 +106,9 @@ def vlj_search(slab, rpars):
     logger.debug(str(parameter_space))
 
     # export the tree view of the parameter space to a PDF file
-    parameter_space.graphical_export(f'parameter_space_{search_block.name}.pdf')
+    parameter_space.graphical_export(
+        f'parameter_space_{search_block.label}.pdf'
+    )
 
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
