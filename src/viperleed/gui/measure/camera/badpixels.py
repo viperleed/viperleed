@@ -157,11 +157,11 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         height, width, dtype = self.frame_info
         self._imgs = {
             _FinderSection.ACQUIRE_DARK_SHORT:
-                BadPixelFrameStorage(height, width),
+                BadPixelsFrameStorage(height, width),
             _FinderSection.ACQUIRE_DARK_LONG:
-                BadPixelFrameStorage(height, width),
+                BadPixelsFrameStorage(height, width),
             _FinderSection.ACQUIRE_FLAT:
-                BadPixelFrameStorage(height, width),
+                BadPixelsFrameStorage(height, width),
             }
         self._current_section = _FinderSection.ACQUIRE_DARK_SHORT
 
@@ -1407,7 +1407,7 @@ class BadPixels:
         return bool(self.__has_info and self.n_bad_pixels_sensor)
 
 
-class BadPixelFrameStorage():
+class BadPixelsFrameStorage():
     """Class for containing bad pixel frames."""
 
     def __init__(self, height, width):
