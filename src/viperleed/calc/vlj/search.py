@@ -126,6 +126,7 @@ def vlj_search(slab, rpars):
     unperturbed_R = calculator.R(unperturbed_x)
 
     used_v0r, *_ = calculator.expand_params(unperturbed_x)
+    used_v0r = float(used_v0r)
     logger.info(
         f'R-factor for unperturbed structure: {unperturbed_R:.4f} with inner '
         f' potential shift of {used_v0r:.2f}'
