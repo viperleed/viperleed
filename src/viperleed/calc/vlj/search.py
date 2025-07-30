@@ -105,10 +105,21 @@ def vlj_search(slab, rpars):
     # log the parameter space
     logger.debug(str(parameter_space))
 
-    # export the tree view of the parameter space to a PDF file
-    parameter_space.graphical_export(
-        f'parameter_space_{search_block.label}.pdf'
-    )
+    # (try to) export the tree view of the parameter space to a PDF file
+    try:
+        parameter_space.export_tree_view(
+            f'parameter_space_{search_block.label}.pdf'
+        )
+    except Exception as e:
+        logger.warning(
+            f'Could not export parameter space tree view: {e}. '
+            'Dot language support may not be available.'
+        )
+    else:
+        logger.info(
+            f'Parameter space tree view exported to '
+            f'parameter_space_{search_block.label}.pdf'
+        )
 
     optimizer_iterator = OptimizerIterator(
         calculator=calculator,
