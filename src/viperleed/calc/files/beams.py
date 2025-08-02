@@ -391,12 +391,17 @@ def checkEXPBEAMS(sl, rp, domains=False):
         rp.expbeams.remove(b)
 
 
-def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
+def readAUXEXPBEAMS(
+    filename="AUXEXPBEAMS",
+    interactive=False,
+    fortran_format='12F6.2'):
     """Reads beams from an AUXEXPBEAMS file, which already has the formatting
     required by TensErLEED. Returns a list of Beam objects. Only works if the
     comment lines are of format *( h k )*, including the stars, with h and k
     separated by whitespace. If 'interactive' is True, then the user will be
-    asked to clarify labels that cannot be read."""
+    asked to clarify labels that cannot be read.
+
+    Some very old versions may use '5(F8.2,F8.3)' as fortran_format."""
     expbeams = []
     try:
         with open(filename, 'r') as rf:
@@ -405,7 +410,7 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
         logger.error("Error reading AUXEXPBEAMS.")
         raise
     read = False
-    rf62x12 = ff.FortranRecordReader('12F6.2')
+    fortran_reader = ff.FortranRecordReader(fortran_format)
     rgx = re.compile(r'[\*\(\s]*(?P<h>[-0-9/]+)\s+(?P<k>[-0-9/]+)')
     for line in lines:
         if "*" in line:
@@ -462,7 +467,7 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                              "beams or scaling factor in line:\n"+line)
                 return []
         elif read:
-            newvals = rf62x12.read(line)
+            newvals = fortran_reader.read(line)
             i = 0
             while i+1 < len(newvals):
                 if newvals[i] is None:
