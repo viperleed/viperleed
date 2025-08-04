@@ -1,17 +1,18 @@
 """Class SearchJob."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2025-07-17"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-07-17'
+__license__ = 'GPLv3+'
 
-from contextlib import contextmanager
-from pathlib import Path
 import logging
 import multiprocessing as mp
-import psutil
 import subprocess
 import time
+from contextlib import contextmanager
+from pathlib import Path
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +20,10 @@ logger = logging.getLogger(__name__)
 class SearchJob:
     """Launch and manage the MPI-based search job in a separate process.
 
-    This takes care of directing the input to stdin, and logging the stdout and
-    stderr. It also gracefully handles termination of all MPI-subprocesses in
-    case of a request to terminate the job, including KeyBoardInterrupt.
+    This takes care of directing the input to stdin, and logging the
+    stdout and stderr. It also gracefully handles termination of all
+    MPI-subprocesses in case of a request to terminate the job,
+    including KeyBoardInterrupt.
 
     This is compatible with the "spawn" multiprocessing method.
     """
@@ -42,13 +44,13 @@ class SearchJob:
         self.input_data = input_data
         self._mp_proc = None
         self.log_path = Path(log_path) if log_path else None
-        self._kill_me_flag = mp.Value("b", False)  # shared bool
-        self._return_code = mp.Value("i", -999)  # shared int for return code
+        self._kill_me_flag = mp.Value('b', False)  # shared bool
+        self._return_code = mp.Value('i', -999)  # shared int for return code
 
     def start(self):
         """Start the search subprocess inside a multiprocessing.Process."""
-        command_str = " ".join(self.command)
-        logger.debug(f"Starting search process with command {command_str}.")
+        command_str = ' '.join(self.command)
+        logger.debug(f'Starting search process with command {command_str}.')
         self._mp_proc = mp.Process(
             target=_run_search_worker,
             args=(
@@ -86,13 +88,14 @@ class SearchJob:
 def _optional_log_file_path(log_path):
     """Context manager to open a log file or yield subprocess.DEVNULL."""
     yield (
-        subprocess.DEVNULL if log_path is None else log_path.open("a", encoding="utf-8")
+        subprocess.DEVNULL
+        if log_path is None
+        else log_path.open('a', encoding='utf-8')
     )
 
 
 def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
     """Run the search command in a separate process."""
-
     with _optional_log_file_path(log_path) as log_f:
         try:
             proc = subprocess.Popen(
@@ -100,7 +103,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
                 stdin=subprocess.PIPE,
                 stdout=log_f,
                 stderr=log_f,
-                encoding="ascii",
+                encoding='ascii',
                 start_new_session=True,
             )
         except Exception:
@@ -114,7 +117,9 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
         except subprocess.TimeoutExpired:
             pass
         except (OSError, subprocess.SubprocessError):
-            logger.error("Error starting search. Check files SD.TL and rf.info.")
+            logger.error(  # noqa: TRY400
+                'Error starting search. Check files SD.TL and rf.info.'
+            )
             return_code.value = 1
             return
 
@@ -138,11 +143,11 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
         try:
             monitor_process()
         except KeyboardInterrupt:
-            logger.info("Killing process due to Keyboard interrupt.")
+            logger.info('Killing process due to Keyboard interrupt.')
             _kill_proc_tree(ps_proc)
             return_code.value = 1
             raise
-        except Exception:
+        except Exception:  # noqa: BLE001
             return_code.value = 1
             _kill_proc_tree(ps_proc)
 
