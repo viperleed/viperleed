@@ -66,3 +66,21 @@ def test_writing_to_log_file(tmp_path):
         content = f.read()
 
     assert 'Test log output' in content
+
+@pytest.mark.timeout(5)
+def test_job_kill_flag(subtests):
+    """Test that the job can be killed using the kill flag."""
+    script = [sys.executable, '-c', 'while True: pass']
+    job = SearchJob(script, '', log_path=None)
+    job.start()
+    time.sleep(0.5)  # give it time to start
+
+    with subtests.test('is running'):
+        assert job.is_running()
+    job._kill_me_flag.value = True
+    job.wait()  # ensure cleanup
+
+    with subtests.test('is not running after kill'):
+        assert not job.is_running()
+
+
