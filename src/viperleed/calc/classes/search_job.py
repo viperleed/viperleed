@@ -47,9 +47,8 @@ class SearchJob:
 
     def start(self):
         """Start the search subprocess inside a multiprocessing.Process."""
-        logger.debug(
-            'Starting search process with command ' f'"{" ".join(self.command)}".'
-        )
+        command_str = " ".join(self.command)
+        logger.debug(f"Starting search process with command {command_str}.")
         self._mp_proc = mp.Process(
             target=_run_search_worker,
             args=(
