@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class SearchJob:
-    """Launch and manage a the MPI-based search job in a separate process.
+    """Launch and manage the MPI-based search job in a separate process.
 
     This takes care of directing the input to stdin, and logging the stdout and
     stderr. It also gracefully handles termination of all MPI-subprocesses in
