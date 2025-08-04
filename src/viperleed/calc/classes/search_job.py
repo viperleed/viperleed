@@ -90,7 +90,7 @@ def _optional_log_file_path(log_path):
     yield (
         subprocess.DEVNULL
         if log_path is None
-        else log_path.open('a', encoding='utf-8')
+        else Path(log_path).open('a', encoding='utf-8')
     )
 
 
