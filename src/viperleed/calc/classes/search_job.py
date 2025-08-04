@@ -55,7 +55,7 @@ class SearchJob:
             args=(
                 self.command,
                 self.input_data,
-                str(self.log_path),
+                str(self.log_path.resolve()) if self.log_path else None,
                 self._kill_me_flag,
                 self._return_code,
             ),
