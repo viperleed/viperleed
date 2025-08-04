@@ -127,7 +127,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
         # get the process info using psutil
         try:
             ps_proc = psutil.Process(proc.pid)
-        except Exception:
+        except psutil.Error:  # catch all psutil errors
             # failed to get process info
             return_code.value = 1
             raise
