@@ -10,7 +10,6 @@ __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
 from collections import Counter
-import numpy as np
 import logging
 import os
 from pathlib import Path
@@ -18,6 +17,8 @@ import re
 import shutil
 import sys
 import time
+
+import numpy as np
 
 from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
