@@ -15,7 +15,7 @@ from viperleed.calc.classes.search_job import SearchJob
 
 @pytest.mark.timeout(5)
 def test_termination(subtests):
-    script = ["python3", "-c", "while True: pass"]
+    script = [sys.executable, '-c', 'while True: pass']
     job = SearchJob(script, "", log_path=None)
     job.start()
     time.sleep(0.5)  # give it time to start
