@@ -30,8 +30,24 @@ def test_termination(subtests):
         assert not job.is_running()
     assert job.returncode is not None
 
+@pytest.mark.timeout(5)
 def test_invalid_command():
-    job = SearchJob(["nonexistent_command_xyz"], "", log_path=None)
+    job = SearchJob(['nonexistent_command_xyz'], '', log_path=None)
     job.start()
     job.wait()
     assert job.returncode == 127  # mimics "command not found"
+
+@pytest.mark.timeout(5)
+def test_correct_return_code():
+    """Test that the job returns the correct return code."""
+    script = [
+        sys.executable,
+        '-c',
+        # we have to wait a bit, otherwise the process dies before we
+        # can fetch the PID
+        'import sys; import time; time.sleep(0.5); sys.exit(42)',
+    ]
+    job = SearchJob(script, '', log_path=None)
+    job.start()
+    job.wait()
+    assert job.returncode == 42
