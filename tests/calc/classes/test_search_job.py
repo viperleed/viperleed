@@ -1,18 +1,16 @@
 """Class SearchJob."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2025-07-17"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-07-17'
+__license__ = 'GPLv3+'
+
+import sys
+import time
 
 import pytest
 
-import logging
-import time
-
 from viperleed.calc.classes.search_job import SearchJob
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.mark.timeout(5)
