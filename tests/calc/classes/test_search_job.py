@@ -84,3 +84,16 @@ def test_job_kill_flag(subtests):
         assert not job.is_running()
 
 
+@pytest.mark.timeout(5)
+def test_notice_immediate_job_death(capfd):
+    """Test that the job is not running immediately after start."""
+    # Note: we HAVE to use capfd here (rather than caplog, capsys or even
+    # "with pytest.raises" because the error occurs in another multiprocessing
+    # process and will not be captured)
+    script = [sys.executable, '-c', 'pass']
+    job = SearchJob(script, '', log_path=None)
+    job.start()
+    job.wait()
+
+    captured = capfd.readouterr()
+    assert 'psutil.NoSuchProcess: process PID not found' in captured.err
