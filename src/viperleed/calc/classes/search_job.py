@@ -86,14 +86,7 @@ class SearchJob:
 @contextmanager
 def _optional_log_file_path(log_path):
     """Context manager to open a log file or yield subprocess.DEVNULL."""
-    if log_path:
-        f = open(log_path, "a")
-        try:
-            yield f
-        finally:
-            f.close()
-    else:
-        yield subprocess.DEVNULL
+    yield (subprocess.DEVNULL if not log_path else log_path.open("a", encoding="utf-8"))
 
 
 def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
