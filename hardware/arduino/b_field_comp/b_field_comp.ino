@@ -10,12 +10,12 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer, Florian Dörr, Tu
 
 #include <SPI.h>
 
-#define DEBUG false                  // Debug mode, writes to serial line, for use in serial monitor
+#define DEBUG false                   // Debug mode, writes to serial line, for use in serial monitor
 
-#include "states-def.h"                 // Basic state machine definitions
-#include "arduino_utils.h"           // from '../lib'; for setChipSelectHigh
+#include "states-def.h"               // Basic state machine definitions
+#include "arduino_utils.h"            // from '../lib'; for setChipSelectHigh
 #include "viper-serial.h"             // Serial communication functions
-#include "b_field_comp.h"            // Globals, #defines, etc.
+#include "b_field_comp.h"             // Globals, #defines, etc.
 
 // The box ID is an indentifier that is necessary for the PC to know what
 // type of Arduino it is handling. 2 is the identifier of a
@@ -23,67 +23,30 @@ Authors: Michele Riva, Christoph Pfungen, Stefan Mitterhöfer, Florian Dörr, Tu
 #define BOX_ID  2
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.1
-#define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    1  // max 255
+#define FIRMWARE_VERSION_MAJOR    0   // max 255
+#define FIRMWARE_VERSION_MINOR    1   // max 255
 
 
+/** ---------------------------- INITIALIZATION ---------------------------- **/
 
 void setup()
 {
-  Serial.setTimeout(100);
-  Serial.begin(9600);          // Open serial port, set data rate to 9600 bps
-  delay(2000);                 // The IDE needs some time to connect to the Serial Monitor
-
-  /*
-
-  //analogReference(INTERNAL);       // Enable 2.56V bandgap reference on Aref pin
-
-  */
-
-  coil_1.setup();
-  coil_2.setup();
-
-  // coil_1.set_duty_cycle(0.5);
-  // coil_2.set_duty_cycle(0.2);
-
-  delay(100);
-
+    Serial.setTimeout(100);
+    Serial.begin(9600);    // Open serial port, set data rate to 9600 bps
+    delay(2000);           // The IDE needs some time to connect to the Serial Monitor
+    coil_1.setup();
+    coil_2.setup();
+    delay(100);
 }
+
+
+/** ----------------------------- STATE MACHINE ---------------------------- **/
 
 void loop()
 {
-    //uint8_t byteRead;
-    // TLE7209_Error errcode = TLE7209_NoError;
-    float current, temperature, shuntvoltage, voltage;                            // TODO: globals?
-    float setpoint;
-
-    // delay(1000);
-
     #if DEBUG
         Serial.println("Heartbeat\n");
     #endif
-
-
-    /***
-    setpoint = -1.000;
-    Serial.println("duty cycle;voltage;current");
-    do {
-      coil_1.set_duty_cycle(setpoint);
-      delay(100);
-      voltage = coil_1.get_voltage();
-      current = coil_1.get_current();
-
-      Serial.print(setpoint,3);
-      Serial.print(";");
-      Serial.print(voltage);
-      Serial.print(";");
-      Serial.println(current,6);
-
-      setpoint += 0.001;
-    }while(setpoint < 1.0);
-    ***/
-
-
 
     /**Read from serial line and handle the state machine.**/
     // See if there is anything coming from the PC.
@@ -96,7 +59,7 @@ void loop()
     compensateForSupplyVoltage();                                                    // TODO: Really here?
     compensateForThermalDrift();
 
-    // Finally do what's needed in the currentState
+    // Finally do what's needed in the currentState.
     switch (currentState){
         case STATE_GET_CONFIGURATION:
             getConfiguration();
@@ -133,7 +96,8 @@ void loop()
             break;
     }
 
-
+    // float current, temperature, shuntvoltage, voltage;
+    // float setpoint;
 
     // do {
     //   coil_1.set_duty_cycle(setpoint);
@@ -181,10 +145,6 @@ void loop()
     //   Serial.println(" A");
     // }
 
-
-
-
-
     /***
     // shuntvoltage = coil_1.measurement.get_shunt_voltage();
     // current = coil_1.get_current();
@@ -207,26 +167,19 @@ void loop()
     // #endif
     ***/
 
-
-
-
-
     /*
     TODO:
         - Call '.set_current' method and adjust current as needed
         - Check return code, transmit error message over serial console
         - Periodically monitor the DIA_REG for short-circuit, overcurrent/-temperature
           If a fault occurs, call driver.reset() to clear the error condition and re-enable the output drivers
-
     */
-
 }
 
 
 bool isAllowedCommand() {
     /**
-    Check if the received command is among the commands the arduino can
-    process.
+    Check if the received command is among those that the arduino can process.
 
     Returns
     -------
@@ -246,7 +199,6 @@ bool isAllowedCommand() {
         case PC_SET_TRANSFORMATION_MATRIX: break;
         case PC_SET_CALIBRATION_CURVE: break;
         case PC_SET_UP_ADCS: break;
-       // case PC_: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
@@ -279,6 +231,7 @@ void updateState() {
     if (not newMessage) return; // No new message, therefore do not set state
 
     if (msgLength > 1) return; // We received data, not a command
+    // Note that all data messages have to be at least two bytes long.
 
     switch(data_received[0]){
         case PC_CONFIGURATION:
@@ -334,65 +287,64 @@ void updateState() {
         case PC_SET_UP_ADCS:
             currentState = STATE_SET_UP_ADCS;
             break;
-        /*case PC_:
-            currentState = STATE_;
-            break;*/
     }
-
     newMessage = false;
 }
 
 
 void compensateForSupplyVoltage(){
-    /** Measure supply voltage and adjust duty cycle according to it. **/
+    /** Measure supply voltage and adjust duty cycle according to it. **/       // TODO: implement
     // If target current:
     // output_voltage = duty_cycle * supply_voltage
 }
 
 
 void compensateForThermalDrift(){
-    /** Compensate for the increased resistance when coils heat up. **/
+    /** Compensate for the increased resistance when coils heat up. **/         // TODO: fix
     // If target current:
     // Only if enough time has passed/not too much current change happened
     // Is change small enough -> calculate resistance
-    
     if (not measured){
-    	return;
+        return;
     }
 
-	for(int j=0; j<2;j++){
-		bool measureResistance = false;
-		floatOrBytes resistance;
-		float delta_current = new_current[j] - last_current[j];
-		
-		unsigned long delta_t = current_time - last_current_time;
-		
-		if (delta_current > current_max){
-			if (delta_t > timeConstant[j].asFloat){
-				measureResistance = true;
-			}
-		}
-		
-		if (delta_current < current_max){
-			measureResistance = true;
-		}
-	
-		if (measureResistance == true){
-			resistance.asFloat = (new_voltage[j] * dutyCycle[j].asFloat) / new_current[j];
-			coilResistance[j] = resistance.asFloat;
-			sendFloatToPC(resistance);
-		}
-	}
-	
-	measured = false;
+    for(int j=0; j<2;j++){
+        bool measureResistance = false;
+        floatOrBytes resistance;
+        float delta_current = new_current[j] - last_current[j];
+        unsigned long delta_t = current_time - last_current_time;
 
+        if (delta_current > current_max){
+            if (delta_t > timeConstant[j].asFloat){
+                measureResistance = true;
+            }
+        }
+
+        if (delta_current < current_max){
+            measureResistance = true;
+        }
+
+        if (measureResistance == true){
+            resistance.asFloat = (new_voltage[j] * dutyCycle[j].asFloat) / new_current[j];
+            coilResistance[j] = resistance.asFloat;
+            sendFloatToPC(resistance);
+        }
+    }
+
+    measured = false;
 }
 
 
+/** ---------------------- STATE & PC-REQUEST HANDLERS --------------------- **/
+
 /** Handler of STATE_GET_CONFIGURATION */
 void getConfiguration(){
-    /**Send box ID, firmware version and serial nr. to PC.
+    /** Send box ID, firmware version and serial nr. to PC.
     The serial number is read from the EEPROM.
+
+    Reads
+    -----
+    currentState
 
     Msg to PC
     ---------
@@ -424,8 +376,8 @@ void getConfiguration(){
                              FIRMWARE_VERSION_MINOR};
     int address = 0;
     while(address <= 3){
-      configuration[address + 3] = serial_nr[address];
-      address += 1;
+        configuration[address + 3] = serial_nr[address];
+        address += 1;
     }
     encodeAndSend(configuration, LENGTH(configuration));
     currentState = STATE_IDLE;
@@ -434,7 +386,10 @@ void getConfiguration(){
 
 /** Handler of STATE_ERROR */
 void handleErrors(){
-    /**Clean up after an error, and report it to the PC.
+    /** Clean up after an error, and report it to the PC.
+
+    The duty cycles are always set to zero in case of an error,
+    turning off the magnetic field compensation.
 
     Reads
     -----
@@ -458,14 +413,16 @@ void handleErrors(){
         raise(ERROR_RUNTIME);
         return;
     }
-	
-	coil_1.set_duty_cycle(0.0);
-	coil_2.set_duty_cycle(0.0);  
 
     // First, report the error, so the PC knows
     // there may be some cleanup going on
     encodeAndSend(PC_ERROR);
     encodeAndSend(errorTraceback, LENGTH(errorTraceback));
+
+    // Disable dynamic compensation and set coil voltages to zero.
+    enableDynamic = false;
+    coil_1.set_duty_cycle(0.0);
+    coil_2.set_duty_cycle(0.0);
 
     // Then clean up possible mess that caused the error
     switch(errorTraceback[1]){
@@ -495,7 +452,9 @@ void reset(){
     ------
     numBytesRead, msgLength, readingFromSerial, newMessage,
     waitingForDataFromPC, dutyCycle, targetCurrent, timeConstant,
-    enableDynamic, transformationMatrix, calibrationCurve
+    enableDynamic, transformationMatrix, calibrationCurve,
+    current_max, coilResistance, new_current, last_current,
+    new_voltage, measured, currentState
 
     Goes to state
     -------------
@@ -505,45 +464,58 @@ void reset(){
     msgLength = 0;
     readingFromSerial = false;
     newMessage = false;
+
     dutyCycle[0].asFloat = 0.0;
     dutyCycle[1].asFloat = 0.0;
     targetCurrent[0].asFloat = 0.0;
     targetCurrent[1].asFloat = 0.0;
     timeConstant[0].asFloat = 0.0;
     timeConstant[1].asFloat = 0.0;
-    enableDynamic = false;
-    
-    for(int i = 0;  i < 3; i++)
-    {	for(int j = 0;  j < 2; j++)
-    	{
-    		transformationMatrix[i][j].asFloat = 0.0;
-    	}
+
+    for(int i = 0;  i < 3; i++){
+        for(int j = 0;  j < 2; j++){
+            transformationMatrix[i][j].asFloat = 0.0;
+        }
     }
-    
-    for(int i = 0;  i < 2; i++)
-    {	for(int j = 0;  j < 12; j++)
-    	{
-    		calibrationCurve[i][j].asFloat = 0.0;
-    	}
+
+    for(int i = 0;  i < 2; i++){
+        for(int j = 0;  j < 12; j++){
+            calibrationCurve[i][j].asFloat = 0.0;
+        }
     }
-    
+
+    current_time = 0;
+    last_current_time = 0;
+
     coilResistance[0] = 0.0;
     coilResistance[1] = 0.0;
+    current_max = 0.0;
+    new_current[0] = 0.0;
+    new_current[1] = 0.0;
+    last_current[0] = 0.0;
+    last_current[0] = 0.0;
+    new_voltage[0] = 0.0;
+    new_voltage[1] = 0.0;
+
+    enableDynamic = false;
+    measured = false;
 
     currentState = STATE_IDLE;
     waitingForDataFromPC = false;
-
 }
 
 
 /** Handler of STATE_SET_SERIAL_NR */
 void setSerialNr(){
-   /**
-    Writes the assigned serial number to the EEPROM.
+    /** Writes the assigned serial number to the EEPROM.
 
     Reads
     -----
-    data_received, newMessage, msgLength
+    currentState, data_received, msgLength, newMessage
+
+    Writes
+    ------
+    newMessage
 
     Msg to PC
     ---------
@@ -594,13 +566,12 @@ void setSerialNr(){
 
 /** Handler of STATE_SET_DUTY_CYCLE */
 void setDutyCycle(){
-     /**
-    Wait until we get data from the PC and set a duty cycle for the respective coil.
+    /** Set received duty cycles for each coil.
 
     For each coil, we need 4 bytes from the data_received[] buffer.
     Their meaning is:
-    - Set duty cycle for coil 1
-    - Set duty cycle for coil 2
+    - Duty cycle for coil 1
+    - Duty cycle for coil 2
 
     Reads
     -----
@@ -612,7 +583,7 @@ void setDutyCycle(){
 
     Msg to PC
     ---------
-    PC_OK, signaling that we're done setting the duty cycle
+    PC_OK
 
     Goes to state
     -------------
@@ -626,10 +597,8 @@ void setDutyCycle(){
         we were expecting to get
     STATE_IDLE  :
         Successfully finished
-
     **/
-
-     if (currentState != STATE_SET_DUTY_CYCLE){
+    if (currentState != STATE_SET_DUTY_CYCLE){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -645,8 +614,8 @@ void setDutyCycle(){
         waitingForDataFromPC = false;
         newMessage = false;
 
-        // Check that it is the right amount of data
-        // We need exactly 8 bytes, 4 bytes for each float representing one duty cycle
+        // Check that it is the right amount of data. We need exactly 8 bytes,
+        // 4 bytes for each float representing one duty cycle.
         if (msgLength != 8){
             raise(ERROR_MSG_DATA_INVALID);
             return;
@@ -654,23 +623,24 @@ void setDutyCycle(){
         for(int j=0; j<2;j++){
             for(int i = 0; i < 4 ;i++){
                 dutyCycle[j].asBytes[3-i] = data_received[i+j*4];
-             }
+            }
         }
-                                                                      //TODO: catch errors from coils and report them
-        coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1
-        coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2
-        
-        sendFloatToPC(dutyCycle[0]);
+                                                  // TODO: catch errors from coils and report them
+        coil_1.set_duty_cycle(dutyCycle[0].asFloat);  // Set coil 1 duty cycle
+        coil_2.set_duty_cycle(dutyCycle[1].asFloat);  // Set coil 2 duty cycle
 
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
-     }
+    }
 }
 
 
 /** Handler of STATE_SET_CURRENT */
 void setCurrent(){
-   /** Wait until we get data (a target current) from the PC, convert the received data in order to set a duty cycle 
+    /** Set desired target current on coils.
+
+    The received desired current is converted into a duty cycle that
+    is set on the coils.
 
     For each coil, we need 4 bytes from the data_received[] buffer.
     Their meaning is:
@@ -687,7 +657,7 @@ void setCurrent(){
 
     Msg to PC
     ---------
-    PC_OK, signaling that we're done setting the current/duty cycle
+    PC_OK
 
     Goes to state
     -------------
@@ -701,10 +671,8 @@ void setCurrent(){
         we were expecting to get
     STATE_IDLE  :
         Successfully finished
-
     **/
-
-     if (currentState != STATE_SET_CURRENT){
+    if (currentState != STATE_SET_CURRENT){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -720,8 +688,8 @@ void setCurrent(){
         waitingForDataFromPC = false;
         newMessage = false;
 
-        // Check that it is the right amount of data
-        // 2 floats -> msgLength is 8
+        // Check that it is the right amount of data. We need exactly 8 bytes,
+        // 4 bytes for each float representing one duty cycle.
         if (msgLength != 8){
             raise(ERROR_MSG_DATA_INVALID);
             return;
@@ -729,32 +697,23 @@ void setCurrent(){
         for(int j=0; j<2;j++){
             for(int i = 0; i < 4 ;i++){
                 targetCurrent[j].asBytes[3-i] = data_received[i+j*4];
-             }
+            }
         }
 
-        //Function convertCurrentToDutyCycle() needs to be written
+        // Generate dutyCycle values from desired currents.
         convertCurrentToDutyCycle();
-
-        coil_1.set_duty_cycle(dutyCycle[0].asFloat);     // This sets the duty cycle for coil 1 using the current
-        coil_2.set_duty_cycle(dutyCycle[1].asFloat);     // This sets the duty cycle for coil 2 using the current
+        coil_1.set_duty_cycle(dutyCycle[0].asFloat); // Set coil 1 duty cycle
+        coil_2.set_duty_cycle(dutyCycle[1].asFloat); // Set coil 2 duty cycle
 
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
-     }
-}
-
-
-void convertCurrentToDutyCycle(){
-    //This function converts the target current given by the PC, to a duty cycle which will be set on the respective coils
-    float x = 0;
-    dutyCycle[0].asFloat = targetCurrent[0].asFloat * x;        // TODO: implement
-    dutyCycle[1].asFloat = targetCurrent[1].asFloat * x;        // TODO: implement
+    }
 }
 
 
 /** Handler of STATE_MEASURE */
 void measure(){
-   /** We are measuring the current and the supply voltage.
+    /** Measure current and supply voltage of each coil and return data to PC.
 
     Reads
     -----
@@ -770,38 +729,35 @@ void measure(){
         If this function is not called within STATE_MEASURE
     STATE_IDLE  :
         Successfully finished
-
     **/
-
-     if (currentState != STATE_MEASURE){
+    if (currentState != STATE_MEASURE){
         raise(ERROR_RUNTIME);
         return;
     }
 
-    floatOrBytes voltage1;		//TODO: make implementation of the returning data more efficient in case this works
+    floatOrBytes voltage1;        //TODO: make implementation of the returning data more efficient in case this works
     floatOrBytes voltage2;
     floatOrBytes current1;
     floatOrBytes current2;
 
+    last_current_time = current_time;
+    current_time = millis();
 
-	last_current_time = current_time;
-	current_time = millis();
-
-
-    //Measure the current of the respective coil
+    // Measure the current of the respective coil.
     current1.asFloat = coil_1.get_current();
     current2.asFloat = coil_2.get_current();
-    
+
     last_current[0] = new_current[0];
     new_current[0] = current1.asFloat;
-    
+
     last_current[1] = new_current[1];
     new_current[1] = current2.asFloat;
 
-    //Measure the voltage at pin8 (motor driver's supply voltage) of the respective coil
+    // Measure the voltage at pin8 (motor driver's supply voltage)
+    // of the respective coil.
     voltage1.asFloat = coil_1.get_voltage();
     voltage2.asFloat = coil_2.get_voltage();
-    
+
     new_voltage[0] = voltage1.asFloat;
     new_voltage[1] = voltage2.asFloat;
 
@@ -810,28 +766,15 @@ void measure(){
     sendFloatToPC(voltage2);
     sendFloatToPC(current1);
     sendFloatToPC(current2);
-    
+
     measured = true;
     currentState = STATE_IDLE;
 }
 
 
-void sendFloatToPC(floatOrBytes value){
-    // Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout, we
-    // have flip the bytes over to maintain consistency of our messages, which
-    // are in big-endian order
-    byte littleToBigEndian[4];
-
-    for (int i = 0; i < 4; i++){
-        littleToBigEndian[i] = value.asBytes[3-i];
-    }
-    encodeAndSend(littleToBigEndian, 4);
-}
-
-
 /** Handler of STATE_SET_TIME_CONSTANT */
 void setTimeConstant(){
-   /** Wait until we get data (time constant) from the PC, convert the received data.
+    /** Set time constants for coils.
 
     For each coil, we need 4 bytes from the data_received[] buffer.
     Their meaning is:
@@ -862,10 +805,8 @@ void setTimeConstant(){
         we were expecting to get
     STATE_IDLE  :
         Successfully finished
-
     **/
-
-     if (currentState != STATE_SET_TIME_CONSTANT){
+    if (currentState != STATE_SET_TIME_CONSTANT){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -881,8 +822,8 @@ void setTimeConstant(){
         waitingForDataFromPC = false;
         newMessage = false;
 
-        // Check that it is the right amount of data
-        // 2 floats ->  msgLength is 8
+        // Check that it is the right amount of data. We need exactly 8 bytes,
+        // 4 bytes for each float representing one time constant.
         if (msgLength != 8){
             raise(ERROR_MSG_DATA_INVALID);
             return;
@@ -891,18 +832,20 @@ void setTimeConstant(){
         for(int j=0; j<2;j++){
             for(int i = 0; i < 4 ;i++){
                 timeConstant[j].asBytes[3-i] = data_received[i+j*4];
-             }
+            }
         }
 
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
-     }
+    }
 }
 
 
 /** Handler of STATE_SET_ENABLE_DYNAMIC */
 void setEnableDynamic(){
-   /** Wait until we get data (enable dynamic mode or not) from the PC, convert the received data.
+    /** Turn dynamic field compensation on or off.
+
+    enableDynamic = true means the dynamic field compensation is on.
 
     Reads
     -----
@@ -928,10 +871,8 @@ void setEnableDynamic(){
         we were expecting to get
     STATE_IDLE  :
         Successfully finished
-
     **/
-
-     if (currentState != STATE_SET_ENABLE_DYNAMIC){
+    if (currentState != STATE_SET_ENABLE_DYNAMIC){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -947,9 +888,11 @@ void setEnableDynamic(){
         waitingForDataFromPC = false;
         newMessage = false;
 
-        // Check that it is the right amount of data
-        // Our msgLength is 2.
-        // We only get two bytes here, so that there is no conflict with the commands, as all one byte messages are considered commands.
+        // Check that it is the right amount of data. (msgLength is 2)
+        // We need to get two bytes here, so that there is no conflict with
+        // the commands, as all one byte messages are considered commands.
+        // This means only the first byte carries information and the
+        // second byte is a dummy byte.
         if (msgLength != 2){
             raise(ERROR_MSG_DATA_INVALID);
             return;
@@ -960,7 +903,7 @@ void setEnableDynamic(){
         }
 
         else if (data_received[0] == 0){
-        	enableDynamic = false;
+            enableDynamic = false;
         }
 
         else{
@@ -970,13 +913,13 @@ void setEnableDynamic(){
 
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
-     }
+    }
 }
 
 
 /** Handler of STATE_SET_TRANSFORMATION_MATRIX */
 void setTransformationMatrix(){
-   /** Wait until we get data from the PC, convert the received data in order to set a transformation matrix.
+    /** Set field transformation matrix.
 
     Reads
     -----
@@ -1002,10 +945,8 @@ void setTransformationMatrix(){
         we were expecting to get
     STATE_IDLE  :
         Successfully finished
-
     **/
-
-     if (currentState != STATE_SET_TRANSFORMATION_MATRIX){
+    if (currentState != STATE_SET_TRANSFORMATION_MATRIX){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -1031,34 +972,39 @@ void setTransformationMatrix(){
             for(int j=0; j<2;j++){
                 for(int i = 0; i < 4 ;i++){
                     transformationMatrix[m][j].asBytes[3-i] = data_received[i+j*4+m*8];
-                 }
+                }
             }
         }
-
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
-     }
+    }
 }
 
 
 /** Handler of STATE_SET_CALIBRATION_CURVE */
 void setCalibrationCurve(){
-   /** Wait until we get data from the PC, convert the received data in order to set a calibration curve.
-   
-    For each coil, we need 48 bytes (12 floats * 4) from the data_received[] buffer and we send these in packages of 6 floats.
-    This is due to serial buffer limitations because the serial buffer can only contain 63 bytes reliably.
-	
-	The two first bytes of each message contain at what coil we are working and in which region (negative or positive).
-	
-	First byte of the message: 0 -> coil 0
-							   1 -> coil 1
-							   
-	Second byte of the message: 0 -> negative region
-							    1 -> positive region
-							    
-	Write the third to the 26th byte into calibrationCurve, which corresponds to 6 floats.
-	calibrationCurve contains two times 12 floats for each coil, and 6 floats per region per coil.
+    /** Set calibration curve for coils.
 
+    For each coil, we need 48 decoded bytes (12 floats * 4) from the
+    data_received[] buffer and we send these in packages of 6 floats.
+    This is due to serial buffer limitations because the serial buffer
+    can only contain 63 bytes reliably. (Note that each data byte could
+    potentially have to be split into two bytes. Therefore 6 bytes = 24
+    decoded bytes can potentially end up being 48 after encoding. 12
+    floats could potentially exceed the buffer size.)
+
+    The two first bytes of each message contain for which coil the
+    calibration curve is and in which region (negative or positive).
+
+    First byte of the message: 0 -> coil 1
+                               1 -> coil 2
+
+    Second byte of the message: 0 -> negative region
+                                1 -> positive region
+
+    Write the third to the 26th byte into calibrationCurve, which
+    corresponds to 6 floats. calibrationCurve contains 24 floats,
+    12 floats for each coil, 6 floats per region per coil.
 
     Reads
     -----
@@ -1084,10 +1030,8 @@ void setCalibrationCurve(){
         we were expecting to get
     STATE_IDLE  :
         Successfully finished
-
     **/
-
-     if (currentState != STATE_SET_CALIBRATION_CURVE){
+    if (currentState != STATE_SET_CALIBRATION_CURVE){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -1104,57 +1048,53 @@ void setCalibrationCurve(){
         newMessage = false;
 
         // Check that it is the right amount of data
-        // 26 bytes in the array -> msgLength is 26, 1 byte for which coil, 1 byte for which region and 24 bytes for 6 floats.
+        // 26 bytes in the array -> msgLength is 26, 1 byte for which coil,
+        // 1 byte for which region and 24 bytes for 6 floats.
         if (msgLength != 26){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
-        
-        // We work with coil 0
-        if (data_received[0] == 0){  
-        	// We work with coil 0 in the negative region
-            if (data_received[1] == 0){
 
-            	for(int j=0; j<6;j++){
-            		for(int i = 0; i < 4 ;i++){
-                		calibrationCurve[0][j].asBytes[3-i] = data_received[2 + i + j*4];
-             		}
-        		}  
-            
-            }
-            
-            // We work with coil 0 in the positive region
-            else if (data_received[1] == 1){
-            
-            	for(int j=0; j<6;j++){
-                	for(int i = 0; i < 4 ;i++){
-                    	calibrationCurve[0][j+6].asBytes[3-i] = data_received[2 + i + j*4];
-                 	}
-            	}
-            }          
-        }
-
-		// We work with coil 1
-        else if (data_received[0] == 1){
-        	// We work with coil 1 in the negative region
+        // We work with coil 1
+        if (data_received[0] == 0){
+            // We work with coil 1 in the negative region
             if (data_received[1] == 0){
-            
-            	for(int j=0; j<6;j++){
-            		for(int i = 0; i < 4 ;i++){
-                		calibrationCurve[1][j].asBytes[3-i] = data_received[2 + i + j*4];
-             		}
-        		}
+                for(int j=0; j<6;j++){
+                    for(int i = 0; i < 4 ;i++){
+                        calibrationCurve[0][j].asBytes[3-i] = data_received[2 + i + j*4];
+                    }
+                }
             }
-            
+
             // We work with coil 1 in the positive region
             else if (data_received[1] == 1){
-            
-            	for(int j=0; j<6;j++){
-                	for(int i = 0; i < 4 ;i++){
-                    	calibrationCurve[1][j+6].asBytes[3-i] = data_received[2 + i + j*4];
-                 	}
-            	}
-        	}
+                for(int j=0; j<6;j++){
+                    for(int i = 0; i < 4 ;i++){
+                        calibrationCurve[0][j+6].asBytes[3-i] = data_received[2 + i + j*4];
+                    }
+                }
+            }
+        }
+
+        // We work with coil 2
+        else if (data_received[0] == 1){
+            // We work with coil 2 in the negative region
+            if (data_received[1] == 0){
+                for(int j=0; j<6;j++){
+                    for(int i = 0; i < 4 ;i++){
+                        calibrationCurve[1][j].asBytes[3-i] = data_received[2 + i + j*4];
+                    }
+                }
+            }
+
+            // We work with coil 2 in the positive region
+            else if (data_received[1] == 1){
+                for(int j=0; j<6;j++){
+                    for(int i = 0; i < 4 ;i++){
+                        calibrationCurve[1][j+6].asBytes[3-i] = data_received[2 + i + j*4];
+                    }
+                }
+            }
         }
 
         else{
@@ -1164,14 +1104,15 @@ void setCalibrationCurve(){
 
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
-     }
+    }
 }
 
 
 /** Handler of STATE_SET_UP_ADCS */
 void prepareADCsForMeasurement(){
-	/** 
-	Msg to PC
+    /** Initialize ADCs for measurement.
+
+    Msg to PC
     ---------
     PC_OK
 
@@ -1187,9 +1128,33 @@ void prepareADCsForMeasurement(){
         return;
     }
 
-	coil_1.measurement.initialize_ADC();
-	coil_2.measurement.initialize_ADC();
+    coil_1.measurement.initialize_ADC();
+    coil_2.measurement.initialize_ADC();
 
-	encodeAndSend(PC_OK);
+    encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
+}
+
+
+/** ---------------- FUNCTIONS CALLED WITHIN STATE HANDLERS ---------------- **/
+
+void convertCurrentToDutyCycle(){
+    /** Convert target currents to duty cycles to set. **/
+    float x = 0;                                                                // TODO: Calculate conversion factors from given calibration curves.
+    dutyCycle[0].asFloat = targetCurrent[0].asFloat * x;                        // TODO: implement
+    dutyCycle[1].asFloat = targetCurrent[1].asFloat * x;                        // TODO: implement
+}
+
+
+void sendFloatToPC(floatOrBytes value){
+    /** Convert and send float values to PC. **/
+    // Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout,
+    // we have flip the bytes over to maintain consistency of our messages,
+    // which are in big-endian order.
+    byte littleToBigEndian[4];
+
+    for (int i = 0; i < 4; i++){
+        littleToBigEndian[i] = value.asBytes[3-i];
+    }
+    encodeAndSend(littleToBigEndian, 4);
 }

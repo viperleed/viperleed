@@ -67,7 +67,7 @@ void loop() {
     // depending on the message received.
     updateState();
 
-    // Finally do what's needed in the currentState
+    // Finally do what's needed in the currentState.
     switch (currentState){
         case STATE_GET_CONFIGURATION:
             getConfiguration();
@@ -126,9 +126,8 @@ void updateState() {
     **/
     if (not newMessage) return;
 
-    if (msgLength > 1) return; //We received data
-    // Note that all data messages have
-    // to be at least two bytes long.
+    if (msgLength > 1) return; // We received data, not a command
+    // Note that all data messages have to be at least two bytes long.
 
     if (data_received[0] != PC_CONFIGURATION
         and data_received[0] != PC_RESET
@@ -311,7 +310,7 @@ void getConfiguration(){
     The serial number is read from the EEPROM.
 
     Writes
-    -----
+    ------
     hardwareDetected
 
     Msg to PC
@@ -451,6 +450,7 @@ void calibrateADCsAtAllGains(){
         checkIfTimedOut();
         return;
     }
+
     if (newMessage and waitingForDataFromPC) {
         // Data has arrived. This part runs only once,
         // the first time the data arrives
