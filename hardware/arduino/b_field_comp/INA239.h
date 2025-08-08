@@ -201,6 +201,13 @@ class INA239 {
 
       return current;
     }
+    
+    // Initialize ADCs and set calibration.
+    void initialize_ADC(){
+   		RegisterWrite(INA239_WRITE_CONFIG, INA239_CONFIG_SET_ADCRANGE);
+    	RegisterWrite(INA239_WRITE_ADC_CONFIG, INA239_ADC_CONFIG_SWEET);
+    	RegisterWrite(INA239_WRITE_SHUNT_CAL, INA239_SHUNT_CAL);
+    }
 
   private:
     const byte _SPI_CS_PIN;
