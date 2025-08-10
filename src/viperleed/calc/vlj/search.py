@@ -132,20 +132,20 @@ def vlj_search(slab, rpars):
     )
     logger.info(format_benchmark_results(benchmark_results))
 
-    # evaluate the initial R-factor
-    unperturbed_x = np.array([0.5] * calculator.n_free_parameters)
-    unperturbed_R = calculator.R(unperturbed_x)
+    # initial parameter vector
+    starting_x = optimizer_iterator.suggested_starting_point
+    logger.debug(f'Initial parameter vector:\n{starting_x}')
 
-    used_v0r, *_ = calculator.expand_params(unperturbed_x)
+    # evaluate the initial R-factor
+    starting_x = np.array([0.5] * calculator.n_free_parameters)
+    starting_R = calculator.R(starting_x)
+
+    used_v0r, *_ = calculator.expand_params(starting_x)
     used_v0r = float(used_v0r[0])
     logger.info(
-        f'R-factor for unperturbed structure: {unperturbed_R:.4f} with inner '
-        f' potential shift of {used_v0r:.2f}'
+        f'R-factor for unperturbed structure: {starting_R:.4f} with inner '
+        f' potential shift of {used_v0r:.2f} eV.'
     )
-
-    # initial parameter vector
-    x = optimizer_iterator.suggested_starting_point
-    logger.debug(f'Initial parameter vector:\n{x}')
 
     for optimizer, result in optimizer_iterator:
         logger.info(
