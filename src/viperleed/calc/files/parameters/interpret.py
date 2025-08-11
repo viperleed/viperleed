@@ -1317,12 +1317,13 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except KeyError:
             self.rpars.setHaltingLevel(2)
             raise ParameterUnknownFlagError(param, f"{flag!r}") from None
-        if flag == 'occ_norm':
-            if parsed_value not in {'mirror', 'project'}:
-                self.rpars.setHaltingLevel(1)
-                message = (f'Invalid value {parsed_value!r} for flag {flag!r}. '
-                           'Valid values are "mirror" and "project".')
-                raise ParameterValueError(param, message=message)
+        if flag == 'occ_norm' and parsed_value not in {'mirror', 'project'}:
+            self.rpars.setHaltingLevel(1)
+            message = (
+                f'Invalid value {parsed_value!r} for flag {flag!r}. '
+                'Valid values are "mirror" and "project".'
+            )
+            raise ParameterValueError(param, message=message)
         self.rpars.VLJ_CONFIG[flag] = parsed_value
 
     @skip_without_matplotlib
