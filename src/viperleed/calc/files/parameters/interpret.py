@@ -1292,16 +1292,24 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
 
         value_error = f'Value {value!r} is invalid for flag {flag!r}'
-        param_types = {'precondition': bool, 'use_symmetry': bool,
-                       'recalc_ref_t_matrices': bool, 't-leed-l_max': int,
-                       'occ_norm': str}
+        param_types = {
+            'precondition': bool,
+            'use_symmetry': bool,
+            'recalc_ref_t_matrices': bool,
+            't-leed-l_max': int,
+            'occ_norm': str,
+            'preoptimize_v0r': True,
+        }
         flag_aliases = {
             'precon': 'precondition',
             'symmetry': 'use_symmetry',
             'recalc': 'recalc_ref_t_matrices',
-            'l_max': 't-leed-l_max', 't_leed_lmax': 't-leed-l_max',
+            'l_max': 't-leed-l_max',
+            't_leed_lmax': 't-leed-l_max',
             'lmax': 't-leed-l_max',
-            'occ': 'occ_norm', 'occupation': 'occ_norm',
+            'occ': 'occ_norm',
+            'occupation': 'occ_norm',
+            'preopt': 'preoptimize_v0r',
         }
 
         if flag in flag_aliases:
