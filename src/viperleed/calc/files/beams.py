@@ -33,11 +33,14 @@ logger = logging.getLogger(__name__)
 
 def averageBeams(beams, weights=None):
     """Takes a list of percentages and a list of lists of Beam objects.
-    Returns a new list of Beam objects with weighted averaged intensities."""
+    Returns a new list of Beam objects with weighted averaged intensities.
+    Weights will be renormalized such that they sum to 1."""
     if beams is None:
         raise ValueError("averageBeams: No beams passed.")
     if weights is None or len(weights) == 0:
-        weights = [1/len(beams)] * len(beams)
+        weights = np.repeat([1/len(beams)], len(beams))
+    else:
+        weights = np.array(weights) / sum(weights)
     avbeams = copy.deepcopy(beams[0])
     for (i, b) in enumerate(avbeams):
         if not all([beams[j][i].isEqual(b) for j in range(1, len(beams))]):
