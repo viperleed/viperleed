@@ -40,7 +40,7 @@ def averageBeams(beams, weights=None):
     if weights is None or len(weights) == 0:
         _weights = np.repeat([1/len(beams)], len(beams))
     else:
-        _weights = np.array(weights) / sum(weights)
+        _weights = np.asarray(weights) / sum(weights)
     avbeams = copy.deepcopy(beams[0])
     for (i, b) in enumerate(avbeams):
         if not all([beams[j][i].isEqual(b) for j in range(1, len(beams))]):
