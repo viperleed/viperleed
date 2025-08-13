@@ -38,9 +38,9 @@ def averageBeams(beams, weights=None):
     if beams is None:
         raise ValueError("averageBeams: No beams passed.")
     if weights is None or len(weights) == 0:
-        weights = np.repeat([1/len(beams)], len(beams))
+        _weights = np.repeat([1/len(beams)], len(beams))
     else:
-        weights = np.array(weights) / sum(weights)
+        _weights = np.array(weights) / sum(weights)
     avbeams = copy.deepcopy(beams[0])
     for (i, b) in enumerate(avbeams):
         if not all([beams[j][i].isEqual(b) for j in range(1, len(beams))]):
@@ -55,9 +55,9 @@ def averageBeams(beams, weights=None):
             raise ValueError(_err)
             return []
         for en in b.intens:
-            b.intens[en] *= weights[0]
+            b.intens[en] *= _weights[0]
             for j in range(1, len(beams)):
-                b.intens[en] += beams[j][i].intens[en] * weights[j]
+                b.intens[en] += beams[j][i].intens[en] * _weights[j]
     return avbeams
 
 
