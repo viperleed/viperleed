@@ -246,7 +246,7 @@ classifiers = [
 
 [tool.ruff]
     target-version = 'py37'
-    line-length = 80
+    line-length = 79
     indent-width = 4
 
 
