@@ -247,7 +247,7 @@ classifiers = [
 
 [tool.ruff]
     target-version = 'py37'
-    line-length = 80
+    line-length = 79
     indent-width = 4
 
 
@@ -280,6 +280,10 @@ classifiers = [
     [tool.ruff.lint.pydocstyle]
     # Numpy style docstrings
     convention = 'numpy'
+
+    [tool.ruff.lint.pycodestyle]
+    # doc length 72 characters
+    max-doc-length = 72
 
     [tool.ruff.format]
     quote-style = 'single'
