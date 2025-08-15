@@ -137,7 +137,6 @@ def vlj_search(slab, rpars):
     logger.debug(f'Initial parameter vector:\n{starting_x}')
 
     # evaluate the initial R-factor
-    starting_x = np.array([0.5] * calculator.n_free_parameters)
     starting_R = calculator.R(starting_x)
 
     used_v0r, *_ = calculator.expand_params(starting_x)
