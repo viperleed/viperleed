@@ -69,3 +69,17 @@ Available setting are:
      occupation parameters onto the :math:`\sum_i c_i = 1` (hyper-)plane.
 
    **Default**: ``mirror``.
+
+-  ``preoptimize_v0r``: If *True*, the initial guess for the offset of the real
+   part of the inner potential :math:`V_0r` is sampled and optimized on the
+   main optimization.
+   The :math:`R`-factor is very sensitive to :math:`V_0r`. Pre-optimizing this
+   parameter can help find a better starting point for the proceeding
+   optimization.
+
+   If the search segment is executed without a reference calculation during the
+   same run, and no pre-optimization is done, the :math:`R`-factor at of the
+   initial guess may be artificially high, since no information about the
+   correct shift of :math:`V_0r` is available.
+
+   **Default**: *True*.
