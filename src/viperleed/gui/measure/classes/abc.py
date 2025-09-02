@@ -290,7 +290,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             and an exact match was asked for.
         """
         settings = self.find_matching_settings_files(
-            obj_info=find_from, directory=base.DEFAULTS_PATH,
+            obj_info=find_from, directory=base.get_default_path(),
             match_exactly=match_exactly,
             )
         if not settings:
@@ -353,12 +353,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
                 'passed on to the find_matching_settings_files method.'
                 )
         directory = Path(directory).resolve()
-        default = directory == base.DEFAULTS_PATH
+        default = directory == base.get_default_path()
         settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
             settings_files = [file for file in settings_files
-                              if '_defaults' not in str(file)]
+                              if '_defaults' not in str(file)
+                              and 'AppData' not in str(file)]
 
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
@@ -673,7 +674,7 @@ class DeviceABC(HardwareABC):
         be enough to determine settings files that contain the correct
         settings for this device. Subclasses should raise a
         DefaultSettingsError if they fail to create instances from the
-        settings in the DEFAULTS_PATH.
+        default settings.
 
         Returns
         -------

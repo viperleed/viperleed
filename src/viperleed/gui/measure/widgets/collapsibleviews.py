@@ -24,7 +24,7 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
     SettingsTag,
     )
-from viperleed.gui.measure.hardwarebase import DEFAULTS_PATH
+from viperleed.gui.measure.hardwarebase import get_default_path
 from viperleed.gui.measure.hardwarebase import disconnected_slot
 from viperleed.gui.measure.hardwarebase import make_device
 from viperleed.gui.measure.hardwarebase import safe_connect
@@ -264,7 +264,8 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         """Get settings files of the device handled by this view."""
         self._settings_file_selector.clear()
         self._settings_file_selector.setEnabled(False)
-        if not self._device_cls or self._settings_folder.path == DEFAULTS_PATH:
+        is_default = self._settings_folder.path == get_default_path()
+        if not self._device_cls or is_default:
             return
 
         if not self.has_hardware_interface:

@@ -22,7 +22,7 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure.classes.settings import MissingSettingsFileError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
-from viperleed.gui.measure.hardwarebase import DEFAULTS_PATH
+from viperleed.gui.measure.hardwarebase import get_default_path
 from viperleed.gui.measure.measurement import ALL_MEASUREMENTS
 from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
@@ -177,7 +177,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         cls = self.selected_type
         settings_path = self.selected_file
         default_path, *_ = cls.find_matching_settings_files(
-            directory=DEFAULTS_PATH, match_exactly=False,
+            directory=get_default_path(), match_exactly=False,
             )
 
         if not settings_path or settings_path in (default, default_path):
