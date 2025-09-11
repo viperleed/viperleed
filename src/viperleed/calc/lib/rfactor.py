@@ -153,7 +153,9 @@ def R_1(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
 ### RMS ###
 
 
-def R_ms(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
+def R_ms(
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+):
     # Experimental data
     exp_deriv_1_spline = exp_spline.derivative()
     exp_deriv_2_spline = exp_deriv_1_spline.derivative()
@@ -181,7 +183,7 @@ def R_ms(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
         energy_step,
     )
 
-    return pendry_R_from_y(y_exp, y_theo, energy_step)
+    return pendry_R_from_y(y_exp, y_theo, energy_step, per_beam=per_beam)
 
 
 def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
