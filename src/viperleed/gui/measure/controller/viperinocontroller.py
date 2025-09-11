@@ -330,8 +330,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             specify additional information on what is wrong with each
             invalid setting.
         """
-        invalid_settings = settings.has_settings(('controller',
-                                                  'firmware_version'))
+        invalid_settings = settings.misses_settings(('controller',
+                                                     'firmware_version'))
         if not invalid_settings:
             try:
                 version = base.Version(

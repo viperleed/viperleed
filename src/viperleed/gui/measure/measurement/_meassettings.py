@@ -216,7 +216,12 @@ class StepProfileViewer(ButtonWithLabel):
 
     def set_(self, value):
         """Set label and load profile into step profile editor."""
-        value = literal_eval(value)
+        try:
+            value = literal_eval(value)
+        except ValueError:
+            # Value is already a string and cannot be converted.
+            pass
+
         if not value:
             value = AbruptEnergyStepEditor().profile
         if isinstance(value, str):

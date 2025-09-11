@@ -21,6 +21,8 @@ from configparser import ConfigParser
 from configparser import DuplicateOptionError
 from configparser import DuplicateSectionError
 from configparser import MissingSectionHeaderError
+from configparser import NoOptionError
+from configparser import NoSectionError
 from configparser import SectionProxy
 from collections import defaultdict
 from collections.abc import Sequence
@@ -34,6 +36,21 @@ import PyQt5.QtCore as qtc
 
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.widgets.pathselector import PathSelector
+
+
+def ensure_aliases_exist():
+    """Merge default and user aliases and create file if required."""
+    _tmp = ConfigParser()
+    _tmp.read(Path(__file__).parent.parent / '_defaults' / '_aliases.ini')
+    _tmp.read(get_aliases_path())
+    with open(get_aliases_path(), 'w', encoding='utf-8') as fproxy:
+        _tmp.write(fproxy)
+
+
+def get_aliases_path():
+    """Return a Path to the user aliases."""
+    return Path(qtc.QSettings(qtc.QSettings.IniFormat, qtc.QSettings.UserScope,
+                              'ViPErLEED', 'Aliases').fileName()).resolve()
 
 
 def interpolate_config_path(filenames):
@@ -61,9 +78,9 @@ def interpolate_config_path(filenames):
             fname = os.fspath(fname)
         if not isinstance(fname, (str, bytes)):
             continue
-        if (fname.startswith("__CONFIG__/")
-                and fname.count("__CONFIG__") == 1):
-            filenames[i] = fname.replace("__CONFIG__", _sys_path)
+        if (fname.startswith('__CONFIG__/')
+                and fname.count('__CONFIG__') == 1):
+            filenames[i] = fname.replace('__CONFIG__', _sys_path)
 
 
 class SettingsError(Exception):
@@ -94,7 +111,200 @@ class TooManyDefaultSettingsError(DefaultSettingsError):
     """Exception raised when too many default settings files were found."""
 
 
-class ViPErLEEDSettings(ConfigParser):
+class AliasConfigParser(ConfigParser):
+    """A ConfigParser that checks for aliases when getting values.
+
+    To load aliases, the prepare_aliases() method must be called with
+    the appropriate cls_name argument. To perform an automatic check for
+    aliases when getting an option, the get() method and its derivatives
+    must be used. Getting values via the __getitem__ method (e.g.,
+    self[sec][opt], has_option()) will not check for aliases.
+    """
+
+    def __init__(self, *args, cls_name='', **kwargs):
+        """Initialise AliasConfigParser instance."""
+        super().__init__(*args, **kwargs)
+        self._aliases = {}
+        self._fallback = defaultdict(dict)
+        self._cls_name = ''
+        self.prepare_aliases(cls_name)
+
+    def get(self, section, option, *, raw=False, vars=None, fallback=_UNSET):
+        """Get an option value for a given section or an alias of it.
+
+        This method will attempt to get a value from self first. If this
+        fails, the loaded aliases are checked. If this fails too,
+        fallback is used. If the gotten value is an empty string, the
+        aliases fallback values are checked.
+
+        Parameters
+        ----------
+        section : str
+            The section key.
+        option : str
+            The option key.
+        raw : bool, optional
+            Whether interpolations in the return value should be
+            expanded. If False, interpolations are expanded. Default
+            is False.
+        vars : dict, optional
+            If provided, the option is looked up in vars before
+            checking section. Default is None.
+        fallback: object, optional
+            If provided, fallback is the return value if getting the
+            option failed. Default is _UNSET.
+
+        Returns
+        -------
+        value : str
+            The read value from the loaded settings.
+
+        Raises
+        ------
+        NoSectionError
+            If the settings section is missing.
+        NoOptionError
+            If the settings option is missing.
+        """
+        value = _UNSET
+        try:
+            value = super().get(section, option, raw=raw, vars=vars)
+        except (NoSectionError, NoOptionError) as err:
+            for sec, opt in self._get_aliases(section, option):
+                try:
+                    value = super().get(sec, opt, raw=raw, vars=vars)
+                except (NoSectionError, NoOptionError):
+                    continue
+                else:
+                    self[section][option] = value
+                    self.remove_option(sec, opt)
+                    break
+            else:
+                value = fallback
+            if value == _UNSET:
+                raise err
+
+        if value == '':
+            try:
+                value = self._fallback[section][option]
+            except KeyError:
+                pass
+            else:
+                self[section][option] = value
+
+        return value
+
+    def prepare_aliases(self, cls_name):
+        """Prepare aliases for the handled settings.
+
+        Parameters
+        ----------
+        cls_name : str
+            Name of the class to which the loaded settings belong.
+
+        Returns
+        -------
+        None.
+        """
+        self._aliases = {}
+        self._fallback = defaultdict(dict)
+        self._cls_name = cls_name
+        if not self._cls_name:
+            # No class name, therefore we cannot look up aliases.
+            return
+        self._prepare()
+
+    def _add_new_sections(self, new_sections):
+        """Add new settings sections.
+
+        Parameters
+        ----------
+        new_sections : list
+            A list of sections to add.
+
+        Returns
+        -------
+        None.
+        """
+        for section in new_sections:
+            if section in self.sections():
+                continue
+            self.add_section(section)
+
+    def _get_aliases(self, section, option):
+        """Get aliases for a section/option pair.
+
+        Parameters
+        ----------
+        section : str
+            The section key.
+        option : str
+            The option key.
+
+        Returns
+        -------
+        aliases : list
+            A list of section/option pairs.
+        """
+        try:
+            aliases = self._aliases[section + '/' + option]
+        except KeyError:
+            return []
+        return [alias.split('/') for alias in aliases]
+
+    def _prepare(self):
+        """Prepare aliases for the handled settings.
+
+        Load relevant aliases and generate missing settings sections for
+        aliases.
+
+        Returns
+        -------
+        None.
+        """
+        conv = ast.literal_eval
+        aliases = ConfigParser()
+        aliases.read(get_aliases_path())
+
+        try:
+            relevant = conv(aliases.get(self._cls_name, 'relevant_sections'))
+        except NoSectionError:
+            # The settings for this class do not have any aliases.
+            return
+        except NoOptionError:
+            # No other relevant sections.
+            relevant = []
+
+        for section in (self._cls_name, *relevant):
+            for key in aliases[section].keys():
+                if key == 'new_sections':
+                    self._add_new_sections(conv(aliases[section][key]))
+                    continue
+                if key == 'fallback_values':
+                    self._set_fallback_values(conv(aliases[section][key]))
+                    continue
+                if key == 'relevant_sections':
+                    continue
+                self._aliases[key] = conv(aliases[section][key])
+
+    def _set_fallback_values(self, fallback_values):
+        """Set fallback values that will be used if values are missing.
+
+        Parameters
+        ----------
+        fallback_values : list
+            A list of section/option and value pairs.
+
+        Returns
+        -------
+        None.
+        """
+        for sec_opt, val in fallback_values:
+            sec, opt = sec_opt.split('/')
+            self._fallback[sec][opt] = val
+
+
+class ViPErLEEDSettings(AliasConfigParser):
     """Class for read/write and handling ViPErLEED settings.
 
     The class remembers the path to the last file read, which
@@ -122,17 +332,17 @@ class ViPErLEEDSettings(ConfigParser):
         # ConfigParser has 3 positional-or-keyword arguments. We
         # want to set the third (allow_no_value) always to True.
         args = args[:2]  # skip positional allow_no_value
-        kwargs["allow_no_value"] = True
+        kwargs['allow_no_value'] = True
 
-        kwargs["comment_prefixes"] = "#;"
-        kwargs["inline_comment_prefixes"] = ""  # no in-line comments
+        kwargs['comment_prefixes'] = '#;'
+        kwargs['inline_comment_prefixes'] = ''  # no in-line comments
 
         # Disallow empty lines in values, as this has the potential
         # to create mess; also make the parser strict (no duplicates)
-        kwargs["empty_lines_in_values"] = False
-        kwargs["strict"] = True
+        kwargs['empty_lines_in_values'] = False
+        kwargs['strict'] = True
 
-        self._interpolate_paths = kwargs.pop("interpolate_paths", True)
+        self._interpolate_paths = kwargs.pop('interpolate_paths', True)
         super().__init__(*args, **kwargs)
 
         self.__comments = defaultdict(list)
@@ -143,8 +353,8 @@ class ViPErLEEDSettings(ConfigParser):
         # the config file. __base_dir should be set from the outside
         # using the .base_dir property to the "<path/to/archive.zip>"
         # when the content of the config was read from an archive.
-        self._last_file = ""
-        self.__base_dir = ""
+        self._last_file = ''
+        self.__base_dir = ''
 
     def __str__(self):
         """Return a simple string representation of self."""
@@ -226,15 +436,15 @@ class ViPErLEEDSettings(ConfigParser):
                                        fallback=fallback, **kwargs)
         except (ValueError, TypeError, SyntaxError,
                 MemoryError, RecursionError) as err:
-            raise NotASequenceError(f"Could not convert {section}/{option} "
-                                    "into a sequence") from err
+            raise NotASequenceError(f'Could not convert {section}/{option} '
+                                    'into a sequence') from err
         if converted is not fallback and not isinstance(converted, Sequence):
-            raise NotASequenceError(f"Could not convert {section}/{option} "
-                                    "into a sequence")
+            raise NotASequenceError(f'Could not convert {section}/{option} '
+                                    'into a sequence')
         return converted
 
-    def has_settings(self, *required_settings):
-        """Check whether self has given settings.
+    def misses_settings(self, *required_settings):
+        """Check whether self misses given settings.
 
         Parameters
         ----------
@@ -269,9 +479,9 @@ class ViPErLEEDSettings(ConfigParser):
         invalid_settings = []
         for setting in required_settings:
             if not setting or len(setting) > 3:
-                raise TypeError(f"Invalid mandatory setting {setting}. "
-                                f"with length {len(setting)}. Expected "
-                                "length <= 3.")
+                raise TypeError(f'Invalid mandatory setting {setting}. '
+                                f'with length {len(setting)}. Expected '
+                                'length <= 3.')
             # (<section>,)
             if len(setting) == 1:
                 if not self.has_section(setting[0]):
@@ -280,18 +490,19 @@ class ViPErLEEDSettings(ConfigParser):
 
             # (<section>, <option>) or (<section>, <option>, <admissible>)
             section, option = setting[:2]
-            if not self.has_option(section, option):
-                invalid_settings.append(f"{section}/{option}")
+            try:
+                value = self.get(section, option)
+            except NoOptionError:
+                invalid_settings.append(f'{section}/{option}')
                 continue
 
             # (<section>, <option>, <admissible>)
             if len(setting) == 3:
                 admissible_values = setting[2]
-                value = self[section][option]
                 if value not in admissible_values:
                     invalid_settings.append(
-                        "/".join(setting[:2])
-                        + " not one of " + ", ".join(admissible_values)
+                        '/'.join(setting[:2])
+                        + ' not one of ' + ', '.join(admissible_values)
                         )
         return invalid_settings
 
@@ -344,7 +555,7 @@ class ViPErLEEDSettings(ConfigParser):
                 if fname not in read_ok:
                     missing.append(fname)
             raise MissingSettingsFileError(
-                "Could not read the following settings file(s):"
+                'Could not read the following settings file(s):'
                 ', '.join(missing)
                 )
         return read_ok
@@ -361,7 +572,7 @@ class ViPErLEEDSettings(ConfigParser):
 
     def read_file(self, f, source=None):
         """Read from a file-like object."""
-        fname = ""
+        fname = ''
         try:
             fname = f.name
         except AttributeError:
@@ -375,8 +586,8 @@ class ViPErLEEDSettings(ConfigParser):
     def update_file(self):
         """Update the last file read with the data in self."""
         if not self._last_file:
-            raise RuntimeError(f"{self.__class__.__name__}: no known "
-                               "last file read to be updated.")
+            raise RuntimeError(f'{self.__class__.__name__}: no known '
+                               'last file read to be updated.')
         with open(self._last_file, 'w', encoding='utf-8') as fproxy:
             self.write(fproxy)
 
@@ -394,11 +605,11 @@ class ViPErLEEDSettings(ConfigParser):
             by spaces.
         """
         # Start with comments at the beginning
-        fp.write("\n".join(self.__comments[None]))
+        fp.write('\n'.join(self.__comments[None]))
         if self.__comments[None]:
             # Add newline before the first section
             # header if there were any comments
-            fp.write("\n")
+            fp.write('\n')
 
         # And store this file's name
         try:
@@ -509,11 +720,11 @@ class ViPErLEEDSettings(ConfigParser):
     def _write_section(self, fp, section_name, section_items, delimiter):
         """Write a single section to the specified 'fp'."""
         # Header
-        fp.write(f"[{section_name}]\n")
+        fp.write(f'[{section_name}]\n')
 
         # All comments (newlines were not stripped)
         if self.__comments[section_name]:
-            fp.write("".join(self.__comments[section_name]))
+            fp.write(''.join(self.__comments[section_name]))
 
         # And all the options/values
         for key, value in section_items:
@@ -522,9 +733,9 @@ class ViPErLEEDSettings(ConfigParser):
             if value is not None or not self._allow_no_value:
                 value = delimiter + str(value).replace('\n', '\n\t')
             else:
-                value = ""
-            fp.write(f"{key}{value}\n")
-        fp.write("\n")
+                value = ''
+            fp.write(f'{key}{value}\n')
+        fp.write('\n')
 
     def __store_if_comment(self, line, sectname):
         """Store a line as comment if it is one.
@@ -597,6 +808,7 @@ class SystemSettings(ViPErLEEDSettings):
         """Return a ViPErLEEDSettings with the same contents as self."""
         fake_copy = ViPErLEEDSettings()
         fake_copy.read_dict(self)
+        fake_copy.prepare_aliases(self._cls_name)
         return copy.deepcopy(fake_copy, memo)
 
     def __init__(self, *args, **kwargs):
@@ -684,7 +896,7 @@ class SystemSettings(ViPErLEEDSettings):
             If any mandatory setting is missing (after potentially
             filling the non-null ones)
         """
-        invalid = self.has_settings(*self.__non_null, *self.__non_mandatory)
+        invalid = self.misses_settings(*self.__non_null, *self.__non_mandatory)
 
         # We're missing settings. Let's add them back...
         for missing in invalid:
@@ -698,12 +910,12 @@ class SystemSettings(ViPErLEEDSettings):
             self.update_file()
 
         # Now check all those that must be there
-        missing = self.has_settings(*self.__mandatory)
+        missing = self.misses_settings(*self.__mandatory)
         if missing:
             raise RuntimeError(
-                f"System settings file at {self._sys_settings.fileName()} "
-                "is missing the following mandatory sections/options: "
-                "; ".join(missing)
+                f'System settings file at {self._sys_settings.fileName()} '
+                'is missing the following mandatory sections/options: '
+                '; '.join(missing)
                 )
 
     def _read_sys_settings(self):

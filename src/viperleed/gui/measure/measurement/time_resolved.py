@@ -47,15 +47,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         ('energies', 'constant_energy'),
         )
 
-    # Backwards compatibility fix                                               # TODO: #242
-    _settings_synonyms = (
-        *MeasurementABC._settings_synonyms,
-        (('energies', 'endless'),
-         ('measurement_settings', 'endless'),),
-        (('energies', 'constant_energy'),
-         ('measurement_settings', 'constant_energy'),),
-        )
-
     _request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                  # TODO: could be done with QMetaObject.invokeMethod
 
     def __init__(self, measurement_settings):

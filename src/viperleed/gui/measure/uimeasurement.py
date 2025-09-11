@@ -205,6 +205,7 @@ from viperleed.gui.measure.camera.abc import CameraABC
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
 from viperleed.gui.measure.classes.datapoints import DataPoints
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
+from viperleed.gui.measure.classes.settings import ensure_aliases_exist
 from viperleed.gui.measure.classes.settings import MissingSettingsFileError
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import SystemSettings
@@ -774,10 +775,12 @@ class Measure(ViPErLEEDPluginBase):                                             
         defaults = [f for f in os.listdir(old_defaults)
                     if os.path.isfile(os.path.join(old_defaults, f))]
         defaults.remove('_system_settings.ini')
+        defaults.remove('_aliases.ini')
         for default in defaults:
             f_location = old_defaults / default
             f_destination = base.get_default_path() / default
             shutil.copyfile(f_location, f_destination)
+        ensure_aliases_exist()
 
     def _on_bad_pixels_selected(self):
         """Stop all cameras, then open the dialog."""
@@ -1080,6 +1083,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         meas_config.read_string(cfg_lines)
         meas_config.base_dir = fname
         cls_name = meas_config['measurement_settings']['measurement_class']
+        meas_config.prepare_aliases(cls_name)
         # Use the information in the config for
         # correctly updating the DataPoints
         datapts.time_resolved = cls_name == "TimeResolved"
@@ -1104,6 +1108,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             return False
 
         cls_name = meas_config['measurement_settings']['measurement_class']
+        meas_config.prepare_aliases(cls_name)
         datapts.time_resolved = cls_name == 'TimeResolved'
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
