@@ -299,4 +299,3 @@ class MeasurementFigureCanvas(FigureCanvas):
         Returns a reference to the matplotlib axes on which stuff is plotted
         """
         return self.__ax
-
