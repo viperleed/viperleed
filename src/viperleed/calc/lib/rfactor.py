@@ -6,6 +6,20 @@ __created__ = '2024-02-21'
 
 from jax import numpy as jnp
 
+R_FACTOR_SYNONYMS = {
+    pendry_R: ('pendry', 'r_p', 'rp', 'pendry r-factor'),
+    R_1: ('r1', 'r_1', 'r1 factor'),
+    R_2: ('r2', 'r_2', 'r2 factor'),
+    R_ms: ('ms', 'msr', 'rms', 'r_ms', 'r_ms factor'),
+    R_zj: (
+        'zj',
+        'zj factor',
+        'zannazi',
+        'zannazi jona',
+        'zannazi-jona',
+    ),
+}
+
 
 def pendry_R(
     theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
@@ -238,18 +252,3 @@ def R_zj(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
     return jnp.nansum(r_beams * exp_energy_ranges) / jnp.nansum(
         exp_energy_ranges
     )
-
-
-R_FACTOR_SYNONYMS = {
-    pendry_R: ('pendry', 'r_p', 'rp', 'pendry r-factor'),
-    R_1: ('r1', 'r_1', 'r1 factor'),
-    R_2: ('r2', 'r_2', 'r2 factor'),
-    R_ms: ('ms', 'msr', 'rms', 'r_ms', 'r_ms factor'),
-    R_zj: (
-        'zj',
-        'zj factor',
-        'zannazi',
-        'zannazi jona',
-        'zannazi-jona',
-    ),
-}
