@@ -11,7 +11,6 @@ __created__ = '2020-01-12'
 __license__ = 'GPLv3+'
 
 from datetime import datetime
-import inspect
 import logging
 import re
 import sys
@@ -47,7 +46,7 @@ def catch_gui_crash(base_log_path):
         btn.setText("Close Application")
 
         # Prepare the info text
-        __repo = 'viperleed-betatest'
+        __repo = 'viperleed'
         __issue = ('<a href=\"https://github.com/viperleed/'
                    f'{__repo}/issues\">GitHub Issue</a>')
         __email = ('<a href="mailto:riva@iap.tuwien.ac.at">'
@@ -221,7 +220,7 @@ def drawText(painter, text, transform=None, combine=False):
     rawFont = qtg.QRawFont.fromFont(painter.font())
     indexes = rawFont.glyphIndexesForString(text)
 
-    painter.save();
+    painter.save()
     paths = [rawFont.pathForGlyph(index) for index in indexes]
     advances = rawFont.advancesForGlyphIndexes(indexes,
                                                qtg.QRawFont.UseDesignMetrics
