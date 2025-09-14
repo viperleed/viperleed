@@ -102,7 +102,9 @@ def integer_shift_v0r(array, n_steps):
 ### R2 ###
 
 
-def R_2(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
+def R_2(
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+):
     # calculate interpolation only – no derivatives needed for R2
 
     # Experimental data
@@ -122,10 +124,16 @@ def R_2(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
         axis=0,
     )
     denominators = nansum_trapezoid(exp_intensity**2, energy_step, axis=0)
+    if per_beam:
+        # return R factor for each beam
+        return numerators / denominators
+    # R factor for all beams
     return jnp.sum(numerators) / jnp.sum(denominators)
 
 
-def R_1(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
+def R_1(
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+):
     # Experimental data
     exp_deriv_spline = exp_spline.derivative()
 
@@ -147,6 +155,10 @@ def R_1(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
         axis=0,
     )
     denominators = nansum_trapezoid(exp_intensity, energy_step, axis=0)
+    if per_beam:
+        # return R factor for each beam
+        return numerators / denominators
+    # R factor for all beams
     return jnp.sum(numerators) / jnp.sum(denominators)
 
 
@@ -195,7 +207,9 @@ def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
     return numerator / denominator
 
 
-def R_zj(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
+def R_zj(
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+):
     # Experimental data
     exp_deriv_1_spline = exp_spline.derivative()
     exp_deriv_2_spline = exp_deriv_1_spline.derivative()
@@ -234,6 +248,8 @@ def R_zj(theo_spline, v0_imag, energy_step, energy_grid, exp_spline):
     r_beams = prefactors * nansum_trapezoid(
         numerators / denominators, axis=0, dx=energy_step
     )
+    if per_beam:
+        return r_beams
 
     return jnp.nansum(r_beams * exp_energy_ranges) / jnp.nansum(
         exp_energy_ranges
