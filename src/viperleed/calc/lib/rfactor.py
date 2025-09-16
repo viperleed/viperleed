@@ -3,7 +3,7 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-02-21'
 
-
+import jax
 from jax import numpy as jnp
 
 
@@ -218,17 +218,31 @@ def R_zj(
     exp_derivative_1 = exp_deriv_1_spline(energy_grid)
     exp_derivative_2 = exp_deriv_2_spline(energy_grid)
 
+    exp_mask = jnp.isnan(exp_intensity)
+    exp_mask = jax.lax.stop_gradient(exp_mask)
+    exp_intensity = jnp.where(exp_mask, 0.0, exp_intensity)
+    exp_derivative_1 = jnp.where(exp_mask, 0.0, exp_derivative_1)
+    exp_derivative_2 = jnp.where(exp_mask, 0.0, exp_derivative_2)
+
     # Theory data
     theo_deriv_1_spline = theo_spline.derivative()
     theo_deriv_2_spline = theo_deriv_1_spline.derivative()
 
     theo_intensity = theo_spline(energy_grid)
+    theo_mask = jnp.isnan(theo_intensity)
+    theo_mask = jax.lax.stop_gradient(theo_mask)
+    mask = jnp.logical_or(exp_mask, theo_mask)
+
     theo_derivative_1 = theo_deriv_1_spline(energy_grid)
     theo_derivative_2 = theo_deriv_2_spline(energy_grid)
 
-    exp_energy_ranges = (
-        jnp.logical_not(jnp.isnan(exp_intensity)).sum(axis=0) * energy_step
-    )
+    # apply mask to theory as well
+    theo_intensity = jnp.where(mask, 0.0, theo_intensity)
+    theo_derivative_1 = jnp.where(mask, 0.0, theo_derivative_1)
+    theo_derivative_2 = jnp.where(mask, 0.0, theo_derivative_2)
+
+    # calculate experimental energy ranges (without NaNs)
+    exp_energy_ranges = jnp.logical_not(mask).sum(axis=0) * energy_step
 
     # Factor 0.027 for random correlation, Zannazi & Jona 1977
     prefactors = (
@@ -243,11 +257,15 @@ def R_zj(
     numerators = abs(
         beam_normalization * theo_derivative_2 - exp_derivative_2
     ) * abs(beam_normalization * theo_derivative_1 - exp_derivative_1)
-    denominators = abs(exp_derivative_1) + jnp.nanmax(exp_derivative_1, axis=0)
+    numerators = jnp.where(mask, 0.0, numerators)
 
-    r_beams = prefactors * nansum_trapezoid(
-        numerators / denominators, axis=0, dx=energy_step
-    )
+    denominators = abs(exp_derivative_1) + jnp.nanmax(exp_derivative_1, axis=0)
+    denominators = jnp.clip(denominators, a_min=1e-12)
+    denominators = jnp.where(mask, 1.0, denominators)
+
+    quotient = numerators / denominators
+
+    r_beams = prefactors * nansum_trapezoid(quotient, axis=0, dx=energy_step)
     if per_beam:
         return r_beams
 
