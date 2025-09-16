@@ -1,0 +1,20 @@
+== SEARCH u
+    = VIB_DELTA
+        Te_surf   = -0.05 0.05 0.005
+        Te_def    = -0.05 0.05 0.005
+        Cu_surf   = -0.05 0.05 0.005
+
+== SEARCH z
+    = GEO_DELTA
+        Te_surf       z = -0.05 0.05 0.005
+        Te_def        z = -0.05 0.05 0.005
+        Cu_surf       z = -0.05 0.05 0.005
+        Cu_def L(1-4) z = -0.03 0.03 0.005
+
+== SEARCH xy
+    = GEO_DELTA
+        Te_surf xy       = -0.05 0.05 0.005
+        Te_def  xy       = -0.05 0.05 0.005
+        Cu_surf xy       = -0.05 0.05 0.005
+        Cu_def L(1-4) xy = -0.03 0.03 0.005
+
