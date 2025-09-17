@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 
 import csv
 from collections import defaultdict
+from collections import namedtuple
 from collections.abc import MutableSequence
 from collections.abc import Sequence
 from copy import deepcopy
@@ -35,6 +36,8 @@ _ALIASES = {
     'Cold_Junction': ('cold_junction',),
     'Timestamps': ('timestamps',),
     }
+_Q = namedtuple('Quantity', ['units', 'scale', 'dtype', 'label', 'axis',
+                            'common_label', 'tooltip', 'description'])
 
 
 NAN = float('nan')
@@ -59,36 +62,35 @@ class QuantityInfo(enum.Enum):
     New measurement quantities have to be added here.
     """
 
-    # Info:   units, scale, dtype, label, axis, common_label, tooltip
-    IMAGES = ('Number', None, str, 'Images', None, None, 'Images', '')
-    ENERGY = ('eV', 'lin', float, 'Energy', 'x', None, 'Energy',
-              'The nominal value of the primary electron energy')
-    HV = ('eV', 'lin', float, 'Measured_Energy',
-          'y', 'Voltage', 'Beam energy',
-          '<nobr>The actual value of the primary electron energy'
-          '</nobr> measured on the LEED optics at high voltage')
-    TIMES = ('s', 'lin', float, 'Times', 'x', None, 'Time','')
-    I0 = ('µA', 'lin', float, 'I0', 'y', 'Current', 'I\u2080',
-          '<nobr>The total electron current emitted by the '
-          'electron gun,</nobr> measured on the LEED optics')
-    ISAMPLE = ('µA', 'lin', float, 'I_Sample',
-               'y', 'Current', 'I\u209b\u2090\u2098\u209a\u2097\u2091',
-               '<nobr>The total electron current emitted by the electron '
-               'gun,</nobr> measured by biasing the sample to +33 V via the '
-               '"I_target" BNC connector. This is an alternative to '
-               'I<sub>0</sub> in case your LEED optics does not provide an '
-               'I<sub>0</sub> output. LEED-IV videos should not be acquired '
-               'at the same time to avoid electric-field-induced distortions')
-    TEMPERATURE = ('°C', 'lin', float, 'Temperature', 'y', 'Temperature',
-                   'Temperature', '')
-    AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux', 'Aux', '')
-    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y',
-                     'Temperature', 'Cold-junction temperature',
-                     'Reference temperature measured internally in the '
-                     'ViPErLEED unit to convert the measured thermocouple '
-                     'voltage to a temperature')
-    TIMESTAMPS = ('s', None, str, 'Timestamp', None, None, 'Timestamp','')
-    UNKNOWN = ('', None, str, '??', None, None, '', '')
+    IMAGES = _Q('Number', None, str, 'Images', None, None, 'Images', '')
+    ENERGY = _Q('eV', 'lin', float, 'Energy', 'x', None, 'Energy',
+                'The nominal value of the primary electron energy')
+    HV = _Q('eV', 'lin', float, 'Measured_Energy',
+            'y', 'Voltage', 'Beam energy',
+            '<nobr>The actual value of the primary electron energy'
+            '</nobr> measured on the LEED optics at high voltage')
+    TIMES = _Q('s', 'lin', float, 'Times', 'x', None, 'Time','')
+    I0 = _Q('µA', 'lin', float, 'I0', 'y', 'Current', 'I\u2080',
+            '<nobr>The total electron current emitted by the '
+            'electron gun,</nobr> measured on the LEED optics')
+    ISAMPLE = _Q('µA', 'lin', float, 'I_Sample', 'y', 'Current',
+                 'I\u209b\u2090\u2098\u209a\u2097\u2091',
+                 '<nobr>The total electron current emitted by the electron '
+                 'gun,</nobr> measured by biasing the sample to +33 V via the '
+                 'I<sub>target</sub> BNC connector. This is an alternative to '
+                 'I\u2080 in case your LEED optics does not provide an I\u2080'
+                 ' output. LEED-IV videos should not be acquired at the same '
+                 'time to avoid electric-field-induced distortions')
+    TEMPERATURE = _Q('°C', 'lin', float, 'Temperature', 'y', 'Temperature',
+                     'Temperature', '')
+    AUX = _Q('mV', 'lin', float, 'Aux', 'y', 'Aux', 'Aux', '')
+    COLD_JUNCTION = _Q('°C', 'lin', float, 'Cold_Junction', 'y',
+                       'Temperature', 'Cold-junction temperature',
+                       'Reference temperature measured internally in the '
+                       'ViPErLEED unit to convert the measured thermocouple '
+                       'voltage to a temperature')
+    TIMESTAMPS = _Q('s', None, str, 'Timestamp', None, None, 'Timestamp','')
+    UNKNOWN = _Q('', None, str, '??', None, None, '', '')
 
     @classmethod
     def from_display_label(cls, label):
