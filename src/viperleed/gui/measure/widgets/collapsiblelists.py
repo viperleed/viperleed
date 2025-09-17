@@ -12,6 +12,8 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-02-14'
 __license__ = 'GPLv3+'
 
+from inspect import isclass
+
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
@@ -77,6 +79,14 @@ class CollapsibleDeviceList(CollapsibleList):
         # are_settings_ok() method to return True.
         self.requires_device = False
         self._add_top_widget_types(qtw.QCheckBox)
+
+    def __init_subclass__(cls, **kwargs):
+        """Ensure _view_type is a subclass of CollapsibleDeviceView."""
+        view = cls._view_type
+        if not isclass(view) or not issubclass(view, CollapsibleDeviceView):
+            raise TypeError('_view_type must be a subclass of '
+                            'CollapsibleDeviceView.')
+        return super().__init_subclass__(**kwargs)
 
     def add_new_view(self, name, cls_and_info):
         """Add a new view.
