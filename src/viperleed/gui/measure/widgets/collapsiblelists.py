@@ -111,7 +111,7 @@ class CollapsibleDeviceList(CollapsibleList):
         view.set_device(*cls_and_info)
         if self.default_settings_folder:
             view.set_settings_folder(self.default_settings_folder)
-        self.insert_view(view)
+        self.append_view(view)
         view.settings_changed.connect(self._emit_and_update_settings)
         return view
 
