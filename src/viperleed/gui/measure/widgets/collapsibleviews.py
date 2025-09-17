@@ -81,6 +81,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
     @original_settings.setter
     def original_settings(self, settings):
         """Store a path to settings as the original ones."""
+        settings = settings.resolve()
         self._original_settings = settings
         self.set_settings_folder(settings.parent)
         self._settings_file_selector.setCurrentText(settings.stem)
