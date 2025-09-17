@@ -19,6 +19,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure.classes.abc import QMetaABC
+from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
@@ -303,7 +304,11 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         enabled = self._expanded and self._settings_file_selector.isEnabled()
         if enabled:
             # Always fetch a settings handler for visible devices
-            self._get_settings_handler()
+            try:
+                self._get_settings_handler()
+            except NoSettingsError:
+                self._on_settings_folder_changed()
+                pass
         elif not self.has_hardware_interface:
             # Devices without a hardware interface are not enabled, as
             # they lack the ability to select a settings file, but they
