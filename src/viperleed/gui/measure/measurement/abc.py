@@ -1357,10 +1357,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 cam = self._make_camera(settings)
             except (RuntimeError, ValueError):
                 continue
-            # Temporarily connect device.error_occurred to
-            # self.error_occurred in order to report errors that
-            # happen during creation of the device object (which delays
-            # its own errors).
+            # Connect device.error_occurred to self.error_occurred in
+            # order to report errors that happen during creation of the
+            # device object (which delays its own errors).
             cam.error_occurred.connect(self.error_occurred)
             # Ensure device errors also abort the measurement.
             cam.error_occurred.connect(self._on_hardware_error)
@@ -1468,10 +1467,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         controller = cls(settings=config, address=address,
                          sets_energy=is_primary)
-        # Temporarily connect device.error_occurred to
-        # self.error_occurred in order to report errors that
-        # happen during creation of the device object (which delays
-        # its own errors).
+        # Connect device.error_occurred to self.error_occurred in order
+        # to report errors that happen during creation of the device
+        # object (which delays its own errors).
         controller.error_occurred.connect(self.error_occurred)
         # Ensure device errors also abort the measurement.
         controller.error_occurred.connect(self._on_hardware_error)

@@ -293,8 +293,8 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
             return
         layout = self._frame.layout()
         if layout.count() == 3:
-            item = layout.itemAt(2)
-            layout.removeItem(item)
+            # The first two items are PathSelector and QComboBox.
+            item = layout.takeAt(2)
             item.widget().deleteLater()
         self._handler = None
 
