@@ -433,6 +433,28 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         self._primary_settings = ()
         self._secondary_settings = ()
 
+    def are_settings_ok(self):
+        """Return whether the controller selection is acceptable.
+
+        Returns
+        -------
+        settings_ok : bool
+            Whether the selection in the CollapsibleControllerList
+            is acceptable or not. If at least one controller is
+            required, then at least one controller has to be selected
+            as the primary controller as well.
+        reason : str
+            A descriptive string elaborating why the settings
+            are not acceptable.
+        """
+        settings_ok, reason = super().are_settings_ok()
+        if not settings_ok:
+            return settings_ok, reason
+        no_primary_selected = self._radio_buttons.checkedId() == -1
+        if self.requires_device and no_primary_selected:
+            return False, 'A primary controller has to be selected.'
+        return True, ''
+
     def get_primary_settings(self):
         """Return a tuple of primary controller settings."""
         for view in self.enabled_views:
