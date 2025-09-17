@@ -118,8 +118,8 @@ class QuantityInfo(enum.Enum):
                             'QuantityInfo.from_display_label. Expected str.')
         try:
             return cls.get_display_labels()[label]
-        except KeyError as err:
-            raise ValueError(f'{cls.__name__}: {label!r} unknown') from err
+        except KeyError as exc:
+            raise ValueError(f'{cls.__name__}: {label!r} unknown') from exc
 
     @classmethod
     def from_label(cls, label):
@@ -156,8 +156,8 @@ class QuantityInfo(enum.Enum):
                 break
         try:
             return cls.get_labels()[label]
-        except KeyError as err:
-            raise ValueError(f'{cls.__name__}: {label!r} unknown') from err
+        except KeyError as exc:
+            raise ValueError(f'{cls.__name__}: {label!r} unknown') from exc
 
     @classmethod
     def get_axis_labels(cls, axis):

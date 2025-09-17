@@ -272,9 +272,8 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
                                  else (self._original_settings,))
         else:
             matching_settings = self._device_cls.find_matching_settings_files(
+                directory=self._settings_folder.path, match_exactly=False,
                 obj_info=self._device_info,
-                directory=self._settings_folder.path,
-                match_exactly=False,
                 )
 
         for settings in matching_settings:

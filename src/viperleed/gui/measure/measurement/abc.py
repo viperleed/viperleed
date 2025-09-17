@@ -162,7 +162,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._secondary_controllers = []
         self._cameras = []
         self._aborted = False
-        self._has_been_used_before = False # Used to stop reuse of object.      # TODO: We may want to modify the measurement to allow this behaviour.
+        self._has_been_used_before = False  # Used to stop reuse of object.     # TODO: We may want to modify the measurement to allow this behaviour.
         self._temp_dir = None   # Directory for saving files
 
         # Keep track of which data of which controller was
@@ -479,7 +479,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                     invalid_settings.remove('/'.join(new_setting))
 
         # Backwards compatibility fix                                           # TODO: #242
-        if ('energies/step_profile') in invalid_settings:
+        if 'energies/step_profile' in invalid_settings:
             settings.set('energies', 'step_profile', "('abrupt',)")
             invalid_settings.remove('energies/step_profile')
         return [(invalid,) for invalid in invalid_settings]
@@ -520,7 +520,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             The handler used in a SettingsDialog to display the
             settings of this measurement to users.
         """
-        self.check_creating_settings_handler_is_possible()
+        # super().get_settings_handler() is only peformed to check
+        # whether a settings handler can be created from the current
+        # settings.
+        super().get_settings_handler()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
 
         handler.add_section('measurement_info', tags=SettingsTag.REGULAR)
@@ -541,7 +544,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                            display_name='Comments')
 
         handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
-        type_display = qtw.QLabel(type(self).__name__)
+        type_display = qtw.QLabel(self.display_name)
         handler.add_static_option(
             'measurement_settings', 'measurement_class',
             type_display, display_name='Measurement type',
