@@ -569,7 +569,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 display_name=display_name, tooltip=tip
                 )
         delta_energy = handler['energies']['delta_energy']
-        delta_energy.handler_widget.soft_minimum = 0.5                          # TODO: allow negative values and catch zero once EnergyGenerator has been implemented
+        delta_energy.handler_widget.soft_minimum = 0.1                          # TODO: allow negative values and catch zero once EnergyGenerator has been implemented
         delta_energy.handler_widget.setSingleStep(0.5)
 
         widget = _settings.StepProfileViewer()
