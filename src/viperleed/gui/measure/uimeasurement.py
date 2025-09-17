@@ -878,11 +878,10 @@ class Measure(ViPErLEEDPluginBase):                                             
     def _on_measurement_finished(self, *_):
         """Reset all after a measurement is over."""
         self._timestamps['finished'] = time.perf_counter()
+        self.measurement.devices_disconnected.connect(
+            self._on_ready_for_next_measurement
+            )
         self.measurement.disconnect_devices_and_notify()
-        self._switch_button_enable(True)
-        for viewer in self._dialogs['camera_viewers']:
-            viewer.stop_on_close = True
-            viewer.interactions_enabled = True
 
     @qtc.pyqtSlot()
     def _on_measurement_prepared(self):
@@ -924,6 +923,15 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._glob['plot'].data_points = data
         self._glob['plot'].show()
         self._glob['last_cfg'] = config
+
+    def _on_ready_for_next_measurement(self):
+        """Reset controls after a measurement."""
+        base.safe_disconnect(self.measurement.devices_disconnected,
+                             self._on_ready_for_next_measurement)
+        self._switch_button_enable(True)
+        for viewer in self._dialogs['camera_viewers']:
+            viewer.stop_on_close = True
+            viewer.interactions_enabled = True
 
     def _on_set_energy(self):
         """Set energy on primary controller."""
