@@ -111,6 +111,8 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
         if new_minimum > self.soft_maximum:
             raise ValueError('The minimum cannot be larger than the maximum.')
         self._soft_min = new_minimum
+        if self.value() < self._soft_min:
+            self._coerce_value()
 
     @property
     def soft_maximum(self):
@@ -123,6 +125,8 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
         if new_maximum < self.soft_minimum:
             raise ValueError('The maximum cannot be smaller than the minimum.')
         self._soft_max = new_maximum
+        if self.value() > self._soft_max:
+            self._coerce_value()
 
     @property
     def soft_range(self):
@@ -135,8 +139,8 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
         new_minimum, new_maximum = values
         if new_minimum > new_maximum:
             new_maximum, new_minimum = new_minimum, new_maximum
-        self._soft_max = new_maximum
-        self._soft_min = new_minimum
+        self.soft_maximum = new_maximum
+        self.soft_minimum = new_minimum
 
     @qtc.pyqtSlot(int)
     def stepBy(self, steps):    # pylint: disable=invalid-name
