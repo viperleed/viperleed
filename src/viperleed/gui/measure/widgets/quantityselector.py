@@ -98,7 +98,7 @@ class QuantitySelector(qtw.QGroupBox):
         Parameters
         ----------
         quantities : Sequence
-            Elements are squences of QuantityInfo objects. Each element
+            Elements are sequences of QuantityInfo objects. Each element
             represents one measuring device installed on the controller,
             with each QuantityInfo being one of the quantities that
             measuring device in particular can acquire.
@@ -123,7 +123,7 @@ class QuantitySelector(qtw.QGroupBox):
         Parameters
         ----------
         quantities : Sequence
-            Elements are squences of QuantityInfo objects. Each element
+            Elements are sequences of QuantityInfo objects. Each element
             represents one measuring device installed on the controller,
             with each QuantityInfo being one of the quantities that
             measuring device in particular can acquire.

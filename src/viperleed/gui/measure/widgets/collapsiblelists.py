@@ -12,6 +12,8 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-02-14'
 __license__ = 'GPLv3+'
 
+from inspect import isclass
+
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
@@ -78,6 +80,14 @@ class CollapsibleDeviceList(CollapsibleList):
         self.requires_device = False
         self._add_top_widget_types(qtw.QCheckBox)
 
+    def __init_subclass__(cls, **kwargs):
+        """Ensure _view_type is a subclass of CollapsibleDeviceView."""
+        view = cls._view_type
+        if not isclass(view) or not issubclass(view, CollapsibleDeviceView):
+            raise TypeError('_view_type must be a subclass of '
+                            'CollapsibleDeviceView.')
+        return super().__init_subclass__(**kwargs)
+
     def add_new_view(self, name, cls_and_info):
         """Add a new view.
 
@@ -101,7 +111,7 @@ class CollapsibleDeviceList(CollapsibleList):
         view.set_device(*cls_and_info)
         if self.default_settings_folder:
             view.set_settings_folder(self.default_settings_folder)
-        self.insert_view(view)
+        self.append_view(view)
         view.settings_changed.connect(self._emit_and_update_settings)
         return view
 
@@ -236,8 +246,7 @@ class CollapsibleDeviceList(CollapsibleList):
         top_labels = qtw.QHBoxLayout()
         remove_spacing_and_margins(top_labels)
         top_labels.addStretch(1)
-        device_label = qtw.QLabel(self._top_labels[0])
-        top_labels.addWidget(device_label)
+        top_labels.addWidget(qtw.QLabel(self._top_labels[0]))
         top_labels.addStretch(1)
         for label in self._top_labels[1:]:
             q_label = qtw.QLabel(label)
@@ -247,9 +256,15 @@ class CollapsibleDeviceList(CollapsibleList):
         self._layout.insertLayout(1, top_labels)
 
     def _update_stored_settings(self):
-        """Update the internally stored settings."""
-        # Must be implemented in subclasses if the subclass
-        # stores device settings internally.
+        """Update the internally stored settings.
+
+        Must be implemented in subclasses if the subclass
+        stores device settings internally.
+
+        Returns
+        -------
+        None.
+        """
 
 
 class CollapsibleCameraList(CollapsibleDeviceList):
@@ -337,6 +352,35 @@ class CollapsibleCameraList(CollapsibleDeviceList):
         self._set_camera_settings()
         self.settings_ok_changed.emit()
 
+    def _find_camera_view(self, settings):
+        """Find or create the correct camera view for the settings.
+
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The settings for which the camera has to be found.
+
+        Returns
+        -------
+        correct_view : CollapsibleCameraView
+            The correct view for the given settings.
+        """
+        device_name = settings.get('camera_settings', 'device_name')
+        for view in self.views:
+            if device_name == view.device_info.unique_name:
+                correct_view = view
+                break
+        else:
+            name = device_name + ' (not found)'
+            cls = class_from_name(
+                'camera', settings.get('camera_settings', 'class_name')
+                )
+            info = {}
+            present = False  # Because there is no hardware interface.
+            settings_info = SettingsInfo(name, present, info)
+            correct_view = self.add_new_view(name, (cls, settings_info))
+        return correct_view
+
     def _set_camera_settings(self):
         """Set camera settings."""
         for settings in self._camera_settings:
@@ -368,22 +412,8 @@ class CollapsibleCameraList(CollapsibleDeviceList):
                        QObjectSettingsErrors.SPECIFIED_SETTINGS_CORRUPTED,
                        error_settings[0],)
             return
-        device_name = settings.get('camera_settings', 'device_name')
-        correct_view = None
-        for view in self.views:
-            if device_name == view.device_info.unique_name:
-                correct_view = view
-                break
-        else:
-            name = device_name + ' (not found)'
-            cls = class_from_name(
-                'camera', settings.get('camera_settings', 'class_name')
-                )
-            info = {}
-            present = False  # Because there is no hardware interface.
-            settings_info = SettingsInfo(name, present, info)
-            correct_view = self.add_new_view(name, (cls, settings_info))
 
+        correct_view = self._find_camera_view(settings)
         with disconnected_slot(self._emit_and_update_settings,
                                self._checkbox(correct_view).stateChanged,
                                type=qtc.Qt.UniqueConnection):
@@ -422,6 +452,28 @@ class CollapsibleControllerList(CollapsibleDeviceList):
                              PathSelector().sizeHint().width())
         self._primary_settings = ()
         self._secondary_settings = ()
+
+    def are_settings_ok(self):
+        """Return whether the controller selection is acceptable.
+
+        Returns
+        -------
+        settings_ok : bool
+            Whether the selection in the CollapsibleControllerList
+            is acceptable or not. If at least one controller is
+            required, then at least one controller has to be selected
+            as the primary controller as well.
+        reason : str
+            A descriptive string elaborating why the settings
+            are not acceptable.
+        """
+        settings_ok, reason = super().are_settings_ok()
+        if not settings_ok:
+            return settings_ok, reason
+        no_primary_selected = self._radio_buttons.checkedId() == -1
+        if self.requires_device and no_primary_selected:
+            return False, 'A primary controller has to be selected.'
+        return True, ''
 
     def get_primary_settings(self):
         """Return a tuple of primary controller settings."""
@@ -503,6 +555,38 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         self._set_primary_from_settings()
         self._set_secondary_from_settings()
         self.settings_ok_changed.emit()
+
+    def _find_controller_view(self, settings):
+        """Find or create the correct controller view for the settings.
+
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The settings for which the controller has to be found.
+
+        Returns
+        -------
+        correct_view : CollapsibleControllerView
+            The correct view for the given settings.
+        """
+        device_name = settings.get('controller', 'device_name')
+        for view in self.views:
+            if device_name == view.device_info.more['name']:
+                correct_view = view
+                break
+        else:
+            name = device_name + ' (not found)'
+            cls = class_from_name(
+                'controller', settings.get('controller', 'controller_class')
+                )
+            info = {
+                'address': NO_HARDWARE_INTERFACE,
+                'name': device_name,
+                }
+            present = False  # Because there is no hardware interface.
+            settings_info = SettingsInfo(name, present, info)
+            correct_view = self.add_new_view(name, (cls, settings_info))
+        return correct_view
 
     def _get_selected_controller_settings(self, view):
         """Return the settings for the selected controller."""
@@ -603,25 +687,8 @@ class CollapsibleControllerList(CollapsibleDeviceList):
                        QObjectSettingsErrors.SPECIFIED_SETTINGS_CORRUPTED,
                        error_settings[0],)
             return
-        device_name = settings.get('controller', 'device_name')
-        correct_view = None
-        for view in self.views:
-            if device_name == view.device_info.more['name']:
-                correct_view = view
-                break
-        else:
-            name = device_name + ' (not found)'
-            cls = class_from_name(
-                'controller', settings.get('controller', 'controller_class')
-                )
-            info = {
-                'address': NO_HARDWARE_INTERFACE,
-                'name': device_name,
-                }
-            present = False  # Because there is no hardware interface.
-            settings_info = SettingsInfo(name, present, info)
-            correct_view = self.add_new_view(name, (cls, settings_info))
 
+        correct_view = self._find_controller_view(settings)
         with disconnected_slot(self._emit_and_update_settings,
                                self._checkbox(correct_view).stateChanged,
                                self.views[correct_view][1].toggled,

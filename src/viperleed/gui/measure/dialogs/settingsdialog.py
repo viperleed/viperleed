@@ -148,6 +148,7 @@ def _get_hook(obj):
 
 class SettingsTag(enum.Flag):
     """Flags that decide the display behaviour of a settings widget."""
+
     NONE = 0
     REGULAR = enum.auto()
     R = REGULAR
@@ -1174,27 +1175,6 @@ class SettingsDialog(qtw.QDialog):
 
         self.__update_advanced_btn()
 
-    def _compose_dialog_buttons(self):
-        """Compose the buttons of the dialog.
-
-        Returns
-        -------
-        buttons : QNoDefaultDialogButtonBox
-            Contains the buttons necessary to handle the dialog.
-        """
-        _bbox = QNoDefaultDialogButtonBox
-        buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
-
-        self._ctrls['apply'] = buttons.buttons()[-1]
-        self._ctrls['accept'] = buttons.buttons()[0]
-        self._ctrls['apply'].setEnabled(False)
-        self.adv_button.setCheckable(True)
-
-        # Use a ResetRole to have the button placed in a
-        # different spot than all others on every platform
-        buttons.addButton(self.adv_button, _bbox.ResetRole)
-        return buttons
-
     def _compose_columns(self):
         """Compose the columns of the layout and add widgets.
 
@@ -1224,6 +1204,27 @@ class SettingsDialog(qtw.QDialog):
             columns[0].addLayout(_form)
         columns[0].addStretch(1)
         return columns
+
+    def _compose_dialog_buttons(self):
+        """Compose the buttons of the dialog.
+
+        Returns
+        -------
+        buttons : QNoDefaultDialogButtonBox
+            Contains the buttons necessary to handle the dialog.
+        """
+        _bbox = QNoDefaultDialogButtonBox
+        buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
+
+        self._ctrls['apply'] = buttons.buttons()[-1]
+        self._ctrls['accept'] = buttons.buttons()[0]
+        self._ctrls['apply'].setEnabled(False)
+        self.adv_button.setCheckable(True)
+
+        # Use a ResetRole to have the button placed in a
+        # different spot than all others on every platform
+        buttons.addButton(self.adv_button, _bbox.ResetRole)
+        return buttons
 
     def _get_ask_to_save_dialog(self):
         """Get the QMessageBox that asks if settings can be saved."""

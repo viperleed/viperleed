@@ -615,10 +615,10 @@ class FirmwareUploader(ArduinoCLI):
 
         Parameters
         ----------
-        boards : list of dicts
-            A list that contains each board as a dict.
-            Each dict representing a controller has the following
-            {key: value} pairs:
+        boards : Sequence of dicts
+            A Sequence that contains each board as a dict.
+            Each dict representing a controller should
+            have the following {key: value} pairs:
             'matching_boards' : list of dict
                 Holds the board name and the fully qualified board name.
             'port' : dict

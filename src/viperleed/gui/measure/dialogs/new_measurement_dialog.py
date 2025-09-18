@@ -13,9 +13,9 @@ __created__ = '2024-06-24'
 __license__ = 'GPLv3+'
 
 from pathlib import Path
+import shutil
 from time import localtime
 from time import strftime
-import shutil
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
@@ -84,6 +84,45 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         """Return the selected settings file."""
         return self._ctrls['settings_file'].currentData()
 
+    @qtc.pyqtSlot()
+    def accept(self):
+        """Emit selected measurement class and settings and close.
+
+        Emits
+        -----
+        measurement_selected
+            If the settings file was found and successfully read.
+        settings_not_found
+            If the settings file was not found. Carries the
+            settings path and the MissingSettingsFileError.
+        """
+        cls = self.selected_type
+        settings_path = self.selected_file
+        default_path, *_ = cls.find_matching_settings_files(
+            directory=get_default_path(), match_exactly=False
+            )
+
+        if not settings_path or settings_path in (default, default_path):
+            settings_path = self._duplicate_settings_file(cls, default_path)
+        elif self._ctrls['clone_settings'].isChecked():
+            settings_path = self._duplicate_settings_file(cls, settings_path)
+
+        config = ViPErLEEDSettings()
+        try:
+            config.read(settings_path)
+        except MissingSettingsFileError as err:
+            self.settings_not_found.emit(settings_path, str(err))
+            super().reject()
+            return
+
+        self.measurement_selected.emit(cls, config)
+        super().accept()
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Find known measurement settings, then show this dialog."""
+        self._find_appropriate_settings()
+        super().showEvent(event)
+
     def _compose_and_connect(self):
         """Place children widgets and connect signals."""
         layout = qtw.QFormLayout()
@@ -114,22 +153,6 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         buttons.rejected.connect(self.reject)
         self.setLayout(layout)
 
-    @qtc.pyqtSlot()
-    def _find_appropriate_settings(self, *_):
-        """Find appropriate settings for the selected measurement type."""
-        settings_folder = self._ctrls['settings_folder'].path
-        self._ctrls['settings_file'].clear()
-        self._ctrls['settings_file'].addItem(
-            'Create new settings from defaults', default
-            )
-        if not settings_folder:
-            return
-        matching_settings = self.selected_type.find_matching_settings_files(
-                                directory=settings_folder, match_exactly=False,
-                                )
-        for settings in matching_settings:
-            self._ctrls['settings_file'].addItem(settings.stem, settings)
-
     def _duplicate_settings_file(self, cls, source_path):
         """Create a copy of the settings file at `source_path`.
 
@@ -157,46 +180,23 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         return settings_path
 
     @qtc.pyqtSlot()
+    def _find_appropriate_settings(self, *_):
+        """Find appropriate settings for the selected measurement type."""
+        settings_folder = self._ctrls['settings_folder'].path
+        self._ctrls['settings_file'].clear()
+        self._ctrls['settings_file'].addItem(
+            'Create new settings from defaults', default
+            )
+        if not settings_folder:
+            return
+        matching_settings = self.selected_type.find_matching_settings_files(
+                                settings_folder, False,
+                                )
+        for settings in matching_settings:
+            self._ctrls['settings_file'].addItem(settings.stem, settings)
+
+    @qtc.pyqtSlot()
     def _update_clone_settings_enabled(self, *_):
         """Disable/enable clone settings choice."""
         enable = self.selected_file is not default
         self._ctrls['clone_settings'].setEnabled(enable)
-
-    @qtc.pyqtSlot()
-    def accept(self):
-        """Emit selected measurement class and settings and close.
-
-        Emits
-        -----
-        measurement_selected
-            If the settings was found and successfuly read.
-        settings_not_found
-            If the settings was not found. Carries the
-            settings path and the MissingSettingsFileError.
-        """
-        cls = self.selected_type
-        settings_path = self.selected_file
-        default_path, *_ = cls.find_matching_settings_files(
-            directory=get_default_path(), match_exactly=False,
-            )
-
-        if not settings_path or settings_path in (default, default_path):
-            settings_path = self._duplicate_settings_file(cls, default_path)
-        elif self._ctrls['clone_settings'].isChecked():
-            settings_path = self._duplicate_settings_file(cls, settings_path)
-
-        config = ViPErLEEDSettings()
-        try:
-            config.read(settings_path)
-        except MissingSettingsFileError as err:
-            self.settings_not_found.emit(settings_path, str(err))
-            super().reject()
-            return
-
-        self.measurement_selected.emit(cls, config)
-        super().accept()
-
-    def showEvent(self, event):          # pylint: disable=invalid-name
-        """Find known measurement settings, then show this dialog."""
-        self._find_appropriate_settings()
-        super().showEvent(event)
