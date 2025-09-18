@@ -33,8 +33,8 @@ from viperleed.gui.measure.classes.calibrationtask import (
     )
 
 
-N_DARK = 100  # Number of dark frames used for finding bad pixels
-N_NOISE = 3000 # Number of dark frames used for finding noisy pixels
+N_DARK = 100    # Number of dark frames used for finding bad pixels
+N_NOISE = 3000  # Number of dark frames used for finding noisy pixels
 _INVOKE = qtc.QMetaObject.invokeMethod
 _UNIQUE = qtc.Qt.UniqueConnection
 _unique_connect = functools.partial(base.safe_connect, type=_UNIQUE)
@@ -488,14 +488,15 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         picked up by each pixel. The threshold when a pixel is
         considered to have too much telegraph noise is when the
         flicker of the pixel is about 3 times the average flicker.
-        (3-1)^2 * 1.5 = 6
+        (3-1)^2 * 1.5 = 6,
+        where 6 is the threshold used for the total badness.
 
-        To determine the long term flickering we use a medium exposure
+        To determine the long-term flickering we use a medium exposure
         time with a very high frame count. The overall measurement for
-        burst noise detection alone should not take lass than ten
+        burst noise detection alone should not take less than ten
         minutes.
         """
-        flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].max_min_diff()
+        flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].range_
         flicker_mean = flicker.mean()
 
         self._badness += ((flicker / flicker_mean - 1)**2) * 1.5
@@ -1450,12 +1451,12 @@ class BadPixels:
 
 
 class BadPixelsMaxMinStorage:
-    """Class for containing maxima and minima of bad pixel frames."""
+    """Container for maximum and minimum of bad-pixel frames."""
 
     def __init__(self, height, width, dtype):
         """Initialize bad pixel peak-to-peak storage class."""
         self._count = 0
-        if dtype not in (np.uint8, np.uint16, np.uint32, np.uint64, np.uintp):
+        if dtype not in (np.uint8, np.uint16, np.uint32, np.uint64):
             raise TypeError('frame pixel value type is not a np.uint.')
         self._max = np.zeros((height, width), dtype=dtype)
         max_value = np.iinfo(dtype).max
@@ -1477,7 +1478,7 @@ class BadPixelsMaxMinStorage:
         self._max = np.maximum(self._max, frame)
         self._min = np.minimum(self._min, frame)
 
-    def max_min_diff(self):
+    def range_(self):
         """Return pixel maximum minus pixel minimum."""
         return self._max - self._min
 
