@@ -448,7 +448,10 @@ class SerialABC(HardwareABC):
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
-        self.check_creating_settings_handler_is_possible()
+        # super().get_settings_handler() is only peformed to check
+        # whether a settings handler can be created from the current
+        # settings.
+        super().get_settings_handler()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
         return handler
 

@@ -19,6 +19,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure.classes.abc import QMetaABC
+from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
@@ -80,6 +81,7 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
     @original_settings.setter
     def original_settings(self, settings):
         """Store a path to settings as the original ones."""
+        settings = settings.resolve()
         self._original_settings = settings
         self.set_settings_folder(settings.parent)
         self._settings_file_selector.setCurrentText(settings.stem)
@@ -272,9 +274,8 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
                                  else (self._original_settings,))
         else:
             matching_settings = self._device_cls.find_matching_settings_files(
+                directory=self._settings_folder.path, match_exactly=False,
                 obj_info=self._device_info,
-                directory=self._settings_folder.path,
-                match_exactly=False,
                 )
 
         for settings in matching_settings:
@@ -292,8 +293,8 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
             return
         layout = self._frame.layout()
         if layout.count() == 3:
-            item = layout.itemAt(2)
-            layout.removeItem(item)
+            # The first two items are PathSelector and QComboBox.
+            item = layout.takeAt(2)
             item.widget().deleteLater()
         self._handler = None
 
@@ -304,7 +305,11 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         enabled = self._expanded and self._settings_file_selector.isEnabled()
         if enabled:
             # Always fetch a settings handler for visible devices
-            self._get_settings_handler()
+            try:
+                self._get_settings_handler()
+            except NoSettingsError:
+                self._on_settings_folder_changed()
+                pass
         elif not self.has_hardware_interface:
             # Devices without a hardware interface are not enabled, as
             # they lack the ability to select a settings file, but they
