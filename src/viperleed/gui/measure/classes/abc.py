@@ -326,9 +326,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
-            settings_files = [file for file in settings_files
-                              if '_defaults' not in str(file)
-                              and 'AppData' not in str(file)]
+            settings_files = [
+                file for file in settings_files
+                if '_defaults' not in str(file)
+                and str(base.get_default_path().parent) not in str(file)
+                ]
 
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
