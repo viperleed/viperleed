@@ -150,7 +150,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._secondary_controllers = []
         self._cameras = []
         self._aborted = False
-        self._has_been_used_before = False # Used to stop reuse of object.      # TODO: We may want to modify the measurement to allow this behaviour.
+        self._has_been_used_before = False  # Used to stop reuse of object.     # TODO: We may want to modify the measurement to allow this behaviour.
         self._temp_dir = None   # Directory for saving files
 
         # Keep track of which data of which controller was
@@ -491,7 +491,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             The handler used in a SettingsDialog to display the
             settings of this measurement to users.
         """
-        self.check_creating_settings_handler_is_possible()
+        # super().get_settings_handler() is only peformed to check
+        # whether a settings handler can be created from the current
+        # settings.
+        super().get_settings_handler()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
 
         handler.add_section('measurement_info', tags=SettingsTag.REGULAR)
@@ -507,7 +510,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                            display_name='Comments')
 
         handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
-        type_display = qtw.QLabel(type(self).__name__)
+        type_display = qtw.QLabel(self.display_name)
         handler.add_static_option(
             'measurement_settings', 'measurement_class',
             type_display, display_name='Measurement type',
@@ -530,7 +533,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             handler.add_option('energies', option_name, handler_widget=widget,
                                display_name=display_name, tooltip=tip)
         delta_energy = handler['energies']['delta_energy']
-        delta_energy.handler_widget.soft_minimum = -1000
+        delta_energy.handler_widget.soft_minimum = 0.1                          # TODO: allow negative values and catch zero once EnergyGenerator has been implemented
         delta_energy.handler_widget.setSingleStep(0.5)
 
         widget = _settings.StepProfileViewer()
@@ -1318,10 +1321,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 cam = self._make_camera(settings)
             except (RuntimeError, ValueError):
                 continue
-            # Temporarily connect device.error_occurred to
-            # self.error_occurred in order to report errors that
-            # happen during creation of the device object (which delays
-            # its own errors).
+            # Connect device.error_occurred to self.error_occurred in
+            # order to report errors that happen during creation of the
+            # device object (which delays its own errors).
             cam.error_occurred.connect(self.error_occurred)
             # Ensure device errors also abort the measurement.
             cam.error_occurred.connect(self._on_hardware_error)
@@ -1420,10 +1422,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         controller = cls(settings=config, address=address,
                          sets_energy=is_primary)
-        # Temporarily connect device.error_occurred to
-        # self.error_occurred in order to report errors that
-        # happen during creation of the device object (which delays
-        # its own errors).
+        # Connect device.error_occurred to self.error_occurred in order
+        # to report errors that happen during creation of the device
+        # object (which delays its own errors).
         controller.error_occurred.connect(self.error_occurred)
         # Ensure device errors also abort the measurement.
         controller.error_occurred.connect(self._on_hardware_error)

@@ -68,7 +68,7 @@ class CollapsibleList(qtw.QScrollArea):
         self._layout.setSpacing(0)
         self._make_scroll_area()
 
-    def insert_view(self, view):
+    def append_view(self, view):
         """Append a new `view` at the bottom of the list.
 
         Parameters
@@ -109,8 +109,8 @@ class CollapsibleList(qtw.QScrollArea):
 
         Parameters
         ----------
-        *widg_types : type(QWidget)
-            A widget type of which an instance should be added
+        *widg_types : type
+            A subclass of QWidget of which an instance should be added
             next to the button of each CollapsibleView.
 
         Returns

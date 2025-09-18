@@ -21,6 +21,7 @@ import sys
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.gui.base import get_qsettings
 from viperleed.gui.dialogs.dropdowndialog import DropdownDialog
 from viperleed.gui.dialogs.errors import DialogDismissedError
 from viperleed.gui.measure.classes.settings import NoSettingsError
@@ -243,11 +244,9 @@ def disconnected_slot(slot, signal, *more_signals, type=None):
 
 def get_default_path():
     """Return the path to default settings."""
-    # The path is detected in runtime and not set as a global variable
+    # The path is detected at runtime and not set as a global variable
     # to catch any changes that may occur to the path in runtime.
-    default = qtc.QSettings(qtc.QSettings.IniFormat, qtc.QSettings.UserScope,
-                            'ViPErLEED', 'Measurement').fileName()
-    return Path(default).parent.resolve()
+    return Path(get_qsettings('Measurement').fileName()).parent.resolve()
 
 
 def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
@@ -376,8 +375,8 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
     parent_widget = kwargs.get('parent_widget', None)
 
     device_config_files = obj_cls.find_matching_settings_files(
-        obj_info=obj_info, directory=directory,
-        match_exactly=match_exactly,
+        directory=directory, match_exactly=match_exactly,
+        obj_info=obj_info,
         )
 
     if device_config_files and len(device_config_files) == 1:

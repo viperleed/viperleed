@@ -518,7 +518,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        self.check_creating_settings_handler_is_possible()
+        base_handler = super().get_settings_handler()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
@@ -528,7 +528,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                            handler_widget=_settings.SerialNumberEditor(self),
                            display_name='Serial No.',
                            tags=SettingsTag.REGULAR)
-        handler.add_from_handler(super().get_settings_handler())
+        handler.add_from_handler(base_handler)
         handler.add_complex_section(
             _settings.HardwareConfigurationEditor(controller=self)
             )

@@ -724,11 +724,12 @@ class ControllerABC(DeviceABC):
         handler.add_section('measurement_settings',
                             tags=SettingsTag.MEASUREMENT,
                             display_name='Measurement Configuration')
+        _i0 = QuantityInfo.I0.display_label
         info = (
-            ('i0_settle_time', 'I<sub>0</sub> settle time',
-             '<nobr>The time interval required for the I<sub>0</sub> '
-             'current</nobr> to reach a stable value after a new energy '
-             'has been set. This should be calibrated for a typical step '
+            ('i0_settle_time', f'{_i0} settle time',
+             f'<nobr>The time interval required for the {_i0} current'
+             '</nobr> to reach a stable value after a new energy has '
+             'been set. This should be calibrated for a typical step '
              'size (e.g., 0.5 eV).'),
             ('hv_settle_time', 'Energy settle time',
              '<nobr>The time interval required for the true beam '

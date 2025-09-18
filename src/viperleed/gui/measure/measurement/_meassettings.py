@@ -86,10 +86,7 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._cameras = CollapsibleCameraList()
         self._default_settings_folder = None
         settings_path = SystemSettings().paths['configuration']
-        if default_folder:
-            self.default_settings_folder = default_folder
-        else:
-            self.default_settings_folder = settings_path
+        self.default_settings_folder = default_folder or settings_path
         self.settings_changed.connect(self._store_device_settings)
         self._compose_and_connect_collapsible_lists(may_have_cameras)
 
@@ -236,7 +233,7 @@ class StepProfileViewer(ButtonWithLabel):
         super().showEvent(event)
 
     def _connect(self):
-        """Connect (only once) relevant signals and slots."""
+        """Connect relevant signals and slots."""
         self.button.clicked.connect(self.profile_editor.show)
         self.profile_editor.accepted.connect(self._on_settings_changed)
 
@@ -352,7 +349,7 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
     def _populate_profile_options(self):
         """Add profile options to profile selection."""
         for profile_editor in self._profile_editors.values():
-            name = profile_editor.name.capitalize() +' profile'
+            name = profile_editor.name.capitalize() + ' profile'
             self.pick_profile.addItem(name, userData=profile_editor)
 
 
@@ -556,7 +553,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         # The first two elements in the layout are the add/remove
         # buttons and the labels. After that, each step is a separate
         # item with two widgets.
-        for index in range(2, layout.count()):
+        for index in range(N_HEADER_ROWS, layout.count()):
             item = layout.itemAt(index)
             profile.append(item.itemAt(0).widget().value())
             profile.append(item.itemAt(1).widget().value())
@@ -615,7 +612,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         return layout
 
     def _connect(self):
-        """Connect buttons to meathods."""
+        """Connect buttons to methods."""
         self._controls['add_step'].clicked.connect(self._add_step)
         self._controls['remove_step'].clicked.connect(self._remove_step)
 
@@ -630,7 +627,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     @qtc.pyqtSlot()
     def _remove_step(self):
         """Remove a step from the fractional step profile."""
-        if self.n_steps == 0:
+        if not self.n_steps:
             return
         self.layout().removeRow(self.layout().rowCount()-1)
         self._update_button_states()
