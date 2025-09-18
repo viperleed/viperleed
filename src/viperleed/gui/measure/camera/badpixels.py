@@ -1472,15 +1472,16 @@ class BadPixelsMaxMinStorage:
         """Return pixel minima."""
         return self._min
 
+    @property
+    def range_(self):
+        """Return pixel maximum minus pixel minimum."""
+        return self._max - self._min
+
     def add_frame(self, frame):
         """Add frame to frame storage."""
         self._count += 1
         self._max = np.maximum(self._max, frame)
         self._min = np.minimum(self._min, frame)
-
-    def range_(self):
-        """Return pixel maximum minus pixel minimum."""
-        return self._max - self._min
 
 
 class BadPixelsSumStorage:
