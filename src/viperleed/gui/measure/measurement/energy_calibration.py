@@ -27,7 +27,7 @@ from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
-    SettingsSectionColumnInfo
+    SettingsSectionColumnInfo,
     )
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement.abc import MeasurementErrors

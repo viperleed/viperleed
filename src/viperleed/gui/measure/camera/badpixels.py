@@ -156,7 +156,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # long-exposure movies for the 'dark' frame (i.e., camera
         # with a cap on) and one frame for a 'flat field' (e.g.,
         # white paper right in front of the lens).
-        height, width, dtype = self.frame_info
+        height, width, _ = self.frame_info
         self._imgs = {
             _FinderSection.ACQUIRE_DARK_SHORT:
                 BadPixelsSumStorage(height, width),
@@ -395,7 +395,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         None.
         """
         pix_min, _, intensity_range = self._limits['intensity']
-        flat = self._imgs[_FinderSection.ACQUIRE_FLAT].frame_sum - pix_min
+        # We can use .mean() because there is only a single flat frame.
+        flat = self._imgs[_FinderSection.ACQUIRE_FLAT].mean() - pix_min
 
         # We have to exclude the already-detected bad pixels.
         # For this to happen, we will (1) add a bit to all
@@ -1448,7 +1449,7 @@ class BadPixels:
         return bool(self.__has_info and self.n_bad_pixels_sensor)
 
 
-class BadPixelsMaxMinStorage():
+class BadPixelsMaxMinStorage:
     """Class for containing bad pixel frames."""
 
     def __init__(self, height, width, dtype):
@@ -1481,32 +1482,31 @@ class BadPixelsMaxMinStorage():
         return self._max - self._min
 
 
-class BadPixelsSumStorage():
+class BadPixelsSumStorage:
     """Class for containing the sum of bad pixel frames."""
 
     def __init__(self, height, width):
         """Initialize bad pixel sum storage class."""
-        self._frame_counter = 0
-        self._frame_sum = np.zeros((height, width), dtype=np.uint64)
-        self._frame_square_sum = np.zeros((height, width), dtype=np.uint64)
+        self._count = 0
+        self._sum = np.zeros((height, width), dtype=np.uint64)
+        self._sum_squares = np.zeros((height, width), dtype=np.uint64)
 
     @property
     def frame_sum(self):
         """Return the summed up frames."""
-        return self._frame_sum
+        return self._sum
 
     def add_frame(self, frame):
         """Add frame to frame sum and square sum."""
-        frame = np.array(frame, dtype=np.uint64)
-        self._frame_counter += 1
-        self._frame_sum += frame
-        self._frame_square_sum += frame**2
+        frame = frame.astype(np.uint64, copy=False)
+        self._count += 1
+        self._sum += frame
+        self._sum_squares += frame**2
 
     def mean(self):
         """Return the mean of the stored frames."""
-        return self.frame_sum / self._frame_counter
+        return self._sum / self._count
 
     def var(self):
         """Return the variance calculated from the stored frames."""
-        n_frame = self._frame_counter
-        return (self._frame_square_sum - self.frame_sum**2 / n_frame) / n_frame
+        return (self._sum_squares - self._sum**2 / self._count) / self._count

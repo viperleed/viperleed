@@ -16,7 +16,7 @@ from PyQt5 import QtCore as qtc
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
-    SettingsSectionColumnInfo
+    SettingsSectionColumnInfo,
     )
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement.abc import MeasurementErrors
