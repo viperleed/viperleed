@@ -190,7 +190,6 @@ __license__ = 'GPLv3+'
 
 from copy import deepcopy
 import functools
-import os
 from pathlib import Path
 import shutil
 import time
@@ -771,14 +770,11 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _move_settings_files(self):
         """Move default settings files to the approriate location."""
-        old_defaults = Path(__file__).parent / '_defaults'
-        defaults = [f for f in os.listdir(old_defaults)
-                    if os.path.isfile(os.path.join(old_defaults, f))]
-        defaults.remove('_system_settings.ini')
+        install_dir_defaults = Path(__file__).parent / '_defaults'
+        defaults = (f for f in install_dir_defaults.iterdir()
+                    if f.is_file() and f.name != '_system_settings.ini')
         for default in defaults:
-            f_location = old_defaults / default
-            f_destination = base.get_default_path() / default
-            shutil.copyfile(f_location, f_destination)
+            shutil.copy2(default, base.get_default_path())
 
     def _on_bad_pixels_selected(self):
         """Stop all cameras, then open the dialog."""
