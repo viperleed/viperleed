@@ -30,8 +30,8 @@ from pathlib import Path
 import sys
 
 from wrapt import synchronized  # thread-safety decorator
-import PyQt5.QtCore as qtc
 
+from viperleed.gui.base import get_qsettings
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.widgets.pathselector import PathSelector
 
@@ -50,9 +50,7 @@ def interpolate_config_path(filenames):
         File names to be interpolated. The interpolation is
         done in-place.
     """
-    _sys_set = qtc.QSettings(qtc.QSettings.IniFormat, qtc.QSettings.UserScope,
-                             'ViPErLEED', 'Measurement')
-    _sys_path = _sys_set.value('PATHS/configuration')
+    _sys_path = get_qsettings('Measurement').value('PATHS/configuration')
     if not _sys_path:
         return
 
@@ -606,9 +604,7 @@ class SystemSettings(ViPErLEEDSettings):
         super().__init__(*args, **kwargs)
         self.__handler = None
 
-        self._sys_settings = qtc.QSettings(qtc.QSettings.IniFormat,
-                                           qtc.QSettings.UserScope,
-                                           'ViPErLEED', 'Measurement')
+        self._sys_qsettings = get_qsettings('Measurement')
         self._read_sys_settings()
         self._check_mandatory_settings()
 
@@ -701,7 +697,7 @@ class SystemSettings(ViPErLEEDSettings):
         missing = self.has_settings(*self.__mandatory)
         if missing:
             raise RuntimeError(
-                f"System settings file at {self._sys_settings.fileName()} "
+                f"System settings file at {self._sys_qsettings.fileName()} "
                 "is missing the following mandatory sections/options: "
                 "; ".join(missing)
                 )
@@ -716,19 +712,19 @@ class SystemSettings(ViPErLEEDSettings):
         keys_to_paths = ('configuration', 'measurements',
                          'arduino_cli', 'firmware')
         temp_dict = defaultdict(dict)
-        for keys in self._sys_settings.allKeys():
+        for keys in self._sys_qsettings.allKeys():
             try:
                 key1, key2 = keys.split('/')
             except ValueError:
                 key1 = 'DEFAULT' if keys not in keys_to_paths else 'PATHS'
                 key2 = keys
-            temp_dict[key1][key2] = self._sys_settings.value(keys)
+            temp_dict[key1][key2] = self._sys_qsettings.value(keys)
         self.read_dict(temp_dict)
         # Ensure there is a settings file.
-        if not self._sys_settings.allKeys():
-            self._sys_settings.setValue('PATHS/configuration', '')
-            self._sys_settings.sync()
+        if not self._sys_qsettings.allKeys():
+            self._sys_qsettings.setValue('PATHS/configuration', '')
+            self._sys_qsettings.sync()
 
         # Set correct path to settings file.
-        self._last_file = Path(self._sys_settings.fileName()).resolve()
+        self._last_file = Path(self._sys_qsettings.fileName()).resolve()
         self.base_dir = self._last_file.parent
