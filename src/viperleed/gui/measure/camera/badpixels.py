@@ -156,7 +156,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # long-exposure movies for the 'dark' frame (i.e., camera
         # with a cap on) and one frame for a 'flat field' (e.g.,
         # white paper right in front of the lens).
-        height, width, _ = self.frame_info
+        height, width, dtype = self.frame_info
         self._imgs = {
             _FinderSection.ACQUIRE_DARK_SHORT:
                 BadPixelsSumStorage(height, width),
@@ -1450,11 +1450,11 @@ class BadPixels:
 
 
 class BadPixelsMaxMinStorage:
-    """Class for containing bad pixel frames."""
+    """Class for containing maxima and minima of bad pixel frames."""
 
     def __init__(self, height, width, dtype):
         """Initialize bad pixel peak-to-peak storage class."""
-        self._frame_counter = 0
+        self._count = 0
         if dtype not in (np.uint8, np.uint16, np.uint32, np.uint64, np.uintp):
             raise TypeError('frame pixel value type is not a np.uint.')
         self._max = np.zeros((height, width), dtype=dtype)
@@ -1473,7 +1473,7 @@ class BadPixelsMaxMinStorage:
 
     def add_frame(self, frame):
         """Add frame to frame storage."""
-        self._frame_counter += 1
+        self._count += 1
         self._max = np.maximum(self._max, frame)
         self._min = np.minimum(self._min, frame)
 
