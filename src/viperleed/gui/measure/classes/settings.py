@@ -49,8 +49,7 @@ def ensure_aliases_exist():
 
 def get_aliases_path():
     """Return a Path to the user aliases."""
-    return Path(qtc.QSettings(qtc.QSettings.IniFormat, qtc.QSettings.UserScope,
-                              'ViPErLEED', 'Aliases').fileName()).resolve()
+    return Path(get_qsettings('Aliases').fileName()).resolve()
 
 
 def interpolate_config_path(filenames):
