@@ -28,7 +28,9 @@ from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
 
 
-default = object()
+# DEFAULT is used as a placeholder to signal that a settings
+# file from the default settings should be used.
+DEFAULT = object()
 
 
 class SelectNewMeasurementDialog(qtw.QDialog):
@@ -102,7 +104,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
             directory=DEFAULTS_PATH, match_exactly=False
             )
 
-        if not settings_path or settings_path in (default, default_path):
+        if not settings_path or settings_path in (DEFAULT, default_path):
             settings_path = self._duplicate_settings_file(cls, default_path)
         elif self._ctrls['clone_settings'].isChecked():
             settings_path = self._duplicate_settings_file(cls, settings_path)
@@ -185,7 +187,7 @@ class SelectNewMeasurementDialog(qtw.QDialog):
         settings_folder = self._ctrls['settings_folder'].path
         self._ctrls['settings_file'].clear()
         self._ctrls['settings_file'].addItem(
-            'Create new settings from defaults', default
+            'Create new settings from defaults', DEFAULT
             )
         if not settings_folder:
             return
@@ -198,5 +200,5 @@ class SelectNewMeasurementDialog(qtw.QDialog):
     @qtc.pyqtSlot()
     def _update_clone_settings_enabled(self, *_):
         """Disable/enable clone settings choice."""
-        enable = self.selected_file is not default
+        enable = self.selected_file is not DEFAULT
         self._ctrls['clone_settings'].setEnabled(enable)
