@@ -56,9 +56,6 @@ from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 # TODO: context menu to "reset" each entry separately.
 
-# pylint: disable=too-many-lines
-# We can probably live with 1011 instead of 1000
-
 _MSGBOX = qtw.QMessageBox
 
 
