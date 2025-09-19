@@ -699,7 +699,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             ctrl = self._make_device(ctrl_cls, ctrl_info, address=address)
         except DefaultSettingsError:
             return
-
+        if not ctrl:
+            return
         dialog = SettingsDialog(ctrl, parent=self)                              # TODO: modal?
         ctrl.ready_to_show_settings.connect(dialog.open)
         dialog.finished.connect(ctrl.disconnect_)
