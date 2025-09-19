@@ -935,7 +935,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             return
         base.safe_disconnect(device.connection_changed,
                              self._check_if_all_devices_disconnected)
-        if any(device.connected for device in self.devices):
+        if any(dev.connected for dev in self.devices):
             return
         self.devices_disconnected.emit()
 
