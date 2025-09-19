@@ -42,8 +42,9 @@ def ensure_aliases_exist():
     """Merge default and user aliases and create file if required."""
     _tmp = ConfigParser()
     _tmp.read(Path(__file__).parent.parent / '_defaults' / '_aliases.ini')
-    _tmp.read(get_aliases_path())
-    with open(get_aliases_path(), 'w', encoding='utf-8') as fproxy:
+    user_aliases = get_aliases_path()
+    _tmp.read(user_aliases)
+    with user_aliases.open('w', encoding='utf-8') as fproxy:
         _tmp.write(fproxy)
 
 
@@ -147,14 +148,14 @@ class AliasConfigParser(ConfigParser):
         vars : dict, optional
             If provided, the option is looked up in vars before
             checking section. Default is None.
-        fallback: object, optional
+        fallback : object, optional
             If provided, fallback is the return value if getting the
             option failed. Default is _UNSET.
 
         Returns
         -------
-        value : str
-            The read value from the loaded settings.
+        value : object
+            The read value from the loaded settings or the fallback.
 
         Raises
         ------
@@ -166,20 +167,11 @@ class AliasConfigParser(ConfigParser):
         value = _UNSET
         try:
             value = super().get(section, option, raw=raw, vars=vars)
-        except (NoSectionError, NoOptionError) as err:
-            for sec, opt in self._get_aliases(section, option):
-                try:
-                    value = super().get(sec, opt, raw=raw, vars=vars)
-                except (NoSectionError, NoOptionError):
-                    continue
-                else:
-                    self[section][option] = value
-                    self.remove_option(sec, opt)
-                    break
-            else:
-                value = fallback
-            if value == _UNSET:
-                raise err
+        except (NoSectionError, NoOptionError):
+            value = self._get_from_alias(section, option, fallback,
+                                         raw=raw, vars=vars)
+            if value is _UNSET:
+                raise
 
         if value == '':
             try:
@@ -244,10 +236,47 @@ class AliasConfigParser(ConfigParser):
             A list of section/option pairs.
         """
         try:
-            aliases = self._aliases[section + '/' + option]
+            aliases = self._aliases[f'{section}/{option}']
         except KeyError:
             return []
         return [alias.split('/') for alias in aliases]
+
+    def _get_from_alias(self, section, option, fallback, raw=False, vars=None):
+        """Get an alias option value for a given section.
+
+        Parameters
+        ----------
+        section : str
+            The section key.
+        option : str
+            The option key.
+        fallback : object
+            fallback is the return value if getting the option failed.
+        raw : bool, optional
+            Whether interpolations in the return value should be
+            expanded. If False, interpolations are expanded. Default
+            is False.
+        vars : dict, optional
+            If provided, the option is looked up in vars before
+            checking section. Default is None.
+
+        Returns
+        -------
+        value : object
+            The read value from the loaded settings or the fallback.
+        """
+        for sec, opt in self._get_aliases(section, option):
+            try:
+                value = super().get(sec, opt, raw=raw, vars=vars)
+            except (NoSectionError, NoOptionError):
+                continue
+            else:
+                self[section][option] = value
+                self.remove_option(sec, opt)
+                return value
+        if section == 'energies':
+            raise RuntimeError('How did I get here.')
+        return fallback
 
     def _prepare(self):
         """Prepare aliases for the handled settings.
@@ -264,7 +293,7 @@ class AliasConfigParser(ConfigParser):
         aliases.read(get_aliases_path())
 
         try:
-            relevant = conv(aliases.get(self._cls_name, 'relevant_sections'))
+            relevant = conv(aliases.get(self._cls_name, 'parent_aliases'))
         except NoSectionError:
             # The settings for this class do not have any aliases.
             return
@@ -273,14 +302,14 @@ class AliasConfigParser(ConfigParser):
             relevant = []
 
         for section in (self._cls_name, *relevant):
-            for key in aliases[section].keys():
+            for key in aliases[section]:
                 if key == 'new_sections':
                     self._add_new_sections(conv(aliases[section][key]))
                     continue
                 if key == 'fallback_values':
                     self._set_fallback_values(conv(aliases[section][key]))
                     continue
-                if key == 'relevant_sections':
+                if key == 'parent_aliases':
                     continue
                 self._aliases[key] = conv(aliases[section][key])
 

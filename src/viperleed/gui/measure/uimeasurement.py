@@ -204,11 +204,11 @@ from viperleed.gui.measure.camera.abc import CameraABC
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
 from viperleed.gui.measure.classes.datapoints import DataPoints
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
-from viperleed.gui.measure.classes.settings import ensure_aliases_exist
 from viperleed.gui.measure.classes.settings import MissingSettingsFileError
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
+from viperleed.gui.measure.classes.settings import ensure_aliases_exist
 from viperleed.gui.measure.controller.abc import ControllerABC
 from viperleed.gui.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog,
