@@ -192,7 +192,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self.set_settings(self._settings_to_load)
 
     def __init_subclass__(cls, **kwargs):
-        """Ensure display name is set."""
+        """Ensure display_name is set."""
         if not isabstract(cls) and not cls.display_name:
             raise ValueError('Concrete measurement subclasses require a '
                              'display_name class attribute.')
@@ -933,7 +933,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         device = self.sender()
         if device_connected or device.connected:
             return
-        base.safe_disconnect(self.sender().connection_changed,
+        base.safe_disconnect(device.connection_changed,
                              self._check_if_all_devices_disconnected)
         if any(device.connected for device in self.devices):
             return
@@ -1214,7 +1214,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             return device_cfg.from_settings(configname)
         except (ValueError, NoSettingsError):
             raise ValueError(f'No config file {configname!r} in '
-                             f'archive {self.settings.base_dir}') from None
+                             f'directory {self.settings.base_dir}') from None
 
     def _get_linear_step(self, *params):
         """Return energies and times for a simple linear step."""

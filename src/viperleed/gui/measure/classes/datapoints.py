@@ -77,7 +77,7 @@ class QuantityInfo(enum.Enum):
                  'I\u209b\u2090\u2098\u209a\u2097\u2091',
                  '<nobr>The total electron current emitted by the electron '
                  'gun,</nobr> measured by biasing the sample to +33 V via the '
-                 'I<sub>target</sub> BNC connector. This is an alternative to '
+                 'I<sub>sample</sub> BNC connector. This is an alternative to '
                  'I\u2080 in case your LEED optics does not provide an I\u2080'
                  ' output. LEED-IV videos should not be acquired at the same '
                  'time to avoid electric-field-induced distortions')

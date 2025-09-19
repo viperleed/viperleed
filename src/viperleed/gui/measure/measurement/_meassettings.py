@@ -599,7 +599,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
                 'equivalent to the current energy and one to the next '
                 'energy. A fraction of one does not have to be '
                 'explicitly included at the end, as this is added '
-                'automatically with the settle time.')
+                'automatically with the correct settle time.')
         layout.addWidget(InfoLabel(label_text='Step fraction', tooltip=info))
         info = ('<nobr>How long to wait until </nobr>'
                 'the next intermediate step.')

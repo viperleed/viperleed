@@ -75,7 +75,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
             The soft minimum and maximum. While it is not impossible
             to set values below and above these respectively, the input
             will be set to either the minimum and maximum value after
-            editing is finished.
+            editing is finished if it is not within `soft_range`.
         step : int or float, optional
             The increment of the SpinBox value. Default is 1.
         suffix : str, optional
