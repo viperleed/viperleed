@@ -7,12 +7,16 @@ __license__ = 'GPLv3+'
 
 import logging
 import multiprocessing as mp
+import os
 import subprocess
 import time
 from contextlib import contextmanager
 from pathlib import Path
 
 import psutil
+
+# return code to mimic "command not found" in shells
+COMMAND_NOT_FOUND_RETURN_CODE = 9009 if os.name == 'nt' else 127
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +85,7 @@ class SearchJob:
 
     @property
     def returncode(self):
+        """Return the return code of the subprocess."""
         return self._return_code.value
 
 
@@ -97,6 +102,7 @@ def _optional_log_file_path(log_path):
 def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
     """Run the search command in a separate process."""
     with _optional_log_file_path(log_path) as log_f:
+
         try:
             proc = subprocess.Popen(
                 command,
@@ -108,7 +114,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
             )
         except Exception:
             # failed to start the process
-            return_code.value = 127  # mimic "command not found"
+            return_code.value = COMMAND_NOT_FOUND_RETURN_CODE
             return
 
         # send input data to the process
@@ -150,6 +156,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
         except Exception:  # noqa: BLE001
             return_code.value = 1
             _kill_proc_tree(ps_proc)
+            raise
 
         # pass the return code back to the main process
         return_code.value = proc.returncode
