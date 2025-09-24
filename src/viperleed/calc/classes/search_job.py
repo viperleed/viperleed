@@ -5,13 +5,13 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-07-17'
 __license__ = 'GPLv3+'
 
+from contextlib import contextmanager
 import logging
 import multiprocessing as mp
 import os
+from pathlib import Path
 import subprocess
 import time
-from contextlib import contextmanager
-from pathlib import Path
 
 import psutil
 

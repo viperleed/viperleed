@@ -5,9 +5,9 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-07-17'
 __license__ = 'GPLv3+'
 
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 
 import pytest
 
