@@ -153,6 +153,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
         # pass the return code back to the main process
         return_code.value = proc.returncode
 
+
 def _send_input_to_process(input_data, return_code, proc):
     try:
         proc.communicate(input=input_data, timeout=0.2)
