@@ -56,7 +56,7 @@ def test_correct_return_code():
 @pytest.mark.timeout(5)
 def test_writing_to_log_file(tmp_path):
     """Test that the job writes to the log file."""
-    log_file = Path(tmp_path) / 'search_job.log'
+    log_file = tmp_path / 'search_job.log'
     script = [sys.executable, '-c', 'print("Test log output")']
     job = SearchJob(script, '', log_path=log_file)
     job.start()
