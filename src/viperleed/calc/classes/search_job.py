@@ -113,7 +113,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
                 encoding='ascii',
                 start_new_session=True,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             # failed to start the process
             return_code.value = COMMAND_NOT_FOUND_RETURN_CODE
             return
@@ -128,7 +128,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
                 'Error starting search. Check files SD.TL and rf.info.'
             )
             return_code.value = 1
-            return
+            raise
 
         # get the process info using psutil
         try:
