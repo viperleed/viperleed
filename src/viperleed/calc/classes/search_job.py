@@ -55,15 +55,16 @@ class SearchJob:
         """Start the search subprocess inside a multiprocessing.Process."""
         command_str = ' '.join(self.command)
         logger.debug(f'Starting search process with command {command_str}.')
+        args = (
+            self.command,
+            self.input_data,
+            str(self.log_path.resolve()) if self.log_path else None,
+            self._kill_me_flag,
+            self._return_code,
+        )
         self._mp_proc = mp.Process(
             target=_run_search_worker,
-            args=(
-                self.command,
-                self.input_data,
-                str(self.log_path.resolve()) if self.log_path else None,
-                self._kill_me_flag,
-                self._return_code,
-            ),
+            args=args,
         )
         self._mp_proc.start()
 
