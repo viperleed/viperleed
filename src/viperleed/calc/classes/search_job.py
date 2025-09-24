@@ -119,16 +119,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
             return
 
         # send input data to the process
-        try:
-            proc.communicate(input=input_data, timeout=0.2)
-        except subprocess.TimeoutExpired:
-            pass
-        except (OSError, subprocess.SubprocessError):
-            logger.error(  # noqa: TRY400
-                'Error starting search. Check files SD.TL and rf.info.'
-            )
-            return_code.value = 1
-            raise
+        _send_input_to_process(input_data, return_code, proc)
 
         # get the process info using psutil
         try:
@@ -161,6 +152,18 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
 
         # pass the return code back to the main process
         return_code.value = proc.returncode
+
+def _send_input_to_process(input_data, return_code, proc):
+    try:
+        proc.communicate(input=input_data, timeout=0.2)
+    except subprocess.TimeoutExpired:
+        pass
+    except (OSError, subprocess.SubprocessError):
+        logger.error(  # noqa: TRY400
+            'Error starting search. Check files SD.TL and rf.info.'
+        )
+        return_code.value = 1
+        raise
 
 
 def _kill_proc_tree(ps_proc):
