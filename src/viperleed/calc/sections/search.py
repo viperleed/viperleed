@@ -141,7 +141,6 @@ class SigbusError(TensErLEEDSearchError):
                    'undefined portion of a memory object')
 
 
-
 def processSearchResults(sl, rp, search_log_path, final=True):
     """Read the best structure from the last block of 'SD.TL' into a slab.
 
