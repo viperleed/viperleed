@@ -250,6 +250,8 @@ classifiers = [
     line-length = 79
     indent-width = 4
 
+    [tool.ruff.lint.isort]
+    force-sort-within-sections = true
 
     [tool.ruff.lint]
     # Enable all rules by default and then disable as needed
