@@ -719,11 +719,11 @@ class _ADCChannelCombo(qtw.QComboBox):
         _qty_ok = quantity is not _UNKNOWN
 
         if quantity is QuantityInfo.I0:
-            _name = f"{quantity.display_label} ({quantity.units})"
+            _name = f"{quantity.display_name} ({quantity.units})"
             _tooltip += f". Range: {hardware['i0_range']}"
         elif quantity is QuantityInfo.ISAMPLE:
             # Unicode chars are for "sample" as subscripts
-            _name = f"{quantity.display_label} ({quantity.units})"
+            _name = f"{quantity.display_name} ({quantity.units})"
         elif quantity is QuantityInfo.TEMPERATURE:
             _tc_type = "??"
             _qty_ok = False
@@ -954,7 +954,7 @@ class _I0EditDialog(_EditDialogBase):
     def __init__(self, controller, *args, **kwargs):
         """Initialise dialog."""
         kwargs['quantity'] = "I0"
-        kwargs['input_quantity'] = QuantityInfo.I0.display_label
+        kwargs['input_quantity'] = QuantityInfo.I0.display_name
         kwargs['raw_quantity'] = "i0"
         kwargs['tooltips'] = {
             "0 \u2013 2.5 V": (
@@ -998,7 +998,7 @@ class _I0EditDialog(_EditDialogBase):
 
     def __compose(self):
         """Place children widgets."""
-        info_label = InfoLabel(label_text=QuantityInfo.I0.display_label)
+        info_label = InfoLabel(label_text=QuantityInfo.I0.display_name)
         self._gain_info = info_label.field_info
         _policy = info_label.label.sizePolicy()
         info_label.label.setSizePolicy(_policy.Fixed, _policy.Preferred)
