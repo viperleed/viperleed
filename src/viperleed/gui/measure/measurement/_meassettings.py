@@ -302,6 +302,7 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
     def accept(self):
         """Store selected profile then accept."""
         self.pick_profile.currentData().update_profile()
+        self.profile = self.pick_profile.currentData().profile
         super().accept()
 
     def _compose_and_connect(self):
