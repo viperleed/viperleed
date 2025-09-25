@@ -477,16 +477,16 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QFormLayout()
-        duration_info = ('<nobr>How long to wait until </nobr>'
-                         'the next intermediate step.')
         step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
                          f'Cannot be more than {MAX_NUM_STEPS}.')
+        duration_info = ('<nobr>How long to wait until </nobr>'
+                         'the next intermediate step.')
         layout.addRow(
-            InfoLabel(label_text='Step duration:', tooltip=duration_info),
+            InfoLabel(label_text='Nr. of steps:', tooltip=step_num_info),
             self._controls['n_steps']
             )
         layout.addRow(
-            InfoLabel(label_text='Nr. of steps:', tooltip=step_num_info),
+            InfoLabel(label_text='Step duration:', tooltip=duration_info),
             self._controls['duration']
             )
         self.setLayout(layout)
