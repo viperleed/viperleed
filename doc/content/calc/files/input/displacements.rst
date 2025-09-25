@@ -10,20 +10,13 @@ The DISPLACEMENTS file defines the types and ranges of of geometry, vibration
 amplitudes, and element concentrations that are varied in the search, error
 calculation and superpos calculation.
 In other words, the DISPLACEMENTS file defines the parameter
-space that can be sampled in tensor-LEED based calculations.
+space that is sampled in tensor-LEED based structure optimizations.
 
-The file can contain multiple 
+.. note::
+    This page gives a top level overview of the DISPLACEMENTS file.
+    For details on the syntax of the individual blocks, see the relevant links.
 
-If multiple search blocks are provided,
-Any subsequent search will use the result of the previous block as a starting
-point for the 
-
-Additionally, an initial offset from the reference calculation structure can be
-specified using an `== OFFSETS` block at the top of the file.
-This offset will be applied before the first search block and will serve as the
-starting point for the first optimization.
-
-The file is split into three main blocks: Geometry, Vibrations, and
+Allowed parameters are split into three main blocks: Geometry, Vibrations, and
 Occupations. The blocks are delimited by lines starting with an equals
 sign "``=``", as in the following example
 
@@ -41,8 +34,6 @@ sign "``=``", as in the following example
    = OCC_DELTA
    O 1 = O 0.8 1.0 0.05          ! Concentration of oxygen atom 1 (and symmetry-equivalent atoms) will be varied from 80% to 100% with 5% steps (rest: vacancies)
 
-Indentation is allowed, but does not affect the function.
-
 In each of the lines in the blocks, the left side of the ``=`` sign defines
 which atoms are being assigned displacements, while the right side defines
 the range of displacements to apply. Generally, atoms can be addressed by
@@ -55,23 +46,9 @@ further limit which atoms are being addressed is optional. If no
 numbers are given, the displacements on the right are applied to
 all atoms of the given element/site.
 
-The exact syntax of the three blocks differs slightly, and is explained in
-detail here:
-
--  :ref:`Geometric displacements<GEODELTA>`
--  :ref:`Vibration amplitudes<VIBDELTA>`
--  :ref:`Chemical substitution<OCCDELTA>`
-
-.. note::
-    Geometric displacements for any atom can only be applied along one
-    :ref:`direction <geodelta_direction>` (e.g., |z|, |x|, |y|, along arcs,
-    etc.) at a time. To optimize positions in multiple directions, multiple
-    subsequent search blocks are necessary.
-
-
-Generally, any displacement applied to one atom will also be applied to
+Any displacement applied to one atom will also be applied to
 all symmetry-equivalent atoms (see Linking in :ref:`POSCAR`), such that
-the symmetry is preserved during the search (eg. in-plane geometric
+the symmetry is preserved during the search (e.g. in-plane geometric
 displacements will be mirrored for atoms linked by a mirror symmetry plane).
 If multiple assignments are made for the same atom, the assignments will be
 ignored if they are consistent, but the user will be warned and the program
@@ -82,6 +59,27 @@ the very same in-plane displacement (not parallel to the mirror plane) to
 all of them would lead to a contradiction, as this would break the symmetry.
 In that case, it would be preferable to assign the displacement explicitly
 to only *one* of the symmetry-equivalent atoms.
+
+The syntax of the three blocks differs slightly, and is explained in
+detail here:
+
+-  :ref:`Geometric displacements<GEODELTA>`
+-  :ref:`Vibration amplitudes<VIBDELTA>`
+-  :ref:`Chemical substitution<OCCDELTA>`
+
+.. note::
+    In the :term:`TensErLEED` backend, geometric displacements for any atom can
+    only be applied along one :ref:`direction <geodelta_direction>`
+    (e.g., |z|, |x|, |y|, along arcs, etc.) at a time.
+    The DISPLACEMENTS file can contain multiple search blocks that are executed
+    in sequence as described below.
+    To optimize positions in
+    multiple directions, multiple subsequent search blocks are necessary.
+
+
+.. note:: Indentation in the DISPLACEMENTS file is allowed, but does not affect
+          function.
+
 
 .. note::
     See the :ref:`Domain calculations<domain_calculation>` page for information
@@ -99,9 +97,8 @@ to only *one* of the symmetry-equivalent atoms.
 Advanced functionality
 ======================
 
-.. note:: Indentation is allowed, but does not affect the function.
-
-**Further constraints: Using CONSTRAIN blocks**
+CONSTRAIN block
+---------------
 
 If some displacements should be constrained or linked in ways that go beyond
 simple symmetry conservation, arbitrary displacements can be linked by using
@@ -115,17 +112,36 @@ simple symmetry conservation, arbitrary displacements can be linked by using
    = CONSTRAIN
    geo O_top, Ir_top = linked   ! keep geometric displacement index the same for O_top and Ir_top atoms. Requires the displacement ranges to have the same number of steps.
    vib Ir_def = linked          ! keep vibration displacement index the same for all Ir_def atoms
-   vib Ir_top = -0.03           ! although a displacement range is defined for Ir_top, fix its value to -0.03 instead
-   vib Ir_top = ind(2)          ! same as the line before: Fix index to 2, i.e. the second entry in the displacement range
 
 .. toctree::
    :hidden:
 
    displacements/searchconstraints
    displacements/symdelta
+   displacements/offsets
 
-Running multiple searches
--------------------------
+
+OFFSETS
+-------
+
+It is possible to apply an offset to the displacement range of an atom,
+i.e., to shift the center of the displacement range away from the position of
+the reference calculation.
+The OFFSETS block, if used, has to be placed at the top of the DISPLACEMENTS
+file.
+Details on the syntax of the OFFSETS block are given in
+:ref:`the respective documentation page<offsets>`.
+
+If multiple search blocks or search loops are used, the offset will be applied
+only to the first search.
+Subsequent searches will be centered around the final position from
+previous searches.
+
+
+Search Blocks
+-------------
+
+.. _search_blocks:
 
 If you want to optimize multiple parameters not simultaneously, but end-to-end
 (necessary e.g. for optimization of atomic positions), you can use multiple
