@@ -647,7 +647,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
                              if c is check_box)
         except StopIteration:
             raise RuntimeError(f'Could not find checkbox {check_box}')
-        was_primary = radio_btn.isEnabled()
+        was_primary = radio_btn.isChecked()
         radio_btn.setEnabled(enable)
         if no_primary_selected and enable:
             radio_btn.setChecked(True)
