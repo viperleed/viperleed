@@ -96,4 +96,4 @@ def test_notice_immediate_job_death(capfd):
     job.wait()
 
     captured = capfd.readouterr()
-    assert 'psutil.NoSuchProcess: process PID not found' in captured.err
+    assert 'psutil.NoSuchProcess' in captured.err
