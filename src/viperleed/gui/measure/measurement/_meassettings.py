@@ -198,11 +198,11 @@ class StepProfileViewer(ButtonWithLabel):
     """
 
     settings_changed = qtc.pyqtSignal()
+    notify_ = settings_changed
 
     def __init__(self, **kwargs):
         """Initialize viewer."""
         super().__init__(**kwargs)
-        self.notify_ = self.settings_changed
         self.set_button_text('Edit')
         self.profile_editor = EnergyStepProfileDialog(parent=self)
         self._connect()
@@ -219,7 +219,7 @@ class StepProfileViewer(ButtonWithLabel):
         if isinstance(value, str):
             value = (value,)
         self.profile_editor.profile = value
-        self._set_label_text(value[0])
+        self._update_label_from_profile()
 
     def showEvent(self, event):          # pylint: disable=invalid-name
         """Connect finished signal when shown."""
@@ -230,20 +230,17 @@ class StepProfileViewer(ButtonWithLabel):
     def _connect(self):
         """Connect relevant signals and slots."""
         self.button.clicked.connect(self.profile_editor.show)
-        self.profile_editor.accepted.connect(self._on_settings_changed)
+        self.profile_editor.accepted.connect(self._on_profile_edited)
 
     @qtc.pyqtSlot()
-    def _on_settings_changed(self):
+    def _on_profile_edited(self):
         """Update step profile to selected profile."""
-        self._set_label_text(self.profile_editor.profile_name)
+        self._update_label_from_profile()
         self.settings_changed.emit()
 
-    def _set_label_text(self, value):
-        """Set label text from selected profile."""
-        if isinstance(value, str):
-            self.set_label_text(value.capitalize() + ' profile')
-            return
-        self.set_label_text('Custom profile')
+    def _update_label_from_profile(self):
+        """Set the label text according to the current profile."""
+        self.set_label_text(self.profile_editor.profile_name)
 
 
 class EnergyStepProfileDialog(qtw.QDialog):                                     # TODO: visually draw profiles
@@ -275,10 +272,15 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         self._adjust_size_timer.timeout.connect(self.adjustSize)
         self._compose_and_connect()
 
+    @staticmethod
+    def _format_profile_name(name):
+        """Format the profile name."""
+        return f'{name.capitalize()} profile'
+
     @property
     def profile_name(self):
         """Return name of the currently selected profile."""
-        return self.pick_profile.currentData().name
+        return self._format_profile_name(self.pick_profile.currentData().name)
 
     @property
     def profile(self):
@@ -291,7 +293,7 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         first = profile_data[0]
         name = (first if isinstance(first, str)
                 else FractionalEnergyStepEditor.name)
-        index = self.pick_profile.findText(name.capitalize() + ' profile')
+        index = self.pick_profile.findText(self._format_profile_name(name))
         self.pick_profile.setCurrentIndex(index)
         self.pick_profile.currentData().set_profile(profile_data)
         self._profile_description.setText(
@@ -345,7 +347,7 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
     def _populate_profile_options(self):
         """Add profile options to profile selection."""
         for profile_editor in self._profile_editors.values():
-            name = profile_editor.name.capitalize() + ' profile'
+            name = self._format_profile_name(profile_editor.name)
             self.pick_profile.addItem(name, userData=profile_editor)
 
 

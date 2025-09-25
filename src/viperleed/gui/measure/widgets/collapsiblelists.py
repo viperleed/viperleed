@@ -88,7 +88,7 @@ class CollapsibleDeviceList(CollapsibleList):
                             'CollapsibleDeviceView.')
         return super().__init_subclass__(**kwargs)
 
-    def add_new_view(self, name, cls_and_info):
+    def add_new_view(self, name, device_cls, device_info):
         """Add a new view.
 
         Parameters
@@ -96,9 +96,10 @@ class CollapsibleDeviceList(CollapsibleList):
         name : str
             The display name of the device that will be displayed
             on the button of the CollapsibleDeviceView.
-        cls_and_info : tuple
-            Tuple of the device class and the SettingsInfo required to
-            determine the device settings.
+        device_cls : type
+            The device class of the device associated with view.
+        device_info : SettingsInfo
+            The SettingsInfo required to determine the device settings.
 
         Returns
         -------
@@ -108,7 +109,7 @@ class CollapsibleDeviceList(CollapsibleList):
         view = self._view_type()
         view.button.setEnabled(False)
         view.button.setText(name)
-        view.set_device(*cls_and_info)
+        view.set_device(device_cls, device_info)
         if self.default_settings_folder:
             view.set_settings_folder(self.default_settings_folder)
         self.append_view(view)
@@ -177,7 +178,7 @@ class CollapsibleDeviceList(CollapsibleList):
         except DefaultSettingsError:
             detected_devices = {}
         for name, cls_and_info in detected_devices.items():
-            self.add_new_view(name, cls_and_info)
+            self.add_new_view(name, *cls_and_info)
 
     @emit_default_faulty
     def _detect_devices(self):
@@ -226,8 +227,10 @@ class CollapsibleDeviceList(CollapsibleList):
     def _make_top_items(self):
         """Make top labels and add them to the QScrollArea.
 
-        Create the top refresh button, force the QScrollArea to
-        take a certain size, and set the top labels.
+        Create the top refresh button, force the QScrollArea to take a
+        certain size, and set the top labels. This method must only be
+        called after a call to self.clear(). Otherwise the QScrollArea
+        would be populated with dublicate child widgets.
 
         Returns
         -------
@@ -378,7 +381,7 @@ class CollapsibleCameraList(CollapsibleDeviceList):
             info = {}
             present = False  # Because there is no hardware interface.
             settings_info = SettingsInfo(name, present, info)
-            correct_view = self.add_new_view(name, (cls, settings_info))
+            correct_view = self.add_new_view(name, cls, settings_info)
         return correct_view
 
     def _set_camera_settings(self):
@@ -472,13 +475,13 @@ class CollapsibleControllerList(CollapsibleDeviceList):
             return settings_ok, reason
         no_primary_selected = self._radio_buttons.checkedId() == -1
         if self.requires_device and no_primary_selected:
-            return False, 'A primary controller has to be selected.'
+            return False, 'Select one controller to set the electron energy.'
         return True, ''
 
     def get_primary_settings(self):
         """Return a tuple of primary controller settings."""
         for view in self.enabled_views:
-            if not self._radiobutton(view).isChecked():
+            if not self._is_primary_controller(view):
                 continue
             return self._get_selected_controller_settings(view)
         return ()
@@ -487,7 +490,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         """Return a tuple of secondary controller settings."""
         settings_files = []
         for view in self.enabled_views:
-            if self._radiobutton(view).isChecked() or not view.settings_file:
+            if self._is_primary_controller(view) or not view.settings_file:
                 continue
             settings_files.append(self._get_selected_controller_settings(view))
         return tuple(settings_files)
@@ -585,7 +588,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
                 }
             present = False  # Because there is no hardware interface.
             settings_info = SettingsInfo(name, present, info)
-            correct_view = self.add_new_view(name, (cls, settings_info))
+            correct_view = self.add_new_view(name, cls, settings_info)
         return correct_view
 
     def _get_selected_controller_settings(self, view):
@@ -594,6 +597,10 @@ class CollapsibleControllerList(CollapsibleDeviceList):
             return tuple()
         rel_path = self._get_relative_path(view.settings_file)
         return (rel_path, view.selected_quantities)
+
+    def _is_primary_controller(self, view):
+        """Return whether the view belongs to the primary controller."""
+        return self._radiobutton(view).isChecked()
 
     @qtc.pyqtSlot(int)
     def _on_unchecked(self, state):
@@ -651,12 +658,11 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         radio_btn.setEnabled(enable)
         if no_primary_selected and enable:
             radio_btn.setChecked(True)
-        elif radio_btn.isChecked() and not enable:
+        elif was_primary and not enable:
             self._radio_buttons.uncheck_buttons()
-        # The following code selects the first available controller that
-        # can be a primary controller as the primary controller if the
-        # previously selected primary controller has been disabled.
-        if was_primary and not enable:
+            # The following code selects the first available controller that
+            # can be a primary controller as the primary controller if the
+            # previously selected primary controller has been disabled.
             for _, radio in self.views.values():
                 if radio.isEnabled():
                     radio.setChecked(True)
@@ -691,7 +697,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         correct_view = self._find_controller_view(settings)
         with disconnected_slot(self._emit_and_update_settings,
                                self._checkbox(correct_view).stateChanged,
-                               self.views[correct_view][1].toggled,
+                               self._radiobutton(correct_view).toggled,
                                type=qtc.Qt.UniqueConnection):
             correct_view.loading_measurement_settings = True
             correct_view.original_settings = settings.last_file
