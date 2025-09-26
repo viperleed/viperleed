@@ -150,7 +150,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # connection types for the underlying _INVOKE.
         self.update_device_settings()
 
-        # _imgs contains: the sum and square sum of short- and
+        # _imgs contains: the sum and sum of squares of short- and
         # long-exposure movies for the 'dark' frame (i.e., camera
         # with a cap on) and one frame for a 'flat field' (e.g.,
         # white paper right in front of the lens).
