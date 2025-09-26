@@ -1,9 +1,9 @@
 """Module for the <element> token in the DISPLACEMENTS file."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2025-05-13"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-05-13'
+__license__ = 'GPLv3+'
 
 from viperleed.calc.lib import periodic_table
 
@@ -52,4 +52,3 @@ class ElementToken(DisplacementsFileToken):
     def __str__(self):
         """Return a string representation of the ElementToken object."""
         return f'ElementToken(element={self.symbol})'
-

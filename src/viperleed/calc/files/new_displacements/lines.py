@@ -18,20 +18,19 @@ from .tokens import (
     CartesianDirectionToken,
     ElementToken,
     LinearOperationToken,
+    ModeToken,
     OffsetToken,
     RangeToken,
     TargetToken,
     TokenParserError,
     TotalOccupationToken,
-    ModeToken,
 )
 
-
-SEARCH_HEADER_PATTERN = re.compile(r"^==\s+(?i:search)\s+(?P<label>.*)$")
+SEARCH_HEADER_PATTERN = re.compile(r'^==\s+(?i:search)\s+(?P<label>.*)$')
 SECTION_HEADER_PATTERN = re.compile(
-    r"^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$"
+    r'^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
 )
-OFFSETS_HEADER_PATTERN = re.compile(r"^=+\s*(?i:OFFSET[S]?)$")
+OFFSETS_HEADER_PATTERN = re.compile(r'^=+\s*(?i:OFFSET[S]?)$')
 LOOP_START_PATTERN = re.compile(r'<loop>')
 LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
 
@@ -58,9 +57,7 @@ DIRECTION_PATTERN = (
     r'|[xyzabc]'
     r'))'
 )
-_DIR_AT_END = re.compile(
-    rf'(?P<dir>{DIRECTION_PATTERN})\s*$'
-)
+_DIR_AT_END = re.compile(rf'(?P<dir>{DIRECTION_PATTERN})\s*$')
 
 
 class HeaderLine(ABC):
@@ -79,6 +76,7 @@ class HeaderLine(ABC):
         """Return the string representation of the header line."""
         pass
 
+
 class OffsetsHeaderLine(HeaderLine):
     """Class to parse the offsets header line in the DISPLACEMENTS file.
 
@@ -90,13 +88,15 @@ class OffsetsHeaderLine(HeaderLine):
         """Initialize the OffsetsHeaderLine with a line string."""
         if not OFFSETS_HEADER_PATTERN.match(line.strip()):
             raise DisplacementsSyntaxError(
-                f'Invalid offsets header line: "{line}".')
+                f'Invalid offsets header line: "{line}".'
+            )
         self.line = line.strip()
         self.section = 'OFFSETS'
 
     def __str__(self):
         """Return the string representation of the offsets header."""
         return self.line
+
 
 class SearchHeaderLine(HeaderLine):
     """Class to parse the search header line in the DISPLACEMENTS file.
@@ -111,7 +111,8 @@ class SearchHeaderLine(HeaderLine):
         match = SEARCH_HEADER_PATTERN.match(line.strip())
         if not match:
             raise DisplacementsSyntaxError(
-                f'Invalid search header line: "{line}".')
+                f'Invalid search header line: "{line}".'
+            )
         self.label = match.group('label').strip()
 
     def __str__(self):
@@ -132,7 +133,8 @@ class SectionHeaderLine(HeaderLine):
         match = SECTION_HEADER_PATTERN.match(section.strip().upper())
         if not match:
             raise DisplacementsSyntaxError(
-                f'Invalid section header line: "{section}".')
+                f'Invalid section header line: "{section}".'
+            )
         # extract the section name from the match
         self.section = match.group('section').strip()
 
@@ -192,7 +194,6 @@ class ParsedLine(ABC):
 
         # split the line into raw left and right hand sides
         self._lhs, self._rhs = self.raw_line.split('=')
-
 
     @abstractmethod
     def __str__(self):
@@ -347,7 +348,6 @@ class VibDeltaLine(ParsedLine):
         return f'{self.targets} = {self.range}'
 
 
-
 class OccDeltaLine(ParsedLine):
     """Class to parse lines in the OCC_DELTA block of DISPLACEMENTS.
 
@@ -436,7 +436,9 @@ class ConstraintLine(ParsedLine):
     """
 
     block_name = 'CONSTRAIN'
-    expected_format = '<type> <target> [, <target>] = [<linear_operation>] <target>'
+    expected_format = (
+        '<type> <target> [, <target>] = [<linear_operation>] <target>'
+    )
 
     def __init__(self, line: str):
         super().__init__(line)
@@ -459,7 +461,7 @@ class ConstraintLine(ParsedLine):
         )
         if dir_str:
             raise DisplacementsSyntaxError(
-                "Direction tokens are not allowed in CONSTRAIN block."
+                'Direction tokens are not allowed in CONSTRAIN block.'
             )
             # TODO, may be implemented in a future version: Do we want this?
             # It would be generally possible (e.g. link only z, but not xy for
@@ -499,7 +501,7 @@ class ConstraintLine(ParsedLine):
                 )
 
             # parse the total occupation value
-            total_occupation_str = self._rhs[len('total '):].strip()
+            total_occupation_str = self._rhs[len('total ') :].strip()
 
             # this is a special case, where the linear operation is
             self.linear_operation = TotalOccupationToken(total_occupation_str)
@@ -526,8 +528,8 @@ class ConstraintLine(ParsedLine):
 
         if len(link_targets) != 1:
             raise DisplacementsSyntaxError(
-                "The target part of the CONSTRAIN line must contain exactly "
-                "one target."
+                'The target part of the CONSTRAIN line must contain exactly '
+                'one target.'
             )
 
         # If we reach here, we have a valid target part
@@ -561,8 +563,9 @@ class OffsetsLine(ParsedLine):
     """
 
     block_name = 'OFFSET'
-    expected_format = ('<type> <target> [, <target> ...] [<direction>] '
-                       '= <offset>')
+    expected_format = (
+        '<type> <target> [, <target> ...] [<direction>] = <offset>'
+    )
 
     def __init__(self, line):
         super().__init__(line)
@@ -576,7 +579,8 @@ class OffsetsLine(ParsedLine):
 
         self.type = self._parse_type(parts[0])
         targets_str, dir_str = separate_direction_from_targets(
-            ' '.join(parts[1:]))
+            ' '.join(parts[1:])
+        )
 
         # parse targets
         self.targets = self._parse_targets(targets_str)
@@ -588,8 +592,8 @@ class OffsetsLine(ParsedLine):
 
         if self.type.mode is not PerturbationMode.GEO and dir_str:
             raise DisplacementsSyntaxError(
-                "Direction tokens in the OFFSETS block are only allowed for "
-                "geometric offsets."
+                'Direction tokens in the OFFSETS block are only allowed for '
+                'geometric offsets.'
             )
 
         # parse RHS into offset
@@ -628,7 +632,7 @@ def separate_direction_from_targets(targets_and_direction: str):
     """
     matches = list(_DIR_AT_END.finditer(targets_and_direction))
     if len(matches) > 1:
-        raise ValueError("Only one directional specification is allowed.")
+        raise ValueError('Only one directional specification is allowed.')
     elif matches:
         match = matches[0]
     else:
@@ -643,8 +647,9 @@ def separate_direction_from_targets(targets_and_direction: str):
 def _check_moire_tag(line_rhs):
     """Check if the right hand side of the line contains a moire tag."""
     if 'moire' in line_rhs.lower():
-        msg = ('Moiré structures are not yet supported.')
+        msg = 'Moiré structures are not yet supported.'
         raise NotImplementedError(msg)
+
 
 def _check_combined_element_ranges(line_rhs):
     """Check if the rhs of the line contains combined element ranges."""
@@ -655,4 +660,3 @@ def _check_combined_element_ranges(line_rhs):
             'constraints in the CONSTRAIN block.'
         )
         raise DisplacementsSyntaxError(msg)
-

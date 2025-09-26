@@ -1,9 +1,10 @@
 """Module errors of viperleed.files.new_displacements."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2024-10-04"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-04'
+__license__ = 'GPLv3+'
+
 
 class DisplacementsFileError(Exception):
     """Base class for all displacement-related errors."""
@@ -15,6 +16,7 @@ class DisplacementsSyntaxError(DisplacementsFileError):
     def __init__(self, message):
         super().__init__(message)
         self.message = message
+
 
 class IncompatibleBackendError(DisplacementsFileError):
     """Error raised when the chosen backend is incompatible with the file."""
@@ -35,8 +37,10 @@ class InvalidSearchBlocksError(DisplacementsFileError):
 class InvalidSearchLoopError(DisplacementsFileError):
     """Error raised when the search loop is not valid."""
 
+
 class SymmetryViolationError(DisplacementsFileError):
     """Error raised when the requested displacements violate symmetry."""
+
 
 class UnknownDisplacementsSegmentError(DisplacementsFileError):
     """Exception raised when a line does not match any known segment header."""

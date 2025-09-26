@@ -1,9 +1,9 @@
 """Module direction of viperleed.files.displacements.tokens."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2024-10-14"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-14'
+__license__ = 'GPLv3+'
 
 from abc import abstractmethod
 import re
@@ -125,8 +125,10 @@ class CartesianDirectionToken(DirectionToken):
             dirs = list(match['dir'])
             vecs = [float(v) for v in match['vec'].split()]
             if len(dirs) != len(vecs):
-                msg = ('Mismatch between directions and components '
-                       f'in {direction_str}')
+                msg = (
+                    'Mismatch between directions and components '
+                    f'in {direction_str}'
+                )
                 raise ValueError(msg)
             vec = self._embed_vector(dirs, vecs)
             return np.array([self._normalize(vec)]), 1
@@ -136,7 +138,7 @@ class CartesianDirectionToken(DirectionToken):
             raise ValueError(msg)
         vecs = [self._get_basis_vector(c) for c in direction_str]
         return np.array(vecs), len(vecs)
-   
+
     def _get_basis_vector(self, label):
         return {
             'x': np.array([1, 0, 0]),
@@ -192,6 +194,7 @@ def _check_unsupported_directions(direction_str):
             f'Invalid direction: {direction_str}'
         )
         raise DirectionTokenParserError(msg)
+
 
 def _xyz_to_zxy(vecs):
     """Convert from xyz to zxy axis (LEED) convention."""

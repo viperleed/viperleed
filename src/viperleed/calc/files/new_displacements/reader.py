@@ -1,9 +1,9 @@
 """Module reader of viperleed.files.displacements."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2024-10-04"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-04'
+__license__ = 'GPLv3+'
 
 
 import logging
@@ -30,22 +30,23 @@ from .lines import (
 )
 
 SECTION_HEADER_PATTERN = re.compile(
-    r"^=\s*(?P<section>OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$"
+    r'^=\s*(?P<section>OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
 )
 LOOP_START_PATTERN = re.compile(r'<loop>')
 LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
 
 DISPLACEMENTS_FILE_SECTION = {
-        'OFFSETS': OffsetsLine,
-        'GEO_DELTA': GeoDeltaLine,
-        'VIB_DELTA': VibDeltaLine,
-        'OCC_DELTA': OccDeltaLine,
-        'CONSTRAIN': ConstraintLine,
+    'OFFSETS': OffsetsLine,
+    'GEO_DELTA': GeoDeltaLine,
+    'VIB_DELTA': VibDeltaLine,
+    'OCC_DELTA': OccDeltaLine,
+    'CONSTRAIN': ConstraintLine,
 }
 
 LoopMarker = Enum('LoopMarker', ['LOOP_START', 'LOOP_END'])
 
 logger = logging.getLogger(__name__)
+
 
 class DisplacementsReader(InputFileReader):
     """Reader/Parser for the DISPLACEMENTS file based on InputFileReader.
@@ -88,7 +89,7 @@ class DisplacementsReader(InputFileReader):
         ):
             try:
                 new_header = header(line)
-            except DisplacementsSyntaxError: 
+            except DisplacementsSyntaxError:
                 continue
 
         # update current section if a new header is found
@@ -125,6 +126,8 @@ def _check_line_generally_valid(line):
         raise DisplacementsSyntaxError(msg)
 
     if 'sym_delta' in line.lower():
-        msg = ('The SYM_DELTA Tag has been deprecated. Use the SYMMETRY_FIX '
-               'parameter instead to manually lower the system symmetry.')
+        msg = (
+            'The SYM_DELTA Tag has been deprecated. Use the SYMMETRY_FIX '
+            'parameter instead to manually lower the system symmetry.'
+        )
         raise DisplacementsSyntaxError(msg)

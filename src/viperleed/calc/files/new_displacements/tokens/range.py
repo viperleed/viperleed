@@ -1,9 +1,9 @@
 """Module for the <range> token in the DISPLACEMENTS file."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2024-10-15"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-15'
+__license__ = 'GPLv3+'
 
 from .base import DisplacementsFileToken, TokenParserError
 from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
@@ -53,10 +53,9 @@ class RangeToken(DisplacementsFileToken):
     def has_step(self):
         """Check if the range has a step defined."""
         return self.step is not None
+
     @classmethod
-    def from_floats(
-        cls, start: float, stop: float, step=None
-    ) -> 'RangeToken':
+    def from_floats(cls, start: float, stop: float, step=None) -> 'RangeToken':
         """Alternate constructor using numeric values directly."""
         inst = cls.__new__(cls)
         inst.start = start
@@ -85,6 +84,8 @@ class RangeToken(DisplacementsFileToken):
     def __str__(self):
         """Return a string representation of the RangeToken object."""
         if self.has_step:
-            return (f'RangeToken(start={self.start}, stop={self.stop}, '
-                    f'step={self.step})')
+            return (
+                f'RangeToken(start={self.start}, stop={self.stop}, '
+                f'step={self.step})'
+            )
         return f'RangeToken(start={self.start}, stop={self.stop})'

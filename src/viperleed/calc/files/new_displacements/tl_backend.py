@@ -1,9 +1,9 @@
 """Module tl_backend of viperleed.files.displacements."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2024-10-15"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-15'
+__license__ = 'GPLv3+'
 
 # Note by @michele-riva: (Part of) this module can probably be moved higher up
 # the calc tree so we will be ready to support more backends, not only
@@ -11,6 +11,7 @@ __license__ = "GPLv3+"
 # in #333.)
 
 from abc import ABC, abstractmethod
+
 
 class TensorLEEDBackend(ABC):
     """Base class for the tensor LEED backends.

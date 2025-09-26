@@ -1,9 +1,9 @@
 """Module for the <element> token in the DISPLACEMENTS file."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2025-07-18"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-07-18'
+__license__ = 'GPLv3+'
 
 
 from .base import DisplacementsFileToken, TokenParserError
@@ -36,14 +36,14 @@ class TotalOccupationToken(DisplacementsFileToken):
             total_occupation_value = float(total_occupation_str.strip())
         except ValueError as err:
             msg = (
-                "Non-numeric value in total occupation: "
+                'Non-numeric value in total occupation: '
                 f'"{total_occupation_str}"'
             )
             raise TotalOccupationTokenParserError(msg) from err
         if not (0 <= total_occupation_value <= 1):
             msg = (
-                f"Total occupation must be in the range [0, 1], "
-                f"got {total_occupation_value}."
+                f'Total occupation must be in the range [0, 1], '
+                f'got {total_occupation_value}.'
             )
             raise TotalOccupationTokenParserError(msg)
         self.total_occupation = total_occupation_value
@@ -58,4 +58,6 @@ class TotalOccupationToken(DisplacementsFileToken):
 
     def __str__(self):
         """Return a string representation of the TotalOccupationToken object."""
-        return f"TotalOccupationToken(total_occupation={self.total_occupation})"
+        return (
+            f'TotalOccupationToken(total_occupation={self.total_occupation})'
+        )
