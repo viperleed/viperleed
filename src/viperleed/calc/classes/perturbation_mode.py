@@ -1,13 +1,11 @@
 """Module perturbation_mode of viperleed.calc.classes."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2025-05-13"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-05-13'
+__license__ = 'GPLv3+'
 
 from enum import Enum
-
-from viperleed.calc.lib.string_utils import harvard_commas
 
 
 class PerturbationModeError(ValueError):
@@ -27,10 +25,10 @@ class PerturbationMode(str, Enum):
         return self.value
 
     @classmethod
-    def from_string(cls, s: str):
+    def from_string(cls, mode_string: str):
         """Convert a string to a PerturbationType enum."""
         try:
-            return cls(s)
+            return cls(mode_string)
         except ValueError:
-            msg = harvard_commas((repr(e.value) for e in cls), sep='or')
+            msg = f'Unknown perturbation mode: {mode_string!r}. '
             raise PerturbationModeError(msg) from None
