@@ -152,7 +152,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # connection types for the underlying _INVOKE.
         self.update_device_settings()
 
-        # _imgs contains: the sum and square sum of short- and
+        # _imgs contains: the sum and sum of squares of short- and
         # long-exposure movies for the 'dark' frame (i.e., camera
         # with a cap on) and one frame for a 'flat field' (e.g.,
         # white paper right in front of the lens).
@@ -1511,4 +1511,5 @@ class BadPixelsSumStorage:
 
     def var(self):
         """Return the variance calculated from the stored frames."""
-        return (self._sum_squares - self._sum**2 / self._count) / self._count
+        mean_of_squares = self._sum_squares / self._count
+        return mean_of_squares - self.mean()**2
