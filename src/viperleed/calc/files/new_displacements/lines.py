@@ -111,7 +111,7 @@ class SearchHeaderLine(HeaderLine):
             raise DisplacementsSyntaxError(
                 f'Invalid search header line: "{line}".'
             )
-        self.label = match.group('label').strip()
+        self.label = match['label'].strip()
 
     def __str__(self):
         """Return the string representation of the search header."""
@@ -157,16 +157,14 @@ class LoopMarkerLine(HeaderLine):
         elif LOOP_END_PATTERN.match(stripped_line):
             self.kind = 'end'
         else:
-            raise DisplacementsSyntaxError(
-                f'Invalid loop marker line: "{line}".'
-            )
+            msg = f'Invalid loop marker line: "{line}".'
+            raise DisplacementsSyntaxError(msg)
 
     def __str__(self):
         """Return the string representation of the loop marker."""
         if self.kind == 'start':
             return '<loop>'
-        else:
-            return '</loop>'
+        return '</loop>'
 
 
 class ParsedLine(ABC):
@@ -238,15 +236,7 @@ class ParsedLine(ABC):
             )
             raise DisplacementsSyntaxError(msg) from err
 
-    def _parse_type(self, type_str):
-        try:
-            return ModeToken(type_str)
-        except TokenParserError as err:
-            msg = (
-                'Unable to parse <type> information from line in '
-                f'{self.block_name} block: {self.raw_line}.'
-            )
-            raise DisplacementsSyntaxError(msg) from err
+
 
     def _parse_element(self, element_str):
         try:
@@ -264,6 +254,16 @@ class ParsedLine(ABC):
         except TokenParserError as err:
             msg = (
                 'Unable to parse <linear_operation> token from line in '
+                f'{self.block_name} block: {self.raw_line}.'
+            )
+            raise DisplacementsSyntaxError(msg) from err
+
+    def _parse_mode(self, mode_str):
+        try:
+            return ModeToken(mode_str)
+        except TokenParserError as err:
+            msg = (
+                'Unable to parse <type> information from line in '
                 f'{self.block_name} block: {self.raw_line}.'
             )
             raise DisplacementsSyntaxError(msg) from err
@@ -298,7 +298,7 @@ class GeoDeltaLine(ParsedLine):
         if not targets_str or not dir_str:
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        # parse the into targets and direction
+        # parse into targets and direction
         self.targets = self._parse_targets(targets_str)
         self.direction = self._parse_direction(dir_str)
 
@@ -318,11 +318,11 @@ class VibDeltaLine(ParsedLine):
     Lines in the VIB_DELTA block are of the form:
         <target> [, <target>] = <range>
     where <target>, and <range> are tokens that are parsed by the
-    `Targets`, `Direction`, and `RangeToken` classes, respectively.
+    `Targets` and `RangeToken` classes, respectively.
     """
 
     block_name = 'VIB_DELTA'
-    expected_format = '<targets> [, <target>] = <range>'
+    expected_format = '<target> [, <target>] = <range>'
 
     def __init__(self, line: str):
         super().__init__(line)
@@ -333,7 +333,7 @@ class VibDeltaLine(ParsedLine):
         if dir_str:
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        # parse the into targets and direction
+        # parse the targets
         self.targets = self._parse_targets(targets_str)
 
         # Right hand side
@@ -357,7 +357,7 @@ class OccDeltaLine(ParsedLine):
 
     block_name = 'OCC_DELTA'
     expected_format = (
-        '<target> [, <target>] = <element> <range> [, <element> <range> ...]'
+        '<target> [, <target>] = <element> <range> [, <element> <range>]'
     )
 
     def __init__(self, line: str):
@@ -367,12 +367,12 @@ class OccDeltaLine(ParsedLine):
         # check if the last part is a direction
         targets_str, dir_str = separate_direction_from_targets(self._lhs)
         if dir_str:
-            raise AttributeError(self.invalid_format_msg)
+            raise DisplacementsSyntaxError(self.invalid_format_msg)
 
         # check for deprecated combined element ranges
         _check_combined_element_ranges(self._rhs)
 
-        # parse the into targets and direction
+        # parse the targets
         self.targets = self._parse_targets(targets_str)
 
         # Right hand side
@@ -403,13 +403,9 @@ class OccDeltaLine(ParsedLine):
 
     def __str__(self):
         """Return the string representation of the line."""
-        txt = f'{self.targets[0]}'
-        for target in self.targets[1:]:
-            txt += f', {target}'
-        txt += f' = {self.element_ranges[0]}'
-        for er in self.element_ranges[1:]:
-            txt += f', {er}'
-        return txt
+        lhs = ', '.join(str(t) for t in self.targets)
+        rhs = ', '.join(str(er) for er in self.element_ranges)
+        return f'{lhs} = {rhs}'
 
 
 class ConstraintLine(ParsedLine):
@@ -446,7 +442,7 @@ class ConstraintLine(ParsedLine):
         if len(lhs_parts) < 2:  # at least type and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        self.type = self._parse_type(lhs_parts[0])
+        self.type = self._parse_mode(lhs_parts[0])
 
         # TODO: Implement Domains here
         if self.type.mode is PerturbationMode.DOM:
@@ -575,7 +571,7 @@ class OffsetsLine(ParsedLine):
         if len(parts) < 2:  # at least type and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        self.type = self._parse_type(parts[0])
+        self.type = self._parse_mode(parts[0])
         targets_str, dir_str = separate_direction_from_targets(
             ' '.join(parts[1:])
         )
