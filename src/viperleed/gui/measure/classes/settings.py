@@ -175,6 +175,8 @@ class AliasConfigParser(ConfigParser):
 
         if value == '':
             try:
+                # This fallback is not the fallback given by the user,
+                # but a fallback taken from the aliases.
                 value = self._fallback[section][option]
             except KeyError:
                 pass
@@ -201,7 +203,7 @@ class AliasConfigParser(ConfigParser):
         if not self._cls_name:
             # No class name, therefore we cannot look up aliases.
             return
-        self._prepare()
+        self._load_aliases()
 
     def _add_new_sections(self, new_sections):
         """Add new settings sections.
@@ -271,12 +273,14 @@ class AliasConfigParser(ConfigParser):
             except (NoSectionError, NoOptionError):
                 continue
             else:
+                # In case a value is found in the aliases, it is
+                # stored in the new section/option pair.
                 self[section][option] = value
                 self.remove_option(sec, opt)
                 return value
         return fallback
 
-    def _prepare(self):
+    def _load_aliases(self):
         """Prepare aliases for the handled settings.
 
         Load relevant aliases and generate missing settings sections for
