@@ -274,8 +274,6 @@ class AliasConfigParser(ConfigParser):
                 self[section][option] = value
                 self.remove_option(sec, opt)
                 return value
-        if section == 'energies':
-            raise RuntimeError('How did I get here.')
         return fallback
 
     def _prepare(self):
