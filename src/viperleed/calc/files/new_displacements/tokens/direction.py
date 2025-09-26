@@ -11,7 +11,7 @@ import re
 import numpy as np
 
 from .base import DisplacementsFileToken, TokenParserError
-from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
+from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
 
 CART_DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')

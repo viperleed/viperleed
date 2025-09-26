@@ -6,7 +6,7 @@ __created__ = "2024-10-15"
 __license__ = "GPLv3+"
 
 from .base import DisplacementsFileToken, TokenParserError
-from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
+from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
 
 
 class RangeTokenParserError(TokenParserError):
