@@ -236,8 +236,6 @@ class ParsedLine(ABC):
             )
             raise DisplacementsSyntaxError(msg) from err
 
-
-
     def _parse_element(self, element_str):
         try:
             return ElementToken(element_str)
@@ -530,11 +528,11 @@ class ConstraintLine(ParsedLine):
         self.link_target = link_targets[0]
 
         # if the operation part is empty, default to identity
-        if not op_part:
-            self.linear_operation = LinearOperationToken.from_array(np.eye(1))
-            return
-
-        self.linear_operation = self._parse_linear_operation(op_part)
+        self.linear_operation = (
+            self._parse_linear_operation(op_part)
+            if op_part
+            else LinearOperationToken.from_array(np.eye(1))
+        )
 
     def __str__(self):
         """Return the string representation of the line."""
@@ -627,15 +625,14 @@ def separate_direction_from_targets(targets_and_direction: str):
     matches = list(_DIR_AT_END.finditer(targets_and_direction))
     if len(matches) > 1:
         raise ValueError('Only one directional specification is allowed.')
-    elif matches:
+    if matches:
         match = matches[0]
     else:
         # no direction found
         return targets_and_direction.strip(), ''
 
-    dir_str = match.group('dir')
     # everything before the direction is the targets
-    return targets_and_direction[: match.start()].strip(), dir_str.strip()
+    return targets_and_direction[: match.start()].strip(), match['dir'].strip()
 
 
 def _check_moire_tag(line_rhs):

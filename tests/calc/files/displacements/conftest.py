@@ -3,6 +3,7 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-15'
 
+from operator import attrgetter
 from pathlib import Path
 
 import pytest
@@ -20,9 +21,9 @@ from viperleed.calc.files.new_displacements.tokens import (
     CartesianDirectionToken,
     ElementToken,
     LinearOperationToken,
+    ModeToken,
     RangeToken,
     TargetToken,
-    ModeToken,
 )
 
 _MOCK_DISPLACEMENTS_PATH = Path('tests/_test_data/DISPLACEMENTS/')
@@ -37,9 +38,9 @@ DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob("*/DISPLACEMENTS*")
 
 @fixture
 @pytest.mark.parametrize(
-    "file_path",
+    'file_path',
     DISPLACEMENTS_FILES,
-    ids=lambda p: p.name,
+    ids=attrgetter('name'),
 )
 def displacements_file_path(file_path):
     """Fixture to provide a path to a DISPLACEMENTS file."""
