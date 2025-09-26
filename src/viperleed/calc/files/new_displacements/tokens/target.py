@@ -7,9 +7,9 @@ __license__ = 'GPLv3+'
 
 import re
 
-from .base import DisplacementsFileToken, TokenParserError
 from viperleed.calc.lib.string_utils import read_int_range
 
+from .base import DisplacementsFileToken, TokenParserError
 
 LAYER_REGEX = r'L\s*\(\s*(?P<ranges>[\d\-:\s]+)\s*\)'
 

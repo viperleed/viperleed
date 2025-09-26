@@ -6,9 +6,9 @@ __created__ = '2024-10-04'
 __license__ = 'GPLv3+'
 
 
+from enum import Enum
 import logging
 import re
-from enum import Enum
 
 from viperleed.calc.files.input_reader import (
     InputFileReader,

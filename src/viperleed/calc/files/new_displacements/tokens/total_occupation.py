@@ -6,8 +6,9 @@ __created__ = '2025-07-18'
 __license__ = 'GPLv3+'
 
 
-from .base import DisplacementsFileToken, TokenParserError
 from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
+
+from .base import DisplacementsFileToken, TokenParserError
 
 
 class TotalOccupationTokenParserError(TokenParserError):

@@ -5,8 +5,9 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-15'
 __license__ = 'GPLv3+'
 
-from .base import DisplacementsFileToken, TokenParserError
 from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
+
+from .base import DisplacementsFileToken, TokenParserError
 
 
 class RangeTokenParserError(TokenParserError):

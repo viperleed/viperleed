@@ -10,8 +10,9 @@ import re
 
 import numpy as np
 
-from .base import DisplacementsFileToken, TokenParserError
 from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
+
+from .base import DisplacementsFileToken, TokenParserError
 
 CART_DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
@@ -47,7 +48,8 @@ class DirectionToken(DisplacementsFileToken):
     - azi[i j] == azi(ab[i j])
     - azi(i j) == azi(ab[i j])
     - r[i j] == r(ab[i j])
-    - r(i j) == r(ab[i j])"""
+    - r(i j) == r(ab[i j])
+    """
 
     @abstractmethod
     def __eq__(self, other):

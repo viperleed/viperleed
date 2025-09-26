@@ -5,9 +5,9 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-10-04'
 __license__ = 'GPLv3+'
 
+from abc import ABC, abstractmethod
 import logging
 import re
-from abc import ABC, abstractmethod
 
 import numpy as np
 
@@ -74,7 +74,6 @@ class HeaderLine(ABC):
     @abstractmethod
     def __str__(self):
         """Return the string representation of the header line."""
-        pass
 
 
 class OffsetsHeaderLine(HeaderLine):
@@ -167,8 +166,7 @@ class LoopMarkerLine(HeaderLine):
         """Return the string representation of the loop marker."""
         if self.kind == 'start':
             return '<loop>'
-        else:
-            return '</loop>'
+        return '</loop>'
 
 
 class ParsedLine(ABC):
@@ -633,7 +631,7 @@ def separate_direction_from_targets(targets_and_direction: str):
     matches = list(_DIR_AT_END.finditer(targets_and_direction))
     if len(matches) > 1:
         raise ValueError('Only one directional specification is allowed.')
-    elif matches:
+    if matches:
         match = matches[0]
     else:
         # no direction found

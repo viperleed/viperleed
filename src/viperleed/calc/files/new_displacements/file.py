@@ -7,13 +7,12 @@ __license__ = 'GPLv3+'
 
 import logging
 
-from anytree import NodeMixin
-from anytree import RenderTree
+from anytree import NodeMixin, RenderTree
 from anytree.render import ContStyle
 
 from .errors import DisplacementsSyntaxError, OffsetsNotAtBeginningError
 from .reader import DisplacementsReader
-from .segments import OffsetsBlock, SearchBlock, LoopBlock
+from .segments import LoopBlock, OffsetsBlock, SearchBlock
 
 logger = logging.getLogger(__name__)
 

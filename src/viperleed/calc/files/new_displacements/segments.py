@@ -9,28 +9,22 @@ __license__ = 'GPLv3+'
 from abc import ABC, abstractmethod
 import itertools
 
-from anytree import NodeMixin
-from anytree import RenderTree
+from anytree import NodeMixin, RenderTree
 from anytree.render import ContStyle
 import numpy as np
 
-from .reader import (
-    DISPLACEMENTS_FILE_SECTION,
-    DisplacementsReader,
-    LoopMarker,
-)
+from .errors import DisplacementsSyntaxError, UnknownDisplacementsSegmentError
 from .lines import (
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
     OccDeltaLine,
+    OffsetsHeaderLine,
     OffsetsLine,
     SearchHeaderLine,
     SectionHeaderLine,
     VibDeltaLine,
-    OffsetsHeaderLine,
 )
-from .errors import UnknownDisplacementsSegmentError, DisplacementsSyntaxError
 
 
 class DisplacementsSegmentABC(ABC, NodeMixin):
@@ -87,10 +81,9 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
                     break  # after child consumes what it needs, continue outer loop
             if processed:
                 continue
-            else:
-                # done reading this segment, return to parent
-                self._validate_segment()
-                return itertools.chain([line], lines)
+            # done reading this segment, return to parent
+            self._validate_segment()
+            return itertools.chain([line], lines)
 
     def __str__(self):
         return str(RenderTree(self, style=ContStyle()).by_attr('_render_name'))
@@ -295,7 +288,6 @@ class LoopBlock(DisplacementsSegmentABC):
 
     def next(self, current_rfac, r_fac_eps=1e-4):
         """Check convergence criteria and return the next search block."""
-
         if self._current_child_id >= len(self.children):
             # if all children have been processed, check convergence
             # specifically do not use abs() here – break if we increased
