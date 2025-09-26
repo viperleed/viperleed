@@ -173,7 +173,7 @@ class AliasConfigParser(ConfigParser):
             if value is _UNSET:
                 raise
 
-        if value == '':
+        if not value:
             try:
                 # This fallback is not the fallback given by the user,
                 # but a fallback taken from the aliases.
