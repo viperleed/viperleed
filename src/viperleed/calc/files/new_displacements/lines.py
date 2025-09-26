@@ -68,7 +68,7 @@ class HeaderLine(ABC):
     """
 
     @abstractmethod
-    def __init__(self, line: str):
+    def __init__(self, line):
         """Initialize the header line with a line string."""
 
     @abstractmethod
@@ -83,12 +83,11 @@ class OffsetsHeaderLine(HeaderLine):
         = OFFSETS
     """
 
-    def __init__(self, line: str):
+    def __init__(self, line):
         """Initialize the OffsetsHeaderLine with a line string."""
         if not OFFSETS_HEADER_PATTERN.match(line.strip()):
-            raise DisplacementsSyntaxError(
-                f'Invalid offsets header line: "{line}".'
-            )
+            msg = f'Invalid offsets header line: {line!r}.'
+            raise DisplacementsSyntaxError(msg)
         self.line = line.strip()
         self.section = 'OFFSETS'
 
@@ -166,7 +165,8 @@ class LoopMarkerLine(HeaderLine):
         """Return the string representation of the loop marker."""
         if self.kind == 'start':
             return '<loop>'
-        return '</loop>'
+        else:
+            return '</loop>'
 
 
 class ParsedLine(ABC):
@@ -631,7 +631,7 @@ def separate_direction_from_targets(targets_and_direction: str):
     matches = list(_DIR_AT_END.finditer(targets_and_direction))
     if len(matches) > 1:
         raise ValueError('Only one directional specification is allowed.')
-    if matches:
+    elif matches:
         match = matches[0]
     else:
         # no direction found
