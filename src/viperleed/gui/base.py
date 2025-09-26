@@ -17,7 +17,6 @@ import re
 import sys
 
 import numpy as np
-from PyQt5 import QtCore as qtc
 
 from viperleed.gui.classes.beamindex import BeamIndex
 from viperleed.gui.classes.planegroup import PlaneGroup
@@ -702,20 +701,3 @@ def orientation(vector, zero_pi=True, precision=4):
     if not zero_pi:
         return angle
     return angle % 180
-
-
-def get_qsettings(settings):
-    """Return a QSettings instance of the given settings.
-
-    Parameters
-    ----------
-    settings : str
-        The target settings for which the QSettings instance is created.
-
-    Returns
-    -------
-    qsettings : QSettings
-        A QSettings instance in IniFormat for the given settings.
-    """
-    return qtc.QSettings(qtc.QSettings.IniFormat, qtc.QSettings.UserScope,
-                         'ViPErLEED', settings)

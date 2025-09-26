@@ -21,10 +21,10 @@ import sys
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.base import get_qsettings
 from viperleed.gui.dialogs.dropdowndialog import DropdownDialog
 from viperleed.gui.dialogs.errors import DialogDismissedError
 from viperleed.gui.measure.classes.settings import NoSettingsError
+from viperleed.gui.qsettings import get_qsettings
 
 
 ################################## FUNCTIONS ##################################

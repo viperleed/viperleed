@@ -31,9 +31,9 @@ import sys
 
 from wrapt import synchronized  # thread-safety decorator
 
-from viperleed.gui.base import get_qsettings
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.widgets.pathselector import PathSelector
+from viperleed.gui.qsettings import get_qsettings
 
 
 def interpolate_config_path(filenames):
