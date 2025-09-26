@@ -46,7 +46,7 @@ class TensorLEEDBackend(ABC):
 
 
 def tenserleed_search_block_handler_func(offsets_block, search_block):
-    """Handle the search block with the TensorLEED backend."""
+    """Handle the search block with the TensErLEED backend."""
     # TODO: xy shorthands exits!
     # For TensErLEED backend, this duplicates a search block xy -> xy[1 0] & xy[0 1]
     raise NotImplementedError

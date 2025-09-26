@@ -53,7 +53,7 @@ class TargetToken(DisplacementsFileToken):
             if not re.fullmatch(LAYER_REGEX, parts[1]):
                 msg = f'Invalid layer specification: "{parts[1]}".'
                 raise TargetingError(msg)
-            int_ranges = read_int_range(layer_match.group('ranges').strip())
+            int_ranges = read_int_range(layer_match['ranges'].strip())
             self.layers = list(int_ranges)
             
             return

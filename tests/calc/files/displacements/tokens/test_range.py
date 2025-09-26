@@ -7,7 +7,8 @@ __created__ = '2025-04-11'
 import pytest
 
 from viperleed.calc.files.new_displacements.tokens.range import (
-    RangeToken, RangeTokenParserError
+    RangeToken,
+    RangeTokenParserError,
 )
 
 

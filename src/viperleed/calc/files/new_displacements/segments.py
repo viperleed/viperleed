@@ -9,11 +9,10 @@ __license__ = "GPLv3+"
 from abc import ABC, abstractmethod
 import itertools
 
-import numpy as np
-
 from anytree import NodeMixin
 from anytree import RenderTree
 from anytree.render import ContStyle
+import numpy as np
 
 from .reader import (
     DISPLACEMENTS_FILE_SECTION,
@@ -37,7 +36,7 @@ from .errors import UnknownDisplacementsSegmentError, DisplacementsSyntaxError
 class DisplacementsSegmentABC(ABC, NodeMixin):
     """Base class for logical segments in a DISPLACEMENTS file."""
 
-    SUBSEGMENTS = ()  # override in subclasses
+    subsegments = ()  # override in subclasses
     _subclasses = set()
 
     def __init_subclass__(cls):
@@ -232,7 +231,7 @@ class SearchBlock(DisplacementsSegmentABC):
         """Check the segments contents run before returning to parent."""
         if not self.children:
             raise DisplacementsSyntaxError(
-                f"Empty search block: '{self.label}'."
+                f'Empty search block: {self.label!r}.'
             )
 
         # check that there is at most one block of each type

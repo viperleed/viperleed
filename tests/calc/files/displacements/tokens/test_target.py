@@ -85,7 +85,7 @@ def test_eq_same_and_different():
     assert a == b
     # different label
     d = TargetToken('B 1-2')
-    assert not (a == d)
+    assert a != d
     # comparing to different type
     assert not (a == 'A 1-2')
 
@@ -122,5 +122,5 @@ def test_generate_label_match_regex_wildcards():
     # Should match XANY, XfooYbar, etc.
     assert r.match('XANY')
     assert r.match('XfooYbar')
-    assert not r.match('XYX') == None  # ensure it matches "XYX"
+    assert r.match('XYX')
     assert not r.match('Y')

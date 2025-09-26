@@ -7,7 +7,8 @@ __license__ = "GPLv3+"
 
 import logging
 
-from anytree import NodeMixin, RenderTree
+from anytree import NodeMixin
+from anytree import RenderTree
 from anytree.render import ContStyle
 
 from .errors import DisplacementsSyntaxError, OffsetsNotAtBeginningError
@@ -142,7 +143,6 @@ class DisplacementsFile(NodeMixin):
 
     def __str__(self):
         return str(RenderTree(self, style=ContStyle()).by_attr("_render_name"))
-
 
     def next(self, current_rfac, r_fac_eps=1e-4):
         """Return the next search to be executed or raise StopIteration.

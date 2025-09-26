@@ -9,8 +9,6 @@ import re
 import ast
 
 import numpy as np
-
-
 from .base import DisplacementsFileToken, TokenParserError
 
 

@@ -1,4 +1,4 @@
-"""Module errors of viperleed.files.displacements."""
+"""Module errors of viperleed.files.new_displacements."""
 
 __authors__ = ("Alexander M. Imre (@amimre)",)
 __copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"

@@ -16,7 +16,10 @@ from viperleed.calc.files.new_displacements.lines import (
     SectionHeaderLine,
     VibDeltaLine,
 )
-from viperleed.calc.files.new_displacements.segments import SearchBlock, LoopBlock
+from viperleed.calc.files.new_displacements.segments import (
+    LoopBlock,
+    SearchBlock,
+    )
 
 def test_search_block():
 

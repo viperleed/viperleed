@@ -1,4 +1,4 @@
-"""Module perturbation_type of viperleed_calc.classes."""
+"""Module perturbation_mode of viperleed.calc.classes."""
 
 __authors__ = ("Alexander M. Imre (@amimre)",)
 __copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
@@ -6,6 +6,7 @@ __created__ = "2025-05-13"
 __license__ = "GPLv3+"
 
 from enum import Enum
+
 from viperleed.calc.lib.string_utils import harvard_commas
 
 

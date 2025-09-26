@@ -28,7 +28,6 @@ class DirectionToken(DisplacementsFileToken):
     specify the allowed directions of movements or constraints for geometric
     displacements.
 
-
     We do not yet support parsing of azimuthal, and radial directions, as well
     as fractional directions (e.g., 'a', 'b', 'c'). These are supported in the
     old viperleed.calc parser. They will need to be added here prior to using
@@ -102,8 +101,7 @@ class CartesianDirectionToken(DirectionToken):
         if not _dir_str:
             raise DirectionTokenParserError('Empty direction token.')
         self.direction_str = _dir_str
-        vecs, self.dof = self._parse_direction(_dir_str)
-        self._vectors = vecs
+        self._vectors, self.dof = self._parse_direction(_dir_str)
 
     @property
     def vectors_xyz(self):
@@ -125,19 +123,19 @@ class CartesianDirectionToken(DirectionToken):
                 msg = f'Invalid direction format: {direction_str}'
                 raise ValueError(msg)
             dirs = list(match['dir'])
-            vecs = list(map(float, match.group('vec').split()))
+            vecs = [float(v) for v in match['vec'].split()]
             if len(dirs) != len(vecs):
                 msg = ('Mismatch between directions and components '
                        f'in {direction_str}')
                 raise ValueError(msg)
             vec = self._embed_vector(dirs, vecs)
-            return (np.array([self._normalize(vec)]), 1)
+            return np.array([self._normalize(vec)]), 1
         # Basis directions like 'x', 'xy', etc.
         if not all(c in SIMPLE_DIRECTIONS for c in direction_str):
             msg = f'Invalid direction: {direction_str}'
             raise ValueError(msg)
         vecs = [self._get_basis_vector(c) for c in direction_str]
-        return (np.array(vecs), len(vecs))
+        return np.array(vecs), len(vecs)
    
     def _get_basis_vector(self, label):
         return {

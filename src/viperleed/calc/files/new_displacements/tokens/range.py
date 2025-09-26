@@ -32,31 +32,27 @@ class RangeToken(DisplacementsFileToken):
         """Construct a RangeToken from a string."""
         # TODO: TensErLEED compatibility: backend requires the step to be specified
         parts = range_str.strip().split()
-        if len(parts) < 2 or len(parts) > 3:
+        if len(parts) not in (2, 3):
             msg = (
                 f'Invalid range format: "{range_str}". Expected format: '
                 '"<start> <stop> [<step>]".'
             )
             raise RangeTokenParserError(msg)
 
-        try:
-            start = float(parts[0])
-            stop = float(parts[1])
-            step = float(parts[2]) if len(parts) == 3 else None
-        except ValueError as err:
-            msg = f'Non-numeric value in range: "{range_str}"'
-            raise RangeTokenParserError(msg) from err
-
-        self.start = start
-        self.stop = stop
-        self.step = step
+        self.start, sef.stop, self.step = None
+        attrs = ('start', 'stop', 'step')
+        for part, attr in zip(parts, attrs):
+            try:
+                value = float(part)
+            except ValueError as err:
+                msg = f'Non-numeric value in range: "{range_str}"'
+                raise RangeTokenParserError(msg) from err
+            setattr(self, attr, value)
 
     @property
     def has_step(self):
         """Check if the range has a step defined."""
         return self.step is not None
-
-
     @classmethod
     def from_floats(
         cls, start: float, stop: float, step=None

@@ -46,7 +46,7 @@ def displacements_file_path(file_path):
     return file_path
 
 
-@pytest.fixture
+@fixture
 def mock_displacements_path_and_lines():
     path = MOCK_DISPLACEMENTS_PATH
     expected_lines = [

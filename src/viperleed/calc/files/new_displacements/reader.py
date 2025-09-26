@@ -96,7 +96,7 @@ class DisplacementsReader(InputFileReader):
             # search headers and loop markers reset the current section
             self._current_section = None
             return new_header
-        elif isinstance(new_header, (SectionHeaderLine, OffsetsHeaderLine)):
+        if isinstance(new_header, (SectionHeaderLine, OffsetsHeaderLine)):
             # section headers set the current section
             self._current_section = new_header.section
             return new_header
@@ -109,7 +109,7 @@ class DisplacementsReader(InputFileReader):
         try:
             # call line parsers
             return DISPLACEMENTS_FILE_SECTION[self._current_section](line)
-        except (ValueError, IndexError) as err:
+        except (ValueError, KeyError) as err:
             msg = (
                 f'Cannot parse line "{line}" in section '
                 f'"{self._current_section}".'

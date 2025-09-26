@@ -31,7 +31,7 @@ class ModeToken(DisplacementsFileToken):
     def __eq__(self, other):
         """Compare self to other ModeToken."""
         if not isinstance(other, ModeToken):
-            return False
+            return NotImplemented
         return self.mode is other.mode
 
     def __str__(self):
