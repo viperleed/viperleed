@@ -1499,7 +1499,7 @@ class BadPixelsSumStorage:
         return self._sum
 
     def add_frame(self, frame):
-        """Add frame to frame sum and square sum."""
+        """Add frame to frame sum and sum of squares."""
         frame = frame.astype(np.uint64, copy=False)
         self._count += 1
         self._sum += frame
