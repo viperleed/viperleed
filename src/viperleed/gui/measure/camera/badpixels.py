@@ -95,6 +95,8 @@ class _FinderSection(CalibrationTaskOperation):
             return N_NOISE
         if 'DARK' in self.name:
             return N_DARK
+        if self is _FinderSection.CALCULATE_FLICKERY:
+            return 2  # short- and long-term telegraph noise
         return 1
 
     @classmethod
@@ -437,37 +439,17 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
 
         self._badness += delta_badness
 
-    @_report_progress
     def find_flickery_pixels(self):
-        """Prepare badness based on how flickery pixels are.
-
-        Badness will be set according to how much each pixel
-        fluctuates in the 'dark' frames. We take as a measure
-        of badness the ratio between the variance of a pixel
-        and the overall average variance: the intensity of
-        flickery pixels varies much more than the average.
-
-        Two contributions are taken into account: long-exposed
-        dark frames are used to detect pixels that flicker due
-        to higher photon sensitivity, whereas short-exposed
-        frames detect pixels that are flickery due to readout
-        noise.
-
-        Returns
-        -------
-        None.
-        """
-        long_flicker = self._imgs[_FinderSection.ACQUIRE_DARK_LONG].var()
-        short_flicker = self._imgs[_FinderSection.ACQUIRE_DARK_SHORT].var()
-        long_mean, short_mean = long_flicker.mean(), short_flicker.mean()
-        self._badness = np.zeros_like(long_flicker)
-
-        # The conditional checks prevent division by zero for very good
-        # cameras. '-1' --> badness == 0 for normally flickery pixels
-        if short_mean:
-            self._badness += short_flicker / short_mean - 1
-        if long_mean:
-            self._badness += long_flicker / long_mean - 1
+        """Prepare pixel badness based on short- and long-term noise."""
+        _section = _FinderSection.CALCULATE_FLICKERY
+        self.progress_occurred.emit(self.progress_name, *_section,
+                                    0, _section.n_steps)
+        self._find_fast_flickery_pixels()
+        self.progress_occurred.emit(self.progress_name, *_section,
+                                    1, _section.n_steps)
+        self._find_long_term_flickery_pixels()
+        self.progress_occurred.emit(self.progress_name, *_section,
+                                    _section.n_steps, _section.n_steps)
 
     @_report_progress
     def find_hot_pixels(self):
@@ -478,28 +460,6 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         hot_pixels = dark_ave >= 0.25*intensity_range
 
         self._badness[hot_pixels] = np.inf
-
-    def find_long_term_flickering(self):
-        """Calculate badness for pixels with sporadic burst noise.
-
-        Badness will be set according to how much each pixel
-        fluctuates in the 'dark' frames. As a measure of badness we
-        take the difference between maximum and minimum intensity
-        picked up by each pixel. The threshold when a pixel is
-        considered to have too much telegraph noise is when the
-        flicker of the pixel is about 3 times the average flicker.
-        (3-1)^2 * 1.5 = 6,
-        where 6 is the threshold used for the total badness.
-
-        To determine the long-term flickering we use a medium exposure
-        time with a very high frame count. The overall measurement for
-        burst noise detection alone should not take less than ten
-        minutes.
-        """
-        flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].range_
-        flicker_mean = flicker.mean()
-
-        self._badness += ((flicker / flicker_mean - 1)**2) * 1.5
 
     @qtc.pyqtSlot(tuple)
     def _on_device_error(self, error):
@@ -559,6 +519,58 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         self.begin_acquiring()
         return True
 
+    def _find_fast_flickery_pixels(self):
+        """Prepare badness based on how flickery pixels are.
+
+        Badness will be set according to how much each pixel
+        fluctuates in the 'dark' frames. We take as a measure
+        of badness the ratio between the variance of a pixel
+        and the overall average variance: the intensity of
+        flickery pixels varies much more than the average.
+
+        Two contributions are taken into account: long-exposed
+        dark frames are used to detect pixels that flicker due
+        to higher photon sensitivity, whereas short-exposed
+        frames detect pixels that are flickery due to readout
+        noise.
+
+        Returns
+        -------
+        None.
+        """
+        long_flicker = self._imgs[_FinderSection.ACQUIRE_DARK_LONG].var()
+        short_flicker = self._imgs[_FinderSection.ACQUIRE_DARK_SHORT].var()
+        long_mean, short_mean = long_flicker.mean(), short_flicker.mean()
+        self._badness = np.zeros_like(long_flicker)
+
+        # The conditional checks prevent division by zero for very good
+        # cameras. '-1' --> badness == 0 for normally flickery pixels
+        if short_mean:
+            self._badness += short_flicker / short_mean - 1
+        if long_mean:
+            self._badness += long_flicker / long_mean - 1
+
+    def _find_long_term_flickery_pixels(self):
+        """Calculate badness for pixels with sporadic burst noise.
+
+        Badness will be set according to how much each pixel
+        fluctuates in the 'dark' frames. As a measure of badness we
+        take the difference between maximum and minimum intensity
+        picked up by each pixel. The threshold when a pixel is
+        considered to have too much telegraph noise is when the
+        flicker of the pixel is about 3 times the average flicker.
+        (3-1)^2 * 1.5 = 6,
+        where 6 is the threshold used for the total badness.
+
+        To determine the long-term flickering we use a medium exposure
+        time with a very high frame count. The overall measurement for
+        burst noise detection alone should not take less than ten
+        minutes.
+        """
+        flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].range_
+        flicker_mean = flicker.mean()
+        self._badness += ((flicker / flicker_mean - 1)**2) * 1.5
+
     @qtc.pyqtSlot()
     def _trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary."""
@@ -574,7 +586,6 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         if self._current_section is _FinderSection.CALCULATE_FLICKERY:
             # Done with all sections. Can proceed to calculations.
             self.find_flickery_pixels()
-            self.find_long_term_flickering()
             self.find_hot_pixels()
             self.find_dead_pixels()
             self.find_bad_and_replacements()
