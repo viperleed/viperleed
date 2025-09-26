@@ -1435,4 +1435,5 @@ class BadPixelsFrameStorage:
 
     def var(self):
         """Return the variance calculated from the stored frames."""
-        return (self._sum_squares - self._sum**2 / self._count) / self._count
+        mean_of_squares = self._sum_squares / self._count
+        return mean_of_squares - self.mean()**2
