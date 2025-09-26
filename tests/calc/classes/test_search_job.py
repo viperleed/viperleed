@@ -11,7 +11,10 @@ import time
 
 import pytest
 
-from viperleed.calc.classes.search_job import SearchJob
+from viperleed.calc.classes.search_job import (
+    COMMAND_NOT_FOUND_RETURN_CODE,
+    SearchJob,
+)
 
 
 @pytest.mark.timeout(5)
@@ -36,7 +39,7 @@ def test_invalid_command():
     job = SearchJob(['nonexistent_command_xyz'], '', log_path=None)
     job.start()
     job.wait()
-    assert job.returncode == 127  # mimics "command not found"
+    assert job.returncode == COMMAND_NOT_FOUND_RETURN_CODE
 
 @pytest.mark.timeout(5)
 def test_correct_return_code():
@@ -84,16 +87,13 @@ def test_job_kill_flag(subtests):
         assert not job.is_running()
 
 
-@pytest.mark.timeout(5)
-def test_notice_immediate_job_death(capfd):
+@pytest.mark.timeout(2)
+def test_notice_immediate_job_death():
     """Test that the job is not running immediately after start."""
-    # Note: we HAVE to use capfd here (rather than caplog, capsys or even
-    # "with pytest.raises" because the error occurs in another multiprocessing
-    # process and will not be captured)
     script = [sys.executable, '-c', 'pass']
     job = SearchJob(script, '', log_path=None)
     job.start()
     job.wait()
 
-    captured = capfd.readouterr()
-    assert 'psutil.NoSuchProcess' in captured.err
+    assert job.returncode == 0
+    assert job._mp_proc.exitcode == 0

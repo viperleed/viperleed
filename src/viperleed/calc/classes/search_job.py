@@ -103,7 +103,6 @@ def _optional_log_file_path(log_path):
 def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
     """Run the search command in a separate process."""
     with _optional_log_file_path(log_path) as log_f:
-
         try:
             proc = subprocess.Popen(
                 command,
@@ -121,33 +120,24 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
         # send input data to the process
         _send_input_to_process(input_data, return_code, proc)
 
-        # get the process info using psutil
-        try:
-            ps_proc = psutil.Process(proc.pid)
-        except psutil.Error:  # catch all psutil errors
-            # failed to get process info
-            return_code.value = 1
-            raise
-
         # Monitoring loop
         def monitor_process():
             """Monitor the process and check for kill requests."""
             while proc.poll() is None:  # not finished yet
                 if kill_flag.value:
-                    _kill_proc_tree(ps_proc)
-                    return
+                    _kill_proc_tree(proc.pid)
                 time.sleep(1.0)
 
         try:
             monitor_process()
         except KeyboardInterrupt:
             logger.info('Killing process due to Keyboard interrupt.')
-            _kill_proc_tree(ps_proc)
+            _kill_proc_tree(pro.pid)
             return_code.value = 1
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
+            _kill_proc_tree(proc.pid)
             return_code.value = 1
-            _kill_proc_tree(ps_proc)
             raise
 
         # pass the return code back to the main process
@@ -167,8 +157,14 @@ def _send_input_to_process(input_data, return_code, proc):
         raise
 
 
-def _kill_proc_tree(ps_proc):
+def _kill_proc_tree(pid):
     """Kill the given process and all of its children."""
+    try:
+        ps_proc = psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        return  # Process is dead already
+    except psutil.Error:  # catch all psutil errors
+        raise
     for child in ps_proc.children(recursive=True):
         try:
             child.kill()
