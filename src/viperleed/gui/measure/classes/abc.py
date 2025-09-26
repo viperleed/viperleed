@@ -305,14 +305,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             instead.
         match_exactly : bool
             Whether obj_info should be matched exactly.
-        obj_info : SettingsInfo or None, optional
+        obj_info : SettingsInfo, optional
             The additional information that should be used to find
-            appropriate settings. If it is None, subclasses must attempt
-            to determine suitable settings without additional
-            information when searching for default settings via
-            is_matching_default_settings(). When looking for user
-            settings with is_matching_user_settings(), a TypeError will
-            be raised if obj_info is None. Default is None.
+            appropriate settings. This argument is mandatory unless
+            `directory` corresponds to the path containing defaults.
+            If not given or None, subclasses must attempt to determine
+            suitable default settings without additional information
+            via is_matching_default_settings(). Default is None.
 
         Returns
         -------

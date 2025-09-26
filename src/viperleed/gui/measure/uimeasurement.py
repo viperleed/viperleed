@@ -940,6 +940,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._glob['plot'].show()
         self._glob['last_cfg'] = config
 
+    @qtc.pyqtSlot()
     def _on_ready_for_next_measurement(self):
         """Reset controls after a measurement."""
         base.safe_disconnect(self.measurement.devices_disconnected,
@@ -984,7 +985,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         timer = self._timers['start_measurement']
         if not self._measurement_thread.isRunning():
             base.safe_connect(self._measurement_thread.started,
-                              timer.start, type=qtc.Qt.UniqueConnection)
+                              timer.start, type=_UNIQUE)
             self._measurement_thread.start(_TIME_CRITICAL)
         else:
             timer.start()

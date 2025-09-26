@@ -217,7 +217,7 @@ class MeasurementPlot(qtw.QWidget):
 
         for color, quantity in zip(_COLORS, self.plotted_quantities):
             legend_elements.append(
-                Line2D([], [], label=quantity.display_label,
+                Line2D([], [], label=quantity.display_name,
                        color=color(COLOR_FRACTION), linewidth=4)
                 )
         return legend_elements
@@ -383,10 +383,10 @@ class MeasurementPlot(qtw.QWidget):
             return
 
         if self.data_points.is_time_resolved:
-            xlabel = (f"{QuantityInfo.TIMES.display_label} "
+            xlabel = (f"{QuantityInfo.TIMES.display_name} "
                       f"({QuantityInfo.TIMES.units})")
         else:
-            xlabel = (f"{QuantityInfo.ENERGY.display_label} "
+            xlabel = (f"{QuantityInfo.ENERGY.display_name} "
                       f"({QuantityInfo.ENERGY.units})")
         axes.set_xlabel(xlabel)
 
@@ -397,9 +397,9 @@ class MeasurementPlot(qtw.QWidget):
             return
 
         if len(self.plotted_quantities) == 1:
-            yname = self.plotted_quantities[0].display_label
+            yname = self.plotted_quantities[0].display_name
         else:
-            yname = self.plotted_quantities[0].common_label
+            yname = self.plotted_quantities[0].generic_label
         axes.set_ylabel(f"{yname} ({self.plotted_quantities[0].units})")
         axes.legend(handles=self._make_legend(), loc='upper left')
         self._canvas.figure.tight_layout()
@@ -413,18 +413,18 @@ class PlotComboBox(CheckComboBox):
         """Return checked QuantityInfo objects."""
         checked = self.selected_items
         for index, item in enumerate(checked):
-            checked[index] = QuantityInfo.from_display_label(item)
+            checked[index] = QuantityInfo.from_display_name(item)
         return checked
 
     def toggle_checked(self, name):
         """Toggle the checked state of an entry with given name."""
         item = self.model().findItems(name)[0]
         super().toggle_checked(name)
-        quantity = QuantityInfo.from_display_label(name)
+        quantity = QuantityInfo.from_display_name(name)
         if self.is_item_checked(item):
             for i in range(self.count()):
                 label = self.model().item(i, 0).text()
-                other_quantity = QuantityInfo.from_display_label(label)
+                other_quantity = QuantityInfo.from_display_name(label)
 
                 if quantity.units != other_quantity.units:
                     disable = self.model().findItems(label)[0]

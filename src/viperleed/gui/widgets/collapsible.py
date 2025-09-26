@@ -59,13 +59,11 @@ class CollapsibleList(qtw.QScrollArea):
     @property
     def enabled_views(self):
         """Return enabled."""
-        return (view for view in self.views if view.is_enabled())
+        return (view for view in self.views if view.is_enabled)
 
     def clear(self):
         """Clear all views in the list and delete references to them."""
         self._views = {}
-        self._layout = qtw.QVBoxLayout()
-        self._layout.setSpacing(0)
         self._make_scroll_area()
 
     def append_view(self, view):
@@ -121,7 +119,9 @@ class CollapsibleList(qtw.QScrollArea):
 
     def _make_scroll_area(self):
         """Compose QScrollArea."""
+        self._layout = qtw.QVBoxLayout()
         widget = qtw.QWidget(parent=self)
+        self._layout.setSpacing(0)
         self._layout.addStretch(1)
         widget.setLayout(self._layout)
         self.setWidget(widget)
@@ -145,11 +145,24 @@ class CollapsibleView(qtw.QWidget):
         self._frame = qtw.QFrame(parent=self)
         self._bottom_space = qtw.QSpacerItem(1, 1)
         self._compose_and_connect()
+        # The _expanded flag keeps track of whether
+        # the collapsible frame is visible or not.
+        self._expanded = False
 
     @property
     def button(self):
         """Return the main button."""
         return self._button
+
+    @property
+    def is_enabled(self):
+        """Return whether the view is enabled."""
+        return self.button.isEnabled()
+
+    @property
+    def is_expanded(self):
+        """Return whether the view is expanded."""
+        return self._expanded
 
     def add_collapsible_item(self, item):
         """Add `item` to the widgets in the inner collapsible layout.
@@ -212,10 +225,6 @@ class CollapsibleView(qtw.QWidget):
         self.layout().addSpacing(_PIXEL_SPACING)
         self.set_top_widget_geometry(widget, width=width, align=align)
 
-    def is_enabled(self):
-        """Return whether the view is enabled."""
-        return self.button.isEnabled()
-
     @qtc.pyqtSlot(int)
     @qtc.pyqtSlot(bool)
     def set_expanded_state(self, expanded):
@@ -233,6 +242,7 @@ class CollapsibleView(qtw.QWidget):
         None.
         """
         expanded = bool(expanded)
+        self._expanded = expanded
         self.button.setEnabled(expanded)
         self._toggle_expanded_state(expanded)
 
