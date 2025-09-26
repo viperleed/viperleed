@@ -75,7 +75,7 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
             The soft minimum and maximum. While it is not impossible
             to set values below and above these respectively, the input
             will be set to either the minimum and maximum value after
-            editing is finished.
+            editing is finished if it is not within `soft_range`.
         step : int or float, optional
             The increment of the SpinBox value. Default is 1.
         suffix : str, optional
@@ -147,15 +147,22 @@ class CoercingDoubleSpinBox(TolerantCommaSpinBox):
         """Modify value by `steps` increments, coercing to soft limits."""
         _, value, _ = sorted((*self.soft_range,
                               self.value() + steps*self.singleStep()))
-        self.setValue(value)
+        super().setValue(value)
         self.value_coerced.emit(value)
 
     @qtc.pyqtSlot()
     def _coerce_value(self):
         """Check if value is whithin the limits and adjust it if necessary."""
         _, value, _ = sorted((self.value(), *self.soft_range))
-        self.setValue(value)
+        super().setValue(value)
         self.value_coerced.emit(value)
+
+    @qtc.pyqtSlot(float)
+    @qtc.pyqtSlot(int)
+    def setValue(self, value):
+        """Set and coerce values."""
+        super().setValue(value)
+        self._coerce_value()
 
 
 class CoercingSpinBox(CoercingDoubleSpinBox):

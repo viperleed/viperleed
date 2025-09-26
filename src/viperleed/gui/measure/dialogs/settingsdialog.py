@@ -56,9 +56,6 @@ from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 # TODO: context menu to "reset" each entry separately.
 
-# pylint: disable=too-many-lines
-# We can probably live with 1011 instead of 1000
-
 _MSGBOX = qtw.QMessageBox
 
 
@@ -1025,15 +1022,19 @@ class SettingsDialog(qtw.QDialog):
         self._handled_obj = handled_obj
         if handled_obj:
             settings = handled_obj.settings
+
+        # Settings are copied before making widgets
+        # as these may fix unacceptable values.
+        self._settings = {'current': settings,
+                          'applied': copy.deepcopy(settings),
+                          'original': copy.deepcopy(settings)}
+
+        if handled_obj:
             handler = handled_obj.get_settings_handler()
         else:
             handler = SettingsHandler(settings)
             handler.make_from_config()
         self.handler = handler
-
-        self._settings = {'current': settings,
-                          'applied': copy.deepcopy(settings),
-                          'original': copy.deepcopy(settings)}
 
         # Set up children widgets and self
         self._ctrls = {
@@ -1106,14 +1107,17 @@ class SettingsDialog(qtw.QDialog):
         if not event.spontaneous():
             # i.e., not a show after minimized
             self.settings.read_again()
+            # Update all settings with the current ones. This has
+            # to be done before updating widgets as these may fix
+            # unacceptable values.
+            for key in ('applied', 'original'):
+                self._settings[key] = copy.deepcopy(self.settings)
             self.handler.update_widgets()
             self.adv_button.setChecked(False)
             if self.handled_object:
                 self.update_title()
-            # Update all settings with the current ones, and
-            # fix the enabled state of the "Apply" button
-            for key in ('applied', 'original'):
-                self._settings[key] = copy.deepcopy(self.settings)
+            # Fix the enabled state of the "Apply" button
+            # since settings have been reloaded above.
             self.__update_apply_enabled()
         super().showEvent(event)
 

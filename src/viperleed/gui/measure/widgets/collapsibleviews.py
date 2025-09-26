@@ -51,7 +51,6 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         self._device_cls = None
         self._device_info = None
         self._handler = None
-        self._expanded = False
         self._original_settings = None
         super().__init__(parent=parent)
 
@@ -109,8 +108,13 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         -------
         None.
         """
+        # Setting self._expanded is necessary here, as it is used in
+        # self._try_fetching_handler. It is also set at the beginning of
+        # super().set_expanded_state, but calling this method before
+        # self._try_fetching_handler will fail to display a device
+        # settings handler.
         self._expanded = bool(expanded)
-        if not self._expanded:
+        if not self.is_expanded:
             self._remove_handler()
         else:
             self._try_fetching_handler()
@@ -238,7 +242,9 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
         _can_make_device. If it can, then it must make_device and
         _make_handler_for_device. When the device has been connected,
         it must _update_widgets_from_device_settings and disconnect
-        the device afterwards.
+        the device afterwards. Getting the settings handler may
+        happen asynchronously. This method should only initiate the
+        process of getting the settings handler.
 
         Returns
         -------
@@ -303,21 +309,23 @@ class CollapsibleDeviceView(CollapsibleView, metaclass=QMetaABC):
     @qtc.pyqtSlot(int)
     def _try_fetching_handler(self):
         """Check if creating a handler is possible."""
-        enabled = self._expanded and self._settings_file_selector.isEnabled()
+        enabled = self.is_expanded and self._settings_file_selector.isEnabled()
         if enabled:
             # Always fetch a settings handler for visible devices
             try:
                 self._get_settings_handler()
             except NoSettingsError:
                 self._on_settings_folder_changed()
-                pass
         elif not self.has_hardware_interface:
             # Devices without a hardware interface are not enabled, as
             # they lack the ability to select a settings file, but they
             # are allowed to create a settings handler in order to
             # display the settings with which a previous measurement
             # was performed.
-            self._get_settings_handler()
+            try:
+                self._get_settings_handler()
+            except NoSettingsError:
+                self._on_settings_folder_changed()
         else:
             # Disabled devices with a hardware interface were detected
             # but not selected by the user. We will fetch a handler in
@@ -347,8 +355,8 @@ class CollapsibleCameraView(CollapsibleDeviceView):
     def _get_settings_handler(self):
         """Get the settings handler of the handled camera.
 
-        Get and update settings handler widgets and
-        populate the collapsible view with them.
+        Get and update settings handler widgets and populate the
+        collapsible view with them.
 
         Returns
         -------
@@ -382,9 +390,21 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         -------
         None.
         """
+        # The loading_measurement_settings flag is used to block
+        # the settings_changed signal when loading settings.
         self.loading_measurement_settings = False
+        # The _is_primary flag is used to track whether
+        # additional settings, required by the primary
+        # controller, should be loaded.
         self._is_primary = False
+        # The _trying_to_get_settings flag is used to track
+        # whether the view is currently in the process of
+        # getting settings from a controller.
         self._trying_to_get_settings = False
+        # The _primary_changed flag is used to track whether the
+        # view is currently in the process of getting settings from
+        # a primary controller. It is necessary to remember which
+        # controller was the primary controller.
         self._primary_changed = False
         self._quantity_selector = None
         self._quantities_to_set = ()
