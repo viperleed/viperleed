@@ -36,8 +36,16 @@ _ALIASES = {
     'Cold_Junction': ('cold_junction',),
     'Timestamps': ('timestamps',),
     }
-_Q = namedtuple('Quantity', ['units', 'scale', 'dtype', 'label', 'axis',
-                            'common_label', 'tooltip', 'description'])
+_Q = namedtuple('Quantity', [
+    'units',
+    'scale',
+    'dtype',
+    'label',
+    'axis',
+    'generic_label',
+    'display_name',
+    'description',
+    ])
 
 
 NAN = float('nan')
@@ -56,55 +64,56 @@ class DataErrors(ViPErLEEDErrorEnum):
                               'Consider increasing energy_step_duration.')
 
 
-class QuantityInfo(enum.Enum):
+class QuantityInfo(_Q, enum.Enum):
     """Measurement quantities with unit, scaling, type, name, etc.
 
     New measurement quantities have to be added here.
     """
 
-    IMAGES = _Q('Number', None, str, 'Images', None, None, 'Images', '')
-    ENERGY = _Q('eV', 'lin', float, 'Energy', 'x', None, 'Energy',
-                'The nominal value of the primary electron energy')
-    HV = _Q('eV', 'lin', float, 'Measured_Energy',
-            'y', 'Voltage', 'Beam energy',
-            '<nobr>The actual value of the primary electron energy'
-            '</nobr> measured on the LEED optics at high voltage')
-    TIMES = _Q('s', 'lin', float, 'Times', 'x', None, 'Time','')
-    I0 = _Q('µA', 'lin', float, 'I0', 'y', 'Current', 'I\u2080',
-            '<nobr>The total electron current emitted by the '
-            'electron gun,</nobr> measured on the LEED optics')
-    ISAMPLE = _Q('µA', 'lin', float, 'I_Sample', 'y', 'Current',
-                 'I\u209b\u2090\u2098\u209a\u2097\u2091',
-                 '<nobr>The total electron current emitted by the electron '
-                 'gun,</nobr> measured by biasing the sample to +33 V via the '
-                 'I<sub>target</sub> BNC connector. This is an alternative to '
-                 'I\u2080 in case your LEED optics does not provide an I\u2080'
-                 ' output. LEED-IV videos should not be acquired at the same '
-                 'time to avoid electric-field-induced distortions')
-    TEMPERATURE = _Q('°C', 'lin', float, 'Temperature', 'y', 'Temperature',
-                     'Temperature', '')
-    AUX = _Q('mV', 'lin', float, 'Aux', 'y', 'Aux', 'Aux', '')
-    COLD_JUNCTION = _Q('°C', 'lin', float, 'Cold_Junction', 'y',
-                       'Temperature', 'Cold-junction temperature',
-                       'Reference temperature measured internally in the '
-                       'ViPErLEED unit to convert the measured thermocouple '
-                       'voltage to a temperature')
-    TIMESTAMPS = _Q('s', None, str, 'Timestamp', None, None, 'Timestamp','')
-    UNKNOWN = _Q('', None, str, '??', None, None, '', '')
+    IMAGES = ('Number', None, str, 'Images', None, None, 'Images', '')
+    ENERGY = ('eV', 'lin', float, 'Energy', 'x', None, 'Energy',
+              'The nominal value of the primary electron energy')
+    HV = ('eV', 'lin', float, 'Measured_Energy',
+          'y', 'Voltage', 'Beam energy',
+          '<nobr>The actual value of the primary electron energy'
+          '</nobr> measured on the LEED optics at high voltage')
+    TIMES = ('s', 'lin', float, 'Times', 'x', None, 'Time','')
+    I0 = ('µA', 'lin', float, 'I0', 'y', 'Current', 'I\u2080',
+          '<nobr>The total electron current emitted by the '
+          'electron gun,</nobr> measured on the LEED optics')
+    ISAMPLE = ('µA', 'lin', float, 'I_Sample', 'y', 'Current',
+               'I\u209b\u2090\u2098\u209a\u2097\u2091',
+               '<nobr>The total electron current emitted by the electron '
+               'gun,</nobr> measured by biasing the sample to +33 V via the '
+               'I<sub>sample</sub> BNC connector. This is an alternative to '
+               'I\u2080 in case your LEED optics does not provide an I\u2080'
+               ' output. LEED-IV videos should not be acquired at the same '
+               'time to avoid electric-field-induced distortions')
+    TEMPERATURE = ('°C', 'lin', float, 'Temperature',
+                   'y', 'Temperature', 'Temperature',
+                   'The temperature measured on the thermocouple.')
+    AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux', 'Aux', '')
+    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y',
+                     'Temperature', 'Cold-junction temperature',
+                     'Reference temperature measured internally in the '
+                     'ViPErLEED unit to convert the measured thermocouple '
+                     'voltage to a temperature')
+    TIMESTAMPS = ('s', None, str, 'Timestamp', None, None, 'Timestamp','')
+    UNKNOWN = ('', None, str, '??', None, None, '', '')
 
     @classmethod
-    def from_display_label(cls, label):
-        """Return the QuantityInfo member associated with display_label.
+    def from_display_name(cls, label):
+        """Return the QuantityInfo member associated with display_name.
 
         Parameters
         ----------
         label : str
-            The display_label to search for.
+            The display_name to search for.
 
         Returns
         -------
         member : QuantityInfo
-            The member of QuantityInfo associated to display_label.
+            The member of QuantityInfo associated to display_name.
 
         Raises
         ------
@@ -115,9 +124,9 @@ class QuantityInfo(enum.Enum):
         """
         if not isinstance(label, str):
             raise TypeError(f'Unexpected type {type(label).__name__} for '
-                            'QuantityInfo.from_display_label. Expected str.')
+                            'QuantityInfo.from_display_name. Expected str.')
         try:
-            return cls.get_display_labels()[label]
+            return cls.get_display_names()[label]
         except KeyError as exc:
             raise ValueError(f'{cls.__name__}: {label!r} unknown') from exc
 
@@ -175,67 +184,17 @@ class QuantityInfo(enum.Enum):
             Each element is the label of the QuantityInfo(s)
             whose .axis is equal to axis.
         """
-        return [q.display_label for q in cls if q.axis == axis]
+        return [q.display_name for q in cls if q.axis == axis]
 
     @classmethod
-    def get_display_labels(cls):
-        """Return a dict {display_label: enum} of all members."""
-        return {q.display_label: q for q in cls}
+    def get_display_names(cls):
+        """Return a dict {display_name: enum} of all members."""
+        return {q.display_name: q for q in cls}
 
     @classmethod
     def get_labels(cls):
         """Return a dict {label: enum} of all members of QuantityInfo."""
         return {l.label: l for l in cls}
-
-    @property
-    def axis(self):
-        """Return the default axis on which self is plotted.
-
-        Typically, only TIMES and ENERGY are used as
-        abscissae ('x'), while all the other quantities
-        are represented as ordinates ('y').
-
-        Returns
-        -------
-        axis : {'x', 'y'}
-            The default plot axis for this quantity.
-        """
-        return self.value[4]
-
-    @property
-    def common_label(self):                                                     # TODO: rename generic_label? denomination?
-        """Return the generic name of self (e.g., 'Current', 'Voltage')."""
-        return self.value[5]
-
-    @property
-    def display_label(self):
-        """Return a label for display.."""
-        return self.value[6]
-
-    @property
-    def dtype(self):
-        """Return the data type of self as a callable (e.g., float)."""
-        return self.value[2]
-
-    @property
-    def description(self):
-        """Return a descriptive text for this quantity."""
-        return self.value[7]
-
-    @property
-    def label(self):
-        """Return the unique label of self as a str (e.g., 'Energy')."""
-        return self.value[3]
-
-    @property
-    def plot_scale(self):
-        """Return the default plotting scale ('lin', 'log') for self."""
-        return self.value[1]
-
-    @property
-    def units(self):
-        """Return the units of measure for self as a string."""
-        return self.value[0]
 
 
 # _EXCEPTIONAL contains quantities that are treated differently

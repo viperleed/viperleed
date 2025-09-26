@@ -144,7 +144,7 @@ class QuantitySelector(qtw.QGroupBox):
                 btn_layout = qtw.QHBoxLayout()
                 button = qtw.QCheckBox()
                 group.addButton(button)
-                button.setText(quantity.display_label)
+                button.setText(quantity.display_name)
                 btn_layout.addWidget(button)
                 tip = quantity.description
                 btn_layout.addWidget(FieldInfo.for_widget(button, tooltip=tip))
