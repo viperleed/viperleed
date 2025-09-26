@@ -21,10 +21,10 @@ import sys
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.base import get_qsettings
 from viperleed.gui.dialogs.dropdowndialog import DropdownDialog
 from viperleed.gui.dialogs.errors import DialogDismissedError
 from viperleed.gui.measure.classes.settings import NoSettingsError
+from viperleed.gui.qsettings import get_qsettings
 
 
 ################################## FUNCTIONS ##################################
@@ -246,7 +246,7 @@ def get_default_path():
     """Return the path to default settings."""
     # The path is detected at runtime and not set as a global variable
     # to catch any changes that may occur to the path in runtime.
-    return Path(get_qsettings('Measurement').fileName()).parent.resolve()
+    return Path(get_qsettings('Measurement').fileName()).resolve().parent
 
 
 def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):

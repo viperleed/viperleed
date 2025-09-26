@@ -33,9 +33,9 @@ import sys
 
 from wrapt import synchronized  # thread-safety decorator
 
-from viperleed.gui.base import get_qsettings
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.widgets.pathselector import PathSelector
+from viperleed.gui.qsettings import get_qsettings
 
 
 def ensure_aliases_exist():
@@ -948,23 +948,23 @@ class SystemSettings(ViPErLEEDSettings):
         self.read(
             Path(__file__).parent.parent / '_defaults' / '_system_settings.ini'
             )
-        # Load in user settings.
-        keys_to_paths = ('configuration', 'measurements',
-                         'arduino_cli', 'firmware')
-        temp_dict = defaultdict(dict)
-        for keys in self._sys_qsettings.allKeys():
-            try:
-                key1, key2 = keys.split('/')
-            except ValueError:
-                key1 = 'DEFAULT' if keys not in keys_to_paths else 'PATHS'
-                key2 = keys
-            temp_dict[key1][key2] = self._sys_qsettings.value(keys)
-        self.read_dict(temp_dict)
+
+        # Pull in all sections. Skip "bare" options without
+        # a section as ConfigParser cannot handle them.
+        for q_section in self._sys_qsettings.childGroups():
+            self._sys_qsettings.beginGroup(q_section)
+            for q_option in self._sys_qsettings.childKeys():
+                self[q_section][q_option] = self._sys_qsettings.value(q_option)
+            self._sys_qsettings.endGroup()
+
         # Ensure there is a settings file.
         if not self._sys_qsettings.allKeys():
-            self._sys_qsettings.setValue('PATHS/configuration', '')
-            self._sys_qsettings.sync()
+            Path(self._sys_qsettings.fileName()).resolve().touch()
 
         # Set correct path to settings file.
         self._last_file = Path(self._sys_qsettings.fileName()).resolve()
         self.base_dir = self._last_file.parent
+        # We update the file here to ensure that the settings are
+        # populated with the keys from _system_settings.ini in
+        # case the settings file was freshly created.
+        self.update_file()

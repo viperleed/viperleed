@@ -22,6 +22,7 @@ __license__ = 'GPLv3+'
 
 from abc import ABCMeta
 from abc import abstractmethod
+import configparser
 from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
@@ -336,7 +337,10 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         is_matching = (cls.is_matching_default_settings if default
                        else cls.is_matching_user_settings)
         for settings_file in settings_files:
-            config = ViPErLEEDSettings.from_settings(settings_file)
+            try:
+                config = ViPErLEEDSettings.from_settings(settings_file)
+            except configparser.MissingSectionHeaderError:
+                continue
             if not cls.is_settings_for_this_class(config):
                 continue
             score = is_matching(obj_info, config, match_exactly)
