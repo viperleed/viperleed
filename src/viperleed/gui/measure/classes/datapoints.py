@@ -37,14 +37,14 @@ _ALIASES = {
     'Timestamps': ('timestamps',),
     }
 _Q = namedtuple('Quantity', [
-    'units',
-    'scale',
-    'dtype',
-    'label',
-    'axis',
-    'generic_label',
-    'display_name',
-    'description',
+    'units',            # The units of measure for self as a string.
+    'scale',            # The default plotting scale ('lin', 'log') for self.
+    'dtype',            # The data type of self as a callable (e.g., float).
+    'label',            # The unique label of self (e.g., 'Energy').
+    'axis',             # The default axis on which self is plotted ('x', 'y').
+    'generic_label',    # The generic name of self (e.g., 'Current').
+    'display_name',     # A label of self for display. (Can contain unicode.)
+    'description',      # A descriptive text for self.
     ])
 
 
