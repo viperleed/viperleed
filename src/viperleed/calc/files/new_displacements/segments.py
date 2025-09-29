@@ -37,7 +37,7 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
         """Register known search segments."""
         cls._subclasses.add(cls)
 
-    def __init__(self, header_line):  # subclasses may use the varargs
+    def __init__(self, header_line):
         """Initialize instance."""
         self._header = header_line
         self._lines = []
@@ -185,7 +185,6 @@ class SearchBlock(DisplacementsSegmentABC):
         super().__init__(header_line)
         self.label = header_line.label
         self.parent = None  # Parent can be set later if needed
-        # self.sections = {s: [] for s in DISPLACEMENTS_FILE_SECTION}
 
     @staticmethod
     def is_my_header_line(line):

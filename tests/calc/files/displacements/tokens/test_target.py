@@ -59,14 +59,13 @@ def test_parse_valid_targets(
         # wrongly formatted layer
     ])
 def test_invalid_target_raises(raw):
-    with pytest.raises(TargetingError) as exc:
+    with pytest.raises(TargetingError):
         TargetToken(raw)
 
 
 def test_empty_string_raises():
-    with pytest.raises(TargetingError) as exc:
+    with pytest.raises(TargetingError, match='Target string is empty') as exc:
         TargetToken('')
-    assert 'Target string is empty' in str(exc.value)
 
 
 def test_repr():
@@ -87,7 +86,7 @@ def test_eq_same_and_different():
     d = TargetToken('B 1-2')
     assert a != d
     # comparing to different type
-    assert not (a == 'A 1-2')
+    assert a != 'A 1-2'
 
 
 def test_eq_layer_specifier():
