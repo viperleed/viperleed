@@ -566,6 +566,10 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         time with a very high frame count. The overall measurement for
         burst noise detection alone should not take less than ten
         minutes.
+
+        Returns
+        -------
+        None.
         """
         flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].range_
         flicker_mean = flicker.mean()
