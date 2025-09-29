@@ -9,6 +9,7 @@ access to system settings.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2022-02-16'
@@ -32,14 +33,7 @@ from wrapt import synchronized  # thread-safety decorator
 
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.widgets.pathselector import PathSelector
-
-
-# TODO: not nice. Also, there's two places where the _defaults
-# path is used. Here and in hardwarebase. However, due to circular
-# imports I cannot use either for the other one. Probably better
-# to move the path in __init__?
-_MEASURE_PATH = Path(__file__).parent.parent
-SYSTEM_CONFIG_PATH = _MEASURE_PATH / "_defaults" / "_system_settings.ini"
+from viperleed.gui.qsettings import get_qsettings
 
 
 def interpolate_config_path(filenames):
@@ -56,13 +50,7 @@ def interpolate_config_path(filenames):
         File names to be interpolated. The interpolation is
         done in-place.
     """
-    # NB: the next lines should NOT use SystemSettings, as
-    # interpolate_config_path is used in ViPErLEEDSettings,
-    # the ancestor of SystemSettings. This leads to infinite
-    # recursion.
-    cfg = ConfigParser()
-    cfg.read(SYSTEM_CONFIG_PATH)
-    _sys_path = cfg.get('PATHS', 'configuration', fallback=None)
+    _sys_path = get_qsettings('Measurement').value('PATHS/configuration')
     if not _sys_path:
         return
 
@@ -142,7 +130,7 @@ class ViPErLEEDSettings(ConfigParser):
         kwargs["empty_lines_in_values"] = False
         kwargs["strict"] = True
 
-        self.__interpolate_paths = kwargs.pop("interpolate_paths", True)
+        self._interpolate_paths = kwargs.pop("interpolate_paths", True)
         super().__init__(*args, **kwargs)
 
         self.__comments = defaultdict(list)
@@ -153,7 +141,7 @@ class ViPErLEEDSettings(ConfigParser):
         # the config file. __base_dir should be set from the outside
         # using the .base_dir property to the "<path/to/archive.zip>"
         # when the content of the config was read from an archive.
-        self.__last_file = ""
+        self._last_file = ""
         self.__base_dir = ""
 
     def __str__(self):
@@ -222,7 +210,7 @@ class ViPErLEEDSettings(ConfigParser):
     @property
     def last_file(self):
         """Return the path to the last file read."""
-        return self.__last_file
+        return self._last_file
 
     def as_dict(self):
         """Return a dictionary version of self."""
@@ -335,13 +323,13 @@ class ViPErLEEDSettings(ConfigParser):
         """
         if isinstance(filenames, (str, bytes, os.PathLike)):
             filenames = [filenames]
-        if self.__interpolate_paths:
+        if self._interpolate_paths:
             interpolate_config_path(filenames)
 
         read_ok = super().read(filenames, encoding=encoding)
         if read_ok:
-            self.__last_file = Path(read_ok[-1]).resolve()
-            self.base_dir = self.__last_file.parent
+            self._last_file = Path(read_ok[-1]).resolve()
+            self.base_dir = self._last_file.parent
 
         if len(read_ok) != len(filenames):
             # Need to run through again, as super().read
@@ -378,16 +366,16 @@ class ViPErLEEDSettings(ConfigParser):
             pass
 
         if fname:
-            self.__last_file = Path(fname).resolve()
-            self.base_dir = self.__last_file.parent
+            self._last_file = Path(fname).resolve()
+            self.base_dir = self._last_file.parent
         super().read_file(f, source)
 
     def update_file(self):
         """Update the last file read with the data in self."""
-        if not self.__last_file:
+        if not self._last_file:
             raise RuntimeError(f"{self.__class__.__name__}: no known "
                                "last file read to be updated.")
-        with open(self.__last_file, 'w', encoding='utf-8') as fproxy:
+        with open(self._last_file, 'w', encoding='utf-8') as fproxy:
             self.write(fproxy)
 
     def write(self, fp, space_around_delimiters=True):
@@ -412,11 +400,11 @@ class ViPErLEEDSettings(ConfigParser):
 
         # And store this file's name
         try:
-            self.__last_file = Path(fp.name).resolve()
+            self._last_file = Path(fp.name).resolve()
         except AttributeError:
             pass
         else:
-            self.base_dir = self.__last_file.parent
+            self.base_dir = self._last_file.parent
 
         super().write(fp, space_around_delimiters)
 
@@ -616,8 +604,9 @@ class SystemSettings(ViPErLEEDSettings):
         super().__init__(*args, **kwargs)
         self.__handler = None
 
-        self.read(SYSTEM_CONFIG_PATH)
-        self.__check_mandatory_settings()
+        self._sys_qsettings = get_qsettings('Measurement')
+        self._read_sys_settings()
+        self._check_mandatory_settings()
 
     @property
     def paths(self):
@@ -680,7 +669,7 @@ class SystemSettings(ViPErLEEDSettings):
 
         return self.__handler
 
-    def __check_mandatory_settings(self):
+    def _check_mandatory_settings(self):
         """Check, and possibly add missing settings.
 
         Missing, non-null settings are added as empty strings.
@@ -702,17 +691,40 @@ class SystemSettings(ViPErLEEDSettings):
 
         if invalid:
             # ...and save changes
-            if self.last_file:
-                self.update_file()
-            else:
-                # We even do not have a system settings file
-                self.write(SYSTEM_CONFIG_PATH)
+            self.update_file()
 
         # Now check all those that must be there
         missing = self.has_settings(*self.__mandatory)
         if missing:
             raise RuntimeError(
-                f"System settings file at {SYSTEM_CONFIG_PATH} is "
-                "missing the following mandatory sections/options: "
+                f"System settings file at {self._sys_qsettings.fileName()} "
+                "is missing the following mandatory sections/options: "
                 "; ".join(missing)
                 )
+
+    def _read_sys_settings(self):
+        """Read the system settings."""
+        # Pre-populate settings with keys from default system settings.
+        self.read(
+            Path(__file__).parent.parent / '_defaults' / '_system_settings.ini'
+            )
+
+        # Pull in all sections. Skip "bare" options without
+        # a section as ConfigParser cannot handle them.
+        for q_section in self._sys_qsettings.childGroups():
+            self._sys_qsettings.beginGroup(q_section)
+            for q_option in self._sys_qsettings.childKeys():
+                self[q_section][q_option] = self._sys_qsettings.value(q_option)
+            self._sys_qsettings.endGroup()
+
+        # Ensure there is a settings file.
+        if not self._sys_qsettings.allKeys():
+            Path(self._sys_qsettings.fileName()).resolve().touch()
+
+        # Set correct path to settings file.
+        self._last_file = Path(self._sys_qsettings.fileName()).resolve()
+        self.base_dir = self._last_file.parent
+        # We update the file here to ensure that the settings are
+        # populated with the keys from _system_settings.ini in
+        # case the settings file was freshly created.
+        self.update_file()
