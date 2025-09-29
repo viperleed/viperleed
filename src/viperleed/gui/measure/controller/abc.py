@@ -747,7 +747,7 @@ class ControllerABC(DeviceABC):
         handler.add_section('measurement_settings',
                             tags=SettingsTag.MEASUREMENT,
                             display_name='Measurement Configuration')
-        _i0 = QuantityInfo.I0.display_label
+        _i0 = QuantityInfo.I0.display_name
         info = (
             ('i0_settle_time', f'{_i0} settle time',
              f'<nobr>The time interval required for the {_i0} current'
@@ -791,7 +791,7 @@ class ControllerABC(DeviceABC):
         within a SettingsInfo must be enough to determine a suitable
         settings file for the device from it. Subclasses should raise a
         DefaultSettingsError if they fail to create instances from the
-        settings in the DEFAULTS_PATH.
+        default settings.
 
         Returns
         -------
