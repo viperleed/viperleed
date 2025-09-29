@@ -222,8 +222,8 @@ class AliasConfigParser(ConfigParser):
                 continue
             self.add_section(section)
 
-    def _get_aliases(self, section, option):
-        """Get aliases for a section/option pair.
+    def _iter_aliases(self, section, option):
+        """Yield aliases for a section/option pair.
 
         Parameters
         ----------
@@ -232,16 +232,16 @@ class AliasConfigParser(ConfigParser):
         option : str
             The option key.
 
-        Returns
-        -------
-        aliases : list
-            A list of section/option pairs.
+        Yields
+        ------
+        alias : tuple
+            Names of old section/option corresponding to the ones given.
         """
         try:
             aliases = self._aliases[f'{section}/{option}']
         except KeyError:
-            return []
-        return [alias.split('/') for alias in aliases]
+            return
+        yield from (alias.split('/') for alias in aliases)
 
     def _get_from_alias(self, section, option, fallback, raw=False, vars=None):
         """Get an alias option value for a given section.
