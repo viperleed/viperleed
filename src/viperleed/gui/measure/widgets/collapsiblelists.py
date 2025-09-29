@@ -230,7 +230,7 @@ class CollapsibleDeviceList(CollapsibleList):
         Create the top refresh button, force the QScrollArea to take a
         certain size, and set the top labels. This method must only be
         called after a call to self.clear(). Otherwise the QScrollArea
-        would be populated with dublicate child widgets.
+        would be populated with duplicate children widgets.
 
         Returns
         -------
