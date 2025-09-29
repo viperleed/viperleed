@@ -210,8 +210,8 @@ class AliasConfigParser(ConfigParser):
 
         Parameters
         ----------
-        new_sections : list
-            A list of sections to add.
+        new_sections : Iterable of str
+            An iterable of sections to add.
 
         Returns
         -------
