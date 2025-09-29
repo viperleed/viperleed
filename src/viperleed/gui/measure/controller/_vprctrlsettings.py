@@ -27,12 +27,15 @@ from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.classes import thermocouple
 from viperleed.gui.measure.dialogs.settingsdialog import (
-    FieldInfo,
     SettingsDialogSectionBase,
+    SettingsTag,
     )
-from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDHardwareError
 from viperleed.gui.measure.serial.viperleedserial import ExtraSerialErrors
-from viperleed.gui.measure.widgets.spinboxes import TolerantCommaSpinBox
+from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDHardwareError
+from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
+from viperleed.gui.measure.widgets.fieldinfo import InfoLabel
+from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 from viperleed.gui.widgets.lib import change_control_text_color
 from viperleed.gui.widgets.lib import move_to_front
 
@@ -45,6 +48,11 @@ _NOT_SET = "** NOT SET **"
 _UNKNOWN = QuantityInfo.UNKNOWN
 _UNIQUE = qtc.Qt.UniqueConnection
 _QMSG = qtw.QMessageBox
+
+# TODO: the next one will need to be fixed when we
+# move the hardware code to a different repository!
+_SCHEMATICS_ROOT = Path(resources_path('../../hardware/schematics'))            # Issue #372
+_SWITCH_JUMPERS_PDF = _SCHEMATICS_ROOT / 'viperLEED_HW_v8 - jumpers.pdf'
 
 
 class FWVersionViewer(qtw.QLabel):
@@ -91,6 +99,304 @@ class FWVersionViewer(qtw.QLabel):
         self.setToolTip(tip_txt)
 
 
+class HardwareConfigurationEditor(SettingsDialogSectionBase):
+    """Class for viewing and setting ADC inputs.
+
+    Provides one line per each ADC present, one entry per each channel.
+    When the user clicks on an editable quantity, a dialog pops up.
+    Editable quantities are those for which one can potentially select
+    a gain factor or a calibration curve. If a channel can only measure
+    a single non-editable quantity, user interaction with it is disabled.
+
+    This widget should be used as a special section of a settings
+    dialog, as it internally handles all the relevant values stored
+    in the configuration file.
+    """
+
+    def __init__(self, controller=None, **kwargs):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        controller : ViPErinoController
+            The controller whose hardware configuration
+            settings are managed.
+        **kwargs : dict
+            Optional arguments passed on to SettingsDialogSectionBase
+
+        Returns
+        -------
+        None.
+        """
+        self.__ctrl = controller
+
+        # Modify arguments for the following super() call
+        kwargs['display_name'] = "Hardware configuration"
+        kwargs['tags'] = SettingsTag.ADVANCED
+        kwargs['tooltip'] = (
+            "This section lists what each hardware channel "
+            "is capable of measuring. Quantities appearing "
+            "on the same line cannot be measured simultaneously."
+            )
+        super().__init__(**kwargs)
+
+        # Set up some static children widgets
+        self.__no_power_warning = qtw.QWidget()
+        self.__try_again = qtw.QPushButton("Retry")
+        self.__hw_info = qtw.QWidget()  # just a container
+        self.__adcs = []  # Will be a list of {channel: combo}
+
+        self.__dialogs = {
+            QuantityInfo.I0: _I0EditDialog(self.__ctrl),
+            QuantityInfo.AUX: _AUXEditDialog(self.__ctrl),
+            QuantityInfo.TEMPERATURE: _TemperatureEditDialog(self.__ctrl),
+            }
+
+        self.__compose_static_children()
+        self.__connect()
+
+        # QueuedConnection prevents serial port not open errors
+        self.__ctrl.error_occurred.connect(self.__on_ctrl_error,
+                                           type=qtc.Qt.QueuedConnection)
+
+    @property
+    def hardware_info(self):
+        """Return a dictionary of information suitable for a settings file."""
+        info = {}
+        devices = []
+        for adc in self.__adcs:
+            devices.append(())
+            for channel, combo in adc.items():
+                quantity = combo.current_quantity
+                if quantity is _UNKNOWN:
+                    continue
+                info[quantity.label] = str(channel)
+                devices[-1] += (quantity.label,)
+
+        with self.__ctrl.lock:
+            if self.__ctrl.hardware['lm35']:
+                cjc = QuantityInfo.COLD_JUNCTION.label
+                devices.append((cjc,))
+                info[cjc] = '0'  # unused anyway
+
+        info['measurement_devices'] = str(tuple(devices))
+        return info
+
+    @qtc.pyqtSlot()
+    def update_widgets(self):
+        """Place children widgets."""
+        with self.__ctrl.lock:
+            detected_adcs = [k for k, present in self.__ctrl.hardware.items()
+                             if 'adc' in k and present]
+        has_power = any(detected_adcs)
+        if has_power:
+            self.__show_adcs(detected_adcs)
+
+        self.__no_power_warning.setVisible(not has_power)
+        self._info.setVisible(has_power)
+        self.__hw_info.setVisible(has_power)
+        self.__connect()
+        self.adjustSize()
+        self.updated.emit()
+
+    def __clear_hw_info(self):
+        """Remove all widgets from __hw_info."""
+        layout = self.__hw_info.layout()
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+    def __compose_static_children(self):
+        """Set up some static children that are shown under some conditions."""
+        lay = qtw.QHBoxLayout()
+        _label = qtw.QLabel("No hardware information. Power\n"
+                            "supply may be disconnected.")
+        _policy = _label.sizePolicy()
+        _label.setSizePolicy(_policy.Fixed, _policy.Preferred)
+        lay.addWidget(_label)
+        lay.addWidget(self.__try_again)
+        lay.setContentsMargins(0, 0, 0, 0)
+        self.__no_power_warning.setLayout(lay)
+
+        self.__hw_info.setLayout(qtw.QGridLayout())
+        self.__hw_info.layout().setContentsMargins(0, 0, 0, 0)
+        self.__hw_info.layout().setSizeConstraint(lay.SetMinimumSize)
+        self.__hw_info.setSizePolicy(_policy.Minimum, _policy.Minimum)
+
+        # Now layout of the central widget: just a box. Only one
+        # of its contents will ever be shown at a time
+        central_layout = qtw.QHBoxLayout()
+        central_layout.addWidget(self.__no_power_warning)
+        central_layout.addWidget(self.__hw_info)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.setSizeConstraint(lay.SetMinimumSize)
+        self.central_widget.setLayout(central_layout)
+
+        self.__try_again.clicked.connect(self.__ctrl.get_hardware)
+        self.__ctrl.hardware_info_arrived.connect(self.update_widgets)
+
+    def __connect(self):
+        """Connect (only once) relevant signals and slots."""
+        _connect = base.safe_connect
+        for dialog in self.__dialogs.values():
+            try:
+                _connect(self.window().finished, dialog.reject, type=_UNIQUE)
+            except AttributeError:
+                pass
+            _connect(dialog.settings_changed, self.settings_changed,
+                     type=_UNIQUE)
+            _connect(dialog.accepted, self.__on_settings_changed, type=_UNIQUE)
+
+    def __get_quantity_combo(self, quantity):
+        """Return an _ADCChannelCombo for a quantity."""
+        combo = _ADCChannelCombo(ctrl=self.__ctrl)
+        combo.add_quantity(quantity)
+        combo.current_quantity = quantity
+        combo.quantity_selected.connect(self.__on_quantity_selected)
+
+        for i in range(combo.count()):
+            dialog = self.__dialogs.get(combo.itemData(i), None)
+            if dialog:
+                dialog.settings_changed.connect(combo.update_items)
+        return combo
+
+    @qtc.pyqtSlot(tuple)
+    def __on_ctrl_error(self, error_info):
+        """React to to controller errors."""
+        # pylint: disable=confusing-consecutive-elif
+        # This is triggered by the inner "if reply ==" in the first
+        # case. This would be an ideal use case for a switch, but
+        # we want to maintain compatibility with Win7, i.e., py<=3.8
+        *_, err_msg = error_info
+        if error_info is ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED:
+            # No power. Suggest to try again.
+            reply = _QMSG.warning(self, "No hardware info", err_msg,
+                                  _QMSG.Retry | _QMSG.Ignore)
+            if reply == _QMSG.Retry:
+                self.__try_again.click()
+        elif error_info is ViPErLEEDHardwareError.ADC_POWER_FAULT:
+            # Info about available ADCs is inconsistent. Probably
+            # something is wrong with the hardware itself.
+            self.__on_hardware_fault(err_msg)
+        elif error_info is ExtraSerialErrors.PORT_NOT_OPEN:
+            _QMSG.critical(
+                self, "Device lost",
+                err_msg + "\n\nThe port may be in use or disconnected.",
+                _QMSG.Ok
+                )
+            self.window().close()
+
+    def __on_hardware_fault(self, err_msg):
+        """React to a hardware problem."""
+        msg = _QMSG(_QMSG.Critical, "Hardware Fault", err_msg,
+                    _QMSG.Ok, self)
+        if self.__ctrl.firmware_version >= 1.0:
+            # Only for public releases of ViPErLEED!
+            # TODO: Is there a decent way to pick the file name?
+            _path = (
+                _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - basic_configuration.pdf'
+                ).resolve()
+            show_schem = msg.addButton("Open schematics...", _QMSG.ActionRole)
+            show_schem.disconnect()  # Box stays open when clicked
+            show_schem.clicked.connect(functools.partial(
+                qtg.QDesktopServices.openUrl,
+                qtc.QUrl.fromLocalFile(str(_path))
+                ))
+        msg.exec_()
+        self.window().close()
+
+    def __on_quantity_selected(self, quantity):
+        """Show a dialog for editing a measurable quantity."""
+        this_combo = self.sender()
+        previous_quantity = this_combo.previous_quantity
+        dialog = self.__dialogs.get(quantity, None)
+        if dialog:
+            move_to_front(dialog)
+        if previous_quantity is quantity:
+            return
+
+        if not dialog:
+            self.__on_settings_changed()
+
+        for combo in (c for adc in self.__adcs for c in adc.values()):
+            combo.enable_quantity(previous_quantity)
+            if combo is not this_combo and quantity is not _UNKNOWN:
+                combo.enable_quantity(quantity, False)
+
+    def __on_settings_changed(self):
+        """React to a change of settings in one of the dialogs."""
+        # Update settings with the info from the combos
+        new_settings = {'controller': self.hardware_info}
+        settings = self.__ctrl.settings
+
+        # Remove all current channel/quantity pairs, then update
+        for quantity in QuantityInfo:
+            settings.remove_option('controller', quantity.label)
+        settings.read_dict(new_settings)
+        self.settings_changed.emit()
+
+    def __show_adcs(self, detected_adcs):
+        """Add one line per active ADC."""
+        self.__adcs = []
+        try:
+            all_adcs = self.__ctrl.available_adcs()
+        except (NotASequenceError, KeyError,
+                TypeError, ValueError, RuntimeError):
+            # Settings are wrong. User will have to fix this.
+            all_adcs = ((_UNKNOWN, _UNKNOWN),)*len(detected_adcs)
+            with self.__ctrl.lock:
+                if self.__ctrl.hardware['lm35']:
+                    all_adcs += ((QuantityInfo.COLD_JUNCTION,),)
+
+        # Now populate self.__hw_info, adding one row per ADC,
+        # one column per channel. Clicking on combo item allows
+        # to edit.
+        self.__clear_hw_info()
+        layout = self.__hw_info.layout()
+        for row, adc in enumerate(all_adcs, start=1):
+            if QuantityInfo.COLD_JUNCTION in adc:
+                continue
+            self.__adcs.append({})
+            _label = qtw.QLabel(f"ADC#{row - 1}:")
+            _label.setSizePolicy(_label.sizePolicy().Fixed,
+                                 _label.sizePolicy().Preferred)
+            layout.addWidget(_label, row, 0)
+            for col, quantity in enumerate(adc, start=1):
+                if quantity is not _UNKNOWN:  # Use the known channel
+                    col = adc[quantity] + 1
+                combo = self.__get_quantity_combo(quantity)
+                self.__adcs[-1][col - 1] = combo
+                layout.addWidget(combo, row, col)
+
+        # Now header line with channel numbers
+        for col in range(layout.columnCount()):
+            if not col:  # skip the one with "ADC#x" labels
+                continue
+            layout.addWidget(qtw.QLabel(f"CH{col - 1}"), 0, col)
+
+        # Finally "+" and "-" buttons for adding/removing channels              # TODO. Also, have one button to start fresh from ?? everywhere (in case of fucked up settings)
+
+    def has_tag(self, tag):
+        """Return whether this section has a specific tag."""
+        # We want this section to be normally visible if there are some
+        # problems with the settings and have to adjust the tags accordingly.
+        # We want to see this section if:
+        #   (1) we don't have info yet
+        #   (2) something is wrong with the current selection
+        adcs = self.__adcs or {}
+        selection_faulty = any('?' in combo.currentText()
+                               for adc in adcs
+                               for combo in adc.values())
+        if not adcs or selection_faulty:
+            if tag is SettingsTag.ADVANCED:
+                return False
+            if tag is SettingsTag.REGULAR:
+                return True
+        return super().has_tag(tag)
+
+
 class SerialNumberEditor(qtw.QWidget):
     """A class that allows viewing and setting a serial number."""
 
@@ -102,8 +408,8 @@ class SerialNumberEditor(qtw.QWidget):
         self.__ctrl = controller
 
         self.__edit = qtw.QLineEdit()
-        self.__rand_btn = qtw.QPushButton("Generate randomly")
-        self.__set_btn = qtw.QPushButton("Set")
+        self.__rand_btn = QNoDefaultPushButton("Generate randomly")
+        self.__set_btn = QNoDefaultPushButton("Set")
         self.__old_serial = ''
         self.notify_ = self.serial_number_changed
 
@@ -250,299 +556,26 @@ class SerialNumberEditor(qtw.QWidget):
         _INVOKE(self.__ctrl, 'set_serial_number', qtc.Q_ARG(str, new_serial))
 
 
-class HardwareConfigurationEditor(SettingsDialogSectionBase):
-    """Class for viewing and setting ADC inputs.
+class UpdateRateSelector(qtw.QComboBox):
+    """Combo box to select ADC update-rate values."""
 
-    Provides one line per each ADC present, one entry per each channel.
-    When the user clicks on an editable quantity, a dialog pops up.
-    Editable quantities are those for which one can potentially select
-    a gain factor or a calibration curve. If a channel can only measure
-    a single non-editable quantity, user interaction with it is disabled.
-
-    This widget should be used as a special section of a settings
-    dialog, as it internally handles all the relevant values stored
-    in the configuration file.
-    """
-
-    def __init__(self, controller=None, **kwargs):
-        """Initialize instance.
-
-        Parameters
-        ----------
-        controller : ViPErinoController
-            The controller whose hardware configuration
-            settings are managed.
-        **kwargs : dict
-            Optional arguments passed on to SettingsDialogSectionBase
-
-        Returns
-        -------
-        None.
-        """
-        self.__ctrl = controller
-
-        # Modify arguments for the following super() call
-        kwargs['display_name'] = "Hardware configuration"
-        kwargs['is_advanced'] = True
-        kwargs['tooltip'] = (
-            "This section lists what each hardware channel "
-            "is capable of measuring. Quantities appearing "
-            "on the same line cannot be measured simultaneously."
-            )
+    def __init__(self, controller, **kwargs):
+        """Initialize instance."""
         super().__init__(**kwargs)
+        for key, frequency in controller.settings.items('adc_update_rate'):
+            self.addItem(f'{round(float(frequency))} Hz', userData=key)
+        self.notify_ = self.currentIndexChanged
 
-        # Set up some static children widgets
-        self.__no_power_warning = qtw.QWidget()
-        self.__try_again = qtw.QPushButton("Retry")
-        self.__hw_info = qtw.QWidget()  # just a container
-        self.__adcs = []  # Will be a list of {channel: combo}
+    def get_(self):
+        """Return the selected update rate."""
+        return self.currentData()
 
-        self.__dialogs = {
-            QuantityInfo.I0: _I0EditDialog(self.__ctrl),
-            QuantityInfo.AUX: _AUXEditDialog(self.__ctrl),
-            QuantityInfo.TEMPERATURE: _TemperatureEditDialog(self.__ctrl),
-            }
-
-        self.__compose_static_children()
-        self.__connect()
-
-        # QueuedConnection prevents serial port not open errors
-        self.__ctrl.error_occurred.connect(self.__on_ctrl_error,
-                                           type=qtc.Qt.QueuedConnection)
-
-    @property
-    def advanced(self):
-        """Return whether this section contains only advanced settings."""
-        # We want this section to be normally visible (i.e., not
-        # advanced) only if there are some problems with the settings.
-        # We want to see this if
-        # (1) we don't have info yet
-        if not self.__adcs:
-            return False
-        # (2) something is wrong with the current selection
-        if any('?' in combo.currentText()
-               for adc in self.__adcs for combo in adc.values()):
-            return False
-        return super().advanced
-
-    @property
-    def hardware_info(self):
-        """Return a dictionary of information suitable for a settings file."""
-        info = {}
-        devices = []
-        for adc in self.__adcs:
-            devices.append(())
-            for channel, combo in adc.items():
-                quantity = combo.current_quantity
-                if quantity is _UNKNOWN:
-                    continue
-                info[quantity.label] = str(channel)
-                devices[-1] += (quantity.label,)
-
-        with self.__ctrl.lock:
-            if self.__ctrl.hardware['lm35']:
-                cjc = QuantityInfo.COLD_JUNCTION.label
-                devices.append((cjc,))
-                info[cjc] = '0'  # unused anyway
-
-        info['measurement_devices'] = str(tuple(devices))
-        return info
-
-    @qtc.pyqtSlot()
-    def update_widgets(self):
-        """Place children widgets."""
-        with self.__ctrl.lock:
-            detected_adcs = [k for k, present in self.__ctrl.hardware.items()
-                             if 'adc' in k and present]
-        has_power = any(detected_adcs)
-        if has_power:
-            self.__show_adcs(detected_adcs)
-
-        self.__no_power_warning.setVisible(not has_power)
-        self._info.setVisible(has_power)
-        self.__hw_info.setVisible(has_power)
-        self.__connect()
-        self.adjustSize()
-        self.updated.emit()
-
-    def __clear_hw_info(self):
-        """Remove all widgets from __hw_info."""
-        layout = self.__hw_info.layout()
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-
-    def __compose_static_children(self):
-        """Set up some static children that are shown under some conditions."""
-        lay = qtw.QHBoxLayout()
-        _label = qtw.QLabel("No hardware information. Power\n"
-                            "supply may be disconnected.")
-        _policy = _label.sizePolicy()
-        _label.setSizePolicy(_policy.Fixed, _policy.Preferred)
-        lay.addWidget(_label)
-        lay.addWidget(self.__try_again)
-        lay.setContentsMargins(0, 0, 0, 0)
-        self.__no_power_warning.setLayout(lay)
-
-        self.__hw_info.setLayout(qtw.QGridLayout())
-        self.__hw_info.layout().setContentsMargins(0, 0, 0, 0)
-        self.__hw_info.layout().setSizeConstraint(lay.SetMinimumSize)
-        self.__hw_info.setSizePolicy(_policy.Minimum, _policy.Minimum)
-
-        # Now layout of the central widget: just a box. Only one
-        # of its contents will ever be shown at a time
-        central_layout = qtw.QHBoxLayout()
-        central_layout.addWidget(self.__no_power_warning)
-        central_layout.addWidget(self.__hw_info)
-        central_layout.setContentsMargins(0, 0, 0, 0)
-        central_layout.setSizeConstraint(lay.SetMinimumSize)
-        self.central_widget.setLayout(central_layout)
-
-        self.__try_again.clicked.connect(self.__ctrl.get_hardware)
-        self.__ctrl.hardware_info_arrived.connect(self.update_widgets)
-
-    def __connect(self):
-        """Connect (only once) relevant signals and slots."""
-        _connect = base.safe_connect
-        for dialog in self.__dialogs.values():
-            try:
-                _connect(self.window().finished, dialog.reject, type=_UNIQUE)
-            except AttributeError:
-                pass
-            _connect(dialog.settings_changed, self.settings_changed,
-                     type=_UNIQUE)
-            _connect(dialog.accepted, self.__on_settings_changed, type=_UNIQUE)
-
-    def __get_quantity_combo(self, quantity):
-        """Return an _ADCChannelCombo for a quantity."""
-        combo = _ADCChannelCombo(ctrl=self.__ctrl)
-        combo.add_quantity(quantity)
-        combo.current_quantity = quantity
-        combo.quantity_selected.connect(self.__on_quantity_selected)
-
-        for i in range(combo.count()):
-            dialog = self.__dialogs.get(combo.itemData(i), None)
-            if dialog:
-                dialog.settings_changed.connect(combo.update_items)
-        return combo
-
-    @qtc.pyqtSlot(tuple)
-    def __on_ctrl_error(self, error_info):
-        """React to to controller errors."""
-        # pylint: disable=confusing-consecutive-elif
-        # This is triggered by the inner "if reply ==" in the first
-        # case. This would be an ideal use case for a switch, but
-        # we want to maintain compatibility with Win7, i.e., py<=3.8
-        *_, err_msg = error_info
-        if error_info is ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED:
-            # No power. Suggest to try again.
-            reply = _QMSG.warning(self, "No hardware info", err_msg,
-                                  _QMSG.Retry | _QMSG.Ignore)
-            if reply == _QMSG.Retry:
-                self.__try_again.click()
-        elif error_info is ViPErLEEDHardwareError.ADC_POWER_FAULT:
-            # Info about available ADCs is inconsistent. Probably
-            # something is wrong with the hardware itself.
-            self.__on_hardware_fault(err_msg)
-        elif error_info is ExtraSerialErrors.PORT_NOT_OPEN:
-            _QMSG.critical(
-                self, "Device lost",
-                err_msg + "\n\nThe port may be in use or disconnected.",
-                _QMSG.Ok
-                )
-            self.window().close()
-
-    def __on_hardware_fault(self, err_msg):
-        """React to a hardware problem."""
-        msg = _QMSG(_QMSG.Critical, "Hardware Fault", err_msg,
-                    _QMSG.Ok, self)
-        if self.__ctrl.firmware_version >= 1.0:
-            # Only for public releases of ViPErLEED!
-            # TODO: Is there a decent way to pick the file name?
-            _path = Path(resources_path(
-                'hardware/schematics/viperLEED_HW_v8 - basic_configuration.pdf'
-                )).resolve()
-            show_schem = msg.addButton("Open schematics...", _QMSG.ActionRole)
-            show_schem.disconnect()  # Box stays open when clicked
-            show_schem.clicked.connect(functools.partial(
-                qtg.QDesktopServices.openUrl,
-                qtc.QUrl.fromLocalFile(str(_path))
-                ))
-        msg.exec_()
-        self.window().close()
-
-    def __on_quantity_selected(self, quantity):
-        """Show a dialog for editing a measurable quantity."""
-        this_combo = self.sender()
-        previous_quantity = this_combo.previous_quantity
-        dialog = self.__dialogs.get(quantity, None)
-        if dialog:
-            move_to_front(dialog)
-        if previous_quantity is quantity:
-            return
-
-        if not dialog:
-            self.__on_settings_changed()
-
-        for combo in (c for adc in self.__adcs for c in adc.values()):
-            combo.enable_quantity(previous_quantity)
-            if combo is not this_combo and quantity is not _UNKNOWN:
-                combo.enable_quantity(quantity, False)
-
-    def __on_settings_changed(self):
-        """React to a change of settings in one of the dialogs."""
-        # Update settings with the info from the combos
-        new_settings = {'controller': self.hardware_info}
-        settings = self.__ctrl.settings
-
-        # Remove all current channel/quantity pairs, then update
-        for quantity in QuantityInfo:
-            settings.remove_option('controller', quantity.label)
-        settings.read_dict(new_settings)
-        self.settings_changed.emit()
-
-    def __show_adcs(self, detected_adcs):
-        """Add one line per active ADC."""
-        self.__adcs = []
-        try:
-            all_adcs = self.__ctrl.available_adcs()
-        except (NotASequenceError, KeyError,
-                TypeError, ValueError, RuntimeError):
-            # Settings are wrong. User will have to fix this.
-            all_adcs = ((_UNKNOWN, _UNKNOWN),)*len(detected_adcs)
-            with self.__ctrl.lock:
-                if self.__ctrl.hardware['lm35']:
-                    all_adcs += ((QuantityInfo.COLD_JUNCTION,),)
-
-        # Now populate self.__hw_info, adding one row per ADC,
-        # one column per channel. Clicking on combo item allows
-        # to edit.
-        self.__clear_hw_info()
-        layout = self.__hw_info.layout()
-        for row, adc in enumerate(all_adcs, start=1):
-            if QuantityInfo.COLD_JUNCTION in adc:
-                continue
-            self.__adcs.append({})
-            _label = qtw.QLabel(f"ADC#{row - 1}:")
-            _label.setSizePolicy(_label.sizePolicy().Fixed,
-                                 _label.sizePolicy().Preferred)
-            layout.addWidget(_label, row, 0)
-            for col, quantity in enumerate(adc, start=1):
-                if quantity is not _UNKNOWN:  # Use the known channel
-                    col = adc[quantity] + 1
-                combo = self.__get_quantity_combo(quantity)
-                self.__adcs[-1][col - 1] = combo
-                layout.addWidget(combo, row, col)
-
-        # Now header line with channel numbers
-        for col in range(layout.columnCount()):
-            if not col:  # skip the one with "ADC#x" labels
-                continue
-            layout.addWidget(qtw.QLabel(f"CH{col - 1}"), 0, col)
-
-        # Finally "+" and "-" buttons for adding/removing channels              # TODO. Also, have one button to start fresh from ?? everywhere (in case of fucked up settings)
+    def set_(self, value):
+        """Set update rate from the settings file."""
+        for i in range(self.count()):
+            if self.itemData(i) == value:
+                self.setCurrentIndex(i)
+                return
 
 
 class _ADCChannelCombo(qtw.QComboBox):
@@ -686,11 +719,11 @@ class _ADCChannelCombo(qtw.QComboBox):
         _qty_ok = quantity is not _UNKNOWN
 
         if quantity is QuantityInfo.I0:
-            _name = f"I\u2080 ({quantity.units})"
+            _name = f"{quantity.display_name} ({quantity.units})"
             _tooltip += f". Range: {hardware['i0_range']}"
         elif quantity is QuantityInfo.ISAMPLE:
             # Unicode chars are for "sample" as subscripts
-            _name = f"I\u209b\u2090\u2098\u209a\u2097\u2091 ({quantity.units})"
+            _name = f"{quantity.display_name} ({quantity.units})"
         elif quantity is QuantityInfo.TEMPERATURE:
             _tc_type = "??"
             _qty_ok = False
@@ -703,144 +736,6 @@ class _ADCChannelCombo(qtw.QComboBox):
             _tooltip += f"Range: {hardware['aux_range']}"
 
         return _name, _tooltip, _qty_ok
-
-
-class _InputRangeSelector(qtw.QWidget):
-    """A widget to show/edit input ranges."""
-
-    range_changed = qtc.pyqtSignal(str)  # The new range
-
-    def __init__(self, **kwargs):
-        """Initialise instance.
-
-        Parameters
-        ----------
-        parent : QWidget, optional
-            The parent widget of self
-        ranges : Sequence, optional
-            The ranges among which this selector allows to choose.
-            If not given, the keys in tooltips are used as ranges,
-            if any. Otherwise fall back to ("0 \u2013 2.5 V",
-            "0 \u2013 10 V").
-        tooltips : dict, optional
-            keys are ranges, values as strings to be used as help text
-        help_file : pathlib.Path, optional
-            Path to the file to be opened when range switching can
-            only be performed manually. The file is supposed to help
-            users perform the range switch. The user is presented with
-            the option of showing this file only if not self.editable
-
-        Returns
-        -------
-        None.
-        """
-        super().__init__(kwargs.get('parent', None))
-
-        if not kwargs.get('tooltips', None):
-            kwargs['tooltips'] = {}
-
-        ranges = kwargs.get('ranges', tuple())
-        if not ranges:
-            if kwargs['tooltips']:
-                ranges = kwargs['tooltips'].keys()
-            else:
-                ranges = ("0 \u2013 2.5 V", "0 \u2013 10 V")
-
-        self.__range_options = {r: qtw.QRadioButton(r) for r in ranges}
-        self.__tooltips = []
-        self.__btn_group = qtw.QButtonGroup()
-        self.__range_change_info = qtw.QPushButton(
-            "Help me to\nswitch range..."
-            )
-        self.__range_change_info.setEnabled(False)
-        self.__range_change_info.setAutoDefault(False)
-        self.__range_change_info.setDefault(False)
-
-        help_file = kwargs.get('help_file', None)
-        if help_file is not None and help_file.exists():
-            self.__range_change_info.clicked.connect(functools.partial(
-                qtg.QDesktopServices.openUrl,
-                qtc.QUrl.fromLocalFile(str(help_file))
-                ))
-            self.__range_change_info.setEnabled(True)
-
-        self.editable = False
-        self.__compose(kwargs)
-
-        self.__btn_group.buttonClicked.connect(self.__on_range_changed)
-
-    @property
-    def range_(self):
-        """Return the selected range."""
-        for range_, btn in self.__range_options.items():
-            if btn.isChecked():
-                return range_
-        return None
-
-    @range_.setter
-    def range_(self, new_range):
-        """Set the selected range."""
-        _btn = self.__range_options.get(new_range, None)
-        if _btn is not None:
-            _btn.setChecked(True)
-            return
-
-        # Uncheck all
-        self.__btn_group.setExclusive(False)
-        for _btn in self.__range_options.values():
-            _btn.setChecked(False)
-        self.__btn_group.setExclusive(True)
-
-    def showEvent(self, event):          # pylint: disable=invalid-name
-        """Show widget."""
-        self.update_widgets()
-        super().showEvent(event)
-
-    def update_widgets(self):
-        """Update the state of children."""
-        for widg in (*self.__range_options.values(), *self.__tooltips):
-            widg.setEnabled(self.editable)
-        _enabled = self.__range_change_info.isEnabled()
-        self.__range_change_info.setVisible(_enabled and not self.editable)
-
-    def __compose(self, kwargs):
-        """Place children widgets."""
-        layout = qtw.QHBoxLayout()
-        layout.addWidget(self.__make_ranges_group(kwargs))
-        layout.addWidget(self.__range_change_info)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(layout)
-
-        # Make help button a bit larger
-        _btn = self.__range_change_info
-        width, height = _btn.sizeHint().width(), _btn.sizeHint().height()
-        _btn.setMinimumSize(round(width*1.2), round(height*1.4))
-
-    def __make_ranges_group(self, kwargs):
-        """Prepare a group box with as many buttons as ranges."""
-        quantity = kwargs.get('quantity', '')
-        tooltips = kwargs['tooltips']
-        _range_btns = qtw.QGroupBox(f"{quantity} input range")
-        _btns_lay = qtw.QVBoxLayout()
-        for range_, btn in self.__range_options.items():
-            _lay = qtw.QHBoxLayout()
-            _lay.addWidget(btn)
-            self.__btn_group.addButton(btn)
-            _btns_lay.addLayout(_lay)
-            tooltip = tooltips.get(range_, "")
-            if not tooltip:
-                continue
-            _size = btn.fontMetrics().boundingRect(btn.text()).height()
-            info = FieldInfo(tooltip, _size)
-            _lay.addWidget(info)
-            _lay.addStretch(1)
-            self.__tooltips.append(info)
-        _range_btns.setLayout(_btns_lay)
-        return _range_btns
-
-    def __on_range_changed(self, _):
-        """React to the user picking a different range."""
-        self.range_changed.emit(self.range_)
 
 
 class _EditDialogBase(qtw.QDialog):
@@ -906,6 +801,141 @@ class _EditDialogBase(qtw.QDialog):
         _done.setFocus()
 
 
+class _InputRangeSelector(qtw.QWidget):
+    """A widget to show/edit input ranges."""
+
+    range_changed = qtc.pyqtSignal(str)  # The new range
+
+    def __init__(self, **kwargs):
+        """Initialise instance.
+
+        Parameters
+        ----------
+        parent : QWidget, optional
+            The parent widget of self
+        ranges : Sequence, optional
+            The ranges among which this selector allows to choose.
+            If not given, the keys in tooltips are used as ranges,
+            if any. Otherwise fall back to ("0 \u2013 2.5 V",
+            "0 \u2013 10 V").
+        tooltips : dict, optional
+            keys are ranges, values as strings to be used as help text
+        help_file : pathlib.Path, optional
+            Path to the file to be opened when range switching can
+            only be performed manually. The file is supposed to help
+            users perform the range switch. The user is presented with
+            the option of showing this file only if not self.editable
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(kwargs.get('parent', None))
+
+        if not kwargs.get('tooltips', None):
+            kwargs['tooltips'] = {}
+
+        ranges = kwargs.get('ranges', tuple())
+        if not ranges:
+            if kwargs['tooltips']:
+                ranges = kwargs['tooltips'].keys()
+            else:
+                ranges = ("0 \u2013 2.5 V", "0 \u2013 10 V")
+
+        self.__range_options = {r: qtw.QRadioButton(r) for r in ranges}
+        self.__btn_group = qtw.QButtonGroup()
+        self.__range_change_info = qtw.QPushButton(
+            "Help me to\nswitch range..."
+            )
+        self.__range_change_info.setEnabled(False)
+        self.__range_change_info.setAutoDefault(False)
+        self.__range_change_info.setDefault(False)
+
+        help_file = kwargs.get('help_file', None)
+        if help_file is not None and help_file.exists():
+            self.__range_change_info.clicked.connect(functools.partial(
+                qtg.QDesktopServices.openUrl,
+                qtc.QUrl.fromLocalFile(str(help_file))
+                ))
+            self.__range_change_info.setEnabled(True)
+
+        self.editable = False
+        self.__compose(kwargs)
+
+        self.__btn_group.buttonClicked.connect(self.__on_range_changed)
+
+    @property
+    def range_(self):
+        """Return the selected range."""
+        for range_, btn in self.__range_options.items():
+            if btn.isChecked():
+                return range_
+        return None
+
+    @range_.setter
+    def range_(self, new_range):
+        """Set the selected range."""
+        _btn = self.__range_options.get(new_range, None)
+        if _btn is not None:
+            _btn.setChecked(True)
+            return
+
+        # Uncheck all
+        self.__btn_group.setExclusive(False)
+        for _btn in self.__range_options.values():
+            _btn.setChecked(False)
+        self.__btn_group.setExclusive(True)
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Show widget."""
+        self.update_widgets()
+        super().showEvent(event)
+
+    def update_widgets(self):
+        """Update the state of children."""
+        for widg in self.__range_options.values():
+            widg.setEnabled(self.editable)
+        _enabled = self.__range_change_info.isEnabled()
+        self.__range_change_info.setVisible(_enabled and not self.editable)
+
+    def __compose(self, kwargs):
+        """Place children widgets."""
+        layout = qtw.QHBoxLayout()
+        layout.addWidget(self.__make_ranges_group(kwargs))
+        layout.addWidget(self.__range_change_info)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        # Make help button a bit larger
+        _btn = self.__range_change_info
+        width, height = _btn.sizeHint().width(), _btn.sizeHint().height()
+        _btn.setMinimumSize(round(width*1.2), round(height*1.4))
+
+    def __make_ranges_group(self, kwargs):
+        """Prepare a group box with as many buttons as ranges."""
+        quantity = kwargs.get('quantity', '')
+        tooltips = kwargs['tooltips']
+        _range_btns = qtw.QGroupBox(f"{quantity} input range")
+        _btns_lay = qtw.QVBoxLayout()
+        for range_, btn in self.__range_options.items():
+            _lay = qtw.QHBoxLayout()
+            _lay.addWidget(btn)
+            self.__btn_group.addButton(btn)
+            _btns_lay.addLayout(_lay)
+            tooltip = tooltips.get(range_, "")
+            if not tooltip:
+                continue
+            info = FieldInfo.for_widget(btn, tooltip=tooltip)
+            _lay.addWidget(info)
+            _lay.addStretch(1)
+        _range_btns.setLayout(_btns_lay)
+        return _range_btns
+
+    def __on_range_changed(self, _):
+        """React to the user picking a different range."""
+        self.range_changed.emit(self.range_)
+
+
 class _I0EditDialog(_EditDialogBase):
     """Dialog for editing I0 input: gain and input range."""
 
@@ -924,7 +954,7 @@ class _I0EditDialog(_EditDialogBase):
     def __init__(self, controller, *args, **kwargs):
         """Initialise dialog."""
         kwargs['quantity'] = "I0"
-        kwargs['input_quantity'] = "I\u2080"
+        kwargs['input_quantity'] = QuantityInfo.I0.display_name
         kwargs['raw_quantity'] = "i0"
         kwargs['tooltips'] = {
             "0 \u2013 2.5 V": (
@@ -938,13 +968,11 @@ class _I0EditDialog(_EditDialogBase):
                 "resistor. <b>Use this for an Omicron SPECTALEED optics<b>"
                 )
             }
-        kwargs['help_file'] = Path(resources_path(
-            'hardware/schematics/viperLEED_HW_v8 - jumpers.pdf'
-            ))
+        kwargs['help_file'] = _SWITCH_JUMPERS_PDF.resolve()
         super().__init__(controller, *args, **kwargs)
 
-        self.__gain = TolerantCommaSpinBox()
-        self.__gain_info = None
+        self.__gain = CoercingDoubleSpinBox(decimals=8)
+        self._gain_info = None
 
         self.__compose()
         self.__connect()
@@ -970,24 +998,15 @@ class _I0EditDialog(_EditDialogBase):
 
     def __compose(self):
         """Place children widgets."""
-        _label = qtw.QLabel("I\u2080 gain")
-        _policy = _label.sizePolicy()
-        _label.setSizePolicy(_policy.Fixed, _policy.Preferred)
-        height = _label.fontMetrics().boundingRect(_label.text()).height()
-        self.__gain_info = FieldInfo(size=height)
-        self.__gain_info.setSizePolicy(_policy.Fixed, _policy.Fixed)
+        info_label = InfoLabel(label_text=QuantityInfo.I0.display_name)
+        self._gain_info = info_label.field_info
+        _policy = info_label.label.sizePolicy()
+        info_label.label.setSizePolicy(_policy.Fixed, _policy.Preferred)
+        info_label.field_info.setSizePolicy(_policy.Fixed, _policy.Fixed)
         self.__update_gain_info()
-
-        layout = qtw.QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(_label)
-        layout.addWidget(self.__gain_info)
+        layout = info_label.layout()
         layout.addWidget(self.__gain)
-
         self.central_widget.setLayout(layout)
-
-        self.__gain.setRange(float('-inf'), float('inf'))
-        self.__gain.setDecimals(8)
 
     def __connect(self):
         """Connect appropriate signals."""
@@ -1019,7 +1038,7 @@ class _I0EditDialog(_EditDialogBase):
         """Update tooltip text for the gain widgets."""
         range_ = self._input_range.range_
         _tip = self._gain_tip_base.format(self._gains[range_])
-        self.__gain_info.set_info_text(_tip)
+        self._gain_info.set_info_text(_tip)
 
 
 class _TemperatureEditDialog(_EditDialogBase):                                  # TODO: after check of TC, add offset correction
@@ -1046,9 +1065,7 @@ class _TemperatureEditDialog(_EditDialogBase):                                  
                 "likely inaccurate (thermovoltages are only a few millivolts)"
                 )
             }
-        kwargs['help_file'] = Path(resources_path(
-            'hardware/schematics/viperLEED_HW_v8 - jumpers.pdf'
-            ))
+        kwargs['help_file'] = _SWITCH_JUMPERS_PDF.resolve()
         super().__init__(controller, *args, **kwargs)
         self.__thermocouples = qtw.QComboBox()
         self.__cjc = qtw.QCheckBox()
@@ -1129,7 +1146,5 @@ class _AUXEditDialog(_EditDialogBase):
     def __init__(self, controller, *args, **kwargs):
         """Initialise dialog."""
         kwargs['raw_quantity'] = "AUX"
-        kwargs['help_file'] = Path(resources_path(
-            'hardware/schematics/viperLEED_HW_v8 - jumpers.pdf'
-            ))
+        kwargs['help_file'] = _SWITCH_JUMPERS_PDF.resolve()
         super().__init__(controller, *args, **kwargs)

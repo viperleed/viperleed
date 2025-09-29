@@ -26,14 +26,17 @@ Part of the code here is inspired by https://github.com/pythonguis/pyqtconfig
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2022-09-02'
 __license__ = 'GPLv3+'
 
 import ast
-import copy
 import collections
+import copy
+from dataclasses import dataclass
+import enum
 from pathlib import Path
 from types import MethodType as _bound_method
 import warnings
@@ -41,17 +44,17 @@ import warnings
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
-from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
+from viperleed.gui.measure.widgets.fieldinfo import InfoLabel
 from viperleed.gui.measure.widgets.pathselector import PathSelector
+from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
+from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 # TODO: find a proper mechanism to make "invalid" values disable
 # "Apply" or "Ok" (but leave "Cancel" enabled). Probably equip
 # widgets with some universally named, validity-checking method.
 
 # TODO: context menu to "reset" each entry separately.
-
-# pylint: disable=too-many-lines
-# We can probably live with 1011 instead of 1000
 
 _MSGBOX = qtw.QMessageBox
 
@@ -80,15 +83,18 @@ def __notify_qbuttongroup(_self):
 _DEFAULT_HOOKS = {
     qtw.QLabel: ('text', 'setText', None, None),
     qtw.QLineEdit: ('text', 'setText', 'textChanged', None),
-    qtw.QCheckBox: ('isChecked', 'setChecked', 'stateChanged', (str, bool)),    # BUG: converter(value) == (str, bool)(value) --> tuple not callable
+    qtw.QCheckBox: ('isChecked', 'setChecked', 'stateChanged',
+                    ast.literal_eval),
+    CoercingDoubleSpinBox: ('cleanText', 'setValue', 'value_coerced', float),
     qtw.QSpinBox: ('cleanText', 'setValue', 'valueChanged', int),
     qtw.QDoubleSpinBox: ('cleanText', 'setValue', 'valueChanged', float),
     qtw.QButtonGroup: (__get_qbuttongroup, __set_qbuttongroup,
                        __notify_qbuttongroup, None),
     qtw.QSlider: ('value', 'setValue', 'valueChanged', int),
-    qtw.QPushButton: ('isChecked', 'setChecked', 'toggled', bool),              # BUG: converter(value) == bool(value) == True whatever non-empty string value!
-    qtw.QAction: ('isChecked', 'setChecked', 'toggled', bool),                  # BUG: converter(value) == bool(value) == True whatever non-empty string value!
+    qtw.QPushButton: ('isChecked', 'setChecked', 'toggled', bool),              # BUG: converter(value) == bool(value) == True whatever non-empty string value! -> perhaps literal_eval?
+    qtw.QAction: ('isChecked', 'setChecked', 'toggled', bool),                  # BUG: converter(value) == bool(value) == True whatever non-empty string value! -> perhaps literal_eval?
     PathSelector: ('get_posix_path', 'set_path', 'path_changed', None),
+    qtw.QTextEdit: ('toPlainText', 'setPlainText', 'textChanged', None),
     }
 
 
@@ -137,6 +143,80 @@ def _get_hook(obj):
     return hook
 
 
+class SettingsTag(enum.Flag):
+    """Flags that decide the display behaviour of a settings widget."""
+
+    NONE = 0
+    REGULAR = enum.auto()
+    R = REGULAR
+    ADVANCED = enum.auto()
+    A = ADVANCED
+    MEASUREMENT = enum.auto()
+    READ_ONLY = enum.auto()
+
+
+Tag = SettingsTag
+
+
+@dataclass
+class SettingsSectionColumnInfo:
+    """Contains information on how to place a settings section.
+
+    Attributes
+    ----------
+    position : int, optional
+        Decides in which column of the SettingsDialog the
+        SettingsSection will be displayed. Default is 0, which
+        means the section will be added to the first column.
+    alignment : Qt.AlignTop or Qt.AlignBottom or Qt.AlignVCenter
+                or None, optional
+        Influences vertical position of the section. Default is None.
+        Qt.AlignTop: Moves section to the top with a bottom stretch.
+        Qt.AlignBottom: Moves section to the bottom with a top stretch.
+        Qt.AlignVCenter: Moves section to the middle with top
+                         and bottom stretches.
+        None: The section will not have any additional stretches.
+
+    Raises
+    ------
+    TypeError
+        If position is not an int, or if alignment is given, but
+        not among the allowed values listed above.
+    """
+
+    position: int = 0
+    alignment: qtc.Qt.Alignment = None
+
+    def __post_init__(self):
+        """Check that we have the correct attribute types."""
+        if not isinstance(self.position, int):
+            raise TypeError('Column position must be an int.')
+        allowed = (qtc.Qt.AlignTop, qtc.Qt.AlignBottom, qtc.Qt.AlignVCenter)
+        if self.alignment and self.alignment not in allowed:
+            raise TypeError('Alignment must be an allowed alignment or None.')
+
+
+class SettingsTagHandler:
+    """This class can return whether it has certain tags or not."""
+
+    def __init__(self, **kwargs):
+        self._tags = kwargs.pop('tags', Tag.NONE)
+
+    @property
+    def tags(self):
+        """Return tags."""
+        return self._tags
+
+    @tags.setter
+    def tags(self, new_tags):
+        """Set tags."""
+        self._tags = new_tags or Tag.NONE
+
+    def has_tag(self, tag):
+        """Return whether the instance has this tag."""
+        return bool(tag & self.tags)
+
+
 class _QContainerMeta(type(collections.abc.Container), type(qtc.QObject)):
     """Meta-class for a Container and QObject."""
 
@@ -147,6 +227,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
 
     settings_changed = qtc.pyqtSignal()
     redraw_needed = qtc.pyqtSignal()  # Should trigger redraw of dialog
+    error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, config, parent=None, show_path_to_config=False):
         """Initialize instance.
@@ -189,6 +270,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 'File', 'config', widget,
                 display_name='Settings file',
                 tooltip=str(file) if file else '',
+                tags=Tag.REGULAR,
                 )
 
     def __delitem__(self, item):
@@ -288,7 +370,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                                       *args, **kwargs)
         self[section_name][option_name] = option
 
-        if not option.read_only:
+        if not option.has_tag(Tag.READ_ONLY):
             option.value_changed.connect(
                 self.__option_setter(section_name, option_name)
                 )
@@ -322,6 +404,10 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         section.settings_changed.connect(self.settings_changed)
         self.__widgets.append(section)
         self.__complex_sections.append(section)
+        try:
+            section.error_occurred.connect(self.error_occurred)                 # TODO: should regular options and sections also have an error_occurred signal?
+        except AttributeError:
+            pass
         section.updated.connect(self.__updated_timer.start)
 
     def add_static_option(self, section_name, option_name, handler_widget,
@@ -333,8 +419,10 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
+        # pylint: disable-next=unsupported-binary-operation
+        tags = kwargs.pop('tags', Tag.NONE) | Tag.READ_ONLY
         option = StaticSettingsDialogOption(option_name, handler_widget,
-                                            *args, **kwargs)
+                                            *args, tags=tags, **kwargs)
         self[section_name][option_name] = option
         if self.has_section(section_name):
             self.__sections[section_name].add_option(option)
@@ -351,10 +439,14 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         """Add a static section that may not come from settings."""
         self._add_section(section_name)
 
+    def get_widgets_with_tags(self, tags):
+        """Return all widgets with a specific tag."""
+        return tuple(wid for wid in self.widgets if tags in wid.tags)
+
     def has_advanced_options(self):
         """Return whether self contains any advanced option."""
-        _adv = any(o.advanced for s in self.values() for o in s.values())
-        return _adv or any(s.advanced for s in self.__complex_sections)
+        _adv = any(o.has_tag(Tag.A) for s in self.values() for o in s.values())
+        return _adv or any(s.has_tag(Tag.A) for s in self.__complex_sections)
 
     def has_section(self, section):
         """Return whether a section is directly handled."""
@@ -366,7 +458,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
             if not self.__config[section_name]:
                 # Empty section
                 continue
-            self.add_section(section_name)
+            self.add_section(section_name, tags=Tag.REGULAR)
             for option_name, value in self.__config[section_name].items():
                 handler = self.__guess_handler_from_value(value)
                 if handler is None:
@@ -420,7 +512,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         return qtc.pyqtSlot(str)(_setter)
 
 
-class SettingsDialogOption(qtc.QObject):
+class SettingsDialogOption(qtc.QObject, SettingsTagHandler):
     """Class for handling a single settings option."""
 
     value_changed = qtc.pyqtSignal(str)
@@ -448,13 +540,19 @@ class SettingsDialogOption(qtc.QObject):
             when hovering over, or clicking on the info icon. If it
             is an empty string, no tooltip is shown. Default is an
             empty string.
-        read_only : bool, optional
-            Whether the user is allowed to change the ViPErLEEDSettings
-            by interacting with the handler of this SettingsDialogOption.
-            Default is False.
-        is_advanced : bool, optional
-            Whether this option is to be displayed only in "Advanced"
-            mode. Default is False.
+        tags : SettingsTag, optional
+            Contains additional tags of this option. Possible tags are
+            a bitwise-or of:
+                SettingsTag.REGULAR
+                    Present if the option contains regular settings.
+                SettingsTag.ADVANCED
+                    Present if the option contains advanced settings.
+                SettingsTag.MEASUREMENT
+                    Present if the option contains settings
+                    related to the measurement.
+                SettingsTag.READ_ONLY
+                    Present if the option contains read-only settings.
+            Default is None.
         label_alignment : {'top', 'centre', 'bottom'}
             Vertical alignment of label field relative to handler_widget.
             Only the first character matters. Any character other than 'c'
@@ -471,16 +569,14 @@ class SettingsDialogOption(qtc.QObject):
         tooltip = kwargs.pop('tooltip', '')
         v_align = kwargs.pop('label_alignment', 't')
 
-        super().__init__(kwargs.pop('parent', None))
+        super().__init__(*args, **kwargs)
         self.option_name = option_name
-        self._advanced = kwargs.pop('is_advanced', False)
-        self._read_only = bool(kwargs.pop('read_only', False))
 
         if isinstance(handler_widget, type(qtw.QWidget)):
             handler_widget = handler_widget(*args, **kwargs)
 
         self._handler_widget = handler_widget
-        self._label = qtw.QLabel()
+        self._label = None
         self._info = None
         self._check_handler()
         self._connect_handler()
@@ -488,6 +584,8 @@ class SettingsDialogOption(qtc.QObject):
 
         self.display_name = self._make_label_widget(display_name, tooltip,
                                                     v_align)
+        if not self.has_tag(Tag.REGULAR):
+            self.setVisible(False)
 
     def __iter__(self):
         """Return the label and the handler for this option."""
@@ -496,16 +594,6 @@ class SettingsDialogOption(qtc.QObject):
     def __repr__(self):
         """Return a string representation of self."""
         return f"SettingsDialogOption({self.option_name})"
-
-    @property
-    def advanced(self):
-        """Return whether this option is considered advanced."""
-        return self._advanced
-
-    @advanced.setter
-    def advanced(self, is_advanced):
-        """Set whether this option is considered advanced."""
-        self._advanced = bool(is_advanced)
 
     @property
     def handler_widget(self):
@@ -528,11 +616,6 @@ class SettingsDialogOption(qtc.QObject):
         """Return the QLabel widget for this option's label."""
         return self._label
 
-    @property
-    def read_only(self):
-        """Return whether this option can be modified."""
-        return self._read_only
-
     def get_(self):
         """Return the value of this option as a string."""
         return self.handler_widget.get_()
@@ -540,6 +623,11 @@ class SettingsDialogOption(qtc.QObject):
     def set_(self, value):
         """Set value displayed by this handler."""
         self.handler_widget.set_(value)
+
+    def set_enabled(self, enabled):
+        """Enable or disable this option."""
+        for child in self:
+            child.setEnabled(enabled)
 
     def set_info_text(self, text):
         """Set informative text."""
@@ -554,7 +642,7 @@ class SettingsDialogOption(qtc.QObject):
     def _check_handler(self):
         """Check that the handler widget can be used."""
         to_have = ('get_', 'set_')
-        if not self.read_only:
+        if not self.has_tag(Tag.READ_ONLY):
             to_have += ('notify_',)
         handler = self.handler_widget
         missing = {m: True for m in to_have if not hasattr(handler, m)}
@@ -565,8 +653,8 @@ class SettingsDialogOption(qtc.QObject):
                 )
 
     def _connect_handler(self):
-        """Connect self.handler_widget if not self.read_only."""
-        if self.read_only:
+        """Connect self.handler_widget if not read only."""
+        if self.has_tag(Tag.READ_ONLY):
             return
 
         signal = self.handler_widget.notify_
@@ -583,24 +671,19 @@ class SettingsDialogOption(qtc.QObject):
         label_text = label_text.strip()
         if not label_text.endswith(':'):
             label_text += ':'
-        self.label.setText(label_text)
+
+        info_label = InfoLabel(label_text=label_text, tooltip=info_text)
+        self._label = info_label.label
+        self._info = info_label.field_info
 
         # Prepare a container widget and its layout
         container = qtw.QWidget()
         container.setLayout(qtw.QVBoxLayout())
         v_align_layout = container.layout()
-        h_align_layout = qtw.QHBoxLayout()
         v_align_layout.setContentsMargins(0, 0, 0, 0)
-        h_align_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Get an appropriate size for the info object
-        info_size = self.label.fontMetrics().boundingRect(label_text).height()
-        self._info = FieldInfo(info_text, size=info_size)
 
         # Fill layout
-        h_align_layout.addWidget(self.label)
-        h_align_layout.addWidget(self._info)
-        v_align_layout.addLayout(h_align_layout)
+        v_align_layout.addWidget(info_label)
 
         # Sort out vertical alignment, using stretches. "Top"
         # is the default for QFormLayout, i.e., nothing to do
@@ -616,7 +699,7 @@ class SettingsDialogOption(qtc.QObject):
         # Now horizontal alignment: Decide where to
         # place a stretch to keep text & info together
         is_left_align = qtw.QFormLayout().labelAlignment() == qtc.Qt.AlignLeft
-        h_align_layout.insertStretch(-1 if is_left_align else 0, 1)
+        info_label.layout().insertStretch(-1 if is_left_align else 0, 1)
 
         self.set_info_text(info_text)
         return container
@@ -628,12 +711,12 @@ class SettingsDialogOption(qtc.QObject):
         self.value_changed.emit(self.get_())
 
     def _update_handler_from_read_only(self):
-        """Update the state of handler_widget according to self.read_only."""
+        """Update the state of handler_widget according to READ_ONLY tag."""
         handler = self.handler_widget
 
         # See if there is a readOnly method
         try:
-            handler.setReadOnly(self.read_only)
+            handler.setReadOnly(self.has_tag(Tag.READ_ONLY))
         except AttributeError:
             pass
         else:
@@ -641,13 +724,13 @@ class SettingsDialogOption(qtc.QObject):
 
         # See if there is a writeable read_only property
         try:
-            handler.read_only = self.read_only
+            handler.read_only = self.has_tag(Tag.READ_ONLY)
         except (AttributeError, TypeError):
             # Just disable it instead
-            handler.setEnabled(not self.read_only)
+            handler.setEnabled(not self.has_tag(Tag.READ_ONLY))
 
 
-class SettingsDialogSectionBase(qtw.QGroupBox):
+class SettingsDialogSectionBase(qtw.QGroupBox, SettingsTagHandler):
     """A base class for handling groups of settings.
 
     Use this class only as the parent class for "advanced"
@@ -663,6 +746,13 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
     # "advanced" sections subclasses, as it is used by the
     # SettingsHandler to notify of changes.
     settings_changed = qtc.pyqtSignal()
+
+    # This signal can be used to trigger a check whether the
+    # settings in a SettingsDialog are ok to be accepted. For
+    # this to work, the are_settings_ok() method must be
+    # reimplemented to check whether the settings of the
+    # section are ok.
+    settings_ok_changed = qtc.pyqtSignal()
 
     # The next signal is emitted when this section undergoes
     # an automatic update of its widgets that should trigger
@@ -680,29 +770,48 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
             A descriptive text that will be used as tooltip, displayed
             when the mouse cursor hovers over the section title. If an
             empty string no tooltip is shown. Default is an empty string.
-        is_advanced : bool, optional
-            Whether this section contains only settings that are to be
-            displayed if a user selects the 'Advanced' display.
+        column_info : SettingsSectionColumnInfo, optional
+            Information on how to display the section. Check out the
+            SettingsSectionColumnInfo class for more information. If
+            not given, the section will be displayed in the main column.
         parent : QWidget, optional
             The parent widget of this SettingsDialogSection. Default
             is None.
+        tags : SettingsTag, optional
+            Contains additional tags of this section. Possible tags are
+            a bitwise-or of:
+                SettingsTag.REGULAR
+                    Present if the section contains regular settings.
+                SettingsTag.ADVANCED
+                    Present if the section contains advanced settings.
+                SettingsTag.MEASUREMENT
+                    Present if the section contains settings
+                    related to the measurement.
+                SettingsTag.READ_ONLY
+                    Present if the section contains read-only settings.
+            Default is None.
 
         Raises
         -------
         TypeError
-            If no display_name is given
+            If no display_name is given.
+        TypeError
+            If column_info is given, but not an instance
+            of SettingsSectionColumnInfo.
         """
         display_name = kwargs.get('display_name', '')
         if not display_name:
             raise TypeError("Missing display_name")
 
+        self.column_info = kwargs.get('column_info',
+                                      SettingsSectionColumnInfo())
+        if not isinstance(self.column_info, SettingsSectionColumnInfo):
+            raise TypeError('Column info must be a SettingsSectionColumnInfo.')
+
         tooltip = kwargs.get('tooltip', '')
-
-        self._advanced = kwargs.get('is_advanced', False)
-
         self._info = qtw.QLabel()
         self.central_widget = qtw.QWidget()
-        super().__init__(display_name, kwargs.get('parent', None))
+        super().__init__(display_name, **kwargs)
 
         self.__compose()
         self.set_info(tooltip)
@@ -711,15 +820,19 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
         """Return a string representation of self."""
         return f"{self.__class__.__name__}(display_name='{self.title()}')"
 
-    @property
-    def advanced(self):
-        """Return whether this section contains only advanced settings."""
-        return self._advanced
+    def are_settings_ok(self):
+        """Return whether the section settings are acceptable.
 
-    @advanced.setter
-    def advanced(self, advanced):
-        """Mark this section as containing only advanced settings."""
-        self._advanced = bool(advanced)
+        Returns
+        -------
+        settings_ok : bool
+            Whether the settings selected in the widget are
+            acceptable or not.
+        reason : str
+            A descriptive string elaborating why the settings
+            are not acceptable.
+        """
+        return True, ''
 
     def set_info(self, info_text):
         """Add informative text in a QLabel."""
@@ -755,7 +868,6 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
         self.central_widget.setSizePolicy(_policy.Minimum, _policy.Minimum)
 
         layout.addWidget(self.central_widget)
-        layout.addStretch(1)                # Keep all options together
 
         self.setSizePolicy(_policy.Minimum, _policy.Minimum)
         self.setLayout(layout)
@@ -779,9 +891,19 @@ class SettingsDialogSection(SettingsDialogSectionBase):
             A descriptive text that will be used as tooltip, displayed
             when the mouse cursor hovers over the section title. If an
             empty string no tooltip is shown. Default is an empty string.
-        is_advanced : bool, optional
-            Whether this section contains only settings that are to be
-            displayed if a user selects the 'Advanced' display.
+        tags : SettingsTag, optional
+            Contains additional tags of this section. Possible tags are
+            a bitwise-or of:
+                SettingsTag.REGULAR
+                    Present if the section contains regular settings.
+                SettingsTag.ADVANCED
+                    Present if the section contains advanced settings.
+                SettingsTag.MEASUREMENT
+                    Present if the section contains settings
+                    related to the measurement.
+                SettingsTag.READ_ONLY
+                    Present if the section contains read-only settings.
+            Default is None.
         options : Sequence, optional
             Elements are SettingsDialogOption instances. Options can
             also be added later with the .add_option/.add_options
@@ -822,8 +944,9 @@ class SettingsDialogSection(SettingsDialogSectionBase):
         """Add one SettingsDialogOption to self."""
         self.__options.append(option)
         self.__layout.addRow(*option)
-        if self.advanced:
-            option.advanced = True
+        option.tags |= self.tags
+        if self.has_tag(Tag.REGULAR):
+            option.setVisible(True)
         option.handler_widget_changed.connect(self.__on_option_widget_changed)
 
     def add_options(self, options):
@@ -847,19 +970,21 @@ class SettingsDialogSection(SettingsDialogSectionBase):
 class SettingsDialog(qtw.QDialog):
     """A dialog to display settings."""
 
-    # This signal is emitted whenever the the OK, Cancel, or Apply
+    # This signal is emitted whenever the OK, Cancel, or Apply
     # buttons are pressed, and only in case settings changed since
     # the last time this signal was emitted (or since the dialog
     # was shown). Users can .connect to this signal and use the
-    # slot to update the object whose settings are being edited
+    # slot to update the object whose settings are being edited.
     settings_changed = qtc.pyqtSignal()
 
     # This signal is emitted every time the dialog finishes and if
     # any change occurred to the settings. It carries True if edited
     # settings were saved to file, False otherwise. Users can connect
     # to his signal, and may want to restore the original settings if
-    # False
+    # False.
     settings_saved = qtc.pyqtSignal(bool)
+
+    error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, handled_obj=None, settings=None, title=None, **kwargs):
         """Initialize dialog instance.
@@ -873,7 +998,7 @@ class SettingsDialog(qtw.QDialog):
             settings should be given instead.
         settings : ViPErLEEDSettings, optional
             A ViPErLEEDSettings to be displayed in full. This
-            argument is ignored if an handled_obj is passed.
+            argument is ignored if a handled_obj is passed.
         **kwargs : object
             Other keyword arguments passed on to QDialog
 
@@ -897,22 +1022,27 @@ class SettingsDialog(qtw.QDialog):
         self._handled_obj = handled_obj
         if handled_obj:
             settings = handled_obj.settings
+
+        # Settings are copied before making widgets
+        # as these may fix unacceptable values.
+        self._settings = {'current': settings,
+                          'applied': copy.deepcopy(settings),
+                          'original': copy.deepcopy(settings)}
+
+        if handled_obj:
             handler = handled_obj.get_settings_handler()
         else:
             handler = SettingsHandler(settings)
             handler.make_from_config()
         self.handler = handler
 
-        self.__settings = {'current': settings,
-                           'applied': copy.deepcopy(settings),
-                           'original': copy.deepcopy(settings)}
-
         # Set up children widgets and self
-        self.__ctrls = {
+        self._ctrls = {
+            'accept': None, # Will be an 'Accept' button
             'apply': None,  # Will be an 'Apply' button
-            'advanced': qtw.QPushButton("Show less"),
+            'advanced': QNoDefaultPushButton("Show less"),
             }
-        self.__compose_and_connect()
+        self._compose_and_connect()
 
         # And finally the window properties
         self.update_title(title, settings)
@@ -920,34 +1050,33 @@ class SettingsDialog(qtw.QDialog):
                             & ~qtc.Qt.WindowContextHelpButtonHint)
 
     @property
+    def adv_button(self):
+        """Return the advanced settings button."""
+        return self._ctrls['advanced']
+
+    @property
     def settings(self):
         """Return the settings currently displayed."""
-        return self.__settings['current']
+        return self._settings['current']
 
     @property
     def handled_object(self):
         """Return the object whose settings are shown."""
         return self._handled_obj
 
+    @qtc.pyqtSlot()
     def accept(self):
-        """Notify if settings changed, then close."""
+        """Notify if settings changed, decide whether to save, then close."""
         self.__on_apply_pressed()
-
         # Ask to save the settings to file.
-        if self.settings != self.__settings['original']:
-            reply = _MSGBOX.question(
-                self, "Save settings to file?",
-                f"{self.windowTitle()} were edited.\n\n"
-                "Would you like to save changes to file?",
-                _MSGBOX.Save | _MSGBOX.Discard
-                )
-            _saved = reply == _MSGBOX.Save
-            if _saved:
-                self.settings.update_file()
-                self.__settings['original'].read_dict(self.settings)
-            self.settings_saved.emit(_saved)
+        if self.settings != self._settings['original']:
+            action = self._save_edited_settings(self._ask_to_save())
+            if action == self.Rejected:
+                super().reject()
+                return
         super().accept()
 
+    @qtc.pyqtSlot()
     def reject(self):
         """Load back the original settings, then close."""
         if not self.isVisible():
@@ -955,8 +1084,8 @@ class SettingsDialog(qtw.QDialog):
             return
 
         # Ask confirmation if settings changed
-        _changed = self.__ctrls['apply'].isEnabled()
-        _changed |= self.__settings['original'] != self.__settings['applied']
+        _changed = self._ctrls['apply'].isEnabled()
+        _changed |= self._settings['original'] != self._settings['applied']
         if _changed:
             reply = _MSGBOX.question(
                 self, "Discard changes?",
@@ -967,9 +1096,9 @@ class SettingsDialog(qtw.QDialog):
             if reply == _MSGBOX.Cancel:
                 return
 
-        self.settings.read_dict(self.__settings['original'])
+        self.settings.read_dict(self._settings['original'])
         self.__on_apply_pressed()
-        if self.__settings['original'] != self.__settings['applied']:
+        if self._settings['original'] != self._settings['applied']:
             self.settings_saved.emit(False)
         super().reject()
 
@@ -978,14 +1107,17 @@ class SettingsDialog(qtw.QDialog):
         if not event.spontaneous():
             # i.e., not a show after minimized
             self.settings.read_again()
+            # Update all settings with the current ones. This has
+            # to be done before updating widgets as these may fix
+            # unacceptable values.
+            for key in ('applied', 'original'):
+                self._settings[key] = copy.deepcopy(self.settings)
             self.handler.update_widgets()
-            self.__ctrls['advanced'].setChecked(False)
+            self.adv_button.setChecked(False)
             if self.handled_object:
                 self.update_title()
-            # Update all settings with the current ones, and
-            # fix the enabled state of the "Apply" button
-            for key in ('applied', 'original'):
-                self.__settings[key] = copy.deepcopy(self.settings)
+            # Fix the enabled state of the "Apply" button
+            # since settings have been reloaded above.
             self.__update_apply_enabled()
         super().showEvent(event)
 
@@ -1004,40 +1136,35 @@ class SettingsDialog(qtw.QDialog):
             title += " settings"
         self.setWindowTitle(title)
 
-    def __compose_and_connect(self):
+    def _ask_to_save(self):
+        """Ask the users whether to save edits or not.
+
+        Returns
+        -------
+        reply : QMessageBox.Constant
+            The action selected by the user.
+        """
+        message_box = self._get_ask_to_save_dialog()
+        return message_box.exec()
+
+    def _compose_and_connect(self):
         """Place and update children widgets."""
+        self.handler.error_occurred.connect(self.error_occurred)
         self.handler.update_widgets()  # Fill widgets from settings
 
-        # Dialog buttons
-        _bbox = qtw.QDialogButtonBox
-        buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
+        buttons = self._compose_dialog_buttons()
+        columns = self._compose_columns()
 
-        self.__ctrls['apply'] = apply_btn = buttons.buttons()[-1]
-        apply_btn.setEnabled(False)
+        columns_layout = qtw.QHBoxLayout()
+        for column in columns:
+            columns_layout.addLayout(column)
 
-        adv_btn = self.__ctrls['advanced']
-        adv_btn.setDefault(False)
-        adv_btn.setAutoDefault(False)
-        adv_btn.setCheckable(True)
-
-        # Use a ResetRole to have the button placed in a
-        # different spot than all others on every platform
-        buttons.addButton(adv_btn, _bbox.ResetRole)
-        # adv_btn.setVisible(self.handler.has_advanced_options())
-
-        layout = qtw.QVBoxLayout()
-        for widg in self.handler.widgets:
-            if isinstance(widg, SettingsDialogSectionBase):
-                layout.addWidget(widg)
-                continue
-            # An option. Need to add it in a QFormLayout
-            _form = qtw.QFormLayout()
-            _form.addRow(*widg)
-            layout.addLayout(_form)
-        layout.addWidget(buttons)
-        layout.setSizeConstraint(layout.SetMinimumSize)
-        self.setLayout(layout)
-        layout.setSpacing(round(layout.spacing()*1.4))
+        outer_layout = qtw.QVBoxLayout()
+        outer_layout.addLayout(columns_layout)
+        outer_layout.addWidget(buttons)
+        outer_layout.setSizeConstraint(outer_layout.SetMinimumSize)
+        self.setLayout(outer_layout)
+        outer_layout.setSpacing(round(outer_layout.spacing()*1.4))
 
         _policy = self.sizePolicy()
         self.setSizePolicy(_policy.Minimum, _policy.Minimum)
@@ -1045,51 +1172,225 @@ class SettingsDialog(qtw.QDialog):
         # Connect signals
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        apply_btn.clicked.connect(self.__on_apply_pressed)
-        adv_btn.toggled.connect(self.__on_show_advanced_toggled)
+        self._ctrls['apply'].clicked.connect(self.__on_apply_pressed)
+        self.adv_button.toggled.connect(self.__on_show_advanced_toggled)
         self.handler.settings_changed.connect(self.__update_apply_enabled)
         self.handler.redraw_needed.connect(self.__update_advanced_btn)
 
         self.__update_advanced_btn()
 
+    def _compose_columns(self):
+        """Compose the columns of the layout and add widgets.
+
+        Returns
+        -------
+        columns : list
+            Contains columns of the dialog layout.
+        """
+        columns = [qtw.QVBoxLayout(),]
+        for widg in self.handler.widgets:
+            if widg.has_tag(Tag.MEASUREMENT) and not widg.has_tag(Tag.REGULAR):
+                continue
+            if isinstance(widg, SettingsDialogSectionBase):
+                position = widg.column_info.position
+                alignment = widg.column_info.alignment
+                while position >= len(columns):                                 # TODO: We could make a defaultlist class similar to defaultdict.
+                    columns.append(qtw.QVBoxLayout())
+                if alignment in (qtc.Qt.AlignVCenter, qtc.Qt.AlignBottom):
+                    columns[position].addStretch(1)
+                columns[position].addWidget(widg)
+                if alignment in (qtc.Qt.AlignVCenter, qtc.Qt.AlignTop):
+                    columns[position].addStretch(1)
+                continue
+            # An option. Need to add it in a QFormLayout
+            _form = qtw.QFormLayout()
+            _form.addRow(*widg)
+            columns[0].addLayout(_form)
+        columns[0].addStretch(1)
+        return columns
+
+    def _compose_dialog_buttons(self):
+        """Compose the buttons of the dialog.
+
+        Returns
+        -------
+        buttons : QNoDefaultDialogButtonBox
+            Contains the buttons necessary to handle the dialog.
+        """
+        _bbox = QNoDefaultDialogButtonBox
+        buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
+
+        self._ctrls['apply'] = buttons.buttons()[-1]
+        self._ctrls['accept'] = buttons.buttons()[0]
+        self._ctrls['apply'].setEnabled(False)
+        self.adv_button.setCheckable(True)
+
+        # Use a ResetRole to have the button placed in a
+        # different spot than all others on every platform
+        buttons.addButton(self.adv_button, _bbox.ResetRole)
+        return buttons
+
+    def _get_ask_to_save_dialog(self):
+        """Get the QMessageBox that asks if settings can be saved."""
+        message_box = _MSGBOX(
+            _MSGBOX.Question, "Save settings to file?",
+            (f"{self.windowTitle()} were edited.\n\n"
+             "Would you like to save changes to file?"),
+            parent=self,
+            )
+        message_box.addButton(_MSGBOX.Save)
+        message_box.addButton(_MSGBOX.Discard)
+        return message_box
+
     @qtc.pyqtSlot(bool)
     def __on_apply_pressed(self, _=False):
         """React to the user pressing 'Apply'."""
-        self.__ctrls['apply'].setEnabled(False)
-        if self.settings != self.__settings['applied']:
+        self._ctrls['apply'].setEnabled(False)
+        if self.settings != self._settings['applied']:
             self.settings_changed.emit()
-        self.__settings['applied'].read_dict(self.settings)
+        self._settings['applied'].read_dict(self.settings)
 
     @qtc.pyqtSlot(bool)
     def __on_show_advanced_toggled(self, visible):
         """Show or hide advanced options."""
+        if not self.handler.has_advanced_options():
+            return
         if visible:
             btn_text = "Show less"
         else:
             btn_text = "Show all"
-        self.__ctrls['advanced'].setText(btn_text)
+        self.adv_button.setText(btn_text)
         for widg in self.handler.widgets:
+            if not widg.has_tag(Tag.A | Tag.R):
+                continue
             if isinstance(widg, SettingsDialogSection):
                 _section_visible = False
                 for option in widg.options:
-                    _section_visible |= visible or not option.advanced
-                    option.setVisible(visible or not option.advanced)
+                    option_visible = visible or (not option.has_tag(Tag.A)
+                                                 and option.has_tag(Tag.R))
+                    _section_visible |= option_visible
+                    option.setVisible(option_visible)
                 widg.setVisible(_section_visible)
             else:
-                widg.setVisible(visible or not widg.advanced)
+                widg.setVisible(visible or (not widg.has_tag(Tag.A)
+                                            and widg.has_tag(Tag.R)))
         self.adjustSize()   # TODO: does not always adjust when going smaller?
+
+    def _save_edited_settings(self, reply):
+        """Save changes to the current settings to file.
+
+        Parameters
+        ----------
+        reply : qtw.QMessageBox.Constant
+            The response seleced by the user. Decides
+            whether the settings should be saved or not.
+
+        Returns
+        -------
+        action : QDialog.Accepted
+            The action that is to be performed on the dialog.
+        """
+        if reply == _MSGBOX.Save:
+            try:
+                self.settings.update_file()
+            except FileNotFoundError:
+                # The file must have been moved before
+                # the settings could be saved.                                  # TODO: open QMessageBox to ask the user how to proceed from here. Ask whether the user wants to save the settings and if yes, ask where and under which name.
+                pass
+            finally:
+                self._settings['original'].read_dict(self.settings)
+        self.settings_saved.emit(reply == _MSGBOX.Save)
+        return self.Accepted
 
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):
         """Update visibility of button and options."""
-        adv_btn = self.__ctrls['advanced']
-        adv_btn.setVisible(self.handler.has_advanced_options())
-        self.__on_show_advanced_toggled(adv_btn.isChecked())
+        self.adv_button.setVisible(self.handler.has_advanced_options())
+        self.__on_show_advanced_toggled(self.adv_button.isChecked())
 
     def __update_apply_enabled(self):
         """Enable/disable 'Apply' depending on whether anything changed."""
-        settings_changed = self.settings != self.__settings['applied']
-        self.__ctrls['apply'].setEnabled(settings_changed)
+        settings_changed = self.settings != self._settings['applied']
+        self._ctrls['apply'].setEnabled(settings_changed)
+
+
+class MeasurementSettingsDialog(SettingsDialog):
+    """A dialog to display measurement settings."""
+
+    @qtc.pyqtSlot()
+    def accept(self):
+        """Store device settings, then notify if settings changed."""
+        for widget in self.handler.widgets:
+            try:
+                widget.store_lower_level_settings()
+            except AttributeError:
+                pass
+        super().accept()
+
+    def showEvent(self, event):          # pylint: disable=invalid-name
+        """Check if the updated widgets have faulty settings."""
+        super().showEvent(event)
+        self._check_if_settings_ok()
+
+    def _check_if_settings_ok(self):
+        """Check if settings are ok and enable/disable accept button."""
+        settings_ok = True
+        self._ctrls['accept'].setToolTip('')
+        for widget in self.handler.widgets:
+            try:
+                settings_ok, reason = widget.are_settings_ok()
+            except AttributeError:
+                continue
+            if not settings_ok:
+                self._ctrls['accept'].setToolTip(reason)
+                break
+        self._ctrls['accept'].setEnabled(settings_ok)
+
+    def _compose_and_connect(self):
+        """Place and update children widgets."""
+        super()._compose_and_connect()
+        self._ctrls['accept'].setText('Start measurement')
+        self._ctrls['apply'].setVisible(False)
+        for widget in self.handler.widgets:
+            try:
+                widget.settings_ok_changed.connect(self._check_if_settings_ok)
+            except AttributeError:
+                pass
+
+    def _get_ask_to_save_dialog(self):
+        """Ask whether to save or not.
+
+        Returns
+        -------
+        reply : QMessageBox.Constant
+            The action selected by the user.
+        """
+        message_box = super()._get_ask_to_save_dialog()
+        for button in message_box.buttons():
+            if message_box.buttonRole(button) == _MSGBOX.DestructiveRole:
+                button.setText('Discard settings')
+                break
+        message_box.addButton(_MSGBOX.Abort)
+        return message_box
+
+    def _save_edited_settings(self, reply):
+        """Save changes to the current settings to file.
+
+        Parameters
+        ----------
+        reply : qtw.QMessageBox.Constant
+            The response seleced by the user. Decides
+            whether the settings should be saved or not.
+
+        Returns
+        -------
+        action : QDialog.DialogCode
+            The action that is to be performed on the dialog.
+        """
+        action = super()._save_edited_settings(reply)
+        if reply == _MSGBOX.Abort:
+            action = self.Rejected
+        return action
 
 
 class StaticSettingsDialogOption(SettingsDialogOption):
@@ -1117,14 +1418,20 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             when hovering over, or clicking on the info icon. If it
             is an empty string, no tooltip is shown. Default is an
             empty string.
-        read_only : bool, optional
-            Whether the user is allowed to change the ViPErLEEDSettings
-            by interacting with the handler of this SettingsDialogOption.
-            Must be True, otherwise a ValueError is raised.
-            Default is True.
-        is_advanced : bool, optional
-            Whether this option is to be displayed only in "Advanced"
-            mode. Default is False.
+        tags : SettingsTag, optional
+            Contains additional tags of this option. Possible tags are
+            a bitwise-or of:
+                SettingsTag.REGULAR
+                    Present if the option contains regular settings.
+                SettingsTag.ADVANCED
+                    Present if the option contains advanced settings.
+                SettingsTag.MEASUREMENT
+                    Present if the option contains settings
+                    related to the measurement.
+                SettingsTag.READ_ONLY
+                    Option contains read-only settings.
+            SettingsTag.READ_ONLY must be present, otherwise a
+            ValueError is raised.
         label_alignment : {'top', 'centre', 'bottom'}
             Vertical alignment of label field relative to handler_widget.
             Only the first character matters. Any character other than 'c'
@@ -1143,10 +1450,10 @@ class StaticSettingsDialogOption(SettingsDialogOption):
             read_only is not True. Indicates wrong
             use of StaticSettingsDialogOption.
         """
-        kwargs.setdefault('read_only', True)
-        if kwargs['read_only'] != True:
+        tags = kwargs.get('tags', Tag.NONE)
+        if Tag.READ_ONLY not in tags:
             raise ValueError(
-                'A StaticSettingsDialogOption may only be read_only. You '
+                'A StaticSettingsDialogOption may only be read only. You '
                 'are seeing this message due to a faulty implementation.'
                 )
         super().__init__(option_name, handler_widget, *args, **kwargs)

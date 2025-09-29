@@ -13,18 +13,16 @@ __license__ = 'GPLv3+'
 
 import csv
 from collections import defaultdict
+from collections import namedtuple
 from collections.abc import MutableSequence
 from collections.abc import Sequence
 from copy import deepcopy
 import enum
 import re
 
-from PyQt5 import QtCore as qtc
-
 from viperleed.gui.measure.classes.abc import QMetaABC
 from viperleed.gui.measure.classes.abc import QObjectWithError
 from viperleed.gui.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.gui.measure.hardwarebase import emit_error
 
 
 _ALIASES = {
@@ -38,6 +36,27 @@ _ALIASES = {
     'Cold_Junction': ('cold_junction',),
     'Timestamps': ('timestamps',),
     }
+_Q = namedtuple('Quantity', [
+    # The units of measure for self as a string. Quantities with the
+    # same unit can be plotted together.
+    'units',
+    # The default plotting scale ('lin', 'log') for self.
+    'scale',
+    # The data type of self as a callable (e.g., float).
+    'dtype',
+    # The unique label of self (e.g., 'Energy'). Used in the csv and for
+    # determining QuantityInfo from settings files (also via _ALIASES).
+    'label',
+    # The default axis for plotting self ('x', 'y'). No plotting if None.
+    'axis',
+    # The generic name of self (e.g., 'Current') for
+    # plotting multiple quantities of the same kind.
+    'generic_label',
+    # A label of self for display in widgets, visible to the user.
+    'display_name',
+    # A descriptive text of self. Used for tooltips.
+    'description',
+    ])
 
 
 NAN = float('nan')
@@ -56,39 +75,71 @@ class DataErrors(ViPErLEEDErrorEnum):
                               'Consider increasing energy_step_duration.')
 
 
-class QuantityInfo(enum.Enum):
+class QuantityInfo(_Q, enum.Enum):
     """Measurement quantities with unit, scaling, type, name, etc.
 
     New measurement quantities have to be added here.
     """
 
-    # Info:   units, scale, dtype, label, axis, common_label, tooltip
-    IMAGES = ('Number', None, str, 'Images', None, None, "")
-    ENERGY = ('eV', 'lin', float, 'Energy', 'x', None,
-              "The nominal value of the primary electron energy")
-    HV = ('eV', 'lin', float, 'Measured_Energy', 'y', 'Voltage',
-          "<nobr>The actual value of the primary electron energy"
-          "</nobr> measured on the LEED optics at high voltage")
-    TIMES = ('s', 'lin', float, 'Times', 'x', None, "")
-    I0 = ('µA', 'lin', float, 'I0', 'y', 'Current',
-          "<nobr>The total electron current emitted by the "
-          "electron gun,</nobr> measured on the LEED optics")
+    IMAGES = ('Number', None, str, 'Images', None, None, 'Images', '')
+    ENERGY = ('eV', 'lin', float, 'Energy', 'x', None, 'Energy',
+              'The nominal value of the primary electron energy')
+    HV = ('eV', 'lin', float, 'Measured_Energy',
+          'y', 'Voltage', 'Beam energy',
+          '<nobr>The actual value of the primary electron energy'
+          '</nobr> measured on the LEED optics at high voltage')
+    TIMES = ('s', 'lin', float, 'Times', 'x', None, 'Time','')
+    I0 = ('µA', 'lin', float, 'I0', 'y', 'Current', 'I\u2080',
+          '<nobr>The total electron current emitted by the '
+          'electron gun,</nobr> measured on the LEED optics')
     ISAMPLE = ('µA', 'lin', float, 'I_Sample', 'y', 'Current',
-               "<nobr>The total electron current emitted by the electron "
-               "gun,</nobr> measured by biasing the sample to +33 V via the "
-               "'I_target' BNC connector. This is an alternative to "
-               "I<sub>0</sub> in case your LEED optics does not provide an "
-               "I<sub>0</sub> output. LEED-IV videos should not be acquired "
-               "at the same time to avoid electric-field-induced distortions")
-    TEMPERATURE = ('°C', 'lin', float, 'Temperature', 'y', 'Temperature',
-                   "")
-    AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux', "")
-    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y', 'Temperature',
-                     "Reference temperature measured internally in the "
-                     "ViPErLEED unit to convert the measured thermocouple "
-                     "voltage to a temperature")
-    TIMESTAMPS = ('s', None, str, 'Timestamp', None, None, "")
-    UNKNOWN = ('', None, str, '??', None, None, "")
+               'I\u209b\u2090\u2098\u209a\u2097\u2091',
+               '<nobr>The total electron current emitted by the electron '
+               'gun,</nobr> measured by biasing the sample to +33 V via the '
+               'I<sub>sample</sub> BNC connector. This is an alternative to '
+               'I\u2080 in case your LEED optics does not provide an I\u2080'
+               ' output. LEED-IV videos should not be acquired at the same '
+               'time to avoid electric-field-induced distortions')
+    TEMPERATURE = ('°C', 'lin', float, 'Temperature',
+                   'y', 'Temperature', 'Temperature',
+                   'The temperature measured on the thermocouple.')
+    AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux', 'Aux', '')
+    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y',
+                     'Temperature', 'Cold-junction temperature',
+                     'Reference temperature measured internally in the '
+                     'ViPErLEED unit to convert the measured thermocouple '
+                     'voltage to a temperature')
+    TIMESTAMPS = ('s', None, str, 'Timestamp', None, None, 'Timestamp','')
+    UNKNOWN = ('', None, str, '??', None, None, '', '')
+
+    @classmethod
+    def from_display_name(cls, label):
+        """Return the QuantityInfo member associated with display_name.
+
+        Parameters
+        ----------
+        label : str
+            The display_name to search for.
+
+        Returns
+        -------
+        member : QuantityInfo
+            The member of QuantityInfo associated to display_name.
+
+        Raises
+        ------
+        TypeError
+            If label is not a str
+        ValueError
+            If label does not match any of the known QuantityInfo(s).
+        """
+        if not isinstance(label, str):
+            raise TypeError(f'Unexpected type {type(label).__name__} for '
+                            'QuantityInfo.from_display_name. Expected str.')
+        try:
+            return cls.get_display_names()[label]
+        except KeyError as exc:
+            raise ValueError(f'{cls.__name__}: {label!r} unknown') from exc
 
     @classmethod
     def from_label(cls, label):
@@ -125,8 +176,8 @@ class QuantityInfo(enum.Enum):
                 break
         try:
             return cls.get_labels()[label]
-        except KeyError as err:
-            raise ValueError(f'{cls.__name__}: {label!r} unknown') from err
+        except KeyError as exc:
+            raise ValueError(f'{cls.__name__}: {label!r} unknown') from exc
 
     @classmethod
     def get_axis_labels(cls, axis):
@@ -144,57 +195,17 @@ class QuantityInfo(enum.Enum):
             Each element is the label of the QuantityInfo(s)
             whose .axis is equal to axis.
         """
-        return [q.label for q in cls if q.axis == axis]
+        return [q.display_name for q in cls if q.axis == axis]
+
+    @classmethod
+    def get_display_names(cls):
+        """Return a dict {display_name: enum} of all members."""
+        return {q.display_name: q for q in cls}
 
     @classmethod
     def get_labels(cls):
         """Return a dict {label: enum} of all members of QuantityInfo."""
         return {l.label: l for l in cls}
-
-    @property
-    def axis(self):
-        """Return the default axis on which self is plotted.
-
-        Typically, only TIMES and ENERGY are used as
-        abscissae ('x'), while all the other quantities
-        are represented as ordinates ('y').
-
-        Returns
-        -------
-        axis : {'x', 'y'}
-            The default plot axis for this quantity.
-        """
-        return self.value[4]
-
-    @property
-    def common_label(self):                                                     # TODO: rename generic_label? denomination?
-        """Return the generic name of self (e.g., "Current", "Voltage")."""
-        return self.value[5]
-
-    @property
-    def dtype(self):
-        """Return the data type of self as a callable (e.g., float)."""
-        return self.value[2]
-
-    @property
-    def description(self):
-        """Return a descriptive text for this quantity."""
-        return self.value[6]
-
-    @property
-    def label(self):
-        """Return the unique label of self as a str (e.g., "Energy")."""
-        return self.value[3]
-
-    @property
-    def plot_scale(self):
-        """Return the default plotting scale ('lin', 'log') for self."""
-        return self.value[1]
-
-    @property
-    def units(self):
-        """Return the units of measure for self as a string."""
-        return self.value[0]
 
 
 # _EXCEPTIONAL contains quantities that are treated differently
@@ -227,7 +238,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
             may be ignored depending on the <continue> argument.
         continuous : bool, optional
             True if this is a time-resolved data series originating
-            from a "continuous" measurement, where data arrives at
+            from a 'continuous' measurement, where data arrives at
             maximum possible speed. If True, it overrides the value
             of time_resolved (to True). It can be set ONCE later
             using the .continuous attribute. It must be set before
@@ -313,21 +324,21 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         """Set whether data came from a continuous, t-resolved measurement."""
         if self.__continuous is not None:
             raise RuntimeError(
-                f"Cannot set {self.__class__.__name__}"
-                ".continuous more than once"
+                f'Cannot set {self.__class__.__name__}'
+                '.continuous more than once'
                 )
         if self.has_data:
             raise RuntimeError(
-                f"Cannot set {self.__class__.__name__}"
-                ".continuous after there is already data"
+                f'Cannot set {self.__class__.__name__}'
+                '.continuous after there is already data'
                 )
         # pylint: disable=compare-to-zero
-        # Complains about the "is False", but we need to check for
-        # "False" and not False-y. None means "undefined"
+        # Complains about the 'is False', but we need to check for
+        # 'False' and not False-y. None means 'undefined'
         if self.__time_resolved is False and continuous:
             raise ValueError(
-                f"{self.__class__.__name__} cannot be "
-                ".continuous and not .time_resolved"
+                f'{self.__class__.__name__} cannot be '
+                '.continuous and not .time_resolved'
                 )
         self.__continuous = bool(continuous)
         if continuous:
@@ -348,18 +359,18 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         """Set whether data is time-resolved if not present."""
         if self.__time_resolved is not None:
             raise RuntimeError(
-                f"Cannot set {self.__class__.__name__}"
-                ".time_resolved more than once"
+                f'Cannot set {self.__class__.__name__}'
+                '.time_resolved more than once'
                 )
         if self.has_data:
             raise RuntimeError(
-                f"Cannot set {self.__class__.__name__}"
-                ".time_resolved after there is already data"
+                f'Cannot set {self.__class__.__name__}'
+                '.time_resolved after there is already data'
                 )
         if self.__continuous and not resolved:
             raise ValueError(
-                f"{self.__class__.__name__} cannot be "
-                ".continuous and not .time_resolved"
+                f'{self.__class__.__name__} cannot be '
+                '.continuous and not .time_resolved'
                 )
         self.__time_resolved = bool(resolved)
         if not resolved:
@@ -368,10 +379,16 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
     def __deepcopy__(self, memo):
         """Return a deep copy of self."""
         cls = self.__class__
-        result = cls.__new__(cls)  # pylint: disable=E1120  # bug?
-        memo[id(self)] = result
-        for key, value in self.__dict__.items():
-            setattr(result, key, deepcopy(value, memo))
+        # The primary controller object is passed on because it is used
+        # for indexing and its times are used as a reference for other
+        # controllers in time-resolved measurements.
+        kwargs = {'primary_controller' : self.primary_controller,
+                  'time_resolved' : self.__time_resolved,
+                  'continuous' : self.__continuous,
+                  'parent' : self.parent(),}
+        result = cls(*deepcopy(self.__list, memo), **kwargs)
+        result.nr_steps_done = self.nr_steps_done
+        result.nr_steps_total = self.nr_steps_total
         return result
 
     def __str__(self):
@@ -380,7 +397,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
 
     def __repr__(self):
         """Return a string representation of self."""
-        return f"DataPoints({self.__list})"
+        return f'DataPoints({self.__list})'
 
     def __getitem__(self, index):
         """Return element(s) at index or slice."""
@@ -438,11 +455,11 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         """
         if controller not in self.controllers:
             raise ValueError(
-                f"Controller {controller} is not in {self.__class__.__name__}"
+                f'Controller {controller} is not in {self.__class__.__name__}'
                 )
         for quantity, values in new_data.items():
             if quantity not in self[-1]:
-                emit_error(self, DataErrors.INVALID_MEASUREMENT)
+                self.emit_error(DataErrors.INVALID_MEASUREMENT)
                 continue
             # In continuous-time-resolved mode, store only the first
             # timestamp (it is strictly needed only for the primary)
@@ -459,18 +476,18 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         # the information in the header to decide from
         # which folder images should be opened (in ImageJ)
         self[-1][QuantityInfo.IMAGES][camera].append(
-            f"{camera.name_clean}/{camera.process_info.filename}"
+            f'{camera.name_clean}/{camera.process_info.filename}'
             )
 
     def calculate_times(self, complain=True):  # too-complex
         """Calculate times for the last data point."""
-        err = ""
+        err = ''
         if not self.has_data:
-            err += "Cannot calculate_times without data. "
+            err += 'Cannot calculate_times without data. '
         if not self.primary_controller:
-            err += "Cannot calculate_times without a primary controller. "
+            err += 'Cannot calculate_times without a primary controller. '
         if self and not QuantityInfo.TIMESTAMPS in self[0]:
-            err += "Should not calculate_times for data read from file. "
+            err += 'Should not calculate_times for data read from file. '
 
         if err and complain:
             raise RuntimeError(err)
@@ -487,8 +504,8 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
                 # duration is so small that a controller did not yet
                 # return any measurement.
                 if complain:
-                    emit_error(self, DataErrors.NO_DATA_FOR_CONTROLLER,
-                               ctrl.address)
+                    self.emit_error(DataErrors.NO_DATA_FOR_CONTROLLER,
+                                    ctrl.address)
                 continue
 
             if self.continuous:
@@ -537,8 +554,8 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         self.__check_attributes()
         if self.is_time_resolved:
             raise RuntimeError(
-                f"{self.__class__.__name__}: cannot return "
-                "energy-resolved data from a time-resolved series."
+                f'{self.__class__.__name__}: cannot return '
+                'energy-resolved data from a time-resolved series.'
                 )
 
         # Prepare the structure of the dictionary to be returned:
@@ -615,7 +632,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         #       {controller: {quantity: measurements}, }
         # including only those controllers that measured (at least
         # one of) the requested quantities. measurements may be
-        # a single, "flat" list (if not separate_steps) or a list
+        # a single, 'flat' list (if not separate_steps) or a list
         # of lists (one per energy step).
         extracted = {controller: defaultdict(list)
                      for quantity in quantities
@@ -672,23 +689,23 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         """
         if not self.primary_controller:
             raise RuntimeError(
-                f"{self.__class__.__name__}: cannot add "
-                "a new data point before .primary_controller "
-                "has been set."
+                f'{self.__class__.__name__}: cannot add '
+                'a new data point before .primary_controller '
+                'has been set.'
                 )
         self.__check_attributes()
         if self:
             if set(controllers) != set(self.controllers):
                 raise ValueError(
-                    f"{self.__class__.__name__}: inconsistent "
-                    "controllers passed to new_data_point. Must "
-                    "always contain the same controllers."
+                    f'{self.__class__.__name__}: inconsistent '
+                    'controllers passed to new_data_point. Must '
+                    'always contain the same controllers.'
                     )
             if set(cameras) != set(self.cameras):
                 raise ValueError(
-                    f"{self.__class__.__name__}: inconsistent "
-                    "cameras passed to new_data_point. Must "
-                    "always contain the same cameras."
+                    f'{self.__class__.__name__}: inconsistent '
+                    'cameras passed to new_data_point. Must '
+                    'always contain the same cameras.'
                     )
             controllers = self.controllers
             cameras = self.cameras
@@ -733,7 +750,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         ----------
         lines : iterable
             Each element is a string of comma-separated values.
-            The first line is expected to contain the "header".
+            The first line is expected to contain the 'header'.
         source : string, optional
             The source from which  data is read. Used exclusively
             for error-reporting purposes.
@@ -758,8 +775,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
          invalid) = self.__make_column_header_map(first_row)
 
         if invalid:
-            emit_error(self, DataErrors.UNKNOWN_QUANTITIES,
-                       ", ".join(invalid))
+            self.emit_error(DataErrors.UNKNOWN_QUANTITIES, ', '.join(invalid))
 
         _egy = QuantityInfo.ENERGY
         # Prepare a dummy data point dictionary
@@ -799,6 +815,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         # Finally define a primary controller
         self.primary_controller = self.controllers[0]
         self.nr_steps_done = len(self)
+        self.nr_steps_total = len(self)
 
     def save_data(self, csv_name):
         """Save data to file.
@@ -872,7 +889,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         #            for the first step, and is the same value since.
         #            Otherwise, we just take the last time of the
         #            previous step and go from there.
-        is_first_step = (len(self) == 1)
+        is_first_step = len(self) == 1
         if ctrl == self.primary_controller or is_first_step:
             first_time = timestamps[0] - start
             first_time += ctrl.initial_delay / 1000
@@ -903,21 +920,21 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
         """Check that .time_resolved (and .continuous) were set."""
         if self.__time_resolved is None:
             raise RuntimeError(
-                f"{self.__class__.__name__}.time_resolved "
-                "should be set before data can be added"
+                f'{self.__class__.__name__}.time_resolved '
+                'should be set before data can be added'
                 )
         if self.__time_resolved and self.__continuous is None:
             raise RuntimeError(
-                f"{self.__class__.__name__}.continuous "
-                "should be set before data can be added"
+                f'{self.__class__.__name__}.continuous '
+                'should be set before data can be added'
                 )
 
     def __check_data(self, value):
         """Check if an element is of acceptable type."""
         if not isinstance(value, dict):
             raise TypeError(
-                f"{self.__class__.__name__}: invalid data "
-                f"type {type(value).__name__!r}. Expected 'dict'"
+                f'{self.__class__.__name__}: invalid data '
+                f'type {type(value).__name__!r}. Expected "dict"'
                 )
 
     @staticmethod
@@ -952,8 +969,8 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
             If the headers do not contain a valid energy column,
             or they contain no valid data.
         """
-        # All column headers, except for the "energy" one are
-        # expected to be of the form "quantity(measuring_device_id)".
+        # All column headers, except for the 'energy' one are
+        # expected to be of the form 'quantity(measuring_device_id)'.
         extractor = re.compile(
             r'\s*(?P<quantity>.*)\s*\(\s*(?P<ctrl>.*)\s*\)\s*'
             )
@@ -972,11 +989,11 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
                 skipped.append(label)
                 continue
             try:
-                info = QuantityInfo.from_label(extracted.group("quantity"))
+                info = QuantityInfo.from_label(extracted.group('quantity'))
             except ValueError:    # Unknown quantity
                 skipped.append(label)
                 continue
-            column_map[label] = (info, extracted.group("ctrl"))
+            column_map[label] = (info, extracted.group('ctrl'))
 
         # Make sure there is only one energy column, at
         # least one times column, and report any problems
@@ -1018,7 +1035,7 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
             <times for each controller>
         """
         _img = QuantityInfo.IMAGES.label
-        header = [f"{_img}({camera.name})" for camera in self.cameras]
+        header = [f'{_img}({camera.name})' for camera in self.cameras]
         header.append(QuantityInfo.ENERGY.label)
         for quantity, controllers in self[0].items():
             if quantity in _EXCEPTIONAL:
@@ -1027,5 +1044,5 @@ class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
             for ctrl in controllers:
                 if not ctrl.measures():
                     continue
-                header.append(f"{quantity.label}({ctrl.name})")
+                header.append(f'{quantity.label}({ctrl.name})')
         return header

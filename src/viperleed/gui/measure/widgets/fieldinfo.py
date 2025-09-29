@@ -3,6 +3,8 @@
 Defines the FieldInfo class: a QLabel with icon, used for displaying
 extra information in a tooltip. Less conspicuous than just having a
 tooltip appear on mouse hover.
+Defines the InfoLabel class: a QWidget composed of a label and a
+FieldInfo.
 """
 
 __authors__ = (
@@ -36,6 +38,18 @@ class FieldInfo(qtw.QLabel):
         self.__tooltip_timer.setSingleShot(True)
         self.__tooltip_timer.setInterval(150)
         self.__tooltip_timer.timeout.connect(self.__show_tooltip)
+
+    @classmethod
+    def for_widget(cls, widget, **kwargs):
+        """Return an instance of FieldInfo properly sized for a widget."""
+        if 'size' in kwargs:
+            raise ValueError('for_widget method does not accept a size.')
+        try:
+            # Get an appropriate size for the info object
+            size = widget.fontMetrics().boundingRect(widget.text()).height()
+        except AttributeError as exc:
+            raise TypeError('Invalid widget for FieldInfo.for_widget') from exc
+        return cls(size=size, **kwargs)
 
     def mouseDoubleClickEvent(self, event):  # pylint: disable=invalid-name
         """Show info on mouse double click."""
@@ -79,3 +93,34 @@ class FieldInfo(qtw.QLabel):
         if qtw.QToolTip.isVisible():
             return
         qtw.QToolTip.showText(qtg.QCursor.pos(), self.toolTip())
+
+
+class InfoLabel(qtw.QWidget):
+    """A label with an attached FieldInfo."""
+
+    def __init__(self, label_text='', tooltip='', parent=None):
+        """Initialize instance."""
+        super().__init__(parent=parent)
+        self._field_info = None
+        self._label = None
+        self._compose(label_text, tooltip)
+
+    @property
+    def field_info(self):
+        """Return FieldInfo."""
+        return self._field_info
+
+    @property
+    def label(self):
+        """Return QLabel."""
+        return self._label
+
+    def _compose(self, label_text, tooltip):
+        """Compase label and FieldInfo."""
+        layout = qtw.QHBoxLayout()
+        self._label = qtw.QLabel(label_text)
+        layout.addWidget(self._label)
+        self._field_info = FieldInfo.for_widget(self._label, tooltip=tooltip)
+        layout.addWidget(self._field_info)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)

@@ -8,6 +8,10 @@ cameraviewer
     Functionality for displaying images from cameras.
 checkcombobox
     A QComboBox with checkable items.
+collapsiblelists
+    Defines collapsible lists of devices.
+collapsibleviews
+    Defines collapsible widgets for measurement devices.
 fieldinfo
     A widget displaying information about another one.
 imgeviewer
@@ -20,6 +24,8 @@ measurement_plot
     Functionality for plotting measured numerical data.
 pathselector
     A widget for users to select a file or folder.
+quantityselector
+    A widget for selecting measured quantities.
 roi
     Functionality for graphically selecting a region of interest.
 roieditor

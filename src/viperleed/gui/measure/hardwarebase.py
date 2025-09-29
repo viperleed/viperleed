@@ -11,6 +11,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-08'
 __license__ = 'GPLv3+'
 
+from contextlib import contextmanager
 import enum
 import inspect
 from pathlib import Path
@@ -210,6 +211,42 @@ def device_name_re(name):
     return re.compile('|'.join(rf'^\s*{p}\s*$' for p in _patterns))
 
 
+@contextmanager
+def disconnected_signal(signal, slot, *more_slots, type=None):
+    """Temporarily disconnect a signal from slots."""
+    reconnect = []
+    for slot in (slot, *more_slots):
+        try:
+            signal.disconnect(slot)
+        except TypeError:  # Not connected
+            continue
+        reconnect.append(slot)
+
+    try:
+        yield
+    finally:
+        for slot in reconnect:
+            safe_connect(signal, slot, type=type)
+
+
+@contextmanager
+def disconnected_slot(slot, signal, *more_signals, type=None):
+    """Temporarily disconnect signals from a slot."""
+    reconnect = []
+    for signal in (signal, *more_signals):
+        try:
+            signal.disconnect(slot)
+        except TypeError:  # Not connected
+            continue
+        reconnect.append(signal)
+
+    try:
+        yield
+    finally:
+        for signal in reconnect:
+            safe_connect(signal, slot, type=type)
+
+
 def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     """Return a device config when it was not found in the original path.
 
@@ -336,7 +373,8 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
     parent_widget = kwargs.get('parent_widget', None)
 
     device_config_files = obj_cls.find_matching_settings_files(
-        obj_info, directory, match_exactly,
+        directory=directory, match_exactly=match_exactly,
+        obj_info=obj_info,
         )
 
     if device_config_files and len(device_config_files) == 1:
@@ -406,6 +444,30 @@ def get_devices(package):
             for device in dev_list:
                 devices[device.unique_name] = (cls, device)
     return devices
+
+
+def make_device(settings_file, device_cls, settings_info, **kwargs):
+    """Return an instance of `device_cls`.
+
+    Parameters
+    ----------
+    settings_file : dict or ConfigParser or str or Path or ViPErLEEDSettings
+        The device settings.
+    device_cls : type
+        The class of the device. It should be a subclass of DeviceABC.
+    settings_info : SettingsInfo
+        The SettingsInfo necessary to determine the settings.
+    **kwargs : object
+        Keyword arguments passed to `device_cls`.
+
+    Returns
+    -------
+    device : DeviceABC
+        An instance of `device_cls`.
+    """
+    if 'address' in settings_info.more:
+        kwargs['address'] = settings_info.more['address']
+    return device_cls(settings=settings_file, **kwargs)
 
 
 def safe_connect(signal, slot, **kwargs):

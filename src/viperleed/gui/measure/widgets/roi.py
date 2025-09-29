@@ -20,12 +20,12 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2022-10-21'
 __license__ = 'GPLv3+'
 
-import sys
 from enum import Enum
+import sys
 
-from PyQt5 import (QtCore as qtc,
-                   QtGui as qtg,
-                   QtWidgets as qtw)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtGui as qtg
+from PyQt5 import QtWidgets as qtw
 
 
 def _fixed_corner_rect(size, reference_rect, fixed_corner, normalize=False):
