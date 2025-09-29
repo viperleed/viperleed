@@ -40,7 +40,7 @@ class RangeToken(DisplacementsFileToken):
             )
             raise RangeTokenParserError(msg)
 
-        self.start, sef.stop, self.step = None
+        self.start, self.stop, self.step = None, None, None
         attrs = ('start', 'stop', 'step')
         for part, attr in zip(parts, attrs):
             try:
