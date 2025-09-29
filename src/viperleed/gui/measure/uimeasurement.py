@@ -702,7 +702,14 @@ class Measure(ViPErLEEDPluginBase):                                             
             ctrl = self._make_device(ctrl_cls, ctrl_info, address=address)
         except DefaultSettingsError:
             return
-
+        if not ctrl:
+            # Making a controller failed for some reason. We cannot
+            # create a SettingsDialog, so we just return. This check is
+            # here to prevent the GUI from breaking if the user refuses
+            # to make a settings file for a controller without settings
+            # when selecting this controller from the devices menu.
+            # (See #391)
+            return
         dialog = SettingsDialog(ctrl, parent=self)                              # TODO: modal?
         ctrl.ready_to_show_settings.connect(dialog.open)
         dialog.finished.connect(ctrl.disconnect_)
