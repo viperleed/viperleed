@@ -22,6 +22,7 @@ __license__ = 'GPLv3+'
 
 from abc import ABCMeta
 from abc import abstractmethod
+import configparser
 from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
@@ -270,7 +271,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             and an exact match was asked for.
         """
         settings = self.find_matching_settings_files(
-            directory=base.DEFAULTS_PATH, match_exactly=match_exactly,
+            directory=base.get_default_path(), match_exactly=match_exactly,
             obj_info=find_from,
             )
         if not settings:
@@ -321,18 +322,24 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             worst.
         """
         directory = Path(directory).resolve()
-        default = directory == base.DEFAULTS_PATH
+        default = directory == base.get_default_path()
         settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
-            settings_files = [file for file in settings_files
-                              if '_defaults' not in str(file)]
+            settings_files = [
+                file for file in settings_files
+                if '_defaults' not in str(file)
+                and str(base.get_default_path().parent) not in str(file)
+                ]
 
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
                        else cls.is_matching_user_settings)
         for settings_file in settings_files:
-            config = ViPErLEEDSettings.from_settings(settings_file)
+            try:
+                config = ViPErLEEDSettings.from_settings(settings_file)
+            except configparser.MissingSectionHeaderError:
+                continue
             if not cls.is_settings_for_this_class(config):
                 continue
             score = is_matching(obj_info, config, match_exactly)
@@ -660,7 +667,7 @@ class DeviceABC(HardwareABC):
         be enough to determine settings files that contain the correct
         settings for this device. Subclasses should raise a
         DefaultSettingsError if they fail to create instances from the
-        settings in the DEFAULTS_PATH.
+        default settings.
 
         Returns
         -------

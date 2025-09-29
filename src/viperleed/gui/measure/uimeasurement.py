@@ -191,6 +191,7 @@ __license__ = 'GPLv3+'
 from copy import deepcopy
 import functools
 from pathlib import Path
+import shutil
 import time
 from zipfile import ZipFile
 
@@ -303,6 +304,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             'retry_open_bpx_dialog': qtc.QTimer(parent=self),
             'delay_check_settings': qtc.QTimer(parent=self),
             }
+
+        self._move_settings_files()
 
         self.measurement = None
         self._measurement_thread = qtc.QThread()
@@ -764,6 +767,14 @@ class Measure(ViPErLEEDPluginBase):                                             
             device.settings.write(fproxy)
         device.uses_default_settings = False
         return device
+
+    def _move_settings_files(self):
+        """Move default settings files to the approriate location."""
+        install_dir_defaults = Path(__file__).parent / '_defaults'
+        defaults = (f for f in install_dir_defaults.iterdir()
+                    if f.is_file() and f.name != '_system_settings.ini')
+        for default in defaults:
+            shutil.copy2(default, base.get_default_path())
 
     def _on_bad_pixels_selected(self):
         """Stop all cameras, then open the dialog."""
