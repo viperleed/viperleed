@@ -705,6 +705,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             # here to prevent the GUI from breaking if the user refuses
             # to make a settings file for a controller without settings
             # when selecting this controller from the devices menu.
+            # (See #391)
             return
         dialog = SettingsDialog(ctrl, parent=self)                              # TODO: modal?
         ctrl.ready_to_show_settings.connect(dialog.open)
