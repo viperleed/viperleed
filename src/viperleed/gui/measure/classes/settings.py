@@ -222,27 +222,6 @@ class AliasConfigParser(ConfigParser):
                 continue
             self.add_section(section)
 
-    def _iter_aliases(self, section, option):
-        """Yield aliases for a section/option pair.
-
-        Parameters
-        ----------
-        section : str
-            The section key.
-        option : str
-            The option key.
-
-        Yields
-        ------
-        alias : tuple
-            Names of old section/option corresponding to the ones given.
-        """
-        try:
-            aliases = self._aliases[f'{section}/{option}']
-        except KeyError:
-            return
-        yield from (alias.split('/') for alias in aliases)
-
     def _get_from_alias(self, section, option, fallback, raw=False, vars=None):
         """Get an alias option value for a given section.
 
@@ -267,7 +246,7 @@ class AliasConfigParser(ConfigParser):
         value : object
             The read value from the loaded settings or the fallback.
         """
-        for sec, opt in self._get_aliases(section, option):
+        for sec, opt in self._iter_aliases(section, option):
             try:
                 value = super().get(sec, opt, raw=raw, vars=vars)
             except (NoSectionError, NoOptionError):
@@ -279,6 +258,27 @@ class AliasConfigParser(ConfigParser):
                 self.remove_option(sec, opt)
                 return value
         return fallback
+
+    def _iter_aliases(self, section, option):
+        """Yield aliases for a section/option pair.
+
+        Parameters
+        ----------
+        section : str
+            The section key.
+        option : str
+            The option key.
+
+        Yields
+        ------
+        alias : tuple
+            Names of old section/option corresponding to the ones given.
+        """
+        try:
+            aliases = self._aliases[f'{section}/{option}']
+        except KeyError:
+            return
+        yield from (alias.split('/') for alias in aliases)
 
     def _load_aliases(self):
         """Prepare aliases for the handled settings.
