@@ -268,6 +268,7 @@ classifiers = [
         'ISC001',   # avoids conflicts with formatter
         'TRY003',   # allow long error messages
         'EM101',    # allow string literals in errors
+        'PERF203',  # don't complain about try - except in loops
     ]
     flake8-quotes.inline-quotes='single'
 
