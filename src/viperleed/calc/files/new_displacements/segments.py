@@ -30,7 +30,6 @@ from .lines import (
 class DisplacementsSegmentABC(ABC, NodeMixin):
     """Base class for logical segments in a DISPLACEMENTS file."""
 
-    subsegments = ()  # override in subclasses
     _subclasses = set()
 
     def __init_subclass__(cls):
@@ -41,7 +40,13 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
         """Initialize instance."""
         self._header = header_line
         self._lines = []
+        self._subsegments = ()
         super().__init__()
+
+    @property
+    def subsegments(self):
+        """Return the possible subsegments of this segment."""
+        return self._subsegments
 
     @classmethod
     def from_header_line(cls, line):
@@ -56,19 +61,26 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
     def is_my_header_line(line):
         """Return whether `line` is a header for this segment."""
 
+    @property
+    def lines(self):
+        """Return the lines belonging to this segment."""
+        return tuple(self._lines)
+
     def read_lines(self, lines):
         while True:
             try:
                 line = next(lines)
             except StopIteration:
-                return iter([])  # No more lines to read
+                # No more lines to read; validate and return
+                self.validate_segment()
+                return iter([])
 
             processed = False
             if self._belongs_to_me(line):
                 self._lines.append(line)
                 continue
             # Check if this line starts one of *my* direct subsegments
-            for subsegment in self.SUBSEGMENTS:
+            for subsegment in self.subsegments:
                 if subsegment.is_my_header_line(line):
                     child = subsegment(line)
                     child.parent = self
@@ -164,7 +176,7 @@ class ConstraintBlock(DeltaBlock):
 class SearchBlock(DisplacementsSegmentABC):
     """Class to hold all information for a search block in the DISPLACEMENTS file."""
 
-    SUBSEGMENTS = (
+    subsegments = (
         GeoDeltaBlock,
         VibDeltaBlock,
         OccDeltaBlock,
@@ -186,27 +198,27 @@ class SearchBlock(DisplacementsSegmentABC):
         """Return the first block of the given type."""
         for child in self.children:
             if isinstance(child, block_type):
-                return child._lines
+                return child.lines
         return []
 
     @property
     def geo_delta_lines(self):
-        """Return the GeoDeltaBlock if it exists, otherwise None."""
+        """Return lines of the GeoDeltaBlock."""
         return self._get_block_lines(GeoDeltaBlock)
 
     @property
     def vib_delta_lines(self):
-        """Return the VibDeltaBlock if it exists, otherwise None."""
+        """Return lines of the VibDeltaBlock."""
         return self._get_block_lines(VibDeltaBlock)
 
     @property
     def occ_delta_lines(self):
-        """Return the OccDeltaBlock if it exists, otherwise None."""
+        """Return lines of the OccDeltaBlock."""
         return self._get_block_lines(OccDeltaBlock)
 
     @property
     def explicit_constraint_lines(self):
-        """Return the ConstraintBlock if it exists, otherwise None."""
+        """Return lines of the ConstraintBlock."""
         return self._get_block_lines(ConstraintBlock)
 
     def validate_segment(self):
@@ -216,7 +228,7 @@ class SearchBlock(DisplacementsSegmentABC):
             raise DisplacementsSyntaxError(msg)
 
         # check that there is at most one block of each type
-        for block_type in self.SUBSEGMENTS:
+        for block_type in self.subsegments:
             blocks = [
                 child
                 for child in self.children
@@ -244,8 +256,10 @@ class LoopBlock(DisplacementsSegmentABC):
         super().__init__(header_line)
 
         # attributes related to iterating over the search blocks
-        self._last_rfac = np.inf  # start with large value; loop will always
+        # start with large value; loop will always decrease it
+        self._last_rfac = np.inf
         self._current_child_id = 0
+        self._subsegments = (SearchBlock, LoopBlock)
 
     @staticmethod
     def is_my_header_line(line):
@@ -254,7 +268,15 @@ class LoopBlock(DisplacementsSegmentABC):
 
     def _belongs_to_me(self, line):
         """Loop end lines belong to this block."""
-        return isinstance(line, LoopMarkerLine) and line.kind == 'end'
+        # is the loop already closed?
+        if self.lines and self.lines[-1].kind == 'end':
+            return False
+        # if not, check if this is the end line
+        is_end_line = isinstance(line, LoopMarkerLine) and line.kind == 'end'
+        if is_end_line:
+            # accept no more subsegments after this
+            self._subsegments = ()
+        return is_end_line
 
     @property
     def _render_name(self):
@@ -262,13 +284,11 @@ class LoopBlock(DisplacementsSegmentABC):
 
     def validate_segment(self):
         # loop block must contain exactly one line – the end loop marker
-        if len(self._lines) != 1:
+        if len(self.lines) < 1:
             raise DisplacementsSyntaxError('Unfinished loop block.')
         # it must contain at least one search block
         if not self.children:
-            raise DisplacementsSyntaxError(
-                'Loop block must contain at least one search block.'
-            )
+            raise DisplacementsSyntaxError('Loop block cannot be empty.')
         # a loop cannot contain only one other loop block
         if len(self.children) == 1 and isinstance(self.children[0], LoopBlock):
             raise DisplacementsSyntaxError(
@@ -279,9 +299,9 @@ class LoopBlock(DisplacementsSegmentABC):
         """Check convergence criteria and return the next search block."""
         if self._current_child_id >= len(self.children):
             # if all children have been processed, check convergence
-            # specifically do not use abs() here – break if we increased
-            if self._last_rfac - current_rfac <= r_fac_eps:
-                # if converged, reset the child index and call next() again
+            # specifically do not use abs() here - break if we increased
+            if self._last_rfac - current_rfac >= r_fac_eps:
+                # if converged, reset the child index and call next()
                 self._current_child_id = 0
                 self._last_rfac = current_rfac
                 return self.next(current_rfac, r_fac_eps)
@@ -303,9 +323,6 @@ class LoopBlock(DisplacementsSegmentABC):
         return next_block
 
 
-# assign the subsegments for LoopBlock
-LoopBlock.SUBSEGMENTS = (SearchBlock, LoopBlock)
-
 
 class OffsetsBlock(LineContainer):
     """Base class for blocks that contain offsets lines."""
@@ -320,5 +337,6 @@ class OffsetsBlock(LineContainer):
         return isinstance(line, OffsetsLine)
 
     def validate_segment(self):
+        """Validate that the offsets block is not empty."""
         if not self._lines:
             raise DisplacementsSyntaxError('Empty OFFSETS block.')
