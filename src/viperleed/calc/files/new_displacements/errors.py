@@ -9,21 +9,21 @@ __license__ = 'GPLv3+'
 class DisplacementsFileError(Exception):
     """Base class for all displacement-related errors."""
 
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+
+class AlreadyReadError(DisplacementsFileError):
+    """Error raised when the file has already been read."""
+
 
 class DisplacementsSyntaxError(DisplacementsFileError):
     """Base class for all errors related to the DISPLACEMENTS file."""
 
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
-
 
 class IncompatibleBackendError(DisplacementsFileError):
     """Error raised when the chosen backend is incompatible with the file."""
-
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
 
 
 class OffsetsNotAtBeginningError(DisplacementsFileError):

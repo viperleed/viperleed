@@ -124,7 +124,7 @@ class CartesianDirectionToken(DirectionToken):
             if not match:
                 msg = f'Invalid direction format: {direction_str}'
                 raise ValueError(msg)
-            dirs = list(match['dir'])
+            dirs = match['dir']
             vecs = [float(v) for v in match['vec'].split()]
             if len(dirs) != len(vecs):
                 msg = (
@@ -151,8 +151,8 @@ class CartesianDirectionToken(DirectionToken):
     def _embed_vector(self, dirs, comps):
         vec = np.zeros(3)
         idx_map = {'x': 0, 'y': 1, 'z': 2}
-        for d, c in zip(dirs, comps):
-            vec[idx_map[d]] = c
+        for direction, component in zip(dirs, comps):
+            vec[idx_map[direction]] = component
         return vec
 
     def _normalize(self, vec):

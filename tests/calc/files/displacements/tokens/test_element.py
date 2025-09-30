@@ -6,7 +6,9 @@ __created__ = '2025-05-13'
 import pytest
 
 from viperleed.calc.files.new_displacements.tokens.element import (
-    ElementToken, ElementTokenParserError)
+    ElementToken,
+    ElementTokenParserError,
+)
 
 
 @pytest.mark.parametrize(

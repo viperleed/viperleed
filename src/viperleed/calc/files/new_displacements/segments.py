@@ -41,6 +41,7 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
         """Initialize instance."""
         self._header = header_line
         self._lines = []
+        super().__init__()
 
     @classmethod
     def from_header_line(cls, line):
@@ -53,11 +54,6 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
     @staticmethod
     @abstractmethod
     def is_my_header_line(line):
-        """Return whether `line` is a header for this segment."""
-
-    @staticmethod
-    @abstractmethod
-    def _belongs_to_me(line):
         """Return whether `line` is a header for this segment."""
 
     def read_lines(self, lines):
@@ -82,7 +78,7 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
             if processed:
                 continue
             # done reading this segment, return to parent
-            self._validate_segment()
+            self.validate_segment()
             return itertools.chain([line], lines)
 
     def __str__(self):
@@ -94,22 +90,17 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
         pass
 
     @abstractmethod
-    def _validate_segment(self):
+    def validate_segment(self):
         """Check the segments contents run before returning to parent."""
+
+    @staticmethod
+    @abstractmethod
+    def _belongs_to_me(line):
+        """Return whether `line` is a header for this segment."""
 
 
 class LineContainer(DisplacementsSegmentABC):
     """Base class for units that contain content lines."""
-
-    SUBSEGMENTS = ()  # Line containers do not allow subsegments
-
-    def __init__(self, header_line):
-        self.header = header_line
-        self._lines = []
-
-    @abstractmethod
-    def _belongs_to_me(self, line):
-        """Check if the line belongs to this container."""
 
     @property
     def _render_name(self):
@@ -126,48 +117,48 @@ class DeltaBlock(LineContainer):
 
     @property
     @abstractmethod
-    def LINE_TYPE(self):
+    def line_type(self):
         """Return the line type for this delta block."""
 
     @property
     @abstractmethod
-    def HEADER(self):
+    def header(self):
         """Return the header for this delta block."""
 
     @classmethod
     def is_my_header_line(cls, line):
         """Check if the line is a header for this DELTA block."""
         return (
-            isinstance(line, SectionHeaderLine) and line.section == cls.HEADER
+            isinstance(line, SectionHeaderLine) and line.section == cls.header
         )
 
     def _belongs_to_me(self, line):
         """Check if the line belongs to this delta block."""
-        return isinstance(line, self.LINE_TYPE) or self.is_my_header_line(line)
+        return isinstance(line, self.line_type) or self.is_my_header_line(line)
 
-    def _validate_segment(self):
+    def validate_segment(self):
         if not self._lines:
-            raise DisplacementsSyntaxError(f'Found empty {self.HEADER} block.')
+            raise DisplacementsSyntaxError(f'Found empty {self.header} block.')
 
 
 class GeoDeltaBlock(DeltaBlock):
-    HEADER = 'GEO_DELTA'
-    LINE_TYPE = GeoDeltaLine
+    header = 'GEO_DELTA'
+    line_type = GeoDeltaLine
 
 
 class VibDeltaBlock(DeltaBlock):
-    HEADER = 'VIB_DELTA'
-    LINE_TYPE = VibDeltaLine
+    header = 'VIB_DELTA'
+    line_type = VibDeltaLine
 
 
 class OccDeltaBlock(DeltaBlock):
-    HEADER = 'OCC_DELTA'
-    LINE_TYPE = OccDeltaLine
+    header = 'OCC_DELTA'
+    line_type = OccDeltaLine
 
 
 class ConstraintBlock(DeltaBlock):
-    HEADER = 'CONSTRAIN'
-    LINE_TYPE = ConstraintLine
+    header = 'CONSTRAIN'
+    line_type = ConstraintLine
 
 
 class SearchBlock(DisplacementsSegmentABC):
@@ -190,10 +181,6 @@ class SearchBlock(DisplacementsSegmentABC):
     def is_my_header_line(line):
         """Return whether `line` is a header for this segment."""
         return isinstance(line, SearchHeaderLine)
-
-    def _belongs_to_me(self, line):
-        """Check if the line belongs to this search block."""
-        return False
 
     def _get_block_lines(self, block_type):
         """Return the first block of the given type."""
@@ -222,16 +209,11 @@ class SearchBlock(DisplacementsSegmentABC):
         """Return the ConstraintBlock if it exists, otherwise None."""
         return self._get_block_lines(ConstraintBlock)
 
-    @property
-    def _render_name(self):
-        return str(self._header)
-
-    def _validate_segment(self):
+    def validate_segment(self):
         """Check the segments contents run before returning to parent."""
         if not self.children:
-            raise DisplacementsSyntaxError(
-                f'Empty search block: {self.label!r}.'
-            )
+            msg = f'Empty search block: {self.label!r}.'
+            raise DisplacementsSyntaxError(msg)
 
         # check that there is at most one block of each type
         for block_type in self.SUBSEGMENTS:
@@ -241,14 +223,22 @@ class SearchBlock(DisplacementsSegmentABC):
                 if isinstance(child, block_type)
             ]
             if len(blocks) > 1:
-                raise DisplacementsSyntaxError(
-                    f'Multiple {block_type.HEADER} blocks found in search '
+                msg = (
+                    f'Multiple {block_type.header} blocks found in search '
                     f"block: '{self.label}'."
                 )
+                raise DisplacementsSyntaxError(msg)
 
+    def _belongs_to_me(self, line):
+        """Check if the line belongs to this search block."""
+        return False
+
+    @property
+    def _render_name(self):
+        return str(self._header)
 
 class LoopBlock(DisplacementsSegmentABC):
-    """Class to hold all information for a search block in the DISPLACEMENTS file."""
+    """Class holding information about a loop block in DISPLACEMENTS."""
 
     def __init__(self, header_line):
         super().__init__(header_line)
@@ -270,7 +260,7 @@ class LoopBlock(DisplacementsSegmentABC):
     def _render_name(self):
         return 'Loop Block'
 
-    def _validate_segment(self):
+    def validate_segment(self):
         # loop block must contain exactly one line – the end loop marker
         if len(self._lines) != 1:
             raise DisplacementsSyntaxError('Unfinished loop block.')
@@ -302,10 +292,10 @@ class LoopBlock(DisplacementsSegmentABC):
         if isinstance(next_block, LoopBlock):
             # call the loop block's next method to get the next search block
             try:
-                return self.children[self.child_id].next(current_rfac)
+                return self.children[self._current_child_id].next(current_rfac)
             except StopIteration:
                 # if the loop block is exhausted, move to the next child
-                self.child_id += 1
+                self._current_child_id += 1
                 return self.next(current_rfac, r_fac_eps=r_fac_eps)
 
         # otherwise, return the next search block
@@ -329,6 +319,6 @@ class OffsetsBlock(LineContainer):
         """Check if the line belongs to this delta block."""
         return isinstance(line, OffsetsLine)
 
-    def _validate_segment(self):
+    def validate_segment(self):
         if not self._lines:
             raise DisplacementsSyntaxError('Empty OFFSETS block.')

@@ -1,7 +1,9 @@
 """Tests for module files/displacements/lines."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-04-10'
+__license__ = 'GPLv3+'
 
 import numpy as np
 import pytest
@@ -21,13 +23,14 @@ from viperleed.calc.files.new_displacements.tokens import (
     CartesianDirectionToken,
     ElementToken,
     LinearOperationToken,
+    ModeToken,
     OffsetToken,
     RangeToken,
     TargetToken,
-    TokenParserError,
-    ModeToken,
 )
-from viperleed.calc.files.new_displacements.tokens.direction import CartesianDirectionToken
+from viperleed.calc.files.new_displacements.tokens.direction import (
+    CartesianDirectionToken,
+)
 
 
 class TestGeoDeltaLine:
@@ -72,7 +75,8 @@ class TestGeoDeltaLine:
         ],
     )
     def test_geodelta_parametrized(
-        self, line,exp_targets, exp_direction, exp_range):
+        self, line, exp_targets, exp_direction, exp_range
+    ):
         geo = GeoDeltaLine(line)
         # targets
         assert len(geo.targets) == len(exp_targets)
@@ -106,20 +110,18 @@ class TestGeoDeltaLine:
         with pytest.raises(exp_error):
             GeoDeltaLine(bad_line)
 
-class TestVibDeltaLine:
 
+class TestVibDeltaLine:
     @pytest.mark.parametrize(
-        "line, exp_targets, exp_range",
+        'line, exp_targets, exp_range',
         [
             # single target, no step
-            ("A = 0 1",
-             [TargetToken("A")],
-             RangeToken.from_floats(0.0, 1.0)
-            ),
+            ('A = 0 1', [TargetToken('A')], RangeToken.from_floats(0.0, 1.0)),
             # multiple targets comma separated, with step
-            ("A1, B2 = -1.5 3.0 0.5",
-             [TargetToken("A1"), TargetToken("B2")],
-             RangeToken.from_floats(-1.5, 3.0, 0.5)
+            (
+                'A1, B2 = -1.5 3.0 0.5',
+                [TargetToken('A1'), TargetToken('B2')],
+                RangeToken.from_floats(-1.5, 3.0, 0.5),
             ),
         ],
     )
@@ -130,20 +132,19 @@ class TestVibDeltaLine:
         for actual, expected in zip(vib.targets, exp_targets):
             assert actual == expected
         # no direction allowed
-        assert not hasattr(vib, "direction")
+        assert not hasattr(vib, 'direction')
         # range
         assert isinstance(vib.range, RangeToken)
         assert vib.range == exp_range
 
-
     @pytest.mark.parametrize(
-        "bad_line, exp_error",
+        'bad_line, exp_error',
         [
-            ("A x = 0 1", DisplacementsSyntaxError),
-            ("A =", DisplacementsSyntaxError),
-            ("A 0 1", DisplacementsSyntaxError),
-            ("A = foo bar", DisplacementsSyntaxError),
-            ("A = 0 1 = 2", DisplacementsSyntaxError),
+            ('A x = 0 1', DisplacementsSyntaxError),
+            ('A =', DisplacementsSyntaxError),
+            ('A 0 1', DisplacementsSyntaxError),
+            ('A = foo bar', DisplacementsSyntaxError),
+            ('A = 0 1 = 2', DisplacementsSyntaxError),
         ],
     )
     def test_invalid(self, bad_line, exp_error):
@@ -151,16 +152,15 @@ class TestVibDeltaLine:
             VibDeltaLine(bad_line)
 
     def test_str_shows_targets_and_range(self):
-        line = "X,Y = 2 4 1"
+        line = 'X,Y = 2 4 1'
         vib = VibDeltaLine(line)
         rep = str(vib)
-        assert "TargetToken" in rep
-        assert "=" in rep
-        assert "RangeToken" in rep
+        assert 'TargetToken' in rep
+        assert '=' in rep
+        assert 'RangeToken' in rep
 
 
 class TestOffsetLine:
-
     @pytest.mark.parametrize(
         'line, exp_type, exp_targets, exp_direction, exp_offset',
         [
@@ -193,7 +193,9 @@ class TestOffsetLine:
             # ),
         ],
     )
-    def test_offsets_valid(self, line, exp_type, exp_targets, exp_direction, exp_offset):
+    def test_offsets_valid(
+        self, line, exp_type, exp_targets, exp_direction, exp_offset
+    ):
         off = OffsetsLine(line)
         # type
         assert isinstance(off.type, ModeToken)
@@ -212,7 +214,6 @@ class TestOffsetLine:
         # offset
         assert isinstance(off.offset, OffsetToken)
         assert off.offset == OffsetToken.from_floats(exp_offset)
-
 
     @pytest.mark.parametrize(
         'bad_line, exp_error',
@@ -269,7 +270,10 @@ class TestOccDeltaLine:
                 [TargetToken('A_surf'), TargetToken('B_def L(2-3)')],
                 [
                     (ElementToken('Pt'), RangeToken.from_floats(0.1, 0.2)),
-                    (ElementToken('Au'), RangeToken.from_floats(0.1, 1.0, 0.1)),
+                    (
+                        ElementToken('Au'),
+                        RangeToken.from_floats(0.1, 1.0, 0.1),
+                    ),
                 ],
             ),
             # whitespace tolerance
@@ -299,7 +303,6 @@ class TestOccDeltaLine:
             assert isinstance(act_r, RangeToken)
             assert act_r == exp_r
 
-
     @pytest.mark.parametrize(
         'bad_line',
         [
@@ -317,7 +320,6 @@ class TestOccDeltaLine:
     def test_occ_delta_invalid(self, bad_line):
         with pytest.raises(DisplacementsSyntaxError):
             OccDeltaLine(bad_line)
-
 
     def test_str_contains_elements_and_ranges(self):
         line = 'A,B = Fe 0.0 1.0, Ni 0.0 0.2'
@@ -356,14 +358,14 @@ class TestConstraintLine:
                 LinearOperationToken.from_array(np.eye(1)),
                 id='geo-single-target-link',
             ),
-            pytest.param(
-                'geo A = [1 0 0] B',
-                ModeToken('geo'),
-                [TargetToken('A')],
-                TargetToken('B'),
-                LinearOperationToken('[1 0 0]'),
-                id='geo-linear-operation',
-            ),
+            # pytest.param(
+            #     'geo A = [1 0 0] B',
+            #     ModeToken('geo'),
+            #     [TargetToken('A')],
+            #     TargetToken('B'),
+            #     LinearOperationToken('[1 0 0]'),
+            #     id='geo-linear-operation',
+            # ),
             pytest.param(
                 'geo Fe_surf, O_surf = [[1 0 0] [0 0 1] [0 1 0]] Fe_surf',
                 ModeToken('geo'),

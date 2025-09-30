@@ -1,4 +1,10 @@
-# test_target_token.py
+"""Tests for <target> token of viperleed.files.new_displacements."""
+
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-14'
+__license__ = 'GPLv3+'
+
 import re
 
 import pytest
@@ -50,21 +56,22 @@ def test_parse_valid_targets(
     [
         # combined layer and number
         'A L(1-2) 3',
-        # numberic without label
+        # numeric without label
         '1 2 3',
         '2',
         '[1 0 0'
         # layer without label
         'L(1)',
         # wrongly formatted layer
-    ])
+    ],
+)
 def test_invalid_target_raises(raw):
     with pytest.raises(TargetingError):
         TargetToken(raw)
 
 
 def test_empty_string_raises():
-    with pytest.raises(TargetingError, match='Target string is empty') as exc:
+    with pytest.raises(TargetingError, match='Target string is empty'):
         TargetToken('')
 
 
@@ -94,6 +101,7 @@ def test_eq_layer_specifier():
     a = TargetToken('Fe L(1-3)')
     b = TargetToken('Fe L(1-3)')
     assert a == b
+
 
 def test_selection_regex_matching():
     # test that regex actually matches sites correctly

@@ -25,7 +25,13 @@ class TargetToken(DisplacementsFileToken):
         self.target_str = target_str.strip()
         self.nums = None
         self.layers = None
+        self._regex = None
         self._parse_target()
+
+    @property
+    def regex(self):
+        """Return the compiled regex pattern for matching site labels."""
+        return self._regex
 
     def _parse_target(self):
         """Parse the site, and optional nums or layers from the target string."""
@@ -39,7 +45,7 @@ class TargetToken(DisplacementsFileToken):
             msg = f'Target must start with a non-numeric label, got: "{site_str}"'
             raise TargetingError(msg)
 
-        self.regex = _generate_label_match_regex(site_str)
+        self._regex = _generate_label_match_regex(site_str)
 
         if len(parts) == 1:
             # only site is specified, no nums or layers

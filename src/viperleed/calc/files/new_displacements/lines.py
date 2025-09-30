@@ -88,12 +88,11 @@ class OffsetsHeaderLine(HeaderLine):
         if not OFFSETS_HEADER_PATTERN.match(line.strip()):
             msg = f'Invalid offsets header line: {line!r}.'
             raise DisplacementsSyntaxError(msg)
-        self.line = line.strip()
         self.section = 'OFFSETS'
 
     def __str__(self):
         """Return the string representation of the offsets header."""
-        return self.line
+        return '== OFFSETS'
 
 
 class SearchHeaderLine(HeaderLine):
@@ -104,13 +103,12 @@ class SearchHeaderLine(HeaderLine):
     where <label> is a string that identifies the search block.
     """
 
-    def __init__(self, line: str):
+    def __init__(self, line):
         """Initialize the SearchHeaderLine with a line string."""
         match = SEARCH_HEADER_PATTERN.match(line.strip())
         if not match:
-            raise DisplacementsSyntaxError(
-                f'Invalid search header line: "{line}".'
-            )
+            msg = f'Invalid search header line: "{line}".'
+            raise DisplacementsSyntaxError(msg)
         self.label = match['label'].strip()
 
     def __str__(self):
@@ -130,9 +128,8 @@ class SectionHeaderLine(HeaderLine):
         """Initialize the SectionHeaderLine with a section name."""
         match = SECTION_HEADER_PATTERN.match(section.strip().upper())
         if not match:
-            raise DisplacementsSyntaxError(
-                f'Invalid section header line: "{section}".'
-            )
+            msg = f'Invalid section header line: "{section}".'
+            raise DisplacementsSyntaxError(msg)
         # extract the section name from the match
         self.section = match.group('section').strip()
 
@@ -168,10 +165,11 @@ class LoopMarkerLine(HeaderLine):
 
 
 class ParsedLine(ABC):
-    """Base class for parsing of non-header lines in the DISPLACEMENTS file.
+    """Base class for parsing of non-header lines in DISPLACEMENTS.
 
-    The class is used to parse lines in the displacements file. It can be
-    initialized with a line string and will parse it into its components.
+    The class is used to parse lines in the displacements file. It can
+    be initialized with a line string and will parse it into its
+    components.
     """
 
     def __init__(self, line: str):
@@ -622,7 +620,7 @@ def separate_direction_from_targets(targets_and_direction: str):
         A tuple containing the targets string and the direction string. Either
         string may be empty if the corresponding part was not found.
     """
-    matches = list(_DIR_AT_END.finditer(targets_and_direction))
+    matches = tuple(_DIR_AT_END.finditer(targets_and_direction))
     if len(matches) > 1:
         raise ValueError('Only one directional specification is allowed.')
     if matches:
@@ -646,8 +644,7 @@ def _check_combined_element_ranges(line_rhs):
     """Check if the rhs of the line contains combined element ranges."""
     if '+' in line_rhs:
         msg = (
-            'Combined element ranges have been deprecated. Use individual '
-            'element ranges for each element instead, combined with '
-            'constraints in the CONSTRAIN block.'
+            'Combined element ranges have been deprecated. Specify each '
+            'element range individually.'
         )
         raise DisplacementsSyntaxError(msg)

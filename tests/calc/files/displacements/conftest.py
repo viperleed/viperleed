@@ -4,10 +4,9 @@ __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-15'
 
 from operator import attrgetter
-from pathlib import Path
 
 import pytest
-from pytest_cases import fixture, parametrize_with_cases
+from pytest_cases import fixture
 
 from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
@@ -33,7 +32,7 @@ MOCK_DISPLACEMENTS_PATH = TEST_DATA / 'DISPLACEMENTS/DISPLACEMENTS_mixed'
 _CU_111_DISPLACEMENTS_PATH = _MOCK_DISPLACEMENTS_PATH / 'Cu_111'
 _CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / 'DISPLACEMENTS_simple'
 
-DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob("*/DISPLACEMENTS*")
+DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob('*/DISPLACEMENTS*')
 
 
 @fixture
@@ -106,7 +105,9 @@ def mock_displacements_path_and_lines():
             OccDeltaLine,
             {
                 'targets': (TargetToken('O 1'),),
-                'element_ranges': ((ElementToken('O'), RangeToken('0.8 1.0')),),
+                'element_ranges': (
+                    (ElementToken('O'), RangeToken('0.8 1.0')),
+                ),
             },
         ),
         (SectionHeaderLine, {'section': 'CONSTRAIN'}),
