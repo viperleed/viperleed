@@ -26,13 +26,16 @@ from .tokens import (
     TotalOccupationToken,
 )
 
-SEARCH_HEADER_PATTERN = re.compile(r'^==\s+(?i:search)\s+(?P<label>.*)$')
-SECTION_HEADER_PATTERN = re.compile(
-    r'^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
+SEARCH_HEADER_PATTERN = re.compile(
+    r'^==\s+(?i:search)\s+(?P<label>.*)$', re.IGNORECASE
 )
-OFFSETS_HEADER_PATTERN = re.compile(r'^=+\s*(?i:OFFSET[S]?)$')
-LOOP_START_PATTERN = re.compile(r'<loop>')
-LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
+SECTION_HEADER_PATTERN = re.compile(
+    r'^=\s*(?P<section>GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$',
+    re.IGNORECASE,
+)
+OFFSETS_HEADER_PATTERN = re.compile(r'^=+\s*(?i:OFFSET[S]?)$', re.IGNORECASE)
+LOOP_START_PATTERN = re.compile(r'<loop>', re.IGNORECASE)
+LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>', re.IGNORECASE)
 
 
 _BELOW_DEBUG = 2
@@ -40,19 +43,21 @@ _BELOW_DEBUG = 2
 logger = logging.getLogger(__name__)
 
 # precompiled direction-at-end regex for separating out the direction token
+_FLOAT_RE = r'-?\d+(?:\.\d+)?'
+_DIRECTION_BRACKETS_RE = rf'\[\s*{_FLOAT_RE}(?:\s+{_FLOAT_RE})*\s*\]'
 DIRECTION_PATTERN = (
     r'(?P<direction>('
     # longer, more specific first:
-    r'azi\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'
-    r'|r\((?:ab|xy)?\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]\)'
+    rf'azi\((?:ab|xy)?{_DIRECTION_BRACKETS_RE}\)'
+    rf'|r\((?:ab|xy)?{_DIRECTION_BRACKETS_RE}\)'
     # 3-letter shorthands *with* optional bracket
-    r'|xyz(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
-    r'|abc(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    rf'|xyz(?:{_DIRECTION_BRACKETS_RE})?'
+    rf'|abc(?:{_DIRECTION_BRACKETS_RE})?'
     # 2-letter shorthands *with* optional bracket
-    r'|xy(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
-    r'|ab(?:\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\])?'
+    rf'|xy(?:{_DIRECTION_BRACKETS_RE})?'
+    rf'|ab(?:{_DIRECTION_BRACKETS_RE})?'
     # bare bracketed vector
-    r'|\[\s*-?\d+(?:\.\d+)?(?:\s+-?\d+(?:\.\d+)?)*\s*\]'
+    rf'|{_DIRECTION_BRACKETS_RE}'
     # single-letter shorthands
     r'|[xyzabc]'
     r'))'

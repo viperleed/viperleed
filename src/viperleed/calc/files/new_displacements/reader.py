@@ -8,16 +8,15 @@ __license__ = 'GPLv3+'
 
 from enum import Enum
 import logging
-import re
 
 from viperleed.calc.files.input_reader import (
     InputFileReader,
     ShouldSkipLineError,
 )
-from viperleed.calc.lib.string_utils import strip_comments
-
-from .errors import DisplacementsSyntaxError
-from .lines import (
+from viperleed.calc.files.new_displacements.errors import (
+    DisplacementsSyntaxError,
+)
+from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
     GeoDeltaLine,
     LoopMarkerLine,
@@ -28,12 +27,7 @@ from .lines import (
     SectionHeaderLine,
     VibDeltaLine,
 )
-
-SECTION_HEADER_PATTERN = re.compile(
-    r'^=\s*(?P<section>OFFSETS|GEO_DELTA|VIB_DELTA|OCC_DELTA|CONSTRAIN)$'
-)
-LOOP_START_PATTERN = re.compile(r'<loop>')
-LOOP_END_PATTERN = re.compile(r'<\\loop>|</loop>')
+from viperleed.calc.lib.string_utils import strip_comments
 
 DISPLACEMENTS_FILE_SECTION = {
     'OFFSETS': OffsetsLine,
