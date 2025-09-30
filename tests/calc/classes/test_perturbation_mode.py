@@ -12,7 +12,7 @@ from viperleed.calc.classes.perturbation_mode import (
 
 
 @pytest.mark.parametrize(
-    'input_str, expected_enum',
+    ('input_str', 'expected_enum'),
     [
         ('geo', PerturbationMode.GEO),
         ('vib', PerturbationMode.VIB),
@@ -25,24 +25,24 @@ def test_valid_enum_from_string(input_str, expected_enum):
 
 
 @pytest.mark.parametrize(
-    'enum_member, expected_str',
+    ('enum_member', 'expected_str'),
     [
         (PerturbationMode.GEO, 'geo'),
         (PerturbationMode.VIB, 'vib'),
         (PerturbationMode.OCC, 'occ'),
+        (PerturbationMode.VIB, 'ViB'),  # check case insensitivity
     ],
 )
 def test_enum_str_values(enum_member, expected_str):
     """Test that enum values behave like strings."""
-    assert str(enum_member) == expected_str
-    assert enum_member == expected_str  # thanks to str inheritance
+    assert str(enum_member) == expected_str.lower()
+    assert enum_member == expected_str.lower()  # thanks to str inheritance
 
 
 @pytest.mark.parametrize(
     'invalid_str',
     [
         'geoo',
-        'VIB',
         'oc',
         '',
         '123',

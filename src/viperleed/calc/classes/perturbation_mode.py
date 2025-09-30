@@ -28,7 +28,7 @@ class PerturbationMode(str, Enum):
     def from_string(cls, mode_string: str):
         """Convert a string to a PerturbationType enum."""
         try:
-            return cls(mode_string)
+            return cls(mode_string.lower())
         except ValueError:
             msg = f'Unknown perturbation mode: {mode_string!r}. '
             raise PerturbationModeError(msg) from None
