@@ -1,4 +1,4 @@
-"""Class SearchJob."""
+"""Module search_job of viperleed.calc.classes."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -26,7 +26,7 @@ class SearchJob:
 
     This takes care of directing the input to stdin, and logging the
     stdout and stderr. It also gracefully handles termination of all
-    MPI-subprocesses in case of a request to terminate the job,
+    MPI subprocesses in case of a request to terminate the job,
     including KeyBoardInterrupt.
 
     This is compatible with the "spawn" multiprocessing method.
@@ -42,7 +42,9 @@ class SearchJob:
         input_data : str
             Input data to send to the subprocess's stdin (rf.info contents).
         log_path : str or Path, optional
-            File to which stdout and stderr should be redirected.
+            File to which stdout and stderr should be redirected. No
+            redirection takes place if not given or None. Default is
+            None.
         """
         self.command = command
         self.input_data = input_data
@@ -93,11 +95,11 @@ class SearchJob:
 @contextmanager
 def _optional_log_file_path(log_path):
     """Context manager to open a log file or yield subprocess.DEVNULL."""
-    yield (
-        subprocess.DEVNULL
-        if log_path is None
-        else Path(log_path).open('a', encoding='utf-8')
-    )
+    if log_path is None:
+        yield subprocess.DEVNULL
+    else:
+        with Path(log_path).open('a', encoding='utf-8') as log_file:
+            yield log_file
 
 
 def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
@@ -112,7 +114,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
                 encoding='ascii',
                 start_new_session=True,
             )
-        except Exception:  # noqa: BLE001
+        except FileNotFoundError:
             # failed to start the process
             return_code.value = COMMAND_NOT_FOUND_RETURN_CODE
             return
@@ -132,7 +134,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
             monitor_process()
         except KeyboardInterrupt:
             logger.info('Killing process due to Keyboard interrupt.')
-            _kill_proc_tree(pro.pid)
+            _kill_proc_tree(proc.pid)
             return_code.value = 1
             raise
         except Exception:
@@ -163,8 +165,6 @@ def _kill_proc_tree(pid):
         ps_proc = psutil.Process(pid)
     except psutil.NoSuchProcess:
         return  # Process is dead already
-    except psutil.Error:  # catch all psutil errors
-        raise
     for child in ps_proc.children(recursive=True):
         try:
             child.kill()
