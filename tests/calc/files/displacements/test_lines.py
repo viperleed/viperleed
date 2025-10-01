@@ -198,8 +198,8 @@ class TestOffsetLine:
     ):
         off = OffsetsLine(line)
         # type
-        assert isinstance(off.type, ModeToken)
-        assert off.type == ModeToken(exp_type)
+        assert isinstance(off.mode, ModeToken)
+        assert off.mode == ModeToken(exp_type)
         # targets
         assert len(off.targets) == len(exp_targets)
         for tok, exp in zip(off.targets, exp_targets):
