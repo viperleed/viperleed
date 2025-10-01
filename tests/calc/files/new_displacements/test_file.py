@@ -9,6 +9,7 @@ from viperleed.calc.files.new_displacements.errors import (
 )
 from viperleed.calc.files.new_displacements.file import DisplacementsFile
 
+
 @pytest.mark.xfail(
     reason='Fractional directions not yet supported', strict=False
 )
