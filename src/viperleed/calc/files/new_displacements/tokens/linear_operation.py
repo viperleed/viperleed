@@ -10,6 +10,8 @@ import re
 
 import numpy as np
 
+from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
+
 from .base import DisplacementsFileToken, TokenParserError
 
 
@@ -89,7 +91,7 @@ class LinearOperationToken(DisplacementsFileToken):
             return NotImplemented
         if self.arr.shape != other.arr.shape:
             return False
-        return np.allclose(self.arr, other.arr)
+        return np.allclose(self.arr, other.arr, atol=DISPLACEMENTS_FILE_EPS)
 
     def __str__(self):
         """Return a string representation of the LinearOperationToken object."""
