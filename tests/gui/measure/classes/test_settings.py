@@ -238,7 +238,7 @@ CapSection/CapOption = ('OldCap/Old',)
         expect = [['oldsection', 'option'], ['even_older', 'old_option']]
         assert aliases == expect
 
-    def test_multiple_old_files_with_alias_overwrite(self, tmp_path):           # TODO: duplicate this using read_string instead of read_dict
+    def test_multiple_old_files_with_alias_overwrite_dict(self, tmp_path):
         """Ensure aliases persist when multiple files are read."""
         parser = AliasConfigParser(cls_name='WithAliases')
 
@@ -252,6 +252,26 @@ CapSection/CapOption = ('OldCap/Old',)
         # second old file, expected to overwrite with "second"
         expect_second = 'second'
         parser.read_dict({'even_older': {'old_option': expect_second}})
+
+        assert parser.get('new_section', 'new_option') == expect_second
+        # Internally stored value is also updated
+        assert parser['new_section']['new_option'] == expect_second
+
+    def test_multiple_old_files_with_alias_overwrite_string(self, tmp_path):
+        """Ensure aliases persist when multiple files are read."""
+        parser = AliasConfigParser(cls_name='WithAliases')
+
+        # first old file
+        expect_first = 'first'
+        parser.read_string(f'[oldsection]\noption={expect_first}')
+        assert parser.get('new_section', 'new_option') == expect_first
+        # Alias value is stored internally
+        assert parser['new_section']['new_option'] == expect_first
+
+        # second old file, expected to overwrite with "second"
+        expect_second = 'second'
+        f'[even_older]\nold_option:={expect_second}'
+        parser.read_string(f'[even_older]\nold_option={expect_second}')
 
         assert parser.get('new_section', 'new_option') == expect_second
         # Internally stored value is also updated
