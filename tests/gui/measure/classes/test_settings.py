@@ -163,6 +163,10 @@ Foo/new_opt=('Foo/old_opt',)
 # TODO: Missing tests:
 # - usage of parent_aliases
 # - overlapping section/option in child when parent is specified
+# Tests for the actual _aliases.ini:
+# - no capital letters in option names anywhere
+# - no overlap of section/option in children vs. parent
+# - no recursive inheritance of aliases
 class TestAliasConfigParser:
     """Tests for AliasConfigParser when aliases are present."""
 
@@ -234,7 +238,7 @@ CapSection/CapOption = ('OldCap/Old',)
         expect = [['oldsection', 'option'], ['even_older', 'old_option']]
         assert aliases == expect
 
-    def test_multiple_old_files_with_alias_overwrite(self, tmp_path):
+    def test_multiple_old_files_with_alias_overwrite(self, tmp_path):           # TODO: duplicate this using read_string instead of read_dict
         """Ensure aliases persist when multiple files are read."""
         parser = AliasConfigParser(cls_name='WithAliases')
 
