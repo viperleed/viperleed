@@ -144,13 +144,11 @@ class AliasConfigParser(ConfigParser):
             return
         self._load_aliases()
         self._replace_aliases()
-        self._fill_in_fallbacks()
 
     def read_dict(self, dictionary, source='<dict>'):
         """Read the target dict and replace aliases."""
         super().read_dict(dictionary, source=source)
         self._replace_aliases()
-        self._fill_in_fallbacks()
 
     def _fill_in_fallbacks(self):
         """Replace empty values with fallbacks."""
@@ -218,7 +216,6 @@ class AliasConfigParser(ConfigParser):
         """Read the target file and replace aliases."""
         super()._read(fp, fpname)
         self._replace_aliases()
-        self._fill_in_fallbacks()
 
     def _replace_alias(self, section, option):
         """Replace alias in self.
@@ -251,10 +248,11 @@ class AliasConfigParser(ConfigParser):
                 return
 
     def _replace_aliases(self):
-        """Replace all aliases in self."""
+        """Replace all aliases in self and apply fallbacks."""
         for key in self._aliases:
             section, option = key.split('/')
             self._replace_alias(section, option)
+        self._fill_in_fallbacks()
 
 
 class ViPErLEEDSettings(AliasConfigParser):
@@ -668,7 +666,6 @@ class ViPErLEEDSettings(AliasConfigParser):
         if err:
             raise err
         self._replace_aliases()
-        self._fill_in_fallbacks()
     # pylint: enable=too-complex,too-many-locals
     # pylint: enable=too-many-branches,too-many-statements
 
