@@ -1,12 +1,13 @@
 """Module for the <range> token in the DISPLACEMENTS file."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2024-10-15"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-15'
+__license__ = 'GPLv3+'
+
+from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
 
 from .base import DisplacementsFileToken, TokenParserError
-from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
 
 
 class RangeTokenParserError(TokenParserError):
@@ -32,35 +33,30 @@ class RangeToken(DisplacementsFileToken):
         """Construct a RangeToken from a string."""
         # TODO: TensErLEED compatibility: backend requires the step to be specified
         parts = range_str.strip().split()
-        if len(parts) < 2 or len(parts) > 3:
+        if len(parts) not in (2, 3):
             msg = (
                 f'Invalid range format: "{range_str}". Expected format: '
                 '"<start> <stop> [<step>]".'
             )
             raise RangeTokenParserError(msg)
 
-        try:
-            start = float(parts[0])
-            stop = float(parts[1])
-            step = float(parts[2]) if len(parts) == 3 else None
-        except ValueError as err:
-            msg = f'Non-numeric value in range: "{range_str}"'
-            raise RangeTokenParserError(msg) from err
-
-        self.start = start
-        self.stop = stop
-        self.step = step
+        self.start, self.stop, self.step = None, None, None
+        attrs = ('start', 'stop', 'step')
+        for part, attr in zip(parts, attrs):
+            try:
+                value = float(part)
+            except ValueError as err:
+                msg = f'Non-numeric value in range: "{range_str}"'
+                raise RangeTokenParserError(msg) from err
+            setattr(self, attr, value)
 
     @property
     def has_step(self):
         """Check if the range has a step defined."""
         return self.step is not None
 
-
     @classmethod
-    def from_floats(
-        cls, start: float, stop: float, step=None
-    ) -> 'RangeToken':
+    def from_floats(cls, start: float, stop: float, step=None) -> 'RangeToken':
         """Alternate constructor using numeric values directly."""
         inst = cls.__new__(cls)
         inst.start = start
@@ -89,6 +85,8 @@ class RangeToken(DisplacementsFileToken):
     def __str__(self):
         """Return a string representation of the RangeToken object."""
         if self.has_step:
-            return (f'RangeToken(start={self.start}, stop={self.stop}, '
-                    f'step={self.step})')
+            return (
+                f'RangeToken(start={self.start}, stop={self.stop}, '
+                f'step={self.step})'
+            )
         return f'RangeToken(start={self.start}, stop={self.stop})'

@@ -1,14 +1,16 @@
 """Module for the <offset> token in the DISPLACEMENTS file."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2025-05-12"
-__license__ = "GPLv3+"
-
-from .base import DisplacementsFileToken, TokenParserError
-from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-05-12'
+__license__ = 'GPLv3+'
 
 import numpy as np
+
+from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
+
+from .base import DisplacementsFileToken, TokenParserError
+
 
 class OffsetTokenParserError(TokenParserError):
     """Class raised by OffsetToken."""
@@ -51,10 +53,10 @@ class OffsetToken(DisplacementsFileToken):
         return self.offset.size
 
     @classmethod
-    def from_floats(cls, *offsets: float) -> "OffsetToken":
+    def from_floats(cls, *offsets: float) -> 'OffsetToken':
         """Alternate constructor using 1–3 numeric values directly."""
         if not (1 <= len(offsets) <= 3):
-            msg = f"Expected 1 to 3 offset values, got {len(offsets)}."
+            msg = f'Expected 1 to 3 offset values, got {len(offsets)}.'
             raise OffsetTokenParserError(msg)
 
         inst = cls.__new__(cls)

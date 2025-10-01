@@ -1,9 +1,9 @@
 """Module tl_backend of viperleed.files.displacements."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2024-10-15"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-15'
+__license__ = 'GPLv3+'
 
 # Note by @michele-riva: (Part of) this module can probably be moved higher up
 # the calc tree so we will be ready to support more backends, not only
@@ -11,6 +11,15 @@ __license__ = "GPLv3+"
 # in #333.)
 
 from abc import ABC, abstractmethod
+
+
+class BackendError(Exception):
+    """Base class for errors in backends."""
+
+
+class IncompatibleBackendError(BackendError):
+    """Error when the backend is incompatible with user requests."""
+
 
 class TensorLEEDBackend(ABC):
     """Base class for the tensor LEED backends.
@@ -29,39 +38,49 @@ class TensorLEEDBackend(ABC):
 
         Parameters
         ----------
-        search_block (SearchBlock): The search block.
+        search_block: SearchBlock
+        The search block to check.
 
         Returns
         -------
-        list(SearchBlock): If the backend can't handle the search block, but
-            can provide a replacement, return the replacement blocks. Otherwise,
-            or if the backend can handle the search block, return None.
+        tuple(SearchBlock)
+            Returns a tuple with a valid set of replacement search
+            blocks. If the original search block is valid, return a
+            tuple with just the original search block.
 
         Raises
         ------
-        IncompatibleBackendError: If the backend can't handle the search block
-            and can't provide a replacement.
+        IncompatibleBackendError
+            If the backend can't handle the search block and can't
+            provide a replacement.
         """
         return self._handle_search_block_func(search_block)
 
+class TensErLEEDBackend(TensorLEEDBackend):
+    """TensErLEED backend for ViPErLEED."""
 
-def tenserleed_search_block_handler_func(offsets_block, search_block):
-    """Handle the search block with the TensorLEED backend."""
-    # TODO: xy shorthands exits!
-    # For TensErLEED backend, this duplicates a search block xy -> xy[1 0] & xy[0 1]
-    raise NotImplementedError
+    name = 'TensErLEED'
+
+    @classmethod
+    def replace_search_block(cls, search_block):
+        """Replace the search block with a TensErLEED-compatible version."""
+        # TODO: xy shorthands exits!
+
+        # For TensErLEED backend, this duplicates a search block
+        # for example: xy -> xy[1 0] & xy[0 1]
+        raise NotImplementedError
 
 
-def viplerleed_jax_search_block_handler_func(search_block):
-    """Handle the search block with the VIPERLEED backend."""
-    # no special handling needed, ViPErLEED jax can handle all search blocks
-    return (search_block,)
+class JAXBackend(TensorLEEDBackend):
+    """JAX backend for ViPErLEED."""
 
+    name = 'ViPErLEED JAX'
 
-VIPERLEED_JAX_BACKEND = TensorLEEDBackend(
-    'ViPErLEED jax', viplerleed_jax_search_block_handler_func
-)
+    @classmethod
+    def replace_search_block(cls, search_block):
+        """Replace the search block with a JAX-compatible version.
 
-TENSERLEED_BACKENDS = TensorLEEDBackend(
-    'TensErLEED', tenserleed_search_block_handler_func
-)
+        This does not need special handling as ViPErLEED JAX can handle all
+        currently implemented search blocks.
+        """
+        return (search_block,)

@@ -1,15 +1,16 @@
 """Module for the <linear_operation> token in the DISPLACEMENTS file."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2025-05-14"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-05-14'
+__license__ = 'GPLv3+'
 
-import re
 import ast
+import re
 
 import numpy as np
 
+from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
 
 from .base import DisplacementsFileToken, TokenParserError
 
@@ -27,8 +28,7 @@ class LinearOperationToken(DisplacementsFileToken):
         The range string to parse.
     """
 
-
-    def __init__(self, op_str: str):
+    def __init__(self, op_str):
         """Construct a LinearOperationToken from a string."""
         # some simple input sanitization
         cleaned = op_str.strip()
@@ -52,8 +52,10 @@ class LinearOperationToken(DisplacementsFileToken):
         try:
             arr = np.array(parsed, dtype=float)
         except ValueError as err:
-            msg = (f'Unable to convert linear operation "{op_str.strip()}" to '
-                   'a numeric array.')
+            msg = (
+                f'Unable to convert linear operation "{op_str.strip()}" to '
+                'a numeric array.'
+            )
             raise LinearOperationTokenParserError(msg) from err
 
         # The linear operation must be a linear map between parameters of the
@@ -83,14 +85,11 @@ class LinearOperationToken(DisplacementsFileToken):
         inst.arr = np.array(arr, dtype=float)
         return inst
 
-
     def __eq__(self, other):
         """Compare two LinearOperationToken objects for equality."""
         if not isinstance(other, LinearOperationToken):
             return NotImplemented
-        if self.arr.shape != other.arr.shape:
-            return False
-        return np.allclose(self.arr, other.arr)
+        return np.allclose(self.arr, other.arr, atol=DISPLACEMENTS_FILE_EPS)
 
     def __str__(self):
         """Return a string representation of the LinearOperationToken object."""

@@ -1,13 +1,16 @@
 """Tests for module files/displacements/range."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-04-11'
+__license__ = 'GPLv3+'
 
 
 import pytest
 
-from viperleed.calc.files.new_displacements.tokens.range import (
-    RangeToken, RangeTokenParserError
+from viperleed.calc.files.new_displacements.tokens.range_ import (
+    RangeToken,
+    RangeTokenParserError,
 )
 
 

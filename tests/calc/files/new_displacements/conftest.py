@@ -3,10 +3,10 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-15'
 
-from pathlib import Path
+from operator import attrgetter
 
 import pytest
-from pytest_cases import fixture, parametrize_with_cases
+from pytest_cases import fixture
 
 from viperleed.calc.files.new_displacements.lines import (
     ConstraintLine,
@@ -20,33 +20,33 @@ from viperleed.calc.files.new_displacements.tokens import (
     CartesianDirectionToken,
     ElementToken,
     LinearOperationToken,
+    ModeToken,
     RangeToken,
     TargetToken,
-    ModeToken,
 )
 
-_MOCK_DISPLACEMENTS_PATH = Path('tests/_test_data/DISPLACEMENTS/')
-MOCK_DISPLACEMENTS_PATH = Path(
-    'tests/_test_data/DISPLACEMENTS/DISPLACEMENTS_mixed'
-)
+from ....helpers import TEST_DATA
+
+_MOCK_DISPLACEMENTS_PATH = TEST_DATA / 'DISPLACEMENTS'
+MOCK_DISPLACEMENTS_PATH = TEST_DATA / 'DISPLACEMENTS/DISPLACEMENTS_mixed'
 _CU_111_DISPLACEMENTS_PATH = _MOCK_DISPLACEMENTS_PATH / 'Cu_111'
 _CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / 'DISPLACEMENTS_simple'
 
-DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob("*/DISPLACEMENTS*")
+DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob('*/DISPLACEMENTS*')
 
 
 @fixture
 @pytest.mark.parametrize(
-    "file_path",
+    'file_path',
     DISPLACEMENTS_FILES,
-    ids=lambda p: p.name,
+    ids=attrgetter('name'),
 )
 def displacements_file_path(file_path):
     """Fixture to provide a path to a DISPLACEMENTS file."""
     return file_path
 
 
-@pytest.fixture
+@fixture
 def mock_displacements_path_and_lines():
     path = MOCK_DISPLACEMENTS_PATH
     expected_lines = [
@@ -105,7 +105,9 @@ def mock_displacements_path_and_lines():
             OccDeltaLine,
             {
                 'targets': (TargetToken('O 1'),),
-                'element_ranges': ((ElementToken('O'), RangeToken('0.8 1.0')),),
+                'element_ranges': (
+                    (ElementToken('O'), RangeToken('0.8 1.0')),
+                ),
             },
         ),
         (SectionHeaderLine, {'section': 'CONSTRAIN'}),

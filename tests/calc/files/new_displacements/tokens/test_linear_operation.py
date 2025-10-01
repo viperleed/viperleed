@@ -34,6 +34,7 @@ def test_linear_operation_token_parsing(input_str, expected_array):
     token = LinearOperationToken(input_str)
     np.testing.assert_allclose(token.arr, expected_array)
 
+
 @pytest.mark.parametrize(
     'invalid_input',
     [

@@ -1,5 +1,14 @@
-import pytest
+"""Tests for module offset of viperleed.calc.files.new_displacements.tokens."""
+
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-05-12'
+__license__ = 'GPLv3+'
+
+
 import numpy as np
+import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.files.new_displacements.tokens.offset import (
     OffsetToken,
@@ -28,17 +37,17 @@ def test_init_valid(input_str, exp_offset):
     assert str(token) == f'OffsetToken(offset={token.offset})'
 
 
-def test_init_invalid_count():
-    for bad in ['', '1 2 3 4', 'a b c']:
-        with pytest.raises(OffsetTokenParserError) as exc:
-            OffsetToken(bad)
+@parametrize('bad', ['', '1 2 3 4', 'a b c'])
+def test_init_invalid_count(bad):
+    with pytest.raises(OffsetTokenParserError):
+        OffsetToken(bad)
 
 
-def test_init_non_numeric():
-    for bad in ['foo', '1.0x', '--3']:
-        with pytest.raises(OffsetTokenParserError) as exc:
-            OffsetToken(bad)
-        assert 'Non-numeric value' in str(exc.value)
+@parametrize('bad', ['foo', '1.0x', '--3'])
+def test_init_non_numeric(bad):
+    with pytest.raises(OffsetTokenParserError) as exc:
+        OffsetToken(bad)
+    assert 'Non-numeric value' in str(exc.value)
 
 
 def test_from_float():

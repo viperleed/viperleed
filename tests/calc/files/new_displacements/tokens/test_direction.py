@@ -24,7 +24,7 @@ def test_basis_vector_plane():
 def test_full_space():
     d = CartesianDirectionToken('xyz')
     assert d.dof == 3
-    expected = np.eye(3)[:, [2, 0, 1]] # zxy order!
+    expected = np.eye(3)[:, [2, 0, 1]]  # zxy order!
     assert d.vectors_zxy == pytest.approx(expected)
 
 
@@ -61,14 +61,16 @@ def test_zero_vector():
     with pytest.raises(ValueError):
         CartesianDirectionToken('xyz[0 0 0]')
 
+
 @pytest.mark.parametrize(
     'direction_str',
-    ['a', 'b', 'c', 'ab', 'abc', 'ab[1 0]', 'abc[1 0 0]', 'ab[1 2]']
+    ['a', 'b', 'c', 'ab', 'abc', 'ab[1 0]', 'abc[1 0 0]', 'ab[1 2]'],
 )
 def test_invalid_fractional(direction_str):
     """Test that fractional directions are not accepted."""
     with pytest.raises(DirectionTokenParserError):
         CartesianDirectionToken(direction_str)
+
 
 @pytest.mark.parametrize(
     'direction_str',

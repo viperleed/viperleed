@@ -1,17 +1,18 @@
 """Module direction of viperleed.files.displacements.tokens."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2024-10-14"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2024-10-14'
+__license__ = 'GPLv3+'
 
 from abc import abstractmethod
 import re
 
 import numpy as np
 
+from viperleed.calc.constants import DISPLACEMENTS_FILE_EPS
+
 from .base import DisplacementsFileToken, TokenParserError
-from viperleed.calc.files.new_displacements import DISPLACEMENTS_FILE_EPS
 
 CART_DIRECTION_PATTERN = r'^(?:(?P<dir>[xyz]+))\[(?P<vec>[\d\s\.\-eE]+)\]$'
 SIMPLE_DIRECTIONS = ('x', 'y', 'z')
@@ -27,7 +28,6 @@ class DirectionToken(DisplacementsFileToken):
     This class defines the interface for direction tokens, which are used to
     specify the allowed directions of movements or constraints for geometric
     displacements.
-
 
     We do not yet support parsing of azimuthal, and radial directions, as well
     as fractional directions (e.g., 'a', 'b', 'c'). These are supported in the
@@ -48,7 +48,8 @@ class DirectionToken(DisplacementsFileToken):
     - azi[i j] == azi(ab[i j])
     - azi(i j) == azi(ab[i j])
     - r[i j] == r(ab[i j])
-    - r(i j) == r(ab[i j])"""
+    - r(i j) == r(ab[i j])
+    """
 
     @abstractmethod
     def __eq__(self, other):
@@ -84,8 +85,10 @@ class CartesianDirectionToken(DirectionToken):
     dof : int
         The number of degrees of freedom (DOF), either 1, 2, or 3.
     vectors : tuple of np.ndarray
-        A tuple of one, two or three orthonormal vectors spanning the direction
-        space. Note, the vectors are in the zxy convention (LEED convention).
+        A tuple of one, two or three orthonormal vectors spanning the
+        direction space. Note, the vectors are in the xyz convention.
+        Use the `vectors_zxy` property to get them in the zxy (LEED)
+        convention.
 
     Raises
     ------
@@ -102,8 +105,7 @@ class CartesianDirectionToken(DirectionToken):
         if not _dir_str:
             raise DirectionTokenParserError('Empty direction token.')
         self.direction_str = _dir_str
-        vecs, self.dof = self._parse_direction(_dir_str)
-        self._vectors = vecs
+        self._vectors, self.dof = self._parse_direction(_dir_str)
 
     @property
     def vectors_xyz(self):
@@ -124,21 +126,23 @@ class CartesianDirectionToken(DirectionToken):
             if not match:
                 msg = f'Invalid direction format: {direction_str}'
                 raise ValueError(msg)
-            dirs = list(match['dir'])
-            vecs = list(map(float, match.group('vec').split()))
+            dirs = match['dir']
+            vecs = [float(v) for v in match['vec'].split()]
             if len(dirs) != len(vecs):
-                msg = ('Mismatch between directions and components '
-                       f'in {direction_str}')
+                msg = (
+                    'Mismatch between directions and components '
+                    f'in {direction_str}'
+                )
                 raise ValueError(msg)
             vec = self._embed_vector(dirs, vecs)
-            return (np.array([self._normalize(vec)]), 1)
+            return np.array([self._normalize(vec)]), 1
         # Basis directions like 'x', 'xy', etc.
         if not all(c in SIMPLE_DIRECTIONS for c in direction_str):
             msg = f'Invalid direction: {direction_str}'
             raise ValueError(msg)
         vecs = [self._get_basis_vector(c) for c in direction_str]
-        return (np.array(vecs), len(vecs))
-   
+        return np.array(vecs), len(vecs)
+
     def _get_basis_vector(self, label):
         return {
             'x': np.array([1, 0, 0]),
@@ -149,8 +153,8 @@ class CartesianDirectionToken(DirectionToken):
     def _embed_vector(self, dirs, comps):
         vec = np.zeros(3)
         idx_map = {'x': 0, 'y': 1, 'z': 2}
-        for d, c in zip(dirs, comps):
-            vec[idx_map[d]] = c
+        for direction, component in zip(dirs, comps):
+            vec[idx_map[direction]] = component
         return vec
 
     def _normalize(self, vec):
@@ -194,6 +198,7 @@ def _check_unsupported_directions(direction_str):
             f'Invalid direction: {direction_str}'
         )
         raise DirectionTokenParserError(msg)
+
 
 def _xyz_to_zxy(vecs):
     """Convert from xyz to zxy axis (LEED) convention."""

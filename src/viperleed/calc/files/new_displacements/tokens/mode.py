@@ -1,9 +1,9 @@
 """Module for the <mode> token in the DISPLACEMENTS file."""
 
-__authors__ = ("Alexander M. Imre (@amimre)",)
-__copyright__ = "Copyright (c) 2019-2025 ViPErLEED developers"
-__created__ = "2025-04-10"
-__license__ = "GPLv3+"
+__authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__created__ = '2025-04-10'
+__license__ = 'GPLv3+'
 
 
 from viperleed.calc.classes.perturbation_mode import (
@@ -16,6 +16,7 @@ from .base import DisplacementsFileToken, TokenParserError
 
 class ModeTokenParserError(TokenParserError):
     """Class for errors during the ModeToken parsing."""
+
 
 class ModeToken(DisplacementsFileToken):
     """Class for the ModeToken."""
@@ -31,7 +32,7 @@ class ModeToken(DisplacementsFileToken):
     def __eq__(self, other):
         """Compare self to other ModeToken."""
         if not isinstance(other, ModeToken):
-            return False
+            return NotImplemented
         return self.mode is other.mode
 
     def __str__(self):

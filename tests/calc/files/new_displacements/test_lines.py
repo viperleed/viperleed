@@ -1,7 +1,9 @@
 """Tests for module files/displacements/lines."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-04-10'
+__license__ = 'GPLv3+'
 
 import numpy as np
 import pytest
@@ -21,13 +23,14 @@ from viperleed.calc.files.new_displacements.tokens import (
     CartesianDirectionToken,
     ElementToken,
     LinearOperationToken,
+    ModeToken,
     OffsetToken,
     RangeToken,
     TargetToken,
-    TokenParserError,
-    TypeToken,
 )
-from viperleed.calc.files.new_displacements.tokens.direction import CartesianDirectionToken
+from viperleed.calc.files.new_displacements.tokens.direction import (
+    CartesianDirectionToken,
+)
 
 
 class TestGeoDeltaLine:
@@ -72,7 +75,8 @@ class TestGeoDeltaLine:
         ],
     )
     def test_geodelta_parametrized(
-        self, line,exp_targets, exp_direction, exp_range):
+        self, line, exp_targets, exp_direction, exp_range
+    ):
         geo = GeoDeltaLine(line)
         # targets
         assert len(geo.targets) == len(exp_targets)
@@ -106,20 +110,18 @@ class TestGeoDeltaLine:
         with pytest.raises(exp_error):
             GeoDeltaLine(bad_line)
 
-class TestVibDeltaLine:
 
+class TestVibDeltaLine:
     @pytest.mark.parametrize(
-        "line, exp_targets, exp_range",
+        'line, exp_targets, exp_range',
         [
             # single target, no step
-            ("A = 0 1",
-             [TargetToken("A")],
-             RangeToken.from_floats(0.0, 1.0)
-            ),
+            ('A = 0 1', [TargetToken('A')], RangeToken.from_floats(0.0, 1.0)),
             # multiple targets comma separated, with step
-            ("A1, B2 = -1.5 3.0 0.5",
-             [TargetToken("A1"), TargetToken("B2")],
-             RangeToken.from_floats(-1.5, 3.0, 0.5)
+            (
+                'A1, B2 = -1.5 3.0 0.5',
+                [TargetToken('A1'), TargetToken('B2')],
+                RangeToken.from_floats(-1.5, 3.0, 0.5),
             ),
         ],
     )
@@ -130,20 +132,19 @@ class TestVibDeltaLine:
         for actual, expected in zip(vib.targets, exp_targets):
             assert actual == expected
         # no direction allowed
-        assert not hasattr(vib, "direction")
+        assert not hasattr(vib, 'direction')
         # range
         assert isinstance(vib.range, RangeToken)
         assert vib.range == exp_range
 
-
     @pytest.mark.parametrize(
-        "bad_line, exp_error",
+        'bad_line, exp_error',
         [
-            ("A x = 0 1", DisplacementsSyntaxError),
-            ("A =", DisplacementsSyntaxError),
-            ("A 0 1", DisplacementsSyntaxError),
-            ("A = foo bar", DisplacementsSyntaxError),
-            ("A = 0 1 = 2", DisplacementsSyntaxError),
+            ('A x = 0 1', DisplacementsSyntaxError),
+            ('A =', DisplacementsSyntaxError),
+            ('A 0 1', DisplacementsSyntaxError),
+            ('A = foo bar', DisplacementsSyntaxError),
+            ('A = 0 1 = 2', DisplacementsSyntaxError),
         ],
     )
     def test_invalid(self, bad_line, exp_error):
@@ -151,16 +152,15 @@ class TestVibDeltaLine:
             VibDeltaLine(bad_line)
 
     def test_str_shows_targets_and_range(self):
-        line = "X,Y = 2 4 1"
+        line = 'X,Y = 2 4 1'
         vib = VibDeltaLine(line)
         rep = str(vib)
-        assert "TargetToken" in rep
-        assert "=" in rep
-        assert "RangeToken" in rep
+        assert 'TargetToken' in rep
+        assert '=' in rep
+        assert 'RangeToken' in rep
 
 
 class TestOffsetLine:
-
     @pytest.mark.parametrize(
         'line, exp_type, exp_targets, exp_direction, exp_offset',
         [
@@ -182,22 +182,24 @@ class TestOffsetLine:
                 2.0,
                 id='vib-no-direction',
             ),
-            # # occ offset, multiple targets, no direction
-            # pytest.param(
-            #     'occ C1, D2 = -0.5',
-            #     'occ',
-            #     ['C1', 'D2'],
-            #     None,
-            #     -0.5,
-            #     id='occ-multiple-targets',
-            # ),
+            # occ offset, multiple targets, no direction
+            pytest.param(
+                'occ C1, D2 = -0.5',
+                'occ',
+                ['C1', 'D2'],
+                None,
+                -0.5,
+                id='occ-multiple-targets',
+            ),
         ],
     )
-    def test_offsets_valid(self, line, exp_type, exp_targets, exp_direction, exp_offset):
+    def test_offsets_valid(
+        self, line, exp_type, exp_targets, exp_direction, exp_offset
+    ):
         off = OffsetsLine(line)
         # type
-        assert isinstance(off.type, TypeToken)
-        assert off.type == TypeToken(exp_type)
+        assert isinstance(off.mode, ModeToken)
+        assert off.mode == ModeToken(exp_type)
         # targets
         assert len(off.targets) == len(exp_targets)
         for tok, exp in zip(off.targets, exp_targets):
@@ -212,7 +214,6 @@ class TestOffsetLine:
         # offset
         assert isinstance(off.offset, OffsetToken)
         assert off.offset == OffsetToken.from_floats(exp_offset)
-
 
     @pytest.mark.parametrize(
         'bad_line, exp_error',
@@ -269,7 +270,10 @@ class TestOccDeltaLine:
                 [TargetToken('A_surf'), TargetToken('B_def L(2-3)')],
                 [
                     (ElementToken('Pt'), RangeToken.from_floats(0.1, 0.2)),
-                    (ElementToken('Au'), RangeToken.from_floats(0.1, 1.0, 0.1)),
+                    (
+                        ElementToken('Au'),
+                        RangeToken.from_floats(0.1, 1.0, 0.1),
+                    ),
                 ],
             ),
             # whitespace tolerance
@@ -286,6 +290,7 @@ class TestOccDeltaLine:
     def test_occ_delta_valid(self, line, exp_targets, exp_elem_ranges):
         occ = OccDeltaLine(line)
         # check targets
+        assert len(occ.targets) == len(exp_targets)
         for target, exp_target in zip(occ.targets, exp_targets):
             assert target == exp_target
         # check element_ranges length and content
@@ -295,10 +300,9 @@ class TestOccDeltaLine:
             occ.element_ranges, exp_elem_ranges
         ):
             assert isinstance(act_e, ElementToken)
-            assert act_e.atomic_number == exp_e.atomic_number
+            assert act_e == exp_e
             assert isinstance(act_r, RangeToken)
             assert act_r == exp_r
-
 
     @pytest.mark.parametrize(
         'bad_line',
@@ -318,7 +322,6 @@ class TestOccDeltaLine:
         with pytest.raises(DisplacementsSyntaxError):
             OccDeltaLine(bad_line)
 
-
     def test_str_contains_elements_and_ranges(self):
         line = 'A,B = Fe 0.0 1.0, Ni 0.0 0.2'
         occ = OccDeltaLine(line)
@@ -334,7 +337,7 @@ class TestConstraintLine:
         [
             pytest.param(
                 'geo A_surf, A_def = linked',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('A_surf'), TargetToken('A_def')],
                 TargetToken('A_surf'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -342,7 +345,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo A = B',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('A')],
                 TargetToken('B'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -350,23 +353,15 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'geo Fe 1 = Fe 2',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('Fe 1')],
                 TargetToken('Fe 2'),
                 LinearOperationToken.from_array(np.eye(1)),
                 id='geo-single-target-link',
             ),
             pytest.param(
-                'geo A = [1 0 0] B',
-                TypeToken('geo'),
-                [TargetToken('A')],
-                TargetToken('B'),
-                LinearOperationToken('[1 0 0]'),
-                id='geo-linear-operation',
-            ),
-            pytest.param(
                 'geo Fe_surf, O_surf = [[1 0 0] [0 0 1] [0 1 0]] Fe_surf',
-                TypeToken('geo'),
+                ModeToken('geo'),
                 [TargetToken('Fe_surf'), TargetToken('O_surf')],
                 TargetToken('Fe_surf'),
                 LinearOperationToken('[[1 0 0] [0 0 1] [0 1 0]]'),
@@ -374,7 +369,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'occ A, B = linked',
-                TypeToken('occ'),
+                ModeToken('occ'),
                 [TargetToken('A'), TargetToken('B')],
                 TargetToken('A'),
                 LinearOperationToken.from_array(np.eye(1)),
@@ -382,7 +377,7 @@ class TestConstraintLine:
             ),
             pytest.param(
                 'vib X, Y = 0.5 Z',
-                TypeToken('vib'),
+                ModeToken('vib'),
                 [TargetToken('X'), TargetToken('Y')],
                 TargetToken('Z'),
                 LinearOperationToken.from_array(np.array(0.5)),
@@ -397,12 +392,12 @@ class TestConstraintLine:
         # Type
         assert con.type == exp_type
         # Targets
+        act_targets = con.targets
         if 'linked' in line:
-            for target, exp_target in zip(con.targets[:-1], exp_targets):
-                assert target == exp_target
-        else:
-            for target, exp_target in zip(con.targets, exp_targets):
-                assert target == exp_target
+            act_targets = con.targets[:-1]  # remove link target from list
+        for target, exp_target in zip(act_targets, exp_targets):
+            assert target == exp_target
+
         # Link target
         assert con.link_target == exp_link_target
         # Array
