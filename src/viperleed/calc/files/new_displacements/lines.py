@@ -586,8 +586,10 @@ class OffsetsLine(ParsedLine):
         super().__init__(line)
         self.direction = None
 
-        # parse LHS
+        # expected DOF is 1 for vib and occ
+        expected_dof = 1
 
+        # parse LHS
         parts = self._lhs.split()
         if len(parts) < 2:  # at least type and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
@@ -604,6 +606,8 @@ class OffsetsLine(ParsedLine):
             # expect and parse direction specifier
             # will raise if no direction is given
             self.direction = self._parse_direction(dir_str)
+            # if geometric, expected DOF is given by direction
+            expected_dof = self.direction.dof
 
         if self.mode.mode is not PerturbationMode.GEO and dir_str:
             raise DisplacementsSyntaxError(
@@ -613,9 +617,19 @@ class OffsetsLine(ParsedLine):
 
         # parse RHS into offset
         try:
-            self.offset = OffsetToken(self._rhs)
+            offset = OffsetToken(self._rhs)
         except TokenParserError as err:
             raise DisplacementsSyntaxError(self.invalid_format_msg) from err
+
+        # check that the offset DOF matches the expected DOF
+        if offset.dof != expected_dof:
+            msg = (
+                f'Offset DOF ({offset.dof}) does not match expected DOF '
+                f'({expected_dof}) for line in {self.block_name} block: '
+                f'"{self.raw_line}".'
+            )
+            raise DisplacementsSyntaxError(msg)
+        self.offset = offset
 
     def _format_lhs_str(self):
         lhs = ', '.join(str(t) for t in self.targets)
