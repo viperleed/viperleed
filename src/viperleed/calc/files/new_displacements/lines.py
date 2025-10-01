@@ -194,10 +194,6 @@ class ParsedLine(ABC):
         # split the line into raw left and right hand sides
         self._lhs, self._rhs = self.raw_line.split('=')
 
-    @abstractmethod
-    def __str__(self):
-        """Return the string representation of the line."""
-
     @property
     @abstractmethod
     def block_name(self):
