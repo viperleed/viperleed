@@ -110,13 +110,10 @@ class TooManyDefaultSettingsError(DefaultSettingsError):
 
 
 class AliasConfigParser(ConfigParser):
-    """A ConfigParser that checks for aliases when getting values.
+    """A ConfigParser that checks for aliases when reading values.
 
     To load aliases, the prepare_aliases() method must be called with
-    the appropriate cls_name argument. To perform an automatic check for
-    aliases when getting an option, the get() method and its derivatives
-    must be used. Getting values via the __getitem__ method (e.g.,
-    self[sec][opt], has_option()) will not check for aliases.
+    the appropriate cls_name argument.
     """
 
     def __init__(self, *args, cls_name='', **kwargs):

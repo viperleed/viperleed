@@ -193,7 +193,6 @@ CapSection/CapOption = ('OldCap/Old',)
         parser.read_dict({'A': {'opt': ''}})
         expect = 'fb'
         assert parser.get('A', 'opt') == expect
-        # After .get, the value is permanently stored
         assert parser['A']['opt'] == expect
 
     def test_get_from_alias_and_empty_fallback(self):
