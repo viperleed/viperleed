@@ -166,6 +166,7 @@ classifiers = [
         'pytest-cov>=2.5',      # Added --cov-branch
         'pytest-mock>=3',
         'pytest-subtests',
+        'pytest-timeout',
         ]
     xfail_strict = true
 
@@ -249,6 +250,8 @@ classifiers = [
     line-length = 79
     indent-width = 4
 
+    [tool.ruff.lint.isort]
+    force-sort-within-sections = true
 
     [tool.ruff.lint]
     # Enable all rules by default and then disable as needed
