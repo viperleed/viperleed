@@ -1,11 +1,10 @@
-"""Class SearchJob."""
+"""Test for viperleed.calc.classes.SearchJob."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-07-17'
 __license__ = 'GPLv3+'
 
-from pathlib import Path
 import sys
 import time
 
@@ -20,7 +19,7 @@ from viperleed.calc.classes.search_job import (
 @pytest.mark.timeout(5)
 def test_termination(subtests):
     script = [sys.executable, '-c', 'while True: pass']
-    job = SearchJob(script, "", log_path=None)
+    job = SearchJob(script, '', log_path=None)
     job.start()
     time.sleep(0.5)  # give it time to start
 
@@ -34,12 +33,14 @@ def test_termination(subtests):
         assert not job.is_running()
     assert job.returncode is not None
 
+
 @pytest.mark.timeout(5)
 def test_invalid_command():
     job = SearchJob(['nonexistent_command_xyz'], '', log_path=None)
     job.start()
     job.wait()
     assert job.returncode == COMMAND_NOT_FOUND_RETURN_CODE
+
 
 @pytest.mark.timeout(5)
 def test_correct_return_code():
@@ -56,19 +57,34 @@ def test_correct_return_code():
     job.wait()
     assert job.returncode == 42
 
+
 @pytest.mark.timeout(5)
-def test_writing_to_log_file(tmp_path):
-    """Test that the job writes to the log file."""
+def test_writing_stdout_and_stderr_to_log_file(tmp_path, subtests):
+    """Both stdout and stderr should be redirected into the log file."""
     log_file = tmp_path / 'search_job.log'
-    script = [sys.executable, '-c', 'print("Test log output")']
+    messages = {
+        'stdout': 'test log output with utf-8 😄',
+        'stderr': 'test error output with utf-8 😡',
+    }
+
+    # print to both stdout and stderr
+    code = (
+        'import sys\n'
+        f'print({messages["stdout"]!r})\n'
+        f'print({messages["stderr"]!r}, file=sys.stderr)\n'
+    )
+    script = [sys.executable, '-c', code]
+
     job = SearchJob(script, '', log_path=log_file)
     job.start()
     job.wait()
 
-    with open(log_file, 'r') as f:
-        content = f.read()
+    content = log_file.read_text(encoding='utf-8')
 
-    assert 'Test log output' in content
+    for stream, text in messages.items():
+        with subtests.test(stream=stream):
+            assert text in content
+
 
 @pytest.mark.timeout(5)
 def test_job_kill_flag(subtests):
