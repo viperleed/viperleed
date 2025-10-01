@@ -182,15 +182,15 @@ class TestOffsetLine:
                 2.0,
                 id='vib-no-direction',
             ),
-            # # occ offset, multiple targets, no direction
-            # pytest.param(
-            #     'occ C1, D2 = -0.5',
-            #     'occ',
-            #     ['C1', 'D2'],
-            #     None,
-            #     -0.5,
-            #     id='occ-multiple-targets',
-            # ),
+            # occ offset, multiple targets, no direction
+            pytest.param(
+                'occ C1, D2 = -0.5',
+                'occ',
+                ['C1', 'D2'],
+                None,
+                -0.5,
+                id='occ-multiple-targets',
+            ),
         ],
     )
     def test_offsets_valid(
@@ -290,6 +290,7 @@ class TestOccDeltaLine:
     def test_occ_delta_valid(self, line, exp_targets, exp_elem_ranges):
         occ = OccDeltaLine(line)
         # check targets
+        assert len(occ.targets) == len(exp_targets)
         for target, exp_target in zip(occ.targets, exp_targets):
             assert target == exp_target
         # check element_ranges length and content
@@ -299,7 +300,7 @@ class TestOccDeltaLine:
             occ.element_ranges, exp_elem_ranges
         ):
             assert isinstance(act_e, ElementToken)
-            assert act_e.atomic_number == exp_e.atomic_number
+            assert act_e == exp_e
             assert isinstance(act_r, RangeToken)
             assert act_r == exp_r
 
@@ -358,14 +359,6 @@ class TestConstraintLine:
                 LinearOperationToken.from_array(np.eye(1)),
                 id='geo-single-target-link',
             ),
-            # pytest.param(
-            #     'geo A = [1 0 0] B',
-            #     ModeToken('geo'),
-            #     [TargetToken('A')],
-            #     TargetToken('B'),
-            #     LinearOperationToken('[1 0 0]'),
-            #     id='geo-linear-operation',
-            # ),
             pytest.param(
                 'geo Fe_surf, O_surf = [[1 0 0] [0 0 1] [0 1 0]] Fe_surf',
                 ModeToken('geo'),
@@ -399,12 +392,12 @@ class TestConstraintLine:
         # Type
         assert con.type == exp_type
         # Targets
+        act_targets = con.targets
         if 'linked' in line:
-            for target, exp_target in zip(con.targets[:-1], exp_targets):
-                assert target == exp_target
-        else:
-            for target, exp_target in zip(con.targets, exp_targets):
-                assert target == exp_target
+            act_targets = con.targets[:-1]  # remove link target from list
+        for target, exp_target in zip(act_targets, exp_targets):
+            assert target == exp_target
+
         # Link target
         assert con.link_target == exp_link_target
         # Array
