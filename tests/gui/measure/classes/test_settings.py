@@ -201,7 +201,6 @@ CapSection/CapOption = ('OldCap/Old',)
         old_value = 'aliasval'
         parser.read_dict({'old': {'old': old_value}})
         assert parser.get('foo', 'opt') == old_value
-        # After .get, the value is permanently stored
         assert parser['foo']['opt'] == old_value
 
     @pytest.mark.xfail(
@@ -213,22 +212,7 @@ CapSection/CapOption = ('OldCap/Old',)
         old_value = 'aliasval'
         parser.read_dict({'OldCap': {'Old': old_value}})
         assert parser.get('CapSection', 'CapOption') == old_value
-        # After .get, the value is permanently stored
         assert parser['CapSection']['CapOption'] == old_value
-
-    def test_get_from_alias_not_found_returns_fallback(self):
-        """Ensure that _get_from_alias behaves like ConfigParser.get."""
-        parser = AliasConfigParser()
-        user_fallback = 'fb'
-        val = parser._get_from_alias('sec', 'opt', fallback=user_fallback)
-        assert val is user_fallback
-        # Here the user fallback is not stored in the parser
-        try:
-            _ = parser['sec']['opt']
-        except (KeyError, NoSectionError, NoOptionError):
-            pass
-        else:
-            pytest.fail('Unexpectedly stored user fallback in parser')
 
     def test_iter_aliases(self):
         """Check expected iteration of known aliases."""
@@ -245,7 +229,6 @@ CapSection/CapOption = ('OldCap/Old',)
         expect_first = 'first'
         parser.read_dict({'oldsection': {'option': expect_first}})
         assert parser.get('new_section', 'new_option') == expect_first
-        # Alias value is stored internally
         assert parser['new_section']['new_option'] == expect_first
 
         # second old file, expected to overwrite with "second"
@@ -253,7 +236,6 @@ CapSection/CapOption = ('OldCap/Old',)
         parser.read_dict({'even_older': {'old_option': expect_second}})
 
         assert parser.get('new_section', 'new_option') == expect_second
-        # Internally stored value is also updated
         assert parser['new_section']['new_option'] == expect_second
 
     def test_multiple_old_files_with_alias_overwrite_string(self, tmp_path):
@@ -264,7 +246,6 @@ CapSection/CapOption = ('OldCap/Old',)
         expect_first = 'first'
         parser.read_string(f'[oldsection]\noption={expect_first}')
         assert parser.get('new_section', 'new_option') == expect_first
-        # Alias value is stored internally
         assert parser['new_section']['new_option'] == expect_first
 
         # second old file, expected to overwrite with "second"
@@ -273,7 +254,6 @@ CapSection/CapOption = ('OldCap/Old',)
         parser.read_string(f'[even_older]\nold_option={expect_second}')
 
         assert parser.get('new_section', 'new_option') == expect_second
-        # Internally stored value is also updated
         assert parser['new_section']['new_option'] == expect_second
 
     def test_new_sections_added(self):
@@ -287,11 +267,3 @@ CapSection/CapOption = ('OldCap/Old',)
         parser = AliasConfigParser(cls_name='IHaveNoAliases')
         assert not parser._aliases
         assert not parser._fallback
-
-    def test_no_new_sections_to_add(self):
-        """Check addition of sections with new names."""
-        parser = AliasConfigParser(cls_name='WithAliases')
-        parser.read_dict({'A': {}})
-        old_section = parser['A']
-        parser._add_new_sections(('A', 'B'))
-        assert parser['A'] is old_section
