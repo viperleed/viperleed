@@ -533,7 +533,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             handler.add_option('energies', option_name, handler_widget=widget,
                                display_name=display_name, tooltip=tip)
         delta_energy = handler['energies']['delta_energy']
+        blocker = qtc.QSignalBlocker(delta_energy.handler_widget)
         delta_energy.handler_widget.soft_minimum = 0.1                          # TODO: allow negative values and catch zero once EnergyGenerator has been implemented
+        blocker.unblock()
         delta_energy.handler_widget.setSingleStep(0.5)
 
         widget = _settings.StepProfileViewer()

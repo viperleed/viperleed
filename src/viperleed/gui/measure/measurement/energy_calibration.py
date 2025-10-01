@@ -313,7 +313,9 @@ class MeasureEnergyCalibration(MeasurementABC):
         """Return a SettingsHandler object for displaying settings."""
         handler = super().get_settings_handler()
         option = handler['energies']['start_energy']
+        blocker = qtc.QSignalBlocker(option.handler_widget)
         option.handler_widget.soft_minimum = self._min_energy
+        blocker.unblock()
         option.set_info_text(
             '<nobr>The energy at which the measurement starts.</nobr> '
             f'The minimum {START_E_NAME} is {self._min_energy} eV.'
