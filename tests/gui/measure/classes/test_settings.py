@@ -234,7 +234,6 @@ CapSection/CapOption = ('OldCap/Old',)
         expect = [['oldsection', 'option'], ['even_older', 'old_option']]
         assert aliases == expect
 
-    @pytest.mark.xfail()
     def test_multiple_old_files_with_alias_overwrite(self, tmp_path):
         """Ensure aliases persist when multiple files are read."""
         parser = AliasConfigParser(cls_name='WithAliases')
