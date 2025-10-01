@@ -410,7 +410,10 @@ class OccDeltaLine(ParsedLine):
         return ', '.join(str(t) for t in self.targets)
 
     def _format_rhs_str(self):
-        return ', '.join(str(er) for er in self.element_ranges)
+        return ', '.join(
+            f'{elem_tok} {range_tok}'
+            for elem_tok, range_tok in self.element_ranges
+        )
 
     def _parse_element_and_range(self, el_range_str):
         """Parse a string containing an element and range token."""
