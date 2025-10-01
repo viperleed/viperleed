@@ -23,7 +23,11 @@ import numpy as np
 from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.files import iosearch, parameters, searchpdf
+from viperleed.calc.files import (
+    iosearch,
+    parameters,
+    searchpdf,
+)
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
@@ -382,8 +386,7 @@ def _check_search_log(search_log_path):
 
 
 def search(sl, rp):
-    """
-    Generates input for and runs the search, then interprets output.
+    """Generate input for and runs the search, then interprets output.
 
     Parameters
     ----------
@@ -415,7 +418,6 @@ def search(sl, rp):
     -------
     None.
     """
-
     rp.searchResultConfig = None
     if rp.domainParams:
         initToDo = [(dp.rpars, dp.slab, dp.workdir) for dp in rp.domainParams]
