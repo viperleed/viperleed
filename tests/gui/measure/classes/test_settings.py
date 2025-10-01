@@ -121,6 +121,7 @@ class TestAliasConfigParserNoAlias:
 [SomeClass]
 Foo/new_opt=('Foo/old_opt',)
 ''')
+        mocker.patch(f'{_MODULE}.get_aliases_path', return_value=aliases)
 
     @parametrize(user_fallback=(None, ''))
     def test_get_empty_fallback(self, user_fallback):
