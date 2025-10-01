@@ -22,10 +22,6 @@ class DisplacementsSyntaxError(DisplacementsFileError):
     """Base class for all errors related to the DISPLACEMENTS file."""
 
 
-class IncompatibleBackendError(DisplacementsFileError):
-    """Error raised when the chosen backend is incompatible with the file."""
-
-
 class OffsetsNotAtBeginningError(DisplacementsFileError):
     """Error raised when the OFFSETS block is not at the start of the file."""
 
