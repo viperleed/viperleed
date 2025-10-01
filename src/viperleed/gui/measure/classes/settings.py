@@ -122,7 +122,7 @@ class AliasConfigParser(ConfigParser):
     def __init__(self, *args, cls_name='', **kwargs):
         """Initialise AliasConfigParser instance."""
         self._aliases = {}
-        self._fallback = defaultdict(dict)
+        self._fallback = ()
         self._cls_name = ''
         super().__init__(*args, **kwargs)
         self.prepare_aliases(cls_name)
@@ -147,37 +147,28 @@ class AliasConfigParser(ConfigParser):
             return
         self._load_aliases()
         self._replace_aliases()
+        self._fill_in_fallbacks()
 
     def read_dict(self, dictionary, source='<dict>'):
         """Read the target dict and replace aliases."""
         super().read_dict(dictionary, source=source)
         self._replace_aliases()
+        self._fill_in_fallbacks()
 
-    def _fill_in_fallback(self, section, option):
-        """Replace empty values with fallbacks.
-
-        Parameters
-        ----------
-        section : str
-            The section key.
-        option : str
-            The option key.
-
-        Returns
-        -------
-        None.
-        """
-        try:
-            value = self.get(section, option)
-        except (NoSectionError, NoOptionError):
-            return
-        else:
-            if value:
-                return
-        try:
-            self[section][option] = self._fallback[section][option]
-        except KeyError:
-            pass
+    def _fill_in_fallbacks(self):
+        """Replace empty values with fallbacks."""
+        for sec_opt, fallback in self._fallback:
+            section, option = sec_opt.split('/')
+            value = None
+            try:
+                value = self.get(section, option)
+            except NoSectionError:
+                self.add_section(section)
+                pass
+            except NoOptionError:
+                pass
+            if not value:
+                self[section][option] = fallback
 
     def _iter_aliases(self, section, option):
         """Yield aliases for a section/option pair.
@@ -220,7 +211,7 @@ class AliasConfigParser(ConfigParser):
                 if key == 'new_sections':
                     continue
                 if key == 'fallback_values':
-                    self._set_fallback_values(conv(aliases[section][key]))
+                    self._fallback = conv(aliases[section][key])
                     continue
                 if key == 'parent_aliases':
                     continue
@@ -230,6 +221,7 @@ class AliasConfigParser(ConfigParser):
         """Read the target file and replace aliases."""
         super()._read(fp, fpname)
         self._replace_aliases()
+        self._fill_in_fallbacks()
 
     def _replace_alias(self, section, option):
         """Replace alias in self.
@@ -266,23 +258,6 @@ class AliasConfigParser(ConfigParser):
         for key in self._aliases:
             section, option = key.split('/')
             self._replace_alias(section, option)
-            self._fill_in_fallback(section, option)
-
-    def _set_fallback_values(self, fallback_values):
-        """Set fallback values that will be used if values are missing.
-
-        Parameters
-        ----------
-        fallback_values : list
-            A list of section/option and value pairs.
-
-        Returns
-        -------
-        None.
-        """
-        for sec_opt, val in fallback_values:
-            sec, opt = sec_opt.split('/')
-            self._fallback[sec][opt] = val
 
 
 class ViPErLEEDSettings(AliasConfigParser):
@@ -696,6 +671,7 @@ class ViPErLEEDSettings(AliasConfigParser):
         if err:
             raise err
         self._replace_aliases()
+        self._fill_in_fallbacks()
     # pylint: enable=too-complex,too-many-locals
     # pylint: enable=too-many-branches,too-many-statements
 
