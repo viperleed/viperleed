@@ -10,7 +10,6 @@ __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
 from collections import Counter
-import numpy as np
 import logging
 import os
 from pathlib import Path
@@ -19,20 +18,26 @@ import shutil
 import sys
 import time
 
+import numpy as np
+
 from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.files import iosearch
-from viperleed.calc.files import parameters
-from viperleed.calc.files import searchpdf
+from viperleed.calc.files import (
+    iosearch,
+    parameters,
+    searchpdf,
+)
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.parabola_fit import parabolaFit
-from viperleed.calc.lib.time_utils import ExecutionTimer
-from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
-from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
+from viperleed.calc.lib.time_utils import (
+    ExecutionTimer,
+    ExpiringOnCountTimer,
+    ExpiringTimerWithDeadline,
+)
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -138,7 +143,6 @@ class SigbusError(TensErLEEDSearchError):
         )
     log_records = ('received signal SIGBUS',
                    'undefined portion of a memory object')
-
 
 
 def processSearchResults(sl, rp, search_log_path, final=True):
@@ -382,8 +386,7 @@ def _check_search_log(search_log_path):
 
 
 def search(sl, rp):
-    """
-    Generates input for and runs the search, then interprets output.
+    """Generate input for and runs the search, then interprets output.
 
     Parameters
     ----------
@@ -415,7 +418,6 @@ def search(sl, rp):
     -------
     None.
     """
-
     rp.searchResultConfig = None
     if rp.domainParams:
         initToDo = [(dp.rpars, dp.slab, dp.workdir) for dp in rp.domainParams]
