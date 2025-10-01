@@ -277,6 +277,20 @@ class ParsedLine(ABC):
             f'Expected format: "{self.expected_format}".'
         )
 
+    def __str__(self):
+        """Return the string representation of the line."""
+        lhs = self._format_lhs_str()
+        rhs = self._format_rhs_str()
+        return f'{type(self).__name__}({lhs} = {rhs})'
+
+    @abstractmethod
+    def _format_lhs_str(self):
+        """Return a string representation of the left hand side."""
+
+    @abstractmethod
+    def _format_rhs_str(self):
+        """Return a string representation of the right hand side."""
+
 
 class GeoDeltaLine(ParsedLine):
     """Class to parse lines in the GEO_DELTA block of DISPLACEMENTS.
@@ -308,9 +322,13 @@ class GeoDeltaLine(ParsedLine):
         # parse to a range
         self.range = self._parse_range(self._rhs)
 
-    def __str__(self):
-        """Return the string representation of the line."""
-        return f'{self.targets} {self.direction} = {self.range}'
+    def _format_lhs_str(self):
+        lhs = ', '.join(str(t) for t in self.targets)
+        lhs += f' {self.direction}'
+        return lhs
+
+    def _format_rhs_str(self):
+        return f'{self.range}'
 
 
 class VibDeltaLine(ParsedLine):
@@ -342,9 +360,11 @@ class VibDeltaLine(ParsedLine):
         # parse to a range
         self.range = self._parse_range(self._rhs)
 
-    def __str__(self):
-        """Return the string representation of the line."""
-        return f'{self.targets} = {self.range}'
+    def _format_lhs_str(self):
+        return ', '.join(str(t) for t in self.targets)
+
+    def _format_rhs_str(self):
+        return f'{self.range}'
 
 
 class OccDeltaLine(ParsedLine):
@@ -378,35 +398,35 @@ class OccDeltaLine(ParsedLine):
 
         # Right hand side
         # consists of one or more <element> <range> combinations
-        elem_ranges_strs = self._rhs.split(',')
-        # iterate over all
-        element_ranges = []
-        for er in elem_ranges_strs:
-            try:
-                # may raise ValueError if Element or range is missing
-                elem_str, range_str = er.strip().split(' ', maxsplit=1)
-            except ValueError as err:
-                msg = (
-                    'Unable to parse chemical ranges from line in '
-                    f'{self.block_name} block: {self.raw_line}.'
-                )
-                raise DisplacementsSyntaxError(msg) from err
-            element_ranges.append(
-                (
-                    self._parse_element(elem_str),
-                    self._parse_range(range_str),
-                )
-            )
+        element_ranges = tuple(
+            self._parse_element_and_range(er) for er in self._rhs.split(',')
+        )
         if len(element_ranges) < 1:
             # must contain at least one pair
             raise DisplacementsSyntaxError(self.invalid_format_msg)
         self.element_ranges = tuple(element_ranges)
 
-    def __str__(self):
-        """Return the string representation of the line."""
-        lhs = ', '.join(str(t) for t in self.targets)
-        rhs = ', '.join(str(er) for er in self.element_ranges)
-        return f'{lhs} = {rhs}'
+    def _format_lhs_str(self):
+        return ', '.join(str(t) for t in self.targets)
+
+    def _format_rhs_str(self):
+        return ', '.join(str(er) for er in self.element_ranges)
+
+    def _parse_element_and_range(self, el_range_str):
+        """Parse a string containing an element and range token."""
+        try:
+            # may raise ValueError if Element or range is missing
+            elem_str, range_str = el_range_str.strip().split(' ', maxsplit=1)
+        except ValueError as err:
+            msg = (
+                'Unable to parse chemical ranges from line in '
+                f'{self.block_name} block: {self.raw_line}.'
+            )
+            raise DisplacementsSyntaxError(msg) from err
+        return (
+            self._parse_element(elem_str),
+            self._parse_range(range_str),
+        )
 
 
 class ConstraintLine(ParsedLine):
@@ -537,15 +557,11 @@ class ConstraintLine(ParsedLine):
             else LinearOperationToken.from_array(np.eye(1))
         )
 
-    def __str__(self):
-        """Return the string representation of the line."""
-        txt = f'ConstraintLine({self.targets[0]}'
-        for target in self.targets[1:]:
-            txt += f', {target}'
-        txt += f' = {self.linear_operation}'
-        txt += f'{self.link_target})'
-        return txt
+    def _format_lhs_str(self):
+        return ', '.join(str(t) for t in self.targets)
 
+    def _format_rhs_str(self):
+        return f'{self.linear_operation} {self.link_target}'
 
 class OffsetsLine(ParsedLine):
     """Class to parse lines in the OFFSETS block of DISPLACEMENTS.
@@ -572,7 +588,7 @@ class OffsetsLine(ParsedLine):
         if len(parts) < 2:  # at least type and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        self.type = self._parse_mode(parts[0])
+        self.mode = self._parse_mode(parts[0])
         targets_str, dir_str = separate_direction_from_targets(
             ' '.join(parts[1:])
         )
@@ -580,12 +596,12 @@ class OffsetsLine(ParsedLine):
         # parse targets
         self.targets = self._parse_targets(targets_str)
 
-        if self.type.mode is PerturbationMode.GEO:
+        if self.mode.mode is PerturbationMode.GEO:
             # expect and parse direction specifier
             # will raise if no direction is given
             self.direction = self._parse_direction(dir_str)
 
-        if self.type.mode is not PerturbationMode.GEO and dir_str:
+        if self.mode.mode is not PerturbationMode.GEO and dir_str:
             raise DisplacementsSyntaxError(
                 'Direction tokens in the OFFSETS block are only allowed for '
                 'geometric offsets.'
@@ -597,15 +613,14 @@ class OffsetsLine(ParsedLine):
         except TokenParserError as err:
             raise DisplacementsSyntaxError(self.invalid_format_msg) from err
 
-    def __str__(self):
-        """Return the string representation of the line."""
-        txt = f'{self.type} {self.targets[0]}'
-        for target in self.targets[1:]:
-            txt += f', {target}'
-        if self.type.mode is PerturbationMode.GEO:
-            txt += f', {self.direction}'
-        txt += f' = {self.offset}'
-        return txt
+    def _format_lhs_str(self):
+        lhs = ', '.join(str(t) for t in self.targets)
+        if self.mode.mode is PerturbationMode.GEO:
+            lhs += f' {self.direction}'
+        return f'{self.mode} {lhs}'
+
+    def _format_rhs_str(self):
+        return f'{self.offset}'
 
 
 def separate_direction_from_targets(targets_and_direction: str):
