@@ -160,10 +160,7 @@ Foo/new_opt=('Foo/old_opt',)
             parser.get('Missing', 'opt')
 
 
-# TODO: Missing tests:
-# - usage of parent_aliases
-# - overlapping section/option in child when parent is specified
-# Tests for the actual _aliases.ini:
+# TODO: Tests for the actual _aliases.ini:
 # - no capital letters in option names anywhere
 # - no overlap of section/option in children vs. parent
 # - no recursive inheritance of aliases
@@ -184,6 +181,9 @@ fallback_values = (('A/opt', 'fb'),)
 new_sections = ('foo', 'CapSection')
 foo/opt = ('old/old',)
 CapSection/CapOption = ('OldCap/Old',)
+
+[HasParent]
+parent_aliases = ('WithAliases', )
 ''')
         mocker.patch(f'{_MODULE}.get_aliases_path', return_value=aliases)
 
@@ -267,3 +267,10 @@ CapSection/CapOption = ('OldCap/Old',)
         parser = AliasConfigParser(cls_name='IHaveNoAliases')
         assert not parser._aliases
         assert not parser._fallback
+
+    def test_parent_aliases(self):
+        """Check if parent aliases are applied."""
+        parser = AliasConfigParser(cls_name='HasParent')
+        expected = 'expected'
+        parser.read_string(f'[oldsection]\noption={expected}')
+        assert parser['new_section']['new_option'] == expected
