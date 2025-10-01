@@ -106,44 +106,43 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
     """Run the search command in a separate process."""
     with _optional_log_file_path(log_path) as log_f:
         try:
-            proc = subprocess.Popen(
+            with subprocess.Popen(  # noqa: S603
                 command,
                 stdin=subprocess.PIPE,
                 stdout=log_f,
                 stderr=log_f,
                 encoding='ascii',
                 start_new_session=True,
-            )
+            ) as proc:
+                # send input data to the process
+                _send_input_to_process(input_data, return_code, proc)
+
+                # Monitoring loop
+                def monitor_process():
+                    """Monitor the process and check for kill requests."""
+                    while proc.poll() is None:  # not finished yet
+                        if kill_flag.value:
+                            _kill_proc_tree(proc.pid)
+                        time.sleep(1.0)
+
+                try:
+                    monitor_process()
+                except KeyboardInterrupt:
+                    logger.info('Killing process due to Keyboard interrupt.')
+                    _kill_proc_tree(proc.pid)
+                    return_code.value = 1
+                    raise
+                except Exception:
+                    _kill_proc_tree(proc.pid)
+                    return_code.value = 1
+                    raise
+
+                # pass the return code back to the main process
+                return_code.value = proc.returncode
         except FileNotFoundError:
             # failed to start the process
             return_code.value = COMMAND_NOT_FOUND_RETURN_CODE
             return
-
-        # send input data to the process
-        _send_input_to_process(input_data, return_code, proc)
-
-        # Monitoring loop
-        def monitor_process():
-            """Monitor the process and check for kill requests."""
-            while proc.poll() is None:  # not finished yet
-                if kill_flag.value:
-                    _kill_proc_tree(proc.pid)
-                time.sleep(1.0)
-
-        try:
-            monitor_process()
-        except KeyboardInterrupt:
-            logger.info('Killing process due to Keyboard interrupt.')
-            _kill_proc_tree(proc.pid)
-            return_code.value = 1
-            raise
-        except Exception:
-            _kill_proc_tree(proc.pid)
-            return_code.value = 1
-            raise
-
-        # pass the return code back to the main process
-        return_code.value = proc.returncode
 
 
 def _send_input_to_process(input_data, return_code, proc):
