@@ -121,72 +121,14 @@ class AliasConfigParser(ConfigParser):
 
     def __init__(self, *args, cls_name='', **kwargs):
         """Initialise AliasConfigParser instance."""
-        super().__init__(*args, **kwargs)
         self._aliases = {}
         self._fallback = defaultdict(dict)
         self._cls_name = ''
+        super().__init__(*args, **kwargs)
         self.prepare_aliases(cls_name)
 
-    def get(self, section, option, *, raw=False, vars=None, fallback=_UNSET):
-        """Get an option value for a given section or an alias of it.
-
-        This method will attempt to get a value from self first. If this
-        fails, the loaded aliases are checked. If this fails too,
-        fallback is used. If the gotten value is an empty string, the
-        aliases fallback values are checked.
-
-        Parameters
-        ----------
-        section : str
-            The section key.
-        option : str
-            The option key.
-        raw : bool, optional
-            Whether interpolations in the return value should be
-            expanded. If False, interpolations are expanded. Default
-            is False.
-        vars : dict, optional
-            If provided, the option is looked up in vars before
-            checking section. Default is None.
-        fallback : object, optional
-            If provided, fallback is the return value if getting the
-            option failed. Default is _UNSET.
-
-        Returns
-        -------
-        value : object
-            The read value from the loaded settings or the fallback.
-
-        Raises
-        ------
-        NoSectionError
-            If the settings section is missing.
-        NoOptionError
-            If the settings option is missing.
-        """
-        value = _UNSET
-        try:
-            value = super().get(section, option, raw=raw, vars=vars)
-        except (NoSectionError, NoOptionError):
-            value = self._get_from_alias(section, option, fallback,
-                                         raw=raw, vars=vars)
-            if value is _UNSET:
-                raise
-
-        if not value:
-            try:
-                # This fallback is not the fallback given by the user,
-                # but a fallback taken from the aliases.
-                value = self._fallback[section][option]
-            except KeyError:
-                pass
-            else:
-                self[section][option] = value
-
-        return value
-
     def prepare_aliases(self, cls_name):
-        """Prepare aliases for the handled settings.
+        """Prepare and replace aliases for the handled settings.
 
         Parameters
         ----------
@@ -204,26 +146,15 @@ class AliasConfigParser(ConfigParser):
             # No class name, therefore we cannot look up aliases.
             return
         self._load_aliases()
+        self._replace_aliases()
 
-    def _add_new_sections(self, new_sections):
-        """Add new settings sections.
+    def read_dict(self, dictionary, source='<dict>'):
+        """Read the target dict and replace aliases."""
+        super().read_dict(dictionary, source=source)
+        self._replace_aliases()
 
-        Parameters
-        ----------
-        new_sections : Iterable of str
-            An iterable of sections to add.
-
-        Returns
-        -------
-        None.
-        """
-        for section in new_sections:
-            if section in self.sections():
-                continue
-            self.add_section(section)
-
-    def _get_from_alias(self, section, option, fallback, raw=False, vars=None):
-        """Get an alias option value for a given section.
+    def _fill_in_fallback(self, section, option):
+        """Replace empty values with fallbacks.
 
         Parameters
         ----------
@@ -231,33 +162,22 @@ class AliasConfigParser(ConfigParser):
             The section key.
         option : str
             The option key.
-        fallback : object
-            fallback is the return value if getting the option failed.
-        raw : bool, optional
-            Whether interpolations in the return value should be
-            expanded. If False, interpolations are expanded. Default
-            is False.
-        vars : dict, optional
-            If provided, the option is looked up in vars before
-            checking section. Default is None.
 
         Returns
         -------
-        value : object
-            The read value from the loaded settings or the fallback.
+        None.
         """
-        for sec, opt in self._iter_aliases(section, option):
-            try:
-                value = super().get(sec, opt, raw=raw, vars=vars)
-            except (NoSectionError, NoOptionError):
-                continue
-            else:
-                # In case a value is found in the aliases, it is
-                # stored in the new section/option pair.
-                self[section][option] = value
-                self.remove_option(sec, opt)
-                return value
-        return fallback
+        try:
+            value = self.get(section, option)
+        except (NoSectionError, NoOptionError):
+            return
+        else:
+            if value:
+                return
+        try:
+            self[section][option] = self._fallback[section][option]
+        except KeyError:
+            pass
 
     def _iter_aliases(self, section, option):
         """Yield aliases for a section/option pair.
@@ -281,15 +201,7 @@ class AliasConfigParser(ConfigParser):
         yield from (alias.split('/') for alias in aliases)
 
     def _load_aliases(self):
-        """Prepare aliases for the handled settings.
-
-        Load relevant aliases and generate missing settings sections for
-        aliases.
-
-        Returns
-        -------
-        None.
-        """
+        """Prepare aliases for the handled settings."""
         conv = ast.literal_eval
         aliases = ConfigParser()
         aliases.read(get_aliases_path())
@@ -306,7 +218,6 @@ class AliasConfigParser(ConfigParser):
         for section in (self._cls_name, *relevant):
             for key in aliases[section]:
                 if key == 'new_sections':
-                    self._add_new_sections(conv(aliases[section][key]))
                     continue
                 if key == 'fallback_values':
                     self._set_fallback_values(conv(aliases[section][key]))
@@ -314,6 +225,48 @@ class AliasConfigParser(ConfigParser):
                 if key == 'parent_aliases':
                     continue
                 self._aliases[key] = conv(aliases[section][key])
+
+    def _read(self, fp, fpname):
+        """Read the target file and replace aliases."""
+        super()._read(fp, fpname)
+        self._replace_aliases()
+
+    def _replace_alias(self, section, option):
+        """Replace alias in self.
+
+        Create section if necessary and replace alias.
+
+        Parameters
+        ----------
+        section : str
+            The section key.
+        option : str
+            The option key.
+
+        Returns
+        -------
+        None.
+        """
+        if section not in self.sections():
+            self.add_section(section)
+        for sec, opt in self._iter_aliases(section, option):
+            try:
+                value = self.get(sec, opt)
+            except (NoSectionError, NoOptionError):
+                continue
+            else:
+                # In case a value is found in the aliases, it is
+                # stored in the new section/option pair.
+                self[section][option] = value
+                self.remove_option(sec, opt)
+                return
+
+    def _replace_aliases(self):
+        """Replace all aliases in self."""
+        for key in self._aliases:
+            section, option = key.split('/')
+            self._replace_alias(section, option)
+            self._fill_in_fallback(section, option)
 
     def _set_fallback_values(self, fallback_values):
         """Set fallback values that will be used if values are missing.
@@ -742,6 +695,7 @@ class ViPErLEEDSettings(AliasConfigParser):
         # if any parsing errors occurred, raise an exception
         if err:
             raise err
+        self._replace_aliases()
     # pylint: enable=too-complex,too-many-locals
     # pylint: enable=too-many-branches,too-many-statements
 
