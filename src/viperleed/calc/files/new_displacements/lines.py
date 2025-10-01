@@ -459,6 +459,11 @@ class ConstraintLine(ParsedLine):
         super().__init__(line)
 
         # Left hand side
+        self._treat_lhs()
+        # Right hand side
+        self._treat_rhs()
+
+    def _treat_lhs(self):
         lhs_parts = self._lhs.split()
         if len(lhs_parts) < 2:  # at least type and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
@@ -486,8 +491,7 @@ class ConstraintLine(ParsedLine):
         # parse targets
         self.targets = self._parse_targets(targets_str)
 
-        # Right hand side
-
+    def _treat_rhs(self):
         # check for deprecated 'offset' tag
         if 'offset' in self._rhs.lower():
             msg = (
@@ -522,6 +526,7 @@ class ConstraintLine(ParsedLine):
             self.linear_operation = TotalOccupationToken(total_occupation_str)
             self.link_target = None
             return
+
 
         # The default case is to treat it as [<linear_operation>] <target>
         # It's not immediately obvious where to split the tokens since both
