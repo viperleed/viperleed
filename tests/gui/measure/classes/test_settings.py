@@ -161,10 +161,6 @@ Foo/new_opt=('Foo/old_opt',)
             parser.get('Missing', 'opt')
 
 
-# TODO: Tests for the actual _aliases.ini:
-# - no capital letters in option names anywhere
-# - no overlap of section/option in children vs. parent
-# - no recursive inheritance of aliases
 class TestAliasConfigParser:
     """Tests for AliasConfigParser when aliases are present."""
 
