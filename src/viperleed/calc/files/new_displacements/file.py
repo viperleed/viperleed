@@ -52,7 +52,7 @@ class DisplacementsFile(NodeMixin):
         self.name = self._render_name
         self._has_been_read = False
         # an OFFSETS block is only allowed at the very beginning of the file
-        # we check this by setting this flag to False after the first block
+        # we check this by setting this flag to True after the first block
 
         # attributes related to iterating over the search blocks
         self._child_id = 0
@@ -86,7 +86,7 @@ class DisplacementsFile(NodeMixin):
 
         Raises
         ------
-        ValueError
+        AlreadyReadError
             If the file has already been read.
         DisplacementsSyntaxError
             If the file cannot be parsed or has an invalid structure.
