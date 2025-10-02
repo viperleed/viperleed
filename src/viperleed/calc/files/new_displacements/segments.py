@@ -75,7 +75,6 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
                 self.validate_segment()
                 return iter([])
 
-            processed = False
             if self._belongs_to_me(line):
                 self._lines.append(line)
                 continue
@@ -85,10 +84,9 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
                     child = subsegment(line)
                     child.parent = self
                     lines = child.read_lines(lines)
-                    processed = True
-                    break  # after child consumes what it needs, continue outer loop
-            if processed:
-                continue
+                    # continue outer loop
+                    # after child consumes what it needs
+                    break
             # done reading this segment, return to parent
             self.validate_segment()
             return itertools.chain([line], lines)
@@ -105,9 +103,8 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
     def validate_segment(self):
         """Check the segments contents run before returning to parent."""
 
-    @staticmethod
     @abstractmethod
-    def _belongs_to_me(line):
+    def _belongs_to_me(self, line):
         """Return whether `line` is a header for this segment."""
 
 
@@ -249,6 +246,7 @@ class SearchBlock(DisplacementsSegmentABC):
     def _render_name(self):
         return str(self._header)
 
+
 class LoopBlock(DisplacementsSegmentABC):
     """Class holding information about a loop block in DISPLACEMENTS."""
 
@@ -321,7 +319,6 @@ class LoopBlock(DisplacementsSegmentABC):
         # otherwise, return the next search block
         self._current_child_id += 1
         return next_block
-
 
 
 class OffsetsBlock(LineContainer):
