@@ -15,6 +15,7 @@ __license__ = 'GPLv3+'
 
 from abc import abstractmethod
 from collections.abc import Sequence
+from configparser import NoOptionError
 from inspect import isabstract
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -1395,7 +1396,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # is not found in the device list.
         try:
             address = config.get('controller', 'address')
-        except (config.NoSectionError, config.NoOptionError):
+        except NoOptionError:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/address',
                             f'No address in {config.last_file}')

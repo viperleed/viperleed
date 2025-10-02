@@ -41,7 +41,7 @@ from viperleed.gui.qsettings import get_qsettings
 def ensure_aliases_exist():
     """Merge default and user aliases and create file if required."""
     _tmp = ConfigParser()
-    _tmp.read(Path(__file__).parent.parent / '_defaults' / '_aliases.ini')
+    _tmp.read(get_default_aliases_path())
     user_aliases = get_aliases_path()
     _tmp.read(user_aliases)
     with user_aliases.open('w', encoding='utf-8') as fproxy:
@@ -51,6 +51,11 @@ def ensure_aliases_exist():
 def get_aliases_path():
     """Return a Path to the user aliases."""
     return Path(get_qsettings('Aliases').fileName()).resolve()
+
+
+def get_default_aliases_path():
+    """Return a Path to the default aliases."""
+    return Path(__file__).parent.parent / '_defaults' / '_aliases.ini'
 
 
 def interpolate_config_path(filenames):
@@ -159,7 +164,6 @@ class AliasConfigParser(ConfigParser):
                 value = self.get(section, option)
             except NoSectionError:
                 self.add_section(section)
-                pass
             except NoOptionError:
                 pass
             if not value:
@@ -218,7 +222,7 @@ class AliasConfigParser(ConfigParser):
         self._replace_aliases()
 
     def _replace_alias(self, section, option):
-        """Replace alias in self.
+        """Replace section/option with its alias.
 
         Create section if necessary and replace alias.
 

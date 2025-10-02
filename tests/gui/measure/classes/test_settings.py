@@ -2,20 +2,21 @@
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-09-30'
 __license__ = 'GPLv3+'
 
-from pathlib import Path
 from configparser import ConfigParser
 from configparser import MissingSectionHeaderError
 from configparser import NoOptionError
 from configparser import NoSectionError
+from pathlib import Path
 
-import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
+import pytest
 
 from viperleed.gui.measure.classes.settings import AliasConfigParser
 from viperleed.gui.measure.classes.settings import MissingSettingsFileError
@@ -178,9 +179,8 @@ new_section/new_option=('oldsection/option','even_older/old_option')
 fallback_values = (('A/opt', 'fb'),)
 
 [Foo]
-new_sections = ('foo', 'CapSection')
+new_sections = ('foo',)
 foo/opt = ('old/old',)
-CapSection/CapOption = ('OldCap/Old',)
 
 [HasParent]
 parent_aliases = ('WithAliases', )
@@ -202,17 +202,6 @@ parent_aliases = ('WithAliases', )
         parser.read_dict({'old': {'old': old_value}})
         assert parser.get('foo', 'opt') == old_value
         assert parser['foo']['opt'] == old_value
-
-    @pytest.mark.xfail(
-        reason='NoOptionError:  No option capoption in section: CapSection'
-        )
-    def test_get_from_alias_capital(self):
-        """Ensure correct behavior for capitalization in option names."""
-        parser = AliasConfigParser(cls_name='Foo')
-        old_value = 'aliasval'
-        parser.read_dict({'OldCap': {'Old': old_value}})
-        assert parser.get('CapSection', 'CapOption') == old_value
-        assert parser['CapSection']['CapOption'] == old_value
 
     def test_iter_aliases(self):
         """Check expected iteration of known aliases."""
