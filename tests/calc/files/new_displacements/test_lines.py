@@ -28,9 +28,6 @@ from viperleed.calc.files.new_displacements.tokens import (
     RangeToken,
     TargetToken,
 )
-from viperleed.calc.files.new_displacements.tokens.direction import (
-    CartesianDirectionToken,
-)
 
 
 class TestGeoDeltaLine:
