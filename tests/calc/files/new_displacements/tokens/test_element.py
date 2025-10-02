@@ -1,4 +1,4 @@
-"""Tests for <element> token."""
+"""Tests for module viperleed.calc.files.new_displacements.tokens.element."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-13'

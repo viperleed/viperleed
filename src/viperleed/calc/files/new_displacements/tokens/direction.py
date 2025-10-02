@@ -1,4 +1,4 @@
-"""Module direction of viperleed.files.displacements.tokens."""
+"""Module direction of viperleed.calc.files.new_displacements.tokens."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -40,11 +40,11 @@ class DirectionToken(DisplacementsFileToken):
 
     Others that we should probably consider (see also #413): a, b, c, ab, bc, ac
 
-    In addition, we can introduce some syntax leniency and accept also the
-    following:
+    In addition, we can introduce some syntax leniency and accept also
+    the following:
 
-    - various permutations of the letters when displacing in the 2D plane (i.e.,
-      ba == ab, zy == yz, etc)
+    - various permutations of the letters when displacing in the 2D
+      plane (i.e. ba == ab, zy == yz, etc):
     - azi[i j] == azi(ab[i j])
     - azi(i j) == azi(ab[i j])
     - r[i j] == r(ab[i j])

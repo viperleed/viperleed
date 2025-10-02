@@ -1,4 +1,4 @@
-"""Module tl_backend of viperleed.files.displacements."""
+"""Module tl_backend of viperleed.calc.files.new_displacements."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -39,7 +39,7 @@ class TensorLEEDBackend(ABC):
         Parameters
         ----------
         search_block: SearchBlock
-        The search block to check.
+            The search block to check.
 
         Returns
         -------

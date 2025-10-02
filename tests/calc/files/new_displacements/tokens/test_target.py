@@ -1,4 +1,4 @@
-"""Tests for <target> token of viperleed.files.new_displacements."""
+"""Tests for module viperleed.calc.files.new_displacements.tokens.target."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'

@@ -1,4 +1,4 @@
-"""Module file_segments of viperleed.calc.files.displacements."""
+"""Module segments of viperleed.calc.files.new_displacements."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -50,7 +50,7 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
 
     @classmethod
     def from_header_line(cls, line):
-        """Return the a subclass instance for a given header `line`."""
+        """Return a subclass instance for a given header `line`."""
         for subsegment in cls._subclasses:
             if subsegment.is_my_header_line(line):
                 return subsegment(line)

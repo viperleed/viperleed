@@ -1,4 +1,4 @@
-"""Conftest for files/displacements."""
+"""Test configuration for calc/files/new_displacements."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-15'
