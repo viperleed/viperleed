@@ -1,4 +1,4 @@
-"""Class SearchJob."""
+"""Module search_job of viperleed.calc.classes."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -26,7 +26,7 @@ class SearchJob:
 
     This takes care of directing the input to stdin, and logging the
     stdout and stderr. It also gracefully handles termination of all
-    MPI-subprocesses in case of a request to terminate the job,
+    MPI subprocesses in case of a request to terminate the job,
     including KeyBoardInterrupt.
 
     This is compatible with the "spawn" multiprocessing method.
@@ -42,7 +42,9 @@ class SearchJob:
         input_data : str
             Input data to send to the subprocess's stdin (rf.info contents).
         log_path : str or Path, optional
-            File to which stdout and stderr should be redirected.
+            File to which stdout and stderr should be redirected. No
+            redirection takes place if not given or None. Default is
+            None.
         """
         self.command = command
         self.input_data = input_data
@@ -93,55 +95,54 @@ class SearchJob:
 @contextmanager
 def _optional_log_file_path(log_path):
     """Context manager to open a log file or yield subprocess.DEVNULL."""
-    yield (
-        subprocess.DEVNULL
-        if log_path is None
-        else Path(log_path).open('a', encoding='utf-8')
-    )
+    if log_path is None:
+        yield subprocess.DEVNULL
+    else:
+        with Path(log_path).open('a', encoding='utf-8') as log_file:
+            yield log_file
 
 
 def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
     """Run the search command in a separate process."""
     with _optional_log_file_path(log_path) as log_f:
         try:
-            proc = subprocess.Popen(
+            with subprocess.Popen(  # noqa: S603
                 command,
                 stdin=subprocess.PIPE,
                 stdout=log_f,
                 stderr=log_f,
                 encoding='ascii',
                 start_new_session=True,
-            )
-        except Exception:  # noqa: BLE001
+            ) as proc:
+                # send input data to the process
+                _send_input_to_process(input_data, return_code, proc)
+
+                # Monitoring loop
+                def monitor_process():
+                    """Monitor the process and check for kill requests."""
+                    while proc.poll() is None:  # not finished yet
+                        if kill_flag.value:
+                            _kill_proc_tree(proc.pid)
+                        time.sleep(1.0)
+
+                try:
+                    monitor_process()
+                except KeyboardInterrupt:
+                    logger.info('Killing process due to Keyboard interrupt.')
+                    _kill_proc_tree(proc.pid)
+                    return_code.value = 1
+                    raise
+                except Exception:
+                    _kill_proc_tree(proc.pid)
+                    return_code.value = 1
+                    raise
+
+                # pass the return code back to the main process
+                return_code.value = proc.returncode
+        except FileNotFoundError:
             # failed to start the process
             return_code.value = COMMAND_NOT_FOUND_RETURN_CODE
             return
-
-        # send input data to the process
-        _send_input_to_process(input_data, return_code, proc)
-
-        # Monitoring loop
-        def monitor_process():
-            """Monitor the process and check for kill requests."""
-            while proc.poll() is None:  # not finished yet
-                if kill_flag.value:
-                    _kill_proc_tree(proc.pid)
-                time.sleep(1.0)
-
-        try:
-            monitor_process()
-        except KeyboardInterrupt:
-            logger.info('Killing process due to Keyboard interrupt.')
-            _kill_proc_tree(pro.pid)
-            return_code.value = 1
-            raise
-        except Exception:
-            _kill_proc_tree(proc.pid)
-            return_code.value = 1
-            raise
-
-        # pass the return code back to the main process
-        return_code.value = proc.returncode
 
 
 def _send_input_to_process(input_data, return_code, proc):
@@ -163,8 +164,6 @@ def _kill_proc_tree(pid):
         ps_proc = psutil.Process(pid)
     except psutil.NoSuchProcess:
         return  # Process is dead already
-    except psutil.Error:  # catch all psutil errors
-        raise
     for child in ps_proc.children(recursive=True):
         try:
             child.kill()
