@@ -251,7 +251,8 @@ parent_aliases = ('WithAliases', )
         added_section = 'new_section'
         assert added_section in parser.sections()
 
-    def test_no_aliases(self):
+    @parametrize(cls_name=('IHaveNoAliases', '', None))
+    def test_no_aliases(self, cls_name):
         """Check emptiness of aliases when none exist."""
         parser = AliasConfigParser(cls_name='IHaveNoAliases')
         assert not parser._aliases
