@@ -17,7 +17,10 @@ from viperleed.calc.files.displacements import (
     readDISPLACEMENTS,
 )
 
-from .cases_read import CasesEmptyFile, CasesInvalidDomainDisplacements
+from .cases_read import (
+    CasesEmptyFile,
+    CasesInvalidDomainDisplacements,
+)
 
 
 @fixture(name='write_displacements')
