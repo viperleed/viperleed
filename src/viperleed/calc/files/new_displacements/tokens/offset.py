@@ -61,7 +61,7 @@ class OffsetToken(DisplacementsFileToken):
 
         inst = cls.__new__(cls)
         try:
-            inst.offset = np.array([float(o) for o in offsets], dtype=float)
+            inst.offset = np.asarray(offsets, dtype=float)
         except ValueError as err:
             msg = f'Non-numeric value in offset: "{offsets}"'
             raise OffsetTokenParserError(msg) from err
@@ -73,7 +73,9 @@ class OffsetToken(DisplacementsFileToken):
             return NotImplemented
         if self.dof != other.dof:
             return False
-        return abs(self.offset - other.offset) < DISPLACEMENTS_FILE_EPS
+        return np.allclose(
+            self.offset, other.offset, atol=DISPLACEMENTS_FILE_EPS
+        )
 
     def __str__(self):
         """Return a string representation of the OffsetToken object."""
