@@ -129,8 +129,15 @@ class CartesianDirectionToken(DirectionToken):
             vec = self._embed_vector(dirs, vecs)
             return np.array([self._normalize(vec)]), 1
         # Basis directions like 'x', 'xy', etc.
+        # validate the direction string
         if not all(c in SIMPLE_DIRECTIONS for c in direction_str):
             msg = f'Invalid direction: {direction_str}'
+            raise ValueError(msg)
+        if len(set(direction_str)) != len(direction_str):
+            msg = f'Duplicate directions in direction string: {direction_str}'
+            raise ValueError(msg)
+        if len(direction_str) > 3:
+            msg = f'Direction string too long: {direction_str} (max 3 allowed)'
             raise ValueError(msg)
         vecs = [self._get_basis_vector(c) for c in direction_str]
         return np.array(vecs), len(vecs)
