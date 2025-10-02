@@ -136,7 +136,7 @@ class SectionHeaderLine(HeaderLine):
             msg = f'Invalid section header line: "{section}".'
             raise DisplacementsSyntaxError(msg)
         # extract the section name from the match
-        self.section = match.group('section').strip()
+        self.section = match['section'].strip()
 
     def __str__(self):
         """Return the string representation of the section header."""
