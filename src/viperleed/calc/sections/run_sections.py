@@ -318,7 +318,7 @@ def section_loop(rp, sl):
                     # Automatically repeat deepest loop if exceeds_tl_limit.
                     improved = rp.last_R < search_loop_R.get(loop, R_MAX)
                     ignore_tl_limit = (
-                        rp.MAX_TL_DISPLACEMENT.action is not MaxTLAction.IGNORE
+                        rp.MAX_TL_DISPLACEMENT.action is MaxTLAction.IGNORE
                     )
                     if improved or (exceeds_tl_limit and not ignore_tl_limit):
                         # Loop back
