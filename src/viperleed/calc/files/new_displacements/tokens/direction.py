@@ -51,14 +51,6 @@ class DirectionToken(DisplacementsFileToken):
     - r(i j) == r(ab[i j])
     """
 
-    @abstractmethod
-    def __eq__(self, other):
-        """Compare two DirectionToken objects for equality."""
-
-    @abstractmethod
-    def __str__(self):
-        """Return a string representation of the DirectionToken object."""
-
 
 class CartesianDirectionToken(DirectionToken):
     """Class to parse direction specifiers in 3D space.
