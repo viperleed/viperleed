@@ -19,7 +19,7 @@ class OffsetTokenParserError(TokenParserError):
 class OffsetToken(DisplacementsFileToken):
     """Class to parse and represent offsets in the DISPLACEMENTS file.
 
-    Ranges are provided by the user as strings containing a single float.
+    Ranges are provided by the user as strings containing 1 to 3 floats.
 
     Parameters
     ----------

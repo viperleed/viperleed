@@ -44,7 +44,7 @@ class ElementToken(DisplacementsFileToken):
         self.symbol = periodic_table.get_element_symbol(self.atomic_number)
 
     def __eq__(self, other):
-        """Compare two RangeToken objects for equality."""
+        """Compare two ElementToken objects for equality."""
         if not isinstance(other, ElementToken):
             return NotImplemented
         return other.atomic_number == self.atomic_number
