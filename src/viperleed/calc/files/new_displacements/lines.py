@@ -539,9 +539,9 @@ class ConstraintLine(ParsedLine):
             target_part = ' '.join(rhs_parts[-i:])
             try:
                 link_targets = self._parse_targets(target_part)
-                break
             except DisplacementsSyntaxError:
                 continue
+            break
         else:
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
