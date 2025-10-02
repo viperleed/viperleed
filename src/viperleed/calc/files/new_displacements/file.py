@@ -142,9 +142,14 @@ class DisplacementsFile(NodeMixin):
             )
 
         # Check if the first segment is an OFFSETS block
-        if any(
-            isinstance(child, OffsetsBlock) for child in self.children
-        ) and not isinstance(self.children[0], OffsetsBlock):
+        offset_blocks = [
+            b for b in self.descendants if isinstance(b, OffsetsBlock)
+        ]
+        if len(offset_blocks) > 1:
+            raise DisplacementsSyntaxError(
+                'Only one OFFSETS block is allowed in the DISPLACEMENTS file.'
+            )
+        if offset_blocks and offset_blocks[0] is not self.children[0]:
             raise OffsetsNotAtBeginningError(
                 'The OFFSETS block must be at the beginning of the file.'
             )
