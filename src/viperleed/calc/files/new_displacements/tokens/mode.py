@@ -1,4 +1,4 @@
-"""Module for the <type> token in the DISPLACEMENTS file."""
+"""Module mode of viperleed.calc.files.new_displacements.tokens."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'

@@ -567,6 +567,7 @@ class ConstraintLine(ParsedLine):
     def _format_rhs_str(self):
         return f'{self.linear_operation} {self.link_target}'
 
+
 class OffsetsLine(ParsedLine):
     """Class to parse lines in the OFFSETS block of DISPLACEMENTS.
 
@@ -578,9 +579,7 @@ class OffsetsLine(ParsedLine):
     """
 
     block_name = 'OFFSET'
-    expected_format = (
-        '<type> <target> [, <target> ...] [<direction>] = <offset>'
-    )
+    expected_format = '<type> <target> [, <target>] [<direction>] = <offset>'
 
     def __init__(self, line):
         super().__init__(line)

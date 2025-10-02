@@ -1,4 +1,4 @@
-"""Module for the <range> token in the DISPLACEMENTS file."""
+"""Module range_ of viperleed.calc.files.new_displacements.tokens."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -29,7 +29,7 @@ class RangeToken(DisplacementsFileToken):
         The range string to parse.
     """
 
-    def __init__(self, range_str: str):
+    def __init__(self, range_str):
         """Construct a RangeToken from a string."""
         # TODO: TensErLEED compatibility: backend requires the step to be specified
         parts = range_str.strip().split()
@@ -56,7 +56,7 @@ class RangeToken(DisplacementsFileToken):
         return self.step is not None
 
     @classmethod
-    def from_floats(cls, start: float, stop: float, step=None) -> 'RangeToken':
+    def from_floats(cls, start, stop, step=None) -> 'RangeToken':
         """Alternate constructor using numeric values directly."""
         inst = cls.__new__(cls)
         inst.start = start
