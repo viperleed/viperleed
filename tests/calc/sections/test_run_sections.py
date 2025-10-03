@@ -7,6 +7,8 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-28'
 __license__ = 'GPLv3+'
 
+import pytest
+
 from collections import defaultdict
 from pytest_cases import fixture
 from pytest_cases import parametrize
@@ -196,6 +198,12 @@ class TestSectionLoop:
             1: [lambda rp: setattr(rp, 'last_refcalc_time', 1)]
                 }, MaxTLAction.REFCALC, [0, 1, 11, 2, 3, 31, 12,
                                          1, 11, 2, 3, 31, 12]),
+        'loop with ignore': ([0, 1, 2, 3], {
+            0: [set_looped_search],
+            3: make_attr_setter_list("last_R", [0.2, 0.2])
+            },
+            MaxTLAction.IGNORE,
+            [0, 1, 11] + [2, 3, 31, 12]*2),
         }
 
     stopped_runs = {  # name: (RUN, actions, expect_code, expect_history)
@@ -239,6 +247,7 @@ class TestSectionLoop:
         assert exit_code == 0
         assert dummy_rp.runHistory == expect
 
+    @pytest.mark.timeout(5)
     @parametrize('run,actions,which,expect', max_disp_runs.values(),
                  ids=max_disp_runs)
     def test_section_loop_valid_max_tl_disp(self, run, actions, which, expect,
