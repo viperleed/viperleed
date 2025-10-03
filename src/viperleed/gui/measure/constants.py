@@ -11,4 +11,4 @@ __license__ = 'GPLv3+'
 from pathlib import Path
 
 
-SRC_ALIASES_PATH = Path(__file__).parent.parent / '_defaults' / '_aliases.ini'
+SRC_ALIASES_PATH = Path(__file__).parent / '_defaults' / '_aliases.ini'
