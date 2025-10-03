@@ -255,6 +255,13 @@ parent_aliases = ('WithAliases', )
         assert not parser._aliases
         assert not parser._fallback
 
+    def test_old_alias_section_removal(self):
+        """Check removal of emptied alias sections."""
+        parser = AliasConfigParser(cls_name='Foo')
+        old_section = 'old'
+        parser.read_dict({old_section: {'old': 'aliasval'}})
+        assert old_section not in parser.sections()
+
     def test_parent_aliases(self):
         """Check if parent aliases are applied."""
         parser = AliasConfigParser(cls_name='HasParent')
