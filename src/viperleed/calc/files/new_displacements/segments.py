@@ -111,6 +111,15 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
 class LineContainer(DisplacementsSegmentABC):
     """Base class for units that contain content lines."""
 
+    header = None
+
+    def __init_subclass__(cls, **kwargs):
+        """Verify the presence of expected class attributes."""
+        super().__init_subclass__(**kwargs)
+        if not cls.header:
+            msg = f"{cls.__name__} must define a 'header' class attribute"
+            raise TypeError(msg)
+
     @property
     def _render_name(self):
         sep = '\n\t'
@@ -124,15 +133,14 @@ class LineContainer(DisplacementsSegmentABC):
 class DeltaBlock(LineContainer):
     """Base class for blocks that contain delta lines."""
 
-    @property
-    @abstractmethod
-    def line_type(self):
-        """Return the line type for this delta block."""
+    line_type = None
 
-    @property
-    @abstractmethod
-    def header(self):
-        """Return the header for this delta block."""
+    def __init_subclass__(cls, **kwargs):
+        """Verify the presence of expected class attributes."""
+        super().__init_subclass__(**kwargs)
+        if not cls.line_type:
+            msg = f"{cls.__name__} must define a 'line_type' class attribute"
+            raise TypeError(msg)
 
     @classmethod
     def is_my_header_line(cls, line):
