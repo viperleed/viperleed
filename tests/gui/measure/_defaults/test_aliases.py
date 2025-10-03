@@ -20,6 +20,7 @@ from viperleed.gui.measure.constants import SRC_ALIASES_PATH
 def fixture_alias_config():
     """Fixture that creates a ConfigParser containing the aliases."""
     config = ConfigParser()
+    config.optionxform = str
     config.read(SRC_ALIASES_PATH)
     return config
 
