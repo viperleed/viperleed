@@ -445,9 +445,7 @@ class ViPErLEEDSettings(AliasConfigParser):
 
             # (<section>, <option>) or (<section>, <option>, <admissible>)
             section, option = setting[:2]
-            try:
-                value = self.get(section, option)
-            except NoOptionError:
+            if not self.has_option(section, option):
                 invalid_settings.append(f'{section}/{option}')
                 continue
 
