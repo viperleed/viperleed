@@ -87,9 +87,10 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
                     # continue outer loop
                     # after child consumes what it needs
                     break
-            # done reading this segment, return to parent
-            self.validate_segment()
-            return itertools.chain([line], lines)
+            else:
+                # done reading this segment, return to parent
+                self.validate_segment()
+                return itertools.chain([line], lines)
 
     def __str__(self):
         return str(RenderTree(self, style=ContStyle()).by_attr('_render_name'))
@@ -111,14 +112,10 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
 class LineContainer(DisplacementsSegmentABC):
     """Base class for units that contain content lines."""
 
-    header = None
-
-    def __init_subclass__(cls, **kwargs):
-        """Verify the presence of expected class attributes."""
-        super().__init_subclass__(**kwargs)
-        if not cls.header:
-            msg = f"{cls.__name__} must define a 'header' class attribute"
-            raise TypeError(msg)
+    @classmethod
+    @abstractmethod
+    def header(cls):
+        """Return the header string for this block."""
 
     @property
     def _render_name(self):
@@ -142,16 +139,17 @@ class DeltaBlock(LineContainer):
             msg = f"{cls.__name__} must define a 'line_type' class attribute"
             raise TypeError(msg)
 
-    @property
-    def header(self):
+    @classmethod
+    def header(cls):
         """Return the header string for this DELTA block."""
-        return self.line_type.block_name
+        return cls.line_type.block_name
 
     @classmethod
     def is_my_header_line(cls, line):
         """Check if the line is a header for this DELTA block."""
         return (
-            isinstance(line, SectionHeaderLine) and line.section == cls.header
+            isinstance(line, SectionHeaderLine)
+            and line.section == cls.header()
         )
 
     def _belongs_to_me(self, line):
@@ -342,7 +340,11 @@ class OffsetsBlock(LineContainer):
     """Base class for blocks that contain offsets lines."""
 
     line_type = OffsetsLine
-    header = line_type.block_name
+
+    @classmethod
+    def header(cls):
+        """Return the header string for this DELTA block."""
+        return cls.line_type.block_name
 
     @classmethod
     def is_my_header_line(cls, line):
