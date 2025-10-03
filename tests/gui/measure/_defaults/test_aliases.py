@@ -64,11 +64,20 @@ class TestDefaultAliases:
                 if option == 'parent_aliases':
                     # Skip class names as these contain uppercase strings.
                     continue
-                value = alias_config[section][option]
-                assert value == value.lower(), (
-                    f'Alias "{value}" in [{section}][{option}] '
-                    'contains uppercase letters.'
-                    )
+                if option != 'fallback_values':
+                    value = alias_config[section][option]
+                    assert value == value.lower(), (
+                        f'Alias "{value}" in [{section}][{option}] '
+                        'contains uppercase letters.'
+                        )
+                    continue
+                # Treat key 'fallback_values' differently because the
+                # fallback values may contain capitalized letters.
+                for value in ast.literal_eval(alias_config[section][option]):
+                    assert value[0] == value[0].lower(), (
+                        f'Alias "{value[0]}" in [{section}][{option}] '
+                        'contains uppercase letters.'
+                        )
 
     def test_no_child_parent_option_overlap(self, alias_config):
         """Ensure that child sections do not redefine parent_aliases."""
