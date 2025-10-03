@@ -39,6 +39,10 @@ class TestDefaultAliases:
                 if option == 'parent_aliases':
                     # Skip class names as these contain uppercase strings.
                     continue
+                if len(option.split('/')) == 3:
+                    # The option contains an overwrite value
+                    # that may contain capitalized letters.
+                    continue
                 if option != 'fallback_values':
                     value = alias_config[section][option]
                     assert value == value.lower(), (
