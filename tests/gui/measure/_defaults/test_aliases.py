@@ -16,8 +16,8 @@ from pytest_cases import fixture
 from viperleed.gui.measure.constants import SRC_ALIASES_PATH
 
 
-@fixture
-def alias_config():
+@fixture(name='alias_config')
+def fixture_alias_config():
     """Fixture that creates a ConfigParser containing the aliases."""
     config = ConfigParser()
     config.read(SRC_ALIASES_PATH)
