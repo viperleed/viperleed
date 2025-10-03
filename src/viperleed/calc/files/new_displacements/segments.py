@@ -327,7 +327,7 @@ class LoopBlock(DisplacementsSegmentABC):
         if isinstance(next_block, LoopBlock):
             # call the loop block's next method to get the next search block
             try:
-                return self.children[self._current_child_id].next(current_rfac)
+                return next_block.next(current_rfac, r_fac_eps=r_fac_eps)
             except StopIteration:
                 # if the loop block is exhausted, move to the next child
                 self._current_child_id += 1
