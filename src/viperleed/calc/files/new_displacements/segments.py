@@ -151,21 +151,26 @@ class DeltaBlock(LineContainer):
 
 
 class GeoDeltaBlock(DeltaBlock):
+    """Class to hold information about a GEO_DELTA block in DISPLACEMENTS."""
+
     header = 'GEO_DELTA'
     line_type = GeoDeltaLine
 
 
 class VibDeltaBlock(DeltaBlock):
+    """Class to hold information about a VIB_DELTA block in DISPLACEMENTS."""
     header = 'VIB_DELTA'
     line_type = VibDeltaLine
 
 
 class OccDeltaBlock(DeltaBlock):
+    """Class to hold information about a OCC_DELTA block in DISPLACEMENTS."""
     header = 'OCC_DELTA'
     line_type = OccDeltaLine
 
 
 class ConstraintBlock(DeltaBlock):
+    """Class to hold information about a CONSTRAIN block in DISPLACEMENTS."""
     header = 'CONSTRAIN'
     line_type = ConstraintLine
 
