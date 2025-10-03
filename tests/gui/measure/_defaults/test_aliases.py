@@ -8,8 +8,8 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-10-02'
 __license__ = 'GPLv3+'
 
-import ast
 from configparser import ConfigParser
+import ast
 
 from pytest_cases import fixture
 
@@ -27,31 +27,6 @@ def fixture_alias_config():
 
 class TestDefaultAliases:
     """Tests for the aliases provided in the _defaults."""
-
-    def test_no_multiple_inheritance(self, alias_config):
-        """Check that there is no multiple inheritance."""
-        # Collect all sections that declare parent_aliases themselves.
-        inheriting_sections = (
-            section
-            for section in alias_config.sections()
-            if alias_config.has_option(section, 'parent_aliases')
-            )
-
-        # For each section, collect its declared parent_aliases.
-        for section in alias_config.sections():
-            parents_raw = alias_config.get(section, 'parent_aliases',
-                                           fallback=None)
-            if not parents_raw:
-                continue
-            parents = ast.literal_eval(parents_raw)
-            # Check if any of the parent_aliases are among
-            # the sections that declare parent_aliases.
-            for parent in parents:
-                assert parent not in inheriting_sections, (
-                    f'Invalid multiple inheritance: Section "{section}"'
-                    f' tries to inherit from "{parent}", which already '
-                    'has its own parent_aliases.'
-                    )
 
     def test_no_capital_letters_in_options_and_values(self, alias_config):
         """Ensure all options and non-parent_aliases values are lowercase."""
@@ -100,3 +75,28 @@ class TestDefaultAliases:
                 f'Section [{section}] redefines option(s) already '
                 f'defined in its parent_aliases {parents}: {overlap}'
                 )
+
+    def test_no_multiple_inheritance(self, alias_config):
+        """Check that there is no multiple inheritance."""
+        # Collect all sections that declare parent_aliases themselves.
+        inheriting_sections = (
+            section
+            for section in alias_config.sections()
+            if alias_config.has_option(section, 'parent_aliases')
+            )
+
+        # For each section, collect its declared parent_aliases.
+        for section in alias_config.sections():
+            parents_raw = alias_config.get(section, 'parent_aliases',
+                                           fallback=None)
+            if not parents_raw:
+                continue
+            parents = ast.literal_eval(parents_raw)
+            # Check if any of the parent_aliases are among
+            # the sections that declare parent_aliases.
+            for parent in parents:
+                assert parent not in inheriting_sections, (
+                    f'Invalid multiple inheritance: Section "{section}"'
+                    f' tries to inherit from "{parent}", which already '
+                    'has its own parent_aliases.'
+                    )
