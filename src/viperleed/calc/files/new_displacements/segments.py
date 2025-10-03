@@ -142,6 +142,11 @@ class DeltaBlock(LineContainer):
             msg = f"{cls.__name__} must define a 'line_type' class attribute"
             raise TypeError(msg)
 
+    @property
+    def header(self):
+        """Return the header string for this DELTA block."""
+        return self.line_type.block_name
+
     @classmethod
     def is_my_header_line(cls, line):
         """Check if the line is a header for this DELTA block."""
@@ -161,25 +166,24 @@ class DeltaBlock(LineContainer):
 class GeoDeltaBlock(DeltaBlock):
     """Class to hold information about a GEO_DELTA block in DISPLACEMENTS."""
 
-    header = 'GEO_DELTA'
     line_type = GeoDeltaLine
 
 
 class VibDeltaBlock(DeltaBlock):
     """Class to hold information about a VIB_DELTA block in DISPLACEMENTS."""
-    header = 'VIB_DELTA'
+
     line_type = VibDeltaLine
 
 
 class OccDeltaBlock(DeltaBlock):
     """Class to hold information about a OCC_DELTA block in DISPLACEMENTS."""
-    header = 'OCC_DELTA'
+
     line_type = OccDeltaLine
 
 
 class ConstraintBlock(DeltaBlock):
     """Class to hold information about a CONSTRAIN block in DISPLACEMENTS."""
-    header = 'CONSTRAIN'
+
     line_type = ConstraintLine
 
 
@@ -212,14 +216,14 @@ class SearchBlock(DisplacementsSegmentABC):
         return []
 
     @property
+    def explicit_constraint_lines(self):
+        """Return lines of the ConstraintBlock."""
+        return self._get_block_lines(ConstraintBlock)
+
+    @property
     def geo_delta_lines(self):
         """Return lines of the GeoDeltaBlock."""
         return self._get_block_lines(GeoDeltaBlock)
-
-    @property
-    def vib_delta_lines(self):
-        """Return lines of the VibDeltaBlock."""
-        return self._get_block_lines(VibDeltaBlock)
 
     @property
     def occ_delta_lines(self):
@@ -227,9 +231,9 @@ class SearchBlock(DisplacementsSegmentABC):
         return self._get_block_lines(OccDeltaBlock)
 
     @property
-    def explicit_constraint_lines(self):
-        """Return lines of the ConstraintBlock."""
-        return self._get_block_lines(ConstraintBlock)
+    def vib_delta_lines(self):
+        """Return lines of the VibDeltaBlock."""
+        return self._get_block_lines(VibDeltaBlock)
 
     def validate_segment(self):
         """Check the segments contents run before returning to parent."""
@@ -336,6 +340,9 @@ class LoopBlock(DisplacementsSegmentABC):
 
 class OffsetsBlock(LineContainer):
     """Base class for blocks that contain offsets lines."""
+
+    line_type = OffsetsLine
+    header = line_type.block_name
 
     @classmethod
     def is_my_header_line(cls, line):
