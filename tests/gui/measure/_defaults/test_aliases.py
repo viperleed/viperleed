@@ -13,14 +13,14 @@ from configparser import ConfigParser
 
 from pytest_cases import fixture
 
-from viperleed.gui.measure.classes.settings import get_default_aliases_path
+from viperleed.gui.measure.constants import SRC_ALIASES_PATH
 
 
 @fixture
 def alias_config():
     """Fixture that creates a ConfigParser containing the aliases."""
     config = ConfigParser()
-    config.read(get_default_aliases_path())
+    config.read(SRC_ALIASES_PATH)
     return config
 
 

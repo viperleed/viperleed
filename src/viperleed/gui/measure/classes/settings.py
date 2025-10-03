@@ -33,6 +33,7 @@ import sys
 
 from wrapt import synchronized  # thread-safety decorator
 
+from viperleed.gui.measure.constants import SRC_ALIASES_PATH
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.qsettings import get_qsettings
@@ -41,7 +42,7 @@ from viperleed.gui.qsettings import get_qsettings
 def ensure_aliases_exist():
     """Merge default and user aliases and create file if required."""
     _tmp = ConfigParser()
-    _tmp.read(get_default_aliases_path())
+    _tmp.read(SRC_ALIASES_PATH)
     user_aliases = get_aliases_path()
     _tmp.read(user_aliases)
     with user_aliases.open('w', encoding='utf-8') as fproxy:
@@ -51,11 +52,6 @@ def ensure_aliases_exist():
 def get_aliases_path():
     """Return a Path to the user aliases."""
     return Path(get_qsettings('Aliases').fileName()).resolve()
-
-
-def get_default_aliases_path():
-    """Return a Path to the default aliases."""
-    return Path(__file__).parent.parent / '_defaults' / '_aliases.ini'
 
 
 def interpolate_config_path(filenames):
