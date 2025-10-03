@@ -456,7 +456,7 @@ class ViPErLEEDSettings(AliasConfigParser):
             # (<section>, <option>, <admissible>)
             if len(setting) == 3:
                 admissible_values = setting[2]
-                if value not in admissible_values:
+                if self[section][option] not in admissible_values:
                     invalid_settings.append(
                         '/'.join(setting[:2])
                         + ' not one of ' + ', '.join(admissible_values)
