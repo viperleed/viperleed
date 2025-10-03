@@ -1,4 +1,4 @@
-"""Tests for module perturbation_type."""
+"""Tests for module viperleed.calc.classes.perturbation_mode."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-04-10'

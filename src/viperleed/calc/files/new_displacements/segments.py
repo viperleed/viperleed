@@ -1,4 +1,4 @@
-"""Module file_segments of viperleed.calc.files.displacements."""
+"""Module segments of viperleed.calc.files.new_displacements."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -50,7 +50,7 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
 
     @classmethod
     def from_header_line(cls, line):
-        """Return the a subclass instance for a given header `line`."""
+        """Return a subclass instance for a given header `line`."""
         for subsegment in cls._subclasses:
             if subsegment.is_my_header_line(line):
                 return subsegment(line)
@@ -75,7 +75,6 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
                 self.validate_segment()
                 return iter([])
 
-            processed = False
             if self._belongs_to_me(line):
                 self._lines.append(line)
                 continue
@@ -85,10 +84,9 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
                     child = subsegment(line)
                     child.parent = self
                     lines = child.read_lines(lines)
-                    processed = True
-                    break  # after child consumes what it needs, continue outer loop
-            if processed:
-                continue
+                    # continue outer loop
+                    # after child consumes what it needs
+                    break
             # done reading this segment, return to parent
             self.validate_segment()
             return itertools.chain([line], lines)
@@ -105,14 +103,22 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
     def validate_segment(self):
         """Check the segments contents run before returning to parent."""
 
-    @staticmethod
     @abstractmethod
-    def _belongs_to_me(line):
+    def _belongs_to_me(self, line):
         """Return whether `line` is a header for this segment."""
 
 
 class LineContainer(DisplacementsSegmentABC):
     """Base class for units that contain content lines."""
+
+    header = None
+
+    def __init_subclass__(cls, **kwargs):
+        """Verify the presence of expected class attributes."""
+        super().__init_subclass__(**kwargs)
+        if not cls.header:
+            msg = f"{cls.__name__} must define a 'header' class attribute"
+            raise TypeError(msg)
 
     @property
     def _render_name(self):
@@ -127,15 +133,19 @@ class LineContainer(DisplacementsSegmentABC):
 class DeltaBlock(LineContainer):
     """Base class for blocks that contain delta lines."""
 
-    @property
-    @abstractmethod
-    def line_type(self):
-        """Return the line type for this delta block."""
+    line_type = None
+
+    def __init_subclass__(cls, **kwargs):
+        """Verify the presence of expected class attributes."""
+        super().__init_subclass__(**kwargs)
+        if not cls.line_type:
+            msg = f"{cls.__name__} must define a 'line_type' class attribute"
+            raise TypeError(msg)
 
     @property
-    @abstractmethod
     def header(self):
-        """Return the header for this delta block."""
+        """Return the header string for this DELTA block."""
+        return self.line_type.block_name
 
     @classmethod
     def is_my_header_line(cls, line):
@@ -154,22 +164,26 @@ class DeltaBlock(LineContainer):
 
 
 class GeoDeltaBlock(DeltaBlock):
-    header = 'GEO_DELTA'
+    """Class to hold information about a GEO_DELTA block in DISPLACEMENTS."""
+
     line_type = GeoDeltaLine
 
 
 class VibDeltaBlock(DeltaBlock):
-    header = 'VIB_DELTA'
+    """Class to hold information about a VIB_DELTA block in DISPLACEMENTS."""
+
     line_type = VibDeltaLine
 
 
 class OccDeltaBlock(DeltaBlock):
-    header = 'OCC_DELTA'
+    """Class to hold information about a OCC_DELTA block in DISPLACEMENTS."""
+
     line_type = OccDeltaLine
 
 
 class ConstraintBlock(DeltaBlock):
-    header = 'CONSTRAIN'
+    """Class to hold information about a CONSTRAIN block in DISPLACEMENTS."""
+
     line_type = ConstraintLine
 
 
@@ -202,14 +216,14 @@ class SearchBlock(DisplacementsSegmentABC):
         return []
 
     @property
+    def explicit_constraint_lines(self):
+        """Return lines of the ConstraintBlock."""
+        return self._get_block_lines(ConstraintBlock)
+
+    @property
     def geo_delta_lines(self):
         """Return lines of the GeoDeltaBlock."""
         return self._get_block_lines(GeoDeltaBlock)
-
-    @property
-    def vib_delta_lines(self):
-        """Return lines of the VibDeltaBlock."""
-        return self._get_block_lines(VibDeltaBlock)
 
     @property
     def occ_delta_lines(self):
@@ -217,9 +231,9 @@ class SearchBlock(DisplacementsSegmentABC):
         return self._get_block_lines(OccDeltaBlock)
 
     @property
-    def explicit_constraint_lines(self):
-        """Return lines of the ConstraintBlock."""
-        return self._get_block_lines(ConstraintBlock)
+    def vib_delta_lines(self):
+        """Return lines of the VibDeltaBlock."""
+        return self._get_block_lines(VibDeltaBlock)
 
     def validate_segment(self):
         """Check the segments contents run before returning to parent."""
@@ -248,6 +262,7 @@ class SearchBlock(DisplacementsSegmentABC):
     @property
     def _render_name(self):
         return str(self._header)
+
 
 class LoopBlock(DisplacementsSegmentABC):
     """Class holding information about a loop block in DISPLACEMENTS."""
@@ -312,7 +327,7 @@ class LoopBlock(DisplacementsSegmentABC):
         if isinstance(next_block, LoopBlock):
             # call the loop block's next method to get the next search block
             try:
-                return self.children[self._current_child_id].next(current_rfac)
+                return next_block.next(current_rfac, r_fac_eps=r_fac_eps)
             except StopIteration:
                 # if the loop block is exhausted, move to the next child
                 self._current_child_id += 1
@@ -323,9 +338,11 @@ class LoopBlock(DisplacementsSegmentABC):
         return next_block
 
 
-
 class OffsetsBlock(LineContainer):
     """Base class for blocks that contain offsets lines."""
+
+    line_type = OffsetsLine
+    header = line_type.block_name
 
     @classmethod
     def is_my_header_line(cls, line):

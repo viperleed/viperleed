@@ -1,4 +1,4 @@
-"""Module file of viperleed.calc.files.displacements."""
+"""Module file of viperleed.calc.files.new_displacements."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -48,10 +48,11 @@ class DisplacementsFile(NodeMixin):
     """
 
     def __init__(self):
+        super().__init__()
         self.name = self._render_name
         self._has_been_read = False
         # an OFFSETS block is only allowed at the very beginning of the file
-        # we check this by setting this flag to False after the first block
+        # we check this by setting this flag to True after the first block
 
         # attributes related to iterating over the search blocks
         self._child_id = 0
@@ -85,7 +86,7 @@ class DisplacementsFile(NodeMixin):
 
         Raises
         ------
-        ValueError
+        AlreadyReadError
             If the file has already been read.
         DisplacementsSyntaxError
             If the file cannot be parsed or has an invalid structure.
@@ -102,19 +103,17 @@ class DisplacementsFile(NodeMixin):
                     header_line = next(reader)
                 except StopIteration:
                     break
-                processed = False
                 for segment_class in TOP_LEVEL_SEGMENTS:
                     if not segment_class.is_my_header_line(header_line):
                         continue
                     new_segment = segment_class(header_line)
                     reader = new_segment.read_lines(reader)
                     new_segment.parent = self
-                    processed = True
-                if processed:
-                    continue
-                # if we reach here, the line was not processed
-                msg = f'Unable to parse line: {header_line!r}.'
-                raise DisplacementsSyntaxError(msg)
+                    break
+                else:
+                    # if we reach here, the line was not processed
+                    msg = f'Unable to parse line: {header_line!r}.'
+                    raise DisplacementsSyntaxError(msg)
 
         self._validate()
         logger.info('DISPLACEMENTS file read successfully using new parser.')
@@ -141,9 +140,14 @@ class DisplacementsFile(NodeMixin):
             )
 
         # Check if the first segment is an OFFSETS block
-        if any(
-            isinstance(child, OffsetsBlock) for child in self.children
-        ) and not isinstance(self.children[0], OffsetsBlock):
+        offset_blocks = [
+            b for b in self.descendants if isinstance(b, OffsetsBlock)
+        ]
+        if len(offset_blocks) > 1:
+            raise DisplacementsSyntaxError(
+                'Only one OFFSETS block is allowed in the DISPLACEMENTS file.'
+            )
+        if offset_blocks and offset_blocks[0] is not self.children[0]:
             raise OffsetsNotAtBeginningError(
                 'The OFFSETS block must be at the beginning of the file.'
             )

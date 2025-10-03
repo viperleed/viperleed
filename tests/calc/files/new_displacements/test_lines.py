@@ -1,4 +1,4 @@
-"""Tests for module files/displacements/lines."""
+"""Tests for module viperleed.calc.files.new_displacements.lines."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -27,9 +27,6 @@ from viperleed.calc.files.new_displacements.tokens import (
     OffsetToken,
     RangeToken,
     TargetToken,
-)
-from viperleed.calc.files.new_displacements.tokens.direction import (
-    CartesianDirectionToken,
 )
 
 

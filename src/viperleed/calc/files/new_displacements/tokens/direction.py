@@ -1,4 +1,4 @@
-"""Module direction of viperleed.files.displacements.tokens."""
+"""Module direction of viperleed.calc.files.new_displacements.tokens."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -40,24 +40,16 @@ class DirectionToken(DisplacementsFileToken):
 
     Others that we should probably consider (see also #413): a, b, c, ab, bc, ac
 
-    In addition, we can introduce some syntax leniency and accept also the
-    following:
+    In addition, we can introduce some syntax leniency and accept also
+    the following:
 
-    - various permutations of the letters when displacing in the 2D plane (i.e.,
-      ba == ab, zy == yz, etc)
+    - various permutations of the letters when displacing in the 2D
+      plane (i.e. ba == ab, zy == yz, etc):
     - azi[i j] == azi(ab[i j])
     - azi(i j) == azi(ab[i j])
     - r[i j] == r(ab[i j])
     - r(i j) == r(ab[i j])
     """
-
-    @abstractmethod
-    def __eq__(self, other):
-        """Compare two DirectionToken objects for equality."""
-
-    @abstractmethod
-    def __str__(self):
-        """Return a string representation of the DirectionToken object."""
 
 
 class CartesianDirectionToken(DirectionToken):
@@ -137,8 +129,15 @@ class CartesianDirectionToken(DirectionToken):
             vec = self._embed_vector(dirs, vecs)
             return np.array([self._normalize(vec)]), 1
         # Basis directions like 'x', 'xy', etc.
+        # validate the direction string
         if not all(c in SIMPLE_DIRECTIONS for c in direction_str):
             msg = f'Invalid direction: {direction_str}'
+            raise ValueError(msg)
+        if len(set(direction_str)) != len(direction_str):
+            msg = f'Duplicate directions in direction string: {direction_str}'
+            raise ValueError(msg)
+        if len(direction_str) > 3:
+            msg = f'Direction string too long: {direction_str} (max 3 allowed)'
             raise ValueError(msg)
         vecs = [self._get_basis_vector(c) for c in direction_str]
         return np.array(vecs), len(vecs)

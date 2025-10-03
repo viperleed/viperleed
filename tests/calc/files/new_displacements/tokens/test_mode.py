@@ -1,4 +1,4 @@
-"""Tests for <mode> token of DISPLACEMENTS file."""
+"""Tests for module viperleed.calc.files.new_displacements.tokens.mode."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2025-05-13'

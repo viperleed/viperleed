@@ -1,4 +1,4 @@
-"""Module for the <offset> token in the DISPLACEMENTS file."""
+"""Module offset of viperleed.calc.files.new_displacements.tokens."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -19,7 +19,7 @@ class OffsetTokenParserError(TokenParserError):
 class OffsetToken(DisplacementsFileToken):
     """Class to parse and represent offsets in the DISPLACEMENTS file.
 
-    Ranges are provided by the user as strings containing a single float.
+    Ranges are provided by the user as strings containing 1 to 3 floats.
 
     Parameters
     ----------
@@ -61,7 +61,7 @@ class OffsetToken(DisplacementsFileToken):
 
         inst = cls.__new__(cls)
         try:
-            inst.offset = np.array([float(o) for o in offsets], dtype=float)
+            inst.offset = np.asarray(offsets, dtype=float)
         except ValueError as err:
             msg = f'Non-numeric value in offset: "{offsets}"'
             raise OffsetTokenParserError(msg) from err
@@ -73,7 +73,9 @@ class OffsetToken(DisplacementsFileToken):
             return NotImplemented
         if self.dof != other.dof:
             return False
-        return abs(self.offset - other.offset) < DISPLACEMENTS_FILE_EPS
+        return np.allclose(
+            self.offset, other.offset, atol=DISPLACEMENTS_FILE_EPS
+        )
 
     def __str__(self):
         """Return a string representation of the OffsetToken object."""

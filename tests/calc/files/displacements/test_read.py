@@ -6,7 +6,10 @@ __created__ = '2025-06-08'
 __license__ = 'GPLv3+'
 
 import pytest
-from pytest_cases import fixture, parametrize_with_cases
+from pytest_cases import (
+    fixture,
+    parametrize_with_cases,
+)
 
 from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.files.displacements import (
@@ -14,7 +17,10 @@ from viperleed.calc.files.displacements import (
     readDISPLACEMENTS,
 )
 
-from .cases_read import CasesEmptyFile, CasesInvalidDomainDisplacements
+from .cases_read import (
+    CasesEmptyFile,
+    CasesInvalidDomainDisplacements,
+)
 
 
 @fixture(name='write_displacements')

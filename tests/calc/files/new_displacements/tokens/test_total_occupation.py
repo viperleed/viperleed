@@ -1,4 +1,4 @@
-"""Tests for calc.files.new_displacements.tokens.total_occupation."""
+"""Tests for viperleed.calc.files.new_displacements.tokens.total_occupation."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'

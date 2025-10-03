@@ -136,7 +136,7 @@ class SectionHeaderLine(HeaderLine):
             msg = f'Invalid section header line: "{section}".'
             raise DisplacementsSyntaxError(msg)
         # extract the section name from the match
-        self.section = match.group('section').strip()
+        self.section = match['section'].strip()
 
     def __str__(self):
         """Return the string representation of the section header."""
@@ -542,9 +542,9 @@ class ConstraintLine(ParsedLine):
             target_part = ' '.join(rhs_parts[-i:])
             try:
                 link_targets = self._parse_targets(target_part)
-                break
             except DisplacementsSyntaxError:
                 continue
+            break
         else:
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
@@ -582,9 +582,7 @@ class OffsetsLine(ParsedLine):
     """
 
     block_name = 'OFFSET'
-    expected_format = (
-        '<type> <target> [, <target> ...] [<direction>] = <offset>'
-    )
+    expected_format = '<type> <target> [, <target>] [<direction>] = <offset>'
 
     def __init__(self, line):
         super().__init__(line)

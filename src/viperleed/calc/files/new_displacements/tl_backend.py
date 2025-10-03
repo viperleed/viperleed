@@ -1,4 +1,4 @@
-"""Module tl_backend of viperleed.files.displacements."""
+"""Module tl_backend of viperleed.calc.files.new_displacements."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -28,18 +28,26 @@ class TensorLEEDBackend(ABC):
     if it can handle a certain type of search block.
     """
 
-    def __init__(self, name, handle_search_block_func):
-        self.name = name
-        self._handle_search_block_func = handle_search_block_func
+    name = None  # subclasses must override this
+
+    def __init_subclass__(cls, **kwargs):
+        """Enforce that subclasses define a valid `name` attribute."""
+        super().__init_subclass__(**kwargs)
+
+        # enforce that subclasses override `name`
+        if cls.name is None:
+            msg = f"{cls.__name__} must define a class attribute 'name'."
+            raise TypeError(msg)
 
     @abstractmethod
-    def replace_search_block(self, search_block):
+    @classmethod
+    def replace_search_block(cls, search_block):
         """Check if the backend can handle the given search block.
 
         Parameters
         ----------
         search_block: SearchBlock
-        The search block to check.
+            The search block to check.
 
         Returns
         -------
@@ -54,7 +62,6 @@ class TensorLEEDBackend(ABC):
             If the backend can't handle the search block and can't
             provide a replacement.
         """
-        return self._handle_search_block_func(search_block)
 
 class TensErLEEDBackend(TensorLEEDBackend):
     """TensErLEED backend for ViPErLEED."""

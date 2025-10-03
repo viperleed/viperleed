@@ -1,4 +1,4 @@
-"""Tests for files/files/displacements/reader.py."""
+"""Tests for module viperleed.calc.files.new_displacements.reader."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
