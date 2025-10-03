@@ -103,19 +103,17 @@ class DisplacementsFile(NodeMixin):
                     header_line = next(reader)
                 except StopIteration:
                     break
-                processed = False
                 for segment_class in TOP_LEVEL_SEGMENTS:
                     if not segment_class.is_my_header_line(header_line):
                         continue
                     new_segment = segment_class(header_line)
                     reader = new_segment.read_lines(reader)
                     new_segment.parent = self
-                    processed = True
-                if processed:
-                    continue
-                # if we reach here, the line was not processed
-                msg = f'Unable to parse line: {header_line!r}.'
-                raise DisplacementsSyntaxError(msg)
+                    break
+                else:
+                    # if we reach here, the line was not processed
+                    msg = f'Unable to parse line: {header_line!r}.'
+                    raise DisplacementsSyntaxError(msg)
 
         self._validate()
         logger.info('DISPLACEMENTS file read successfully using new parser.')
