@@ -249,6 +249,10 @@ class AliasConfigParser(ConfigParser):
                 # stored in the new section/option pair.
                 self[section][option] = value
                 self.remove_option(sec, opt)
+                # Remove sections that were emptied
+                # because of the alias replacement.
+                if not self.options(sec):
+                    self.remove_section(sec)
                 return
 
     def _replace_aliases(self):
