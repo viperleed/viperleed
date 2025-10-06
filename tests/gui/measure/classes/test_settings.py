@@ -64,8 +64,9 @@ class TestEnsureAliasesExist:
     def test_new_aliases_written(self, tmp_path, mocker):
         """Check that a user aliases.ini file is always created."""
         user_aliases = tmp_path / 'aliases.ini'
+        defaults = tmp_path / '_defaults'
         mocker.patch(f'{_MODULE}.get_aliases_path', return_value=user_aliases)
-        mocker.patch(f'{_MODULE}.__file__', str(tmp_path / 'dummy/dummy.py'))
+        mocker.patch(f'{_MODULE}.SRC_ALIASES_PATH', defaults / '_aliases.ini')
         ensure_aliases_exist()
         assert user_aliases.is_file()
 
