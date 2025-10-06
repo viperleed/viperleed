@@ -156,7 +156,7 @@ Foo/new_opt=('Foo/old_opt',)
     def test_missing_section_raises(self):
         """Check complaints for a missing non-aliased section."""
         parser = AliasConfigParser(cls_name='SomeClass')
-        parser.read_dict({'Foo':{}})
+        parser.read_dict({'Foo': {}})
         with pytest.raises(NoSectionError):
             parser.get('Missing', 'opt')
 
