@@ -34,6 +34,7 @@ import sys
 from wrapt import synchronized  # thread-safety decorator
 
 from viperleed.gui.measure.constants import SRC_ALIASES_PATH
+from viperleed.gui.measure.constants import SRC_SYS_SETTINGS_PATH
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.qsettings import get_qsettings
@@ -874,9 +875,7 @@ class SystemSettings(ViPErLEEDSettings):
     def _read_sys_settings(self):
         """Read the system settings."""
         # Pre-populate settings with keys from default system settings.
-        self.read(
-            Path(__file__).parent.parent / '_defaults' / '_system_settings.ini'
-            )
+        self.read(SRC_SYS_SETTINGS_PATH)
 
         # Pull in all sections. Skip "bare" options without
         # a section as ConfigParser cannot handle them.

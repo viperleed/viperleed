@@ -209,6 +209,7 @@ from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 from viperleed.gui.measure.classes.settings import ensure_aliases_exist
+from viperleed.gui.measure.constants import DEFAULTS
 from viperleed.gui.measure.controller.abc import ControllerABC
 from viperleed.gui.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog,
@@ -778,11 +779,12 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _move_settings_files(self):
         """Move default settings files to the approriate location."""
-        install_dir_defaults = Path(__file__).parent / '_defaults'
-        defaults = (f for f in install_dir_defaults.iterdir()
-                    if f.is_file()
-                    and f.name not in ('_system_settings.ini', '_aliases.ini'))
-        for default in defaults:
+        default_settings = (
+            f for f in DEFAULTS.iterdir()
+            if f.is_file()
+            and f.name not in ('_system_settings.ini', '_aliases.ini')
+            )
+        for default in default_settings:
             shutil.copy2(default, base.get_default_path())
         ensure_aliases_exist()
 
