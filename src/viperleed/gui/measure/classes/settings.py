@@ -120,7 +120,7 @@ class AliasConfigParser(ConfigParser):
     def __init__(self, *args, cls_name='', **kwargs):
         """Initialise AliasConfigParser instance."""
         self._aliases = {}
-        self._fallbacks = ()
+        self._fallbacks = []
         self._cls_name = ''
         super().__init__(*args, **kwargs)
         self.prepare_aliases(cls_name)
@@ -138,7 +138,7 @@ class AliasConfigParser(ConfigParser):
         None.
         """
         self._aliases = {}
-        self._fallbacks = ()
+        self._fallbacks = []
         self._cls_name = cls_name
         if not self._cls_name:
             # No class name, therefore we cannot look up aliases.
@@ -206,7 +206,7 @@ class AliasConfigParser(ConfigParser):
                 if key == 'new_sections':
                     continue
                 if key == 'fallback_values':
-                    self._fallbacks = conv(aliases[section][key])
+                    self._fallbacks.extend(conv(aliases[section][key]))
                     continue
                 if key == 'parent_aliases':
                     continue
