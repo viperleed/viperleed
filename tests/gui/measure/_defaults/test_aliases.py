@@ -83,11 +83,11 @@ class TestDefaultAliases:
     def test_no_multiple_inheritance(self, alias_config):
         """Check that there is no multiple inheritance."""
         # Collect all sections that declare parent_aliases themselves.
-        inheriting_sections = (
+        inheriting_sections = {
             section
             for section in alias_config.sections()
             if alias_config.has_option(section, 'parent_aliases')
-            )
+            }
 
         # For each section, collect its declared parent_aliases.
         for section in alias_config.sections():
