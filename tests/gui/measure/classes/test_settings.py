@@ -173,7 +173,7 @@ class TestAliasConfigParser:
 [WithAliases]
 new_sections = ('new_section', 'another_new_section')
 new_section/new_option=('oldsection/option','even_older/old_option')
-fallback_values = (('A/opt', 'fb'),)
+fallback_values = (('A/opt', 'fb'), ('A/opt2', 'pfb'),)
 
 [Foo]
 new_sections = ('foo',)
@@ -181,6 +181,7 @@ foo/opt = ('old/old',)
 
 [HasParent]
 parent_aliases = ('WithAliases', )
+fallback_values = (('A/opt2', 'cfb'),)
 ''')
         mocker.patch(f'{_MODULE}.get_aliases_path', return_value=aliases)
 
@@ -188,9 +189,17 @@ parent_aliases = ('WithAliases', )
         """Check retrieval of a fallback_value from the aliases."""
         parser = AliasConfigParser(cls_name='WithAliases')
         parser.read_dict({'A': {'opt': ''}})
-        expect = 'fb'
-        assert parser.get('A', 'opt') == expect
-        assert parser['A']['opt'] == expect
+        for option, expect in (('opt', 'fb'), ('opt2', 'pfb')):
+            assert parser.get('A', option) == expect
+            assert parser['A'][option] == expect
+
+    def test_fallback_from_aliases_with_parent(self):
+        """Check retrieval of a fallback_value with parent aliases."""
+        parser = AliasConfigParser(cls_name='HasParent')
+        parser.read_dict({'A': {'opt': ''}})
+        for option, expect in (('opt', 'fb'), ('opt2', 'cfb')):
+            assert parser.get('A', option) == expect
+            assert parser['A'][option] == expect
 
     def test_get_from_alias_and_empty_fallback(self):
         """Ensure retrieval of an old-named section/option from new ones."""
