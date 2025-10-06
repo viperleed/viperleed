@@ -1,4 +1,4 @@
-"""Tests for _aliases.ini of viperleed.gui.measure._defaults."""
+"""Tests for aliases and defaults of viperleed.gui.measure._defaults."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -12,7 +12,9 @@ from configparser import ConfigParser
 import ast
 
 from pytest_cases import fixture
+from pytest_cases import parametrize
 
+from viperleed.gui.measure.constants import DEFAULTS
 from viperleed.gui.measure.constants import SRC_ALIASES_PATH
 
 
@@ -23,6 +25,13 @@ def fixture_alias_config():
     config.optionxform = str
     config.read(SRC_ALIASES_PATH)
     return config
+
+
+def list_default_settings():
+    """Return all default settings files."""
+    return [f for f in DEFAULTS.iterdir()
+            if f.is_file()
+            and f.name not in ('_system_settings.ini', '_aliases.ini')]
 
 
 class TestDefaultAliases:
@@ -103,4 +112,23 @@ class TestDefaultAliases:
                     f'Invalid multiple inheritance: Section "{section}"'
                     f' tries to inherit from "{parent}", which already '
                     'has its own parent_aliases.'
+                    )
+
+class TestDefaultSettings:
+    """Tests for the default settings provided in the _defaults."""
+
+    @parametrize(file=list_default_settings())
+    def test_no_captial_letters_in_defaults(self, file):
+        """Check that there are no capital letters in the default settings."""
+        config = ConfigParser()
+        config.optionxform = str
+        config.read(file)
+        for section in config.sections():
+            assert section == section.lower(), (
+                    f'Section "{section}" contains uppercase letters.'
+                    )
+            for option in config.options(section):
+                assert option == option.lower(), (
+                    f'Option "{option}" in section [{section}] '
+                    'contains uppercase letters.'
                     )
