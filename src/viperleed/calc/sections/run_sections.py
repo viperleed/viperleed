@@ -337,7 +337,10 @@ def section_loop(rp, sl):
                     # repeat it; if not, go one loop out and keep checking.
                     # Automatically repeat deepest loop if exceeds_tl_limit.
                     improved = rp.last_R < search_loop_R.get(loop, R_MAX)
-                    if improved or exceeds_tl_limit:
+                    ignore_tl_limit = (
+                        rp.MAX_TL_DISPLACEMENT.action is MaxTLAction.IGNORE
+                    )
+                    if improved or (exceeds_tl_limit and not ignore_tl_limit):
                         # Loop back
                         search_loop_R[loop] = rp.last_R
                         rp.search_index = loop[0]
