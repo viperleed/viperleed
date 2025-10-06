@@ -54,7 +54,7 @@ class TestDefaultAliases:
                 # fallback values may contain capitalized letters.
                 for value in ast.literal_eval(alias_config[section][option]):
                     assert value[0] == value[0].lower(), (
-                        f'Alias "{value[0]}" in [{section}][{option}] '
+                        f'Fallback "{value[0]}" in [{section}][{option}] '
                         'contains uppercase letters.'
                         )
 
