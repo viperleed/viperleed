@@ -348,7 +348,6 @@ R_FACTOR_SYNONYMS = {
     pendry_R: ('pendry', 'r_p', 'rp', 'pendry r-factor'),
     R_1: ('r1', 'r_1', 'r1 factor'),
     R_2: ('r2', 'r_2', 'r2 factor'),
-    R_ms: ('ms', 'msr', 'rms', 'r_ms', 'r_ms factor'),
     R_s: ('s', 'rs', 'r_s', 'smooth'),
     R_zj: (
         'zj',
