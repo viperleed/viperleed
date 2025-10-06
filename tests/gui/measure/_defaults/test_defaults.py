@@ -114,6 +114,7 @@ class TestDefaultAliases:
                     'has its own parent_aliases.'
                     )
 
+
 class TestDefaultSettings:
     """Tests for the default settings provided in the _defaults."""
 

@@ -221,8 +221,10 @@ class AliasConfigParser(ConfigParser):
     def _replace_alias(self, section, option):
         """Replace section/option with its alias.
 
-        Create section if necessary, replace alias
-        and remove section if it became empty.
+        Create section if necessary and move stored alias under
+        old_section/old_option pair to section/option pair. Delete
+        old_section/old_option pair and delete old_section if there
+        are no other options left in old_section.
 
         Parameters
         ----------
@@ -242,16 +244,15 @@ class AliasConfigParser(ConfigParser):
                 value = self.get(old_section, old_option)
             except (NoSectionError, NoOptionError):
                 continue
-            else:
-                # In case a value is found in the aliases, it is
-                # stored in the new section/option pair.
-                self[section][option] = value
-                self.remove_option(old_section, old_option)
-                # Remove sections that were emptied
-                # because of the alias replacement.
-                if not self.options(old_section):
-                    self.remove_section(old_section)
-                return
+            # In case a value is found in the aliases, it is
+            # stored in the new section/option pair.
+            self[section][option] = value
+            self.remove_option(old_section, old_option)
+            # Remove sections that were emptied
+            # because of the alias replacement.
+            if not self.options(old_section):
+                self.remove_section(old_section)
+            return
 
     def _replace_aliases(self):
         """Replace all aliases in self and apply fallbacks."""
