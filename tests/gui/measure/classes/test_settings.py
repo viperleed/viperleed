@@ -252,7 +252,7 @@ parent_aliases = ('WithAliases', )
         """Check emptiness of aliases when none exist."""
         parser = AliasConfigParser(cls_name='IHaveNoAliases')
         assert not parser._aliases
-        assert not parser._fallback
+        assert not parser._fallbacks
 
     def test_old_alias_section_removal(self):
         """Check removal of emptied alias sections."""
