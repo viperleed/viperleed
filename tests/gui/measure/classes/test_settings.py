@@ -54,8 +54,7 @@ class TestEnsureAliasesExist:
         with (defaults/'_aliases.ini').open('w') as installed_ini:
             installed_aliases.write(installed_ini)
         mocker.patch(f'{_MODULE}.get_aliases_path', return_value=user_aliases)
-        mocker.patch(f'{_MODULE}.SRC_ALIASES_PATH',
-                     str(tmp_path / '_defaults' / '_aliases.ini'))
+        mocker.patch(f'{_MODULE}.SRC_ALIASES_PATH', defaults / '_aliases.ini')
         ensure_aliases_exist()
         merged_aliases = ConfigParser()
         merged_aliases.read(user_aliases)
