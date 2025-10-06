@@ -16,6 +16,7 @@ import copy
 import logging
 import os
 from pathlib import Path
+import shutil
 
 import numpy as np
 
@@ -579,6 +580,9 @@ def init_domains(rp):
             dp.rpars.inherit_from(rp, *inherited, override=True)
             if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
                 dp.rpars.LMAX.max = rp.LMAX.max
+            # Copy over the IVBEAMS from the main work, otherwise
+            # follow-up runs will again require a refcalc
+            shutil.copy2('IVBEAMS', dp.workdir)
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:

@@ -11,8 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_OUT
+from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.files import parameters
@@ -76,6 +77,16 @@ class TestInitializationDomains:
         _, work_domains = self.collect_domain_info(init_domains)
         work_paths = (f'./{p.name}' for p in work_domains.values())
         assert all(new_path in edited for new_path in work_paths)
+
+    def test_ivbeams_generated(self, init_domains):
+        """Check that domain folders contain copies of the main IVBEAMS."""
+        _, work_domains = self.collect_domain_info(init_domains)
+        main_ivbeams = (init_domains.work_path/'IVBEAMS').read_text()
+        for domain in work_domains.values():
+            if (domain/DEFAULT_TENSORS).exists():
+                continue   # IVBEAMS copied from tensor
+            domain_ivbeams = (domain/'IVBEAMS').read_text()
+            assert domain_ivbeams == main_ivbeams
 
     def test_main_output_copied(self, init_domains, re_match):
         """Check that the results of the main calculation are copied back."""
