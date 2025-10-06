@@ -207,6 +207,67 @@ def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
     return numerator / denominator
 
 
+def R_s(
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+):
+    # Experimental data
+    exp_deriv_1_spline = exp_spline.derivative()
+    exp_deriv_2_spline = exp_deriv_1_spline.derivative()
+
+    exp_intensity = exp_spline(energy_grid)
+    exp_derivative_1 = exp_deriv_1_spline(energy_grid)
+    exp_derivative_2 = exp_deriv_2_spline(energy_grid)
+
+    # Theory data
+    theo_deriv_1_spline = theo_spline.derivative()
+    theo_deriv_2_spline = theo_deriv_1_spline.derivative()
+
+    theo_intensity = theo_spline(energy_grid)
+    theo_derivative_1 = theo_deriv_1_spline(energy_grid)
+    theo_derivative_2 = theo_deriv_2_spline(energy_grid)
+
+    y_exp = y_s(
+        exp_intensity, exp_derivative_1, exp_derivative_2, v0_imag, energy_step
+    )
+    y_theo = y_s(
+        theo_intensity,
+        theo_derivative_1,
+        theo_derivative_2,
+        v0_imag,
+        energy_step,
+    )
+
+    return pendry_R_from_y(y_exp, y_theo, energy_step, per_beam=per_beam)
+
+
+def y_s(
+    intensity,
+    first_derivative,
+    second_derivative,
+    v0_imag,
+    e_step,
+    alpha=4.0,
+    beta=0.15,
+):
+    intermediate_1 = (
+        intensity / second_derivative
+        - 0.5 * first_derivative**2 / second_derivative**2
+    )
+    intermediate_1 = (alpha / v0_imag**2) * intermediate_1 + beta
+    intermediate_2 = intermediate_1 / jnp.sqrt(1 + intermediate_1**2)
+
+    numerator = first_derivative
+    condition = jnp.logical_and(second_derivative > 0, intermediate_1 > 0)
+
+    denominator = intensity**2 + 4 * v0_imag**2 * first_derivative**2
+    conditional_denominator = (
+        second_derivative**2 * v0_imag**4 * intermediate_2**2
+    )
+    denominator += condition * conditional_denominator
+    denominator = jnp.sqrt(denominator)
+    return numerator / denominator
+
+
 def R_zj(
     theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
 ):
@@ -279,6 +340,7 @@ R_FACTOR_SYNONYMS = {
     R_1: ('r1', 'r_1', 'r1 factor'),
     R_2: ('r2', 'r_2', 'r2 factor'),
     R_ms: ('ms', 'msr', 'rms', 'r_ms', 'r_ms factor'),
+    R_s: ('s', 'rs', 'r_s', 'smooth'),
     R_zj: (
         'zj',
         'zj factor',
