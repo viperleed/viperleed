@@ -120,7 +120,7 @@ class AliasConfigParser(ConfigParser):
     def __init__(self, *args, cls_name='', **kwargs):
         """Initialise AliasConfigParser instance."""
         self._aliases = {}
-        self._fallback = ()
+        self._fallbacks = ()
         self._cls_name = ''
         super().__init__(*args, **kwargs)
         self.prepare_aliases(cls_name)
@@ -138,7 +138,7 @@ class AliasConfigParser(ConfigParser):
         None.
         """
         self._aliases = {}
-        self._fallback = defaultdict(dict)
+        self._fallbacks = ()
         self._cls_name = cls_name
         if not self._cls_name:
             # No class name, therefore we cannot look up aliases.
@@ -153,7 +153,7 @@ class AliasConfigParser(ConfigParser):
 
     def _fill_in_fallbacks(self):
         """Replace empty values with fallbacks."""
-        for sec_opt, fallback in self._fallback:
+        for sec_opt, fallback in self._fallbacks:
             section, option = sec_opt.split('/')
             value = None
             try:
@@ -206,7 +206,7 @@ class AliasConfigParser(ConfigParser):
                 if key == 'new_sections':
                     continue
                 if key == 'fallback_values':
-                    self._fallback = conv(aliases[section][key])
+                    self._fallbacks = conv(aliases[section][key])
                     continue
                 if key == 'parent_aliases':
                     continue
@@ -220,7 +220,8 @@ class AliasConfigParser(ConfigParser):
     def _replace_alias(self, section, option):
         """Replace section/option with its alias.
 
-        Create section if necessary and replace alias.
+        Create section if necessary, replace alias
+        and remove section if it became empty.
 
         Parameters
         ----------
@@ -235,20 +236,20 @@ class AliasConfigParser(ConfigParser):
         """
         if section not in self.sections():
             self.add_section(section)
-        for sec, opt in self._iter_aliases(section, option):
+        for old_section, old_option in self._iter_aliases(section, option):
             try:
-                value = self.get(sec, opt)
+                value = self.get(old_section, old_option)
             except (NoSectionError, NoOptionError):
                 continue
             else:
                 # In case a value is found in the aliases, it is
                 # stored in the new section/option pair.
                 self[section][option] = value
-                self.remove_option(sec, opt)
+                self.remove_option(old_section, old_option)
                 # Remove sections that were emptied
                 # because of the alias replacement.
-                if not self.options(sec):
-                    self.remove_section(sec)
+                if not self.options(old_section):
+                    self.remove_section(old_section)
                 return
 
     def _replace_aliases(self):
