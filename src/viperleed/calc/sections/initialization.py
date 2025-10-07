@@ -671,7 +671,7 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             "Make sure the angle phi is interpreted correctly: "
             f"Phi is {rp.PHI:.2f}° from x, which is "
             f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from a.\n"
-            "See the ViPErLEED documentation for the parameter BEAM_INCDIDENCE "
+            "See the ViPErLEED documentation for the parameter BEAM_INCIDENCE "
             "for details."
             )
 
