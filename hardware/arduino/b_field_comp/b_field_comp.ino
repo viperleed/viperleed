@@ -622,7 +622,7 @@ void setDutyCycle(){
         }
         for(int j=0; j<2;j++){
             for(int i = 0; i < 4 ;i++){
-                dutyCycle[j].asBytes[3-i] = data_received[i+j*4];
+                dutyCycle[j].asBytes[3-i] = data_received[i+j*4];               // TODO: Write function that converts incoming bytes to float. (Counterpart to sendFloatToPC.)
             }
         }
                                                   // TODO: catch errors from coils and report them
