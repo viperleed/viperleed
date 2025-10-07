@@ -17,6 +17,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.constants import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.files import parameters
+from viperleed.calc.lib.string_utils import strip_comments
 
 from ....helpers import filesystem_to_dict
 from .test_run_one_domain import TestInitialization as _TestBasic
@@ -121,6 +122,22 @@ class TestInitializationDomains:
                 }
         work_tree = filesystem_to_dict(init_domains.work_path)
         self.check_path_contains(work_tree, expect_original_inputs)
+
+    def test_parameters_inherited(self, init_domains):
+        """Ensure that domain PARAMETERS are updated from the main ones."""
+        updated_params = (
+            'THEO_ENERGIES',
+            'BEAM_INCIDENCE',
+            # There would also be LMAX for TL_VERSION <= 1.6.0
+            )
+        _, work_domains = self.collect_domain_info(init_domains)
+        for domain in work_domains.values():
+            params_lines = [
+                line for line in (domain/'PARAMETERS').read_text().splitlines()
+                if strip_comments(line)
+                ]
+            for updated in updated_params:
+                assert any(line for line in params_lines if updated in line)
 
     def test_phaseshifts_generated(self, init_domains):
         """Check that PHASESHIFTS files were generated in the right places."""
