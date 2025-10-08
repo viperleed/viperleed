@@ -22,6 +22,7 @@ __license__ = 'GPLv3+'
 
 from abc import ABCMeta
 from abc import abstractmethod
+import configparser
 from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
@@ -131,7 +132,7 @@ class QObjectWithError(qtc.QObject):                                            
     @qtc.pyqtSlot(tuple)
     def _on_error_delayed(self, error):
         """Collect errors to be delayed."""
-        self._store_delayed_error(error, self.sender())
+        self._delayed_errors.append((error, self.sender()))
         self._delay_errors_timer.start()
 
     @qtc.pyqtSlot()
@@ -143,10 +144,6 @@ class QObjectWithError(qtc.QObject):                                            
             except (RuntimeError, AttributeError):
                 self.emit_error(error)
         self._delayed_errors.clear()
-
-    def _store_delayed_error(self, error, sender):
-        """Remember an error to be delayed."""
-        self._delayed_errors.append((error, sender))
 
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
@@ -221,7 +218,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         # To get the settings of any QObjectWithSettingsABC use the
         # settings property. In a similar manner, to set settings either
         # use the settings property or the set_settings method.
-        self._settings = ViPErLEEDSettings()
+        self._settings = ViPErLEEDSettings(cls_name=type(self).__name__)
         self._settings_to_load = settings
         self.uses_default_settings = False
         if not settings:
@@ -239,22 +236,6 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def settings(self, new_settings):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
-
-    def check_creating_settings_handler_is_possible(self):                      # TODO: make private and rather use super().get_settings_handler() for implicit check in subclasses
-        """Raise if it is not possible to produce a SettingsHandler."""
-        if not self.settings:
-            # Remember to catch this exception before catching
-            # SettingsError. Otherwise NoSettingsError will be
-            # swallowed up as it is a subclass of SettingsError.
-            raise NoSettingsError(
-                f'Instance of {type(self).__name__} tried to return '
-                'a settings handler without settings.'
-                )
-        if self.uses_default_settings:
-            raise SettingsError(
-                f'Instance of {type(self).__name__} tried to return '
-                'a settings handler using default settings.'
-                )
 
     def find_default_settings(self, find_from=None, match_exactly=False):
         """Find default settings for this object.
@@ -290,8 +271,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             and an exact match was asked for.
         """
         settings = self.find_matching_settings_files(
-            obj_info=find_from, directory=base.DEFAULTS_PATH,
-            match_exactly=match_exactly,
+            directory=base.get_default_path(), match_exactly=match_exactly,
+            obj_info=find_from,
             )
         if not settings:
             # No default settings was found.
@@ -309,31 +290,29 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         return settings[0]
 
     @classmethod
-    def find_matching_settings_files(cls, obj_info=None, directory=None,
-                                     match_exactly=None):
+    def find_matching_settings_files(cls, directory, match_exactly,
+                                     obj_info=None):
         """Find .ini files for obj_info in the tree starting at directory.
 
         Parameters
         ----------
-        obj_info : SettingsInfo or None, optional
-            The additional information that should be used to find
-            appropriate settings. If it is None, subclasses must attempt
-            to determine suitable settings without additional
-            information when searching for default settings via
-            is_matching_default_settings(). When looking for user
-            settings with is_matching_user_settings(), a TypeError will
-            be raised if obj_info is None. Default is None.
-        directory : str or Path or None
+        directory : str or Path
             The location in which to look for configuration files.
             Settings files are searched in directory and all its
             subfolders. If directory is the directory containing the
             default settings, is_matching_default_settings is used to
             determine whether a configuration file is appropriate. If it
             is a different folder, is_matching_user_settings is used
-            instead. Raises RuntimeError if None. Default is None.
-        match_exactly : bool or None
-            Whether obj_info should be matched exactly. Raises
-            RuntimeError if None. Default is None.
+            instead.
+        match_exactly : bool
+            Whether obj_info should be matched exactly.
+        obj_info : SettingsInfo, optional
+            The additional information that should be used to find
+            appropriate settings. This argument is mandatory unless
+            `directory` corresponds to the path containing defaults.
+            If not given or None, subclasses must attempt to determine
+            suitable default settings without additional information
+            via is_matching_default_settings(). Default is None.
 
         Returns
         -------
@@ -341,30 +320,26 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             A list of the paths to settings files that contain appropriate
             settings sorted by how well the settings match from best to
             worst.
-
-        Raises
-        ------
-        RuntimeError
-            If directory or match_exactly were not given.
         """
-        if directory is None or match_exactly is None:
-            raise RuntimeError(
-                'directory and match_exactly keyword arguments must be '
-                'passed on to the find_matching_settings_files method.'
-                )
         directory = Path(directory).resolve()
-        default = directory == base.DEFAULTS_PATH
+        default = directory == base.get_default_path()
         settings_files = directory.glob('**/*.ini')
         if not default:
             # Filter out default settings.
-            settings_files = [file for file in settings_files
-                              if '_defaults' not in str(file)]
+            settings_files = [
+                file for file in settings_files
+                if '_defaults' not in str(file)
+                and str(base.get_default_path().parent) not in str(file)
+                ]
 
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
                        else cls.is_matching_user_settings)
         for settings_file in settings_files:
-            config = ViPErLEEDSettings.from_settings(settings_file)
+            try:
+                config = ViPErLEEDSettings.from_settings(settings_file)
+            except configparser.MissingSectionHeaderError:
+                continue
             if not cls.is_settings_for_this_class(config):
                 continue
             score = is_matching(obj_info, config, match_exactly)
@@ -502,7 +477,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             invalid setting.
         """
         return [(invalid,) for invalid in
-                settings.has_settings(*self._mandatory_settings)]
+                settings.misses_settings(*self._mandatory_settings)]
 
     @abstractmethod
     def get_settings_handler(self):
@@ -525,8 +500,27 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         handler : SettingsHandler
             The handler used in a SettingsDialog to display the
             settings of this instance to users.
+
+        Raises
+        ------
+        NoSettingsError
+            If there are no settings to return a handler from.
+        SettingsError
+            If the given settings are pointing to the default ones.
         """
-        self.check_creating_settings_handler_is_possible()
+        if not self.settings:
+            # Remember to catch this exception before catching
+            # SettingsError. Otherwise NoSettingsError will be
+            # swallowed up as it is a subclass of SettingsError.
+            raise NoSettingsError(
+                f'Instance of {type(self).__name__} tried to return '
+                'a settings handler without settings.'
+                )
+        if self.uses_default_settings:
+            raise SettingsError(
+                f'Instance of {type(self).__name__} tried to return '
+                'a settings handler using default settings.'
+                )
         handler = SettingsHandler(self.settings)
         return handler
 
@@ -565,11 +559,12 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If any element of the new_settings does
             not fit the mandatory settings.
         """
-        try:                                                                    # TODO: #242 make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
+        try:
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except (ValueError, NoSettingsError):
             self.emit_error(QObjectSettingsErrors.MISSING_SETTINGS)
             return False
+        new_settings.prepare_aliases(type(self).__name__)
         invalid = self.are_settings_invalid(new_settings)
         for missing, *info in invalid:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
@@ -673,7 +668,7 @@ class DeviceABC(HardwareABC):
         be enough to determine settings files that contain the correct
         settings for this device. Subclasses should raise a
         DefaultSettingsError if they fail to create instances from the
-        settings in the DEFAULTS_PATH.
+        default settings.
 
         Returns
         -------

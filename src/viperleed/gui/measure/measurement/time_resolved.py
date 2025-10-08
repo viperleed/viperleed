@@ -19,7 +19,7 @@ from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
-    SettingsSectionColumnInfo
+    SettingsSectionColumnInfo,
     )
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement._meassettings import DeviceEditor
@@ -45,15 +45,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         ('measurement_settings', 'energy_step_duration'),
         ('energies', 'endless'),
         ('energies', 'constant_energy'),
-        )
-
-    # Backwards compatibility fix                                               # TODO: #242
-    _settings_synonyms = (
-        *MeasurementABC._settings_synonyms,
-        (('energies', 'endless'),
-         ('measurement_settings', 'endless'),),
-        (('energies', 'constant_energy'),
-         ('measurement_settings', 'constant_energy'),),
         )
 
     _request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                  # TODO: could be done with QMetaObject.invokeMethod

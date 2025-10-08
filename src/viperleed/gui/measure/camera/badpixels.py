@@ -33,7 +33,8 @@ from viperleed.gui.measure.classes.calibrationtask import (
     )
 
 
-N_DARK = 100  # Number of dark frames used for finding bad pixels
+N_DARK = 100    # Number of dark frames used for finding bad pixels
+N_NOISE = 3000  # Number of dark frames used for finding noisy pixels
 _INVOKE = qtc.QMetaObject.invokeMethod
 _UNIQUE = qtc.Qt.UniqueConnection
 _unique_connect = functools.partial(base.safe_connect, type=_UNIQUE)
@@ -69,36 +70,39 @@ class BadPixelsFinderErrors(base.ViPErLEEDErrorEnum):
 class _FinderSection(CalibrationTaskOperation):
     """Enumeration class for bad-pixel finder sections."""
 
-    ACQUIRE_DARK_SHORT, ACQUIRE_DARK_LONG, ACQUIRE_FLAT = 1, 2, 3
-    CALCULATE_FLICKERY, CALCULATE_HOT, CALCULATE_DEAD = 4, 5, 6
-    CALCULATE_BAD = 7
-    DONE = 8
+    ACQUIRE_DARK_SHORT, ACQUIRE_DARK_LONG, ACQUIRE_DARK_MEDIUM = 1, 2, 3
+    ACQUIRE_FLAT, CALCULATE_FLICKERY, CALCULATE_HOT = 4, 5, 6
+    CALCULATE_DEAD, CALCULATE_BAD, DONE = 7, 8, 9
 
     @property
     def long_name(self):
         """Return a long description for this section."""
         if self is _FinderSection.DONE:
-            return "Done."
+            return 'Done.'
         operation, what, *_ = self.name.split('_')
 
-        if operation == "ACQUIRE":
-            txt = f"Acquiring {what.lower()} frame"
-            txt += "s " if what == "DARK" else " "
-            return self._format_long_name(txt + "with {:.1f} ms exposure...")
+        if operation == 'ACQUIRE':
+            txt = f'Acquiring {what.lower()} frame'
+            txt += 's ' if what == 'DARK' else ' '
+            return self._format_long_name(txt + 'with {:.1f} ms exposure...')
         # Calculating
-        return f"Calculating coordinates of {what.lower()} pixels..."
+        return f'Calculating coordinates of {what.lower()} pixels...'
 
     @property
     def n_steps(self):
         """Return the number of steps in this section."""
+        if self is _FinderSection.ACQUIRE_DARK_MEDIUM:
+            return N_NOISE
         if 'DARK' in self.name:
             return N_DARK
+        if self is _FinderSection.CALCULATE_FLICKERY:
+            return 2  # short- and long-term telegraph noise
         return 1
 
     @classmethod
     def from_short_name(cls, name):
         """Return an instance from a short name."""
-        if name.lower() in ('dark-short', 'dark-long', 'flat'):
+        if name.lower() in ('dark-short', 'dark-long', 'dark-medium', 'flat'):
             elem = f"ACQUIRE_{name.replace('-', '_').upper()}"
         elif name.lower() == 'done':
             elem = "DONE"
@@ -150,25 +154,27 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # connection types for the underlying _INVOKE.
         self.update_device_settings()
 
-        # __imgs contains: the short- and long-exposure movies
-        # (N_DARK frames each) for the 'dark' frame (i.e., camera
+        # _imgs contains: the sum and sum of squares of short- and
+        # long-exposure movies for the 'dark' frame (i.e., camera
         # with a cap on) and one frame for a 'flat field' (e.g.,
         # white paper right in front of the lens).
         height, width, dtype = self.frame_info
-        self.__imgs = {
+        self._imgs = {
             _FinderSection.ACQUIRE_DARK_SHORT:
-                np.zeros((N_DARK, height, width), dtype=dtype),
+                BadPixelsSumStorage(height, width),
             _FinderSection.ACQUIRE_DARK_LONG:
-                np.zeros((N_DARK, height, width), dtype=dtype),
+                BadPixelsSumStorage(height, width),
+            _FinderSection.ACQUIRE_DARK_MEDIUM:
+                BadPixelsMaxMinStorage(height, width, dtype),
             _FinderSection.ACQUIRE_FLAT:
-                np.zeros((height, width), dtype=dtype)
+                BadPixelsSumStorage(height, width),
             }
-        self.__current_section = _FinderSection.ACQUIRE_DARK_SHORT
+        self._current_section = _FinderSection.ACQUIRE_DARK_SHORT
 
-        # __badness contains a measure of the badness of
+        # _badness contains a measure of the badness of
         # each pixel. 'Normal' pixels have badness 0, bad
         # pixels have badness >= 6, very good pixels < 0.
-        self.__badness = np.zeros((height, width), dtype=float)
+        self._badness = np.zeros((height, width), dtype=float)
 
         # __bad_pixels will contain info about bad
         # pixel coordinates and their replacements
@@ -187,10 +193,18 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         return min(1000, max_exposure)
 
     @property
+    def medium_exposure(self):
+        """Return a medium exposure time in milliseconds."""
+        _, exposure, _ = sorted((*self._limits['exposure'], 200))
+        return exposure
+
+    @property
     def missing_frames(self):
         """Return whether frames are missing for the current section."""
-        if 'DARK' in self.__current_section.name:
-            todo = self.__imgs[self.__current_section].shape[0]
+        if self._current_section is _FinderSection.ACQUIRE_DARK_MEDIUM:
+            todo = N_NOISE
+        elif 'DARK' in self._current_section.name:
+            todo = N_DARK
         else:
             todo = 1
         return self._frames_done < todo
@@ -213,13 +227,13 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
 
     def begin_acquiring(self):
         """Start acquiring images."""
-        if self.__current_section is _FinderSection.ACQUIRE_DARK_SHORT:
+        if self._current_section is _FinderSection.ACQUIRE_DARK_SHORT:
             self.set_info_text(
                 "A 'dark' movie will be acquired.<br>Make sure no light "
                 "enters the camera.<br>For example, you can <b>close the "
                 "lens with its cap.</b>"
                 )
-        elif self.__current_section is _FinderSection.ACQUIRE_FLAT:
+        elif self._current_section is _FinderSection.ACQUIRE_FLAT:
             self.set_info_text(
                 "A 'flat' frame will be acquired.<br>Make sure the camera "
                 "is viewing a featureless background with uniform "
@@ -227,7 +241,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
                 "piece of paper right in front of the lens</b>. Normal room "
                 "light should be uniform enough."
                 )
-        if self.__current_section is not _FinderSection.ACQUIRE_DARK_LONG:
+        if self._current_section not in (_FinderSection.ACQUIRE_DARK_LONG,
+                                         _FinderSection.ACQUIRE_DARK_MEDIUM):
             # Show dialog. Its .accepted signal will trigger
             # .continue_(), its .rejected will trigger .abort()
             self.show_info()
@@ -237,7 +252,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
     @qtc.pyqtSlot(np.ndarray)
     def _check_and_store_frame(self, frame):
         """Store a new frame if it is acceptable."""
-        sec = self.__current_section
+        sec = self._current_section
         if not self.__frame_acceptable(frame):
             if 'DARK' in sec.name:
                 self.emit_error(
@@ -247,10 +262,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
                 self.__adjust_exposure_and_gain(frame)
             return
 
-        if 'DARK' in sec.name:
-            self.__imgs[sec][self._frames_done, :, :] = frame
-        else:
-            self.__imgs[sec][:, :] = frame
+        self._imgs[sec].add_frame(frame)
         self._frames_done += 1
         self.__report_acquisition_progress()
         self._trigger_next_frame()
@@ -260,10 +272,12 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """Continue acquiring after user confirmation."""
         # In all cases start from the same gain and pick exposure
         gain = self.large_gain
-        if self.__current_section is _FinderSection.ACQUIRE_DARK_SHORT:
+        if self._current_section is _FinderSection.ACQUIRE_DARK_SHORT:
             exposure = self.short_exposure
-        elif self.__current_section is _FinderSection.ACQUIRE_DARK_LONG:
+        elif self._current_section is _FinderSection.ACQUIRE_DARK_LONG:
             exposure = self.long_exposure
+        elif self._current_section is _FinderSection.ACQUIRE_DARK_MEDIUM:
+            exposure = self.medium_exposure
         else:
             # Here we use the large gain and a somewhat short
             # exposure to begin with, but these are adjusted when
@@ -312,7 +326,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
 
         offsets = np.array(((1, 0), (0, 1), (1, 1), (1, -1), (2, 0),
                             (0, 2), (1, 2), (2, 1), (1, -2), (2, -1)))
-        badness = self.__badness.copy()
+        badness = self._badness.copy()
 
         bad_coords = np.asarray(np.where(badness >= 6))
         bad_y, bad_x = bad_coords
@@ -383,7 +397,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         None.
         """
         pix_min, _, intensity_range = self._limits['intensity']
-        flat = self.__imgs[_FinderSection.ACQUIRE_FLAT] - pix_min
+        # We can use .mean() because there is only a single flat frame.
+        flat = self._imgs[_FinderSection.ACQUIRE_FLAT].mean() - pix_min
 
         # We have to exclude the already-detected bad pixels.
         # For this to happen, we will (1) add a bit to all
@@ -397,7 +412,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         flat_bad = flat + offset
         flat_bad_ones = np.ones(flat_bad.shape)  # for counting
 
-        bad_px_mask = self.__badness >= 6
+        bad_px_mask = self._badness >= 6
 
         flat_bad[bad_px_mask] = 0
         flat_bad_ones[bad_px_mask] = 0
@@ -422,53 +437,29 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         delta_badness = neighbor_ave / flat - 1
         delta_badness[np.isnan(delta_badness)] = np.inf
 
-        self.__badness += delta_badness
+        self._badness += delta_badness
 
-    @_report_progress
     def find_flickery_pixels(self):
-        """Prepare badness based on how flickery pixels are.
-
-        Badness will be set according to how much each pixel
-        fluctuates in the 'dark' frames. We take as a measure
-        of badness the ratio between the variance of a pixel
-        and the overall average variance: the intensity of
-        flickery pixels varies much more than the average.
-
-        Two contributions are taken into account: long-exposed
-        dark frames are used to detect pixels that flicker due
-        to higher photon sensitivity, whereas short-exposed
-        frames detect pixels that are flickery due to readout
-        noise.
-
-        Returns
-        -------
-        None.
-        """
-        _long = _FinderSection.ACQUIRE_DARK_LONG
-        _short = _FinderSection.ACQUIRE_DARK_SHORT
-        long_flicker = self.__imgs[_long].var(axis=0)
-        short_flicker = self.__imgs[_short].var(axis=0)
-
-        long_mean, short_mean = long_flicker.mean(), short_flicker.mean()
-        self.__badness = np.zeros_like(long_flicker)
-
-        # The conditional checks prevent division by zero for very good
-        # cameras. '-1' --> badness == 0 for normally flickery pixels
-        if short_mean:
-            self.__badness += short_flicker / short_mean - 1
-        if long_mean:
-            self.__badness += long_flicker / long_mean - 1
+        """Prepare pixel badness based on short- and long-term noise."""
+        _section = _FinderSection.CALCULATE_FLICKERY
+        self.progress_occurred.emit(self.progress_name, *_section,
+                                    0, _section.n_steps)
+        self._find_fast_flickery_pixels()
+        self.progress_occurred.emit(self.progress_name, *_section,
+                                    1, _section.n_steps)
+        self._find_long_term_flickery_pixels()
+        self.progress_occurred.emit(self.progress_name, *_section,
+                                    _section.n_steps, _section.n_steps)
 
     @_report_progress
     def find_hot_pixels(self):
         """Set badness of hot pixels to infinity."""
         pix_min, _, intensity_range = self._limits['intensity']
-        _long = _FinderSection.ACQUIRE_DARK_LONG
-
-        dark_ave = self.__imgs[_long].mean(axis=0) - pix_min
+        _long = self._imgs[_FinderSection.ACQUIRE_DARK_LONG]
+        dark_ave = _long.mean() - pix_min
         hot_pixels = dark_ave >= 0.25*intensity_range
 
-        self.__badness[hot_pixels] = np.inf
+        self._badness[hot_pixels] = np.inf
 
     @qtc.pyqtSlot(tuple)
     def _on_device_error(self, error):
@@ -524,9 +515,65 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         bad_old = self.camera.bad_pixels
         if bad_old:
             bad_old.clear()
-        self.__current_section = _FinderSection.first()
+        self._current_section = _FinderSection.first()
         self.begin_acquiring()
         return True
+
+    def _find_fast_flickery_pixels(self):
+        """Prepare badness based on how flickery pixels are.
+
+        Badness will be set according to how much each pixel
+        fluctuates in the 'dark' frames. We take as a measure
+        of badness the ratio between the variance of a pixel
+        and the overall average variance: the intensity of
+        flickery pixels varies much more than the average.
+
+        Two contributions are taken into account: long-exposed
+        dark frames are used to detect pixels that flicker due
+        to higher photon sensitivity, whereas short-exposed
+        frames detect pixels that are flickery due to readout
+        noise.
+
+        Returns
+        -------
+        None.
+        """
+        long_flicker = self._imgs[_FinderSection.ACQUIRE_DARK_LONG].var()
+        short_flicker = self._imgs[_FinderSection.ACQUIRE_DARK_SHORT].var()
+        long_mean, short_mean = long_flicker.mean(), short_flicker.mean()
+        self._badness = np.zeros_like(long_flicker)
+
+        # The conditional checks prevent division by zero for very good
+        # cameras. '-1' --> badness == 0 for normally flickery pixels
+        if short_mean:
+            self._badness += short_flicker / short_mean - 1
+        if long_mean:
+            self._badness += long_flicker / long_mean - 1
+
+    def _find_long_term_flickery_pixels(self):
+        """Calculate badness for pixels with sporadic burst noise.
+
+        Badness will be set according to how much each pixel
+        fluctuates in the 'dark' frames. As a measure of badness we
+        take the difference between maximum and minimum intensity
+        picked up by each pixel. The threshold when a pixel is
+        considered to have too much telegraph noise is when the
+        flicker of the pixel is about 3 times the average flicker.
+        (3-1)^2 * 1.5 = 6,
+        where 6 is the threshold used for the total badness.
+
+        To determine the long-term flickering we use a medium exposure
+        time with a very high frame count. The overall measurement for
+        burst noise detection alone should not take less than ten
+        minutes.
+
+        Returns
+        -------
+        None.
+        """
+        flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].range_
+        flicker_mean = flicker.mean()
+        self._badness += ((flicker / flicker_mean - 1)**2) * 1.5
 
     @qtc.pyqtSlot()
     def _trigger_next_frame(self, *_):
@@ -539,8 +586,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
             return
 
         # One section over, go to the next one
-        self.__current_section = self.__current_section.next_()
-        if self.__current_section is _FinderSection.CALCULATE_FLICKERY:
+        self._current_section = self._current_section.next_()
+        if self._current_section is _FinderSection.CALCULATE_FLICKERY:
             # Done with all sections. Can proceed to calculations.
             self.find_flickery_pixels()
             self.find_hot_pixels()
@@ -634,7 +681,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """
         pixel_min, _, intensity_range = self._limits['intensity']
         relative_intensity = (frame.mean() - pixel_min) / intensity_range
-        if 'DARK' in self.__current_section.name:
+        name = self._current_section.name
+        if 'DARK' in name:
             return relative_intensity < 0.2
         _min, _max = (0.45, 0.55) if not self.__force_exposure else (0.3, 0.7)
         return _min < relative_intensity < _max                                 # TODO: do we want to complain if there are very bright areas (gradients)?
@@ -659,7 +707,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """Report progress of acquisition."""
         if exposure is None:
             exposure = self.camera.exposure
-        section = self.__current_section
+        section = self._current_section
         section.set_format(exposure)
         n_adjustments = len(self.__adjustments)
         self.progress_occurred.emit(self.progress_name, *section,
@@ -1415,3 +1463,68 @@ class BadPixels:
     def __bool__(self):
         """Return the truth value of self."""
         return bool(self.__has_info and self.n_bad_pixels_sensor)
+
+
+class BadPixelsMaxMinStorage:
+    """Container for maximum and minimum of bad-pixel frames."""
+
+    def __init__(self, height, width, dtype):
+        """Initialize bad pixel peak-to-peak storage class."""
+        self._count = 0
+        if dtype not in (np.uint8, np.uint16, np.uint32, np.uint64):
+            raise TypeError('frame pixel value type is not a np.uint.')
+        self._max = np.zeros((height, width), dtype=dtype)
+        max_value = np.iinfo(dtype).max
+        self._min = np.full((height, width), max_value, dtype=dtype)
+
+    @property
+    def max(self):
+        """Return pixel maxima."""
+        return self._max
+
+    @property
+    def min(self):
+        """Return pixel minima."""
+        return self._min
+
+    @property
+    def range_(self):
+        """Return pixel maximum minus pixel minimum."""
+        return self._max - self._min
+
+    def add_frame(self, frame):
+        """Add frame to frame storage."""
+        self._count += 1
+        self._max = np.maximum(self._max, frame)
+        self._min = np.minimum(self._min, frame)
+
+
+class BadPixelsSumStorage:
+    """Class for containing the sum of bad pixel frames."""
+
+    def __init__(self, height, width):
+        """Initialize bad pixel sum storage class."""
+        self._count = 0
+        self._sum = np.zeros((height, width), dtype=np.uint64)
+        self._sum_squares = np.zeros((height, width), dtype=np.uint64)
+
+    @property
+    def frame_sum(self):
+        """Return the summed up frames."""
+        return self._sum
+
+    def add_frame(self, frame):
+        """Add frame to frame sum and sum of squares."""
+        frame = frame.astype(np.uint64, copy=False)
+        self._count += 1
+        self._sum += frame
+        self._sum_squares += frame**2
+
+    def mean(self):
+        """Return the mean of the stored frames."""
+        return self._sum / self._count
+
+    def var(self):
+        """Return the variance calculated from the stored frames."""
+        mean_of_squares = self._sum_squares / self._count
+        return mean_of_squares - self.mean()**2

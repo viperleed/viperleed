@@ -94,6 +94,7 @@ class FieldInfo(qtw.QLabel):
             return
         qtw.QToolTip.showText(qtg.QCursor.pos(), self.toolTip())
 
+
 class InfoLabel(qtw.QWidget):
     """A label with an attached FieldInfo."""
 

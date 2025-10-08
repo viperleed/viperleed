@@ -98,7 +98,7 @@ class QuantitySelector(qtw.QGroupBox):
         Parameters
         ----------
         quantities : Sequence
-            Elements are squences of QuantityInfo objects. Each element
+            Elements are sequences of QuantityInfo objects. Each element
             represents one measuring device installed on the controller,
             with each QuantityInfo being one of the quantities that
             measuring device in particular can acquire.
@@ -123,7 +123,7 @@ class QuantitySelector(qtw.QGroupBox):
         Parameters
         ----------
         quantities : Sequence
-            Elements are squences of QuantityInfo objects. Each element
+            Elements are sequences of QuantityInfo objects. Each element
             represents one measuring device installed on the controller,
             with each QuantityInfo being one of the quantities that
             measuring device in particular can acquire.
@@ -144,7 +144,7 @@ class QuantitySelector(qtw.QGroupBox):
                 btn_layout = qtw.QHBoxLayout()
                 button = qtw.QCheckBox()
                 group.addButton(button)
-                button.setText(quantity.display_label)
+                button.setText(quantity.display_name)
                 btn_layout.addWidget(button)
                 tip = quantity.description
                 btn_layout.addWidget(FieldInfo.for_widget(button, tooltip=tip))

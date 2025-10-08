@@ -97,14 +97,6 @@ class ControllerABC(DeviceABC):
         ('controller', 'device_name'),
         )
 
-    # Backwards compatibility fix                                               # TODO: #242
-    _settings_synonyms = (
-        (('measurement_settings', 'nr_samples'),
-         ('measurement_settings', 'num_meas_to_average'),),
-        (('controller', 'serial_class'),
-         ('controller', 'serial_port_class'),),
-        )
-
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):
         """Initialise the controller instance.
@@ -478,10 +470,7 @@ class ControllerABC(DeviceABC):
     def _update_serial_from_settings(self):
         """Set serial settings from new controller settings."""
         serial_cls_name = self.settings.get('controller', 'serial_class',
-                                            fallback='')                        # TODO: #242
-        if not serial_cls_name:                                                 # TODO: #242
-            serial_cls_name = self.settings.get('controller',
-                                                'serial_port_class')
+                                            fallback='')
         if self.serial.__class__.__name__ != serial_cls_name:
             serial_class = base.class_from_name('serial', serial_cls_name)
             self._serial = serial_class(self.settings,
@@ -605,20 +594,8 @@ class ControllerABC(DeviceABC):
             extra_mandatory = (('measurement_settings', 'i0_settle_time'),
                                ('measurement_settings', 'hv_settle_time'),
                                ('measurement_settings', 'first_settle_time'))
-
-        invalid_settings = settings.has_settings(*self._mandatory_settings,
-                                                 *extra_mandatory)
-
-        # Backwards compatibility fix                                           # TODO: #242
-        for new_setting, old_setting in self._settings_synonyms:
-            if '/'.join(new_setting) in invalid_settings:
-                old_missing = settings.has_settings(old_setting)
-                if not old_missing:
-                    settings.set(*new_setting, settings.get(*old_setting))
-                    settings.remove_option(*old_setting)
-                    settings.update_file()
-                    invalid_settings.remove('/'.join(new_setting))
-
+        invalid_settings = settings.misses_settings(*self._mandatory_settings,
+                                                    *extra_mandatory)
         return [(invalid,) for invalid in invalid_settings]
 
     @qtc.pyqtSlot(tuple)
@@ -747,11 +724,12 @@ class ControllerABC(DeviceABC):
         handler.add_section('measurement_settings',
                             tags=SettingsTag.MEASUREMENT,
                             display_name='Measurement Configuration')
+        _i0 = QuantityInfo.I0.display_name
         info = (
-            ('i0_settle_time', 'I<sub>0</sub> settle time',
-             '<nobr>The time interval required for the I<sub>0</sub> '
-             'current</nobr> to reach a stable value after a new energy '
-             'has been set. This should be calibrated for a typical step '
+            ('i0_settle_time', f'{_i0} settle time',
+             f'<nobr>The time interval required for the {_i0} current'
+             '</nobr> to reach a stable value after a new energy has '
+             'been set. This should be calibrated for a typical step '
              'size (e.g., 0.5 eV).'),
             ('hv_settle_time', 'Energy settle time',
              '<nobr>The time interval required for the true beam '
@@ -790,7 +768,7 @@ class ControllerABC(DeviceABC):
         within a SettingsInfo must be enough to determine a suitable
         settings file for the device from it. Subclasses should raise a
         DefaultSettingsError if they fail to create instances from the
-        settings in the DEFAULTS_PATH.
+        default settings.
 
         Returns
         -------

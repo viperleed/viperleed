@@ -56,9 +56,6 @@ from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 # TODO: context menu to "reset" each entry separately.
 
-# pylint: disable=too-many-lines
-# We can probably live with 1011 instead of 1000
-
 _MSGBOX = qtw.QMessageBox
 
 
@@ -148,6 +145,7 @@ def _get_hook(obj):
 
 class SettingsTag(enum.Flag):
     """Flags that decide the display behaviour of a settings widget."""
+
     NONE = 0
     REGULAR = enum.auto()
     R = REGULAR
@@ -345,7 +343,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
     def add_option(self, section_name, option_name, *args,
                    handler_widget=None, option_type=None, **kwargs):
         """Add a handler for a section/option pair."""
-        if not self.__config.has_option(section_name, option_name):
+        if self.__config.misses_settings((section_name, option_name)):
             raise ValueError(
                 "Configuration file does not contain a section"
                 f"/option pair {section_name}/{option_name}"
@@ -474,7 +472,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
             for opt_name, option in options.items():
                 if isinstance(option, StaticSettingsDialogOption):
                     continue
-                option.set_(self.__config[sec_name][opt_name])
+                option.set_(self.__config.get(sec_name, opt_name))
         for section in self.__complex_sections:
             section.update_widgets()
 
@@ -1024,15 +1022,19 @@ class SettingsDialog(qtw.QDialog):
         self._handled_obj = handled_obj
         if handled_obj:
             settings = handled_obj.settings
+
+        # Settings are copied before making widgets
+        # as these may fix unacceptable values.
+        self._settings = {'current': settings,
+                          'applied': copy.deepcopy(settings),
+                          'original': copy.deepcopy(settings)}
+
+        if handled_obj:
             handler = handled_obj.get_settings_handler()
         else:
             handler = SettingsHandler(settings)
             handler.make_from_config()
         self.handler = handler
-
-        self._settings = {'current': settings,
-                          'applied': copy.deepcopy(settings),
-                          'original': copy.deepcopy(settings)}
 
         # Set up children widgets and self
         self._ctrls = {
@@ -1105,14 +1107,17 @@ class SettingsDialog(qtw.QDialog):
         if not event.spontaneous():
             # i.e., not a show after minimized
             self.settings.read_again()
+            # Update all settings with the current ones. This has
+            # to be done before updating widgets as these may fix
+            # unacceptable values.
+            for key in ('applied', 'original'):
+                self._settings[key] = copy.deepcopy(self.settings)
             self.handler.update_widgets()
             self.adv_button.setChecked(False)
             if self.handled_object:
                 self.update_title()
-            # Update all settings with the current ones, and
-            # fix the enabled state of the "Apply" button
-            for key in ('applied', 'original'):
-                self._settings[key] = copy.deepcopy(self.settings)
+            # Fix the enabled state of the "Apply" button
+            # since settings have been reloaded above.
             self.__update_apply_enabled()
         super().showEvent(event)
 
@@ -1174,27 +1179,6 @@ class SettingsDialog(qtw.QDialog):
 
         self.__update_advanced_btn()
 
-    def _compose_dialog_buttons(self):
-        """Compose the buttons of the dialog.
-
-        Returns
-        -------
-        buttons : QNoDefaultDialogButtonBox
-            Contains the buttons necessary to handle the dialog.
-        """
-        _bbox = QNoDefaultDialogButtonBox
-        buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
-
-        self._ctrls['apply'] = buttons.buttons()[-1]
-        self._ctrls['accept'] = buttons.buttons()[0]
-        self._ctrls['apply'].setEnabled(False)
-        self.adv_button.setCheckable(True)
-
-        # Use a ResetRole to have the button placed in a
-        # different spot than all others on every platform
-        buttons.addButton(self.adv_button, _bbox.ResetRole)
-        return buttons
-
     def _compose_columns(self):
         """Compose the columns of the layout and add widgets.
 
@@ -1224,6 +1208,27 @@ class SettingsDialog(qtw.QDialog):
             columns[0].addLayout(_form)
         columns[0].addStretch(1)
         return columns
+
+    def _compose_dialog_buttons(self):
+        """Compose the buttons of the dialog.
+
+        Returns
+        -------
+        buttons : QNoDefaultDialogButtonBox
+            Contains the buttons necessary to handle the dialog.
+        """
+        _bbox = QNoDefaultDialogButtonBox
+        buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
+
+        self._ctrls['apply'] = buttons.buttons()[-1]
+        self._ctrls['accept'] = buttons.buttons()[0]
+        self._ctrls['apply'].setEnabled(False)
+        self.adv_button.setCheckable(True)
+
+        # Use a ResetRole to have the button placed in a
+        # different spot than all others on every platform
+        buttons.addButton(self.adv_button, _bbox.ResetRole)
+        return buttons
 
     def _get_ask_to_save_dialog(self):
         """Get the QMessageBox that asks if settings can be saved."""

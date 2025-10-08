@@ -52,6 +52,7 @@ _QMSG = qtw.QMessageBox
 # TODO: the next one will need to be fixed when we
 # move the hardware code to a different repository!
 _SCHEMATICS_ROOT = Path(resources_path('../../hardware/schematics'))            # Issue #372
+_SWITCH_JUMPERS_PDF = _SCHEMATICS_ROOT / 'viperLEED_HW_v8 - jumpers.pdf'
 
 
 class FWVersionViewer(qtw.QLabel):
@@ -378,7 +379,7 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
         # Finally "+" and "-" buttons for adding/removing channels              # TODO. Also, have one button to start fresh from ?? everywhere (in case of fucked up settings)
 
     def has_tag(self, tag):
-        """Return whether this section hsa a specific tag."""
+        """Return whether this section has a specific tag."""
         # We want this section to be normally visible if there are some
         # problems with the settings and have to adjust the tags accordingly.
         # We want to see this section if:
@@ -718,11 +719,11 @@ class _ADCChannelCombo(qtw.QComboBox):
         _qty_ok = quantity is not _UNKNOWN
 
         if quantity is QuantityInfo.I0:
-            _name = f"{QuantityInfo.I0.display_label} ({quantity.units})"
+            _name = f"{quantity.display_name} ({quantity.units})"
             _tooltip += f". Range: {hardware['i0_range']}"
         elif quantity is QuantityInfo.ISAMPLE:
             # Unicode chars are for "sample" as subscripts
-            _name = f"{QuantityInfo.ISAMPLE.display_label} ({quantity.units})"
+            _name = f"{quantity.display_name} ({quantity.units})"
         elif quantity is QuantityInfo.TEMPERATURE:
             _tc_type = "??"
             _qty_ok = False
@@ -953,7 +954,7 @@ class _I0EditDialog(_EditDialogBase):
     def __init__(self, controller, *args, **kwargs):
         """Initialise dialog."""
         kwargs['quantity'] = "I0"
-        kwargs['input_quantity'] = "I\u2080"
+        kwargs['input_quantity'] = QuantityInfo.I0.display_name
         kwargs['raw_quantity'] = "i0"
         kwargs['tooltips'] = {
             "0 \u2013 2.5 V": (
@@ -967,9 +968,7 @@ class _I0EditDialog(_EditDialogBase):
                 "resistor. <b>Use this for an Omicron SPECTALEED optics<b>"
                 )
             }
-        kwargs['help_file'] = (
-            _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - jumpers.pdf'
-            ).resolve()
+        kwargs['help_file'] = _SWITCH_JUMPERS_PDF.resolve()
         super().__init__(controller, *args, **kwargs)
 
         self.__gain = CoercingDoubleSpinBox(decimals=8)
@@ -999,7 +998,7 @@ class _I0EditDialog(_EditDialogBase):
 
     def __compose(self):
         """Place children widgets."""
-        info_label = InfoLabel(label_text='I\u2080 gain')
+        info_label = InfoLabel(label_text=QuantityInfo.I0.display_name)
         self._gain_info = info_label.field_info
         _policy = info_label.label.sizePolicy()
         info_label.label.setSizePolicy(_policy.Fixed, _policy.Preferred)
@@ -1066,9 +1065,7 @@ class _TemperatureEditDialog(_EditDialogBase):                                  
                 "likely inaccurate (thermovoltages are only a few millivolts)"
                 )
             }
-        kwargs['help_file'] = (
-            _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - jumpers.pdf'
-            ).resolve()
+        kwargs['help_file'] = _SWITCH_JUMPERS_PDF.resolve()
         super().__init__(controller, *args, **kwargs)
         self.__thermocouples = qtw.QComboBox()
         self.__cjc = qtw.QCheckBox()
@@ -1149,7 +1146,5 @@ class _AUXEditDialog(_EditDialogBase):
     def __init__(self, controller, *args, **kwargs):
         """Initialise dialog."""
         kwargs['raw_quantity'] = "AUX"
-        kwargs['help_file'] = (
-            _SCHEMATICS_ROOT/ 'viperLEED_HW_v8 - jumpers.pdf'
-            ).resolve()
+        kwargs['help_file'] = _SWITCH_JUMPERS_PDF.resolve()
         super().__init__(controller, *args, **kwargs)
