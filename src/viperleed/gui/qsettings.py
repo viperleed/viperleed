@@ -28,4 +28,4 @@ def get_qsettings(file_name):
         A QSettings instance in IniFormat for the given settings.
     """
     return qtc.QSettings(qtc.QSettings.IniFormat, qtc.QSettings.UserScope,
-                         'ViPErLEED', file_name)
+                         'viperleed', file_name.lower())

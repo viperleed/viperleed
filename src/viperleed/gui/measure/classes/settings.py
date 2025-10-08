@@ -52,7 +52,7 @@ def ensure_aliases_exist():
 
 def get_aliases_path():
     """Return a Path to the user aliases."""
-    return Path(get_qsettings('Aliases').fileName()).resolve()
+    return Path(get_qsettings('aliases').fileName()).resolve()
 
 
 def interpolate_config_path(filenames):
@@ -69,7 +69,7 @@ def interpolate_config_path(filenames):
         File names to be interpolated. The interpolation is
         done in-place.
     """
-    _sys_path = get_qsettings('Measurement').value('PATHS/configuration')
+    _sys_path = get_qsettings('measurement').value('PATHS/configuration')
     if not _sys_path:
         return
 
@@ -775,7 +775,7 @@ class SystemSettings(ViPErLEEDSettings):
         super().__init__(*args, **kwargs)
         self.__handler = None
 
-        self._sys_qsettings = get_qsettings('Measurement')
+        self._sys_qsettings = get_qsettings('measurement')
         self._read_sys_settings()
         self._check_mandatory_settings()
 
