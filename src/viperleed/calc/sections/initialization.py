@@ -889,13 +889,19 @@ def _read_inputs_for_domain(domain, main_rpars):
     # when fetching files in init_domains).
     domain.rpars = rpars = parameters.read()
 
-    # Inherit some values from the main PARAMETERS
+    # Inherit some values from the main PARAMETERS:
+    # For some of these, keep user-given ones if they were:
     inherited = (
         'paths',
         'timestamp',
         'ZIP_COMPRESSION_LEVEL',
         )
     rpars.inherit_from(main_rpars, *inherited)
+    # It is crucial that some others are identical:
+    inherit_and_override = (
+        'TL_VERSION',
+        )
+    rpars.inherit_from(main_rpars, *inherit_and_override, override=True)
 
     # Store input files for each domain, BEFORE any edit
     preserve_original_inputs(rpars)
