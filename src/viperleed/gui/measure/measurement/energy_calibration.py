@@ -111,14 +111,11 @@ class MeasureEnergyCalibration(MeasurementABC):
     def _min_energy(self):
         """Return the minimum starting energy (in eV)."""
         try:
-            min_e = self.settings.getfloat('energies', 'min_energy')
-        except (NoSectionError, NoOptionError):
-            # Backwards compatibility fix                                       # TODO: #242
-            min_e = self.settings.getfloat('measurement_settings',
-                                           'min_energy', fallback=5.)
+            min_e = self.settings.getfloat('energies', 'min_energy',
+                                           fallback=5.)
         except (TypeError, ValueError):
-                # Not a float
-                min_e = 5.0
+            # Not a float
+            min_e = 5.0
         return min_e
 
     @qtc.pyqtSlot()
@@ -316,7 +313,8 @@ class MeasureEnergyCalibration(MeasurementABC):
         """Return a SettingsHandler object for displaying settings."""
         handler = super().get_settings_handler()
         option = handler['energies']['start_energy']
-        option.handler_widget.soft_minimum = self._min_energy
+        with qtc.QSignalBlocker(option.handler_widget):
+            option.handler_widget.soft_minimum = self._min_energy
         option.set_info_text(
             '<nobr>The energy at which the measurement starts.</nobr> '
             f'The minimum {START_E_NAME} is {self._min_energy} eV.'

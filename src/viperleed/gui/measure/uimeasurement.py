@@ -208,6 +208,8 @@ from viperleed.gui.measure.classes.settings import MissingSettingsFileError
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
+from viperleed.gui.measure.classes.settings import ensure_aliases_exist
+from viperleed.gui.measure.constants import DEFAULTS
 from viperleed.gui.measure.controller.abc import ControllerABC
 from viperleed.gui.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog,
@@ -777,11 +779,14 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _move_settings_files(self):
         """Move default settings files to the approriate location."""
-        install_dir_defaults = Path(__file__).parent / '_defaults'
-        defaults = (f for f in install_dir_defaults.iterdir()
-                    if f.is_file() and f.name != '_system_settings.ini')
-        for default in defaults:
+        default_settings = (
+            f for f in DEFAULTS.iterdir()
+            if f.is_file()
+            and f.name not in ('_system_settings.ini', '_aliases.ini')
+            )
+        for default in default_settings:
             shutil.copy2(default, base.get_default_path())
+        ensure_aliases_exist()
 
     def _on_bad_pixels_selected(self):
         """Stop all cameras, then open the dialog."""
@@ -1093,6 +1098,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         meas_config.read_string(cfg_lines)
         meas_config.base_dir = fname
         cls_name = meas_config['measurement_settings']['measurement_class']
+        meas_config.prepare_aliases(cls_name)
         # Use the information in the config for
         # correctly updating the DataPoints
         datapts.time_resolved = cls_name == "TimeResolved"
@@ -1117,6 +1123,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             return False
 
         cls_name = meas_config['measurement_settings']['measurement_class']
+        meas_config.prepare_aliases(cls_name)
         datapts.time_resolved = cls_name == 'TimeResolved'
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',

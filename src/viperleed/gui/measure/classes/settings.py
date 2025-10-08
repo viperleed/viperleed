@@ -21,6 +21,8 @@ from configparser import ConfigParser
 from configparser import DuplicateOptionError
 from configparser import DuplicateSectionError
 from configparser import MissingSectionHeaderError
+from configparser import NoOptionError
+from configparser import NoSectionError
 from configparser import SectionProxy
 from collections import defaultdict
 from collections.abc import Sequence
@@ -31,9 +33,26 @@ import sys
 
 from wrapt import synchronized  # thread-safety decorator
 
+from viperleed.gui.measure.constants import SRC_ALIASES_PATH
+from viperleed.gui.measure.constants import SRC_SYS_SETTINGS_PATH
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.widgets.pathselector import PathSelector
 from viperleed.gui.qsettings import get_qsettings
+
+
+def ensure_aliases_exist():
+    """Merge default and user aliases and create file if required."""
+    _tmp = ConfigParser()
+    _tmp.read(SRC_ALIASES_PATH)
+    user_aliases = get_aliases_path()
+    _tmp.read(user_aliases)
+    with user_aliases.open('w', encoding='utf-8') as fproxy:
+        _tmp.write(fproxy)
+
+
+def get_aliases_path():
+    """Return a Path to the user aliases."""
+    return Path(get_qsettings('aliases').fileName()).resolve()
 
 
 def interpolate_config_path(filenames):
@@ -50,7 +69,7 @@ def interpolate_config_path(filenames):
         File names to be interpolated. The interpolation is
         done in-place.
     """
-    _sys_path = get_qsettings('Measurement').value('PATHS/configuration')
+    _sys_path = get_qsettings('measurement').value('PATHS/configuration')
     if not _sys_path:
         return
 
@@ -59,9 +78,9 @@ def interpolate_config_path(filenames):
             fname = os.fspath(fname)
         if not isinstance(fname, (str, bytes)):
             continue
-        if (fname.startswith("__CONFIG__/")
-                and fname.count("__CONFIG__") == 1):
-            filenames[i] = fname.replace("__CONFIG__", _sys_path)
+        if (fname.startswith('__CONFIG__/')
+                and fname.count('__CONFIG__') == 1):
+            filenames[i] = fname.replace('__CONFIG__', _sys_path)
 
 
 class SettingsError(Exception):
@@ -92,7 +111,158 @@ class TooManyDefaultSettingsError(DefaultSettingsError):
     """Exception raised when too many default settings files were found."""
 
 
-class ViPErLEEDSettings(ConfigParser):
+class AliasConfigParser(ConfigParser):
+    """A ConfigParser that checks for aliases when reading values.
+
+    To load aliases, the prepare_aliases() method must be called with
+    the appropriate cls_name argument.
+    """
+
+    def __init__(self, *args, cls_name='', **kwargs):
+        """Initialise AliasConfigParser instance."""
+        self._aliases = {}
+        self._fallbacks = []
+        self._cls_name = ''
+        super().__init__(*args, **kwargs)
+        self.prepare_aliases(cls_name)
+
+    def prepare_aliases(self, cls_name):
+        """Prepare and replace aliases for the handled settings.
+
+        Parameters
+        ----------
+        cls_name : str
+            Name of the class to which the loaded settings belong.
+
+        Returns
+        -------
+        None.
+        """
+        self._aliases = {}
+        self._fallbacks = []
+        self._cls_name = cls_name
+        if not self._cls_name:
+            # No class name, therefore we cannot look up aliases.
+            return
+        self._load_aliases()
+        self._replace_aliases()
+
+    def read_dict(self, dictionary, source='<dict>'):
+        """Read the target dict and replace aliases."""
+        super().read_dict(dictionary, source=source)
+        self._replace_aliases()
+
+    def _fill_in_fallbacks(self):
+        """Replace empty values with fallbacks."""
+        for sec_opt, fallback in self._fallbacks:
+            section, option = sec_opt.split('/')
+            value = None
+            try:
+                value = self.get(section, option)
+            except NoSectionError:
+                self.add_section(section)
+            except NoOptionError:
+                pass
+            if not value:
+                self[section][option] = fallback
+
+    def _iter_aliases(self, section, option):
+        """Yield aliases for a section/option pair.
+
+        Parameters
+        ----------
+        section : str
+            The section key.
+        option : str
+            The option key.
+
+        Yields
+        ------
+        alias : tuple
+            Names of old section/option corresponding to the ones given.
+        """
+        try:
+            aliases = self._aliases[f'{section}/{option}']
+        except KeyError:
+            return
+        yield from (alias.split('/') for alias in aliases)
+
+    def _load_aliases(self):
+        """Prepare aliases for the handled settings."""
+        conv = ast.literal_eval
+        aliases = ConfigParser()
+        aliases.read(get_aliases_path())
+
+        try:
+            relevant = conv(aliases.get(self._cls_name, 'parent_aliases'))
+        except NoSectionError:
+            # The settings for this class do not have any aliases.
+            return
+        except NoOptionError:
+            # No other relevant sections.
+            relevant = []
+
+        for section in (self._cls_name, *relevant):
+            for key in aliases[section]:
+                if key == 'new_sections':
+                    continue
+                if key == 'fallback_values':
+                    self._fallbacks.extend(conv(aliases[section][key]))
+                    continue
+                if key == 'parent_aliases':
+                    continue
+                self._aliases[key] = conv(aliases[section][key])
+
+    def _read(self, fp, fpname):
+        """Read the target file and replace aliases."""
+        super()._read(fp, fpname)
+        self._replace_aliases()
+
+    def _replace_alias(self, section, option):
+        """Replace section/option with its alias.
+
+        Create section if necessary and move stored alias under
+        old_section/old_option pair to section/option pair. Delete
+        old_section/old_option pair and delete old_section if there
+        are no other options left in old_section.
+
+        Parameters
+        ----------
+        section : str
+            The section key.
+        option : str
+            The option key.
+
+        Returns
+        -------
+        None.
+        """
+        if section not in self.sections():
+            self.add_section(section)
+        for old_section, old_option in self._iter_aliases(section, option):
+            try:
+                value = self.get(old_section, old_option)
+            except (NoSectionError, NoOptionError):
+                continue
+            # In case a value is found in the aliases, it is
+            # stored in the new section/option pair.
+            self[section][option] = value
+            self.remove_option(old_section, old_option)
+            # Remove sections that were emptied
+            # because of the alias replacement.
+            if not self.options(old_section):
+                self.remove_section(old_section)
+            return
+
+    def _replace_aliases(self):
+        """Replace all aliases in self and apply fallbacks."""
+        for key in self._aliases:
+            section, option = key.split('/')
+            self._replace_alias(section, option)
+        self._fill_in_fallbacks()
+
+
+class ViPErLEEDSettings(AliasConfigParser):
     """Class for read/write and handling ViPErLEED settings.
 
     The class remembers the path to the last file read, which
@@ -120,17 +290,17 @@ class ViPErLEEDSettings(ConfigParser):
         # ConfigParser has 3 positional-or-keyword arguments. We
         # want to set the third (allow_no_value) always to True.
         args = args[:2]  # skip positional allow_no_value
-        kwargs["allow_no_value"] = True
+        kwargs['allow_no_value'] = True
 
-        kwargs["comment_prefixes"] = "#;"
-        kwargs["inline_comment_prefixes"] = ""  # no in-line comments
+        kwargs['comment_prefixes'] = '#;'
+        kwargs['inline_comment_prefixes'] = ''  # no in-line comments
 
         # Disallow empty lines in values, as this has the potential
         # to create mess; also make the parser strict (no duplicates)
-        kwargs["empty_lines_in_values"] = False
-        kwargs["strict"] = True
+        kwargs['empty_lines_in_values'] = False
+        kwargs['strict'] = True
 
-        self._interpolate_paths = kwargs.pop("interpolate_paths", True)
+        self._interpolate_paths = kwargs.pop('interpolate_paths', True)
         super().__init__(*args, **kwargs)
 
         self.__comments = defaultdict(list)
@@ -141,8 +311,8 @@ class ViPErLEEDSettings(ConfigParser):
         # the config file. __base_dir should be set from the outside
         # using the .base_dir property to the "<path/to/archive.zip>"
         # when the content of the config was read from an archive.
-        self._last_file = ""
-        self.__base_dir = ""
+        self._last_file = ''
+        self.__base_dir = ''
 
     def __str__(self):
         """Return a simple string representation of self."""
@@ -224,15 +394,15 @@ class ViPErLEEDSettings(ConfigParser):
                                        fallback=fallback, **kwargs)
         except (ValueError, TypeError, SyntaxError,
                 MemoryError, RecursionError) as err:
-            raise NotASequenceError(f"Could not convert {section}/{option} "
-                                    "into a sequence") from err
+            raise NotASequenceError(f'Could not convert {section}/{option} '
+                                    'into a sequence') from err
         if converted is not fallback and not isinstance(converted, Sequence):
-            raise NotASequenceError(f"Could not convert {section}/{option} "
-                                    "into a sequence")
+            raise NotASequenceError(f'Could not convert {section}/{option} '
+                                    'into a sequence')
         return converted
 
-    def has_settings(self, *required_settings):
-        """Check whether self has given settings.
+    def misses_settings(self, *required_settings):
+        """Check whether self misses given settings.
 
         Parameters
         ----------
@@ -267,9 +437,9 @@ class ViPErLEEDSettings(ConfigParser):
         invalid_settings = []
         for setting in required_settings:
             if not setting or len(setting) > 3:
-                raise TypeError(f"Invalid mandatory setting {setting}. "
-                                f"with length {len(setting)}. Expected "
-                                "length <= 3.")
+                raise TypeError(f'Invalid mandatory setting {setting}. '
+                                f'with length {len(setting)}. Expected '
+                                'length <= 3.')
             # (<section>,)
             if len(setting) == 1:
                 if not self.has_section(setting[0]):
@@ -279,17 +449,16 @@ class ViPErLEEDSettings(ConfigParser):
             # (<section>, <option>) or (<section>, <option>, <admissible>)
             section, option = setting[:2]
             if not self.has_option(section, option):
-                invalid_settings.append(f"{section}/{option}")
+                invalid_settings.append(f'{section}/{option}')
                 continue
 
             # (<section>, <option>, <admissible>)
             if len(setting) == 3:
                 admissible_values = setting[2]
-                value = self[section][option]
-                if value not in admissible_values:
+                if self[section][option] not in admissible_values:
                     invalid_settings.append(
-                        "/".join(setting[:2])
-                        + " not one of " + ", ".join(admissible_values)
+                        '/'.join(setting[:2])
+                        + ' not one of ' + ', '.join(admissible_values)
                         )
         return invalid_settings
 
@@ -342,7 +511,7 @@ class ViPErLEEDSettings(ConfigParser):
                 if fname not in read_ok:
                     missing.append(fname)
             raise MissingSettingsFileError(
-                "Could not read the following settings file(s):"
+                'Could not read the following settings file(s):'
                 ', '.join(missing)
                 )
         return read_ok
@@ -359,7 +528,7 @@ class ViPErLEEDSettings(ConfigParser):
 
     def read_file(self, f, source=None):
         """Read from a file-like object."""
-        fname = ""
+        fname = ''
         try:
             fname = f.name
         except AttributeError:
@@ -373,8 +542,8 @@ class ViPErLEEDSettings(ConfigParser):
     def update_file(self):
         """Update the last file read with the data in self."""
         if not self._last_file:
-            raise RuntimeError(f"{self.__class__.__name__}: no known "
-                               "last file read to be updated.")
+            raise RuntimeError(f'{self.__class__.__name__}: no known '
+                               'last file read to be updated.')
         with open(self._last_file, 'w', encoding='utf-8') as fproxy:
             self.write(fproxy)
 
@@ -392,11 +561,11 @@ class ViPErLEEDSettings(ConfigParser):
             by spaces.
         """
         # Start with comments at the beginning
-        fp.write("\n".join(self.__comments[None]))
+        fp.write('\n'.join(self.__comments[None]))
         if self.__comments[None]:
             # Add newline before the first section
             # header if there were any comments
-            fp.write("\n")
+            fp.write('\n')
 
         # And store this file's name
         try:
@@ -501,17 +670,18 @@ class ViPErLEEDSettings(ConfigParser):
         # if any parsing errors occurred, raise an exception
         if err:
             raise err
+        self._replace_aliases()
     # pylint: enable=too-complex,too-many-locals
     # pylint: enable=too-many-branches,too-many-statements
 
     def _write_section(self, fp, section_name, section_items, delimiter):
         """Write a single section to the specified 'fp'."""
         # Header
-        fp.write(f"[{section_name}]\n")
+        fp.write(f'[{section_name}]\n')
 
         # All comments (newlines were not stripped)
         if self.__comments[section_name]:
-            fp.write("".join(self.__comments[section_name]))
+            fp.write(''.join(self.__comments[section_name]))
 
         # And all the options/values
         for key, value in section_items:
@@ -520,9 +690,9 @@ class ViPErLEEDSettings(ConfigParser):
             if value is not None or not self._allow_no_value:
                 value = delimiter + str(value).replace('\n', '\n\t')
             else:
-                value = ""
-            fp.write(f"{key}{value}\n")
-        fp.write("\n")
+                value = ''
+            fp.write(f'{key}{value}\n')
+        fp.write('\n')
 
     def __store_if_comment(self, line, sectname):
         """Store a line as comment if it is one.
@@ -595,6 +765,7 @@ class SystemSettings(ViPErLEEDSettings):
         """Return a ViPErLEEDSettings with the same contents as self."""
         fake_copy = ViPErLEEDSettings()
         fake_copy.read_dict(self)
+        fake_copy.prepare_aliases(self._cls_name)
         return copy.deepcopy(fake_copy, memo)
 
     def __init__(self, *args, **kwargs):
@@ -604,7 +775,7 @@ class SystemSettings(ViPErLEEDSettings):
         super().__init__(*args, **kwargs)
         self.__handler = None
 
-        self._sys_qsettings = get_qsettings('Measurement')
+        self._sys_qsettings = get_qsettings('measurement')
         self._read_sys_settings()
         self._check_mandatory_settings()
 
@@ -680,7 +851,7 @@ class SystemSettings(ViPErLEEDSettings):
             If any mandatory setting is missing (after potentially
             filling the non-null ones)
         """
-        invalid = self.has_settings(*self.__non_null, *self.__non_mandatory)
+        invalid = self.misses_settings(*self.__non_null, *self.__non_mandatory)
 
         # We're missing settings. Let's add them back...
         for missing in invalid:
@@ -694,20 +865,18 @@ class SystemSettings(ViPErLEEDSettings):
             self.update_file()
 
         # Now check all those that must be there
-        missing = self.has_settings(*self.__mandatory)
+        missing = self.misses_settings(*self.__mandatory)
         if missing:
             raise RuntimeError(
-                f"System settings file at {self._sys_qsettings.fileName()} "
-                "is missing the following mandatory sections/options: "
-                "; ".join(missing)
+                f'System settings file at {self._sys_qsettings.fileName()} '
+                'is missing the following mandatory sections/options: '
+                '; '.join(missing)
                 )
 
     def _read_sys_settings(self):
         """Read the system settings."""
         # Pre-populate settings with keys from default system settings.
-        self.read(
-            Path(__file__).parent.parent / '_defaults' / '_system_settings.ini'
-            )
+        self.read(SRC_SYS_SETTINGS_PATH)
 
         # Pull in all sections. Skip "bare" options without
         # a section as ConfigParser cannot handle them.

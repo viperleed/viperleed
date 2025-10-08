@@ -218,7 +218,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         # To get the settings of any QObjectWithSettingsABC use the
         # settings property. In a similar manner, to set settings either
         # use the settings property or the set_settings method.
-        self._settings = ViPErLEEDSettings()
+        self._settings = ViPErLEEDSettings(cls_name=type(self).__name__)
         self._settings_to_load = settings
         self.uses_default_settings = False
         if not settings:
@@ -477,7 +477,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             invalid setting.
         """
         return [(invalid,) for invalid in
-                settings.has_settings(*self._mandatory_settings)]
+                settings.misses_settings(*self._mandatory_settings)]
 
     @abstractmethod
     def get_settings_handler(self):
@@ -559,11 +559,12 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If any element of the new_settings does
             not fit the mandatory settings.
         """
-        try:                                                                    # TODO: #242 make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
+        try:
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except (ValueError, NoSettingsError):
             self.emit_error(QObjectSettingsErrors.MISSING_SETTINGS)
             return False
+        new_settings.prepare_aliases(type(self).__name__)
         invalid = self.are_settings_invalid(new_settings)
         for missing, *info in invalid:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,

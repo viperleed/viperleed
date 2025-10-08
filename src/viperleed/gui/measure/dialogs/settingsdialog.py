@@ -343,7 +343,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
     def add_option(self, section_name, option_name, *args,
                    handler_widget=None, option_type=None, **kwargs):
         """Add a handler for a section/option pair."""
-        if not self.__config.has_option(section_name, option_name):
+        if self.__config.misses_settings((section_name, option_name)):
             raise ValueError(
                 "Configuration file does not contain a section"
                 f"/option pair {section_name}/{option_name}"
@@ -472,7 +472,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
             for opt_name, option in options.items():
                 if isinstance(option, StaticSettingsDialogOption):
                     continue
-                option.set_(self.__config[sec_name][opt_name])
+                option.set_(self.__config.get(sec_name, opt_name))
         for section in self.__complex_sections:
             section.update_widgets()
 
