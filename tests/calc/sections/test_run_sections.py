@@ -18,7 +18,25 @@ from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
     )
+from viperleed.calc.sections.run_sections import run_section
 from viperleed.calc.sections.run_sections import section_loop
+
+
+class TestRunSection:
+    """Tests for the run_section function."""
+
+    def test_search_marks_domains_as_require_refcalc(self, mocker):
+        """Check that all domains require a refcalc after a search."""
+        rpars = Rparams()
+        for file in rpars.fileLoaded:
+            # Fake that all files have been read already to skip
+            # all the code that loads files before running.
+            rpars.fileLoaded[file] = True
+        rpars.domainParams = [mocker.MagicMock(refcalc_required=False)]
+        mock_search = mocker.patch('viperleed.calc.sections.search.search')
+        run_section(3, mocker.MagicMock(name='slab'), rpars)
+        mock_search.assert_called_once()
+        assert all(d.refcalc_required for d in rpars.domainParams)
 
 
 class TestSectionLoop:

@@ -231,6 +231,13 @@ def run_section(index, sl, rp):
         )
     if index == 1:
         rp.last_refcalc_time = since_section_started.how_long()
+    if index == 3:
+        # Mark all domains (if any) as requiring a refcalc. This will
+        # ensure that a possible reference calculation segment after
+        # this search will actually execute. This may happen because
+        # of explicit user input or because of MAX_TL_DISPLACEMENT.
+        for domain in rp.domainParams:
+            domain.refcalc_required = True
 
 
 def section_loop(rp, sl):
