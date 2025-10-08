@@ -263,10 +263,16 @@ class WindowsCamera:
     # omitted below where this is the case.
 
     if sys.maxsize > 2**32:
-        windll.LoadLibrary(str(dll_path / "TIS_UDSHL11_x64.dll"))
+        try:
+            windll.LoadLibrary(str(dll_path / "TIS_UDSHL11_x64.dll"))
+        except FileNotFoundError:
+            raise ImportError
         _dll = windll.LoadLibrary(str(dll_path / "tisgrabber_x64.dll"))
     else:
-        windll.LoadLibrary(str(dll_path / "TIS_UDSHL11.dll"))
+        try:
+            windll.LoadLibrary(str(dll_path / "TIS_UDSHL11.dll"))
+        except FileNotFoundError:
+            raise ImportError
         _dll = windll.LoadLibrary(str(dll_path / "tisgrabber.dll"))
 
     __initalized = False
