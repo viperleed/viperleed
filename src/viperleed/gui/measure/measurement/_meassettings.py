@@ -29,7 +29,7 @@ from viperleed.gui.measure.widgets.collapsiblelists import (
     CollapsibleCameraList,
     CollapsibleControllerList,
     )
-from viperleed.gui.measure.widgets.fieldinfo import FieldInfo
+from viperleed.gui.measure.widgets.fieldinfo import InfoLabel
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.gui.widgets.buttons import ButtonWithLabel
@@ -86,10 +86,7 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._cameras = CollapsibleCameraList()
         self._default_settings_folder = None
         settings_path = SystemSettings().paths['configuration']
-        if default_folder:
-            self.default_settings_folder = default_folder
-        else:
-            self.default_settings_folder = settings_path
+        self.default_settings_folder = default_folder or settings_path
         self.settings_changed.connect(self._store_device_settings)
         self._compose_and_connect_collapsible_lists(may_have_cameras)
 
@@ -201,11 +198,11 @@ class StepProfileViewer(ButtonWithLabel):
     """
 
     settings_changed = qtc.pyqtSignal()
+    notify_ = settings_changed
 
     def __init__(self, **kwargs):
         """Initialize viewer."""
         super().__init__(**kwargs)
-        self.notify_ = self.settings_changed
         self.set_button_text('Edit')
         self.profile_editor = EnergyStepProfileDialog(parent=self)
         self._connect()
@@ -216,13 +213,18 @@ class StepProfileViewer(ButtonWithLabel):
 
     def set_(self, value):
         """Set label and load profile into step profile editor."""
-        value = literal_eval(value)
+        try:
+            value = literal_eval(value)
+        except ValueError:
+            # Value is already a string and cannot be converted.
+            pass
+
         if not value:
             value = AbruptEnergyStepEditor().profile
         if isinstance(value, str):
             value = (value,)
         self.profile_editor.profile = value
-        self._set_label_text(value[0])
+        self._update_label_from_profile()
 
     def showEvent(self, event):          # pylint: disable=invalid-name
         """Connect finished signal when shown."""
@@ -231,22 +233,19 @@ class StepProfileViewer(ButtonWithLabel):
         super().showEvent(event)
 
     def _connect(self):
-        """Connect (only once) relevant signals and slots."""
+        """Connect relevant signals and slots."""
         self.button.clicked.connect(self.profile_editor.show)
-        self.profile_editor.accepted.connect(self._on_settings_changed)
+        self.profile_editor.accepted.connect(self._on_profile_edited)
 
     @qtc.pyqtSlot()
-    def _on_settings_changed(self):
+    def _on_profile_edited(self):
         """Update step profile to selected profile."""
-        self._set_label_text(self.profile_editor.profile_name)
+        self._update_label_from_profile()
         self.settings_changed.emit()
 
-    def _set_label_text(self, value):
-        """Set label text from selected profile."""
-        if isinstance(value, str):
-            self.set_label_text(value.capitalize() + ' profile')
-            return
-        self.set_label_text('Custom profile')
+    def _update_label_from_profile(self):
+        """Set the label text according to the current profile."""
+        self.set_label_text(self.profile_editor.profile_name)
 
 
 class EnergyStepProfileDialog(qtw.QDialog):                                     # TODO: visually draw profiles
@@ -278,10 +277,15 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         self._adjust_size_timer.timeout.connect(self.adjustSize)
         self._compose_and_connect()
 
+    @staticmethod
+    def _format_profile_name(name):
+        """Format the profile name."""
+        return f'{name.capitalize()} profile'
+
     @property
     def profile_name(self):
         """Return name of the currently selected profile."""
-        return self.pick_profile.currentData().name
+        return self._format_profile_name(self.pick_profile.currentData().name)
 
     @property
     def profile(self):
@@ -294,7 +298,7 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         first = profile_data[0]
         name = (first if isinstance(first, str)
                 else FractionalEnergyStepEditor.name)
-        index = self.pick_profile.findText(name.capitalize() + ' profile')
+        index = self.pick_profile.findText(self._format_profile_name(name))
         self.pick_profile.setCurrentIndex(index)
         self.pick_profile.currentData().set_profile(profile_data)
         self._profile_description.setText(
@@ -305,6 +309,7 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
     def accept(self):
         """Store selected profile then accept."""
         self.pick_profile.currentData().update_profile()
+        self.profile = self.pick_profile.currentData().profile
         super().accept()
 
     def _compose_and_connect(self):
@@ -347,7 +352,7 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
     def _populate_profile_options(self):
         """Add profile options to profile selection."""
         for profile_editor in self._profile_editors.values():
-            name = profile_editor.name.capitalize() +' profile'
+            name = self._format_profile_name(profile_editor.name)
             self.pick_profile.addItem(name, userData=profile_editor)
 
 
@@ -480,27 +485,19 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QFormLayout()
-        duration_label = qtw.QLabel('Step duration:')
-        step_num_label = qtw.QLabel('Nr. of steps:')
-        duration_info = ('<nobr>How long to wait until </nobr>'
-                         'the next intermediate step.')
         step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
                          f'Cannot be more than {MAX_NUM_STEPS}.')
-        layout.addRow(self._make_info_label(duration_label, duration_info),
-                      self._controls['n_steps'])
-        layout.addRow(self._make_info_label(step_num_label, step_num_info),
-                      self._controls['duration'])
+        duration_info = ('<nobr>How long to wait until </nobr>'
+                         'the next intermediate step.')
+        layout.addRow(
+            InfoLabel(label_text='Nr. of steps:', tooltip=step_num_info),
+            self._controls['n_steps']
+            )
+        layout.addRow(
+            InfoLabel(label_text='Step duration:', tooltip=duration_info),
+            self._controls['duration']
+            )
         self.setLayout(layout)
-
-    def _make_info_label(self, label, info):
-        """Return a widget containing the label and info."""
-        container = qtw.QWidget()
-        layout = qtw.QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(label)
-        layout.addWidget(FieldInfo.for_widget(label, tooltip=info))
-        container.setLayout(layout)
-        return container
 
 
 class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
@@ -559,7 +556,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         # The first two elements in the layout are the add/remove
         # buttons and the labels. After that, each step is a separate
         # item with two widgets.
-        for index in range(2, layout.count()):
+        for index in range(N_HEADER_ROWS, layout.count()):
             item = layout.itemAt(index)
             profile.append(item.itemAt(0).widget().value())
             profile.append(item.itemAt(1).widget().value())
@@ -604,24 +601,21 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose_labels(self):
         """Return a layout of the labels."""
         layout = qtw.QHBoxLayout()
-        fraction_label = qtw.QLabel('Step fraction')
-        layout.addWidget(fraction_label)
         info = ('<nobr>The energies to set given as a fraction</nobr> '
                 f'of {DELTA_E_NAME}. Number of steps cannot exceed '
                 f'{MAX_NUM_STEPS}. Any value is acceptable. Zero is '
                 'equivalent to the current energy and one to the next '
                 'energy. A fraction of one does not have to be '
                 'explicitly included at the end, as this is added '
-                'automatically with the settle time.')
-        layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
-        layout.addWidget(qtw.QLabel('Duration'))
+                'automatically with the correct settle time.')
+        layout.addWidget(InfoLabel(label_text='Step fraction', tooltip=info))
         info = ('<nobr>How long to wait until </nobr>'
                 'the next intermediate step.')
-        layout.addWidget(FieldInfo.for_widget(fraction_label, tooltip=info))
+        layout.addWidget(InfoLabel(label_text='Duration', tooltip=info))
         return layout
 
     def _connect(self):
-        """Connect buttons to meathods."""
+        """Connect buttons to methods."""
         self._controls['add_step'].clicked.connect(self._add_step)
         self._controls['remove_step'].clicked.connect(self._remove_step)
 
@@ -636,7 +630,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     @qtc.pyqtSlot()
     def _remove_step(self):
         """Remove a step from the fractional step profile."""
-        if self.n_steps == 0:
+        if not self.n_steps:
             return
         self.layout().removeRow(self.layout().rowCount()-1)
         self._update_button_states()

@@ -13,6 +13,7 @@ __license__ = 'GPLv3+'
 
 import csv
 from collections import defaultdict
+from collections import namedtuple
 from collections.abc import MutableSequence
 from collections.abc import Sequence
 from copy import deepcopy
@@ -35,6 +36,27 @@ _ALIASES = {
     'Cold_Junction': ('cold_junction',),
     'Timestamps': ('timestamps',),
     }
+_Q = namedtuple('Quantity', [
+    # The units of measure for self as a string. Quantities with the
+    # same unit can be plotted together.
+    'units',
+    # The default plotting scale ('lin', 'log') for self.
+    'scale',
+    # The data type of self as a callable (e.g., float).
+    'dtype',
+    # The unique label of self (e.g., 'Energy'). Used in the csv and for
+    # determining QuantityInfo from settings files (also via _ALIASES).
+    'label',
+    # The default axis for plotting self ('x', 'y'). No plotting if None.
+    'axis',
+    # The generic name of self (e.g., 'Current') for
+    # plotting multiple quantities of the same kind.
+    'generic_label',
+    # A label of self for display in widgets, visible to the user.
+    'display_name',
+    # A descriptive text of self. Used for tooltips.
+    'description',
+    ])
 
 
 NAN = float('nan')
@@ -53,13 +75,12 @@ class DataErrors(ViPErLEEDErrorEnum):
                               'Consider increasing energy_step_duration.')
 
 
-class QuantityInfo(enum.Enum):
+class QuantityInfo(_Q, enum.Enum):
     """Measurement quantities with unit, scaling, type, name, etc.
 
     New measurement quantities have to be added here.
     """
 
-    # Info:   units, scale, dtype, label, axis, common_label, tooltip
     IMAGES = ('Number', None, str, 'Images', None, None, 'Images', '')
     ENERGY = ('eV', 'lin', float, 'Energy', 'x', None, 'Energy',
               'The nominal value of the primary electron energy')
@@ -71,16 +92,17 @@ class QuantityInfo(enum.Enum):
     I0 = ('µA', 'lin', float, 'I0', 'y', 'Current', 'I\u2080',
           '<nobr>The total electron current emitted by the '
           'electron gun,</nobr> measured on the LEED optics')
-    ISAMPLE = ('µA', 'lin', float, 'I_Sample',
-               'y', 'Current', 'I\u209b\u2090\u2098\u209a\u2097\u2091',
+    ISAMPLE = ('µA', 'lin', float, 'I_Sample', 'y', 'Current',
+               'I\u209b\u2090\u2098\u209a\u2097\u2091',
                '<nobr>The total electron current emitted by the electron '
                'gun,</nobr> measured by biasing the sample to +33 V via the '
-               '"I_target" BNC connector. This is an alternative to '
-               'I<sub>0</sub> in case your LEED optics does not provide an '
-               'I<sub>0</sub> output. LEED-IV videos should not be acquired '
-               'at the same time to avoid electric-field-induced distortions')
-    TEMPERATURE = ('°C', 'lin', float, 'Temperature', 'y', 'Temperature',
-                   'Temperature', '')
+               'I<sub>sample</sub> BNC connector. This is an alternative to '
+               'I\u2080 in case your LEED optics does not provide an I\u2080'
+               ' output. LEED-IV videos should not be acquired at the same '
+               'time to avoid electric-field-induced distortions')
+    TEMPERATURE = ('°C', 'lin', float, 'Temperature',
+                   'y', 'Temperature', 'Temperature',
+                   'The temperature measured on the thermocouple.')
     AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux', 'Aux', '')
     COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y',
                      'Temperature', 'Cold-junction temperature',
@@ -91,18 +113,18 @@ class QuantityInfo(enum.Enum):
     UNKNOWN = ('', None, str, '??', None, None, '', '')
 
     @classmethod
-    def from_display_label(cls, label):
-        """Return the QuantityInfo member associated with display_label.
+    def from_display_name(cls, label):
+        """Return the QuantityInfo member associated with display_name.
 
         Parameters
         ----------
         label : str
-            The display_label to search for.
+            The display_name to search for.
 
         Returns
         -------
         member : QuantityInfo
-            The member of QuantityInfo associated to display_label.
+            The member of QuantityInfo associated to display_name.
 
         Raises
         ------
@@ -113,11 +135,11 @@ class QuantityInfo(enum.Enum):
         """
         if not isinstance(label, str):
             raise TypeError(f'Unexpected type {type(label).__name__} for '
-                            'QuantityInfo.from_display_label. Expected str.')
+                            'QuantityInfo.from_display_name. Expected str.')
         try:
-            return cls.get_display_labels()[label]
-        except KeyError as err:
-            raise ValueError(f'{cls.__name__}: {label!r} unknown') from err
+            return cls.get_display_names()[label]
+        except KeyError as exc:
+            raise ValueError(f'{cls.__name__}: {label!r} unknown') from exc
 
     @classmethod
     def from_label(cls, label):
@@ -154,8 +176,8 @@ class QuantityInfo(enum.Enum):
                 break
         try:
             return cls.get_labels()[label]
-        except KeyError as err:
-            raise ValueError(f'{cls.__name__}: {label!r} unknown') from err
+        except KeyError as exc:
+            raise ValueError(f'{cls.__name__}: {label!r} unknown') from exc
 
     @classmethod
     def get_axis_labels(cls, axis):
@@ -173,67 +195,17 @@ class QuantityInfo(enum.Enum):
             Each element is the label of the QuantityInfo(s)
             whose .axis is equal to axis.
         """
-        return [q.display_label for q in cls if q.axis == axis]
+        return [q.display_name for q in cls if q.axis == axis]
 
     @classmethod
-    def get_display_labels(cls):
-        """Return a dict {display_label: enum} of all members."""
-        return {q.display_label: q for q in cls}
+    def get_display_names(cls):
+        """Return a dict {display_name: enum} of all members."""
+        return {q.display_name: q for q in cls}
 
     @classmethod
     def get_labels(cls):
         """Return a dict {label: enum} of all members of QuantityInfo."""
         return {l.label: l for l in cls}
-
-    @property
-    def axis(self):
-        """Return the default axis on which self is plotted.
-
-        Typically, only TIMES and ENERGY are used as
-        abscissae ('x'), while all the other quantities
-        are represented as ordinates ('y').
-
-        Returns
-        -------
-        axis : {'x', 'y'}
-            The default plot axis for this quantity.
-        """
-        return self.value[4]
-
-    @property
-    def common_label(self):                                                     # TODO: rename generic_label? denomination?
-        """Return the generic name of self (e.g., 'Current', 'Voltage')."""
-        return self.value[5]
-
-    @property
-    def display_label(self):
-        """Return a label for display.."""
-        return self.value[6]
-
-    @property
-    def dtype(self):
-        """Return the data type of self as a callable (e.g., float)."""
-        return self.value[2]
-
-    @property
-    def description(self):
-        """Return a descriptive text for this quantity."""
-        return self.value[7]
-
-    @property
-    def label(self):
-        """Return the unique label of self as a str (e.g., 'Energy')."""
-        return self.value[3]
-
-    @property
-    def plot_scale(self):
-        """Return the default plotting scale ('lin', 'log') for self."""
-        return self.value[1]
-
-    @property
-    def units(self):
-        """Return the units of measure for self as a string."""
-        return self.value[0]
 
 
 # _EXCEPTIONAL contains quantities that are treated differently

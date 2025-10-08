@@ -906,7 +906,8 @@ class CameraABC(DeviceABC):
             "particularly bright, dark, or noisy pixels that should be "
             "corrected to improve data quality"
             )
-        if not self.settings.has_option('camera_settings', 'bad_pixels_path'):
+        if self.settings.misses_settings(('camera_settings',
+                                          'bad_pixels_path')):
             # We may ignore errors related to the bad-pixels path
             self.settings['camera_settings']['bad_pixels_path'] = ''
         handler.add_option('camera_settings', 'bad_pixels_path',
@@ -929,7 +930,7 @@ class CameraABC(DeviceABC):
         contained within a SettingsInfo must be enough to determine a
         suitable settings file for the device from it. Subclasses should
         raise a DefaultSettingsError if they fail to create instances
-        from the settings in the DEFAULTS_PATH.
+        from the default settings.
 
         Returns
         -------

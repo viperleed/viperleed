@@ -20,8 +20,6 @@ import shutil
 
 from viperleed import __version__
 from viperleed.calc.classes.rparams.rparams import Rparams
-from viperleed.calc.constants import DEFAULT_OUT
-from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import LOG_PREFIX
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
@@ -54,7 +52,7 @@ def run_calc(
     preset_params=None,
     source=None,
     home=None,
-    ):
+        ):
     """Run a ViPErLEED calculation in the current directory.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
@@ -115,7 +113,7 @@ def run_calc(
                 + DateTimeFormat.LOG_CONTENTS.now())
     LOGGER.info(f'This is ViPErLEED version {__version__}\n')
 
-    manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT, log_name)
+    manifest = ManifestFile(log_name)
     try:
         # Read input files and load user arguments
         rpars, slab = _make_rpars_and_slab(manifest, preset_params, slab, home)
@@ -257,18 +255,18 @@ def _interpret_parameters(rpars, slab, preset_params):
 
 def _preprocess_work(rpars, log_name):
     """Do preliminary cleanup of the work directory.
-    
+
     The following actions are taken:
     - store away previous calc results that may be present in work.
     - save input files to SUPP/original_inputs.
-    
+
     Parameters
     ----------
     rpars : Rparams
         The current run parameters.
     log_name : str
         Name of the current log file.
-    
+
     Returns
     -------
     None.

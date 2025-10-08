@@ -24,12 +24,7 @@ from PyQt5 import QtWidgets as qtw
 from viperleed.gui.dialogs.dropdowndialog import DropdownDialog
 from viperleed.gui.dialogs.errors import DialogDismissedError
 from viperleed.gui.measure.classes.settings import NoSettingsError
-
-# TODO: not nice. Also, there's two places where the _defaults
-# path is used. Here and in classes.settings. However, due to circular
-# imports I cannot use either for the other one. Probably better
-# to move the path in __init__?
-DEFAULTS_PATH = Path(__file__).parent / '_defaults'
+from viperleed.gui.qsettings import get_qsettings
 
 
 ################################## FUNCTIONS ##################################
@@ -247,6 +242,13 @@ def disconnected_slot(slot, signal, *more_signals, type=None):
             safe_connect(signal, slot, type=type)
 
 
+def get_default_path():
+    """Return the path to default settings."""
+    # The path is detected at runtime and not set as a global variable
+    # to catch any changes that may occur to the path in runtime.
+    return Path(get_qsettings('measurement').fileName()).resolve().parent
+
+
 def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     """Return a device config when it was not found in the original path.
 
@@ -282,13 +284,13 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
         If no settings file was found and no alternative option was
         given.
     """
-    parent_widget = kwargs.get("parent_widget", None)
-    directory = kwargs.get("directory", DEFAULTS_PATH)
-    third_btn_text = kwargs.get("third_btn_text", "")
+    parent_widget = kwargs.get('parent_widget', None)
+    directory = kwargs.get('directory', get_default_path())
+    third_btn_text = kwargs.get('third_btn_text', '')
 
     obj_name = obj_info.unique_name
     msg_box = qtw.QMessageBox(parent=parent_widget)
-    msg_box.setWindowTitle("No settings file found")
+    msg_box.setWindowTitle('No settings file found')
     msg = (f'Directory {directory} and its subfolders do not contain '
            f'any settings file for device {obj_name}. Select a '
            'different directory.')
@@ -296,7 +298,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
         msg += f' Alternatively, you can {third_btn_text.lower()}.'
     msg_box.setText(msg)
     msg_box.setIcon(msg_box.Warning)
-    btn = msg_box.addButton("Select path", msg_box.ActionRole)
+    btn = msg_box.addButton('Select path', msg_box.ActionRole)
     third_btn = None
     if third_btn_text:
         third_btn = msg_box.addButton(third_btn_text, msg_box.AcceptRole)
@@ -307,7 +309,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     if _clicked is btn:
         new_path = qtw.QFileDialog.getExistingDirectory(
             parent=parent_widget,
-            caption="Choose directory of device settings",
+            caption='Choose directory of device settings',
             directory=str(directory),
             )
         if new_path:
@@ -368,13 +370,13 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         given, or if multiple files were found but the user did not
         pick one.
     """
-    directory = kwargs.get('directory', DEFAULTS_PATH)
+    directory = kwargs.get('directory', get_default_path())
     match_exactly = kwargs.get('match_exactly', False)
     parent_widget = kwargs.get('parent_widget', None)
 
     device_config_files = obj_cls.find_matching_settings_files(
-        obj_info=obj_info, directory=directory,
-        match_exactly=match_exactly,
+        directory=directory, match_exactly=match_exactly,
+        obj_info=obj_info,
         )
 
     if device_config_files and len(device_config_files) == 1:

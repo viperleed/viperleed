@@ -52,7 +52,7 @@ DEFAULT_OPEN_FILE = (
     )
 INPUT_FILE_EXTENSIONS = {
     # <extension>: <descriptive text>
-    '*.ini': 'LEED pattern input files',
+    '*.ini': 'Experiment-symmetry files',
     '*.tlm': 'Legacy input files',
     '*': 'All files',
     }
@@ -116,29 +116,29 @@ def default_file_menu():
         'new': (style.standardIcon(qtw.QStyle.SP_FileIcon),
                 '&New/edit...',
                 'Ctrl+N',
-                'New/Edit LEED pattern',
-                'New/Edit LEED pattern input file',
+                'New/Edit experiment symmetry',
+                'New/Edit experiment-symmetry file',
                 '_on_file_new_or_edit_pressed',
                 False),
         'open': (style.standardIcon(qtw.QStyle.SP_DialogOpenButton),
                  '&Open...',
                  'Ctrl+O',
-                 'Open LEED pattern input',
-                 'Open LEED pattern input file',
+                 'Open experiment symmetry',
+                 'Open experiment-symmetry file',
                  '_on_file_open_pressed',
                  False),
         'save': (style.standardIcon(qtw.QStyle.SP_DialogSaveButton),
                  '&Save',
                  'Ctrl+S',
-                 'Save LEED pattern input',
-                 'Save LEED pattern input file',
+                 'Save experiment symmetry',
+                 'Save experiment-symmetry file',
                  '_on_file_save_pressed',
                  True),
         'save_as': (None,
                     '&Save As...',
                     'Ctrl+Shift+S',
-                    'Save LEED pattern input as',
-                    'Save LEED pattern input file as',
+                    'Save experiment symmetry as',
+                    'Save experiment-symmetry file as',
                     '_on_file_save_as_pressed',
                     True),
         'exit': (None,
@@ -467,7 +467,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
     def _on_file_open_pressed(self):
         """React to a request to open existing input files."""
         fnames = qtw.QFileDialog.getOpenFileNames(
-            self, 'Open LEED pattern input',
+            self, 'Open experiment-symmetry file',
             DEFAULT_OPEN_FILE[0],
             default_input_file_extensions()
             )
@@ -494,7 +494,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
     def _on_file_save_as_pressed(self):
         """React to a request to save the input with a new name."""
         fname = qtw.QFileDialog.getSaveFileName(
-            self, 'Save Pattern simulator input',
+            self, 'Save experiment-symmetry file',
             '', default_input_file_extensions()
             )
         if fname and fname[0]:
@@ -649,11 +649,11 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         # * Export list of beams to *.csv
         export_csv = qtw.QAction(
             self.style().standardIcon(qtw.QStyle.SP_DriveFDIcon),
-            '&Export Beam List...', self)
+            '&Export spot-pattern file...', self)
         export_csv.setShortcut('Ctrl+E')
         shortcut = export_csv.shortcut().toString()
-        export_csv.setToolTip('Export list of LEED beams' + f" ({shortcut})")
-        export_csv.setStatusTip("Export list of LEED beams "
+        export_csv.setToolTip('Export spot-pattern file' + f" ({shortcut})")
+        export_csv.setStatusTip("Export spot-pattern file "
                                 + f"to *.csv ({shortcut})")
         export_csv.triggered.connect(self._on_export_beams_pressed)
         self.__enabled_on_valid_input.append(export_csv)
@@ -679,9 +679,12 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             self.unsavedPopup()
 
         # Then open a normal file dialog to save the data to file
-        fname = qtw.QFileDialog.getSaveFileName(self, 'Export list of beams',
-                                                self.default_export[0],
-                                                'Comma-separated file (*.csv)')
+        fname = qtw.QFileDialog.getSaveFileName(
+            self,
+            'Export spot-pattern file',
+            self.default_export[0],
+            'Comma-separated file (*.csv)',
+            )
         if not fname or not fname[0]:
             return
 
@@ -824,7 +827,7 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
             controls. leed_parameters is an empty list if fnames
             are an invalid input.
         """
-        error_msg = ErrorBox(error_while="opening LEED pattern input",
+        error_msg = ErrorBox(error_while="opening experiment-symmetry file",
                              parent=self, silent=silent)
         parser = LEEDParser()
 
@@ -845,14 +848,14 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
         except NameError as err:
             # Missing parameters
             self.statusBar().showMessage(
-                f"Invalid LEED input file(s): {err.args[0]}.", 5000
+                f"Invalid experiment-symmetry file(s): {err.args[0]}.", 5000
                 )
             error_msg.exec_(self.statusBar().currentMessage())
             return LEEDParametersList()
         except (ValueError, RuntimeError) as err:
             # Invalid data
             self.statusBar().showMessage(
-                f"Invalid LEED input file(s): {err.args[0]}", 5000
+                f"Invalid experiment-symmetry file(s): {err.args[0]}", 5000
                 )
             error_msg.exec_(self.statusBar().currentMessage())
             return LEEDParametersList()
@@ -862,7 +865,9 @@ class LEEDPatternSimulator(ViPErLEEDPluginBase):
                 raise EOFError(f"The selected file(s) contain no data.")
             except EOFError as err:
                 self.statusBar().showMessage("File(s) are empty", 5000)
-                error_msg.exec_(f"Invalid LEED input file: {err.args[0]}")
+                error_msg.exec_(
+                    f"Invalid experiment-symmetry file: {err.args[0]}"
+                    )
                 return LEEDParametersList()
         return params
 

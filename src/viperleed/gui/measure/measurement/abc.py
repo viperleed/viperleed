@@ -15,6 +15,7 @@ __license__ = 'GPLv3+'
 
 from abc import abstractmethod
 from collections.abc import Sequence
+from configparser import NoOptionError
 from inspect import isabstract
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -138,18 +139,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         ('energies', 'step_profile'),
         )
 
-    # Backwards compatibility fix                                               # TODO: #242
-    _settings_synonyms = (
-        (('energies', 'start_energy'),
-         ('measurement_settings', 'start_energy'),),
-        (('energies', 'delta_energy'),
-         ('measurement_settings', 'delta_energy'),),
-        (('energies', 'end_energy'),
-         ('measurement_settings', 'end_energy'),),
-        (('energies', 'step_profile'),
-         ('measurement_settings', 'step_profile'),),
-        )
-
     def __init__(self, settings):
         """Initialise measurement instance."""
         super().__init__(settings=settings)
@@ -162,7 +151,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._secondary_controllers = []
         self._cameras = []
         self._aborted = False
-        self._has_been_used_before = False # Used to stop reuse of object.      # TODO: We may want to modify the measurement to allow this behaviour.
+        self._has_been_used_before = False  # Used to stop reuse of object.     # TODO: We may want to modify the measurement to allow this behaviour.
         self._temp_dir = None   # Directory for saving files
 
         # Keep track of which data of which controller was
@@ -192,7 +181,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self.set_settings(self._settings_to_load)
 
     def __init_subclass__(cls, **kwargs):
-        """Ensure display name is set."""
+        """Ensure display_name is set."""
         if not isabstract(cls) and not cls.display_name:
             raise ValueError('Concrete measurement subclasses require a '
                              'display_name class attribute.')
@@ -461,27 +450,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             specify additional information on what is wrong with each
             invalid setting.
         """
-        invalid_settings = settings.has_settings(
+        invalid_settings = settings.misses_settings(
             *self._mandatory_settings,
             *self._other_mandatory_settings
             )
-
-        # Backwards compatibility fix                                           # TODO: #242
-        if not settings.has_section('energies'):                                # TODO: Auto-generate new sections if necessary!
-            settings.add_section('energies')
-        for new_setting, old_setting in self._settings_synonyms:
-            if '/'.join(new_setting) in invalid_settings:
-                old_missing = settings.has_settings(old_setting)
-                if not old_missing:
-                    settings.set(*new_setting, settings.get(*old_setting))
-                    settings.remove_option(*old_setting)
-                    settings.update_file()
-                    invalid_settings.remove('/'.join(new_setting))
-
-        # Backwards compatibility fix                                           # TODO: #242
-        if ('energies/step_profile') in invalid_settings:
-            settings.set('energies', 'step_profile', "('abrupt',)")
-            invalid_settings.remove('energies/step_profile')
         return [(invalid,) for invalid in invalid_settings]
 
     def disconnect_devices_and_notify(self):
@@ -520,28 +492,26 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             The handler used in a SettingsDialog to display the
             settings of this measurement to users.
         """
-        self.check_creating_settings_handler_is_possible()
+        # super().get_settings_handler() is only peformed to check
+        # whether a settings handler can be created from the current
+        # settings.
+        super().get_settings_handler()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
 
         handler.add_section('measurement_info', tags=SettingsTag.REGULAR)
         tip = ('<nobr>This string will be appended </nobr>'
                'to the file name of the data.')
-        # Backwards compatibility fix                                           # TODO: #242
-        has_option = self.settings.has_option('measurement_info', 'suffix')
-        option = 'suffix' if has_option else 'tag'
-        handler.add_option('measurement_info', option,
+
+        handler.add_option('measurement_info', 'suffix',
                            handler_widget=qtw.QLineEdit,
                            display_name='File suffix',
                            tooltip=tip)
-        # Backwards compatibility fix                                           # TODO: #242
-        has_option = self.settings.has_option('measurement_info', 'comments')
-        option = 'comments' if has_option else 'info'
-        handler.add_option('measurement_info', option,
+        handler.add_option('measurement_info', 'comments',
                            handler_widget=qtw.QTextEdit,
                            display_name='Comments')
 
         handler.add_section('measurement_settings', tags=SettingsTag.REGULAR)
-        type_display = qtw.QLabel(type(self).__name__)
+        type_display = qtw.QLabel(self.display_name)
         handler.add_static_option(
             'measurement_settings', 'measurement_class',
             type_display, display_name='Measurement type',
@@ -561,19 +531,17 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         for option_name, display_name, tip in info:
             widget = CoercingDoubleSpinBox(decimals=1, soft_range=(0, 1000),
                                            suffix=' eV')
-            handler.add_option(
-                'energies', option_name, handler_widget=widget,
-                display_name=display_name, tooltip=tip
-                )
+            handler.add_option('energies', option_name, handler_widget=widget,
+                               display_name=display_name, tooltip=tip)
         delta_energy = handler['energies']['delta_energy']
-        delta_energy.handler_widget.soft_minimum = -1000
+        with qtc.QSignalBlocker(delta_energy.handler_widget):
+            delta_energy.handler_widget.soft_minimum = 0.1                      # TODO: allow negative values and catch zero once EnergyGenerator has been implemented
         delta_energy.handler_widget.setSingleStep(0.5)
 
         widget = _settings.StepProfileViewer()
         tip = '<nobr>How to move from </nobr>one energy to the next one.'
-        handler.add_option('energies', 'step_profile',
-                           handler_widget=widget, display_name='Step profile',
-                           tooltip=tip)
+        handler.add_option('energies', 'step_profile', handler_widget=widget,
+                           display_name='Step profile', tooltip=tip)
         return handler
 
     @classmethod
@@ -930,9 +898,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         device = self.sender()
         if device_connected or device.connected:
             return
-        base.safe_disconnect(self.sender().connection_changed,
+        base.safe_disconnect(device.connection_changed,
                              self._check_if_all_devices_disconnected)
-        if any(device.connected for device in self.devices):
+        if any(dev.connected for dev in self.devices):
             return
         self.devices_disconnected.emit()
 
@@ -1211,7 +1179,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             return device_cfg.from_settings(configname)
         except (ValueError, NoSettingsError):
             raise ValueError(f'No config file {configname!r} in '
-                             f'archive {self.settings.base_dir}') from None
+                             f'directory {self.settings.base_dir}') from None
 
     def _get_linear_step(self, *params):
         """Return energies and times for a simple linear step."""
@@ -1312,14 +1280,15 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                             'devices/path to camera configuration', err)
             raise
 
-        invalid = config.has_settings(('camera_settings', 'class_name'))
+        invalid = config.misses_settings(('camera_settings', 'class_name'))
         if invalid:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/class_name',
                             f'No class_name in {config.last_file}')
             raise RuntimeError
-
         camera_cls_name = config.get('camera_settings', 'class_name')
+        config.prepare_aliases(camera_cls_name)
+
         try:
             camera_class = base.class_from_name('camera', camera_cls_name)
         except ValueError:
@@ -1354,10 +1323,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 cam = self._make_camera(settings)
             except (RuntimeError, ValueError):
                 continue
-            # Temporarily connect device.error_occurred to
-            # self.error_occurred in order to report errors that
-            # happen during creation of the device object (which delays
-            # its own errors).
+            # Connect device.error_occurred to self.error_occurred in
+            # order to report errors that happen during creation of the
+            # device object (which delays its own errors).
             cam.error_occurred.connect(self.error_occurred)
             # Ensure device errors also abort the measurement.
             cam.error_occurred.connect(self._on_hardware_error)
@@ -1413,36 +1381,27 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                             'devices/path to controller configuration', err)
             raise
 
-        invalid = config.has_settings(('controller', 'controller_class'))
+        invalid = config.misses_settings(('controller', 'controller_class'))
         if invalid:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/controller_class',
                             f'No controller_class in {config.last_file}')
             raise RuntimeError
+        cls_name = config.get('controller', 'controller_class')
+        config.prepare_aliases(cls_name)
 
         # For now, check that the address is in the settings.                   # TODO: add getting address from device list
         # Later on, this check will only happen if the unique name
         # of the controller in the settings file that was passed
         # is not found in the device list.
-        # Backwards compatibility fix for port_name:                            # TODO: #242
-        address = 'address'
-        invalid = config.has_settings(('controller', 'address'))
-        if invalid:
-            address = 'port_name'
-            invalid = config.has_settings(('controller', 'port_name'))
-        if invalid:
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'controller/address',
-                            f'No address in {config.last_file}')
-            raise RuntimeError
-        address = config.get('controller', address)
-        if not address:
+        try:
+            address = config.get('controller', 'address')
+        except NoOptionError:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'controller/address',
                             f'No address in {config.last_file}')
             raise RuntimeError
 
-        cls_name = config['controller']['controller_class']
         try:
             cls = base.class_from_name('controller', cls_name)
         except ValueError:
@@ -1465,10 +1424,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         controller = cls(settings=config, address=address,
                          sets_energy=is_primary)
-        # Temporarily connect device.error_occurred to
-        # self.error_occurred in order to report errors that
-        # happen during creation of the device object (which delays
-        # its own errors).
+        # Connect device.error_occurred to self.error_occurred in order
+        # to report errors that happen during creation of the device
+        # object (which delays its own errors).
         controller.error_occurred.connect(self.error_occurred)
         # Ensure device errors also abort the measurement.
         controller.error_occurred.connect(self._on_hardware_error)
@@ -1712,10 +1670,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         tmp_path = self._temp_dir
         base_path = tmp_path.parent
-        # Backwards compatibility fix                                           # TODO: #242
-        has_option = self.settings.has_option('measurement_info', 'suffix')
-        option = 'suffix' if has_option else 'tag'
-        suffix = self.settings.get('measurement_info', option, fallback='')
+        suffix = self.settings.get('measurement_info', 'suffix', fallback='')
         name_tag = ('_' + suffix) if suffix else ''
         current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         self.settings.set('measurement_info', 'ended', current_time)
