@@ -66,33 +66,36 @@ def fixture_mock_implementation_run(rpars, mock_compile, mocker):
     def _make_sdtl(*_, **__):
         Path('SD.TL').touch()
 
-    # Patch away the stuff that does not exist on Windows,
-    # with the sole purpose of actually running the tests.
-    mock_missing_on_windows = {
-        'os.getpgid': mocker.patch('os.getpgid', create=True),
-        'os.killpg': mocker.patch('os.killpg', create=True),
-        }
-    # os.setsid is not in the dictionary because it will
-    # not be called as we mock subprocess.Popen below.
-    mocker.patch('os.setsid', create=True)
+    # Note: os calls are no longer necessary, as SearchJob
+    # handles the process management via psutil and multiprocessing.
 
-    mock_process = mocker.MagicMock()
-    mock_process.poll.side_effect = (None, 'search finished')
-    mock_process.communicate = _make_sdtl
+    # mock the timer to always expire immediately
     mock_eval_timer = mocker.MagicMock()
-    mock_eval_timer.has_expired.return_value=True
+    mock_eval_timer.has_expired.return_value = True
+
+    # mock the SearchJob, which handles the search process
+    # create SD.TL when started, and then behaves as if it finished
+    mock_search_job = mocker.MagicMock()
+    mock_search_job.start.side_effect = lambda: _make_sdtl()
+    mock_search_job.is_running.side_effect = (True, False)
+
+    # set required rpars attributes
     rpars.searchEvalTime = 0.05  # Seconds
     rpars.output_interval = 1    # Generations
     mock_run = {
         'sleep': mocker.patch('time.sleep'),  # Make tests faster
-        'popen': mocker.patch('subprocess.Popen', return_value=mock_process),
         'results': mocker.patch(f'{_MODULE}.processSearchResults'),
         'update_rpars': mocker.patch(f'{_MODULE}.parameters.update'),
-        'eval_timer': mocker.patch(f'{_MODULE}.ExpiringTimerWithDeadline',
-                                   return_value=mock_eval_timer),
-        'os.waitpid': mocker.patch('os.waitpid'),
-        }
-    mocks = {**mock_compile, **mock_missing_on_windows, **mock_run}
+        'eval_timer': mocker.patch(
+            f'{_MODULE}.ExpiringTimerWithDeadline',
+            return_value=mock_eval_timer,
+        ),
+        'search_job': mocker.patch(
+            f'{_MODULE}.SearchJob',
+            return_value=mock_search_job,
+        ),
+    }
+    mocks = {**mock_compile, **mock_run}
     # When running, writeSearchOutput is called as part of
     # processSearchResults, which we mock away above. This
     # means it will never be called in the tests.
@@ -179,6 +182,7 @@ class TestSearch:
         not_called.assert_not_called()
         assert rpars.halt >= 3
 
+    @pytest.mark.timeout(2)
     @use('n_cores',
          'vary',
          'mpirun_available',
@@ -191,8 +195,7 @@ class TestSearch:
             # The following mocks are called multiple times,
             # while test_no_displacements uses assert_called_once.
             'copy',
-            'os.getpgid',
-            )
+        )
         mocks_called_multiple_times = [mock_run.pop(n)
                                        for n in called_more_than_once]
         self.test_no_displacements(rpars, mock_run, tmp_path, mocker)
