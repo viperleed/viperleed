@@ -111,7 +111,7 @@ def _run_search_worker(command, input_data, log_path, kill_flag, return_code):
                 stdin=subprocess.PIPE,
                 stdout=log_f,
                 stderr=log_f,
-                encoding='ascii',
+                encoding='utf-8',
                 start_new_session=True,
             ) as proc:
                 # send input data to the process
