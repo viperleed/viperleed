@@ -76,7 +76,7 @@ def fixture_mock_implementation_run(rpars, mock_compile, mocker):
     # mock the SearchJob, which handles the search process
     # create SD.TL when started, and then behaves as if it finished
     mock_search_job = mocker.MagicMock()
-    mock_search_job.start.side_effect = lambda: _make_sdtl()
+    mock_search_job.start.side_effect = _make_sdtl
     mock_search_job.is_running.side_effect = (True, False)
 
     # set required rpars attributes
