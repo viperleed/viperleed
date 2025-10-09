@@ -49,7 +49,7 @@ class TestCompileRefcalc:
     section_name = 'refcalc'
 
     @fixture(name='make_comptask')
-    def factory_comptask(self, mocker):
+    def factory_comptask(self, mocker, tmp_path):
         """Return a fake RefcalcCompileTask."""
         def _mock_sources(sources):
             if sources is None:
@@ -72,7 +72,7 @@ class TestCompileRefcalc:
                 param='test_param',
                 copy_source_files_to_local=mocker.MagicMock(),
                 )
-            task.exec_dir = Path.cwd() / task.foldername
+            task.exec_dir = tmp_path / task.foldername
             task.__str__.return_value = (
                 f'{self.compiler_cls_name} {task.foldername}'
                 )
@@ -155,8 +155,7 @@ class TestCompileRefcalc:
         """Check warnings are emitted when the work directory exists."""
         work = tmp_path / 'test_folder'
         work.mkdir()
-        with execute_in_dir(tmp_path):
-            comptask = make_comptask(sources=(None, None, None, None))
+        comptask = make_comptask(sources=(None, None, None, None))
         run_compile(comptask)
         expect_log = 'Contents may get overwritten.'
         assert expect_log in caplog.text
