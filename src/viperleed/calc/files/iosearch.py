@@ -634,8 +634,8 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             csl = sl
             frompath = ""
         else:
-            crp = rp.domainParams[k].rp
-            csl = rp.domainParams[k].sl
+            crp = rp.domainParams[k].rpars
+            csl = rp.domainParams[k].slab
             frompath = rp.domainParams[k].workdir
             info += "---- DOMAIN {} ----\n".format(k+1)
         prev_parcount = parcount
