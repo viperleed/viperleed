@@ -72,6 +72,7 @@ class TestCompileRefcalc:
                 param='test_param',
                 copy_source_files_to_local=mocker.MagicMock(),
                 )
+            task.exec_dir = Path.cwd() / task.foldername
             task.__str__.return_value = (
                 f'{self.compiler_cls_name} {task.foldername}'
                 )
@@ -152,8 +153,10 @@ class TestCompileRefcalc:
     def test_work_exists_warning(self, make_comptask, run_compile,
                                  tmp_path, caplog):
         """Check warnings are emitted when the work directory exists."""
-        (tmp_path / 'test_folder').mkdir()
-        comptask = make_comptask(sources=(None, None, None, None))
+        work = tmp_path / 'test_folder'
+        work.mkdir()
+        with execute_in_dir(tmp_path):
+            comptask = make_comptask(sources=(None, None, None, None))
         run_compile(comptask)
         expect_log = 'Contents may get overwritten.'
         assert expect_log in caplog.text

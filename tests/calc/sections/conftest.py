@@ -49,8 +49,11 @@ INIT_SURFACES = (
     'Ag(100)',
     'Ag(100)_el_rename',
     )
-INIT_DOMAINS = (  # In the domains subfolder of TEST_DATA
+INIT_DOMAINS = (   # In the domains subfolder of TEST_DATA
     'silver_and_bismuth',
+    )
+DELTA_DOMAINS = (  # Also in the domain subfolder of TEST_DATA
+    'telluride_stacking',
     )
 REFCALC_SURFACES = ('Ag(100)',)
 AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
@@ -242,6 +245,24 @@ def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
                        'TL_VERSION': _NON_INIT_TL_VERSION,}
         )
     return files
+
+
+@fixture(scope='session')
+@parametrize(domains=DELTA_DOMAINS)
+@with_tl_versions
+def delta_domains(domains, tl_version, make_section_tempdir, tensorleed_path):
+    """Collect files, and run a multi-domain delta-amplitude calculation."""
+    setup = BaseCalcFilesSetup(
+        surface_dir=f'domains/{domains}',
+        tmp_test_path=make_section_tempdir(domains, 'deltas'),
+        copy_dirs=['deltas'],
+        )
+    setup.run_calc_from_setup(
+        source=tensorleed_path,
+        preset_params={'RUN': [0, 2],  # init and deltas
+                       'TL_VERSION': tl_version,}
+        )
+    return setup
 
 
 @fixture(scope='session')

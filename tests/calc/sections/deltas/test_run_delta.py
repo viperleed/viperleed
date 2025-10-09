@@ -27,12 +27,13 @@ class TestRunDelta:
     """Tests for the run_delta function."""
 
     @fixture(name='runtask')
-    def factory_runtask(self, mocker):
+    def factory_runtask(self, mocker, tmp_path):
         """Return a fake DeltaRunTask."""
         comptask = mocker.MagicMock(
             exename='test_exe',
             foldername='test_folder',
             )
+        comptask.exec_dir = tmp_path/comptask.foldername
         runtask = mocker.MagicMock(
             comptask=comptask,
             deltaname='test_delta',
@@ -40,6 +41,7 @@ class TestRunDelta:
             deltalogname='test_delta.log',
             din='test input',
             foldername='calculating_test_delta',
+            io_dir=tmp_path,
             )
         runtask.name = 'test_name'
         return runtask

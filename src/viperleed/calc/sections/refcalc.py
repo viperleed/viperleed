@@ -129,6 +129,11 @@ class RefcalcCompileTask:
         """Name of the log file as it should appear in compile_logs."""
         return self.foldername
 
+    @property
+    def exec_dir(self):
+        """Return the path to the folder where compilation takes place."""
+        return Path.cwd() / self.foldername
+
     def get_source_files(self):
         """Return a tuple of source files needed for running a refcalc."""
         sourcedir = Path(self.source_dir).resolve()
@@ -254,7 +259,7 @@ def compile_refcalc(comptask):
     error_info : str
         Description of any error that occurred while compiling.
     """
-    workfolder = Path(comptask.foldername).resolve()
+    workfolder = comptask.exec_dir
     # Make compilation subfolder and go there
     try:
         workfolder.mkdir()

@@ -2,7 +2,10 @@
 
 This module defines tests for the deltas_domains function, the main
 entry point of a delta-amplitudes calculation for a multi-domain
-system.
+system. The tests in this module only cover implementation details
+of the deltas_domains function via mocks. Tests for actually executing
+a multi-domain delta-amplitudes calculation can be found in module
+test_calculate_for_real.py.
 """
 
 __authors__ = (

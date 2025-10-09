@@ -29,3 +29,13 @@ class TestDeltasAg100:
     def test_deltas_zip_created(self, delta_files_ag100):
         """Check that an archive with delta-amplitude files was created."""
         assert delta_files_ag100.expected_file_exists('Deltas/Deltas_001.zip')
+
+
+class TestDeltasDomains:
+    """Test execution of a multi-domain delta-amplitudes calculation."""
+
+    def test_successful_run(self, delta_domains):
+        """Check that delta-amplitude calculation exits without errors."""
+        assert not delta_domains.failed
+        assert delta_domains.records is not None
+        assert delta_domains.records.get_last_state_for_section('delta')

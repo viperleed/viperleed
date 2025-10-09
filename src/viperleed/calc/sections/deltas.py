@@ -59,6 +59,13 @@ class DeltaCompileTask:
     source_dir : Path
         Path to the folder containing the static Fortran
         source files to be compiled.
+
+    Notes
+    -----
+    It is important to create instances of this class while the current
+    directory is the work directory for the specific domain: the main
+    work directory for a single-domain calculation, the relevant
+    subfolder of the main work directory for multi-domain ones.
     """
 
     def __init__(self, param, source_dir, index):
@@ -87,12 +94,24 @@ class DeltaCompileTask:
         self.param = param
         self.source_dir = Path(source_dir).resolve()  # where the fortran files are
 
+        # _root is the folder that contains .foldername. Compilation
+        # happens in self.exec_dir, but _root contains the tensors
+        # required for the calculation. It is also in _root that the
+        # results of the delta calculation are placed when finished.
+        # This is critical for multi-domain calculations (Issue #440).
+        self._root = Path.cwd()
+
         if os.name == 'nt':
             self.exename += '.exe'
 
     def __str__(self):
         """Return a string representation of this DeltaCompileTask."""
         return f'{type(self).__name__} {self.foldername}'
+
+    @property
+    def exec_dir(self):
+        """Return the path to the folder where the compiled executable is."""
+        return self._root / self.foldername
 
     @property
     def logfile(self):
@@ -162,6 +181,11 @@ class DeltaRunTask:
         return f'calculating_{self.name}'
 
     @property
+    def io_dir(self):
+        """Path where inputs are and results should be placed."""
+        return self.comptask.exec_dir.parent
+
+    @property
     def name(self):
         """Return a name for this task."""
         return self.deltaname
@@ -175,9 +199,9 @@ class DeltaRunTask:
 def run_delta(runtask):
     """Execute a single delta-amplitude DeltaRunTask.
 
-    The calculation is executed in a subfolder of the current working
-    directory. The subfolder is removed upon successful execution.
-    This function is meant to be executed by parallelized workers.
+    The calculation is executed in a subfolder of runtask.io_dir. The
+    subfolder is removed upon successful execution. This function is
+    meant to be executed by parallelized workers.
 
     Parameters
     ----------
@@ -191,8 +215,7 @@ def run_delta(runtask):
         A message with information about errors occurred during
         execution of `runtask`.
     """
-    base = Path.cwd()
-    workfolder = base / runtask.foldername
+    workfolder = runtask.io_dir / runtask.foldername
     # Make folder and go there:
     try:
         workfolder.mkdir()
@@ -201,7 +224,7 @@ def run_delta(runtask):
                        'Contents may get overwritten.')
     with execute_in_dir(workfolder):
         # Collect tensor file
-        tensor = base / DEFAULT_TENSORS / runtask.tensorname
+        tensor = runtask.io_dir / DEFAULT_TENSORS / runtask.tensorname
         try:
             shutil.copy2(tensor, 'AMP')
         except FileNotFoundError:
@@ -218,7 +241,7 @@ def run_delta(runtask):
         # Fetch compiled executable
         exename = runtask.comptask.exename
         try:
-            shutil.copy2(base / runtask.comptask.foldername / exename, '.')
+            shutil.copy2(runtask.comptask.exec_dir / exename, '.')
         except OSError:
             logger.error('Error getting delta executable: ', exc_info=True)
             return (f'Error encountered by {runtask}: '
@@ -244,7 +267,7 @@ def run_delta(runtask):
 
         # Copy delta file out
         try:
-            shutil.copy2('DELWV', base / runtask.deltaname)
+            shutil.copy2('DELWV', runtask.io_dir / runtask.deltaname)
         except OSError:
             logger.error('Failed to copy delta output file DELWV to main '
                          f'folder as {runtask.deltaname}', exc_info=True)
@@ -259,7 +282,7 @@ def run_delta(runtask):
             logger.warning('Could not read local delta '
                            f'log for {runtask.name}')
         if log:
-            deltalog = base / runtask.deltalogname
+            deltalog = runtask.io_dir / runtask.deltalogname
             try:  # pylint: disable=too-many-try-statements
                 with deltalog.open('a', encoding='utf-8') as collated_log:
                     collated_log.write(
@@ -297,7 +320,7 @@ def compile_delta(comptask):
     error_info : str
         Description of any error that occurred while compiling.
     """
-    workfolder = Path(comptask.foldername).resolve()
+    workfolder = comptask.exec_dir
     try:
         workfolder.mkdir()
     except FileExistsError:
