@@ -12,6 +12,10 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
 
+import re
+
+from viperleed.calc.constants import LOG_PREFIX
+
 
 class TestDeltasAg100:
     """Test the successful outcome of a delta-amplitudes calculation."""
@@ -33,6 +37,15 @@ class TestDeltasAg100:
 
 class TestDeltasDomains:
     """Test execution of a multi-domain delta-amplitudes calculation."""
+
+    def test_compile_folders_handled(self, delta_domains):
+        """Ensure that compile folders/logs were processed correctly."""
+        log_file = next(delta_domains.work_path.glob(f'{LOG_PREFIX}*.log'))
+        # This regex covers
+        #  (i) deletion of compilation folder
+        # (ii) moving of compile_log file
+        assert not re.search(r'WARNING.*Delta_Compile',
+                             log_file.read_text())
 
     def test_successful_run(self, delta_domains):
         """Check that delta-amplitude calculation exits without errors."""

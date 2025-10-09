@@ -464,14 +464,17 @@ def _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks):
 
     # Clean up compile folders
     for comp_task in compile_tasks:
-        leedbase.copy_compile_log(rpars,
-                                  comp_task.logfile,
-                                  comp_task.compile_log_name)
+        with execute_in_dir(comp_task.exec_dir.parent):
+            # The compile_logs folder is in the parent directory
+            # of the one in which the delta compilation occurs.
+            leedbase.copy_compile_log(rpars,
+                                      comp_task.logfile,
+                                      comp_task.compile_log_name)
         try:
-            shutil.rmtree(comp_task.foldername)
+            shutil.rmtree(comp_task.exec_dir)
         except Exception:
             logger.warning('Error deleting delta '
-                           f'compile folder {comp_task.foldername}')
+                           f'compile folder {comp_task.exec_dir}')
 
 
 def _compile_deltas_in_parallel(rpars, compile_tasks):
@@ -505,9 +508,12 @@ def _compile_deltas_in_parallel(rpars, compile_tasks):
                                       compile_tasks)
     except Exception:  # Save log files in case of error
         for task in compile_tasks:
-            leedbase.copy_compile_log(rpars,
-                                      task.logfile,
-                                      task.compile_log_name)
+            with execute_in_dir(task.exec_dir.parent):
+                # The compile_logs folder is in the parent directory
+                # of the one in which the delta compilation occurs.
+                leedbase.copy_compile_log(rpars,
+                                          task.logfile,
+                                          task.compile_log_name)
         raise
     return True
 
