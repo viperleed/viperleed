@@ -120,11 +120,6 @@ class RefcalcCompileTask:
         return f'{type(self).__name__} {self.foldername}'
 
     @property
-    def logfile(self):
-        """Return the (relative) path to the compilation log file."""
-        return Path(self.foldername) / 'fortran-compile.log'
-
-    @property
     def compile_log_name(self):
         """Name of the log file as it should appear in compile_logs."""
         return self.foldername
@@ -133,6 +128,11 @@ class RefcalcCompileTask:
     def exec_dir(self):
         """Return the path to the folder where compilation takes place."""
         return Path.cwd() / self.foldername
+
+    @property
+    def logfile(self):
+        """Return the (relative) path to the compilation log file."""
+        return Path(self.foldername) / 'fortran-compile.log'
 
     def get_source_files(self):
         """Return a tuple of source files needed for running a refcalc."""
