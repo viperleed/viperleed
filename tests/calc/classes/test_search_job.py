@@ -60,16 +60,25 @@ def test_correct_return_code():
 
 @pytest.mark.timeout(5)
 def test_writing_stdout_and_stderr_to_log_file(tmp_path, subtests):
-    """Both stdout and stderr should be redirected into the log file."""
+    """Both stdout and stderr should be redirected into the log file.
+
+    Note that we explicitly test for UTF-8 characters. To ensure
+    compatibility on Windows, we reconfigure the sys streams to use
+    UTF-8 encoding. This is necessary as the tests are run in a
+    non-console environment, which, on Windows, defaults to the 'locale'
+    (ANSI) encoding.
+    """
     log_file = tmp_path / 'search_job.log'
     messages = {
         'stdout': 'test log output with utf-8 😄',
         'stderr': 'test error output with utf-8 😡',
     }
 
-    # print to both stdout and stderr
+    # reconfigure sys.stdout and sys.stderr and print
     code = (
         'import sys\n'
+        'sys.stdout.reconfigure(encoding="utf-8")\n'
+        'sys.stderr.reconfigure(encoding="utf-8")\n'
         f'print({messages["stdout"]!r})\n'
         f'print({messages["stderr"]!r}, file=sys.stderr)\n'
     )
