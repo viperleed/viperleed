@@ -57,13 +57,20 @@ from viperleed.gui.measure.camera.drivers.imagingsource.properties import (
     store_property,
     )
 from viperleed.gui.measure.camera.drivers.imagingsource.models import ISModels
+from viperleed.gui.measure.classes.settings import SystemSettings
 
-
-dll_path = Path(__file__).resolve().parent
 
 c_float_p = POINTER(c_float)
 c_long_p = POINTER(c_long)
 c_int_p = POINTER(c_int)
+
+
+def get_dll_path():
+    """Return the path to the dll files."""
+    dll_path = SystemSettings().get('PATHS', 'drivers', fallback=None)
+    if dll_path:
+        return Path(dll_path)
+    raise ImportError
 
 
 def _to_bytes(string):
@@ -256,6 +263,7 @@ class WindowsCamera:
     # Note: ctypes assumes restype == c_int. Thus restype is
     # omitted below where this is the case.
 
+    dll_path = get_dll_path()
     if sys.maxsize > 2**32:
         try:
             windll.LoadLibrary(str(dll_path / "TIS_UDSHL11_x64.dll"))
