@@ -60,12 +60,6 @@ from viperleed.gui.measure.camera.drivers.imagingsource.models import ISModels
 
 
 dll_path = Path(__file__).resolve().parent
-try:
-    os.add_dll_directory(dll_path)
-except AttributeError:
-    pass
-sys.path.append(str(dll_path))
-
 
 c_float_p = POINTER(c_float)
 c_long_p = POINTER(c_long)
