@@ -513,7 +513,7 @@ class ConstraintLine(ParsedLine):
         if self._rhs.lower().strip().startswith('total '):
             logger.log(_BELOW_DEBUG, 'Detected "total" tag.')
 
-            if self.mode.mode is not PerturbationMode.OCC:
+            if self.mode_token.mode is not PerturbationMode.OCC:
                 raise DisplacementsSyntaxError(
                     'The "total" tag is only allowed for occupational '
                     'constraints.'
@@ -596,7 +596,7 @@ class OffsetsLine(ParsedLine):
         if len(parts) < 2:  # at least mode and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        self.mode = self._parse_mode(parts[0])
+        self.mode_token = self._parse_mode(parts[0])
         targets_str, dir_str = separate_direction_from_targets(
             ' '.join(parts[1:])
         )
@@ -604,14 +604,14 @@ class OffsetsLine(ParsedLine):
         # parse targets
         self.targets = self._parse_targets(targets_str)
 
-        if self.mode.mode is PerturbationMode.GEO:
+        if self.mode_token.mode is PerturbationMode.GEO:
             # expect and parse direction specifier
             # will raise if no direction is given
             self.direction = self._parse_direction(dir_str)
             # if geometric, expected DOF is given by direction
             expected_dof = self.direction.dof
 
-        if self.mode.mode is not PerturbationMode.GEO and dir_str:
+        if self.mode_token.mode is not PerturbationMode.GEO and dir_str:
             raise DisplacementsSyntaxError(
                 'Direction tokens in the OFFSETS block are only allowed for '
                 'geometric offsets.'
@@ -635,9 +635,9 @@ class OffsetsLine(ParsedLine):
 
     def _format_lhs_str(self):
         lhs = ', '.join(str(t) for t in self.targets)
-        if self.mode.mode is PerturbationMode.GEO:
+        if self.mode_token.mode is PerturbationMode.GEO:
             lhs += f' {self.direction}'
-        return f'{self.mode} {lhs}'
+        return f'{self.mode_token} {lhs}'
 
     def _format_rhs_str(self):
         return f'{self.offset}'
