@@ -38,6 +38,7 @@ from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLDisplacement,
     )
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
@@ -127,6 +128,8 @@ _SIMPLE_NUMERICAL_PARAMS = {
 # parameters that can be optimized in FD optimization
 _OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i', 'a', 'b', 'c', 'ab', 'abc',}
 
+# algorithms available for the viperleed-jax plugin
+_VLJ_ALGOS = {'CMAES', 'SLSQP', 'BFGS'}
 
 def interpret(rpars, slab=None, silent=False):
     """Interpret rpars.readParams to actual values.
@@ -279,6 +282,13 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             p for p in KNOWN_PARAMS
             if p in self.rpars.readParams and p not in self._param_names
             )
+
+    def _parse_simple_bool(self, val):
+        val_lower = val.lower()
+        for key, values in self.bool_synonyms.items():
+            if val_lower in values:
+                return key
+        raise ValueError(f"Unrecognized boolean value: {val!r}")
 
     # ---------- Methods for interpreting simple parameters -----------
     # Disable pylint warning since, while 6 is a bit many, we can't
@@ -1126,6 +1136,204 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterRangeError(param, given_value=ps_eps,
                                       allowed_range=(0, 1))
 
+    def interpret_vlj_algo(self, assignment):
+        """Assign parameter VLJ_ALGO.
+
+        If no flag is given, sets the used algorithms. If an algorithm name is
+        given as a flag , set the settings for that algorithm.
+        """
+        param = 'VLJ_ALGO'
+
+        flag = assignment.flag.lower()
+        if not flag:  # No flag given, set the used algorithms
+            self._interpret_vlj_algo_set_algos(assignment)
+        else:  # Flag given, set the settings for that algorithm
+            self._ensure_single_flag_assignment(assignment, param)
+            algo = flag.upper()
+            if algo == 'CMAES':
+                for flag_value_pair in assignment.values_str.split(','):
+                    self._interpret_vlj_algo_cmaes(flag_value_pair)
+            elif algo == 'SLSQP':
+                for flag_value_pair in assignment.values_str.split(','):
+                    self._interpret_vlj_algo_slsqp(flag_value_pair)
+            elif algo == 'BFGS':
+                for flag_value_pair in assignment.values_str.split(','):
+                    self._interpret_vlj_algo_bfgs(flag_value_pair)
+            else:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterUnknownFlagError(param, flag)
+
+    def _interpret_vlj_algo_set_algos(self, assignment):
+        """Set the used VLJ algorithms."""
+        param = 'VLJ_ALGORITHM'
+        self._ensure_no_flags_assignment(assignment, param)
+        if not assignment.values:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterHasNoValueError(param)
+
+        # Algorithms to be used are given as single strings, separated by ','
+        algos = [algo.strip().upper() for algo in assignment.values_str.split(',')]
+        for algo in algos:
+            if algo not in _VLJ_ALGOS:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterValueError(
+                    param, message=f'Unknown algorithm {algo!r}')
+
+        # For now, allow a maximum of two algorithms
+        if len(algos) > 2:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(
+                param,
+                message=f'Only one or two algorithms allowed, got {len(algos)}.'
+            )
+
+        # Set the algorithms
+        self.rpars.VLJ_ALGO = algos
+
+    def __interpret_vlj_algo(self, flag_value_pair, algo, param_types, flag_aliases):
+        """Generic interpreter for VLJ_ALGORITHM flags."""
+        param = "VLJ_ALGORITHM"
+        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
+        value_error = f"Value {value!r} is invalid for flag {flag!r}"
+
+        flag = flag_aliases.get(flag, flag)
+        print(flag, value, param_types, flag_aliases)  # Debugging line
+
+        try:
+            if param_types[flag] is bool:
+                parsed_value = self._parse_simple_bool(value)
+            else:
+                parsed_value = param_types[flag](value)
+        except ValueError as exc:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message=value_error) from exc
+        except KeyError:
+            self.rpars.setHaltingLevel(2)
+            raise ParameterUnknownFlagError(param, f"{flag!r}") from None
+        print(parsed_value)  # Debugging line
+        self.rpars.vlj_algo_settings[algo][flag] = parsed_value
+
+    def _interpret_vlj_algo_cmaes(self, flag_value_pair):
+        """Interpret one 'flag value' pair for VLJ_ALGO CMAES."""
+        param_types = {'pop': int, 'max_gens': int, 'ftol': float}
+        flag_aliases = {
+            'population': 'pop', 'pop_size': 'pop',
+            'gens': 'max_gens', 'generations': 'max_gens',
+            'tolerance': 'ftol', 'tol': 'ftol',
+        }
+        self.__interpret_vlj_algo(
+            flag_value_pair, 'CMAES', param_types, flag_aliases)
+
+    def _interpret_vlj_algo_slsqp(self, flag_value_pair):
+        """Interpret one 'flag value' pair for VLJ_ALGO SLSQP."""
+        param_types = {'grad': bool, 'grad_damping': float}
+        flag_aliases = {
+            'use_grad': 'grad',
+            'gradient': 'grad',
+            'gradient_damping': 'grad_damping',
+        }
+        self.__interpret_vlj_algo(
+            flag_value_pair, 'SLSQP', param_types, flag_aliases)
+
+    def _interpret_vlj_algo_bfgs(self, flag_value_pair):
+        """Interpret one 'flag value' pair for VLJ_ALGO BFGS."""
+        param_types = {'grad': bool, 'grad_damping': float}
+        flag_aliases = {
+            'use_grad': 'grad',
+        }
+        self.__interpret_vlj_algo(
+            flag_value_pair, 'BFGS', param_types, flag_aliases)
+
+    def interpret_vlj_batch(self, assignment):
+        """Assign parameter VLJ_BATCH."""
+        param = 'VLJ_BATCH'
+        self._ensure_no_flags_assignment(assignment)
+
+        for flag_value_pair in assignment.values_str.split(','):
+            self._interpret_vlj_batch_flag_value_pair(param, flag_value_pair)
+
+    def _interpret_vlj_batch_flag_value_pair(self, param, flag_value_pair):
+        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
+
+        value_error = f'Value {value!r} is invalid for flag {flag!r}'
+        partype = {'energies': int, 'atoms': int}
+        flag_aliases = {
+            'e': 'energies', 'energy': 'energies',
+            'a': 'atoms', 'atom': 'atoms',
+        }
+        if flag in flag_aliases:
+            flag = flag_aliases[flag]
+        try:
+            numeric = partype[flag](value)
+        except ValueError as exc:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message=value_error) from exc
+        except KeyError:
+            self.rpars.setHaltingLevel(2)
+            raise ParameterUnknownFlagError(param, f"{flag!r}") from None
+
+        # check if valid (positive int or -1 for default)
+        if numeric < -1 or numeric == 0:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterRangeError(param, message=value_error)
+        self.rpars.VLJ_BATCH[flag] = numeric
+
+    def interpret_vlj_config(self, assignment):
+        """Assign parameter VLJ_CONFIG.
+
+        VLJ_CONFIG has several switches that alter the inner workings of the
+        viperleed-jax plugin."""
+        param = 'VLJ_CONFIG'
+        self._ensure_no_flags_assignment(assignment, param)
+        for flag_value_pair in assignment.values_str.split(","):
+            self._interpret_vlj_config_flag_value_pair(param, flag_value_pair)
+
+    def _interpret_vlj_config_flag_value_pair(self, param, flag_value_pair):
+        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
+
+        value_error = f'Value {value!r} is invalid for flag {flag!r}'
+        param_types = {
+            'precondition': bool,
+            'use_symmetry': bool,
+            'recalc_ref_t_matrices': bool,
+            't-leed-l_max': int,
+            'occ_norm': str,
+            'preoptimize_v0r': True,
+        }
+        flag_aliases = {
+            'precon': 'precondition',
+            'symmetry': 'use_symmetry',
+            'recalc': 'recalc_ref_t_matrices',
+            'l_max': 't-leed-l_max',
+            't_leed_lmax': 't-leed-l_max',
+            'lmax': 't-leed-l_max',
+            'occ': 'occ_norm',
+            'occupation': 'occ_norm',
+            'preopt': 'preoptimize_v0r',
+        }
+
+        if flag in flag_aliases:
+            flag = flag_aliases[flag]
+        try:
+            if param_types[flag] is bool:
+                parsed_value = self._parse_simple_bool(value)
+            else:
+                parsed_value = param_types[flag](value)
+        except ValueError as exc:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message=value_error) from exc
+        except KeyError:
+            self.rpars.setHaltingLevel(2)
+            raise ParameterUnknownFlagError(param, f"{flag!r}") from None
+        if flag == 'occ_norm' and parsed_value not in {'mirror', 'project'}:
+            self.rpars.setHaltingLevel(1)
+            message = (
+                f'Invalid value {parsed_value!r} for flag {flag!r}. '
+                'Valid values are "mirror" and "project".'
+            )
+            raise ParameterValueError(param, message=message)
+        self.rpars.VLJ_CONFIG[flag] = parsed_value
+
     @skip_without_matplotlib
     def interpret_plot_iv(self, assignment):
         """Assign parameter PLOT_IV."""
@@ -1284,6 +1492,24 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         if segments[0] is not Section.INITIALIZATION:
             segments.insert(0, Section.INITIALIZATION)
         self.rpars.RUN = [s.value for s in segments]                            # TODO: replace with "segments" to keep Section objects
+
+    def interpret_backend(self, assignment):
+        """Assign parameter BACKEND."""
+        param = 'BACKEND'
+        self._ensure_single_flag_and_value_assignment(assignment)
+
+        # For now, we only support the 'search' flag
+        if assignment.flag.lower() != 'search':
+            self.rpars.setHaltingLevel(1)
+            raise ParameterUnknownFlagError(param, assignment.flag)
+
+        value = assignment.value.lower()
+        if value in ('tenserleed', 'tenser'):
+            self.rpars.BACKEND['search'] = SearchBackend.TENSERLEED
+        elif value in ('viperleed', 'viperleed-jax', 'jax', 'vlj'):
+            self.rpars.BACKEND['search'] = SearchBackend.VLJ
+        else:
+            raise ParameterValueError(param, value)
 
     def interpret_search_beams(self, assignment):
         """Assign parameter SEARCH_BEAMS."""

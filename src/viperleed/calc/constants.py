@@ -24,6 +24,8 @@ DEFAULT_SUPP = 'SUPP'
 DEFAULT_TENSORS = 'Tensors'  # Where Tensor files are stored
 DEFAULT_WORK = 'work'
 DEFAULT_WORK_HISTORY = 'workhistory'
+# epsilon for comparison of user inputs in the DISPLACEMENTS file
+DISPLACEMENTS_FILE_EPS = 1e-6
 LOG_PREFIX = 'viperleed-calc'
 ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 SKIP_IN_DOMAIN_MAIN = (
