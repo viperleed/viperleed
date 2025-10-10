@@ -26,8 +26,14 @@ from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.classes.thermocouple import Thermocouple
-from viperleed.gui.measure.controller import abc
-from viperleed.gui.measure.controller import _vprctrlsettings as _settings
+from viperleed.gui.measure.controller.abc import MeasureControllerABC
+from viperleed.gui.measure.controller.abc import ensure_connected
+from viperleed.gui.measure.controller._vprctrlsettings import (
+    FWVersionViewer,
+    HardwareConfigurationEditor,
+    SerialNumberEditor,
+    UpdateRateSelector,
+    )
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsTag
 
@@ -94,7 +100,7 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 
 
 # too-many-instance-attributes, too-many-public-methods
-class ViPErinoController(abc.MeasureControllerABC):
+class ViPErinoController(MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
     # The box ID is the identifier that differentiates viperleed
@@ -107,7 +113,7 @@ class ViPErinoController(abc.MeasureControllerABC):
     cls_lock = threading.RLock()  # Thread safe access to class properties
     _mandatory_settings = (
         # pylint: disable=protected-access
-        *abc.MeasureControllerABC._mandatory_settings,
+        *MeasureControllerABC._mandatory_settings,
         ('available_commands',),
         ('controller', 'measurement_devices'),
         ('controller', 'firmware_version'),  # also mandatory on serial
@@ -469,7 +475,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.send_message(cmd, message)
 
     @qtc.pyqtSlot()
-    @abc.ensure_connected
+    @ensure_connected
     def get_hardware(self):
         """Get hardware connected to micro controller.
 
@@ -521,18 +527,18 @@ class ViPErinoController(abc.MeasureControllerABC):
         base_handler = super().get_settings_handler()
         handler = SettingsHandler(self.settings, show_path_to_config=True)
         handler.add_option('controller', 'firmware_version',
-                           handler_widget=_settings.FWVersionViewer(self),
+                           handler_widget=FWVersionViewer(self),
                            display_name='Firmware version',
                            tags=SettingsTag.READ_ONLY | SettingsTag.REGULAR)
         handler.add_option('controller', 'device_name',
-                           handler_widget=_settings.SerialNumberEditor(self),
+                           handler_widget=SerialNumberEditor(self),
                            display_name='Serial No.',
                            tags=SettingsTag.REGULAR)
         handler.add_from_handler(base_handler)
         handler.add_complex_section(
-            _settings.HardwareConfigurationEditor(controller=self)
+            HardwareConfigurationEditor(controller=self)
             )
-        widget = _settings.UpdateRateSelector(self)
+        widget = UpdateRateSelector(self)
         tooltip = ('<nobr>The frequency at which the </nobr>controller '
                    'acquires measurements. To minimize noise during regular '
                    'measurements, it should be set to the line frequency of '
@@ -777,7 +783,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.measurements_done()
 
     @qtc.pyqtSlot()
-    @abc.ensure_connected
+    @ensure_connected
     def prepare_to_show_settings(self):
         """Prepare the controller to present settings to the user.
 
@@ -1000,7 +1006,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.send_message(cmd, message)
 
     @qtc.pyqtSlot(str)
-    @abc.ensure_connected
+    @ensure_connected
     def set_serial_number(self, new_serial_nr):
         """Set a 4-characters-long serial number in the electronics."""
         new_serial_nr = new_serial_nr.upper()

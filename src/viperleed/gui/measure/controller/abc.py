@@ -22,12 +22,12 @@ from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
 from viperleed.gui.measure import hardwarebase as base
-from viperleed.gui.measure.classes import settings as _m_settings
 from viperleed.gui.measure.classes.abc import DeviceABC
 from viperleed.gui.measure.classes.abc import DeviceABCErrors
 from viperleed.gui.measure.classes.abc import NO_HARDWARE_INTERFACE
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
+from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 
@@ -268,7 +268,7 @@ class ControllerABC(DeviceABC):
                 coef = self.settings.getsequence('energy_calibration',
                                                  'coefficients',
                                                  fallback=(0, 1))
-            except _m_settings.NotASequenceError:
+            except NotASequenceError:
                 coef = (0, 1)
                 self.emit_error(
                     QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
@@ -278,7 +278,7 @@ class ControllerABC(DeviceABC):
                 domain = self.settings.getsequence('energy_calibration',
                                                    'domain',
                                                    fallback=(-10, 1100))
-            except _m_settings.NotASequenceError:
+            except NotASequenceError:
                 # pylint: disable=redefined-variable-type
                 # Likely pylint bug? domain is Sequence also before.
                 # No reasonable need to bother the user with this. We
