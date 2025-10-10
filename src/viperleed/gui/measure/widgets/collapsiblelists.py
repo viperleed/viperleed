@@ -422,7 +422,7 @@ class CollapsibleCameraList(CollapsibleDeviceList):
             error_settings = [camera_settings,]
             interpolate_config_path(error_settings)
             emit_error(self,
-                       QObjectSettingsErrors.SPECIFIED_SETTINGS_CORRUPTED,
+                       QObjectSettingsErrors.INVALID_CLASS_NAME,
                        error_settings[0],)
             return
         with disconnected_slot(self._emit_and_update_settings,
@@ -708,7 +708,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
             error_settings = [camera_settings,]
             interpolate_config_path(error_settings)
             emit_error(self,
-                       QObjectSettingsErrors.SPECIFIED_SETTINGS_CORRUPTED,
+                       QObjectSettingsErrors.INVALID_CLASS_NAME,
                        error_settings[0],)
             return
         with disconnected_slot(self._emit_and_update_settings,
