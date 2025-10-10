@@ -387,7 +387,7 @@ class TestConstraintLine:
     ):
         con = ConstraintLine(line)
         # Type
-        assert con.type == exp_type
+        assert con.mode_token == exp_type
         # Targets
         act_targets = con.targets
         if 'linked' in line:

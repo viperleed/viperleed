@@ -467,10 +467,10 @@ class ConstraintLine(ParsedLine):
         if len(lhs_parts) < 2:  # at least type and one target
             raise DisplacementsSyntaxError(self.invalid_format_msg)
 
-        self.type = self._parse_mode(lhs_parts[0])
+        self.mode_token = self._parse_mode(lhs_parts[0])
 
         # TODO: Implement Domains here
-        if self.type.mode is PerturbationMode.DOM:
+        if self.mode_token.mode is PerturbationMode.DOM:
             raise NotImplementedError(
                 'Domain constraints are not yet supported.'
             )
