@@ -70,7 +70,7 @@ def class_from_name(package, class_name):
 
 
 def import_with_sub_modules(importable, package=None, recursive=False):
-    """Import importable and sub-modules and yield.
+    """Import importable and sub-modules and yield each of them.
 
     Parameters
     ----------
