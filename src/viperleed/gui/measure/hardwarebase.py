@@ -114,7 +114,7 @@ def import_with_sub_modules(importable, package=None, recursive=False):
             yield from import_with_sub_modules(
                 sub_mod.name, package=module.__package__, recursive=recursive
                 ) if recursive else [importlib.import_module(sub_name)]
-        except ImportError:
+        except (AttributeError if recursive else ImportError):
             pass
 
 
