@@ -50,7 +50,7 @@ def class_from_name(package, class_name):
     ValueError
         If `class_name` could not be found in `package`.
     ImportError
-        If more than one sub-module define class_name.
+        If more than one sub-module defines `class_name`.
     """
     all_modules = import_importable_with_sub_modules(package)
     classes_by_module = ((m, getattr(m, class_name, None))
