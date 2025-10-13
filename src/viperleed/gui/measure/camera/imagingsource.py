@@ -22,14 +22,14 @@ from PyQt5 import QtCore as qtc
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera.abc import CameraABC
 from viperleed.gui.measure.camera.abc import fallback_if_disconnected
-from viperleed.gui.measure.camera.imagingsourcecalibration import (
-    DarkLevelCalibration,
-    )
 from viperleed.gui.measure.camera.drivers.imagingsource import (
     FrameReadyCallbackType,
     ImagingSourceError,
     ISCamera as ImagingSourceDriver,
     SinkFormat,
+    )
+from viperleed.gui.measure.camera.imagingsourcecalibration import (
+    DarkLevelCalibration,
     )
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.abc import SettingsInfo
