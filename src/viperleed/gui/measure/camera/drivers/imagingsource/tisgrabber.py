@@ -67,10 +67,11 @@ c_int_p = POINTER(c_int)
 
 def get_dll_path():
     """Return the path to the dll files."""
-    dll_path = SystemSettings().get('PATHS', 'drivers', fallback=None)
-    if dll_path:
-        return Path(dll_path)
-    raise ImportError
+    drivers_path = SystemSettings().get('PATHS', 'drivers', fallback=None)
+    if not drivers_path:
+        raise ImportError
+    dll_path = next(Path(drivers_path).rglob('TIS_UDSHL11_x64.dll')).parent
+    return dll_path
 
 
 def _to_bytes(string):
