@@ -86,7 +86,7 @@ def import_importable_with_sub_modules(importable):
     Raises
     ------
     AttributeError
-        If importable is not a valid importable.
+        If `importable` is not a valid importable.
     """
     try:
         module = importlib.import_module(f'{__package__}.{importable}')
