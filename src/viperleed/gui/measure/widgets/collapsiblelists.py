@@ -705,7 +705,7 @@ class CollapsibleControllerList(CollapsibleDeviceList):
         try:
             correct_view = self._find_controller_view(settings)
         except ValueError:
-            error_settings = [camera_settings,]
+            error_settings = list(controller_settings)
             interpolate_config_path(error_settings)
             emit_error(self,
                        QObjectSettingsErrors.INVALID_CLASS_NAME,
