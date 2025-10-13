@@ -48,7 +48,7 @@ def class_from_name(package, class_name):
     AttributeError
         If package is not a valid package.
     ValueError
-        If class_name could not be found in package.
+        If `class_name` could not be found in `package`.
     ImportError
         If more than one sub-module define class_name.
     """
