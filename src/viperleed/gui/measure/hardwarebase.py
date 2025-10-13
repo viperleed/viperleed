@@ -52,7 +52,7 @@ def class_from_name(package, class_name):
     ImportError
         If more than one sub-module defines `class_name`.
     """
-    all_modules = import_importable_with_sub_modules(package)
+    all_modules = import_with_sub_modules(package)
     classes_by_module = ((m, getattr(m, class_name, None))
                          for m in all_modules)
     classes = (c for m, c in classes_by_module
@@ -69,45 +69,53 @@ def class_from_name(package, class_name):
                       f'defines {class_name} class.')
 
 
-def import_importable_with_sub_modules(importable):
-    """Import importable, all its direct sub-modules, and return them.
+def import_with_sub_modules(importable, package=None, recursive=False):
+    """Import importable and sub-modules and yield.
 
     Parameters
     ----------
     importable : str
         A module or package that should be imported
         along with its potential sub-modules.
+    package : str or None, optional
+        A package from which to import `importable`. If None,
+        __package__ will be used instead. Default is None.
+    recursive : bool, optional
+        Whether modules should be imported recursively. If True,
+        a recursive import of sub-sub-modules is performed.
+        Default is False.
 
-    Returns
-    -------
-    all_modules : list
-        A list of modules.
+    Yields
+    ------
+    module : module
+        An imported module.
 
     Raises
     ------
     AttributeError
         If `importable` is not a valid importable.
     """
+    package = package or __package__
     try:
-        module = importlib.import_module(f'{__package__}.{importable}')
+        module = importlib.import_module(f'{package}.{importable}')
     except ImportError as exc:
-        raise AttributeError(f'{__package__} does not contain '
+        raise AttributeError(f'{package} does not contain '
                              f'an importable named {importable}') from exc
+    yield module
 
-    all_modules = [module]
     try:
         module_path = module.__path__
     except AttributeError:  # A simple module, not a package
-        return all_modules
+        return
 
     for sub_mod in pkgutil.iter_modules(module_path):
+        sub_name = f'{module.__package__}.{sub_mod.name}'
         try:
-            all_modules.append(
-                importlib.import_module(f'{module.__package__}.{sub_mod.name}')
-                )
+            yield from import_with_sub_modules(
+                sub_mod.name, package=module.__package__, recursive=recursive
+                ) if recursive else [importlib.import_module(sub_name)]
         except ImportError:
             pass
-    return all_modules
 
 
 def emit_error(sender, error, *msg_args, **msg_kwargs):
@@ -478,7 +486,7 @@ def get_devices(package):
                 and not inspect.isabstract(cls)
                 and hasattr(cls, 'list_devices'))
 
-    all_modules = import_importable_with_sub_modules(package)
+    all_modules = import_with_sub_modules(package)
     devices = {}
     for module in all_modules:
         for _, cls in inspect.getmembers(module, _filter_device_cls):
