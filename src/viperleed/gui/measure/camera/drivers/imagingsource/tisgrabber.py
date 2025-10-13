@@ -70,7 +70,10 @@ def get_dll_path():
     drivers_path = SystemSettings().get('PATHS', 'drivers', fallback=None)
     if not drivers_path:
         raise ImportError
-    dll_path = next(Path(drivers_path).rglob('TIS_UDSHL11_x64.dll')).parent
+    try:
+        dll_path = next(Path(drivers_path).rglob('TIS_UDSHL11*.dll')).parent
+    except StopIteration:
+        raise ImportError from None
     return dll_path
 
 
