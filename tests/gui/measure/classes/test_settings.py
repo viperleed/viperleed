@@ -37,7 +37,7 @@ def test_get_aliases_path(mocker):
     mock_get = mocker.patch(f'{_MODULE}.get_qsettings', return_value=fake_qs)
     result = get_aliases_path()
     assert result == fake_path.resolve()
-    mock_get.assert_called_once_with('Aliases')
+    mock_get.assert_called_once_with('aliases')
 
 
 class TestEnsureAliasesExist:
@@ -92,7 +92,7 @@ class TestInterpolateConfigPath:
         no_replacements = list(files)
         interpolate_config_path(no_replacements)
         assert no_replacements == list(files)
-        mock_get.assert_called_once_with('Measurement')
+        mock_get.assert_called_once_with('measurement')
 
     def test_success(self, mocker):
         """Check successful interpolation of a path."""
