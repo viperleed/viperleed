@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 import abc
 import sys
 import types
+
 import pytest
 
 from viperleed.gui.measure.hardwarebase import class_from_name

@@ -52,9 +52,8 @@ def class_from_name(package, class_name):
     ImportError
         If more than one sub-module defines `class_name`.
     """
-    all_modules = import_with_sub_modules(package)
     classes_by_module = ((m, getattr(m, class_name, None))
-                         for m in all_modules)
+                         for m in import_with_sub_modules(package))
     classes = (c for m, c in classes_by_module
                if c and c.__module__ == m.__name__)
     try:
@@ -486,9 +485,8 @@ def get_devices(package):
                 and not inspect.isabstract(cls)
                 and hasattr(cls, 'list_devices'))
 
-    all_modules = import_with_sub_modules(package)
     devices = {}
-    for module in all_modules:
+    for module in import_with_sub_modules(package):
         for _, cls in inspect.getmembers(module, _filter_device_cls):
             dummy_instance = cls()
             # list_devices raises a DefaultSettingsError if the default
