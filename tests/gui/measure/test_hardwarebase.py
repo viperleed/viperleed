@@ -53,7 +53,7 @@ def fake_pkg(mocker):
 
     # Mock pkgutil.iter_modules to reflect whatever submodules exist.
     def fake_iter_modules(path):
-        return [types.SimpleNamespace(name=n) for n in submodules.keys()]
+        return [types.SimpleNamespace(name=n) for n in submodules]
 
     mocker.patch('pkgutil.iter_modules', side_effect=fake_iter_modules)
 
