@@ -102,6 +102,31 @@ class TestImportWithSubModules:
         expect_names = ['fakepkg',]
         assert names == expect_names
 
+    def test_import_with_submodules_recursive(self, fake_pkg, mocker):
+        sub_a = fake_pkg.submodules['sub_a']
+        sub_a.__path__ = ['dummy_sub_path']
+        sub_a.__package__ = 'fakepkg.sub_a'
+
+        mocker.patch(
+            'pkgutil.iter_modules',
+            side_effect=[
+                [types.SimpleNamespace(name='sub_a')],
+                [types.SimpleNamespace(name='nested_sub')]
+                ],
+            )
+
+        nested = types.ModuleType('fakepkg.sub_a.nested_sub')
+        fake_pkg.add_submodule('sub_a.nested_sub', nested)
+
+        names = [m.__name__ for m in import_with_sub_modules('fakepkg',
+                                                             recursive=True)]
+        expect_names = [
+            'fakepkg',
+            'fakepkg.sub_a',
+            'fakepkg.sub_a.nested_sub',   # Recursively imported module
+            ]
+        assert names == expect_names
+
 
 class TestClassFromName:
     """Tests for the class_from_name function."""
