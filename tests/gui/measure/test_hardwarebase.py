@@ -19,8 +19,8 @@ from viperleed.gui.measure.hardwarebase import get_devices
 from viperleed.gui.measure.hardwarebase import import_with_sub_modules
 
 
-@pytest.fixture
-def fake_pkg(mocker):
+@pytest.fixture(name='fake_pkg')
+def fixture_fake_pkg(mocker):
     """
     Create a fake package structure like:
     fakepkg/
