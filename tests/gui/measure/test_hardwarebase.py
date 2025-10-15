@@ -19,6 +19,17 @@ from viperleed.gui.measure.hardwarebase import get_devices
 from viperleed.gui.measure.hardwarebase import import_with_sub_modules
 
 
+def in_module(module, forced_name=''):
+    """Register a class to belong to a module."""
+    def _register_cls(cls):
+        if forced_name:
+            cls.__name__ = forced_name
+        cls.__module__ = module.__name__
+        setattr(module, cls.__name__, cls)
+        return cls
+    return _register_cls
+
+
 @pytest.fixture(name='fake_pkg')
 def fixture_fake_pkg(mocker):
     """
@@ -62,10 +73,9 @@ def fixture_fake_pkg(mocker):
 
     # Define submodule containing a class A.
     sub_a = types.ModuleType('fakepkg.sub_a')
+    @in_module(sub_a)
     class A:
         pass
-    A.__module__ = sub_a.__name__
-    sub_a.A = A
     pkg.add_submodule('sub_a', sub_a)
 
     return pkg
@@ -101,11 +111,9 @@ def test_class_from_name_no_class_found(fake_pkg):
 def test_class_from_name_duplicate_classes(fake_pkg):
     # Add submodule that defines another A
     sub_b = types.ModuleType('fakepkg.sub_b')
+    @in_module(sub_b, forced_name='A')
     class A2:
         pass
-    A2.__name__ = 'A'
-    A2.__module__ = sub_b.__name__
-    sub_b.A = A2
     fake_pkg.add_submodule('sub_b', sub_b)
 
     with pytest.raises(ImportError):
@@ -120,12 +128,10 @@ def test_get_devices_collects_all_devices(fake_pkg):
         def __init__(self, name):
             self.unique_name = name
 
+    @in_module(driver_a)
     class DummyDevice:
         def list_devices(self):
             return [DummyDeviceInfo('device_a')]
-
-    DummyDevice.__module__ = driver_a.__name__
-    driver_a.DummyDevice = DummyDevice
     fake_pkg.add_submodule('driver_a', driver_a)
 
     devices = get_devices('fakepkg')
@@ -142,13 +148,11 @@ def test_get_devices_ignores_non_device_classes(fake_pkg):
     # Add abstract class with list_devices. 'A' already is a
     # non-abstract class without 'list_devices', so we do not
     # need to add a non-device class.
+    @in_module(sub)
     class AbstractDevice(metaclass=abc.ABCMeta):
         @abc.abstractmethod
         def list_devices(self):
             pass
-
-    AbstractDevice.__module__ = sub.__name__
-    sub.AbstractDevice = AbstractDevice
     fake_pkg.add_submodule('drivers', sub)
 
     devices = get_devices('fakepkg')
