@@ -73,8 +73,7 @@ def fixture_fake_pkg(mocker):
 
 # Tests for import_with_sub_modules
 def test_import_with_sub_modules_yields_main_and_submodules(fake_pkg):
-    result = list(import_with_sub_modules('fakepkg'))
-    names = [m.__name__ for m in result]
+    names = [m.__name__ for m in import_with_sub_modules('fakepkg')]
     expect_names = [
         'fakepkg',        # First the top-level module
         'fakepkg.sub_a',  # Then all its submodules
@@ -85,7 +84,7 @@ def test_import_with_sub_modules_yields_main_and_submodules(fake_pkg):
 def test_import_with_sub_modules_invalid_import(mocker):
     mocker.patch('importlib.import_module', side_effect=ImportError)
     with pytest.raises(AttributeError):
-        tmp = list(import_with_sub_modules('nonexistent'))
+        _ = list(import_with_sub_modules('nonexistent'))
 
 
 # Tests for class_from_name
