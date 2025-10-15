@@ -77,83 +77,84 @@ def fixture_fake_pkg(mocker):
     class A:
         pass
     pkg.add_submodule('sub_a', sub_a)
-
     return pkg
 
 
-# Tests for import_with_sub_modules
-def test_import_with_sub_modules_yields_main_and_submodules(fake_pkg):
-    names = [m.__name__ for m in import_with_sub_modules('fakepkg')]
-    expect_names = [
-        'fakepkg',        # First the top-level module
-        'fakepkg.sub_a',  # Then all its submodules
-        ]
-    assert names == expect_names
+class TestImportWithSubModules:
+    """Tests for the import_with_submodules iterator."""
+
+    def test_yield_main_and_submodule(self, fake_pkg):
+        names = [m.__name__ for m in import_with_sub_modules('fakepkg')]
+        expect_names = [
+            'fakepkg',        # First the top-level module
+            'fakepkg.sub_a',  # Then all its submodules
+            ]
+        assert names == expect_names
+
+    def test_invalid_import(self, mocker):
+        mocker.patch('importlib.import_module', side_effect=ImportError)
+        with pytest.raises(AttributeError):
+            _ = list(import_with_sub_modules('nonexistent'))
 
 
-def test_import_with_sub_modules_invalid_import(mocker):
-    mocker.patch('importlib.import_module', side_effect=ImportError)
-    with pytest.raises(AttributeError):
-        _ = list(import_with_sub_modules('nonexistent'))
+class TestClassFromName:
+    """Tests for the class_from_name function."""
 
+    def test_find_class(self, fake_pkg):
+        cls = class_from_name('fakepkg', 'A')
+        assert cls.__name__ == 'A'
 
-# Tests for class_from_name
-def test_class_from_name_finds_class(fake_pkg):
-    cls = class_from_name('fakepkg', 'A')
-    assert cls.__name__ == 'A'
+    def test_no_class_found(self, fake_pkg):
+        with pytest.raises(ValueError):
+            class_from_name('fakepkg', 'NotExist')
 
-
-def test_class_from_name_no_class_found(fake_pkg):
-    with pytest.raises(ValueError):
-        class_from_name('fakepkg', 'NotExist')
-
-
-def test_class_from_name_duplicate_classes(fake_pkg):
-    # Add submodule that defines another A
-    sub_b = types.ModuleType('fakepkg.sub_b')
-    @in_module(sub_b, forced_name='A')
-    class A2:
-        pass
-    fake_pkg.add_submodule('sub_b', sub_b)
-
-    with pytest.raises(ImportError):
-        class_from_name('fakepkg', 'A')
-
-
-# Tests for get_devices
-def test_get_devices_collects_all_devices(fake_pkg):
-    driver_a = types.ModuleType('fakepkg.driver_a')
-
-    class DummyDeviceInfo:
-        def __init__(self, name):
-            self.unique_name = name
-
-    @in_module(driver_a)
-    class DummyDevice:
-        def list_devices(self):
-            return [DummyDeviceInfo('device_a')]
-    fake_pkg.add_submodule('driver_a', driver_a)
-
-    devices = get_devices('fakepkg')
-    assert len(devices) == 1
-    assert 'device_a' in devices
-    cls, dev = devices['device_a']
-    assert cls is DummyDevice
-    assert dev.unique_name == 'device_a'
-
-
-def test_get_devices_ignores_non_device_classes(fake_pkg):
-    sub = types.ModuleType('fakepkg.drivers')
-
-    # Add abstract class with list_devices. 'A' already is a
-    # non-abstract class without 'list_devices', so we do not
-    # need to add a non-device class.
-    @in_module(sub)
-    class AbstractDevice(metaclass=abc.ABCMeta):
-        @abc.abstractmethod
-        def list_devices(self):
+    def test_duplicate_classes(self, fake_pkg):
+        # Add submodule that defines another A
+        sub_b = types.ModuleType('fakepkg.sub_b')
+        @in_module(sub_b, forced_name='A')
+        class A2:
             pass
-    fake_pkg.add_submodule('drivers', sub)
+        fake_pkg.add_submodule('sub_b', sub_b)
 
-    devices = get_devices('fakepkg')
-    assert not devices
+        with pytest.raises(ImportError):
+            class_from_name('fakepkg', 'A')
+
+
+class TestGetDevices:
+    """Tests for the get_devices function."""
+
+    def test_device_getting(self, fake_pkg):
+        driver_a = types.ModuleType('fakepkg.driver_a')
+
+        class DummyDeviceInfo:
+            def __init__(self, name):
+                self.unique_name = name
+
+        @in_module(driver_a)
+        class DummyDevice:
+            def list_devices(self):
+                return [DummyDeviceInfo('device_a')]
+        fake_pkg.add_submodule('driver_a', driver_a)
+
+        devices = get_devices('fakepkg')
+        assert len(devices) == 1
+        assert 'device_a' in devices
+        cls, dev = devices['device_a']
+        assert cls is DummyDevice
+        assert dev.unique_name == 'device_a'
+
+    def test_ignore_non_device_classes(self, fake_pkg):
+        sub = types.ModuleType('fakepkg.drivers')
+
+        # Add abstract class with list_devices. 'A' already is a
+        # non-abstract class without 'list_devices', so we do not
+        # need to add a non-device class.
+        @in_module(sub)
+        class AbstractDevice(metaclass=abc.ABCMeta):
+            @abc.abstractmethod
+            def list_devices(self):
+                pass
+        fake_pkg.add_submodule('drivers', sub)
+
+        devices = get_devices('fakepkg')
+        assert not devices
