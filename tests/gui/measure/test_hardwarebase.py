@@ -113,31 +113,26 @@ def test_class_from_name_duplicate_classes(fake_pkg):
 
 
 # Tests for get_devices
-class DummyDevice:
-    def __init__(self, name):
-        self.unique_name = name
-
-
 def test_get_devices_collects_all_devices(fake_pkg):
     driver_a = types.ModuleType('fakepkg.driver_a')
 
-    class DummyDevice:
+    class DummyDeviceInfo:
         def __init__(self, name):
             self.unique_name = name
 
-    class DummyDeviceClass:
+    class DummyDevice:
         def list_devices(self):
-            return [DummyDevice('device_a')]
+            return [DummyDeviceInfo('device_a')]
 
-    DummyDeviceClass.__module__ = driver_a.__name__
-    driver_a.DummyDeviceClass = DummyDeviceClass
+    DummyDevice.__module__ = driver_a.__name__
+    driver_a.DummyDevice = DummyDevice
     fake_pkg.add_submodule('driver_a', driver_a)
 
     devices = get_devices('fakepkg')
     assert len(devices) == 1
     assert 'device_a' in devices
     cls, dev = devices['device_a']
-    assert cls is DummyDeviceClass
+    assert cls is DummyDevice
     assert dev.unique_name == 'device_a'
 
 
