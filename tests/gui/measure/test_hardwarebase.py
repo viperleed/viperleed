@@ -75,8 +75,11 @@ def fixture_fake_pkg(mocker):
 def test_import_with_sub_modules_yields_main_and_submodules(fake_pkg):
     result = list(import_with_sub_modules('fakepkg'))
     names = [m.__name__ for m in result]
-    assert 'fakepkg' in names
-    assert 'fakepkg.sub_a' in names
+    expect_names = [
+        'fakepkg',        # First the top-level module
+        'fakepkg.sub_a',  # Then all its submodules
+        ]
+    assert names == expect_names
 
 
 def test_import_with_sub_modules_invalid_import(mocker):
