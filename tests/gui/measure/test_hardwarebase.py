@@ -125,6 +125,19 @@ class TestClassFromName:
         with pytest.raises(ImportError):
             class_from_name('fakepkg', 'A')
 
+    def test_imported_class_does_not_count_as_duplicate(self, fake_pkg):
+        # Import A from sub_a into sub_b
+        sub_a = fake_pkg.submodules['sub_a']
+        sub_b = types.ModuleType('fakepkg.sub_b')
+
+        # Re-export A (imported reference)
+        sub_b.A = sub_a.A
+        fake_pkg.add_submodule('sub_b', sub_b)
+
+        cls = class_from_name('fakepkg', 'A')
+        assert cls is sub_a.A
+        assert cls.__module__ == sub_a.__name__
+
 
 class TestGetDevices:
     """Tests for the get_devices function."""
