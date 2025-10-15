@@ -83,6 +83,11 @@ def fixture_fake_pkg(mocker):
 class TestImportWithSubModules:
     """Tests for the import_with_submodules iterator."""
 
+    def test_invalid_import(self, mocker):
+        mocker.patch('importlib.import_module', side_effect=ImportError)
+        with pytest.raises(AttributeError):
+            _ = list(import_with_sub_modules('nonexistent'))
+
     def test_yield_main_and_submodule(self, fake_pkg):
         names = [m.__name__ for m in import_with_sub_modules('fakepkg')]
         expect_names = [
@@ -91,10 +96,11 @@ class TestImportWithSubModules:
             ]
         assert names == expect_names
 
-    def test_invalid_import(self, mocker):
-        mocker.patch('importlib.import_module', side_effect=ImportError)
-        with pytest.raises(AttributeError):
-            _ = list(import_with_sub_modules('nonexistent'))
+    def test_yield_module_only(self, fake_pkg):
+        delattr(fake_pkg, '__path__')
+        names = [m.__name__ for m in import_with_sub_modules('fakepkg')]
+        expect_names = ['fakepkg',]
+        assert names == expect_names
 
 
 class TestClassFromName:
