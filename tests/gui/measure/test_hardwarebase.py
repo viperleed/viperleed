@@ -134,6 +134,7 @@ def test_get_devices_collects_all_devices(fake_pkg):
     fake_pkg.add_submodule('driver_a', driver_a)
 
     devices = get_devices('fakepkg')
+    assert len(devices) == 1
     assert 'device_a' in devices
     cls, dev = devices['device_a']
     assert cls is DummyDeviceClass
