@@ -157,4 +157,4 @@ def test_get_devices_ignores_non_device_classes(fake_pkg):
     fake_pkg.add_submodule('drivers', sub)
 
     devices = get_devices('fakepkg')
-    assert devices == {}
+    assert not devices
