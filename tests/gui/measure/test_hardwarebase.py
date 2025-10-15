@@ -134,7 +134,7 @@ def test_get_devices_collects_all_devices(fake_pkg):
     devices = get_devices('fakepkg')
     assert 'device_a' in devices
     cls, dev = devices['device_a']
-    assert cls.__name__ == 'DummyDeviceClass'
+    assert cls is DummyDeviceClass
     assert dev.unique_name == 'device_a'
 
 
