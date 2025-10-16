@@ -19,11 +19,9 @@ from viperleed.gui.measure.hardwarebase import get_devices
 from viperleed.gui.measure.hardwarebase import import_with_sub_modules
 
 
-def in_module(module, forced_name=''):
+def in_module(module):
     """Register a class to belong to a module."""
     def _register_cls(cls):
-        if forced_name:
-            cls.__name__ = forced_name
         cls.__module__ = module.__name__
         setattr(module, cls.__name__, cls)
         return cls
@@ -46,21 +44,13 @@ def fixture_fake_pkg(mocker):
     pkg.__path__ = ['dummy_path']
     pkg.__package__ = full_base
 
-    sys.modules[base] = pkg
-    sys.modules[full_base] = pkg
-
+    mocker.patch.dict('sys.modules', {base: pkg, full_base: pkg})
     submodules = {}
 
     def add_submodule(name, module):
-        sys.modules[f'{base}.{name}'] = module
-        sys.modules[f'{full_base}.{name}'] = module
+        mocker.patch.dict('sys.modules', {f'{base}.{name}': module,
+                                          f'{full_base}.{name}': module})
         submodules[name] = module
-
-    # Mock importlib.import_module.
-    def fake_import(name, package=None):
-        return sys.modules[name]
-
-    mocker.patch('importlib.import_module', side_effect=fake_import)
 
     # Mock pkgutil.iter_modules to reflect whatever submodules exist.
     def fake_iter_modules(path):
@@ -102,10 +92,12 @@ class TestImportWithSubModules:
         expect_names = ['fakepkg',]
         assert names == expect_names
 
-    def test_import_with_submodules_recursive(self, fake_pkg, mocker):
+    def test_yield_recursive(self, fake_pkg, mocker):
         sub_a = fake_pkg.submodules['sub_a']
         sub_a.__path__ = ['dummy_sub_path']
         sub_a.__package__ = 'fakepkg.sub_a'
+        nested = types.ModuleType('fakepkg.sub_a.nested_sub')
+        fake_pkg.add_submodule('sub_a.nested_sub', nested)
 
         mocker.patch(
             'pkgutil.iter_modules',
@@ -114,9 +106,6 @@ class TestImportWithSubModules:
                 [types.SimpleNamespace(name='nested_sub')]
                 ],
             )
-
-        nested = types.ModuleType('fakepkg.sub_a.nested_sub')
-        fake_pkg.add_submodule('sub_a.nested_sub', nested)
 
         names = [m.__name__ for m in import_with_sub_modules('fakepkg',
                                                              recursive=True)]
@@ -142,8 +131,8 @@ class TestClassFromName:
     def test_duplicate_classes(self, fake_pkg):
         # Add submodule that defines another A
         sub_b = types.ModuleType('fakepkg.sub_b')
-        @in_module(sub_b, forced_name='A')
-        class A2:
+        @in_module(sub_b)
+        class A:
             pass
         fake_pkg.add_submodule('sub_b', sub_b)
 
