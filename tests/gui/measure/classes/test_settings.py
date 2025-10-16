@@ -9,7 +9,6 @@ __created__ = '2025-09-30'
 __license__ = 'GPLv3+'
 
 from configparser import ConfigParser
-from configparser import MissingSectionHeaderError
 from configparser import NoOptionError
 from configparser import NoSectionError
 from pathlib import Path
@@ -19,9 +18,6 @@ from pytest_cases import parametrize
 import pytest
 
 from viperleed.gui.measure.classes.settings import AliasConfigParser
-from viperleed.gui.measure.classes.settings import MissingSettingsFileError
-from viperleed.gui.measure.classes.settings import NoSettingsError
-from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.classes.settings import ensure_aliases_exist
 from viperleed.gui.measure.classes.settings import get_aliases_path
 from viperleed.gui.measure.classes.settings import interpolate_config_path
@@ -58,8 +54,10 @@ class TestEnsureAliasesExist:
         ensure_aliases_exist()
         merged_aliases = ConfigParser()
         merged_aliases.read(user_aliases)
+        # pylint: disable=magic-value-comparison
         assert merged_aliases['Foo']['stays'] == 'stays'
         assert merged_aliases['Foo']['changed'] == 'user'
+        # pylint: enable=magic-value-comparison
 
     def test_new_aliases_written(self, tmp_path, mocker):
         """Check that a user aliases.ini file is always created."""
@@ -209,13 +207,16 @@ fallback_values = (('A/opt2', 'cfb'),)
         assert parser.get('foo', 'opt') == old_value
         assert parser['foo']['opt'] == old_value
 
+    # pylint: disable=protected-access
     def test_iter_aliases(self):
         """Check expected iteration of known aliases."""
         parser = AliasConfigParser(cls_name='WithAliases')
         aliases = list(parser._iter_aliases('new_section', 'new_option'))
         expect = [['oldsection', 'option'], ['even_older', 'old_option']]
         assert aliases == expect
+    # pylint: enable=protected-access
 
+    # pylint: disable=unused-argument
     def test_multiple_old_files_with_alias_overwrite_dict(self, tmp_path):
         """Ensure aliases persist when multiple files are read."""
         parser = AliasConfigParser(cls_name='WithAliases')
@@ -245,7 +246,6 @@ fallback_values = (('A/opt2', 'cfb'),)
 
         # second old file, expected to overwrite with "second"
         expect_second = 'second'
-        f'[even_older]\nold_option:={expect_second}'
         parser.read_string(f'[even_older]\nold_option={expect_second}')
 
         assert parser.get('new_section', 'new_option') == expect_second
@@ -261,8 +261,9 @@ fallback_values = (('A/opt2', 'cfb'),)
     def test_no_aliases(self, cls_name):
         """Check emptiness of aliases when none exist."""
         parser = AliasConfigParser(cls_name='IHaveNoAliases')
-        assert not parser._aliases
-        assert not parser._fallbacks
+        assert not parser._aliases      # pylint: disable=protected-access
+        assert not parser._fallbacks    # pylint: disable=protected-access
+    # pylint: enable=unused-argument
 
     def test_old_alias_section_removal(self):
         """Check removal of emptied alias sections."""

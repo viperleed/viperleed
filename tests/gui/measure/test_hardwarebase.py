@@ -17,6 +17,7 @@ from viperleed.gui.measure.hardwarebase import class_from_name
 from viperleed.gui.measure.hardwarebase import get_devices
 from viperleed.gui.measure.hardwarebase import import_with_sub_modules
 
+
 # pylint: disable=magic-value-comparison, unused-argument
 def in_module(module):
     """Register a class to belong to a module."""

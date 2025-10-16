@@ -37,6 +37,7 @@ def list_default_settings():
 class TestDefaultAliases:
     """Tests for the aliases provided in the _defaults."""
 
+    # pylint: disable=magic-value-comparison
     def test_no_capital_letters_in_options_and_values(self, alias_config):
         """Ensure all options and non-parent_aliases values are lowercase."""
         for section in alias_config.sections():
@@ -66,6 +67,7 @@ class TestDefaultAliases:
                         f'Fallback "{value[0]}" in [{section}][{option}] '
                         'contains uppercase letters.'
                         )
+    # pylint: enable=magic-value-comparison
 
     def test_no_child_parent_option_overlap(self, alias_config):
         """Ensure that child sections do not redefine parent_aliases."""
@@ -115,7 +117,7 @@ class TestDefaultAliases:
                     )
 
 
-class TestDefaultSettings:
+class TestDefaultSettings: # pylint: disable=too-few-public-methods
     """Tests for the default settings provided in the _defaults."""
 
     @parametrize(file=list_default_settings())
