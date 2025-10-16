@@ -147,7 +147,7 @@ class TestClassFromName:
             pass
         fake_pkg.add_submodule('sub_b', sub_b)
 
-        with pytest.raises(ImportError):
+        with pytest.raises(RuntimeError):
             class_from_name('fakepkg', 'A')
 
     def test_imported_class_does_not_count_as_duplicate(self, fake_pkg):

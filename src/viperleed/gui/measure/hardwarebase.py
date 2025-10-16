@@ -49,7 +49,7 @@ def class_from_name(package, class_name):
         If package is not a valid package.
     ValueError
         If `class_name` could not be found in `package`.
-    ImportError
+    RuntimeError
         If more than one sub-module defines `class_name`.
     """
     classes_by_module = ((m, getattr(m, class_name, None))
@@ -64,8 +64,8 @@ def class_from_name(package, class_name):
         next(classes)
     except StopIteration:  # Only one module defines class_name: OK
         return cls
-    raise ImportError(f'More than one sub-module in {package} '
-                      f'defines {class_name} class.')
+    raise RuntimeError(f'More than one sub-module in {package} '
+                       f'defines {class_name} class.')
 
 
 def import_with_sub_modules(importable, package=None, recursive=False):
