@@ -207,17 +207,15 @@ fallback_values = (('A/opt2', 'cfb'),)
         assert parser.get('foo', 'opt') == old_value
         assert parser['foo']['opt'] == old_value
 
-    # pylint: disable=protected-access
     def test_iter_aliases(self):
         """Check expected iteration of known aliases."""
         parser = AliasConfigParser(cls_name='WithAliases')
+        # pylint: disable-next=protected-access
         aliases = list(parser._iter_aliases('new_section', 'new_option'))
         expect = [['oldsection', 'option'], ['even_older', 'old_option']]
         assert aliases == expect
-    # pylint: enable=protected-access
 
-    # pylint: disable=unused-argument
-    def test_multiple_old_files_with_alias_overwrite_dict(self, tmp_path):
+    def test_multiple_old_files_with_alias_overwrite_dict(self):
         """Ensure aliases persist when multiple files are read."""
         parser = AliasConfigParser(cls_name='WithAliases')
 
@@ -234,7 +232,7 @@ fallback_values = (('A/opt2', 'cfb'),)
         assert parser.get('new_section', 'new_option') == expect_second
         assert parser['new_section']['new_option'] == expect_second
 
-    def test_multiple_old_files_with_alias_overwrite_string(self, tmp_path):
+    def test_multiple_old_files_with_alias_overwrite_string(self):
         """Ensure aliases persist when multiple files are read."""
         parser = AliasConfigParser(cls_name='WithAliases')
 
@@ -258,12 +256,12 @@ fallback_values = (('A/opt2', 'cfb'),)
         assert added_section in parser.sections()
 
     @parametrize(cls_name=('IHaveNoAliases', '', None))
+    # pylint: disable-next=unused-argument
     def test_no_aliases(self, cls_name):
         """Check emptiness of aliases when none exist."""
         parser = AliasConfigParser(cls_name='IHaveNoAliases')
         assert not parser._aliases      # pylint: disable=protected-access
         assert not parser._fallbacks    # pylint: disable=protected-access
-    # pylint: enable=unused-argument
 
     def test_old_alias_section_removal(self):
         """Check removal of emptied alias sections."""
