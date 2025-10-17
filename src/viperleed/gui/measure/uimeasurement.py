@@ -1035,7 +1035,6 @@ class Measure(ViPErLEEDPluginBase):                                             
                 )
             if _reply == _QMSG.Yes:
                 path_widg.path.mkdir(parents=True)
-        self.system_settings.update_file()
 
         # Since older device dialogs may now be still pointing to
         # old configuration files, remove them completely. This
