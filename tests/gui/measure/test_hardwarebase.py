@@ -42,7 +42,7 @@ def fixture_fake_pkg(mocker):
     import_with_sub_modules and related functions can discover them.
     """
     base = 'fakepkg'
-    full_base = 'viperleed.gui.measure.fakepkg'
+    full_base = f'viperleed.gui.measure.{base}'
 
     pkg = types.ModuleType(base)
     pkg.__path__ = ['dummy_path']
