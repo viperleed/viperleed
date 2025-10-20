@@ -22,6 +22,7 @@ from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
     )
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
+from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
@@ -407,7 +408,8 @@ def section_loop(rp, sl):
 
     logger.debug("End of section loop.")
     disp_ranges_str = '\n\t'.join(str(at.disp_ranges) for at in sl)
-    logger.log(1, f'Total ranges of all displacements:\n{disp_ranges_str}')     # TODO: Consider deleting, it's not even really true - outside of the loop, this is only the *final* displacement ranges.
+    logger.log(LOG_VERY_VERBOSE,                                                # TODO: Consider deleting, it's not even really true - outside of the loop, this is only the *final* displacement ranges.
+               f'Total ranges of all displacements:\n{disp_ranges_str}')
     cleanup(rp)
     return 0, state_recorder
 
