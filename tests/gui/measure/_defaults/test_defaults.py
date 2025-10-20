@@ -116,7 +116,7 @@ class TestDefaultAliases:
                     )
 
 
-class TestDefaultSettings: # pylint: disable=too-few-public-methods
+class TestDefaultSettings:  # pylint: disable=too-few-public-methods
     """Tests for the default settings provided in the _defaults."""
 
     @parametrize(file=list_default_settings())

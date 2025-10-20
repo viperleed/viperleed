@@ -163,11 +163,12 @@ class TestClassFromName:
         sub_b = types.ModuleType('fakepkg.sub_b')
 
         # Re-export DummyA (imported reference)
-        sub_b.DummyA = sub_a.DummyA
+        imported_cls = getattr(sub_a, _DUMMY_NAME)
+        setattr(sub_b, _DUMMY_NAME) = imported_cls
         fake_pkg.add_submodule('sub_b', sub_b)
 
         cls = class_from_name('fakepkg', _DUMMY_NAME)
-        assert cls is sub_a.DummyA
+        assert cls is imported_cls
         assert cls.__module__ == sub_a.__name__
 
 
