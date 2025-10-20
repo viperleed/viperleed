@@ -69,10 +69,8 @@ def fixture_fake_pkg(mocker):
 
     # Define submodule containing a class DummyA.
     sub_a = types.ModuleType('fakepkg.sub_a')
-    @in_module(sub_a)
-    class DummyA:   # pylint: disable=too-few-public-methods, unused-variable
-        """Dummy class."""
-    pkg.add_submodule('sub_a', sub_a)   # pylint: disable=no-member
+    in_module(sub_a)(type(_DUMMY_NAME, (), {}))
+    pkg.add_submodule('sub_a', sub_a)
     return pkg
 
 
@@ -147,10 +145,7 @@ class TestClassFromName:
         """Test duplicate class declaration."""
         # Add submodule that defines another DummyA
         sub_b = types.ModuleType('fakepkg.sub_b')
-        @in_module(sub_b)
-        # pylint: disable-next=too-few-public-methods, unused-variable
-        class DummyA:
-            """Dummy class."""
+        in_module(sub_b)(type(_DUMMY_NAME, (), {}))
         fake_pkg.add_submodule('sub_b', sub_b)
 
         with pytest.raises(RuntimeError):
@@ -163,11 +158,12 @@ class TestClassFromName:
         sub_b = types.ModuleType('fakepkg.sub_b')
 
         # Re-export DummyA (imported reference)
-        sub_b.DummyA = sub_a.DummyA
+        imported_cls = getattr(sub_a, _DUMMY_NAME)
+        setattr(sub_b, _DUMMY_NAME, imported_cls)
         fake_pkg.add_submodule('sub_b', sub_b)
 
         cls = class_from_name('fakepkg', _DUMMY_NAME)
-        assert cls is sub_a.DummyA
+        assert cls is imported_cls
         assert cls.__module__ == sub_a.__name__
 
 
