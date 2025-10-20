@@ -665,7 +665,7 @@ def _find_atoms_that_need_deltas(slab, rpars):
     if countExisting > 0:
         logger.info(f'{countExisting} of {len(atElTodo) + countExisting} '
                     'required Delta-files are already present. '
-                    'Generating remaining {len(atElTodo)} files...')
+                    f'Generating remaining {len(atElTodo)} files...')
     return attodo, atElTodo, vaclist
 
 
