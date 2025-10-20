@@ -559,7 +559,9 @@ def init_domains(rp):
                 logger.error(f'Error while re-initializing {dp}')
                 raise
 
-    if 4 not in rp.RUN and 1 not in rp.RUN and rr:
+    next_segment = next((s for s in rp.RUN if s != 0), None)
+
+    if rr and next_segment not in (1, 4):
         logger.error(
             "Some domains require new reference calculations before "
             "a domain search can be executed. Please either manually "
@@ -568,7 +570,6 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
 
-    next_segment = next((s for s in rp.RUN if s != 0), None)
     if next_segment == 1:
         # Users explicitly requested a refcalc for all domains.
         for domain in rp.domainParams:
