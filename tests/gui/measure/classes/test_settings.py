@@ -256,10 +256,9 @@ fallback_values = (('A/opt2', 'cfb'),)
         assert added_section in parser.sections()
 
     @parametrize(cls_name=('IHaveNoAliases', '', None))
-    # pylint: disable-next=unused-argument
     def test_no_aliases(self, cls_name):
         """Check emptiness of aliases when none exist."""
-        parser = AliasConfigParser(cls_name='IHaveNoAliases')
+        parser = AliasConfigParser(cls_name=cls_name)
         assert not parser._aliases      # pylint: disable=protected-access
         assert not parser._fallbacks    # pylint: disable=protected-access
 
