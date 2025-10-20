@@ -69,10 +69,8 @@ def fixture_fake_pkg(mocker):
 
     # Define submodule containing a class DummyA.
     sub_a = types.ModuleType('fakepkg.sub_a')
-    @in_module(sub_a)
-    class DummyA:   # pylint: disable=too-few-public-methods, unused-variable
-        """Dummy class."""
-    pkg.add_submodule('sub_a', sub_a)   # pylint: disable=no-member
+    in_module(sub_a)(type(_DUMMY_NAME, (), {}))
+    pkg.add_submodule('sub_a', sub_a)
     return pkg
 
 
@@ -147,10 +145,7 @@ class TestClassFromName:
         """Test duplicate class declaration."""
         # Add submodule that defines another DummyA
         sub_b = types.ModuleType('fakepkg.sub_b')
-        @in_module(sub_b)
-        # pylint: disable-next=too-few-public-methods, unused-variable
-        class DummyA:
-            """Dummy class."""
+        in_module(sub_b)(type(_DUMMY_NAME, (), {}))
         fake_pkg.add_submodule('sub_b', sub_b)
 
         with pytest.raises(RuntimeError):
