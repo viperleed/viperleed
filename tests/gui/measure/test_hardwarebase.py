@@ -18,7 +18,12 @@ from viperleed.gui.measure.hardwarebase import get_devices
 from viperleed.gui.measure.hardwarebase import import_with_sub_modules
 
 
-# pylint: disable=magic-value-comparison, unused-argument
+_DUMMY_NAME = 'DummyA'
+_DUMMY_INFO = 'device_a'
+
+with_fake_pkg = pytest.mark.usefixtures('fake_pkg')
+
+
 def in_module(module):
     """Register a class to belong to a module."""
     def _register_cls(cls):
@@ -37,7 +42,7 @@ def fixture_fake_pkg(mocker):
     import_with_sub_modules and related functions can discover them.
     """
     base = 'fakepkg'
-    full_base = 'viperleed.gui.measure.fakepkg'
+    full_base = f'viperleed.gui.measure.{base}'
 
     pkg = types.ModuleType(base)
     pkg.__path__ = ['dummy_path']
@@ -53,7 +58,7 @@ def fixture_fake_pkg(mocker):
         submodules[name] = module
 
     # Mock pkgutil.iter_modules to reflect whatever submodules exist.
-    def fake_iter_modules(path):
+    def fake_iter_modules(_):
         """Iterate through fake modules."""
         return [types.SimpleNamespace(name=n) for n in submodules]
 
@@ -64,10 +69,8 @@ def fixture_fake_pkg(mocker):
 
     # Define submodule containing a class DummyA.
     sub_a = types.ModuleType('fakepkg.sub_a')
-    @in_module(sub_a)
-    class DummyA:   # pylint: disable=too-few-public-methods, unused-variable
-        """Dummy class."""
-    pkg.add_submodule('sub_a', sub_a)   # pylint: disable=no-member
+    in_module(sub_a)(type(_DUMMY_NAME, (), {}))
+    pkg.add_submodule('sub_a', sub_a)
     return pkg
 
 
@@ -80,7 +83,8 @@ class TestImportWithSubModules:
         with pytest.raises(AttributeError):
             _ = list(import_with_sub_modules('nonexistent'))
 
-    def test_yield_main_and_submodule(self, fake_pkg):
+    @with_fake_pkg
+    def test_yield_main_and_submodule(self):
         """Test import of package and submodule."""
         names = [m.__name__ for m in import_with_sub_modules('fakepkg')]
         expect_names = [
@@ -125,12 +129,14 @@ class TestImportWithSubModules:
 class TestClassFromName:
     """Tests for the class_from_name function."""
 
-    def test_find_class(self, fake_pkg):
+    @with_fake_pkg
+    def test_find_class(self):
         """Test finding class."""
-        cls = class_from_name('fakepkg', 'DummyA')
-        assert cls.__name__ == 'DummyA'
+        cls = class_from_name('fakepkg', _DUMMY_NAME)
+        assert cls.__name__ == _DUMMY_NAME
 
-    def test_no_class_found(self, fake_pkg):
+    @with_fake_pkg
+    def test_no_class_found(self):
         """Test finding class failure."""
         with pytest.raises(ValueError):
             class_from_name('fakepkg', 'NotExist')
@@ -139,13 +145,11 @@ class TestClassFromName:
         """Test duplicate class declaration."""
         # Add submodule that defines another DummyA
         sub_b = types.ModuleType('fakepkg.sub_b')
-        @in_module(sub_b)
-        class DummyA: # pylint: disable=too-few-public-methods, unused-variable
-            """Dummy class."""
+        in_module(sub_b)(type(_DUMMY_NAME, (), {}))
         fake_pkg.add_submodule('sub_b', sub_b)
 
         with pytest.raises(RuntimeError):
-            class_from_name('fakepkg', 'DummyA')
+            class_from_name('fakepkg', _DUMMY_NAME)
 
     def test_imported_class_does_not_count_as_duplicate(self, fake_pkg):
         """Test reimport of class."""
@@ -154,18 +158,19 @@ class TestClassFromName:
         sub_b = types.ModuleType('fakepkg.sub_b')
 
         # Re-export DummyA (imported reference)
-        sub_b.DummyA = sub_a.DummyA
+        imported_cls = getattr(sub_a, _DUMMY_NAME)
+        setattr(sub_b, _DUMMY_NAME, imported_cls)
         fake_pkg.add_submodule('sub_b', sub_b)
 
-        cls = class_from_name('fakepkg', 'DummyA')
-        assert cls is sub_a.DummyA
+        cls = class_from_name('fakepkg', _DUMMY_NAME)
+        assert cls is imported_cls
         assert cls.__module__ == sub_a.__name__
 
 
 class TestGetDevices:
     """Tests for the get_devices function."""
 
-    def test_device_getting(self, fake_pkg):
+    def test_get_device(self, fake_pkg):
         """Test getting devices."""
         driver_a = types.ModuleType('fakepkg.driver_a')
 
@@ -180,25 +185,25 @@ class TestGetDevices:
             """Dummy dwevice."""
             def list_devices(self):
                 """Dummy list devices."""
-                return [DummyDeviceInfo('device_a')]
+                return [DummyDeviceInfo(_DUMMY_INFO)]
         fake_pkg.add_submodule('driver_a', driver_a)
 
         devices = get_devices('fakepkg')
         assert len(devices) == 1
-        assert 'device_a' in devices
-        cls, dev = devices['device_a']
+        assert _DUMMY_INFO in devices
+        cls, dev = devices[_DUMMY_INFO]
         assert cls is DummyDevice
-        assert dev.unique_name == 'device_a'
+        assert dev.unique_name == _DUMMY_INFO
 
     def test_ignore_non_device_classes(self, fake_pkg):
-        """Test ignoring non-devices."""
+        """Test ignoring non-devices and abstract classes."""
         sub = types.ModuleType('fakepkg.drivers')
 
         # Add abstract class with list_devices. 'DummyA' already is
         # a non-abstract class without 'list_devices', so we do not
         # need to add a non-device class.
         @in_module(sub)
-        # pylint: disable=too-few-public-methods, unused-variable
+        # pylint: disable-next=too-few-public-methods, unused-variable
         class AbstractDevice(metaclass=abc.ABCMeta):
             """Dummy device ABC."""
             @abc.abstractmethod
