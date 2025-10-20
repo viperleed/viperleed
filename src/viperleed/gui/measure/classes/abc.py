@@ -85,6 +85,13 @@ class QObjectSettingsErrors(base.ViPErLEEDErrorEnum):
         'Unable to read settings at {}. Check if the file is still present. '
         'If the file is still present, it is most likely corrupted.'
         )
+    INVALID_CLASS_NAME = (
+        105,
+        'Unable to load a class from the class name specified in the '
+        'settings at {}. Check if the file contains the correct class '
+        'name and that all necessary resources to make the class '
+        '(e.g., drivers) are installed.'
+        )
 
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.

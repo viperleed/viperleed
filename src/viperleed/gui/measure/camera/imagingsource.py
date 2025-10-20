@@ -20,13 +20,16 @@ import numpy as np
 from PyQt5 import QtCore as qtc
 
 from viperleed.gui.measure import hardwarebase as base
-from viperleed.gui.measure.camera import abc
-from viperleed.gui.measure.camera import imagingsourcecalibration as is_cal
+from viperleed.gui.measure.camera.abc import CameraABC
+from viperleed.gui.measure.camera.abc import fallback_if_disconnected
 from viperleed.gui.measure.camera.drivers.imagingsource import (
     FrameReadyCallbackType,
     ImagingSourceError,
     ISCamera as ImagingSourceDriver,
     SinkFormat,
+    )
+from viperleed.gui.measure.camera.imagingsourcecalibration import (
+    DarkLevelCalibration,
     )
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.abc import SettingsInfo
@@ -257,13 +260,13 @@ def _color_format_mapper(formats):
 # pylint counts 33, I count 26. Of those, 17 are actually
 # reimplementations of abstract methods that are only supposed
 # to be used internally (i.e., they are the driver interface)
-class ImagingSourceCamera(abc.CameraABC):
+class ImagingSourceCamera(CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
     _mandatory_settings = (
         # pylint: disable=protected-access
         # Needed for extending
-        *abc.CameraABC._mandatory_settings,
+        *CameraABC._mandatory_settings,
         ('camera_settings', 'black_level'),
         )
 
@@ -336,9 +339,9 @@ class ImagingSourceCamera(abc.CameraABC):
                     CURRENTLY UNUSED.
         """
         tasks = super().calibration_tasks
-        if not any(isinstance(t, is_cal.DarkLevelCalibration)
+        if not any(isinstance(t, DarkLevelCalibration)
                    for t in tasks['bad_pixels']):
-            tasks['bad_pixels'].append(is_cal.DarkLevelCalibration(self))
+            tasks['bad_pixels'].append(DarkLevelCalibration(self))
         return tasks
 
     @property
@@ -769,7 +772,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """Set the exposure time for one frame (from settings)."""
         self.driver.exposure = self.exposure
 
-    @abc.fallback_if_disconnected
+    @fallback_if_disconnected
     def get_exposure_limits(self):
         """Return the the minimum and maximum exposure times supported.
 
@@ -784,7 +787,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """Return the number of frames delivered per second."""
         return self.driver.frame_rate
 
-    @abc.fallback_if_disconnected
+    @fallback_if_disconnected
     def get_gain(self):
         """Get the gain (in decibel) from the camera device."""
         return self.driver.gain
@@ -793,7 +796,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """Set the gain of the camera in decibel."""
         self.driver.gain = self.gain
 
-    @abc.fallback_if_disconnected
+    @fallback_if_disconnected
     def get_gain_limits(self):
         """Return the the minimum and maximum gains supported.
 

@@ -750,6 +750,7 @@ class SystemSettings(ViPErLEEDSettings):
     # for it's core functionality.
     __non_mandatory = (
         ('PATHS', 'arduino_cli'),
+        ('PATHS', 'drivers'),
         ('PATHS', 'firmware'),
         )
 
@@ -816,10 +817,16 @@ class SystemSettings(ViPErLEEDSettings):
         ('PATHS', 'arduino_cli',
          '<nobr>This is the folder in which the Arduino</nobr> '
          'command-line interface is installed.'),
+        ('PATHS', 'drivers',
+         '<nobr>This is the folder containing third-party </nobr>'
+         'drivers necessary to operate non-ViPErLEED hardware. Note '
+         'that if you previously selected a valid drivers folder, you '
+         'may need to restart ViPErLEED for the new settings to take '
+         'effect.'
+         ),
         ('PATHS', 'firmware',
          '<nobr>This is the folder containing archives with</nobr> '
          'firmware for ViPErLEED controllers.'),
-
         )
         for section, option, info in _infos:
             handler[section][option].set_info_text(info)
