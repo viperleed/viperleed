@@ -164,7 +164,7 @@ class TestClassFromName:
 
         # Re-export DummyA (imported reference)
         imported_cls = getattr(sub_a, _DUMMY_NAME)
-        setattr(sub_b, _DUMMY_NAME) = imported_cls
+        setattr(sub_b, _DUMMY_NAME, imported_cls)
         fake_pkg.add_submodule('sub_b', sub_b)
 
         cls = class_from_name('fakepkg', _DUMMY_NAME)
