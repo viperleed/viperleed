@@ -356,7 +356,11 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
         third_btn = msg_box.addButton(third_btn_text, msg_box.AcceptRole)
     msg_box.addButton(msg_box.Cancel)
     msg_box.exec_()
-    msg_box.setParent(None)  # py garbage collector will take care
+    try:
+        msg_box.setParent(None)  # py garbage collector will take care
+    except RuntimeError:
+        # Dialog was dismissed and msg_box C object was already deleted.
+        raise DialogDismissedError('Failed to get device settings.')
     _clicked = msg_box.clickedButton()
     if _clicked is btn:
         new_path = qtw.QFileDialog.getExistingDirectory(
