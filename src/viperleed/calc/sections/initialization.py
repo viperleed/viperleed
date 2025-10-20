@@ -568,6 +568,12 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
 
+    next_segment = next((s for s in rp.RUN if s != 0), None)
+    if next_segment == 1:
+        # Users explicitly requested a refcalc for all domains.
+        for domain in rp.domainParams:
+            domain.refcalc_required = True
+
     while 4 in rp.RUN:
         if rr:
             rp.RUN.insert(rp.RUN.index(4), 1)
