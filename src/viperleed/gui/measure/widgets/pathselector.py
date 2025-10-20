@@ -19,6 +19,8 @@ import sys
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.gui.widgets.lib import change_control_text_color
+
 
 _ELLIPSIS = '\u2026'
 _IS_WINDOWS = sys.platform.startswith('win')
@@ -66,22 +68,22 @@ class PathSelector(qtw.QWidget):
         -------
         None.
         """
-        select_file = kwargs.pop('select_file', True)
-        existing_file = kwargs.pop('existing_file', True)
         self.__glob = {
             'read_only': kwargs.pop('read_only', False),
             'max_chars': max(10, kwargs.pop('max_chars', 35)),
             'kwargs': kwargs,
             'full_path': None,
-            'elided_path': ''
+            'elided_path': '',
+            'select_file': kwargs.pop('select_file', True),
+            'existing_file': kwargs.pop('existing_file', True),
             }
         super().__init__(kwargs.get('parent', None))
 
         _fdialog = qtw.QFileDialog
         selector = _fdialog.getExistingDirectory
-        if select_file and existing_file:
+        if self.__glob['select_file'] and self.__glob['existing_file']:
             selector = _fdialog.getOpenFileName
-        elif select_file and not existing_file:
+        elif self.__glob['select_file'] and not self.__glob['existing_file']:
             selector = _fdialog.getSaveFileName
         self.__selector = selector
 
@@ -155,10 +157,14 @@ class PathSelector(qtw.QWidget):
         """Set the contents of this path selector."""
         self.__glob['full_path'] = Path(new_path)
         self.__lineedit.setToolTip(str(new_path))
-        if self.__glob['full_path'].is_dir():
-            self.__lineedit.setStyleSheet('color: black')
+        if self.__glob['select_file']:
+            valid = self.__glob['full_path'].is_file()
+            if not self.__glob['existing_file']:
+                valid = not valid
         else:
-            self.__lineedit.setStyleSheet('color: red')
+            valid = self.__glob['full_path'].is_dir()
+        color = 'black' if valid else 'red'
+        change_control_text_color(self.__lineedit, color)
         self.__show_path()
 
     def get_posix_path(self):
