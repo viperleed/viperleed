@@ -155,6 +155,10 @@ class PathSelector(qtw.QWidget):
         """Set the contents of this path selector."""
         self.__glob['full_path'] = Path(new_path)
         self.__lineedit.setToolTip(str(new_path))
+        if self.__glob['full_path'].is_dir():
+            self.__lineedit.setStyleSheet('color: black')
+        else:
+            self.__lineedit.setStyleSheet('color: red')
         self.__show_path()
 
     def get_posix_path(self):

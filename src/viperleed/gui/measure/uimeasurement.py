@@ -1038,7 +1038,6 @@ class Measure(ViPErLEEDPluginBase):                                             
                 )
             if _reply == _QMSG.Yes:
                 path_widg.path.mkdir(parents=True)
-        self.system_settings.update_file()
 
         # Since older device dialogs may now be still pointing to
         # old configuration files, remove them completely. This
@@ -1061,6 +1060,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         """React to a user clicking on 'Settings'."""
         # Update from file, then .open (which updates widgets)
         self.system_settings.read_again()
+        # Note that we are using exec() and an immediate call to
+        # _check_sys_settings_ok() to create a loop and force the user
+        # to give valid settings.
         self._dialogs['sys_settings'].exec()
         self._check_sys_settings_ok()
 
