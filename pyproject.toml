@@ -118,7 +118,6 @@ classifiers = [
         'input examples/*.tlm',
         'exported/*.csv',
         ]
-    'viperleed.gui.measure.camera.drivers.imagingsource' = ['*.dll']            # TODO: remove for release!
     'viperleed.gui.measure.classes' = ['thermocouple_coefficients.txt']
     'viperleed.gui.measure._defaults' = ['*.ini']
 
