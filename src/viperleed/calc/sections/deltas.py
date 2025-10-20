@@ -50,9 +50,6 @@ class DeltaCompileTask:
         after successful compilation.
     fortran_comp : tuple
         Compiler and compilation flags.
-    hash : str
-        A unique identifier for this task. Usually calculated
-        from `param`.
     param : str
         Contents of the PARAM file, defining array dimensions
         for compilation.
@@ -62,10 +59,12 @@ class DeltaCompileTask:
 
     Notes
     -----
-    It is important to create instances of this class while the current
-    directory is the work directory for the specific domain: the main
-    work directory for a single-domain calculation, the relevant
-    subfolder of the main work directory for multi-domain ones.
+    Instances of this class remember the path in which they were
+    created. Compilation (via compile_delta) and later execution
+    (via run_delta) happen in a subfolder of this path. It is
+    thus important to create instances of this class in the correct
+    work directory: the main one for a single domain, domain.workdir
+    for each domain of a multi-domain calculation.
     """
 
     def __init__(self, param, source_dir, index):
@@ -110,7 +109,7 @@ class DeltaCompileTask:
 
     @property
     def exec_dir(self):
-        """Return the path to the folder where the compiled executable is."""
+        """Return the path to the folder where compilation takes place."""
         return self._root / self.foldername
 
     @property
@@ -306,8 +305,7 @@ def run_delta(runtask):
 def compile_delta(comptask):
     """Compile a delta-amplitudes calculation executable.
 
-    Compilation is performed in the comptask.foldername
-    subfolder of the current directory. This function may
+    Compilation is performed in comptask.exec_dir. This function may
     be executed by parallelized workers.
 
     Parameters
