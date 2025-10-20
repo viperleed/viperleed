@@ -69,13 +69,13 @@ class PathSelector(qtw.QWidget):
         None.
         """
         self.__glob = {
+            'select_file': kwargs.pop('select_file', True),
+            'existing_file': kwargs.pop('existing_file', True),
             'read_only': kwargs.pop('read_only', False),
             'max_chars': max(10, kwargs.pop('max_chars', 35)),
             'kwargs': kwargs,
             'full_path': None,
             'elided_path': '',
-            'select_file': kwargs.pop('select_file', True),
-            'existing_file': kwargs.pop('existing_file', True),
             }
         super().__init__(kwargs.get('parent', None))
 
@@ -89,8 +89,8 @@ class PathSelector(qtw.QWidget):
 
         self.__lineedit = qtw.QLineEdit()
         self.__browse = qtw.QToolButton()
-        browse_action = qtw.QAction("\u00b7"*3)
-        browse_action.setToolTip("")
+        browse_action = qtw.QAction('\u00b7'*3)
+        browse_action.setToolTip('')
         self.__browse.setDefaultAction(browse_action)
 
         self.__compose()
@@ -146,7 +146,7 @@ class PathSelector(qtw.QWidget):
         self.__lineedit.setReadOnly(self.read_only)
 
         # Add/remove the spacer item between line edit and browse
-        # It is always at position 1: "0" is
+        # It is always at position 1: '0' is
         layout = self.layout()
         if self.read_only:
             layout.removeItem(layout.itemAt(1))
