@@ -62,11 +62,11 @@ class InputReader(Iterator):
             try:
                 return self._read_one_line(line)
             except ShouldSkipLineError:
-                if self.noisy:
-                    line = line.rstrip('\n')
+                line = line.rstrip('\n')
+                if self.noisy and line:
                     _LOGGER.log(LOG_VERY_VERBOSE,
                                 f'Skipping line {self._current_line} '
-                                 f'in input file: {line!r}.')
+                                f'in input file: {line!r}.')
                 continue
         raise StopIteration
 
