@@ -458,6 +458,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         camera = viewer.camera
         if cam_name != camera.name:
             return False
+        if not Path(camera.settings.last_file).is_file():
+            viewer.close()
+            self._dialogs['camera_viewers'].remove(viewer)
+            return False
         viewer.stop_on_close = True
         cfg = deepcopy(camera.settings)
         cfg.read_again()                                                        # TODO: TEMP: re-read config to apply changes. Will not be done when I have a settings editor.
@@ -876,6 +880,13 @@ class Measure(ViPErLEEDPluginBase):                                             
         if not _dialog:
             # Something went wrong with creating the dialog
             return
+        if not Path(_dialog.settings.last_file).is_file():
+            # Old settings dialog and file is missing.
+            self._delete_outdated_ctrl_dialog(ctrl_info.more['name'])
+            self._make_ctrl_settings_dialog(ctrl_cls, ctrl_info)
+            _dialog = self._dialogs['device_settings'].get(full_name, None)
+            if not _dialog:
+                return
         if _dialog.isVisible():                                                 # TODO: we should make sure (regularly?) somewhere that the controller is still where it is supposed to be (COM-wise)
             move_to_front(_dialog)
             return
