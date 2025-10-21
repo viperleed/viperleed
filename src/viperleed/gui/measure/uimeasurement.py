@@ -1059,7 +1059,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.system_settings.read_again()
         # Note that we are using exec() and an immediate call to
         # _check_sys_settings_ok() to create a loop and force the user
-        # to give valid settings.
+        # to give valid settings. QDialog.open would not block.
         self._dialogs['sys_settings'].exec()
         self._check_sys_settings_ok()
 
