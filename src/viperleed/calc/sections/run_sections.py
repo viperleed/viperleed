@@ -304,8 +304,8 @@ def section_loop(rp, sl):
                 rp.setHaltingLevel(2)
                 initHalt = True
             elif (sec == 1 and rp.fileLoaded["EXPBEAMS"]):
-                if (next_section != 11 and          # r-factor after refcalc
-                        (not rp.domainParams or 3 in rp.runHistory)):
+                if (next_section != 11  # r-factor after refcalc
+                        and (not rp.domainParams or 3 in rp.runHistory)):
                     rp.RUN.insert(0, 11)
             elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
                 if next_section != 31:  # superpos after search
@@ -327,7 +327,7 @@ def section_loop(rp, sl):
                     improved = rp.last_R < search_loop_R.get(loop, R_MAX)
                     ignore_tl_limit = (
                         rp.MAX_TL_DISPLACEMENT.action is MaxTLAction.IGNORE
-                    )
+                        )
                     if improved or (exceeds_tl_limit and not ignore_tl_limit):
                         # Loop back
                         search_loop_R[loop] = rp.last_R
