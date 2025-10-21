@@ -157,12 +157,14 @@ class PathSelector(qtw.QWidget):
         """Set the contents of this path selector."""
         self.__glob['full_path'] = Path(new_path)
         self.__lineedit.setToolTip(str(new_path))
-        if self.__glob['select_file']:
-            valid = self.__glob['full_path'].is_file()
-            if not self.__glob['existing_file']:
-                valid = not valid
-        else:
-            valid = self.__glob['full_path'].is_dir()
+        full_path = self.__glob['full_path']
+        selects_file = self.__glob['select_file']
+        if not selects_file:
+            valid = full_path.is_dir()
+        elif selects_file and self.__glob['existing_file']:
+            valid = full_path.is_file()
+        else:  # A file to be selected for saving
+            valid = True
         color = 'black' if valid else 'red'
         change_control_text_color(self.__lineedit, color)
         self.__show_path()
