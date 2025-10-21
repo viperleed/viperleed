@@ -146,7 +146,7 @@ class PathSelector(qtw.QWidget):
         self.__lineedit.setReadOnly(self.read_only)
 
         # Add/remove the spacer item between line edit and browse
-        # It is always at position 1: '0' is
+        # It is always at position 1, 0 is self.__lineedit.
         layout = self.layout()
         if self.read_only:
             layout.removeItem(layout.itemAt(1))
