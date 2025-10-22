@@ -25,6 +25,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2023-07-26'
 __license__ = 'GPLv3+'
 
+from pathlib import Path
 import shutil
 from zipfile import ZipFile
 
@@ -32,6 +33,7 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.constants import DEFAULT_WORK
+from viperleed.calc.files import parameters
 from viperleed.calc.files import tenserleed
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.fs_utils import copytree_exists_ok
@@ -164,6 +166,42 @@ class BaseCalcFilesSetup:
         return (self.work_path/'manifest').read_text().splitlines()
 
 
+class DomainsCalcFilesSetup(BaseCalcFilesSetup):
+    """Utility for executing multi-domain calc runs."""
+
+    def __init__(self, surface_dir, *args, **kwargs):
+        """Initialize instance."""
+        super().__init__(f'domains/{surface_dir}', *args, **kwargs)
+        self.src_folders = ()    # Paths (as str) given in PARAMETERS
+        self.work_domains = {}   # {src_path_as_str: work_path}
+
+    def run_calc_from_setup(self, *args, **kwargs):
+        """Move to work folder, execute, collect outcome, go back home."""
+        super().run_calc_from_setup(*args, **kwargs)
+        self._collect_domain_info()
+
+    def _collect_domain_info(self):
+        """Collect information about the domains in the calculation."""
+        src_parameters = [file
+                          for src_path in self.input_files_paths
+                          for file in src_path.glob('PARAMETERS')]
+        assert len(src_parameters) == 1
+        rpars = parameters.read(src_parameters[0])
+        domains = rpars.readParams['DOMAIN']
+        src_to_folders_created = {
+            domain.values_str: {f'Domain_{domain.flags_str}',
+                                Path(domain.values_str).name}
+            for domain in domains
+            }
+        self.src_folders = tuple(src_to_folders_created)
+        self.work_domains = {
+            src: self.work_path/n
+            for src, paths in src_to_folders_created.items()
+            for n in paths
+            if (self.work_path/n).is_dir()
+            }
+
+
 @fixture(scope='session')
 @parametrize(surface=INIT_SURFACES, ids=INIT_SURFACES)
 @with_tl_versions
@@ -188,8 +226,8 @@ def init_files(surface, tl_version, make_section_tempdir, tensorleed_path):
 @with_tl_versions
 def init_domains(domains, tl_version, make_section_tempdir, tensorleed_path):
     """Collect input files for a DOMAINS calculation and run initialization."""
-    setup = BaseCalcFilesSetup(
-        surface_dir=f'domains/{domains}',
+    setup = DomainsCalcFilesSetup(
+        surface_dir=domains,
         tmp_test_path=make_section_tempdir(domains, 'init'),
         required_files=['PHASESHIFTS',],
         copy_dirs=['initialization'],
@@ -252,8 +290,8 @@ def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
 @with_tl_versions
 def delta_domains(domains, tl_version, make_section_tempdir, tensorleed_path):
     """Collect files, and run a multi-domain delta-amplitude calculation."""
-    setup = BaseCalcFilesSetup(
-        surface_dir=f'domains/{domains}',
+    setup = DomainsCalcFilesSetup(
+        surface_dir=domains,
         tmp_test_path=make_section_tempdir(domains, 'deltas'),
         copy_dirs=['deltas'],
         )
