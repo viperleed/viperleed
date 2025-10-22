@@ -1,7 +1,7 @@
 """Tests for viperleed.calc section refcalc.
 
-This module contains implementation tests for the run_refcalc
-function. No reference calculation is actually executed.
+This module contains tests for the implementation of the run_refcalc
+function. No reference calculation is truly executed.
 """
 
 __authors__ = (

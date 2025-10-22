@@ -177,7 +177,7 @@ class DomainsCalcFilesSetup(BaseCalcFilesSetup):
         self.work_domains = {}   # {src_path_as_str: work_path}
 
     def find_most_recent_tensors(self):
-        """Collect the most recent tensors numbers for each domain."""
+        """Collect the most recent tensor number for each domain."""
         self._collect_domain_info()
         src_tensors = {src: leedbase.getMaxTensorIndex(src)
                        for src in self.src_folders}
