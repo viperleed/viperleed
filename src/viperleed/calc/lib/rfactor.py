@@ -5,6 +5,7 @@ __created__ = '2024-02-21'
 
 import jax
 from jax import numpy as jnp
+from jax import lax
 
 
 def pendry_R(
@@ -21,6 +22,11 @@ def pendry_R(
     theo_deriv_spline = theo_spline.derivative()
 
     theo_intensity = theo_spline(energy_grid)
+    # shift theo_intensity to be non-negative
+    theo_intensity = _shift_theo_intensity_non_negative(
+        theo_intensity, exp_intensity
+    )
+
     theo_derivative = theo_deriv_spline(energy_grid)
 
     exp_y = pendry_y(exp_intensity, exp_derivative, v0_imag)
@@ -181,6 +187,11 @@ def R_ms(
     theo_deriv_2_spline = theo_deriv_1_spline.derivative()
 
     theo_intensity = theo_spline(energy_grid)
+    # shift theo_intensity to be non-negative
+    theo_intensity = _shift_theo_intensity_non_negative(
+        theo_intensity, exp_intensity
+    )
+
     theo_derivative_1 = theo_deriv_1_spline(energy_grid)
     theo_derivative_2 = theo_deriv_2_spline(energy_grid)
 
@@ -230,6 +241,11 @@ def R_s(
     theo_deriv_2_spline = theo_deriv_1_spline.derivative()
 
     theo_intensity = theo_spline(energy_grid)
+    # shift theo_intensity to be non-negative
+    theo_intensity = _shift_theo_intensity_non_negative(
+        theo_intensity, exp_intensity
+    )
+
     theo_derivative_1 = theo_deriv_1_spline(energy_grid)
     theo_derivative_2 = theo_deriv_2_spline(energy_grid)
 
@@ -357,3 +373,45 @@ R_FACTOR_SYNONYMS = {
         'zannazi-jona',
     ),
 }
+
+def _shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
+    """Shift the theoretical intensity so that it is non-negative.
+
+    The array containing the theoretical intensity is calculated from a spline
+    interpolation, which can lead to small negative values due to undershoots
+    near the minima. This function shifts the theoretical intensities
+    into the non-negative (physical) range by adding a constant value.
+    The constant is chosen on a per-beam basis, and only considers the region of
+    overlap between the theoretical and experimental intensities.
+
+    Parameters
+    ----------
+    theo_intensity : jnp.ndarray
+        Interpolated theoretical intensity array of shape (n_energies, n_beams)
+    exp_intensity : jnp.ndarray
+        Interpolated experimental intensity array of shape (n_energies, n_beams)
+
+    Returns
+    -------
+    jnp.ndarray
+        Shifted theoretical intensity array of shape (n_energies, n_beams)
+    """
+    # Determine the mask for valid (non-NaN) intensities
+    valid_exp_mask = ~jnp.isnan(exp_intensity)
+    valid_theo_mask = ~jnp.isnan(theo_intensity)
+    overlap_mask = jnp.logical_and(valid_exp_mask, valid_theo_mask)
+
+    # Calculate the minimum theoretical intensity in the valid regions
+    masked_theo_intensity = jnp.where(overlap_mask, theo_intensity, jnp.nan)
+    masked_theo_mins = jnp.nanmin(masked_theo_intensity, axis=0)
+    # Ensure that we do not consider NaNs in the minimum calculation
+    min_theo_intensity = jnp.where(
+        jnp.isnan(masked_theo_mins), 0.0, masked_theo_mins
+    )
+    # only shift if minimum is negative
+    shifts = jnp.where(min_theo_intensity < 0, -min_theo_intensity, 0.0)
+    # stop gradient on shifts to avoid affecting optimization
+    shifts = lax.stop_gradient(shifts)
+
+    # broadcast shifts and add to theo_intensity
+    return theo_intensity + shifts
