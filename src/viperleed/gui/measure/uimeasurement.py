@@ -487,13 +487,12 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _check_sys_settings_ok(self):
         """Complain if the system settings are missing entries."""
-        if self.system_settings.valid:
+        valid, reason = self.system_settings.valid()
+        if valid:
             return
 
         reply = _QMSG.critical(
-            self, "Invalid system settings",
-            "Missing or invalid system settings. Please fill "
-            "in all mandatory (*) fields in the next dialog.",
+            self, 'Invalid system settings', reason,
             _QMSG.Ok | _QMSG.Close
             )
         if reply == _QMSG.Close:
@@ -601,7 +600,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         connect_dialogs = (
             ('sys_settings', 'settings_changed',
              self._on_sys_settings_changed),
-            ('sys_settings', 'finished', self._check_sys_settings_ok),
             ('bad_px_finder', 'finished',
              functools.partial(self._switch_button_enable, True)),
             ('error_box', 'finished', self._report_errors),
@@ -815,6 +813,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._dialogs['bad_px_finder'].open()
 
     def _on_camera_clicked(self, *_):                                           # TODO: may want to display a busy dialog with "starting camera <name>..."
+        self._check_sys_settings_ok()
         cam_name = self.sender().text()
 
         # Decide whether we can take the camera object
@@ -859,6 +858,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def _on_controller_clicked(self, *_):
         """Show settings of the controller selected."""
+        self._check_sys_settings_ok()
         full_name = self.sender().text()
         ctrl_cls, ctrl_info = self.sender().data()
 
@@ -1035,7 +1035,6 @@ class Measure(ViPErLEEDPluginBase):                                             
                 )
             if _reply == _QMSG.Yes:
                 path_widg.path.mkdir(parents=True)
-        self.system_settings.update_file()
 
         # Since older device dialogs may now be still pointing to
         # old configuration files, remove them completely. This
@@ -1058,7 +1057,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         """React to a user clicking on 'Settings'."""
         # Update from file, then .open (which updates widgets)
         self.system_settings.read_again()
-        self._dialogs['sys_settings'].open()
+        # Note that we are using exec() and an immediate call to
+        # _check_sys_settings_ok() to create a loop and force the user
+        # to give valid settings. QDialog.open would not block.
+        self._dialogs['sys_settings'].exec()
+        self._check_sys_settings_ok()
 
     @qtc.pyqtSlot()
     def _print_done(self):

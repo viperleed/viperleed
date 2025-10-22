@@ -786,11 +786,6 @@ class SystemSettings(ViPErLEEDSettings):
         return self['PATHS']
 
     @property
-    def valid(self):
-        """Return whether all settings are valid."""
-        return all(self[sec][opt] for sec, opt in self.__non_null)
-
-    @property
     def settings(self):
         """Return self."""
         return self
@@ -846,6 +841,17 @@ class SystemSettings(ViPErLEEDSettings):
             label.setText('* ' + unstarred_name)
 
         return self.__handler
+
+    def valid(self):
+        """Return whether settings are valid and a reason if invalid."""
+        if not all(self[sec][opt] for sec, opt in self.__non_null):
+            return (False, 'Missing mandatory (*) settings. Please fill '
+                           'in all mandatory fields in the next dialog.')
+        for folder in self['PATHS'].values():
+            if not Path(folder).is_dir():
+                return (False, 'Invalid path detected. Please make sure that '
+                               'the given paths only point to directories.')
+        return (True, '')
 
     def _check_mandatory_settings(self):
         """Check, and possibly add missing settings.
