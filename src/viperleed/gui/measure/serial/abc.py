@@ -161,7 +161,23 @@ class SerialABC(HardwareABC):
         # after a .send_message()
         self.__got_unacceptable_response = False
 
+        # unsent_messages is a list of messages that have been
+        # stored by the serial because it was not yet possible
+        # to send them to the hardware controller. New messages
+        # will automatically be appended to unsent_messages if
+        # the serial is still waiting for a response from the
+        # hardware. All messages in unsent_messages are processed
+        # in the order they arrive at. When the serial receives
+        # a valid answer from the hardware it will automatically
+        # trigger an attempt to send the next message in
+        # unsent_messages. Each element of unsent_messages is
+        # a tuple whose first element is the command and its associated
+        # data, and the second element is the timeout parameter.
+        self.unsent_messages = []
+
         self.__move_to_thread_requested.connect(self.__on_moved_to_thread)
+        _qu = qtc.Qt.QueuedConnection | qtc.Qt.UniqueConnection
+        self.busy_changed.connect(self.send_unsent_messages, type=_qu)
 
     @property
     def byte_order(self):
@@ -686,11 +702,14 @@ class SerialABC(HardwareABC):
     def send_message(self, message, *other_messages, timeout=None):
         """Send message to hardware via serial port.
 
-        If a message is not supported send_message will return and not
-        send the message. Afterwards a timeout timer is started and the
-        message is encoded. START and END markers are added to the
-        message. In the end the message is sent to the port specified
-        in the settings via self.port_name.
+        If the serial is busy when a message is supposed to be sent,
+        the message is stored in .unsent_messages and sent at a later
+        time when the serial is no longer busy. If a message is not
+        supported send_message will return and not send the message.
+        Afterwards a timeout timer is started and the message is
+        encoded. START and END markers are added to the message. In the
+        end the message is sent to the port specified in the settings
+        via self.port_name.
 
         Parameters
         ----------
@@ -721,6 +740,11 @@ class SerialABC(HardwareABC):
             return
 
         all_messages = (message, *other_messages)
+
+        if self.busy:
+            self.unsent_messages.append((all_messages, timeout))
+            return
+
         if not self.is_message_supported(all_messages):
             return
 
@@ -748,6 +772,21 @@ class SerialABC(HardwareABC):
 
         if not _requires_response:
             self.busy = False
+
+    @qtc.pyqtSlot()
+    @qtc.pyqtSlot(bool)
+    def send_unsent_messages(self, *_):
+        """Send messages that have been stored.
+
+        Returns
+        -------
+        None.
+        """
+        if self.busy:
+            return
+        if self.unsent_messages:
+            data, timeout = self.unsent_messages.pop(0)
+            self.send_message(*data, timeout=timeout)
 
     def connect_(self, *__args):
         """Connect to currently selected port."""

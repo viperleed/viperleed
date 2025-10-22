@@ -1065,6 +1065,24 @@ class ViPErinoController(MeasureControllerABC):
             return
         stop = self.settings.get('available_commands', 'PC_STOP')
         self.send_message(stop)
+        if self.serial.unsent_messages:
+            # Stop message was not sent yet, force
+            # stop in case the serial is stuck.
+            self._force_stop_timer.start()
+
+    @qtc.pyqtSlot()
+    def force_stop(self):
+        """Force the controller to stop."""
+        if not self.settings or not self.connected:
+            # Settings missing or serial no longer connected.
+            return
+        if not self.serial.unsent_messages:
+            # The timer was started, but the serial managed
+            # to send the stop command in the meanwhile.
+            return
+        super().force_stop()
+        stop = self.settings.get('available_commands', 'PC_STOP')
+        self.send_message(stop)
 
     @qtc.pyqtSlot()
     def __almost_ready_to_show_settings(self):
