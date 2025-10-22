@@ -193,7 +193,6 @@ class TestDeltasDomains:
                             make_domain,
                             mock_tasks,
                             mocks,
-                            mocker,
                             caplog):
         """Ensure correct propagation to nested domains."""
         caplog.set_level(logging.INFO)

@@ -39,6 +39,7 @@ def fixture_call_in_tmp(rpars, mocks, tmp_path, mocker):
     def _call(**kwargs):
         args = mocker.MagicMock(name='slab'), rpars
         with execute_in_dir(tmp_path):
+            # pylint: disable-next=assignment-from-none  # Tested below
             result = deltas(*args, **kwargs)
         assert result is None
         mocks['fetch_deltas'].assert_called_once_with(rpars.TENSOR_INDEX,
@@ -174,6 +175,7 @@ class TestDeltasCalls:
         """Check calls when deltas is called in a multi-domain calculation."""
         rpars.domainParams = ['Domain 1']
         domains_impl = mocker.patch(f'{_MODULE}.deltas_domains')
+        # pylint: disable-next=assignment-from-none  # Tested below
         result = deltas(None, rpars)
         domains_impl.assert_called_once_with(rpars)
         assert result is None
