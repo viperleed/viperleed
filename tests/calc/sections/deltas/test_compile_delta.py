@@ -12,14 +12,14 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.sections.deltas import compile_delta
 
-from ..test_refcalc import TestCompileRefcalc
+from ..refcalc.test_compile_refcalc import TestCompileRefcalc as _TestRefcalc
 
 
 # Notice that the compile_delta and compile_refcalc functions are
 # virtually identical, except for a few error messages and a few
 # variable names. There is no need to add more tests. When doing
 # #43, the tests can be given to the base-class method!
-class TestCompileDelta(TestCompileRefcalc):
+class TestCompileDelta(_TestRefcalc):
     """Tests for the compile_delta function."""
 
     compile_func = compile_delta

@@ -20,7 +20,7 @@ from viperleed.calc.sections.deltas import run_delta
 
 from ....helpers import filesystem_from_dict
 from ....helpers import filesystem_to_dict
-from ..test_refcalc import TestRunRefcalc as _TestRefcalc
+from ..refcalc.test_run_refcalc import TestRunRefcalc as _TestRefcalc
 
 
 class TestRunDelta:
