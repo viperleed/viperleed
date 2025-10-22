@@ -829,6 +829,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         except DefaultSettingsError:
             return
 
+        if not camera:
+            return
+
         camera.error_occurred.connect(self._on_camera_error)
         if camera.mode != 'live':
             camera.settings.set('camera_settings', 'mode', 'live')
