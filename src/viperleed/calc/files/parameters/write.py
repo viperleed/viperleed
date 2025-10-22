@@ -444,7 +444,7 @@ class ParametersFileEditor(AbstractContextManager):
             )
         if should_write_old_line:
             self._write_param_file.write(raw_line)
-            try:  # Do not to write twice identical values
+            try:  # Do not write twice identical values
                 modified.already_written = True
             except AttributeError:
                 assert modified is None
