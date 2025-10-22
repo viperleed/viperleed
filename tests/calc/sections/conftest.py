@@ -35,6 +35,7 @@ from pytest_cases import parametrize
 from viperleed.calc.constants import DEFAULT_WORK
 from viperleed.calc.files import parameters
 from viperleed.calc.files import tenserleed
+from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.fs_utils import copytree_exists_ok
 from viperleed.calc.lib.version import Version
@@ -174,6 +175,16 @@ class DomainsCalcFilesSetup(BaseCalcFilesSetup):
         super().__init__(f'domains/{surface_dir}', *args, **kwargs)
         self.src_folders = ()    # Paths (as str) given in PARAMETERS
         self.work_domains = {}   # {src_path_as_str: work_path}
+
+    def find_most_recent_tensors(self):
+        """Collect the most recent tensors numbers for each domain."""
+        self._collect_domain_info()
+        src_tensors = {src: leedbase.getMaxTensorIndex(src)
+                       for src in self.src_folders}
+        work_tensors = {src: leedbase.getMaxTensorIndex(work)
+                        for src, work in self.work_domains.items()}
+        return {src: max(src_tensors[src], work_tensors[src])
+                for src in self.src_folders}
 
     def run_calc_from_setup(self, *args, **kwargs):
         """Move to work folder, execute, collect outcome, go back home."""
