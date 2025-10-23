@@ -893,7 +893,9 @@ class ControllerABC(DeviceABC):
 
         Stop whatever the controller is doing right now and return to
         idle state. If there are .serial.unsent_messages after trying
-        to send the stop command, start ._force_stop_timer.
+        to send the stop command, sublasses must .start() the
+        ._force_stop_timer to guarantee that the controller is stopped
+        in a timely manner even if it is stalling.
 
         Returns
         -------
@@ -906,9 +908,28 @@ class ControllerABC(DeviceABC):
     @qtc.pyqtSlot()
     @abstractmethod
     def force_stop(self):
-        """Force the controller to stop."""
+        """Force the controller to stop.
+
+        Subclasses must call super().force_stop() to clear unsent
+        messages and to check whether the command to stop the controller
+        still has to be sent.
+
+        Returns
+        -------
+        must_stop : bool
+            Whether the controller still has to be stoppped. If true,
+            another stop command has to be sent.
+        """
         self.serial._busy = False
         self.serial.unsent_messages.clear()
+        if not self.settings or not self.connected:
+            # Settings missing or serial no longer connected.
+            return False
+        if not self.serial.unsent_messages:
+            # The timer was started, but the serial managed
+            # to send the stop command in the meanwhile.
+            return False
+        return True
 
     def true_energy_to_setpoint(self, energy):
         """Take requested energy and convert it to the energy to set.

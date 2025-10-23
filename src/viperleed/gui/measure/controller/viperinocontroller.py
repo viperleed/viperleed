@@ -1072,17 +1072,19 @@ class ViPErinoController(MeasureControllerABC):
 
     @qtc.pyqtSlot()
     def force_stop(self):
-        """Force the controller to stop."""
-        if not self.settings or not self.connected:
-            # Settings missing or serial no longer connected.
-            return
-        if not self.serial.unsent_messages:
-            # The timer was started, but the serial managed
-            # to send the stop command in the meanwhile.
-            return
-        super().force_stop()
+        """Force the controller to stop.
+
+        Returns
+        -------
+        must_stop : bool
+            In this reimplementation this will always be False. Only
+            required to match the behaviour of super().force_stop().
+        """
+        if not super().force_stop():
+            return False
         stop = self.settings.get('available_commands', 'PC_STOP')
         self.send_message(stop)
+        return False
 
     @qtc.pyqtSlot()
     def __almost_ready_to_show_settings(self):
