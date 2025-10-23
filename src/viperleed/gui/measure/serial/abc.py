@@ -791,6 +791,10 @@ class SerialABC(HardwareABC):
             data, timeout = self.unsent_messages.popleft()
             self.send_message(*data, timeout=timeout)
 
+    def set_private_busy(self, is_busy):
+        """Set the _busy attribute without emitting busy_changed."""
+        self._busy = is_busy
+
     def connect_(self, *__args):
         """Connect to currently selected port."""
         if self.is_open:

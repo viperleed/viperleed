@@ -920,7 +920,7 @@ class ControllerABC(DeviceABC):
             Whether the controller still has to be stoppped. If true,
             another stop command has to be sent.
         """
-        self.serial._busy = False
+        self.serial.set_private_busy(False)
         self.serial.unsent_messages.clear()
         if not self.settings or not self.connected:
             # Settings missing or serial no longer connected.
