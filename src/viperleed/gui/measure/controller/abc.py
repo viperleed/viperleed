@@ -604,7 +604,7 @@ class ControllerABC(DeviceABC):
         # preparation will not be sent till the end of the whole
         # preparation. This excludes a call to .stop(), which is
         # always done as soon as possible.
-        self.serial.unsent_messages = []
+        self.serial.unsent_messages.clear()
         self.__can_continue_preparation = False
 
         self.busy = True
@@ -653,7 +653,7 @@ class ControllerABC(DeviceABC):
 
     def flush(self):
         """Clear unsent messages and set not busy."""
-        self.serial.unsent_messages = []
+        self.serial.unsent_messages.clear()
         self.busy = False
 
     @abstractmethod
