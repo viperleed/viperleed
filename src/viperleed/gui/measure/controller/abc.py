@@ -908,7 +908,7 @@ class ControllerABC(DeviceABC):
     def force_stop(self):
         """Force the controller to stop."""
         self.serial._busy = False
-        self.serial.unsent_messages = []
+        self.serial.unsent_messages.clear()
 
     def true_energy_to_setpoint(self, energy):
         """Take requested energy and convert it to the energy to set.

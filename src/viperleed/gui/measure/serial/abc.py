@@ -17,6 +17,7 @@ __created__ = '2021-06-23'
 __license__ = 'GPLv3+'
 
 from abc import abstractmethod
+from collections import deque
 from configparser import NoOptionError
 from configparser import NoSectionError
 
@@ -164,7 +165,7 @@ class SerialABC(HardwareABC):
         # after a .send_message()
         self.__got_unacceptable_response = False
 
-        # unsent_messages is a list of messages that have been
+        # unsent_messages is a deque of messages that have been
         # stored by the serial because it was not yet possible
         # to send them to the hardware controller. New messages
         # will automatically be appended to unsent_messages if
@@ -176,7 +177,7 @@ class SerialABC(HardwareABC):
         # unsent_messages. Each element of unsent_messages is
         # a tuple whose first element is the command and its associated
         # data, and the second element is the timeout parameter.
-        self.unsent_messages = []
+        self.unsent_messages = deque()
 
         self.__move_to_thread_requested.connect(self.__on_moved_to_thread)
         self.busy_changed.connect(self.send_unsent_messages, type=_QU)
@@ -787,7 +788,7 @@ class SerialABC(HardwareABC):
         if self.busy:
             return
         if self.unsent_messages:
-            data, timeout = self.unsent_messages.pop(0)
+            data, timeout = self.unsent_messages.popleft()
             self.send_message(*data, timeout=timeout)
 
     def connect_(self, *__args):
