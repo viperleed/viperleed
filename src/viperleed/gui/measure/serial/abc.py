@@ -28,6 +28,9 @@ from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.gui.measure.hardwarebase import ViPErLEEDErrorEnum
 
 
+_QU = qtc.Qt.QueuedConnection | qtc.Qt.UniqueConnection
+
+
 SERIAL_ERROR_MESSAGES = {
     qts.QSerialPort.NoError: '',
     qts.QSerialPort.DeviceNotFoundError:
@@ -176,8 +179,7 @@ class SerialABC(HardwareABC):
         self.unsent_messages = []
 
         self.__move_to_thread_requested.connect(self.__on_moved_to_thread)
-        _qu = qtc.Qt.QueuedConnection | qtc.Qt.UniqueConnection
-        self.busy_changed.connect(self.send_unsent_messages, type=_qu)
+        self.busy_changed.connect(self.send_unsent_messages, type=_QU)
 
     @property
     def byte_order(self):

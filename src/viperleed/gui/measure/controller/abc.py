@@ -886,8 +886,8 @@ class ControllerABC(DeviceABC):
                 'any quantities. Subclass MeasureControllerABC instead.'
                 )
 
-    @abstractmethod
     @qtc.pyqtSlot()
+    @abstractmethod
     def stop(self):
         """Stop.
 
@@ -903,8 +903,8 @@ class ControllerABC(DeviceABC):
         base.safe_disconnect(serial_busy, self.__do_preparation_step)
         base.safe_connect(serial_busy, self.set_busy, type=_QUEUED_UNIQUE)
 
-    @abstractmethod
     @qtc.pyqtSlot()
+    @abstractmethod
     def force_stop(self):
         """Force the controller to stop."""
         self.serial._busy = False
