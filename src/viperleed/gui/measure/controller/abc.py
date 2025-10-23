@@ -29,6 +29,7 @@ from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsTag
+from viperleed.gui.measure.hardwarebase import disconnected_signal
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 
 
@@ -917,11 +918,16 @@ class ControllerABC(DeviceABC):
         Returns
         -------
         must_stop : bool
-            Whether the controller still has to be stoppped. If true,
-            another stop command has to be sent.
+            Whether the controller still has to be stoppped. If True,
+            another stop command has to be sent. Subclasses should only
+            return False unless they are subclassed themselves.
         """
-        self.serial.set_private_busy(False)
         self.serial.unsent_messages.clear()
+        with disconnected_signal(self.serial.busy_changed,
+                                 self.__do_preparation_step,
+                                 self.set_busy,
+                                 type=_UNIQUE):
+            self.serial.busy = False
         if not self.settings or not self.connected:
             # Settings missing or serial no longer connected.
             return False
