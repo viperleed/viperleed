@@ -779,12 +779,7 @@ class SerialABC(HardwareABC):
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(bool)
     def send_unsent_messages(self, *_):
-        """Send messages that have been stored.
-
-        Returns
-        -------
-        None.
-        """
+        """Send messages that have been stored."""
         if self.busy:
             return
         if self.unsent_messages:
