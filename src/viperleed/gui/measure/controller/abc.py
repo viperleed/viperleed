@@ -919,8 +919,10 @@ class ControllerABC(DeviceABC):
         -------
         must_stop : bool
             Whether the controller still has to be stoppped. If True,
-            another stop command has to be sent. Subclasses should only
-            return False unless they are subclassed themselves.
+            another stop command has to be sent. Extensions of this
+            method should return False once the stop command has been
+            sent. (Regardless of whether the stop command has been sent
+            before or during the execution of .force_stop().)
         """
         self.serial.unsent_messages.clear()
         with disconnected_signal(self.serial.busy_changed,
