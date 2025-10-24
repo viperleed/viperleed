@@ -924,12 +924,6 @@ class ControllerABC(DeviceABC):
             sent. (Regardless of whether the stop command has been sent
             before or during the execution of .force_stop().)
         """
-        self.serial.unsent_messages.clear()
-        with disconnected_signal(self.serial.busy_changed,
-                                 self.__do_preparation_step,
-                                 self.set_busy,
-                                 type=_UNIQUE):
-            self.serial.busy = False
         if not self.settings or not self.connected:
             # Settings missing or serial no longer connected.
             return False
@@ -937,6 +931,12 @@ class ControllerABC(DeviceABC):
             # The timer was started, but the serial managed
             # to send the stop command in the meanwhile.
             return False
+        self.serial.unsent_messages.clear()
+        with disconnected_signal(self.serial.busy_changed,
+                                 self.__do_preparation_step,
+                                 self.set_busy,
+                                 type=_UNIQUE):
+            self.serial.busy = False
         return True
 
     def true_energy_to_setpoint(self, energy):
