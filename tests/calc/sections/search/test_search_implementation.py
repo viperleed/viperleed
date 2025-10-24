@@ -169,8 +169,7 @@ class TestSearch:
         with execute_in_dir(tmp_path):
             search(mocker.MagicMock(name='slab'), rpars)
         assert rpars.N_CORES is not None
-        for mock_name, mock in mock_no_run.items():
-            print(mock_name)
+        for mock in mock_no_run.values():
             mock.assert_called_once()
 
     @use('n_cores', 'vary', 'tl_version')

@@ -521,7 +521,10 @@ def search(sl, rp):
         libpattern = 'lib.search'
         if usempi and rp.TL_VERSION <= Version('1.7.3'):
             libpattern += '.mpi'
-        lib_file = next(libpath.glob(libpattern + '*'), None)
+        lib_files = libpath.glob(libpattern + '*')
+        if not usempi:
+            lib_files = (f for f in lib_files if 'mpi' not in f.name)
+        lib_file = next(lib_files, None)
         if lib_file is None:
             raise FileNotFoundError(f'File {libpattern}.f not found.')
 

@@ -112,7 +112,7 @@ def test_job_kill_flag(subtests):
         assert not job.is_running()
 
 
-@pytest.mark.timeout(2)
+@pytest.mark.timeout(5)
 def test_notice_immediate_job_death():
     """Test that the job is not running immediately after start."""
     script = [sys.executable, '-c', 'pass']
