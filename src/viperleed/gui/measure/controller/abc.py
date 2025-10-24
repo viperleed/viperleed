@@ -29,6 +29,7 @@ from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsTag
+from viperleed.gui.measure.hardwarebase import disconnected_signal
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 
 
@@ -137,10 +138,10 @@ class ControllerABC(DeviceABC):
         # as it may be waiting for an OK. This can happen before
         # the first segment of the preparation is over, where we may
         # be waiting for a while.
-        self.__force_stop_timer = qtc.QTimer(self)
-        self.__force_stop_timer.setSingleShot(True)
-        self.__force_stop_timer.setInterval(200)
-        self.__force_stop_timer.timeout.connect(self.send_unsent_messages)
+        self._force_stop_timer = qtc.QTimer(self)
+        self._force_stop_timer.setSingleShot(True)
+        self._force_stop_timer.setInterval(200)
+        self._force_stop_timer.timeout.connect(self.force_stop)
 
         self._address = address
         self.__energy_calibration = None
@@ -177,23 +178,6 @@ class ControllerABC(DeviceABC):
         # alternating order) to be set during the preparation.
         self.first_energies_and_times = []
 
-        # _unsent_messages is a list of messages that have been
-        # stored by the controller because it was not yet possible
-        # to send them to the hardware controller. New messages
-        # will automatically be appended to _unsent_messages if
-        # the serial is still waiting for a response from the
-        # hardware. All messages in _unsent_messages are processed
-        # in the order they arrive at. When the serial receives
-        # a valid answer from the hardware it will automatically
-        # trigger an attempt to send the next message in
-        # _unsent_messages. Each element of unsent_messages is
-        # a tuple whose first element is the command and its associated
-        # data, and the second element is the timeout parameter.
-        self._unsent_messages = []
-        if self.serial:
-            self.serial.busy_changed.connect(self.send_unsent_messages,
-                                             type=_QUEUED_UNIQUE)
-
     def __deepcopy__(self, memo):
         """Return self rather than a deep copy."""
         # One has to be very careful, like for cameras
@@ -225,11 +209,10 @@ class ControllerABC(DeviceABC):
     def set_busy(self, is_busy):
         """Set the controller to busy True/False.
 
-        No change of the busy state can occur if the controller
-        has a queue of messages that have still to be sent to
-        the hardware. Also, the value given is discarded if the
-        serial is currently busy (i.e., waiting for a response).
-        In this latter case, the controller will always be busy.
+        The controller will always be busy if the serial is currently
+        busy with another task (i.e., waiting for a response, or if
+        there is a queue of messages that have still to be sent to the
+        hardware).
 
         Parameters
         ----------
@@ -241,9 +224,7 @@ class ControllerABC(DeviceABC):
         busy_changed
             If the busy state of the controller changed.
         """
-        if self._unsent_messages:
-            return
-        if self.serial and self.serial.busy:
+        if self.serial and (self.serial.busy or self.serial.unsent_messages):
             is_busy = True
         super().set_busy(is_busy)
 
@@ -624,15 +605,10 @@ class ControllerABC(DeviceABC):
         # preparation will not be sent till the end of the whole
         # preparation. This excludes a call to .stop(), which is
         # always done as soon as possible.
-        self._unsent_messages = []
+        self.serial.unsent_messages.clear()
         self.__can_continue_preparation = False
 
         self.busy = True
-        base.safe_disconnect(self.serial.busy_changed,
-                             self.send_unsent_messages)
-        # Note that here we do not need to use a _QUEUED_UNIQUE
-        # connection, as preparation steps never cause the
-        # accumulation of unsent messages
         base.safe_connect(self.serial.busy_changed, self.__do_preparation_step,
                           type=_UNIQUE)
         self.__do_preparation_step()
@@ -664,11 +640,6 @@ class ControllerABC(DeviceABC):
         self.__can_continue_preparation = True
 
         self.busy = True
-        base.safe_disconnect(self.serial.busy_changed,
-                             self.send_unsent_messages)
-        # Note that here we do not need to use a _QUEUED_UNIQUE
-        # connection, as preparation steps never cause the
-        # accumulation of unsent messages
         base.safe_connect(self.serial.busy_changed, self.__do_preparation_step,
                           type=_UNIQUE)
         self.__do_preparation_step()
@@ -683,7 +654,7 @@ class ControllerABC(DeviceABC):
 
     def flush(self):
         """Clear unsent messages and set not busy."""
-        self._unsent_messages = []
+        self.serial.unsent_messages.clear()
         self.busy = False
 
     @abstractmethod
@@ -847,9 +818,6 @@ class ControllerABC(DeviceABC):
     def send_message(self, *data, **kwargs):
         """Use serial to send message.
 
-        Send message via serial. Save it if serial is busy
-        or if there are other messages that have been stored.
-
         Parameters
         ----------
         *data : object
@@ -863,31 +831,7 @@ class ControllerABC(DeviceABC):
         -------
         None.
         """
-        if self._unsent_messages or self.serial.busy:
-            self._unsent_messages.append((data, kwargs))
-            return
         self.serial.send_message(*data, **kwargs)
-
-    @qtc.pyqtSlot()
-    @qtc.pyqtSlot(bool)
-    def send_unsent_messages(self, serial_busy=False):
-        """Send messages that have been stored.
-
-        Parameters
-        ----------
-        serial_busy : bool, optional
-            Busy state of the serial. If not busy, send next
-            unsent message. Default is False.
-
-        Returns
-        -------
-        None.
-        """
-        if serial_busy:
-            return
-        if self._unsent_messages:
-            data, kwargs = self._unsent_messages.pop(0)
-            self.serial.send_message(*data, **kwargs)
 
     @abstractmethod
     def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
@@ -943,13 +887,16 @@ class ControllerABC(DeviceABC):
                 'any quantities. Subclass MeasureControllerABC instead.'
                 )
 
-    @abstractmethod
     @qtc.pyqtSlot()
+    @abstractmethod
     def stop(self):
         """Stop.
 
-        Stop whatever the controller is doing right now
-        and return to idle state.
+        Stop whatever the controller is doing right now and return to
+        idle state. If there are .serial.unsent_messages after trying
+        to send the stop command, sublasses must .start() the
+        ._force_stop_timer to guarantee that the controller is stopped
+        in a timely manner even if it is stalling.
 
         Returns
         -------
@@ -957,10 +904,40 @@ class ControllerABC(DeviceABC):
         """
         serial_busy = self.serial.busy_changed
         base.safe_disconnect(serial_busy, self.__do_preparation_step)
-        base.safe_connect(serial_busy, self.send_unsent_messages,
-                          type=_QUEUED_UNIQUE)
         base.safe_connect(serial_busy, self.set_busy, type=_QUEUED_UNIQUE)
-        self.__force_stop_timer.start()
+
+    @qtc.pyqtSlot()
+    @abstractmethod
+    def force_stop(self):
+        """Force the controller to stop.
+
+        Subclasses must call super().force_stop() to clear unsent
+        messages and to check whether the command to stop the controller
+        still has to be sent.
+
+        Returns
+        -------
+        must_stop : bool
+            Whether the controller still has to be stoppped. If True,
+            another stop command has to be sent. Extensions of this
+            method should return False once the stop command has been
+            sent. (Regardless of whether the stop command has been sent
+            before or during the execution of .force_stop().)
+        """
+        if not self.settings or not self.connected:
+            # Settings missing or serial no longer connected.
+            return False
+        if not self.serial.unsent_messages:
+            # The timer was started, but the serial managed
+            # to send the stop command in the meanwhile.
+            return False
+        self.serial.unsent_messages.clear()
+        with disconnected_signal(self.serial.busy_changed,
+                                 self.__do_preparation_step,
+                                 self.set_busy,
+                                 type=_UNIQUE):
+            self.serial.busy = False
+        return True
 
     def true_energy_to_setpoint(self, energy):
         """Take requested energy and convert it to the energy to set.
@@ -1031,13 +1008,6 @@ class ControllerABC(DeviceABC):
         # during the call to continue_preparation
         base.safe_disconnect(self.serial.busy_changed,
                              self.__do_preparation_step)
-        if self.__can_continue_preparation:
-            # The whole preparation is now over.
-            # Guarantee that any unsent message that may have come
-            # while the preparation was running is now sent.
-            base.safe_connect(self.serial.busy_changed,
-                              self.send_unsent_messages,
-                              type=_QUEUED_UNIQUE)
         self.busy = False
 
 
