@@ -14,6 +14,7 @@ Created on Mon Nov 21 09:44:40 2016
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-07-18'
@@ -244,6 +245,16 @@ GrabberHandlePtr = POINTER(GrabberHandle)
 GrabberHandlePtr.__repr__ = lambda self: f"GrabberHandlePtr({self.contents})"
 
 
+# Prototype of disconnected callbacks (best to use as a decorator):
+DisconnectedCallbackType = CFUNCTYPE(
+    c_void_p,          # return type
+    GrabberHandlePtr,  # HGRABBER
+    py_object          # python camera object
+    )
+
+DisconnectedCallbackType.__ctypeswrapper__ = 'DisconnectedCallbackType'
+
+
 # Prototype of frame-ready callbacks (best to use as a decorator):
 FrameReadyCallbackType = CFUNCTYPE(
     c_void_p,          # return type
@@ -291,7 +302,7 @@ class WindowsCamera:
         self.__init_library()
         self.__handle = self.create_grabber()
         self.__vcd_properties = {}
-        self.__has_frame_ready_callback = False
+        self._has_callbacks = False
         # Store video format info, as this is static for an open
         # device, and takes a while to retrieve the first time.
         self.__video_fmt_info = {'min_w': None, 'min_h': None,
@@ -830,7 +841,7 @@ class WindowsCamera:
         # trying to set a new callback. It is unclear whether the
         # problem with setting the callback twice is only there
         # when running from the terminal.
-        self.__has_frame_ready_callback = False
+        self._has_callbacks = False
 
         self.__video_fmt_info = {'min_w': None, 'min_h': None,
                                  'max_w': None, 'max_h': None,
@@ -971,6 +982,88 @@ class WindowsCamera:
         """
         self._dll_pause_live(self.__handle)
 
+    _dll_set_callback = _dll.IC_SetCallbacks
+    _dll_set_callback.errcheck = check_dll_return()
+    # The py_object at the end is the same that will later be passed
+    # on to the callbacks as the last argument.
+    _dll_set_callback.argtypes = (
+        GrabberHandlePtr,
+        FrameReadyCallbackType, py_object, # FRAME_READY_CALLBACK
+        DisconnectedCallbackType, py_object, # DEVICE_LOST_CALLBACK
+        )
+
+    def set_callbacks(self, on_frame_ready, on_disconnected, py_obj):
+        """Define callback functions.
+
+        Parameters
+        ----------
+        on_frame_ready : callable
+            Should be decorated with @FrameReadyCallbackType to ensure
+            proper typing. This is the function that will be called
+            whenever a new frame has been acquired (in 'continuous'
+            mode) or whenever an image is 'snapped'. The callable
+            should return None, and have signature:
+            on_frame_ready(__handle, img_buffer, frame_no, py_obj)
+            where:
+                __handle : int
+                    Pointer to grabber handle. Should not be used.
+                img_buffer : ctypes.POINTER(c_ubyte)
+                    Pointer to first byte of bottom line of image data
+                frame_no : int
+                    Frame number. Unclear what it corresponds to.
+                py_obj : object
+                    Same object as below
+        on_disconnected : callable
+            Should be decorated with @DisconnectedCallbackType to ensure
+            proper typing. This is the function that will be called
+            whenever the camera is disconnected. The callable
+            should return None, and have signature:
+            on_disconnected_(__handle, camera)
+            where:
+                __handle : int
+                    Pointer to grabber handle. Should not be used.
+                camera : ImagingSourceCamera
+                    The camera python object.
+        py_obj : object
+            The python object that is passed as the last argument to
+            on_frame_ready and of which the .camera attribute is passed
+            on to on_disconnected. If the callback is to modify this,
+            it is necessary to pass a dictionary-like object (or a class
+            instance with attributes).
+
+        Raises
+        -------
+        TypeError
+            If one of the callbacks is not callable.
+        ValueError
+            If one of the callbacks was not properly decorated.
+        ImagingSourceError
+            If this method is called more than once
+            before rebooting a camera.
+        """
+        # Make sure the callbacks have been wrapped correctly.
+        allowed = ('FrameReadyCallbackType', 'DisconnectedCallbackType')
+        for cb in (on_frame_ready, on_disconnected):
+            if not hasattr(cb, '__call__'):
+                raise TypeError(f'Callback {cb.__name__} '
+                                'is not a callable.')
+            if (not hasattr(cb, '__ctypeswrapper__')
+                    or cb.__ctypeswrapper__ not in allowed):
+                raise ValueError(f'Callback {cb.__name__} was not '
+                                 'decorated with an allowed callback '
+                                 'type. This is needed to ensure '
+                                 'appropriate type checking/conversions')
+        if not self._has_callbacks:
+            self._dll_set_callback(self.__handle, on_frame_ready, py_obj,
+                                   on_disconnected, py_obj.camera)
+            self._has_callbacks = True
+        else:
+            raise ImagingSourceError(
+                'Cannot set callbacks twice due to some bug in the '
+                'underlying DLL. Power-down the camera, and retry.',
+                err_code=DLLReturns.REQUIRES_REBOOT
+                )
+
     _dll_set_frame_ready_callback = _dll.IC_SetFrameReadyCallback
     _dll_set_frame_ready_callback.errcheck = check_dll_return()
     # The py_object at the end is the same that will later be passed
@@ -1017,6 +1110,8 @@ class WindowsCamera:
             If this method is called more than once
             before rebooting a camera.
         """
+        raise RuntimeError('This function should no longer be used.'
+                           'Use set_callbacks instead.')
         # Make sure the frame-ready callback has been wrapped correctly
         if not hasattr(on_frame_ready, '__call__'):
             raise TypeError(f"Frame-ready callback {on_frame_ready.__name__} "

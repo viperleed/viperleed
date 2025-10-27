@@ -1330,7 +1330,7 @@ class CameraABC(DeviceABC):
                 Coordinates of the top-left pixel. Zero is the
                 topmost/leftmost pixel.
             roi_width, roi_height : int
-                Width and height of the region of interest in pixels
+                Width and height of the region of interest in pixels.
         """
         return tuple()
 
@@ -1410,12 +1410,13 @@ class CameraABC(DeviceABC):
         return
 
     @abstractmethod
-    def set_callback(self, on_frame_ready):
-        """Pass a frame-ready callback to the camera driver.
+    def set_callbacks(self, on_frame_ready, on_disconnected):
+        """Pass frame-ready and disconnected callbacks to the driver.
 
-        If the camera does not support having a callback function,
+        If the camera does not support having callback functions,
         a similar behavior can be obtained using an appropriate
-        pyqtSignal, emitted as soon as a frame has been acquired.
+        pyqtSignal, emitted as soon as a frame has been acquired
+        or if the camera has been disconnected/does not respond.
 
         Parameters
         ----------
@@ -1429,6 +1430,10 @@ class CameraABC(DeviceABC):
             It may do so either taking self directly or taking
             self.process_info (.camera is a reference to self).
             It can then access methods of the driver via self.driver.
+        on_disconnected : callable
+            The function that will be called by the camera if it is
+            disconnected. The callback should set self.connected to
+            False and emit an DeviceABCErrors.DEVICE_NOT_FOUND error.
 
         Returns
         -------

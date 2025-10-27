@@ -6,6 +6,7 @@ CameraABC meant to handle (GigE only?) cameras from The Imaging Source.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-10-21'
@@ -23,6 +24,7 @@ from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera.abc import CameraABC
 from viperleed.gui.measure.camera.abc import fallback_if_disconnected
 from viperleed.gui.measure.camera.drivers.imagingsource import (
+    DisconnectedCallbackType,
     FrameReadyCallbackType,
     ImagingSourceError,
     ISCamera as ImagingSourceDriver,
@@ -31,6 +33,7 @@ from viperleed.gui.measure.camera.drivers.imagingsource import (
 from viperleed.gui.measure.camera.imagingsourcecalibration import (
     DarkLevelCalibration,
     )
+from viperleed.gui.measure.classes.abc import DeviceABCErrors
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.abc import SettingsInfo
 from viperleed.gui.measure.dialogs.settingsdialog import SettingsHandler
@@ -48,6 +51,27 @@ _CUSTOM_NAME_RE = re.compile(r"\[.*\]")
 # pylint: disable=useless-param-doc,useless-type-doc
 # I prefer to keep the documentation of the (unused) arguments
 # to remember the signature required by the driver.
+@DisconnectedCallbackType
+def on_disconnected_(__grabber_handle, camera):
+    """Set python camera object to disconnected and emit error.
+
+    Parameters
+    ----------
+    __grabber_handle : imagingsource.GrabberHandlePointer
+        Unused C pointer to the grabber handle used internally
+        by the Imaging Source driver to address the camera.
+    camera : ImagingSourceCamera
+        Instance of ImagingSourceCamera that is to be disconnected.
+
+    Emits
+    -----
+    camera.error_occurred
+        After setting camera.connected to False.
+    """
+    camera.connected = False
+    camera.emit_error(DeviceABCErrors.DEVICE_NOT_FOUND, camera.name)
+
+
 @FrameReadyCallbackType
 def on_frame_ready_(__grabber_handle, image_start_pixel,
                     __frame_number, process_info):
@@ -303,7 +327,7 @@ class ImagingSourceCamera(CameraABC):
         self.__burst_count = -1
         self.__extra_delay = []  # Duration of abort_trigger_burst
 
-        self.__has_callback = False
+        self._has_callbacks = False
 
         super().__init__(ImagingSourceDriver(), *args,
                          settings=settings, parent=parent, **kwargs)
@@ -719,9 +743,9 @@ class ImagingSourceCamera(CameraABC):
         # work for no obvious reason (returns errors).
         self.set_roi(no_roi=True)
         self.driver.enable_auto_properties(False)
-        if not self.__has_callback:
-            self.set_callback(on_frame_ready_)
-            self.__has_callback = True
+        if not self._has_callbacks:
+            self.set_callbacks(on_frame_ready_, on_disconnected_)
+            self._has_callbacks = True
         self.set_roi()
         return True
 
@@ -946,8 +970,8 @@ class ImagingSourceCamera(CameraABC):
         except ImagingSourceError:
             pass
 
-    def set_callback(self, on_frame_ready):
-        """Pass a frame-ready callback to the camera driver.
+    def set_callbacks(self, on_frame_ready, on_disconnected):
+        """Pass frame-ready and disconnected callbacks to the camera driver.
 
         Parameters
         ----------
@@ -955,8 +979,17 @@ class ImagingSourceCamera(CameraABC):
             The function that will be called by the camera each time
             a new frame arrives. Takes self.process_info as the last
             argument.
+        on_disconnected : DisconnectedCallbackType
+            The function that will be called by the camera each time
+            the hardware is disconnected. Takes self as the last
+            argument.
+
+        Returns
+        -------
+        None.
         """
-        self.driver.set_frame_ready_callback(on_frame_ready, self.process_info)
+        self.driver.set_callbacks(on_frame_ready, on_disconnected,
+                                  self.process_info)
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(object)
