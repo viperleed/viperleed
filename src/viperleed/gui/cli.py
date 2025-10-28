@@ -18,13 +18,13 @@ import sys
 
 from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.gui.base import catch_gui_crash
+from viperleed.gui.constants import LOGO
 from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import Qt5DependencyFinder
 from viperleed.gui.detect_graphics import check_pyqt_sanity
 from viperleed.gui.detect_graphics import find_missing_qt_dependencies
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.detect_graphics import suppress_file_permission_warnings
-from viperleed.gui.constants import LOGO
 from viperleed.gui.helpers import resources_path
 
 # Part of error message emitted if a likely ABI mismatch is detected
