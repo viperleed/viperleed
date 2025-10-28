@@ -29,7 +29,7 @@ from viperleed.gui.helpers import resources_path
 
 # Part of error message emitted if a likely ABI mismatch is detected
 # on the current PyQt5 installation (e.g., Anaconda vs. pip)
-_ABI_MISMATCH_MSG = details = '''
+_ABI_MISMATCH_MSG = '''
 If you are executing viperleed in a conda environment, try:
     1. Creating a new, clean environment without Qt by calling
        conda create with the --no-default-packages flag, then

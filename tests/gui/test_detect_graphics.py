@@ -294,6 +294,7 @@ class TestPyQtSanityChecker:
         checker.forget_status()
         checker()
 
+        # pylint: disable-next=magic-value-comparison
         assert mock_do_check.call_count == 2
 
     _exit_codes = {
@@ -309,6 +310,7 @@ class TestPyQtSanityChecker:
 
     @parametrize(has_display=(True, False))
     @parametrize('exit_code,expect', _exit_codes.items())
+    # pylint: disable-next=too-many-arguments   # 2/6 fixtures
     def test_check_sanity(self, has_display, exit_code, expect,
                           mock_multiprocessing, mocker):
         """Check expected return value when no display is available."""
