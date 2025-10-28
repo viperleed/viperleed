@@ -302,7 +302,8 @@ class WindowsCamera:
         self.__init_library()
         self.__handle = self.create_grabber()
         self.__vcd_properties = {}
-        self._has_callbacks = False
+        self._has_disconnected_callback = False
+        self._has_frame_ready_callback = False
         # Store video format info, as this is static for an open
         # device, and takes a while to retrieve the first time.
         self.__video_fmt_info = {'min_w': None, 'min_h': None,
@@ -841,7 +842,8 @@ class WindowsCamera:
         # trying to set a new callback. It is unclear whether the
         # problem with setting the callback twice is only there
         # when running from the terminal.
-        self._has_callbacks = False
+        self._has_disconnected_callback = False
+        self._has_frame_ready_callback = False
 
         self.__video_fmt_info = {'min_w': None, 'min_h': None,
                                  'max_w': None, 'max_h': None,
@@ -1053,10 +1055,12 @@ class WindowsCamera:
                                  'decorated with an allowed callback '
                                  'type. This is needed to ensure '
                                  'appropriate type checking/conversions')
-        if not self._has_callbacks:
+        if (not self._has_disconnected_callback
+            and not self._has_frame_ready_callback):
             self._dll_set_callback(self.__handle, on_frame_ready, py_obj,
                                    on_disconnected, py_obj.camera)
-            self._has_callbacks = True
+            self._has_disconnected_callback = True
+            self._has_frame_ready_callback = True
         else:
             raise ImagingSourceError(
                 'Cannot set callbacks twice due to some bug in the '
@@ -1110,8 +1114,8 @@ class WindowsCamera:
             If this method is called more than once
             before rebooting a camera.
         """
-        raise RuntimeError('This function should no longer be used.'
-                           'Use set_callbacks instead.')
+        raise NotImplementedError('This function should no longer be used.'
+                                  'Use set_callbacks instead.')
         # Make sure the frame-ready callback has been wrapped correctly
         if not hasattr(on_frame_ready, '__call__'):
             raise TypeError(f"Frame-ready callback {on_frame_ready.__name__} "
@@ -1121,10 +1125,10 @@ class WindowsCamera:
             raise ValueError("Frame-ready callback was not decorated with "
                              "@FrameReadyCallbackType. This is needed to "
                              "ensure appropriate type checking/conversions")
-        if not self.__has_frame_ready_callback:
+        if not self._has_disconnected_callback:
             self._dll_set_frame_ready_callback(self.__handle, on_frame_ready,
                                                py_obj_for_callback)
-            self.__has_frame_ready_callback = True
+            self._has_disconnected_callback = True
         else:
             raise ImagingSourceError(
                 "Cannot set twice a callback due to some bug in the "
