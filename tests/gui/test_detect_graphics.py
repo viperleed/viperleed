@@ -417,6 +417,19 @@ class TestQt5DependencyFinder:
         no_install_suggestion = ''
         assert result == no_install_suggestion
 
+    @parametrize(platform=(*_supported, *_unsupported))
+    def test_find_install_for_libs_no_missing(self, platform, mocker):
+        """Check shortcut if nothing is missing."""
+        mocker.patch('sys.platform', platform)
+        mock_delegate = mocker.patch.object(
+            Qt5DependencyFinder,
+            f'_find_install_for_libs_{platform}',
+            create=True,
+            )
+        none_missing = {}
+        assert not Qt5DependencyFinder.find_install_for_libs(none_missing)
+        mock_delegate.assert_not_called()
+
     @pytest.mark.usefixtures('mock_pyqt_root')
     @parametrize(platform=_supported)
     def test_find_missing_dependencies_supported(self, platform, mocker):

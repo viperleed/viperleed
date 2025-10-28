@@ -165,6 +165,8 @@ class Qt5DependencyFinder:
     @classmethod
     def find_install_for_libs(cls, missing):
         """Return a suggestion on how to install `missing` libraries."""
+        if not missing:
+            return ''
         finder_name = f'_find_install_for_libs_{sys.platform}'
         try:
             finder = getattr(cls, finder_name)
@@ -219,6 +221,7 @@ class Qt5DependencyFinder:
     @staticmethod
     def _list_install_for_libs_linux(missing):
         """Return library names that make `missing` ones available on Linux."""
+        assert missing
         # Build a regular-expression pattern for apt-cache
         rgx = '|'.join(missing)
         try:
