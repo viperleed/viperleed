@@ -249,7 +249,7 @@ GrabberHandlePtr.__repr__ = lambda self: f"GrabberHandlePtr({self.contents})"
 DisconnectedCallbackType = CFUNCTYPE(
     c_void_p,          # return type
     GrabberHandlePtr,  # HGRABBER
-    py_object          # python camera object
+    py_object,         # python camera object
     )
 
 DisconnectedCallbackType.__ctypeswrapper__ = 'DisconnectedCallbackType'
