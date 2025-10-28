@@ -18,13 +18,45 @@ import sys
 
 from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.gui.base import catch_gui_crash
-from viperleed.gui.constants import LOGO
+from viperleed.gui.detect_graphics import PyQtSanity
 from viperleed.gui.detect_graphics import Qt5DependencyFinder
+from viperleed.gui.detect_graphics import check_pyqt_sanity
 from viperleed.gui.detect_graphics import find_missing_qt_dependencies
-from viperleed.gui.detect_graphics import has_graphics
 from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.detect_graphics import suppress_file_permission_warnings
+from viperleed.gui.constants import LOGO
 from viperleed.gui.helpers import resources_path
+
+# Part of error message emitted if a likely ABI mismatch is detected
+# on the current PyQt5 installation (e.g., Anaconda vs. pip)
+_ABI_MISMATCH_MSG = details = '''
+If you are executing viperleed in a conda environment, try:
+    1. Creating a new, clean environment without Qt by calling
+       conda create with the --no-default-packages flag, then
+            pip install "viperleed[GUI]"
+       there.
+    2. or, if you have installed viperleed globally, deactivating the
+       current environment first.
+If the above does not work, or you're not in a conda environment, please
+open an issue under https://github.com/viperleed/viperleed/issues.'''
+
+# Error messages emitted if the sanity check fails
+_SANITY_TO_ERR_MSG = {
+    PyQtSanity.NOT_FOUND: 'PyQt5 is not installed.',
+    # All of the following may still be caused by missing dependencies
+    PyQtSanity.OK: '',
+    PyQtSanity.IMPORT_ERROR: (
+        'PyQt5 was found, but it could not be loaded.' + _ABI_MISMATCH_MSG
+        ),
+    PyQtSanity.RUNTIME_CRASH: (
+        'PyQt5 was found, but the GUI crashed at startup.' + _ABI_MISMATCH_MSG
+        ),
+    PyQtSanity.NO_DISPLAY: (
+        'the system appears to have no graphics capability (i.e., no '
+        'monitor was detected). Try once more if this is the first '
+        'time you execute the GUI, or have just updated viperleed.'
+        ),
+    }
 
 
 class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
@@ -57,13 +89,19 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             If the GUI cannot execute because
             - PyQt5 is not installed,
             - PyQt5 misses any system dependencies,
+            - loading PyQt5 or opening the GUI would crash Python,
             - the current machine has no graphics capability.
         """
         err_msg = (
             'Cannot execute the ViPErLEED graphical user interface because {}'
             )
-        if not has_pyqt():
-            self.parser.error(err_msg.format('PyQt5 is not installed.'))
+        sanity = check_pyqt_sanity()
+        details = _SANITY_TO_ERR_MSG[sanity]  # Let KeyError propagate
+        if sanity is PyQtSanity.NOT_FOUND:
+            # This is the only case in which it makes no sense to
+            # check for missing dependencies. All other non-sane
+            # configurations may be because of missing dependencies.
+            self.parser.error(err_msg.format(details))
         missing = tuple(chain.from_iterable(
             find_missing_qt_dependencies().values()
             ))
@@ -79,12 +117,8 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
                 'the following PyQt5 dependencies are missing on your system:'
                 f'{fmt_missing}\n{install_msg}'
                 ))
-        if not has_graphics():
-            self.parser.error(err_msg.format(
-                'the system appears to have no graphics capability (i.e., no '
-                'monitor was detected). Try once more if this is the first '
-                'time you execute the GUI, or have just updated viperleed.'
-                ))
+        if sanity is not PyQtSanity.OK:
+            self.parser.error(err_msg.format(details))
 
 
 def commandline_main():
