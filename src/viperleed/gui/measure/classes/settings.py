@@ -904,7 +904,6 @@ class SystemSettings(ViPErLEEDSettings):
             ini_path = Path(self._sys_qsettings.fileName()).resolve()
             ini_path.parent.mkdir(parents=True, exist_ok=True)
             ini_path.resolve().touch()
-            
 
         # Set correct path to settings file.
         self._last_file = Path(self._sys_qsettings.fileName()).resolve()
