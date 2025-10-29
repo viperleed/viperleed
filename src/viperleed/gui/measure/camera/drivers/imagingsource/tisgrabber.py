@@ -986,7 +986,7 @@ class WindowsCamera:
 
     _dll_set_callback = _dll.IC_SetCallbacks
     _dll_set_callback.errcheck = check_dll_return()
-    # The py_object at the end is the same that will later be passed
+    # The py_objects at the end are the same that will later be passed
     # on to the callbacks as the last argument.
     _dll_set_callback.argtypes = (
         GrabberHandlePtr,
@@ -994,7 +994,8 @@ class WindowsCamera:
         DisconnectedCallbackType, py_object, # DEVICE_LOST_CALLBACK
         )
 
-    def set_callbacks(self, on_frame_ready, on_disconnected, py_obj):
+    def set_callbacks(self, on_frame_ready, on_disconnected,
+                      py_obj_frame_ready, camera):
         """Define callback functions.
 
         Parameters
@@ -1005,7 +1006,7 @@ class WindowsCamera:
             whenever a new frame has been acquired (in 'continuous'
             mode) or whenever an image is 'snapped'. The callable
             should return None, and have signature:
-            on_frame_ready(__handle, img_buffer, frame_no, py_obj)
+            on_frame_ready(__handle, img_buffer, frame_no, py_obj_frame_ready)
             where:
                 __handle : int
                     Pointer to grabber handle. Should not be used.
@@ -1013,7 +1014,7 @@ class WindowsCamera:
                     Pointer to first byte of bottom line of image data
                 frame_no : int
                     Frame number. Unclear what it corresponds to.
-                py_obj : object
+                py_obj_frame_ready : object
                     Same object as below
         on_disconnected : callable
             Should be decorated with @DisconnectedCallbackType to ensure
@@ -1026,12 +1027,14 @@ class WindowsCamera:
                     Pointer to grabber handle. Should not be used.
                 camera : ImagingSourceCamera
                     The camera python object.
-        py_obj : object
+        py_obj_frame_ready : object
             The python object that is passed as the last argument to
-            on_frame_ready and of which the .camera attribute is passed
-            on to on_disconnected. If the callback is to modify this,
-            it is necessary to pass a dictionary-like object (or a class
+            on_frame_ready. If the callback is to modify this, it is
+            necessary to pass a dictionary-like object (or a class
             instance with attributes).
+        camera : ImagingSourceCamera
+            The python camera object that is passed as the last argument
+            to on_disconnected.
 
         Raises
         -------
@@ -1057,8 +1060,8 @@ class WindowsCamera:
                                  'appropriate type checking/conversions')
         if (not self._has_disconnected_callback
             and not self._has_frame_ready_callback):
-            self._dll_set_callback(self.__handle, on_frame_ready, py_obj,
-                                   on_disconnected, py_obj.camera)
+            self._dll_set_callback(self.__handle, on_frame_ready,
+                                   py_obj_frame_ready, on_disconnected, camera)
             self._has_disconnected_callback = True
             self._has_frame_ready_callback = True
         else:

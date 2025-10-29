@@ -989,7 +989,7 @@ class ImagingSourceCamera(CameraABC):
         None.
         """
         self.driver.set_callbacks(on_frame_ready, on_disconnected,
-                                  self.process_info)
+                                  self.process_info, self)
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(object)
