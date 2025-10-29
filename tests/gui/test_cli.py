@@ -73,6 +73,17 @@ Try again after installing them'''
         stderr = capsys.readouterr().err.strip()
         assert stderr.endswith(expect_err)
 
+    _mock_abi_msg = '''
+If you are executing viperleed in a conda environment, try one of the
+following:
+    1. Creating a new, clean environment without Qt by calling
+       conda create with the --no-default-packages flag, then
+            pip install "viperleed[GUI]"
+       there.
+    2. Deactivating the current environment first, if you have 
+       installed viperleed globally.
+If none of the above works, or you're not in a conda environment, please
+open an issue under https://github.com/viperleed/viperleed/issues.'''
     _can_run = {
         'normal gui': (PyQtSanity.OK, ''),
         'no qt': (PyQtSanity.NOT_FOUND, 'PyQt5 is not installed.'),
@@ -80,35 +91,15 @@ Try again after installing them'''
             PyQtSanity.NO_DISPLAY,
             ('the system appears to have no graphics capability (i.e., '
              'no monitor was detected). Try once more if this is the first '
-             'time you execute the GUI, or have just updated viperleed.'),
+             'time you execute the GUI, or if you just updated viperleed.'),
             ),
         'import fail': (
             PyQtSanity.IMPORT_ERROR,
-            '''\
-PyQt5 was found, but it could not be loaded.
-If you are executing viperleed in a conda environment, try:
-    1. Creating a new, clean environment without Qt by calling
-       conda create with the --no-default-packages flag, then
-            pip install "viperleed[GUI]"
-       there.
-    2. or, if you have installed viperleed globally, deactivating the
-       current environment first.
-If the above does not work, or you're not in a conda environment, please
-open an issue under https://github.com/viperleed/viperleed/issues.'''
+            'PyQt5 was found, but it could not be loaded.' + _mock_abi_msg,
             ),
         'runtime crash': (
             PyQtSanity.RUNTIME_CRASH,
-            '''\
-PyQt5 was found, but the GUI crashed at startup.
-If you are executing viperleed in a conda environment, try:
-    1. Creating a new, clean environment without Qt by calling
-       conda create with the --no-default-packages flag, then
-            pip install "viperleed[GUI]"
-       there.
-    2. or, if you have installed viperleed globally, deactivating the
-       current environment first.
-If the above does not work, or you're not in a conda environment, please
-open an issue under https://github.com/viperleed/viperleed/issues.'''
+            'PyQt5 was found, but the GUI crashed at startup.' + _mock_abi_msg,
             ),
         }
 

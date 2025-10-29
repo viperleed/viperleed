@@ -30,14 +30,15 @@ from viperleed.gui.helpers import resources_path
 # Part of error message emitted if a likely ABI mismatch is detected
 # on the current PyQt5 installation (e.g., Anaconda vs. pip)
 _ABI_MISMATCH_MSG = '''
-If you are executing viperleed in a conda environment, try:
+If you are executing viperleed in a conda environment, try one of the
+following:
     1. Creating a new, clean environment without Qt by calling
        conda create with the --no-default-packages flag, then
             pip install "viperleed[GUI]"
        there.
-    2. or, if you have installed viperleed globally, deactivating the
-       current environment first.
-If the above does not work, or you're not in a conda environment, please
+    2. Deactivating the current environment first, if you have 
+       installed viperleed globally.
+If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''
 
 # Error messages emitted if the sanity check fails
@@ -54,7 +55,7 @@ _SANITY_TO_ERR_MSG = {
     PyQtSanity.NO_DISPLAY: (
         'the system appears to have no graphics capability (i.e., no '
         'monitor was detected). Try once more if this is the first '
-        'time you execute the GUI, or have just updated viperleed.'
+        'time you execute the GUI, or if you just updated viperleed.'
         ),
     }
 
