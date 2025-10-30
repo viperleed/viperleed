@@ -758,7 +758,10 @@ class Rparams:
                               'compiler not found.')
             raise FileNotFoundError('Fortran MPI compiler not found')
         if found == 'mpiifort':
-            self.FORTRAN_COMP_MPI = ['mpiifort -Ofast', '']
+            # On Windows, mpiifort is a .bat, not an executable. It
+            # must be called via cmd.exe, otherwise FileNotFoundError
+            cmd = 'cmd /c ' if os.name == 'nt' else ''
+            self.FORTRAN_COMP_MPI = [f'{cmd}mpiifort -Ofast', '']
             _LOGGER.debug('Using fortran compiler: mpiifort')
         elif found == 'mpifort':
             # check for the mpifort version
