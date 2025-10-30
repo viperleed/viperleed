@@ -352,10 +352,7 @@ def run_refcalc(runtask):
         else:
             log_file = Path('refcalc.log')
             fin = edit_fin_energy_lmax(runtask)
-            try:
-                Path('refcalc-FIN').write_text(fin, encoding='utf-8')
-            except OSError:
-                pass  # local FIN is just for information...
+            Path('refcalc-FIN').write_text(fin, encoding='utf-8')
 
         # get executable
         exename = runtask.comptask.exename
@@ -367,19 +364,19 @@ def run_refcalc(runtask):
                     'Failed to get refcalc executable.')
         # run execution
         with log_file.open('w', encoding='utf-8') as log:
-            try:
-                subprocess.run(str(workfolder/exename),
-                               input=fin,
-                               encoding='ascii',
-                               stdout=log,
-                               stderr=log,
-                               check=False)
-            except Exception:
-                logger.error('Error while executing reference calculation '
-                             f'{runtask.name}. Also check refcalc log file.',
-                             exc_info=True)
-                return (f'Error encountered by {runtask}: '
-                        'Error during refcalc execution.')
+            with open('refcalc-FIN', encoding='utf-8') as fin_file:
+                try:
+                    subprocess.run(str(workfolder/exename),
+                                   stdout=log,
+                                   stderr=log,
+                                   stdin=fin_file,
+                                   check=False)
+                except Exception:
+                    logger.error('Error while executing reference calculation '
+                                 f'{runtask.name}. Also check refcalc log file.',
+                                 exc_info=True)
+                    return (f'Error encountered by {runtask}: '
+                            'Error during refcalc execution.')
 
         if runtask.single_threaded:
             return ''
@@ -505,10 +502,10 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.debug("Wrote input for refcalc as file refcalc-FIN.")
     except Exception:
         logger.error(
-            "Exception while trying to write refcalc-FIN file. "
-            "Execution will proceed. The exception was: ",
-            exc_info=True
+            "Exception while trying to write refcalc-FIN file. ",
+            exc_info=True,
             )
+        raise  # We need refcalc-FIN for piping to subprocess
     if rp.TL_VERSION < Version('1.7.0'):   # muftin.f deprecated in version 1.7
         try:
             iorefcalc.writeMuftin(rp)
@@ -628,6 +625,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                     "check results!"
                     )
         collection_dir.mkdir(parents=True, exist_ok=True)
+        collection_dir = collection_dir.resolve()  # Use full path
     # collect run tasks
     ref_tasks = []
     if not single_threaded:

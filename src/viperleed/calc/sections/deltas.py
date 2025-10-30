@@ -246,23 +246,31 @@ def run_delta(runtask):
             return (f'Error encountered by {runtask}: '
                     'Failed to get delta executable.')
 
+        # Write DIN file to be piped. We need an explicit file, as
+        # multiprocessing with spawn may not create a proper STDIN
+        # (typically on Windows), so we can't just pass it along
+        # via subprocess.run's input kwarg bt have to provide a
+        # real file handle.
+        din_path = Path('delta-DIN')
+        din_path.write_text(runtask.din, encoding='utf-8')
+
         # Run delta-amplitudes calculation
         log_file = Path('delta.log')
         with log_file.open('w', encoding='utf-8') as log:
-            try:
-                subprocess.run(str(workfolder / exename),
-                               input=runtask.din,
-                               encoding='ascii',
-                               stdout=log,
-                               stderr=log,
-                               check=False)
-            except Exception:
-                logger.error('Error while executing delta-amplitudes '
-                             f'calculation for {runtask.name}. Also '
-                             'check delta log file.',
-                             exc_info=True)
-                return (f'Error encountered by {runtask}: '
-                        'Error during delta execution.')
+            with din_path.open(encoding='utf-8') as din_file:
+                try:
+                    subprocess.run(str(workfolder / exename),
+                                   stdout=log,
+                                   stderr=log,
+                                   stdin=din_file,
+                                   check=False)
+                except Exception:
+                    logger.error('Error while executing delta-amplitudes '
+                                 f'calculation for {runtask.name}. Also '
+                                 'check delta log file.',
+                                 exc_info=True)
+                    return (f'Error encountered by {runtask}: '
+                            'Error during delta execution.')
 
         # Copy delta file out
         try:
