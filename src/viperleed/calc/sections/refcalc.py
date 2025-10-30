@@ -120,14 +120,19 @@ class RefcalcCompileTask:
         return f'{type(self).__name__} {self.foldername}'
 
     @property
-    def logfile(self):
-        """Return the (relative) path to the compilation log file."""
-        return Path(self.foldername) / 'fortran-compile.log'
-
-    @property
     def compile_log_name(self):
         """Name of the log file as it should appear in compile_logs."""
         return self.foldername
+
+    @property
+    def exec_dir(self):
+        """Return the path to the folder where compilation takes place."""
+        return Path.cwd() / self.foldername
+
+    @property
+    def logfile(self):
+        """Return the (relative) path to the compilation log file."""
+        return Path(self.foldername) / 'fortran-compile.log'
 
     def get_source_files(self):
         """Return a tuple of source files needed for running a refcalc."""
@@ -254,7 +259,7 @@ def compile_refcalc(comptask):
     error_info : str
         Description of any error that occurred while compiling.
     """
-    workfolder = Path(comptask.foldername).resolve()
+    workfolder = comptask.exec_dir
     # Make compilation subfolder and go there
     try:
         workfolder.mkdir()
@@ -837,7 +842,7 @@ def _reinitialize_deltas(slab):
 
     Delete old delta files in main work folder, if necessary
     (there should not be any, unless there was an error). Also,
-    empty all atom.known_deltas because they would refer to
+    empty all atom.current_deltas because they would refer to
     previous tensors.
 
     Parameters
@@ -855,9 +860,9 @@ def _reinitialize_deltas(slab):
                 "cause the delta file to incorrectly be labelled as belonging "
                 "with the new set of tensors.")
 
-    # empty atom.known_deltas, reset displacements and constraints
+    # empty atom.current_deltas, reset displacements and constraints
     for at in slab:
-        at.known_deltas = []
+        at.current_deltas = []
         at.initDisp(force=True)
         at.constraints = {1: {}, 2: {}, 3: {}}
 

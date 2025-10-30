@@ -7,9 +7,9 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-28'
 __license__ = 'GPLv3+'
 
-import pytest
-
 from collections import defaultdict
+
+import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
@@ -18,18 +18,40 @@ from viperleed.calc.classes.rparams.rparams import Rparams
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
     )
+from viperleed.calc.sections.run_sections import run_section
 from viperleed.calc.sections.run_sections import section_loop
+
+
+_MODULE = 'viperleed.calc.sections.run_sections'
+
+
+class TestRunSection:
+    """Tests for the run_section function."""
+
+    def test_search_marks_domains_as_require_refcalc(self, mocker):
+        """Check that all domains require a refcalc after a search."""
+        rpars = Rparams()
+        for file in rpars.fileLoaded:
+            # Fake that all files have been read already to skip
+            # all the code that loads files before running.
+            rpars.fileLoaded[file] = True
+        rpars.domainParams = [mocker.MagicMock(refcalc_required=False)]
+        mock_search = mocker.patch('viperleed.calc.sections.search.search')
+        run_section(3, mocker.MagicMock(name='slab'), rpars)
+        mock_search.assert_called_once()
+        assert all(d.refcalc_required for d in rpars.domainParams)
 
 
 class TestSectionLoop:
     """Tests for the section_loop function."""
 
     @fixture(name='patch_common', autouse=True)
-    def patch_common(self, monkeypatch):
-        for p in ("viperleed.calc.files.parameters.update",
-                  "viperleed.calc.sections.run_sections.cleanup",
-                  "viperleed.calc.sections.run_sections.move_oldruns"):
-            monkeypatch.setattr(p, lambda *_args, **_kwargs: None)
+    def patch_common(self, mocker):
+        """Replace implementation details with mocks."""
+        for func in ('viperleed.calc.files.parameters.update',
+                     f'{_MODULE}.cleanup',
+                     f'{_MODULE}.move_oldruns'):
+            mocker.patch(func, return_value=None)
 
     @fixture(name='dummy_slab')
     def _make_dummy_slab(self, mocker):
@@ -40,30 +62,34 @@ class TestSectionLoop:
 
     @fixture(name='dummy_rp')
     def _make_dummy_rp(self):
-        rp = Rparams()
-        rp.HALTING = 3    # don't halt unless specified
-        rp.fileLoaded["EXPBEAMS"] = True
-        return rp
+        rpars = Rparams()
+        rpars.HALTING = 3    # don't halt unless specified
+        rpars.fileLoaded['EXPBEAMS'] = True
+        return rpars
 
     def make_fake_run_section(self, actions_per_index=None):
-        """
-        Factory that returns a stateful fake_run_section.
+        """Factory that returns a stateful fake_run_section.
 
-        :param actions_per_index: dict mapping index to list of actions
-                                  (each action is a callable receiving `rp`)
+        Parameters
+        ----------
+        actions_per_index: dict, optional
+            Keys are section indices, values are sequences of callables
+            representing actions to perform when the corresponding
+            section is executed. Each action is a callable taking
+            a single `rpars` argument.
         """
         call_counts = defaultdict(int)
 
-        def fake_run_section(index, slab, rp):
+        def fake_run_section(index, _slab, rpars):
             call_counts[index] += 1
-            rp.runHistory.append(index)
+            rpars.runHistory.append(index)
 
             if actions_per_index and index in actions_per_index:
                 action_list = actions_per_index[index]
                 call_index = call_counts[index] - 1  # 0-based
                 if call_index < len(action_list):
                     action = action_list[call_index]
-                    action(rp)
+                    action(rpars)
 
         return fake_run_section
 
@@ -81,38 +107,39 @@ class TestSectionLoop:
     def make_is_too_far_by_section(which_calls):
         """Return a function that returns True only if it's called for the Nth
         time and N is in the which_calls argument."""
-        call_count = {"count": -1}
+        call_count = {'count': -1}
 
-        def is_too_far(atom):
+        def is_too_far(_atom):
             # simulate one call per section
-            call_count["count"] += 1
-            return call_count["count"] in which_calls
+            call_count['count'] += 1
+            # pylint: disable-next=unsupported-membership-test  # dict
+            return call_count['count'] in which_calls
         return is_too_far
 
-    def set_multi_search(rp):
-        rp.disp_blocks = [('dummy_lines', 'search 1'),
-                          ('dummy_lines', 'search 2')]
+    def set_multi_search(rpars):
+        rpars.disp_blocks = [('dummy_lines', 'search 1'),
+                             ('dummy_lines', 'search 2')]
 
-    def set_looped_search(rp):
-        rp.disp_blocks = [('dummy_lines', 'search 1')]
-        rp.disp_loops = [(0, 0)]
+    def set_looped_search(rpars):
+        rpars.disp_blocks = [('dummy_lines', 'search 1')]
+        rpars.disp_loops = [(0, 0)]
 
-    def set_nested_looped_search(rp):
+    def set_nested_looped_search(rpars):
         """Inner loop at beginning"""
-        rp.disp_blocks = [('dummy_lines', 'search 1'),
-                          ('dummy_lines', 'search 2'),]
-        rp.disp_loops = [(0, 0), (0, 1)]
+        rpars.disp_blocks = [('dummy_lines', 'search 1'),
+                             ('dummy_lines', 'search 2'),]
+        rpars.disp_loops = [(0, 0), (0, 1)]
 
-    def set_nested_looped_search_2(rp):
+    def set_nested_looped_search_2(rpars):
         """Inner loop at end"""
-        rp.disp_blocks = [('dummy_lines', 'search 1'),
-                          ('dummy_lines', 'search 2'),]
-        rp.disp_loops = [(0, 1), (1, 1)]
+        rpars.disp_blocks = [('dummy_lines', 'search 1'),
+                             ('dummy_lines', 'search 2'),]
+        rpars.disp_loops = [(0, 1), (1, 1)]
 
-    def raise_fake_error(rp):
-        raise RuntimeError("Testing Error")
+    def raise_fake_error(_rpars):
+        raise RuntimeError('Testing Error')
 
-    def raise_keyboard_interrupt(rp):
+    def raise_keyboard_interrupt(_rpars):
         raise KeyboardInterrupt
 
     valid_runs = {  # name: (RUN, actions, expect)
@@ -129,35 +156,37 @@ class TestSectionLoop:
         '2 blocks explicit': ([0, 1, 2, 3, 2, 3], {0: [set_multi_search]},
                               [0, 1, 11, 2, 3, 31, 12, 2, 3, 31, 12]),
         'loop': ([0, 1, 2, 3], {
-            0: [set_looped_search],
-            3: make_attr_setter_list("last_R", [0.2, 0.2])
-            },
+                0: [set_looped_search],
+                3: make_attr_setter_list('last_R', [0.2, 0.2])
+                },
             [0, 1, 11] + [2, 3, 31, 12]*2),
         'loop with improvement': ([0, 1, 2, 3], {
             0: [set_looped_search],
-            3: make_attr_setter_list("last_R", [0.3, 0.2, 0.2])
+            3: make_attr_setter_list('last_R', [0.3, 0.2, 0.2])
             },
             [0, 1, 11] + [2, 3, 31, 12]*3),
         'nested loop trivial': ([0, 1, 2, 3], {
             0: [set_nested_looped_search],
-            3: make_attr_setter_list("last_R", [0.2]*5)
+            3: make_attr_setter_list('last_R', [0.2]*5)
             },
             [0, 1, 11] + [2, 3, 31, 12]*5),
         'nested loop improvement': ([0, 1, 2, 3], {
             0: [set_nested_looped_search],
-            3: make_attr_setter_list("last_R", [
-                0.3, 0.25, 0.25] + [0.24]*4)
+            3: make_attr_setter_list(
+                'last_R', [0.3, 0.25, 0.25] + [0.24]*4
+                ),
             },
             [0, 1, 11] + [2, 3, 31, 12]*7),
         'nested loop trivial 2': ([0, 1, 2, 3], {
             0: [set_nested_looped_search_2],
-            3: make_attr_setter_list("last_R", [0.2]*5)
+            3: make_attr_setter_list('last_R', [0.2]*5)
             },
             [0, 1, 11] + [2, 3, 31, 12]*5),
         'nested loop improvement 2': ([0, 1, 2, 3], {
             0: [set_nested_looped_search_2],
-            3: make_attr_setter_list("last_R", [
-                0.3, 0.25] + [0.24]*4)
+            3: make_attr_setter_list(
+                'last_R', [0.3, 0.25] + [0.24]*4
+                ),
             },
             [0, 1, 11] + [2, 3, 31, 12]*6),
         }
@@ -172,12 +201,12 @@ class TestSectionLoop:
                      [0, 1, 2, 3, 31, 12, 2, 3, 31, 12]),
         'loop': ([0, 1, 2, 3], {
             0: [set_looped_search],
-            3: make_attr_setter_list("last_R", [0.2, 0.2])
+            3: make_attr_setter_list('last_R', [0.2, 0.2])
             },
             [0, 1] + [2, 3, 31, 12]*2),
         'loop with improvement': ([0, 1, 2, 3], {
             0: [set_looped_search],
-            3: make_attr_setter_list("last_R", [0.3, 0.2, 0.2])
+            3: make_attr_setter_list('last_R', [0.3, 0.2, 0.2])
             },
             [0, 1] + [2, 3, 31, 12]*3),
         }
@@ -200,7 +229,7 @@ class TestSectionLoop:
                                          1, 11, 2, 3, 31, 12]),
         'loop with ignore': ([0, 1, 2, 3], {
             0: [set_looped_search],
-            3: make_attr_setter_list("last_R", [0.2, 0.2])
+            3: make_attr_setter_list('last_R', [0.2, 0.2])
             },
             MaxTLAction.IGNORE,
             [0, 1, 11] + [2, 3, 31, 12]*2),
@@ -208,9 +237,9 @@ class TestSectionLoop:
 
     stopped_runs = {  # name: (RUN, actions, expect_code, expect_history)
         'user STOP': ([0, 1, 2, 3], {
-            1: [lambda rp: setattr(rp, "STOP", True)]}, 0, [0, 1, 11]),
+            1: [lambda rp: setattr(rp, 'STOP', True)]}, 0, [0, 1, 11]),
         'halting': ([0, 1, 2, 3], {
-            1: [lambda rp: setattr(rp, "halt", 3)]}, 0, [0, 1]),
+            1: [lambda rp: setattr(rp, 'halt', 3)]}, 0, [0, 1]),
         'KeyboardInterrupt': ([0, 1, 2, 3], {
             1: [raise_keyboard_interrupt]}, 1, [0, 1]),
         'Exception': ([0, 1, 2, 3], {
@@ -222,9 +251,9 @@ class TestSectionLoop:
                                 dummy_rp, dummy_slab, monkeypatch):
         dummy_rp.RUN = run[:]
 
-        monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
+        monkeypatch.setattr(f'{_MODULE}.run_section',
                             self.make_fake_run_section(actions))
-        exit_code, state_recorder = section_loop(dummy_rp, dummy_slab)
+        exit_code, _ = section_loop(dummy_rp, dummy_slab)
 
         assert exit_code == 0
         assert dummy_rp.runHistory == expect
@@ -234,15 +263,15 @@ class TestSectionLoop:
                                              dummy_rp, dummy_slab,
                                              monkeypatch):
         dummy_rp.RUN = run[:]
-        dp = DomainParameters('.', 'dummy_name')
-        dp.rpars = Rparams()
-        dp.rpars.HALTING = 3
-        dp.slab = dummy_slab
-        dummy_rp.domainParams = [dp]
+        domain = DomainParameters('.', 'dummy_name')
+        domain.rpars = Rparams()
+        domain.rpars.HALTING = 3
+        domain.slab = dummy_slab
+        dummy_rp.domainParams = [domain]
 
-        monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
+        monkeypatch.setattr(f'{_MODULE}.run_section',
                             self.make_fake_run_section(actions))
-        exit_code, state_recorder = section_loop(dummy_rp, dummy_slab)
+        exit_code, _ = section_loop(dummy_rp, dummy_slab)
 
         assert exit_code == 0
         assert dummy_rp.runHistory == expect
@@ -257,11 +286,11 @@ class TestSectionLoop:
 
         # always exceed MAX_TL_DISPLACEMENT limit
         monkeypatch.setattr(
-            "viperleed.calc.sections.run_sections._check_exceeds_tl_limit",
+            f'{_MODULE}._check_exceeds_tl_limit',
             lambda *_args, **_kwargs: True)
-        monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
+        monkeypatch.setattr(f'{_MODULE}.run_section',
                             self.make_fake_run_section(actions))
-        exit_code, state_recorder = section_loop(dummy_rp, dummy_slab)
+        exit_code, _ = section_loop(dummy_rp, dummy_slab)
 
         assert exit_code == 0
         assert dummy_rp.runHistory == expect
@@ -273,9 +302,9 @@ class TestSectionLoop:
                                 dummy_slab, monkeypatch):
         dummy_rp.RUN = run[:]
 
-        monkeypatch.setattr("viperleed.calc.sections.run_sections.run_section",
+        monkeypatch.setattr(f'{_MODULE}.run_section',
                             self.make_fake_run_section(actions))
-        exit_code, state_recorder = section_loop(dummy_rp, dummy_slab)
+        exit_code, _ = section_loop(dummy_rp, dummy_slab)
 
         assert exit_code == expect_code
         assert dummy_rp.runHistory == expect_history
