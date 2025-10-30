@@ -285,7 +285,7 @@ class TestSystemSettings:
         """Test whether the hidden folder and settings were created."""
         fake_path = tmp_path / 'ViPErLEED' / 'Measurement.ini'
         # Patch detected folder path to be in tmp_path.
-        mocker.patch('PyQt5.QtCore.QSettings.fileName', return_value=fake_path)
+        mocker.patch('PyQt5.QtCore.QSettings.fileName', return_value=str(fake_path))
         # Patch QSettings.allKeys to force creation of settings folder.
         mocker.patch('PyQt5.QtCore.QSettings.allKeys', return_value=None)
         sys_settings = SystemSettings()
