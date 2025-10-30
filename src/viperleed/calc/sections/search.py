@@ -480,7 +480,12 @@ def search(sl, rp):
         return None
 
     # Decide whether to use parallelization
-    usempi = rp.N_CORES > 1 and shutil.which('mpirun')
+    mpi_runners = ['mpirun']
+    if os.name == 'nt':
+        # On Windows, Intel does not provide a mpirun>mpiexec symlink
+        mpi_runners.append('mpiexec')
+    mpirun = next((r for r in mpi_runners if shutil.which(r)), None)
+    usempi = rp.N_CORES > 1 and mpirun
     if not usempi:
         reason = (
             f'The N_CORES parameter is set to {rp.N_CORES}' if rp.N_CORES <= 1
@@ -664,7 +669,7 @@ def search(sl, rp):
 
     # Prepare the command to be run via subprocess
     executable = os.path.join('.', searchname)
-    command = [] if not usempi else ['mpirun', '-n', str(rp.N_CORES)]
+    command = [] if not usempi else [mpirun, '-n', str(rp.N_CORES)]
     if usempi and is_gfortran:
         # Assume we're using OpenMPI: we need to specify the use of all
         # CPU threads explicitly, otherwise OpenMPI will use only the
