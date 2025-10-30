@@ -698,7 +698,13 @@ class Rparams:
                 _LOGGER.error('Rparams.getFortranComp: Requested fortran '
                               'compiler not found.')
             raise FileNotFoundError('Fortran compiler not found')
-        if found == 'ifort':
+        if found == 'ifort' and os.name == 'nt':  # Windows
+            mkl_path = Path(os.environ['MKLROOT'], 'include').resolve()
+            self.FORTRAN_COMP = [
+                f'ifort -O2 -I"{mkl_path}"',
+                '-Qmkl:parallel -traceback',
+                ]
+        elif found == 'ifort':  # Unix
             self.FORTRAN_COMP = [
                 'ifort -O2 -I/opt/intel/mkl/include',
                 '-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 '
