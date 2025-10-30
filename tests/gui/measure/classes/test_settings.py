@@ -18,6 +18,7 @@ from pytest_cases import parametrize
 import pytest
 
 from viperleed.gui.measure.classes.settings import AliasConfigParser
+from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.classes.settings import ensure_aliases_exist
 from viperleed.gui.measure.classes.settings import get_aliases_path
 from viperleed.gui.measure.classes.settings import interpolate_config_path
@@ -275,3 +276,20 @@ fallback_values = (('A/opt2', 'cfb'),)
         expected = 'expected'
         parser.read_string(f'[oldsection]\noption={expected}')
         assert parser['new_section']['new_option'] == expected
+
+
+class TestSystemSettings:
+    """Tests for SystemSettings."""
+
+    def test_hidden_folder_and_settings_creation(self, tmp_path, mocker):
+        """Test whether the hidden folder and settings were created."""
+        fake_path = tmp_path / 'ViPErLEED' / 'Measurement.ini'
+        # Patch detected folder path to be in tmp_path.
+        mocker.patch('PyQt5.QtCore.QSettings.fileName',
+                     return_value=str(fake_path))
+        # Patch QSettings.allKeys to force creation of settings folder.
+        mocker.patch('PyQt5.QtCore.QSettings.allKeys', return_value=None)
+        sys_settings = SystemSettings()
+        settings_path = Path(sys_settings._sys_qsettings.fileName()).resolve()
+        assert settings_path.parent.is_dir()
+        assert settings_path.is_file()
