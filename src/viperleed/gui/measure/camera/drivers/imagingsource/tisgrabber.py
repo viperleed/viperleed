@@ -1131,7 +1131,7 @@ class WindowsCamera:
         if not self._has_frame_ready_callback:
             self._dll_set_frame_ready_callback(self.__handle, on_frame_ready,
                                                py_obj_for_callback)
-            self._has_frame_ready_callback= True
+            self._has_frame_ready_callback = True
         else:
             raise ImagingSourceError(
                 "Cannot set twice a callback due to some bug in the "
