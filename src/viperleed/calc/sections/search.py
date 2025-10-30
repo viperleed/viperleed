@@ -576,7 +576,9 @@ def search(sl, rp):
     # compile task could be inherited from general CompileTask (issue #43)
     ctasks = [(f"{fcomp[0]} -o lib.search.o -c", lib_file.name, fcomp[1])]
     if hashname:
-        ctasks.append((f"{fcomp[0]} -c", hashname, fcomp[1]))
+        ctasks.append(
+            (f"{fcomp[0]} -o intarr_hashing.o -c", hashname, fcomp[1])
+            )
     ctasks.append((f"{fcomp[0]} -o restrict.o -c", "restrict.f", fcomp[1]))
     _fixed_format = any(f.endswith('.f90')
                         for f in (lib_file.name, src_file.name, hashname))
