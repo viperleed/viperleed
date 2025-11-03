@@ -442,6 +442,8 @@ def search(sl, rp):
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
+    if rp.TL_VERSION >= Version('1.7.0'):
+        rf_info_content = ''  # search reads from rf.info since v1.7
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
@@ -567,6 +569,27 @@ def search(sl, rp):
     # Prepare to compile fortran files
     searchname = f'search-{rp.timestamp}'
     fcomp = rp.FORTRAN_COMP_MPI if usempi else rp.FORTRAN_COMP
+
+    # On Windows with ifort, older versions that need the rf.info
+    # contents to be piped are known not to work correctly (they
+    # stall forever). There are also some problems in the random
+    # number generator external module (which affect up to v1.7.3)
+    # but we can let the compiler fail in that case.
+    known_unsupported = (
+        rp.TL_VERSION < Version('1.7.0')
+        and os.name == 'nt'
+        and 'ifort' in fcomp[0]
+        )
+    if known_unsupported:
+        logger.error('Old TensErLEED versions are not supported on Windows. '
+                     'Please upgrade your TensErLEED code to at least '
+                     # Suggest the version that uses Fortran's random
+                     # so people don't have to bother modifying and
+                     # manually compiling random_.c (see also #151).
+                     'version 1.7.4')
+        rp.setHaltingLevel(3)
+        return
+
     logger.info('Compiling fortran input files...')
 
     # compile task could be inherited from general CompileTask (issue #43)
