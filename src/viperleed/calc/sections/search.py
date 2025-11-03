@@ -23,21 +23,17 @@ import numpy as np
 from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.files import (
-    iosearch,
-    parameters,
-    searchpdf,
-)
+from viperleed.calc.files import iosearch
+from viperleed.calc.files import parameters
+from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.parabola_fit import parabolaFit
-from viperleed.calc.lib.time_utils import (
-    ExecutionTimer,
-    ExpiringOnCountTimer,
-    ExpiringTimerWithDeadline,
-)
+from viperleed.calc.lib.time_utils import ExecutionTimer
+from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
+from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -690,11 +686,9 @@ def search(sl, rp):
             if log_exists:  # log file existed before
                 search_log_f.write("\n\n-------\nRESTARTING\n-------\n\n")
 
-        search_job = SearchJob(
-            command=command,
-            input_data=rf_info_content,
-            log_path=search_log_path,
-        )
+        search_job = SearchJob(command=command,
+                               input_data=rf_info_content,
+                               log_path=search_log_path)
         search_job.start()
 
         # MONITOR SEARCH
