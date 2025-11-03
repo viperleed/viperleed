@@ -346,13 +346,13 @@ def run_refcalc(runtask):
                            'exists. Contents may get overwritten.')
 
     with execute_in_dir(workfolder):
+        fin_path = Path('refcalc-FIN')
         if runtask.single_threaded:
             log_file = Path(runtask.logname)
-            fin = runtask.fin
         else:
             log_file = Path('refcalc.log')
-            fin = edit_fin_energy_lmax(runtask)
-            Path('refcalc-FIN').write_text(fin, encoding='utf-8')
+            fin_path.write_text(edit_fin_energy_lmax(runtask),
+                                encoding='utf-8')
 
         # get executable
         exename = runtask.comptask.exename
@@ -364,7 +364,7 @@ def run_refcalc(runtask):
                     'Failed to get refcalc executable.')
         # run execution
         with log_file.open('w', encoding='utf-8') as log:
-            with open('refcalc-FIN', encoding='utf-8') as fin_file:
+            with fin_path.open('r', encoding='utf-8') as fin_file:
                 try:
                     subprocess.run(str(workfolder/exename),
                                    stdout=log,

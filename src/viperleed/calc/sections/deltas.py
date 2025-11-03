@@ -249,7 +249,7 @@ def run_delta(runtask):
         # Write DIN file to be piped. We need an explicit file, as
         # multiprocessing with spawn may not create a proper STDIN
         # (typically on Windows), so we can't just pass it along
-        # via subprocess.run's input kwarg bt have to provide a
+        # via subprocess.run's input kwarg but have to provide a
         # real file handle.
         din_path = Path('delta-DIN')
         din_path.write_text(runtask.din, encoding='utf-8')
@@ -257,7 +257,7 @@ def run_delta(runtask):
         # Run delta-amplitudes calculation
         log_file = Path('delta.log')
         with log_file.open('w', encoding='utf-8') as log:
-            with din_path.open(encoding='utf-8') as din_file:
+            with din_path.open('r', encoding='utf-8') as din_file:
                 try:
                     subprocess.run(str(workfolder / exename),
                                    stdout=log,
