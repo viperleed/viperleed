@@ -263,8 +263,8 @@ def _write_control_chem(rp, generation, configs):
     try:
         with _ctrl_chem_p.open("w", encoding="utf-8") as control_chem:
             control_chem.writelines(lines)                                      # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
-    except Exception:
-        logger.error("Failed to write control.chem")
+    except Exception as exc:
+        logger.error(f"Failed to write control.chem. Reason: {exc}")
         rp.setHaltingLevel(1)
 
 
