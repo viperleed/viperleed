@@ -169,7 +169,7 @@ class SearchWorkerABC(ABC):
             logger.error(
                 'Error starting search. Check files SD.TL and rf.info.'
                 )
-            self.return_code.value = 1
+            self.return_code.value = KILLED_EXIT_CODE
             raise
 
     def _monitor_and_wait(self):
