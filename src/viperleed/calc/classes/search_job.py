@@ -174,16 +174,13 @@ class SearchWorkerABC(ABC):
 
     def _monitor_and_wait(self):
         """Monitor the process for termination requests."""
-        proc = self._proc
-        if not proc:
-            return
-        while proc.poll() is None:  # not finished yet
+        while self._proc.poll() is None:  # not finished yet
             if self.kill_flag.value:
                 logger.debug('Termination requested. Killing process tree.')
                 self.kill()
                 return
             time.sleep(1.0)
-        self.return_code.value = proc.returncode or 0
+        self.return_code.value = self._proc.returncode or 0
 
     def _run(self, log_file):
         with self.start_subprocess(log_file) as self._proc:
