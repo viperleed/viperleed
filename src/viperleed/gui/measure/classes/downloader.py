@@ -1,6 +1,6 @@
 """Module downloader of viperleed.gui.measure.classes.
 
-Contains NetworkHelper, a downloader that uses QNetwork or requests as
+Contains NetworkHelper, a downloader that uses QtNetwork or requests as
 fallback to download data from a given url.
 """
 
@@ -13,7 +13,6 @@ __created__ = '2025-11-04'
 __license__ = 'GPLv3+'
 
 import importlib
-import typing
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtNetwork as qtn
@@ -24,7 +23,7 @@ class _RequestsWorker(qtc.QObject):
 
     # Emitted if download finished successfully.
     finished = qtc.pyqtSignal(bytes)
-    #Emitted if download failed.
+    # Emitted if download failed.
     failed = qtc.pyqtSignal()
 
     def __init__(self, url):
@@ -49,7 +48,7 @@ class _RequestsWorker(qtc.QObject):
 
 
 class NetworkHelper(qtc.QObject):
-    """Abstraction for QNetwork with requests fallback."""
+    """Abstraction for QtNetwork with requests fallback."""
 
     # Emitted if the download was successful. Carries downloaded data.
     download_finished = qtc.pyqtSignal(bytes)
@@ -58,7 +57,7 @@ class NetworkHelper(qtc.QObject):
     download_failed = qtc.pyqtSignal()
 
     # Emitted if the requests module must be installed. This is usually
-    # the case if Qt5 QNetwork is incompatible with the OS.
+    # the case if Qt5 QtNetwork is incompatible with the OS.
     install_requests = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
@@ -74,15 +73,15 @@ class NetworkHelper(qtc.QObject):
         # 'independently'.
         self._network = qtn.QNetworkAccessManager()
         self._network.setTransferTimeout(timeout=2000)
-        self._thread: typing.Optional[qtc.QThread] = None
-        self._worker: typing.Optional[_RequestsWorker] = None
+        self._thread = None
+        self._worker = None
 
     def download(self, url):
         """Start a download from url.
 
-        Choose QNetwork or requests dynamically depending on system
-        availability. QNetwork is preferred. Missing QNetwork support is
-        detected automatically.
+        Choose QtNetwork or requests dynamically depending on system
+        availability. QtNetwork is preferred. Missing QtNetwork support
+        is detected automatically.
 
         Parameters
         ----------
@@ -94,7 +93,7 @@ class NetworkHelper(qtc.QObject):
         None.
         """
         if not qtn.QSslSocket.supportsSsl():
-            # Cannot use QNetwork, use requests module instead.
+            # Cannot use QtNetwork, use requests module instead.
             self._download_with_requests(url)
             return
 
