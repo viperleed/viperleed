@@ -89,12 +89,12 @@ def fixture_mock_implementation_run(rpars, mock_compile, mocker):
         'eval_timer': mocker.patch(
             f'{_MODULE}.ExpiringTimerWithDeadline',
             return_value=mock_eval_timer,
-        ),
+            ),
         'search_job': mocker.patch(
             f'{_MODULE}.SearchJob',
             return_value=mock_search_job,
-        ),
-    }
+            ),
+        }
     mocks = {**mock_compile, **mock_run}
     # When running, writeSearchOutput is called as part of
     # processSearchResults, which we mock away above. This
@@ -163,7 +163,7 @@ def fixture_mock_stuff_to_vary(rpars):
 class TestSearch:
     """Collection of tests for the search function."""
 
-    @use('n_cores')
+    @use('n_cores', 'tl_version')
     def test_no_displacements(self, rpars, mock_no_run, tmp_path, mocker):
         """Check behavior when no displacements are defined."""
         with execute_in_dir(tmp_path):
@@ -194,7 +194,7 @@ class TestSearch:
             # The following mocks are called multiple times,
             # while test_no_displacements uses assert_called_once.
             'copy',
-        )
+            )
         mocks_called_multiple_times = [mock_run.pop(n)
                                        for n in called_more_than_once]
         self.test_no_displacements(rpars, mock_run, tmp_path, mocker)

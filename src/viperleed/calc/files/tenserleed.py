@@ -66,7 +66,7 @@ def get_tensorleed_path(tensorleed_path=None):
     ----------
     tensorleed_path : pathlike, optional
         Path to the viperleed-tensorleed source code, by default None.
-        If not given, the $VIPERLEED_TENSORLEED environment variable
+        If not given, the VIPERLEED_TENSORLEED environment variable
         is used, if defined. As a last resort, the current directory
         is used. In all cases, the path given may be the top-level tree
         containing the tensor-LEED code, its parent, or a first-level

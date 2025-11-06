@@ -151,6 +151,8 @@ class TestRunRefcalc:
             # pylint: disable-next=magic-value-comparison
             if path.suffix == '.log' and mode == 'a':
                 raise OSError
+            if path.name == 'refcalc-FIN' and not path.is_file():
+                path.touch()
             # pylint: disable-next=unspecified-encoding  # In **kwargs
             return open(path, mode, *args, **kwargs)
         mock_implementation()  # BEFORE replacing Path.open again
@@ -218,14 +220,15 @@ class TestRunRefcalc:
 
     def test_fails_to_write_local_fin(self, run, mock_implementation,
                                       caplog, mocker):
-        """Check that there are no complaints when writing FIN fails."""
+        """Check that failures to write FIN raise."""
         def _write_fin_fails(file, *_, **__):
             # pylint: disable-next=magic-value-comparison
             if 'FIN' in file.name:
-                raise OSError
+                raise OSError('failed FIN')
         mock_implementation()
         mocker.patch('pathlib.Path.write_text', _write_fin_fails)
-        run(fails=False, mock=False)
+        with pytest.raises(OSError, match='failed FIN'):
+            run(fails=False, mock=False)
         assert not caplog.text
 
     def test_log_read_fails(self, run, caplog):
