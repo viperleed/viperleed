@@ -558,7 +558,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             '<p><center><b>python -m pip install requests</b></center></p>'
             'Restart ViPErLEED after installing <b>requests</b>.'
             )
-        notify.addButton(qtw.QPushButton('Ok'), notify.AcceptRole)
+        notify.addButton(notify.Ok)
         notify.exec_()
 
     @qtc.pyqtSlot()
