@@ -18,6 +18,7 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 import re
+import sys
 from zipfile import ZipFile
 
 from PyQt5 import QtCore as qtc
@@ -247,7 +248,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._uploader.cli_failed.connect(self._on_cli_done)
         self._downloader.progress_occurred.connect(self._progress_bar.setValue)
         self._uploader.progress_occurred.connect(self._progress_bar.setValue)
-        self._downloader.install_requests.connect(self._on_install_requests)
+        self._downloader.requests_module_not_found.connect(
+            self._on_requests_module_not_found
+            )
 
     @qtc.pyqtSlot(bool, bool)
     def _continue_open(self, is_installed, is_outdated):
@@ -543,23 +546,22 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._update_combo_box('controllers', data_dict)
 
     @qtc.pyqtSlot()
-    def _on_install_requests(self):
+    def _on_requests_module_not_found(self):
         """Notify user that requests must be installed."""
-        notify = qtw.QMessageBox(parent=self)
-        notify.setWindowTitle('Installation required')
-        notify.setTextFormat(qtc.Qt.RichText)
-        notify.setText(
-            'It seems your system cannot use the built-in Qt network '
-            'support. To continue, you need to install the Python '
-            '<b>requests</b> module in the environment in which you '
-            'have installed ViPErLEED. You can do this in your terminal'
-            ' or command prompt by activating your environment and '
-            'excuting the following command:'
-            '<p><center><b>python -m pip install requests</b></center></p>'
-            'Restart ViPErLEED after installing <b>requests</b>.'
+        warning = qtw.QMessageBox(
+            qtw.QMessageBox.Warning,
+            'Installation required',
+            ('It seems your system cannot use the built-in Qt network '
+             'support. To continue, you need to install the Python '
+             '<b>requests</b> module. You can do this in your terminal'
+             ' or command prompt by excuting the following command:'
+             f'<p><code>"{sys.executable}" -m pip install requests'
+             '</code></p>Restart ViPErLEED after installing '
+             '<b>requests</b>.'),
+             parent=self,
             )
-        notify.addButton(notify.Ok)
-        notify.exec_()
+        warning.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
+        warning.exec_()
 
     @qtc.pyqtSlot()
     def _on_upload_finished(self):

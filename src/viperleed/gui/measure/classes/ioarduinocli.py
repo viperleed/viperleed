@@ -288,7 +288,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
 
     # Emitted if requests must be installed in order
     # to be able to download the Arduino CLI.
-    install_requests = qtc.pyqtSignal()
+    requests_module_not_found = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialise the Arduino CLI downloader."""
@@ -296,8 +296,9 @@ class ArduinoCLIInstaller(ArduinoCLI):
         self._downloader = NetworkHelper(parent=self)
         self._downloader.download_failed.connect(self._on_download_failed,
                                                  type=qtc.Qt.UniqueConnection)
-        self._downloader.install_requests.connect(self._on_install_requests,
-                                                  type=qtc.Qt.UniqueConnection)
+        self._downloader.requests_module_not_found.connect(
+            self._on_requests_module_not_found, type=qtc.Qt.UniqueConnection
+            )
         # _archive_name is the name of the OS specific Arduino
         # CLI version that has to be downloaded from github for
         # installation. It is determined automatically before
@@ -512,9 +513,9 @@ class ArduinoCLIInstaller(ArduinoCLI):
         self.emit_error(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
 
     @qtc.pyqtSlot()
-    def _on_install_requests(self):
+    def _on_requests_module_not_found(self):
         """Notify user that requests must be installed."""
-        self.install_requests.emit()
+        self.requests_module_not_found.emit()
         self._on_install_failed()
 
     @qtc.pyqtSlot(tuple)

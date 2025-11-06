@@ -66,7 +66,7 @@ class NetworkHelper(qtc.QObject):
 
     # Emitted if the requests module must be installed. This is usually
     # the case if Qt5 QtNetwork is incompatible with the OS.
-    install_requests = qtc.pyqtSignal()
+    requests_module_not_found = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialise the NetworkHelper."""
@@ -143,13 +143,13 @@ class NetworkHelper(qtc.QObject):
 
         Emits
         -----
-        install_requests
+        requests_module_not_found
             If requests module is not installed.
         """
         try:
             importlib.import_module('requests')
         except ImportError:
-            self.install_requests.emit()
+            self.requests_module_not_found.emit()
             return
         self._thread = qtc.QThread(self)
         self._worker = _RequestsWorker(url)
