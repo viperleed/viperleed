@@ -286,8 +286,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
     # the currently running process has been completed.
     progress_occurred = qtc.pyqtSignal(int)
 
-    # Emitted if requests must be installed in order to able
-    # to download the Arduino CLI.
+    # Emitted if requests must be installed in order
+    # to be able to download the Arduino CLI.
     install_requests = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
