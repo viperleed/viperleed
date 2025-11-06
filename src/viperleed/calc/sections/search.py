@@ -20,6 +20,7 @@ import time
 
 import numpy as np
 
+from viperleed.calc.classes.search_job import IS_WINDOWS
 from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.constants import DEFAULT_TENSORS
@@ -479,7 +480,7 @@ def search(sl, rp):
 
     # Decide whether to use parallelization
     mpi_runners = ['mpirun']
-    if os.name == 'nt':
+    if IS_WINDOWS:
         # On Windows, Intel does not provide a mpirun>mpiexec symlink
         mpi_runners.append('mpiexec')
     mpirun = next((r for r in mpi_runners if shutil.which(r)), None)
@@ -577,7 +578,7 @@ def search(sl, rp):
     # but we can let the compiler fail in that case.
     known_unsupported = (
         rp.TL_VERSION < Version('1.7.0')
-        and os.name == 'nt'
+        and IS_WINDOWS
         and 'ifort' in fcomp[0]
         )
     if known_unsupported:

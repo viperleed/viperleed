@@ -13,12 +13,14 @@ __created__ = '2025-06-06'
 __license__ = 'GPLv3+'
 
 from pathlib import Path
+from shutil import which as sh_which  # Import it because we mock it
 
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.calc.classes.rparams.rparams import Rparams
+from viperleed.calc.classes.search_job import IS_WINDOWS
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.version import Version
 from viperleed.calc.sections.search import search
@@ -184,10 +186,10 @@ class TestSearch:
     @pytest.mark.timeout(2)
     @use('n_cores',
          'vary',
-         'mpirun_available',
          'tl_version',
          'mock_src_files')
-    def test_compile_and_run(self, rpars, mock_run, tmp_path, mocker):
+    def test_compile_and_run(self, rpars, mpirun_available, mock_run,
+                             tmp_path, mocker):
         """Check that nothing is executed when execution is suppressed."""
         rpars.SUPPRESS_EXECUTION = False
         called_more_than_once = (
@@ -197,7 +199,29 @@ class TestSearch:
             )
         mocks_called_multiple_times = [mock_run.pop(n)
                                        for n in called_more_than_once]
+        not_called = []
+        stops_early = (
+            rpars.TL_VERSION < '1.7'
+            and IS_WINDOWS
+            and sh_which('ifort')
+            )
+        if stops_early:
+            # Early TensErLEED versions are not supported on Windows
+            # with ifort as they need rf.info to be piped. They
+            # terminate before compilation, but after collecting
+            # the source files.
+            not_called.extend((
+                'compile',
+                'sleep',
+                'results',
+                'update_rpars',
+                'eval_timer',
+                'search_job',
+                ))
+        mocks_not_called = [mock_run.pop(n) for n in not_called]
         self.test_no_displacements(rpars, mock_run, tmp_path, mocker)
         for mock in mocks_called_multiple_times:
             mock.assert_called()
+        for mock in mocks_not_called:
+            mock.assert_not_called()
         # TODO: check relevant calls
