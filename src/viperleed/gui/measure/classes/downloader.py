@@ -39,12 +39,20 @@ class _RequestsWorker(qtc.QObject):
         except ImportError:
             self.failed.emit()
             return
+
         try:
             response = requests.get(self._url, timeout=2)
-            response.raise_for_status()
-            self.finished.emit(response.content)
         except requests.exceptions.RequestException:
             self.failed.emit()
+            return
+
+        try:
+            response.raise_for_status()
+        except requests.exceptions.RequestException:
+            self.failed.emit()
+            return
+
+        self.finished.emit(response.content)
 
 
 class NetworkHelper(qtc.QObject):
@@ -102,30 +110,28 @@ class NetworkHelper(qtc.QObject):
         # must be set in order to get the Arduino CLI file via http.
         request.setAttribute(qtn.QNetworkRequest.FollowRedirectsAttribute,
                              True)
-        reply = self._network.get(request)
-        reply.finished.connect(lambda: self._on_qt_finished(reply))
+        self._network.finished.connect(self._on_qt_finished)
+        self._network.get(request)
 
-    @qtc.pyqtSlot(qtn.QNetworkReply)
-    def _on_qt_finished(self, reply):
-        """Check reply and emit.
+    def moveToThread(self, thread):     # pylint: disable=invalid-name
+        """Move self and self._network to thread."""
+        super().moveToThread(thread)
+        self._network.moveToThread(thread)
 
-        Parameters
-        ----------
-        reply : qtn.QNetworkReply
-            Contains downloaded data or error message.
+    @qtc.pyqtSlot(bytes)
+    @qtc.pyqtSlot()
+    def _cleanup_thread(self, *_):
+        """Delete thread and worker objects."""
+        if self._thread:
+            self._thread.quit()
+            self._thread.wait()
+            self._thread.deleteLater()
 
-        Emits
-        -----
-        download_failed
-            If the download failed.
-        download_finished(data)
-            If the download succeeded. Carries data as bytes.
-        """
-        if reply.error():
-            self.download_failed.emit()
-        else:
-            self.download_finished.emit(bytes(reply.readAll()))
-        reply.deleteLater()
+        if self._worker:
+            self._worker.deleteLater()
+
+        self._worker = None
+        self._thread = None
 
     def _download_with_requests(self, url):
         """Download data with requests module.
@@ -152,38 +158,31 @@ class NetworkHelper(qtc.QObject):
         # Wire signals
         self._worker.finished.connect(self._cleanup_thread)
         self._worker.failed.connect(self._cleanup_thread)
-        self._worker.finished.connect(self._on_requests_finished)
-        self._worker.failed.connect(self._on_requests_failed)
+        self._worker.finished.connect(self.download_finished.emit)
+        self._worker.failed.connect(self.download_failed.emit)
         self._thread.started.connect(self._worker.run)
 
         self._thread.start()
 
-    @qtc.pyqtSlot(bytes)
-    @qtc.pyqtSlot()
-    def _cleanup_thread(self, *_):
-        """Delete thread and worker objects."""
-        if self._thread:
-            self._thread.quit()
-            self._thread.wait()
-            self._thread.deleteLater()
+    @qtc.pyqtSlot(qtn.QNetworkReply)
+    def _on_qt_finished(self, reply):
+        """Check reply and emit.
 
-        if self._worker:
-            self._worker.deleteLater()
+        Parameters
+        ----------
+        reply : qtn.QNetworkReply
+            Contains downloaded data or error message.
 
-        self._worker = None
-        self._thread = None
-
-    @qtc.pyqtSlot(bytes)
-    def _on_requests_finished(self, data):
-        """Emit download_finished."""
-        self.download_finished.emit(data)
-
-    @qtc.pyqtSlot()
-    def _on_requests_failed(self):
-        """Emit download_failed."""
-        self.download_failed.emit()
-
-    def moveToThread(self, thread):     # pylint: disable=invalid-name
-        """Move self and self._network to thread."""
-        super().moveToThread(thread)
-        self._network.moveToThread(thread)
+        Emits
+        -----
+        download_failed
+            If the download failed.
+        download_finished(data)
+            If the download succeeded. Carries data as bytes.
+        """
+        self._network.finished.disconnect(self._on_qt_finished)
+        if reply.error():
+            self.download_failed.emit()
+        else:
+            self.download_finished.emit(bytes(reply.readAll()))
+        reply.deleteLater()
