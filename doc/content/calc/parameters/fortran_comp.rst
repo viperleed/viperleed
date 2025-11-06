@@ -25,6 +25,7 @@ the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
 .. tab-set::
 
   .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+    :sync: unix
 
     ::
 
@@ -32,6 +33,7 @@ the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
        FORTRAN_COMP post = '-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl -traceback'
 
   .. tab-item:: Windows
+    :sync: win
 
     ::
 
@@ -49,13 +51,31 @@ if :term:`ifort` is not present, but gfortran is:
    FORTRAN_COMP = 'gfortran -O2'
    FORTRAN_COMP post = '-llapack -lpthread -lblas -fbacktrace'
 
-Additionally, if ``mpirun`` or, on Windows, ``mpiexec`` are present:
+Additionally, if :program:`mpirun` or, on Windows, :program:`mpiexec` are
+present:
 
-::
+.. tab-set::
 
-   FORTRAN_COMP mpi = 'mpiifort -Ofast'
+  .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+    :sync: unix
 
-Or, if ``mpiifort`` is not present, but mpifort is:
+    ::
+
+       FORTRAN_COMP mpi = 'mpiifort -Ofast'
+
+  .. tab-item:: Windows
+    :sync: win
+
+    ::
+
+       FORTRAN_COMP mpi = 'cmd mpiifort /Ofast'
+
+    On Windows, :program:`mpiifort` is a :file:`.bat` file, not an executable.
+    Python's subprocess cannot directly run it. This is why it is prepended by
+    ``cmd`` (i.e., the Windows Command Prompt).
+
+
+Or, if :program:`mpiifort` is not present, but :program:`mpifort` is:
 
 ::
 
@@ -75,6 +95,10 @@ Or, if ``mpiifort`` is not present, but mpifort is:
    making ``-fallow-argument-mismatch`` mandatory to compile unaltered
    TensErLEED. However, earlier versions of GCC and gfortran may not
    recognize the flag.
+
+.. versionchanged:: 0.14.1
+    Added correct defaults for ``ifort``/``mpiifort`` on Windows. On
+    earlier versions, Windows users needed to manually set ``FORTRAN_COMP``.
 
 
 **Syntax:**
@@ -134,5 +158,3 @@ library structure. Therefore, explicitly declaring ``FORTRAN_COMP`` and
       This poses no known problems for TensErLEED up to at least v.1.7.3, but
       it could lead to unexpected behavior in the future. Use the flag
       ``-fno-finite-math-only`` to re-enable these checks.
-
-
