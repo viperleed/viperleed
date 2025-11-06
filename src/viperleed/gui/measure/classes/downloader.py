@@ -41,7 +41,7 @@ class _RequestsWorker(qtc.QObject):
             self.failed.emit()
             return
         try:
-            response = requests.get(self._url, timeout=10)
+            response = requests.get(self._url, timeout=2)
             response.raise_for_status()
             self.finished.emit(response.content)
         except requests.exceptions.RequestException:
