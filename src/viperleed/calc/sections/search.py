@@ -10,26 +10,18 @@ __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
 from collections import Counter
-import copy
 import logging
 import os
 from pathlib import Path
 import re
 import shutil
-import signal
-import subprocess
 import sys
 import time
 
 import numpy as np
-import scipy
-from sklearn.linear_model import ElasticNet
-from sklearn.linear_model import Lasso
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import Ridge
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import PolynomialFeatures
 
+from viperleed.calc.classes.search_job import IS_WINDOWS
+from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iosearch
@@ -39,6 +31,7 @@ from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.context import execute_in_dir
+from viperleed.calc.lib.parabola_fit import parabolaFit
 from viperleed.calc.lib.time_utils import ExecutionTimer
 from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
 from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
@@ -271,8 +264,8 @@ def _write_control_chem(rp, generation, configs):
     try:
         with _ctrl_chem_p.open("w", encoding="utf-8") as control_chem:
             control_chem.writelines(lines)                                      # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
-    except Exception:
-        logger.error("Failed to write control.chem")
+    except Exception as exc:
+        logger.error(f"Failed to write control.chem. Reason: {exc}")
         rp.setHaltingLevel(1)
 
 
@@ -388,282 +381,9 @@ def _check_search_log(search_log_path):
         pass
 
 
-def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
-    """
-    Performs a parabola fit to all rfactor/configuration data in r_configs.
-    Stores the result in the rp searchpar objects. Keyword arguments are read
-    from rp by default.
-
-    Parameters
-    ----------
-    rp : Rparams
-        The Rparams object containing runtime information
-    datafiles : list of str
-        The files to read data from
-    r_best : float
-        Best known R-factor so far
-    x0 : numpy.array, optional
-        A starting guess for the minimum
-    max_configs : int
-        0 to read all, else specifies the maximum number of configurations to
-        read in. Will sort configurations and read in the ones with lowest
-        R-factors first, discard the rest.
-    Keyword Arguments:
-        localize : real, optional
-            If not zero, r_configs will be reduced to only use points close to
-            the current best result. The value determines the region to be used
-            ascompared to the full data, i.e. 0.5 would use only half of the
-            space in each dimesion.
-        mincurv : float, optional
-            The minimum curvature that the N-dimensional paraboloid is
-            required to have along the axis of a given parameter, in order for
-            the minimum and curvature to be saved for that parameter.
-        type : str, optional
-            Defines the regression model to use in the fit. Allowed values are
-            LinearRegression (default), Ridge, Lasso, and ElasticNet. Note that
-            for the fit, parameters are centered around the current best
-            configuration. Therefore, all models except LinearRegression put
-            some penalty not only on curvature, but also on the parameter
-            offset from the best-R configuration.
-            Setting 'type' to 'none' turns off parabola fit entirely.
-        alpha : float, optional
-            The alpha value used by Ridge, Lasso and ElasticNet regression. The
-            default is 1e-5.
-
-    Returns
-    -------
-    np.array
-        The result vector in parameter space, consisting of the coordinates of
-        the parabola minimum for those dimensions where the parabola curvature
-        is greater than mincurv, and the values from the configuration with
-        the lowest R-factor for all dimensions. Can be passed back as x0 in
-        the next iteration.
-    float
-        Predicted minimum R-factor.
-
-    """
-
-    def optimizerHelper(array, func):
-        return func(array.reshape(1, -1))
-
-    def castToMatrix(features, dim):
-        """Casts the weights of PolynomialFeatures of degree 2 into a square
-        symmetric 2D array, discarding linear features."""
-        m = np.zeros((dim, dim))
-        start = dim+1
-        for i in range(0, dim):
-            m[i][i:] = features[start:start + dim - i]
-            start += dim - i
-        m = 0.5*(m + m.T)
-        return m
-
-    if not datafiles:
-        return None, None
-    if "type" not in kwargs:
-        which_regression = rp.PARABOLA_FIT["type"]
-    else:
-        which_regression = kwargs["type"]
-    if which_regression == "none":
-        return None, None
-    for a in ("localize", "mincurv", "alpha", "type"):
-        if a not in kwargs:
-            kwargs[a] = rp.PARABOLA_FIT[a]
-
-    # read data
-    r_cutoff = 1.0
-    if datafiles:
-        varR = np.sqrt(8*abs(rp.V0_IMAG) / rp.total_energy_range())*r_best
-        rc = np.array((iosearch.readDataChem(
-            rp, datafiles,
-            cutoff=r_best + r_cutoff * varR,
-            max_configs=max_configs
-            )), dtype=object)
-    if len(rc) < 100*rp.indyPars:
-        return None, None
-
-    rfacs, configs = rc[:, 0].astype(float), rc[:, 1]
-    localizeFactor = kwargs["localize"]
-    if localizeFactor == 0:
-        localizeFactor = 1  # no localization
-    # reduce to independent parameters during fit
-    if not rp.domainParams:
-        sps = [sp for sp in rp.searchpars if sp.el != "vac" and
-               sp.mode != "dom" and sp.steps*localizeFactor >= 3 and
-               sp.linkedTo is None and sp.restrictTo is None]
-        indep_pars = np.array([*np.array([*np.array(configs, dtype=object)],    # TODO: pylint complains about too-many-function-args. I don't understand the line
-                                         dtype=object)
-                               .reshape(-1, 1, 2)[:, 0, 1]])
-        indep_pars = np.delete(indep_pars, [i for i in
-                                            range(len(rp.searchpars)-1)
-                                            if rp.searchpars[i] not in sps], 1)
-    else:
-        # first the percentages:
-        sps = [sp for sp in rp.searchpars if sp.mode == "dom"]
-        reshaped = (np.array([*np.array(configs, dtype=object)], dtype=object)  # TODO: pylint complains about too-many-function-args. I don't understand the line
-                    .reshape(-1, len(rp.domainParams), 2))
-        indep_pars = reshaped[:, :, 0].astype(int)  # contains the percentages
-        # then the 'real' parameters:
-        for (j, dp) in enumerate(rp.domainParams):
-            new_sps = [sp for sp in dp.rpars.searchpars if
-                       sp.el != "vac" and sp.steps*localizeFactor >= 3 and
-                       sp.linkedTo is None and sp.restrictTo is None and
-                       sp.mode != "dom"]
-            new_ip = np.array([*reshaped[:, j, 1]])
-            new_ip = np.delete(new_ip,
-                               [i for i in range(len(dp.rpars.searchpars))
-                                if dp.rpars.searchpars[i] not in new_sps],
-                                1)
-            sps.extend(new_sps)
-            indep_pars = np.append(indep_pars, new_ip, axis=1)
-    indep_pars = indep_pars.astype(float)
-    best_config = np.copy(indep_pars[np.argmin(rfacs)])
-    sps_original = sps[:]
-
-    which_regression = kwargs["type"].lower()
-    alpha = kwargs["alpha"]
-    if which_regression == 'lasso':
-        polyreg = make_pipeline(PolynomialFeatures(degree=2),
-                                Lasso(alpha=alpha, normalize=True))             # TODO: incorrect keyword normalize
-    elif which_regression == 'ridge':
-        polyreg = make_pipeline(PolynomialFeatures(degree=2),
-                                Ridge(alpha=alpha, normalize=True))             # TODO: incorrect keyword normalize
-    elif which_regression == 'elasticnet':
-        polyreg = make_pipeline(PolynomialFeatures(degree=2),
-                                ElasticNet(alpha=alpha, normalize=True))        # TODO: incorrect keyword normalize
-    else:
-        if which_regression not in ('linearregression', 'linear'):
-            logger.warning("Regression model {} not found, parabola fit "
-                           "defaulting to linear regression."
-                           .format(which_regression))
-        which_regression = "linearregression"
-        polyreg = make_pipeline(PolynomialFeatures(degree=2),
-                                LinearRegression())
-    xmin = np.copy(indep_pars[np.argmin(rfacs), :])
-    rr = np.sqrt(8*abs(rp.V0_IMAG) / rp.total_energy_range())
-    ip_tofit = np.copy(indep_pars)
-    rf_tofit = np.copy(rfacs)
-    # throw out high R-factors - TODO: perhaps also throw out highest X% ?
-    to_del = np.where(rf_tofit > min(rf_tofit) + 3*rr)
-    ip_tofit = np.delete(ip_tofit, to_del, axis=0)
-    rf_tofit = np.delete(rf_tofit, to_del, axis=0)
-    # center on best config; important because offset from the
-    #  best configuration may also be penalized in regression
-    ip_tofit = ip_tofit - xmin
-    # fit
-    polyreg.fit(ip_tofit, rf_tofit)
-    # now find minimum within bounds (still centered around xmin)
-    bounds = np.array([(1, sp.steps) for sp in sps]) - xmin.reshape((-1, 1))
-    if x0 is None:  # x0 is the starting guess
-        x0 = np.copy(xmin)
-    # else:
-    #     x0 = np.delete(x0, deletedPars)
-    parab_min = scipy.optimize.minimize(
-        optimizerHelper, x0, args=(polyreg.predict,), method='L-BFGS-B',
-        bounds=bounds)
-    predictR = parab_min.fun[0]
-    # find errors
-    m = castToMatrix(polyreg.named_steps[which_regression].coef_, len(sps))
-    w, v = np.linalg.eig(m)
-    # error along main axes
-    d = np.copy(np.diag(m))
-    d[d <= 0] = np.nan
-    with np.errstate(invalid="ignore"):
-        err_unco = 2 * np.sqrt(rr * predictR / d)
-        err_unco[err_unco < 0] = np.nan
-    err_unco = np.sqrt(err_unco)
-    # error along eigenvectors
-    w2 = np.copy(w)
-    w2[w2 == 0] = 1e-100  # to avoid divide-by-zero; dealt with below
-    with np.errstate(invalid="ignore"):
-        err_ev = 2 * np.sqrt(rr * predictR / w2)
-        err_ev[err_ev < 0] = 0  # dealt with below
-    err_ev = np.sqrt(err_ev)
-    # correlated error
-    err_co = np.dot(v**2, err_ev)
-    for i in range(len(err_co)):
-        if any(w[j] <= 0 and v[i, j] >= 0.1 for j in range(len(w))):
-            err_co[i] = np.nan
-    # !!! TODO: maybe discard parameters and re-fit?
-
-    # deletedPars = []
-    # while True:
-    #     ip_tofit = np.copy(indep_pars)
-    #     rf_tofit = np.copy(rfacs)
-    #     xmin = np.copy(ip_tofit[np.argmin(rfacs), :])
-    #     if kwargs["localize"] != 0:
-    #         # discard points that are far from global min in any dimension
-    #         base = np.copy(xmin)  # parameter vector of best conf
-    #         for i in range(len(base)):
-    #             r = sps[i].steps*localizeFactor*0.5
-    #             base[i] = max(base[i], 1 + r)
-    #             base[i] = min(base[i], sps[i].steps - r)
-    #         dist_norm = np.array([1/(sp.steps-1) for sp in sps])
-    #         dist = abs(dist_norm*(ip_tofit - base))
-    #         maxdist = np.max(dist, 1)
-    #         # dist = np.linalg.norm(dist_norm*(indep_pars - base), axis=1)
-    #         # cutoff = np.percentile(dist, 30)
-    #         # cutoff = np.max(dist) * 0.75
-    #         cutoff = 0.5*localizeFactor
-    #         # weights = [1 if d <= cutoff else 0.1 for d in dist]
-    #         to_del = [i for i in range(len(maxdist)) if maxdist[i] > cutoff]
-    #         ip_tofit = np.delete(ip_tofit, to_del, axis=0)
-    #         rf_tofit = np.delete(rf_tofit, to_del, axis=0)
-    #     # center on best config; important because offset from the
-    #     #  best configuration may also be penalized in regression
-    #     ip_tofit = ip_tofit - xmin
-    #     # check curvature of the parabolas per parameter
-    #     polyreg.fit(ip_tofit, rf_tofit)
-    #     curvs = [(polyreg.named_steps[which_regression]
-    #               .coef_[polyreg.named_steps['polynomialfeatures']
-    #               .get_feature_names().index('x{}^2'.format(i))])
-    #              * sp.steps**2
-    #              for i, sp in enumerate(sps)]
-    #     if min(curvs) >= kwargs["mincurv"]:
-    #         if len(rf_tofit) < 50*len(sps):  # too few points for good fit
-    #             # logger.debug("{} points - too few for fit of {} dimensions"
-    #             #               .format(len(rf_tofit), len(sps)))
-    #             for sp in rp.searchpars:
-    #                 sp.parabolaFit = {"curv": None, "min": None}
-    #             return None, None
-    #         break  # all parabola dimensions now have reasonable shape
-    #     if len(sps) == 1:
-    #         # logger.debug("Found no parameter with sufficient curvature")
-    #         sps[0].parabolaFit = {"curv": None, "min": None}
-    #         return None, None  # found no parameter with parabola shape
-    #     # throw out the parameters with lowest curvature; repeat.
-    #     #   discard: min. 1, max. all with low curv.
-    #     k = min(max(1, int(len(curvs)*0.2)),
-    #             sum(c < kwargs["mincurv"] for c in curvs))
-    #     ind = np.argpartition(curvs, k)[:k]
-    #     for i in ind:
-    #         sps[i].parabolaFit = {"curv": None, "min": None}
-    #         deletedPars.append(sps_original.index(sps[i]))
-    #     sps = [sps[i] for i in range(len(sps)) if i not in ind]
-    #     indep_pars = np.delete(indep_pars, ind, axis=1)
-    # for (i, sp) in enumerate(sps):
-    #     sp.parabolaFit["curv"] = curvs[i]
-
-    # logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
-    #              "({:.4f} s)".format(len(sps), len(sps_original),
-    #                                  len(rf_tofit), (timer() - starttime)))
-
-    for (i, sp) in enumerate(sps):
-        sp.parabolaFit["min"] = parab_min.x[i] + xmin[i]
-        sp.parabolaFit["err_co"] = err_co[i]
-        sp.parabolaFit["err_unco"] = err_unco[i]
-        best_config[sps_original.index(sp)] = parab_min.x[i] + xmin[i]
-    for sp in [sp for sp in rp.searchpars if isinstance(sp.linkedTo, SearchPar)
-               or isinstance(sp.restrictTo, SearchPar)]:
-        if isinstance(sp.linkedTo, SearchPar):
-            sp.parabolaFit = copy.copy(sp.linkedTo.parabolaFit)
-        elif isinstance(sp.restrictTo, SearchPar):
-            sp.parabolaFit = copy.copy(sp.restrictTo.parabolaFit)
-    return (best_config, predictR)
-
 
 def search(sl, rp):
-    """
-    Generates input for and runs the search, then interprets output.
+    """Generate input for and runs the search, then interprets output.
 
     Parameters
     ----------
@@ -676,39 +396,25 @@ def search(sl, rp):
     ------
     RuntimeError
         Raised if execution cannot continue.
+    FileNotFoundError
+        If Fortran compilers are not found, or any of the
+        Fortran source files for the search are missing.
+    Exception
+        If preparing the input files for the search fails.
+    Exception
+        If collecting any information other than the compilers
+        or the Fortran source files fails.
+    Exception
+        If compiling the Fortran code fails.
+    Exception
+        If interpreting the results of the search fails.
+    OSError
+        If the compiled search subprocess cannot be started.
 
     Returns
     -------
     None.
-
     """
-
-    def kill_process(proc, default_pgid=None):
-        """Cleanly kill the mpirun subprocess and its children. If the process
-        is not alive any more (and therefore the pgid cannot be determined),
-        will instead try to terminate the default_pgid, if passed."""
-        # determine pgid
-        try:
-            pgid = os.getpgid(proc.pid)                                         # TODO: only UNIX!
-        except ProcessLookupError:
-            pgid = default_pgid
-        # kill main process
-        try:
-            proc.kill()
-            proc.wait()
-        except ProcessLookupError:
-            pass   # already dead
-        if pgid is not None:
-            # kill children
-            try:
-                os.killpg(pgid, signal.SIGTERM)                                 # TODO: only UNIX
-                if os.name == "nt":
-                    os.waitpid(pgid)
-                else:
-                    os.waitpid(-pgid, 0)
-            except (ProcessLookupError, ChildProcessError):
-                pass  # already dead or no children
-
     rp.searchResultConfig = None
     if rp.domainParams:
         initToDo = [(dp.rpars, dp.slab, dp.workdir) for dp in rp.domainParams]
@@ -737,6 +443,8 @@ def search(sl, rp):
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
+    if rp.TL_VERSION >= Version('1.7.0'):
+        rf_info_content = ''  # search reads from rf.info since v1.7
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
@@ -771,7 +479,12 @@ def search(sl, rp):
         return None
 
     # Decide whether to use parallelization
-    usempi = rp.N_CORES > 1 and shutil.which('mpirun')
+    mpi_runners = ['mpirun']
+    if IS_WINDOWS:
+        # On Windows, Intel does not provide a mpirun>mpiexec symlink
+        mpi_runners.append('mpiexec')
+    mpirun = next((r for r in mpi_runners if shutil.which(r)), None)
+    usempi = rp.N_CORES > 1 and mpirun
     if not usempi:
         reason = (
             f'The N_CORES parameter is set to {rp.N_CORES}' if rp.N_CORES <= 1
@@ -812,7 +525,10 @@ def search(sl, rp):
         libpattern = 'lib.search'
         if usempi and rp.TL_VERSION <= Version('1.7.3'):
             libpattern += '.mpi'
-        lib_file = next(libpath.glob(libpattern + '*'), None)
+        lib_files = libpath.glob(libpattern + '*')
+        if not usempi:
+            lib_files = (f for f in lib_files if 'mpi' not in f.name)
+        lib_file = next(lib_files, None)
         if lib_file is None:
             raise FileNotFoundError(f'File {libpattern}.f not found.')
 
@@ -854,12 +570,35 @@ def search(sl, rp):
     # Prepare to compile fortran files
     searchname = f'search-{rp.timestamp}'
     fcomp = rp.FORTRAN_COMP_MPI if usempi else rp.FORTRAN_COMP
+
+    # On Windows with ifort, older versions that need the rf.info
+    # contents to be piped are known not to work correctly (they
+    # stall forever). There are also some problems in the random
+    # number generator external module (which affect up to v1.7.3)
+    # but we can let the compiler fail in that case.
+    known_unsupported = (
+        rp.TL_VERSION < Version('1.7.0')
+        and IS_WINDOWS
+        and 'ifort' in fcomp[0]
+        )
+    if known_unsupported:
+        logger.error('Old TensErLEED versions are not supported on Windows. '
+                     'Please upgrade your TensErLEED code to at least '
+                     # Suggest the version that uses Fortran's random
+                     # so people don't have to bother modifying and
+                     # manually compiling random_.c (see also #151).
+                     'version 1.7.4')
+        rp.setHaltingLevel(3)
+        return
+
     logger.info('Compiling fortran input files...')
 
     # compile task could be inherited from general CompileTask (issue #43)
     ctasks = [(f"{fcomp[0]} -o lib.search.o -c", lib_file.name, fcomp[1])]
     if hashname:
-        ctasks.append((f"{fcomp[0]} -c", hashname, fcomp[1]))
+        ctasks.append(
+            (f"{fcomp[0]} -o intarr_hashing.o -c", hashname, fcomp[1])
+            )
     ctasks.append((f"{fcomp[0]} -o restrict.o -c", "restrict.f", fcomp[1]))
     _fixed_format = any(f.endswith('.f90')
                         for f in (lib_file.name, src_file.name, hashname))
@@ -947,14 +686,12 @@ def search(sl, rp):
             count_start=0,
             )
     tried_repeat = False  # if SD.TL is not written, try restarting
-    pgid = None
     logger.info("Starting search. See files Search-progress.pdf "
                 "and SD.TL for progress information.")
 
     # Prepare the command to be run via subprocess
     executable = os.path.join('.', searchname)
-    if usempi:
-        command = ['mpirun', '-n', str(rp.N_CORES)]
+    command = [] if not usempi else [mpirun, '-n', str(rp.N_CORES)]
     if usempi and is_gfortran:
         # Assume we're using OpenMPI: we need to specify the use of all
         # CPU threads explicitly, otherwise OpenMPI will use only the
@@ -966,46 +703,17 @@ def search(sl, rp):
     while repeat:                                                               # TODO: all this mess would be nicer to handle with a state machine approach. This would at least help readability on the various ways things are handled
         repeat = False
         interrupted = False
-        proc = None
         # if LOG_SEARCH -> log search
         if search_log_path:
             log_exists = search_log_path.is_file()
             search_log_f = search_log_path.open("a")
             if log_exists:  # log file existed before
                 search_log_f.write("\n\n-------\nRESTARTING\n-------\n\n")
-        else:
-            search_log_f = subprocess.DEVNULL
-        # NB: log file may be open and must be closed!
-        # Create search process
-        logger.debug(f'Starting search process with command "{" ".join(command)}".')
-        try:
-            proc = subprocess.Popen(
-                command, encoding="ascii",
-                stdout=search_log_f,  # if LOG_SEARCH is False, this is DEVNULL
-                stderr=search_log_f,  # same as above
-                preexec_fn=os.setsid                                            # TODO: setsid only POSIX; os comments suggest NOT TO USE THIS as it is unsafe against deadlocks. Suggestion is to use start_new_session keyword [UNIX only!] instead of setsid. For a Windows solution see https://stackoverflow.com/questions/47016723. Probably even better: do not use python subprocess, but QProcess (which can run with its own event loop, and has a .kill(), or perhaps .terminate()). QProcess may have some issues with OpenMPI v<=1.7 due to a bug there (see www.qtcentre.org/threads/19636-Qprocess-and-mpi-not-finishing).
-                )
-        except OSError:  # This should not fail unless the shell is very broken.
-            logger.error("Error starting search. Check SD.TL file.")
-            if search_log_path:
-                search_log_f.close()
-            raise
-        else:
-            pgid = os.getpgid(proc.pid)                                         # TODO: getpgid only POSIX
-        if proc is None:
-            logger.error("Error starting search subprocess... Stopping.")
-            if search_log_path:
-                search_log_f.close()
-            raise RuntimeError("Error running search."
-                               f'Could not start process using "{command}".')
-        # FEED INPUT
-        try:
-            proc.communicate(input=rf_info_content, timeout=0.2)
-        except subprocess.TimeoutExpired:
-            pass  # started successfully; monitoring below
-        except (OSError, subprocess.SubprocessError):
-            logger.error("Error feeding input to search process. "
-                         "Check files SD.TL and rf.info.")
+
+        search_job = SearchJob(command=command,
+                               input_data=rf_info_content,
+                               log_path=search_log_path)
+        search_job.start()
 
         # MONITOR SEARCH
         search_eval_timer = ExpiringTimerWithDeadline(                          # TODO: would be nicer with a QTimer, or even a QFileSystemWatcher
@@ -1021,7 +729,7 @@ def search(sl, rp):
         gaussianWidthOri = rp.GAUSSIAN_WIDTH
         check_datafiles = False
         try:
-            while proc.poll() is None:  # proc is running
+            while search_job.is_running():
                 time.sleep(timestep)
                 parameters.update(rp)                                           # TODO: Would be way nicer with a QFileSystemWatcher
                 # check convergence criteria
@@ -1118,7 +826,7 @@ def search(sl, rp):
                         # "speed" is actually the inverse of a
                         # speed, in seconds per 1000 generations
                         speed = 1000 * since_started.how_long() / current_gen
-                        logger.debug(
+                        logger.info(
                             f'R = {min(rfacs)} (Generation {current_gen}, '
                             f'{since_last_debug.how_long():.3f} s since '
                             f'gen. {since_last_debug.previous_count}, '
@@ -1175,7 +883,7 @@ def search(sl, rp):
                                            f"and VIBROCC: {exc}")
                 if stop:
                     logger.info("Stopping search...")
-                    kill_process(proc, default_pgid=pgid)
+                    search_job.terminate()
                     if (not repeat and not rp.GAUSSIAN_WIDTH_SCALING == 1
                             and checkrepeat):
                         repeat = True
@@ -1233,12 +941,12 @@ def search(sl, rp):
                     pass   # user insisted, give up
             interrupted = True
             rp.STOP = True
-            kill_process(proc, default_pgid=pgid)
+            search_job.terminate()
             logger.warning("Search interrupted by user. Attempting "
                            "analysis of results...")
         except Exception:
             logger.error("Error during search. Check SD.TL file.")
-            kill_process(proc, default_pgid=pgid)
+            search_job.terminate()
             raise
         finally:
             # close open input and log files
@@ -1263,11 +971,9 @@ def search(sl, rp):
                     logger.warning("Failed to delete old SD.TL file. "
                                    "This may cause errors in the "
                                    "interpretation of search progress.")
-    if proc is not None:
-        try:     # should generally not be necessary, but just to make sure
-            kill_process(proc, default_pgid=pgid)
-        except Exception:
-            pass
+    # terminate job again to be sure
+    search_job.terminate()
+
     if not interrupted:
         logger.info("Finished search. Processing files...")
     else:
