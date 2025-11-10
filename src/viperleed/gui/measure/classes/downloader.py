@@ -159,8 +159,8 @@ class NetworkHelper(qtc.QObject):
         # Wire signals
         self._worker.finished.connect(self._cleanup_thread)
         self._worker.failed.connect(self._cleanup_thread)
-        self._worker.finished.connect(self.download_finished.emit)
-        self._worker.failed.connect(self.download_failed.emit)
+        self._worker.finished.connect(self.download_finished)
+        self._worker.failed.connect(self.download_failed)
         self._thread.started.connect(self._worker.run)
 
         self._thread.start()
