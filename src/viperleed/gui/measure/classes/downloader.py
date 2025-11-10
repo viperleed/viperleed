@@ -26,9 +26,9 @@ class _RequestsWorker(qtc.QObject):
     # Emitted if download failed.
     failed = qtc.pyqtSignal()
 
-    def __init__(self, url):
+    def __init__(self, url, parent=None):
         """Initialise downloader."""
-        super().__init__()
+        super().__init__(parent=parent)
         self._url = url
 
     @qtc.pyqtSlot()
