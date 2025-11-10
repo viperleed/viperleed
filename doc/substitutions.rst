@@ -14,6 +14,7 @@
 .. |LEED-IV|      replace:: LEED-|IV|
 .. |LEED IV|      replace:: LEED |IV|
 .. |lmax|         replace:: *ℓ*\ :sub:`max`
+.. |measure|      replace:: ``viperleed.gui.measure``
 .. |OUT|          replace:: :file:`OUT`
 .. |PARAMETERS|   replace:: :file:`PARAMETERS`
 .. |POSCAR|       replace:: :file:`POSCAR`
