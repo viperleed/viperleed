@@ -1,0 +1,10 @@
+! ####### GLOBAL PARAMETERS #######
+RUN = delta
+
+DOMAIN STA = ./STA
+DOMAIN FAU = ./FAU
+DOMAIN_STEP = 1
+
+LOG_DEBUG = True
+
+THEO_ENERGIES =   49 100 3

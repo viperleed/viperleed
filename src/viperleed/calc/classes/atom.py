@@ -81,8 +81,10 @@ class Atom:                                                                     
         'no change'
     dispInitialized : bool
         disp_* variables get initialized after readVIBROCC by Atom.initDisp
-    known_deltas : list of str
+    current_deltas : list of str
         Filenames of delta files generated or found for this atom
+        that will be used for the current iteration of structural
+        optimization.
     offset_geo, offset_vib, offset_occ : dict
         Offsets from self.cartpos, self.site.vib, self.site.occ
         per element
@@ -109,7 +111,7 @@ class Atom:                                                                     
         self.site = None
 
         self.duplicate_of = None
-        self.known_deltas = []
+        self.current_deltas = []
         self.oriState = None
 
         self.linklist = []
