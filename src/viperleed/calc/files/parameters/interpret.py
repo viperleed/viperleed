@@ -38,6 +38,7 @@ from viperleed.calc.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLDisplacement,
     )
+from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.log_utils import logger_silent
@@ -181,9 +182,6 @@ def _with_dynamic_methods(cls):
     return cls
 
 
-_BELOW_DEBUG = 2
-
-
 # Disable 'too-many-public-methods' because of the mechanics of a
 # ParameterInterpreter: a dispatcher for interpreting PARAMETERS.
 # Methods are public, but are very rarely used. Most of the times
@@ -232,7 +230,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             for param, assignment in self._get_param_assignments():
                 self._complain_if_invalid_param_in_domain_calc(param)
                 self._interpret_param(param, assignment)
-                _LOGGER.log(_BELOW_DEBUG,
+                _LOGGER.log(LOG_VERY_VERBOSE,
                             f'Successfully interpreted parameter {param}')
 
             # Make sure there is no inconsistent combination of parameters
