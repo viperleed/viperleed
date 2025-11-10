@@ -108,7 +108,7 @@ class NetworkHelper(qtc.QObject):
         request = qtn.QNetworkRequest(qtc.QUrl(url))
         # The RedirectAttribute needs to be set in order to get the
         # Arduino CLI file via http because github redirects from https
-        # to http .
+        # to http.
         request.setAttribute(qtn.QNetworkRequest.FollowRedirectsAttribute,
                              True)
         self._network.finished.connect(self._on_qt_finished)
