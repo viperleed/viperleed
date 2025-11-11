@@ -80,7 +80,7 @@ to data acquisition:
  * **Tools** – Hardware-related utilities.
  * **View** – Reopen the data plot if it has been closed.
  * **Settings** – Reopen the system settings dialogue.
- * **About** – Display software and version information.
+ * **About** – Display software information.
 
 Once the system settings have been configured, ViPErLEED is ready for firmware
 upload, bad pixel calibration and data acquisiotion.
