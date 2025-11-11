@@ -120,14 +120,19 @@ class RefcalcCompileTask:
         return f'{type(self).__name__} {self.foldername}'
 
     @property
-    def logfile(self):
-        """Return the (relative) path to the compilation log file."""
-        return Path(self.foldername) / 'fortran-compile.log'
-
-    @property
     def compile_log_name(self):
         """Name of the log file as it should appear in compile_logs."""
         return self.foldername
+
+    @property
+    def exec_dir(self):
+        """Return the path to the folder where compilation takes place."""
+        return Path.cwd() / self.foldername
+
+    @property
+    def logfile(self):
+        """Return the (relative) path to the compilation log file."""
+        return Path(self.foldername) / 'fortran-compile.log'
 
     def get_source_files(self):
         """Return a tuple of source files needed for running a refcalc."""
@@ -254,7 +259,7 @@ def compile_refcalc(comptask):
     error_info : str
         Description of any error that occurred while compiling.
     """
-    workfolder = Path(comptask.foldername).resolve()
+    workfolder = comptask.exec_dir
     # Make compilation subfolder and go there
     try:
         workfolder.mkdir()
@@ -341,16 +346,13 @@ def run_refcalc(runtask):
                            'exists. Contents may get overwritten.')
 
     with execute_in_dir(workfolder):
+        fin_path = Path('refcalc-FIN')
         if runtask.single_threaded:
             log_file = Path(runtask.logname)
-            fin = runtask.fin
         else:
             log_file = Path('refcalc.log')
-            fin = edit_fin_energy_lmax(runtask)
-            try:
-                Path('refcalc-FIN').write_text(fin, encoding='utf-8')
-            except OSError:
-                pass  # local FIN is just for information...
+            fin_path.write_text(edit_fin_energy_lmax(runtask),
+                                encoding='utf-8')
 
         # get executable
         exename = runtask.comptask.exename
@@ -362,19 +364,19 @@ def run_refcalc(runtask):
                     'Failed to get refcalc executable.')
         # run execution
         with log_file.open('w', encoding='utf-8') as log:
-            try:
-                subprocess.run(str(workfolder/exename),
-                               input=fin,
-                               encoding='ascii',
-                               stdout=log,
-                               stderr=log,
-                               check=False)
-            except Exception:
-                logger.error('Error while executing reference calculation '
-                             f'{runtask.name}. Also check refcalc log file.',
-                             exc_info=True)
-                return (f'Error encountered by {runtask}: '
-                        'Error during refcalc execution.')
+            with fin_path.open('r', encoding='utf-8') as fin_file:
+                try:
+                    subprocess.run(str(workfolder/exename),
+                                   stdout=log,
+                                   stderr=log,
+                                   stdin=fin_file,
+                                   check=False)
+                except Exception:
+                    logger.error('Error while executing reference calculation '
+                                 f'{runtask.name}. Also check refcalc log file.',
+                                 exc_info=True)
+                    return (f'Error encountered by {runtask}: '
+                            'Error during refcalc execution.')
 
         if runtask.single_threaded:
             return ''
@@ -500,10 +502,10 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.debug("Wrote input for refcalc as file refcalc-FIN.")
     except Exception:
         logger.error(
-            "Exception while trying to write refcalc-FIN file. "
-            "Execution will proceed. The exception was: ",
-            exc_info=True
+            "Exception while trying to write refcalc-FIN file. ",
+            exc_info=True,
             )
+        raise  # We need refcalc-FIN for piping to subprocess
     if rp.TL_VERSION < Version('1.7.0'):   # muftin.f deprecated in version 1.7
         try:
             iorefcalc.writeMuftin(rp)
@@ -623,6 +625,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                     "check results!"
                     )
         collection_dir.mkdir(parents=True, exist_ok=True)
+        collection_dir = collection_dir.resolve()  # Use full path
     # collect run tasks
     ref_tasks = []
     if not single_threaded:
@@ -837,7 +840,7 @@ def _reinitialize_deltas(slab):
 
     Delete old delta files in main work folder, if necessary
     (there should not be any, unless there was an error). Also,
-    empty all atom.known_deltas because they would refer to
+    empty all atom.current_deltas because they would refer to
     previous tensors.
 
     Parameters
@@ -855,9 +858,11 @@ def _reinitialize_deltas(slab):
                 "cause the delta file to incorrectly be labelled as belonging "
                 "with the new set of tensors.")
 
-    # empty atom.known_deltas
+    # empty atom.current_deltas, reset displacements and constraints
     for at in slab:
-        at.known_deltas = []
+        at.current_deltas = []
+        at.initDisp(force=True)
+        at.constraints = {1: {}, 2: {}, 3: {}}
 
 
 def run_refcalc_for_one_domain(domain):

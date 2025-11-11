@@ -1,0 +1,10 @@
+= Vibration Amplitudes
+Te_top = 0.133
+Te_bot = 0.0775
+Co_def = 0.0755
+Au_def = 0.094
+
+= Occupations
+Au_def = 0.001
+
+= Search offsets

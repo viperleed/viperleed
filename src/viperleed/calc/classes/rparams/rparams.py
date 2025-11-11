@@ -123,6 +123,7 @@ class Rparams:
         self.LMAX = self.get_default('LMAX')
         self.LOG_LEVEL = DEFAULTS['LOG_LEVEL'][NO_VALUE]
         self.LOG_SEARCH = True
+        self.MAX_TL_DISPLACEMENT = self.get_default('MAX_TL_DISPLACEMENT')
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
         # OPTIMIZE: settings for fd optimization
@@ -197,7 +198,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ''
         self.timestamp = ''
-        self.manifest = ManifestFile(DEFAULT_SUPP, DEFAULT_OUT)
+        self.manifest = ManifestFile()
         self.files_to_out = set()  # Edited or generated, for OUT
         self.fileLoaded = {
             'PARAMETERS': True, 'POSCAR': False,
@@ -211,6 +212,7 @@ class Rparams:
         self.ivbeams_sorted = False
         self.last_R = None
         self.stored_R = {'refcalc': None, 'superpos': None}
+        self.last_refcalc_time = None    # duration of last refcalc in seconds
         self.checklist = []  # output strings of things to check at program end
 
         # domains
@@ -696,7 +698,13 @@ class Rparams:
                 _LOGGER.error('Rparams.getFortranComp: Requested fortran '
                               'compiler not found.')
             raise FileNotFoundError('Fortran compiler not found')
-        if found == 'ifort':
+        if found == 'ifort' and os.name == 'nt':  # Windows
+            mkl_path = Path(os.environ['MKLROOT'], 'include').resolve()
+            self.FORTRAN_COMP = [
+                f'ifort -O2 -I"{mkl_path}"',
+                '-Qmkl:parallel -traceback',
+                ]
+        elif found == 'ifort':  # Unix
             self.FORTRAN_COMP = [
                 'ifort -O2 -I/opt/intel/mkl/include',
                 '-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 '
@@ -750,7 +758,10 @@ class Rparams:
                               'compiler not found.')
             raise FileNotFoundError('Fortran MPI compiler not found')
         if found == 'mpiifort':
-            self.FORTRAN_COMP_MPI = ['mpiifort -Ofast', '']
+            # On Windows, mpiifort is a .bat, not an executable. It
+            # must be called via cmd.exe, otherwise FileNotFoundError
+            cmd = 'cmd /c ' if os.name == 'nt' else ''
+            self.FORTRAN_COMP_MPI = [f'{cmd}mpiifort -Ofast', '']
             _LOGGER.debug('Using fortran compiler: mpiifort')
         elif found == 'mpifort':
             # check for the mpifort version
@@ -974,7 +985,7 @@ class Rparams:
         if (2 in self.runHistory or 42 in self.runHistory
                 or sl.deltas_initialized):
             # if delta has been run, information what deltas exist is stored
-            atlist = [at for at in sl if not at.is_bulk and at.known_deltas]
+            atlist = [at for at in sl if not at.is_bulk and at.current_deltas]
         else:
             _LOGGER.debug('Delta-amplitudes were not calculated in current '
                           'run; looking for delta files by name.')
@@ -1016,7 +1027,7 @@ class Rparams:
                                if f.split('_')[2] == el]:
                         if checkDelta(df, at, el, self):
                             found = True
-                            at.known_deltas.append(df)
+                            at.current_deltas.append(df)
                             break
                     if not found:
                         _LOGGER.error('No appropriate Delta file found '
@@ -1073,9 +1084,9 @@ class Rparams:
         splToRestrict = []
         indep = []
         for at in atlist:
-            if len(at.known_deltas) > self.search_maxfiles:
-                self.search_maxfiles = len(at.known_deltas)
-            for fn in at.known_deltas:
+            if len(at.current_deltas) > self.search_maxfiles:
+                self.search_maxfiles = len(at.current_deltas)
+            for fn in at.current_deltas:
                 el = fn.split('_')[2]
                 if el == 'vac':
                     self.searchpars.append(SearchPar(at, 'geo', 'vac', fn))

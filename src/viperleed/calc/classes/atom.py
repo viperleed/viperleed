@@ -17,7 +17,7 @@ from dataclasses import field
 import logging
 from typing import Dict
 
-
+import itertools
 import numpy as np
 
 from viperleed.calc.lib.coordinates import add_edges_and_corners
@@ -81,8 +81,10 @@ class Atom:                                                                     
         'no change'
     dispInitialized : bool
         disp_* variables get initialized after readVIBROCC by Atom.initDisp
-    known_deltas : list of str
+    current_deltas : list of str
         Filenames of delta files generated or found for this atom
+        that will be used for the current iteration of structural
+        optimization.
     offset_geo, offset_vib, offset_occ : dict
         Offsets from self.cartpos, self.site.vib, self.site.occ
         per element
@@ -109,7 +111,7 @@ class Atom:                                                                     
         self.site = None
 
         self.duplicate_of = None
-        self.known_deltas = []
+        self.current_deltas = []
         self.oriState = None
 
         self.linklist = []
@@ -519,6 +521,36 @@ class Atom:                                                                     
         self.oriState.offset_vib = copy.deepcopy(other.offset_vib)
         self.oriState.offset_occ = copy.deepcopy(other.offset_occ)
 
+    def distance(self, cartpos, include_c_replicas=False):
+        """Return the distance of this atom from a `cartpos`.
+
+        2D or 3D replicas of this atom in other unit cells are also
+        considered, and the minimum distance is returned.
+
+        Parameters
+        ----------
+        cartpos : numpy.ndarray or Atom
+            3D Cartesian coordinates to check against the position
+            of this atom. If an Atom, its Cartesian position is used.
+        include_c_replicas : bool
+            Whether replicas in the out-of-plane directions should be
+            considered. The default is False (2D-replicas only).
+
+        Returns
+        -------
+        float
+            The smallest absolute distance among the replicas.
+        """
+        if isinstance(cartpos, Atom):
+            cartpos = cartpos.cartpos
+        offsets = itertools.product((-1, 0, 1),
+                                    repeat=3 if include_c_replicas else 2)
+        ucell = self.slab.ucell.T
+        if not include_c_replicas:
+            ucell = ucell[:2]
+        complist = [self.cartpos + np.dot(v, ucell) for v in offsets]
+        return min(np.linalg.norm(cartpos - complist, axis=1))
+
     def duplicate(self, add_to_atlists=True, num=None):
         """Return a somewhat lightweight copy of this Atom.
 
@@ -604,7 +636,7 @@ class Atom:                                                                     
     def is_same_xy(self, cartpos, eps=1e-3):
         """Return whether this atom is close to a 2D cartpos.
 
-        If the atom is close to an edge or corner its replicas
+        If the atom is close to an edge or corner, its replicas
         are also considered.
 
         Parameters

@@ -6,3 +6,5 @@ pytest<8       # Till Issue #337 of pytest-cases is fixed
 pytest-cases>=3.8.1
 pytest-cov>=2.5
 pytest-mock>=3
+pytest-subtests
+pytest-timeout

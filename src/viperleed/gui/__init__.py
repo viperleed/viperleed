@@ -37,10 +37,6 @@ pluginsbase
 selecplugin
     The main window of the GUI, allowing interactive selection of
     which part of the GUI to use. Requires PyQt5.
-widgetdecorators
-    Decorators dedicated to Qt QWidgets. Requires PyQt5.
-widgetslib
-    Functions for Qt QWidgets. Requires PyQt5.
 
 Packages
 --------
@@ -51,6 +47,8 @@ leedsim
     The LEED Pattern Simulator plugin.
 measure
     The LEED-IV measurement plugin.
+widgets
+    Custom widgets and widget-related functionality. Requires PyQt5.
 
 Non-python data
 ---------------

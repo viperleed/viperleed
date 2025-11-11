@@ -14,8 +14,8 @@ __license__ = 'GPLv3+'
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-from viperleed.gui.basewidgets import TextBoxWithButtons
-from viperleed.gui.widgetslib import AllGUIFonts
+from viperleed.gui.widgets.lib import AllGUIFonts
+from viperleed.gui.widgets.spinboxes import TextBoxWithButtons
 
 
 class EnergyBlock(TextBoxWithButtons):

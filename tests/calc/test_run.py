@@ -103,7 +103,7 @@ class TestRunCalc:
                 file_name=log_name,
                 with_console=kwargs.get('console_output', True),
                 ),
-            'manifest': mocker.call('SUPP', 'OUT', log_name),
+            'manifest': mocker.call(log_name),
             'make_rp_sl': mocker.call(
                 mocks['manifest'].return_value,
                 kwargs.get('preset_params'),
@@ -153,7 +153,7 @@ class TestRunCalc:
             'prepare_log': mocker.call(mocks['logger'],
                                        file_name=log_name,
                                        with_console=True),
-            'manifest': mocker.call('SUPP', 'OUT', log_name),
+            'manifest': mocker.call(log_name),
             'make_rp_sl': mocker.call(mocks['manifest'].return_value,
                                       None,   # preset_params
                                       None,   # slab
@@ -190,7 +190,7 @@ class TestRunCalc:
             'prepare_log': mocker.call(mocks['logger'],
                                        file_name=log_name,
                                        with_console=True),
-            'manifest': mocker.call('SUPP', 'OUT', log_name),
+            'manifest': mocker.call(log_name),
             'make_rp_sl': mocker.call(mocks['manifest'].return_value,
                                       None,   # preset_params
                                       None,   # slab
