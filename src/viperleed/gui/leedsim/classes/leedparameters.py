@@ -30,8 +30,6 @@ non_string_keys = ('emax', 'surfbasis', 'superlattice', 'bulkgroup',
                    'surfgroup', 'beamincidence', 'screenaperture')
 
 
-# TODO: may need to pull the old LEEDParameters from master
-
 class LEEDParameters(MutableMapping):
     """Dictionary-like container of LEED pattern parameters.
 

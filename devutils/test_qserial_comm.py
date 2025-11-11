@@ -27,12 +27,10 @@ from viperleed.gui.measure.serial.viperleedserial import ViPErLEEDSerial
 TIMEOUT = 30000  # milliseconds
 
 
+CONFIG_FILE = Path(__file__).resolve().parent / 'viperleed_hardware.ini'
+assert CONFIG_FILE.exists(), f'No {CONFIG_FILE.name} at {CONFIG_FILE.parent}'
 CONFIG = ConfigParser()
-CONFIG.read(
-    Path(__file__).resolve().parents[2]  # The main viperleed directory
-    / 'src/viperleed/gui/measure/configuration/viperleed_hardware.ini'
-    )
-
+CONFIG.read(CONFIG_FILE)
 
 class MainWindow(qtw.QWidget):
     """Simple window for basic tests."""
@@ -105,7 +103,7 @@ class MainWindow(qtw.QWidget):
         """Connect to currently selected port."""
         name = self._ctrls['select_port'].currentText().split(':')[0]
         self.__port.port_name = name
-        self.__port.serial_connect()
+        self.__port.connect_()
 
         self.__port.data_received.connect(self.on_data_received)
         self.__port.error_occurred.connect(self.on_error_occurred)
@@ -118,7 +116,7 @@ class MainWindow(qtw.QWidget):
 
     def serial_disconnect(self, *__args):
         """Disconnect from connected serial port."""
-        self.__port.serial_disconnect()
+        self.__port.disconnect_()
 
         for key in ('select_port', 'update_ports', 'connect'):
             self._ctrls[key].setEnabled(True)
@@ -147,7 +145,7 @@ class MainWindow(qtw.QWidget):
         else:
             msg = (msg_command,)
 
-        print(f"{msg=}")
+        print(f"msg={msg}")
         self.__port.send_message(*msg, timeout=TIMEOUT)
 
     def on_data_received(self, data):
@@ -165,7 +163,7 @@ class MainWindow(qtw.QWidget):
     def closeEvent(self, event):
         """Reimplement closeEvent to also close open ports."""
         try:
-            self.__port.serial_disconnect()
+            self.__port.disconnect_()
         except TypeError:
             # port is already disconnected
             pass
@@ -204,7 +202,7 @@ class MainWindow(qtw.QWidget):
     def get_random_sr_byte(self):
         """Get random value."""
         unacceptable_values = [58 + i for i in range(7)]
-        random_value = random.randint(48,90)
+        random_value = random.randint(48, 90)
         if random_value in unacceptable_values:
             random_value = self.get_random_sr_byte()
         return random_value

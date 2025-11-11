@@ -173,17 +173,19 @@ class TestGuiMain:
             'qtc': mocker.MagicMock(),
             'qtg': mocker.MagicMock(),
             'qtw': mocker.MagicMock(),
+            'widgets_lib': mocker.MagicMock(),
             'select_cls': mocker.MagicMock(name='ViPErLEEDSelectPlugin'),
             }
         mocker.patch(f'{_MODULE}.import_graphics_modules',
                      return_value=mock_imports.values())
         return {
-            'catch_crash': mocker.patch(f'{_MODULE}.catch_gui_crash'),
             'font_path': mocker.patch(f'{_MODULE}.resources_path',
                                       return_value='fake/path/to/fonts'),
             **mock_imports,
-            'app': mock_imports['qtw'].QApplication.return_value,
+            'catch_crash': mock_imports['widgets_lib'].catch_gui_crash,
+            'raise_qt': mock_imports['widgets_lib'].raise_on_qt_messages,
             'select': mock_imports['select_cls'].return_value,
+            'app': mock_imports['qtw'].QApplication.return_value,
             'suppress_warnings': mocker.patch(
                 f'{_MODULE}.suppress_file_permission_warnings'
                 ),
@@ -236,7 +238,8 @@ class TestGuiMain:
     def test_implementation(self, mocks):
         """Check inner implementation details."""
         gui_main()
-        mocks['catch_crash'].assert_called_once_with()
+        mocks['catch_crash'].assert_called_once()
+        mocks['raise_qt'].assert_called_once_with()
         mocks['select_cls'].assert_called_once_with()
         mocks['suppress_warnings'].assert_called_once_with()
         mocks['qtw'].QApplication.assert_called_once_with(sys.argv)
@@ -260,10 +263,11 @@ class TestImportGrpahicsModules:
             'PyQt5.QtCore',
             'PyQt5.QtGui',
             'PyQt5.QtWidgets',
+            'viperleed.gui.widgets.lib',
             )
         assert mock_import.mock_calls == [mocker.call(m)
                                           for m in imported_modules]
-        n_return_values = 4
+        n_return_values = 5
         assert len(result) == n_return_values
 
 

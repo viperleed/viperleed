@@ -42,6 +42,7 @@ def receive_mouse_broadcast(cls, _, args, kwargs):
 
     return cls(*args, **kwargs)
 
+# Maybe better: https://forum.qt.io/topic/62020/how-to-monitor-user-activity-on-widget/2
 @ensure_decorates_class(qtw.QWidget)
 @wrapt.decorator
 def broadcast_mouse(cls, _, args, kwargs):

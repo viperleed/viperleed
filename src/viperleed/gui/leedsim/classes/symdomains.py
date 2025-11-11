@@ -697,7 +697,7 @@ class LEEDSymmetryDomains(Sequence):
         # skip the identity, i.e., the 1st domain, as it is already
         # included above
         ops = [np.linalg.inv(op).T for op in ops_t[1:]]
-        domains.extend(domains[0].transformed(op) for op in ops)
+        domains.extend(domains[0].transformed(op) for op in ops)                # TODO: perhaps as_copy=True?
         return domains
 
     def __find_domain_operations(self):
