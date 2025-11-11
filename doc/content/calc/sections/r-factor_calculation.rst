@@ -14,18 +14,25 @@ the |R factor| between the calculated and experimental |IV| curves.
 As the comparison of two curves is not an unambiguous task, multiple |R factor|
 implementations exist. The :ref:`RFACTORTYPE` parameter can be set in
 the :ref:`PARAMETERS` file to choose between
-Pendry's |R factor| |RP| :cite:p:`pendryReliabilityFactorsLEED1980`
-and :math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`:
+Pendry's |R factor| |RP| :cite:p:`pendryReliabilityFactorsLEED1980`,
+:math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`
+and a new "smooth" |R factor| |RS| :cite:p:`imreRSmooth2025`:
 
 -   |RP| compares the logarithmic derivatives of the |IV| data, using a fix
     for the divergence of the logarithm when the intensity approaches zero.
 -   :math:`R_2` is based on the mean square difference of the |IV| curves
     (after appropriate scaling).
+-   |RS| is an improvement on |RP|, which behaves better near intensity minima,
+    resulting in fewer local |R factor| minima and better gradients.
 
 .. note::
     Using |RP| is the **default setting** and highly encouraged since tests
     have shown that it leads to better results than :math:`R_2`
     :cite:p:`spornAccuracyQuantitativeLEED1998`.
+
+.. warning::
+    |RS| is currently only implemented for the :ref:`sec_search` using the
+    viperleed-jax :ref:`BACKEND`.
 
 .. _pendry_r:
 
@@ -96,6 +103,24 @@ file should already contain smoothed data.
     Using the :ref:`RFACTORSMOOTH` parameter for smoothing the experimental
     |IV| curves is discouraged, as the smoothing algorithm applied there is
     inferior to that used by the |IV|-curve editor.
+
+The "smooth" |R factor|
+---------------------
+
+We have `recently introduced <https://arxiv.org/abs/2511.05448v1>`__ a modified
+|R factor| |RS|, calculated in a similar manner as |RP| but adapting the
+definition of the :math:`Y` functions to improve its behavior near intensity
+minima. This should improve convergence in the :ref:`sec_search`, in particular
+when using gradient-based methods as implemented in the viperleed-jax
+:ref:`BACKEND`. Comparing |RP| and |RS| on the same system will typically yield
+slightly lower values for |RS| by about 0.01.
+
+.. todo::
+    Update this with more details and update the citation once the |RS| paper
+    is out.
+
+.. todo::
+    Update when |RS| is available for TensErLEED.
 
 .. [1] Notice that the Pendry |R factor| between two sets of beams is not the
        average of the |R factor|\ s between beam pairs, as sums over all beams
