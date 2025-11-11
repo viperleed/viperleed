@@ -32,12 +32,12 @@ import sys
 from zipfile import ZipFile
 
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtNetwork as qtn
 
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes import settings
 from viperleed.gui.measure.classes.abc import QObjectWithError
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
+from viperleed.gui.measure.classes.downloader import NetworkHelper
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
 
 
@@ -286,31 +286,63 @@ class ArduinoCLIInstaller(ArduinoCLI):
     # the currently running process has been completed.
     progress_occurred = qtc.pyqtSignal(int)
 
+    # Emitted if requests must be installed in order
+    # to be able to download the Arduino CLI.
+    requests_module_not_found = qtc.pyqtSignal()
+
     def __init__(self, parent=None):
         """Initialise the Arduino CLI downloader."""
         super().__init__(parent=parent)
-        # Notice that we do not give self as a parent for self.network.
-        # That's because moving a QNetworkAccessManager automatically
-        # to a new thread together with its parent (at is normally the
-        # case with parent-child relationships) seems to be broken in
-        # Qt5. We move self.network explicitly in self.moveToThread.
-        # Assigning a parent here would break the overridden
-        # self.moveToThread, as children with a parent cannot be moved
-        # 'independently'.
-        self.network = qtn.QNetworkAccessManager()
-        self.network.setTransferTimeout(timeout=2000)
+        self._downloader = NetworkHelper(parent=self)
+        self._downloader.download_failed.connect(self._on_download_failed,
+                                                 type=qtc.Qt.UniqueConnection)
+        self._downloader.requests_module_not_found.connect(
+            self._on_requests_module_not_found, type=qtc.Qt.UniqueConnection
+            )
         # _archive_name is the name of the OS specific Arduino
         # CLI version that has to be downloaded from github for
         # installation. It is determined automatically before
         # downloading the CLI. It is also the file name of the
         # zipped CLI.
         self._archive_name = ''
-
         # Whenever an error occurs perform _on_install_failed.
-        self.error_occurred.connect(self._on_install_failed)
+        self.error_occurred.connect(self._on_install_failed,
+                                    type=qtc.Qt.UniqueConnection)
 
-    @qtc.pyqtSlot(qtn.QNetworkReply)
-    def _download_newest_cli(self, reply):
+    @qtc.pyqtSlot()
+    def get_arduino_cli_from_git(self):
+        """Obtain the latest version of Arduino CLI from GitHub.
+
+        Download and extract the latest version of the Arduino
+        command-line interface executables for the current platform
+        asynchronously and upgrade libraries/cores. For simplicity, the
+        32bit version is downloaded for both Linux and Windows. First
+        the required CLI version is detected, then it is downloaded from
+        github. When the installation is finished, or has failed, the
+        cli_installation_finished signal is emitted.
+
+        Emits
+        -----
+        progress_occurred
+            Emitted at the beginning to signal the start of the
+            Arduino CLI installation/upgrade process.
+        """
+        self.progress_occurred.emit(0)
+        url = 'https://api.github.com/repos/arduino/arduino-cli/releases/latest'
+        base.safe_connect(self._downloader.download_finished,
+                          self._download_newest_cli,
+                          type=qtc.Qt.UniqueConnection)
+        base.safe_disconnect(self._downloader.download_finished,
+                             self._install_arduino_cli)
+        self._downloader.download(url)
+
+    def moveToThread(self, thread):     # pylint: disable=invalid-name
+        """Move self and self._downloader to thread."""
+        super().moveToThread(thread)
+        self._downloader.moveToThread(thread)
+
+    @qtc.pyqtSlot(bytes)
+    def _download_newest_cli(self, data):
         """Download newest version of Arduino CLI from github.
 
         Download newest version of the CLI for the OS if it doesn't
@@ -319,7 +351,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
 
         Parameters
         ----------
-        reply : QNetworkReply
+        data : bytes
             Contains the newest CLI version names and download
             urls for these CLIs for various platforms.
 
@@ -331,24 +363,17 @@ class ArduinoCLIInstaller(ArduinoCLI):
             done immediately if installed version matches the newest
             available version, or after initiating download of newest
             version if installed version is outdated.
-        error_occurred(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
-            If the QNetworkReply from the QNetworkAccessManager
-            contains an error.
         error_occurred(ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI)
             If the OS is not supported by any precompiled
             Arduino CLI version.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
+            If converting the downloaded Arduino CLI version data to
+            json failed.
         cli_installation_finished(False)
             If any error_occurred.
         """
-        base.safe_disconnect(self.network.finished, self._download_newest_cli)
-
-        # Check if connection failed.
-        if reply.error():
-            self.emit_error(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
-            return
-        self.progress_occurred.emit(10)
-
-        latest = json.loads(reply.readAll().data())
+        base.safe_disconnect(self._downloader.download_finished,
+                             self._download_newest_cli)
 
         platform = sys.platform
         if 'darwin' in platform:
@@ -361,8 +386,16 @@ class ArduinoCLIInstaller(ArduinoCLI):
             self.emit_error(ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI)
             return
 
+        self.progress_occurred.emit(10)
+
+        try:
+            info = json.loads(data.decode('utf-8'))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.emit_error(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
+            return
+
         url_latest = ''
-        for asset in latest['assets']:
+        for asset in info['assets']:
             # This should always pick the 32 bit version if
             # present, as it comes alphabetically earlier
             if os_name in asset['name']:
@@ -381,13 +414,11 @@ class ArduinoCLIInstaller(ArduinoCLI):
             self._install_and_upgrade_cores()
             return
 
-        request = qtn.QNetworkRequest(qtc.QUrl(url_latest))
-        # Since Qt does not come with SSL support the RedirectAttribute
-        # must be set in order to get the file via http.
-        request.setAttribute(qtn.QNetworkRequest.FollowRedirectsAttribute, True)
-        self.network.finished.connect(self._install_arduino_cli,
-                                      type=qtc.Qt.UniqueConnection)
-        self.network.get(request)
+        # For the second-stage download, rewire the handlers
+        base.safe_connect(self._downloader.download_finished,
+                          self._install_arduino_cli,
+                          type=qtc.Qt.UniqueConnection)
+        self._downloader.download(url_latest)
         self.progress_occurred.emit(25)
 
     def _install_and_upgrade_cores(self):
@@ -407,28 +438,37 @@ class ArduinoCLIInstaller(ArduinoCLI):
         self.progress_occurred.emit(100)
         self.cli_installation_finished.emit(True)
 
-    @qtc.pyqtSlot(qtn.QNetworkReply)
-    def _install_arduino_cli(self, reply):
+    @qtc.pyqtSlot(bytes)
+    def _install_arduino_cli(self, data):
         """Extract downloaded Arduino CLI from .zip archive.
 
         Parameters
         ----------
-        reply : QNetworkReply
-            Contains the Arduino CLI in a .zip archive.
+        data : bytes
+            The zipped Arduino CLI.
 
         Emits
         -----
         progress_occurred
             Emitted after newest CLI version has been downloaded
             and after it has been installed.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
+            If unpacking the .zip archive failed.
+        cli_installation_finished(False)
+            If any error_occurred.
         """
-        base.safe_disconnect(self.network.finished,
+        base.safe_disconnect(self._downloader.download_finished,
                              self._install_arduino_cli)
         self.progress_occurred.emit(40)
         with open(self.base_path / self._archive_name, 'wb') as archive:
-            archive.write(reply.readAll())
-        shutil.unpack_archive(self.base_path / self._archive_name,
-                              self.base_path)
+            archive.write(data)
+        try:
+            shutil.unpack_archive(self.base_path / self._archive_name,
+                                  self.base_path)
+        except shutil.ReadError:
+            self.emit_error(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
+            return
+
         # self._archive_name is no longer needed.
         self._archive_name = ''
         self.progress_occurred.emit(60)
@@ -467,8 +507,19 @@ class ArduinoCLIInstaller(ArduinoCLI):
         except subprocess.CalledProcessError as err:
             self.on_arduino_cli_failed(err)
 
+    @qtc.pyqtSlot()
+    def _on_download_failed(self):
+        """Emit error occurred."""
+        self.emit_error(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
+
+    @qtc.pyqtSlot()
+    def _on_requests_module_not_found(self):
+        """Notify user that requests must be installed."""
+        self.requests_module_not_found.emit()
+        self._on_install_failed()
+
     @qtc.pyqtSlot(tuple)
-    def _on_install_failed(self, _):
+    def _on_install_failed(self, *_):
         """Installation of Arduino CLI failed."""
         self.cli_installation_finished.emit(False)
 
@@ -513,37 +564,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
             subprocess.run([cli, 'upgrade'], capture_output=True, check=True)
         except subprocess.CalledProcessError as err:
             self.on_arduino_cli_failed(err)
-
-    @qtc.pyqtSlot()
-    def get_arduino_cli_from_git(self):
-        """Obtain the latest version of Arduino CLI from GitHub.
-
-        Download and extract the latest version of the Arduino
-        command-line interface executables for the current platform
-        asynchronously and upgrade libraries/cores. For simplicity, the
-        32bit version is downloaded for both Linux and Windows. First
-        the required CLI version is detected, then it is downloaded from
-        github. When the installation is finished, or has failed, the
-        cli_installation_finished signal is emitted.
-
-        Emits
-        -----
-        progress_occurred
-            Emitted at the beginning to signal the start of the
-            Arduino CLI installation/upgrade process.
-        """
-        self.progress_occurred.emit(0)
-        request = qtn.QNetworkRequest(qtc.QUrl(
-            'https://api.github.com/repos/arduino/arduino-cli/releases/latest'
-            ))
-        self.network.finished.connect(self._download_newest_cli,
-                                      type=qtc.Qt.UniqueConnection)
-        self.network.get(request)
-
-    def moveToThread(self, thread):     # pylint: disable=invalid-name
-        """Move self and self.network to thread."""
-        super().moveToThread(thread)
-        self.network.moveToThread(thread)
 
 
 class FirmwareUploader(ArduinoCLI):
@@ -655,7 +675,7 @@ class FirmwareUploader(ArduinoCLI):
         for board in viper_boards:
             port = board['port']['address']
             board = board['matching_boards'][0]
-            name = board['name'] 
+            name = board['name']
             ctrl = f'{name} ({port})'
             ctrl_dict[ctrl] = {
                 'port': port,

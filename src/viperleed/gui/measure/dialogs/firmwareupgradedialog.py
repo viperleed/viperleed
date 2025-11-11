@@ -18,6 +18,7 @@ __license__ = 'GPLv3+'
 
 from pathlib import Path
 import re
+import sys
 from zipfile import ZipFile
 
 from PyQt5 import QtCore as qtc
@@ -247,6 +248,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._uploader.cli_failed.connect(self._on_cli_done)
         self._downloader.progress_occurred.connect(self._progress_bar.setValue)
         self._uploader.progress_occurred.connect(self._progress_bar.setValue)
+        self._downloader.requests_module_not_found.connect(
+            self._on_requests_module_not_found
+            )
 
     @qtc.pyqtSlot(bool, bool)
     def _continue_open(self, is_installed, is_outdated):
@@ -540,6 +544,24 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         """
         self._enable_buttons(True)
         self._update_combo_box('controllers', data_dict)
+
+    @qtc.pyqtSlot()
+    def _on_requests_module_not_found(self):
+        """Notify user that requests must be installed."""
+        warning = qtw.QMessageBox(
+            qtw.QMessageBox.Warning,
+            'Installation required',
+            ('It seems your system cannot use the built-in Qt network '
+             'support. To continue, you need to install the Python '
+             '<b>requests</b> module. You can do this in your terminal'
+             ' or command prompt by excuting the following command:'
+             f'<p><code>"{sys.executable}" -m pip install requests'
+             '</code></p>Restart ViPErLEED after installing '
+             '<b>requests</b>.'),
+             parent=self,
+            )
+        warning.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
+        warning.exec_()
 
     @qtc.pyqtSlot()
     def _on_upload_finished(self):
