@@ -107,13 +107,13 @@ file should already contain smoothed data.
 The "smooth" |R factor|
 ---------------------
 
-We have `recently introduced <https://arxiv.org/abs/2511.05448v1>`__ a modified
-|R factor| |RS|, calculated in a similar manner as |RP| but adapting the
-definition of the :math:`Y` functions to improve its behavior near intensity
+We have recently introduced a modified |R factor| |RS|
+:cite:p:`imreRSmooth2025`, calculated in a similar manner as |RP| but adapting
+the definition of the :math:`Y` functions to improve its behavior near intensity
 minima. This should improve convergence in the :ref:`sec_search`, in particular
 when using gradient-based methods as implemented in the viperleed-jax
 :ref:`BACKEND`. Comparing |RP| and |RS| on the same system will typically yield
-slightly lower values for |RS| by about 0.01.
+slightly lower values for |RS| on the order of 0.01.
 
 .. todo::
     Update this with more details and update the citation once the |RS| paper
