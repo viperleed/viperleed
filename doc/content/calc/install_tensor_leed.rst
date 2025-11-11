@@ -325,10 +325,12 @@ The full documentation of the |oneAPI| is available from the
         from Windows 10). Running natively on Windows is possible, but
         experimental and *not recommended*.
 
-    .. warning::
-        The :ref:`structure-optimization section<sec_search>` currently
-        contains Python code that is incompatible with Windows. Therefore,
-        a full |LEED-IV| calculation cannot be performed under Windows.
+    .. note::
+        The :ref:`structure-optimization section<sec_search>` in |calc|
+        versions earlier than 0.14.1 contains Python code that is
+        incompatible with Windows. Therefore, a full |LEED-IV|
+        calculation cannot be performed under Windows with those
+        versions.
 
     Follow the Intel
     `guide <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__
@@ -394,14 +396,14 @@ The full documentation of the |oneAPI| is available from the
 
             ifort -D
             mpiifort -D
-    
+
     .. important::
         You will have to
-        
+
         .. code-block:: bat
 
             activate_intel.bat
-        
+
         **every time** you open a **new** :program:`cmd` session to have
         the |oneAPI| compilers available.
 
@@ -516,12 +518,12 @@ for how to install ``gfortran`` on various operating systems.
         from Windows 10). Running natively on Windows is possible, but
         experimental and *not recommended*.
 
-    .. warning::
-        The :ref:`structure-optimization section<sec_search>` currently
-        contains Python code that is incompatible with Windows. Therefore,
-        a full |LEED-IV| calculation cannot be performed under Windows.
-        For this reason, this section does not describe a way to obtain
-        an MPI implementation nor an the ``mpirun`` Fortran compiler.
+    .. note::
+        The :ref:`structure-optimization section<sec_search>` in |calc|
+        versions earlier than 0.14.1 contains Python code that is
+        incompatible with Windows. Therefore, a full |LEED-IV|
+        calculation cannot be performed under Windows with those
+        versions.
 
     .. warning::
         The notes below are for installing the very basic, non-optimized
@@ -604,6 +606,30 @@ for how to install ``gfortran`` on various operating systems.
        wget http://www.math.ucla.edu/~wotaoyin/software/lapack_test.cpp  # download
        g++ lapack_test.cpp -llapack -o lapack_test     # build
        ./lapack_test                                   # run
+
+    - Download and install MS-MPI to obtain a Windows-native MPI
+      implementation:
+
+         - Go to `<https://learn.microsoft.com/en-us/message-passing-interface/microsoft-mpi>`__
+         - Install both MS-MPI SDK and MS-MPI Runtime.
+         - Add MS-MPI to your :envvar:`Path` environment variable (usually
+           :file:`C:\\Program Files (x86)\\Microsoft SDKs\\MPI\\Bin\\` or
+           :file:`C:\\Program Files\\Microsoft MPI\\Bin\\`).
+         - Create an :file:`mpifort.bat` file in the location just added
+           with the following contents:
+
+           .. code-block:: bat
+
+               @echo off
+               :: Set MPI include and lib paths
+               set MPI_INC="C:\Program Files\Microsoft MPI\Include"
+               set MPI_LIB="C:\Program Files\Microsoft MPI\Lib\x64"
+
+               :: Call gfortran with MPI include/lib
+               gfortran %* -I%MPI_INC% -L%MPI_LIB% -lmsmpi
+
+           Adapt ``MPI_INC`` and ``MPI_LIB`` to point to the correct
+           MS-MPI location.
 
     For actually running, set the :ref:`FORTRAN_COMP` parameter in the
     :ref:`PARAMETERS` file as follows:
@@ -735,9 +761,9 @@ Random numbers library for TensErLEED < v1.7.4
 
 .. note::
     Users wishing to run natively on Windows can skip this step,
-    as the random numbers are used only in the structure-optimization
-    :ref:`section<sec_search>`, which is currently incompatible with
-    native execution on Windows due to limitations on the Python code.
+    as the random numbers are only used in legacy versions of TensErLEED
+    (< 1.7.3) where the structure-optimization :ref:`section<sec_search>`
+    is unsupported on Windows.
 
 TensErLEED versions up to v1.7.3 need the :term:`C`-object files called
 ``random_.o`` and ``MPIrandom_.o``. These files must be precompiled with C and

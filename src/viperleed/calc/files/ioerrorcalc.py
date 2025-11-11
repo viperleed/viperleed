@@ -19,6 +19,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import numpy as np
 from scipy import interpolate
 
+from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
@@ -510,7 +511,7 @@ def make_errors_figs(errors, formatting=None):
         fig.tight_layout(rect=(0, 0, 1, 0.965))
         fig.suptitle(titles[mode])
         figs.append(fig)
-    logger.log(1, f'Number of error figures: {len(figs)}')                      # TODO: This will never appear as we set INFO at the module level
+    logger.log(LOG_VERY_VERBOSE, f'Number of error figures: {len(figs)}')       # TODO: This will never appear as we set INFO at the module level
     return figs
 
 def _error_legends(mode, mode_errors):

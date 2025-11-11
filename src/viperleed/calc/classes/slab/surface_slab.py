@@ -1228,7 +1228,7 @@ class SurfaceSlab(BaseSlab):
         if keepDisp:
             return
         for at in self:
-            at.known_deltas = []
+            at.current_deltas = []
             at.initDisp(force=True)
             at.constraints = {1: {}, 2: {}, 3: {}}
         return

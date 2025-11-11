@@ -5,8 +5,8 @@ Deltas
 
 Delta directories Deltas\_\ *XYZ* and archives Deltas\_\ *XYZ*.zip use the
 same Tensor index *XYZ* as the :ref:`Tensor files<Tensorszip>`. In fact,
-**the index XYZ of a Deltas\_\ XYZ.zip archive indicates that it was **
-**created based on the Tensors with the same index, Tensors\_\ XYZ.zip**.
+**the index XYZ of a Deltas\_\ XYZ.zip archive indicates that it was
+created based on the Tensors with the same index, Tensors\_\ XYZ.zip**.
 Delta files are named using the pattern 'DEL\_\ *N*\ \_\ *El*\ \_\ *k*',
 where *N* is the number of the atom (same numbering as in
 :ref:`POSCAR`), *El* is the chemical element being addressed by
