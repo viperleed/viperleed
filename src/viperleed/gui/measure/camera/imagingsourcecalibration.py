@@ -16,7 +16,10 @@ from copy import deepcopy
 from PyQt5 import QtCore as qtc
 import numpy as np
 
-from viperleed.gui.measure.camera import cameracalibration as _calib
+from viperleed.gui.measure.camera.cameracalibration import (
+    CameraCalibrationErrors,
+    CameraCalibrationTask,
+    )
 from viperleed.gui.measure.classes.calibrationtask import (
     CalibrationTaskOperation,
     )
@@ -67,7 +70,7 @@ class _DarkLevelOperation(CalibrationTaskOperation):
         return 1
 
 
-class DarkLevelCalibration(_calib.CameraCalibrationTask):
+class DarkLevelCalibration(CameraCalibrationTask):
     """Calibration task that determines an appropriate dark level.
 
     The dark level is considered appropriate if the intensity
@@ -154,9 +157,7 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         intensity = mean_ - 6*stdev
 
         if mean_ > 0.5*int_range:  # Too much for a dark frame
-            self.emit_error(
-                _calib.CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT
-                )
+            self.emit_error(CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT)
             return
 
         this_section = self.__current_section

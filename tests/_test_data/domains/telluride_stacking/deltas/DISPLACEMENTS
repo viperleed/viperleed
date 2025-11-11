@@ -1,0 +1,32 @@
+== SEARCH z
+
+== DOMAIN STA
+
+       = GEO_DELTA
+               Te_top     z = -0.1 0.1 0.01
+!              Te_bot     z = -0.1 0.1 0.01
+               Co_def     z = -0.1 0.1 0.01
+
+== DOMAIN FAU
+
+       = GEO_DELTA
+               Te_top     z = -0.001 0.001 0.001
+
+== SEARCH u
+
+== DOMAIN STA
+
+        = VIB_DELTA
+                Te_top      = -0.04 0.04 0.002
+                Te_bot      = -0.04 0.04 0.002
+                Co_def      = -0.04 0.04 0.002
+
+!       = CONSTRAIN
+!
+!              vib Te_top = linked
+!              vib Co_def = linked
+
+== DOMAIN FAU
+
+        = VIB_DELTA
+                Te_top         = -0.001 0.001 0.001

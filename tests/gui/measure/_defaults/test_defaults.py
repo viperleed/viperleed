@@ -39,6 +39,7 @@ class TestDefaultAliases:
 
     def test_no_capital_letters_in_options_and_values(self, alias_config):
         """Ensure all options and non-parent_aliases values are lowercase."""
+        # pylint: disable=magic-value-comparison
         for section in alias_config.sections():
             for option in alias_config.options(section):
                 assert option == option.lower(), (
@@ -115,7 +116,7 @@ class TestDefaultAliases:
                     )
 
 
-class TestDefaultSettings:
+class TestDefaultSettings:  # pylint: disable=too-few-public-methods
     """Tests for the default settings provided in the _defaults."""
 
     @parametrize(file=list_default_settings())

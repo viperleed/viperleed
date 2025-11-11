@@ -384,6 +384,26 @@ class TestZipFolder:
                   'pre-existing': 'contents were already there'}
         assert extracted == expect
 
+    def test_skips_duplicates(self, tmp_path):
+        """Check that re-packing does not duplicate items."""
+        def _get_archived_info(archive):
+            # Collect only some sensible attributes from ZipInfo
+            # objects, as ZipInfo's compare by identity (no __eq__)
+            with ZipFile(archive, 'r') as _zip:
+                return [(i.filename, i.date_time, i.file_size)
+                        for i in _zip.infolist()]
+        folder = 'tst_folder'
+        contents = {'file': 'file contents'}
+        filesystem_from_dict({folder: contents}, tmp_path)
+        archive = (tmp_path/folder).with_suffix('.zip')
+        # Pack it once, get info
+        _zip_folder(tmp_path/folder, 2)
+        items_before = _get_archived_info(archive)
+        # Pack it again, check that infos are unchanged
+        _zip_folder(tmp_path/folder, 2)
+        items_after = _get_archived_info(archive)
+        assert items_after == items_before
+
 
 class TestZipSubfolders:
     """Tests for the _zip_subfolders function."""

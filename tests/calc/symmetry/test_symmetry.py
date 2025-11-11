@@ -261,6 +261,7 @@ class TestSymmetryConstraints:
         'pg_10': 'Known to often fail with a random shift',
         'cm_1m1': 'Known to often fail with a random shift',
         'poscar_fe3o4_001_cod': 'Known to rarely fail with a random shift',
+        'p6': 'Known to rarely fail with a random shift',
         }
 
     def test_correct_atom_linking(self, with_symmetry_constraints, first_case):

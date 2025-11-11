@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _fortran_comp:
 
 FORTRAN_COMP
@@ -20,43 +22,83 @@ the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
 
 **Default:** if :term:`ifort` is present:
 
-::
+.. tab-set::
 
-   FORTRAN_COMP = 'ifort -O2 -I/opt/intel/mkl/include'
-   FORTRAN_COMP post = '-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl'
+  .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+    :sync: unix
+
+    ::
+
+       FORTRAN_COMP = 'ifort -O2 -I/opt/intel/mkl/include'
+       FORTRAN_COMP post = '-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl -traceback'
+
+  .. tab-item:: Windows
+    :sync: win
+
+    ::
+
+       FORTRAN_COMP = 'ifort /O2 /I"%MKLROOT%/include"'
+       FORTRAN_COMP post = '/Qmkl:parallel /traceback'
+
+    Where ``%MKLROOT%`` is the path that is automatically set as
+    an environment variable by Intel oneAPI® when it is initialized.
+
 
 if :term:`ifort` is not present, but gfortran is:
 
 ::
 
    FORTRAN_COMP = 'gfortran -O2'
-   FORTRAN_COMP post = '-llapack -lpthread -lblas'
+   FORTRAN_COMP post = '-llapack -lpthread -lblas -fbacktrace'
 
-Additionally, if ``mpirun`` is present:
+Additionally, if :program:`mpirun` or, on Windows, :program:`mpiexec` are
+present:
+
+.. tab-set::
+
+  .. tab-item:: Linux, macOS, Windows Subsystem for Linux
+    :sync: unix
+
+    ::
+
+       FORTRAN_COMP mpi = 'mpiifort -Ofast'
+
+  .. tab-item:: Windows
+    :sync: win
+
+    ::
+
+       FORTRAN_COMP mpi = 'cmd mpiifort /Ofast'
+
+    On Windows, :program:`mpiifort` is a :file:`.bat` file, not an executable.
+    Python's subprocess cannot directly run it. This is why it is prepended by
+    ``cmd`` (i.e., the Windows Command Prompt).
+
+
+Or, if :program:`mpiifort` is not present, but :program:`mpifort` is:
 
 ::
 
-   FORTRAN_COMP mpi = 'mpiifort -Ofast'
-
-Or, if ``mpiifort`` is not present, but mpifort is:
-
-::
-
-   FORTRAN_COMP mpi = 'mpifort -Ofast -no-pie -fallow-argument-mismatch'
+   FORTRAN_COMP mpi = 'mpifort -Ofast -fallow-argument-mismatch'
 
 .. warning::
    If you are using an older version of gfortran packaged with GCC 9 or
    earlier, you need to remove the compiler flag ``-fallow-argument-mismatch``.
-   So, specify in :ref:`PARAMETERS`:
+   |calc| should do this automatically if it can detect the compiler version.
+   Should this fail, you can explicitly specify in :ref:`PARAMETERS`:
 
    ::
 
-      FORTRAN_COMP mpi = 'mpifort -Ofast -no-pie'
+      FORTRAN_COMP mpi = 'mpifort -Ofast'
 
    This is necessary, because type-checks were made stricter in GCC 10,
    making ``-fallow-argument-mismatch`` mandatory to compile unaltered
    TensErLEED. However, earlier versions of GCC and gfortran may not
    recognize the flag.
+
+.. versionchanged:: 0.14.1
+    Added correct defaults for ``ifort``/``mpiifort`` on Windows. On
+    earlier versions, Windows users needed to manually set ``FORTRAN_COMP``.
 
 
 **Syntax:**
@@ -76,8 +118,8 @@ OR
    FORTRAN_COMP mpi = mpifort
    FORTRAN_COMP mpi = mpiifort
 
-**Acceptable values**: Either ``ifort`` or ``gfortran`` (or ``mpifort``
-for ``mpiifort`` for ``FORTRAN_COMP mpi``) (this will add the default
+**Acceptable values**: Either ``ifort`` or ``gfortran`` (or
+``mpifort``/``mpiifort`` for ``FORTRAN_COMP mpi``) (this will add the default
 flags listed above for both ``FORTRAN_COMP`` and ``FORTRAN_COMP post``),
 or a string containing the full compile statement, including optimization
 flags, libraries, etc. Quotation marks are optional and will be stripped
@@ -108,14 +150,11 @@ library structure. Therefore, explicitly declaring ``FORTRAN_COMP`` and
       :literal:`Symbol `time' causes overflow in R_X86_64_PC32 relocation`
       in the search log (use :ref:`LOG_SEARCH` to produce such
       a log), this can be resolved by using mpifort with the additional flag
-      ``-no-pie`` (set by default by ViPErLEED for the ``mpifort`` option,
-      see above).
+      ``-no-pie``.
 
 .. warning::
    -  **gfortran/mpifort**: When using aggressive (``-Ofast``) optimization
       flags, checks for NaNs and +/-Inf values are disabled by the compiler.
-      This poses no known problems for TensErLEED up to at least v.1.73, but
+      This poses no known problems for TensErLEED up to at least v.1.7.3, but
       it could lead to unexpected behavior in the future. Use the flag
       ``-fno-finite-math-only`` to re-enable these checks.
-
-

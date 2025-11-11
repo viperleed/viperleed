@@ -13,10 +13,11 @@ __license__ = 'GPLv3+'
 
 from contextlib import contextmanager
 import enum
+import importlib
 import inspect
 from pathlib import Path
+import pkgutil
 import re
-import sys
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
@@ -45,24 +46,75 @@ def class_from_name(package, class_name):
     Raises
     ------
     AttributeError
-        If package is not a valid package
+        If package is not a valid package.
     ValueError
-        If class_name could not be found in package
+        If `class_name` could not be found in `package`.
+    RuntimeError
+        If more than one sub-module defines `class_name`.
     """
+    classes_by_module = ((m, getattr(m, class_name, None))
+                         for m in import_with_sub_modules(package))
+    classes = (c for m, c in classes_by_module
+               if c and c.__module__ == m.__name__)
     try:
-        getattr(sys.modules[__package__], package)
-    except AttributeError as err:
-        raise AttributeError(f"{__package__} does not contain "
-                             f"a package named {package}") from err
+        cls = next(classes)
+    except StopIteration:
+        raise ValueError(f'No {package} class named {class_name} found.')
+    try:
+        next(classes)
+    except StopIteration:  # Only one module defines class_name: OK
+        return cls
+    raise RuntimeError(f'More than one sub-module in {package} '
+                       f'defines {class_name} class.')
 
-    package_name = f"{__package__}.{package}"
+
+def import_with_sub_modules(importable, package=None, recursive=False):
+    """Import importable and sub-modules and yield each of them.
+
+    Parameters
+    ----------
+    importable : str
+        A module or package that should be imported
+        along with its potential sub-modules.
+    package : str or None, optional
+        A package from which to import `importable`. If None,
+        __package__ will be used instead. Default is None.
+    recursive : bool, optional
+        Whether modules should be imported recursively. If True,
+        a recursive import of sub-sub-modules is performed.
+        Default is False.
+
+    Yields
+    ------
+    module : module
+        An imported module.
+
+    Raises
+    ------
+    AttributeError
+        If `importable` is not a valid importable.
+    """
+    package = package or __package__
     try:
-        cls = getattr(sys.modules[package_name], class_name)
-    except AttributeError as err:
-        raise ValueError(
-            f"No {package} class named {class_name} found."
-            ) from err
-    return cls
+        module = importlib.import_module(f'{package}.{importable}')
+    except ImportError as exc:
+        raise AttributeError(f'{package} does not contain '
+                             f'an importable named {importable}') from exc
+    yield module
+
+    try:
+        module_path = module.__path__
+    except AttributeError:  # A simple module, not a package
+        return
+
+    for sub_mod in pkgutil.iter_modules(module_path):
+        sub_name = f'{module.__package__}.{sub_mod.name}'
+        try:
+            yield from import_with_sub_modules(
+                sub_mod.name, package=module.__package__, recursive=recursive
+                ) if recursive else [importlib.import_module(sub_name)]
+        except (AttributeError if recursive else ImportError):
+            pass
 
 
 def emit_error(sender, error, *msg_args, **msg_kwargs):
@@ -304,7 +356,11 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
         third_btn = msg_box.addButton(third_btn_text, msg_box.AcceptRole)
     msg_box.addButton(msg_box.Cancel)
     msg_box.exec_()
-    msg_box.setParent(None)  # py garbage collector will take care
+    try:
+        msg_box.setParent(None)  # py garbage collector will take care
+    except RuntimeError:
+        # Dialog was dismissed and msg_box C object was already deleted.
+        raise DialogDismissedError('Failed to get device settings.')
     _clicked = msg_box.clickedButton()
     if _clicked is btn:
         new_path = qtw.QFileDialog.getExistingDirectory(
@@ -428,17 +484,14 @@ def get_devices(package):
     DefaultSettingsError
         If the default settings are corrupted.
     """
-    try:
-        getattr(sys.modules[__package__], package)
-    except AttributeError as err:
-        raise AttributeError(f"{__package__} does not contain "
-                             f"a package named {package}") from err
+    def _filter_device_cls(cls):
+        return (inspect.isclass(cls)
+                and not inspect.isabstract(cls)
+                and hasattr(cls, 'list_devices'))
 
-    package_name = f"{__package__}.{package}"
     devices = {}
-    for _, cls in inspect.getmembers(sys.modules[package_name],
-                                     inspect.isclass):
-        if hasattr(cls, 'list_devices'):
+    for module in import_with_sub_modules(package):
+        for _, cls in inspect.getmembers(module, _filter_device_cls):
             dummy_instance = cls()
             # list_devices raises a DefaultSettingsError if the default
             # settings do not suffice to make and detect devices.

@@ -416,7 +416,15 @@ class CollapsibleCameraList(CollapsibleDeviceList):
                        error_settings[0],)
             return
 
-        correct_view = self._find_camera_view(settings)
+        try:
+            correct_view = self._find_camera_view(settings)
+        except ValueError:
+            error_settings = [camera_settings,]
+            interpolate_config_path(error_settings)
+            emit_error(self,
+                       QObjectSettingsErrors.INVALID_CLASS_NAME,
+                       error_settings[0],)
+            return
         with disconnected_slot(self._emit_and_update_settings,
                                self._checkbox(correct_view).stateChanged,
                                type=qtc.Qt.UniqueConnection):
@@ -694,7 +702,15 @@ class CollapsibleControllerList(CollapsibleDeviceList):
                        error_settings[0],)
             return
 
-        correct_view = self._find_controller_view(settings)
+        try:
+            correct_view = self._find_controller_view(settings)
+        except ValueError:
+            error_settings = list(controller_settings)
+            interpolate_config_path(error_settings)
+            emit_error(self,
+                       QObjectSettingsErrors.INVALID_CLASS_NAME,
+                       error_settings[0],)
+            return
         with disconnected_slot(self._emit_and_update_settings,
                                self._checkbox(correct_view).stateChanged,
                                self._radiobutton(correct_view).toggled,

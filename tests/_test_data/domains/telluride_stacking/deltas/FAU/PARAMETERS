@@ -1,0 +1,19 @@
+! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
+
+LAYER_CUTS =  0.55 0.65
+N_BULK_LAYERS = 1
+BULK_REPEAT = [-1.91707 -1.10682 2.34793]
+
+SITE_DEF Te = top 1, bot 2
+
+! ####### PARAMETERS FOR REFCALC #######
+
+LMAX = 7-12
+
+
+! ######################################################
+! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #
+! ######################################################
+
+BEAM_INCIDENCE = THETA 0.0000, PHI 0.0000
+THEO_ENERGIES = 49 100 3

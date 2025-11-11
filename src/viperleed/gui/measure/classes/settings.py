@@ -750,6 +750,7 @@ class SystemSettings(ViPErLEEDSettings):
     # for it's core functionality.
     __non_mandatory = (
         ('PATHS', 'arduino_cli'),
+        ('PATHS', 'drivers'),
         ('PATHS', 'firmware'),
         )
 
@@ -785,11 +786,6 @@ class SystemSettings(ViPErLEEDSettings):
         return self['PATHS']
 
     @property
-    def valid(self):
-        """Return whether all settings are valid."""
-        return all(self[sec][opt] for sec, opt in self.__non_null)
-
-    @property
     def settings(self):
         """Return self."""
         return self
@@ -816,10 +812,16 @@ class SystemSettings(ViPErLEEDSettings):
         ('PATHS', 'arduino_cli',
          '<nobr>This is the folder in which the Arduino</nobr> '
          'command-line interface is installed.'),
+        ('PATHS', 'drivers',
+         '<nobr>This is the folder containing third-party </nobr>'
+         'drivers necessary to operate non-ViPErLEED hardware. Note '
+         'that if you previously selected a valid drivers folder, you '
+         'may need to restart ViPErLEED for the new settings to take '
+         'effect.'
+         ),
         ('PATHS', 'firmware',
          '<nobr>This is the folder containing archives with</nobr> '
          'firmware for ViPErLEED controllers.'),
-
         )
         for section, option, info in _infos:
             handler[section][option].set_info_text(info)
@@ -839,6 +841,17 @@ class SystemSettings(ViPErLEEDSettings):
             label.setText('* ' + unstarred_name)
 
         return self.__handler
+
+    def valid(self):
+        """Return whether settings are valid and a reason if invalid."""
+        if not all(self[sec][opt] for sec, opt in self.__non_null):
+            return (False, 'Missing mandatory (*) settings. Please fill '
+                           'in all mandatory fields in the next dialog.')
+        for folder in self['PATHS'].values():
+            if not Path(folder).is_dir():
+                return (False, 'Invalid path detected. Please make sure that '
+                               'the given paths only point to directories.')
+        return (True, '')
 
     def _check_mandatory_settings(self):
         """Check, and possibly add missing settings.
@@ -888,7 +901,9 @@ class SystemSettings(ViPErLEEDSettings):
 
         # Ensure there is a settings file.
         if not self._sys_qsettings.allKeys():
-            Path(self._sys_qsettings.fileName()).resolve().touch()
+            ini_path = Path(self._sys_qsettings.fileName()).resolve()
+            ini_path.parent.mkdir(parents=True, exist_ok=True)
+            ini_path.resolve().touch()
 
         # Set correct path to settings file.
         self._last_file = Path(self._sys_qsettings.fileName()).resolve()

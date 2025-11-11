@@ -25,6 +25,9 @@ DEFAULT_TENSORS = 'Tensors'  # Where Tensor files are stored
 DEFAULT_WORK = 'work'
 DEFAULT_WORK_HISTORY = 'workhistory'
 LOG_PREFIX = 'viperleed-calc'
+# Below-DEBUG log levels. Can be made visible via -v or -vv CLI flags
+LOG_VERBOSE = 5
+LOG_VERY_VERBOSE = 1
 ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 SKIP_IN_DOMAIN_MAIN = (
     # Input files that should not be present in the

@@ -57,19 +57,24 @@ from viperleed.gui.measure.camera.drivers.imagingsource.properties import (
     store_property,
     )
 from viperleed.gui.measure.camera.drivers.imagingsource.models import ISModels
-
-
-dll_path = Path(__file__).resolve().parent
-try:
-    os.add_dll_directory(dll_path)
-except AttributeError:
-    pass
-sys.path.append(str(dll_path))
+from viperleed.gui.measure.classes.settings import SystemSettings
 
 
 c_float_p = POINTER(c_float)
 c_long_p = POINTER(c_long)
 c_int_p = POINTER(c_int)
+
+
+def get_dll_path():
+    """Return the path to the dll files."""
+    drivers_path = SystemSettings().get('PATHS', 'drivers', fallback=None)
+    if not drivers_path:
+        raise ImportError
+    try:
+        dll_path = next(Path(drivers_path).rglob('TIS_UDSHL11*.dll')).parent
+    except StopIteration:
+        raise ImportError from None
+    return dll_path
 
 
 def _to_bytes(string):
@@ -262,11 +267,18 @@ class WindowsCamera:
     # Note: ctypes assumes restype == c_int. Thus restype is
     # omitted below where this is the case.
 
+    dll_path = get_dll_path()
     if sys.maxsize > 2**32:
-        windll.LoadLibrary(str(dll_path / "TIS_UDSHL11_x64.dll"))
+        try:
+            windll.LoadLibrary(str(dll_path / "TIS_UDSHL11_x64.dll"))
+        except FileNotFoundError:
+            raise ImportError
         _dll = windll.LoadLibrary(str(dll_path / "tisgrabber_x64.dll"))
     else:
-        windll.LoadLibrary(str(dll_path / "TIS_UDSHL11.dll"))
+        try:
+            windll.LoadLibrary(str(dll_path / "TIS_UDSHL11.dll"))
+        except FileNotFoundError:
+            raise ImportError
         _dll = windll.LoadLibrary(str(dll_path / "tisgrabber.dll"))
 
     __initalized = False
