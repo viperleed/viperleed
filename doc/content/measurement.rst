@@ -27,3 +27,4 @@ The ViPErLEED Python code can also be obtained from the
     measurement/setup_measurements
     measurement/download_firmware
     measurement/download_imaging_source_drivers
+    measurement/quantities

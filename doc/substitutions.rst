@@ -4,12 +4,17 @@
 .. typically before the title
 ..       .. include:: /substitutions.rst
 
+.. role:: raw-html(raw)
+   :format: html
+
 
 .. |a|            replace:: :math:`\mathbf{a}`
 .. |b|            replace:: :math:`\mathbf{b}`
 .. |bookkeeper|   replace:: :program:`bookkeeper`
 .. |c|            replace:: :math:`\mathbf{c}`
 .. |calc|         replace:: ``viperleed.calc``
+.. |I0|           replace:: I\ :sub:`0`\
+.. |I0b|          replace:: :raw-html:`<strong>I<sub>0</sub></strong>`
 .. |IV|           replace:: *I*\ (\ *V*\ )
 .. |LEED-IV|      replace:: LEED-|IV|
 .. |LEED IV|      replace:: LEED |IV|
