@@ -27,7 +27,8 @@ electron gun. This is especially useful if your sample degrades quickly under
 electron beam exposure. For a quick setup, prepare and align your sample as
 usual, then move it out of the beam path along one axis and perform the
 calibration. Once complete, you can immediately reposition the sample and begin
-your |LEED-IV| measurement.
+your |LEED-IV| measurement. An alternative is to set a very negative Wehnelt
+voltage to repel emitted electrons.
 
 Note that some electronics may require a short time for capacitors to discharge
 and dipoles to relax after operating at high energies. In such cases, it may be
