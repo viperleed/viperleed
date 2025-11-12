@@ -1,31 +1,37 @@
 """Tests for viperleed.calc.files.displacements."""
 
-__authors__ = (
-    'Michele Riva (@michele-riva)',
-    )
+__authors__ = ('Michele Riva (@michele-riva)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-06-08'
 __license__ = 'GPLv3+'
 
 import pytest
-from pytest_cases import fixture
-from pytest_cases import parametrize_with_cases
+from pytest_cases import (
+    fixture,
+    parametrize_with_cases,
+)
 
 from viperleed.calc.classes.rparams.rparams import Rparams
-from viperleed.calc.files.displacements import NoDisplacementsError
-from viperleed.calc.files.displacements import readDISPLACEMENTS
+from viperleed.calc.files.displacements import (
+    NoDisplacementsError,
+    readDISPLACEMENTS,
+)
 
-from .cases_read import CasesEmptyFile
-from .cases_read import CasesInvalidDomainDisplacements
+from .cases_read import (
+    CasesEmptyFile,
+    CasesInvalidDomainDisplacements,
+)
 
 
 @fixture(name='write_displacements')
 def fixture_write_displacements(tmp_path):
     """Write a temporary DISPLACEMENTS file with given contents."""
-    file = tmp_path/'DISPLACEMENTS'
+    file = tmp_path / 'DISPLACEMENTS'
+
     def _write(contents):
         file.write_text(contents, encoding='utf-8')
         return file
+
     return _write
 
 
