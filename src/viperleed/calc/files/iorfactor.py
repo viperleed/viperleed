@@ -401,6 +401,11 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     Returns
     -------
     None.
+
+    Raises
+    ------
+    RfactorError
+        If selected R-factor type is not supported by TensErLEED
     """
     (_, theo_range,
      iv_shift, vincr) = prepare_rfactor_energy_ranges(rp, theobeams,
@@ -468,12 +473,19 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         output += '\n'
     output += '&NL2\n'
     output += ' NSSK=    0,\n'
-    if rp.R_FACTOR_TYPE == 1:
-        output += ' WR=      0.,0.,1.,\n'  # Pendry
-    elif rp.R_FACTOR_TYPE == 2:
-        output += ' WR=      1.,0.,0.,\n'  # R2
+    if str(rp.R_FACTOR_TYPE) == 'pendry':
+        output += ' WR=      0.,0.,1.,\n'
+    elif str(rp.R_FACTOR_TYPE) == 'r2':
+        output += ' WR=      1.,0.,0.,\n'
+    elif str(rp.R_FACTOR_TYPE) == 'zj':
+        output += ' WR=      0.,1.,0.,\n'
     else:
-        output += ' WR=      0.,1.,0.,\n'  # Zanazzi-Jona
+        msg = (
+            f'R factor type {rp.R_FACTOR_TYPE} not supported by '
+            'TensErLEED backend.'
+        )
+        logger.error(msg)
+        raise RfactorError(msg)
     output += '''\
  &END
  &NL3
