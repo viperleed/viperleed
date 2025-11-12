@@ -1,0 +1,28 @@
+.. include:: /substitutions.rst
+
+.. _energy_calibration:
+
+==================
+Energy Calibration
+==================
+
+A brief overview
+================
+
+The energy calibration is one of the available measurement types when starting
+a new measurement. It ensures that the energy scale of |LEED-IV| data is
+accurate and should be performed before any |LEED-IV| data acquisition.
+
+Before starting an energy calibration, make sure that the LEED optics are
+switched on and that your setup can measure the acceleration voltage of the
+electron gun. Allow the electron gun filament sufficient time to heat up before
+proceeding.
+
+To perform the calibration for the correct energy range, select the desired
+start and end beam energies for your |LEED-IV| measurement. Once an energy
+calibration has been completed successfully, the resulting calibration data are
+stored automatically and will be applied in all subsequent measurements.
+
+If a calibration attempt yields implausible results, a warning will appear,
+indicating that the energy calibration failed. In that case, the previously
+stored calibration will continue to be used.
