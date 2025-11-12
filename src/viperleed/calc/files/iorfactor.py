@@ -479,6 +479,13 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         output += ' WR=      1.,0.,0.,\n'
     elif str(rp.R_FACTOR_TYPE) == 'zj':
         output += ' WR=      0.,1.,0.,\n'
+    elif str(rp.R_FACTOR_TYPE) == 'smooth':
+        output += ' WR=      0.,0.,1.,\n'
+        logger.warning(
+            'Smooth R-factors are not yet supported outside of the search. '
+            'Falling back on Pendry R-factor. Resulting R-factors may differ '
+            'from those calculated during the search.'
+            )
     else:
         msg = (
             f'R factor type {rp.R_FACTOR_TYPE} not supported by '
