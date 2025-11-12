@@ -3,7 +3,7 @@
 .. _best_practice:
 
 =============
-Best Practice
+Best practice
 =============
 
 The energy calibration should be performed regularly, at least once per day

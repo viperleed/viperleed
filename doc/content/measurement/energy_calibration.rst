@@ -3,7 +3,7 @@
 .. _energy_calibration:
 
 ==================
-Energy Calibration
+Energy calibration
 ==================
 
 The energy calibration is one of the available measurement types when starting

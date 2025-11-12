@@ -3,7 +3,7 @@
 .. _download_imaging_source_drivers:
 
 ===============================
-Download Imaging Source Drivers
+Download Imaging Source drivers
 ===============================
 
 To use the ViPErLEED Imaging Source camera implementation, additional driver

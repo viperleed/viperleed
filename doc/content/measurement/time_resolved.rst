@@ -3,7 +3,7 @@
 .. _time_resolved:
 
 ==========================
-Time-Resolved Measurements
+Time-resolved measurements
 ==========================
 
 To observe the evolution of a measurement over time, it is necessary to collect
@@ -24,7 +24,7 @@ measurements with the time-resolved measurement type. A time-resolved
 measurement can be performed in two manners. Either it is a continuous
 measurement, or it is non-continuous and therefore triggered.
 
-Continuous Time-Resolved Measurement
+Continuous time-resolved measurement
 ====================================
 
 The continuous time-resolved mode enables very fast sampling of quantities and
@@ -38,7 +38,7 @@ This mode acquires measurements as fast as possible and creates a continuous
 data stream to the PC. The continuous time-resolved measurement does not
 currently support camera use.
 
-Triggered Time-Resolved Measurement
+Triggered time-resolved measurement
 ===================================
 
 The triggered time-resolved mode acquires data at regular intervals for each

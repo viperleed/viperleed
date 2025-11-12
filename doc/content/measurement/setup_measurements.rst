@@ -85,7 +85,7 @@ to data acquisition:
 Once the system settings have been configured, ViPErLEED is ready for firmware
 upload, bad pixel calibration and data acquisiotion.
 
-Uploading Firmware
+Uploading firmware
 ==================
 
 Before a ViPErLEED hardware controller can be used for data acquisition, the

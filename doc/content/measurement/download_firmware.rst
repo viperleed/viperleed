@@ -3,7 +3,7 @@
 .. _download_firmware:
 
 ===========================
-Download ViPErLEED Firmware
+Download ViPErLEED firmware
 ===========================
 
 Firmware for the ViPErLEED hardware controller is provided through our firmware
