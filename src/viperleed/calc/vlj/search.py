@@ -106,7 +106,7 @@ def vlj_search(slab, rpars):
     logger.debug(str(parameter_space))
 
     # set the R-factor type
-    calculator.set_rfactor_type(str(rpars.R_FACTOR_TYPE))
+    calculator.set_rfactor(str(rpars.R_FACTOR_TYPE))
 
     # (try to) export the tree view of the parameter space to a PDF file
     try:
