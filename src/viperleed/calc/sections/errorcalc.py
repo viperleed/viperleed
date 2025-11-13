@@ -129,6 +129,7 @@ def errorcalc(sl, rp):
 
     # Inform user that statistical error estimates are only available
     # for Pendry R-factor.
+    # TODO: Update once R_S is available
     if str(rp.R_FACTOR_TYPE) != 'pendry':
         logger.info("Estimates for statistical uncertainties "
                     "of parameters are only available for the Pendry "
