@@ -77,6 +77,7 @@ DEFAULTS = {
     'LAYER_CUTS': 'dz(1.2)',
     'LMAX': (NO_VALUE, NO_VALUE),
     'MAX_TL_DISPLACEMENT': (0.15,),
+    'R_FACTOR_TYPE': 'pendry',
     'SEARCH_CULL': (0.1, 'genetic'),
     'SYMMETRY_EPS': 0.1,  # z always equal to in-plane
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),

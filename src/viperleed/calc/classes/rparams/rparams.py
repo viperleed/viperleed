@@ -141,7 +141,7 @@ class Rparams:
                         }
         self.RUN = self.get_default('RUN')        # what segments should be run
         self.R_FACTOR_LEGACY = True
-        self.R_FACTOR_TYPE = 'pendry'  # Pendry R-factor by default
+        self.R_FACTOR_TYPE = self.get_default('R_FACTOR_TYPE')
         self.R_FACTOR_SMOOTH = 0
         self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD
         self.SCREEN_APERTURE = 110.
