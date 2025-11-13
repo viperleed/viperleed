@@ -34,7 +34,9 @@ energies increase the information density and are therefore recommended for
 |LEED-IV| measurements (e.g., 0.5 eV).
 
 **End energy**: The final beam energy of the measurement, after which the
-acquisition either concludes or restarts.
+acquisition either concludes or restarts. This energy should be chosen with
+great care. A wider energy range adds more data to the available data pool, but
+higher beam energies can sometimes degrade a sample very quickly.
 
 Times
 =====
