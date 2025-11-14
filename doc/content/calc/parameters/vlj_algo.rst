@@ -65,9 +65,11 @@ Available setting for CMAES are:
    algorithm converges before reaching this number, it will stop early.
 
 -  ``ftol``: The convergence criterion on the R-factor value. The algorithm
-   will stop if the R-factor does not improve by more than this value over
-   the last generation.
+   will stop standard deviation of the best R-factor values over the last
+   ``convergence_gens`` generations is below this value. 
 
+-  ``convergence_gens``: The number of generations to consider when
+   evaluating convergence based on the ``ftol`` criterion.
 
 SLSQP
 -----
