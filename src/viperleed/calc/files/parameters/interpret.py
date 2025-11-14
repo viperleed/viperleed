@@ -1201,7 +1201,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         value_error = f"Value {value!r} is invalid for flag {flag!r}"
 
         flag = flag_aliases.get(flag, flag)
-        print(flag, value, param_types, flag_aliases)  # Debugging line
+        # print(flag, value, param_types, flag_aliases)  # Debugging line
 
         try:
             if param_types[flag] is bool:
@@ -1214,7 +1214,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except KeyError:
             self.rpars.setHaltingLevel(2)
             raise ParameterUnknownFlagError(param, f"{flag!r}") from None
-        print(parsed_value)  # Debugging line
+        # print(parsed_value)  # Debugging line
         self.rpars.vlj_algo_settings[algo][flag] = parsed_value
 
     def _interpret_vlj_algo_cmaes(self, flag_value_pair):
