@@ -95,7 +95,12 @@ DEFAULTS = {
         'preoptimize_v0r': True,
     },
     'vlj_algo_settings': {
-        'CMAES': {'pop': 30, 'max_gens': 200, 'ftol': 1e-3},
+        'CMAES': {
+            'convergence_gens': 5,
+            'pop': 30,
+            'max_gens': 200,
+            'ftol': 1e-3,
+        },
         'SLSQP': {'grad': True, 'grad_damping': 0.1},
         'BFGS': {'grad': True},
     },

@@ -1219,11 +1219,21 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
 
     def _interpret_vlj_algo_cmaes(self, flag_value_pair):
         """Interpret one 'flag value' pair for VLJ_ALGO CMAES."""
-        param_types = {'pop': int, 'max_gens': int, 'ftol': float}
+        param_types = {
+            'pop': int,
+            'max_gens': int,
+            'ftol': float,
+            'convergence_gens': int,
+        }
         flag_aliases = {
-            'population': 'pop', 'pop_size': 'pop',
-            'gens': 'max_gens', 'generations': 'max_gens',
-            'tolerance': 'ftol', 'tol': 'ftol',
+            'lookback': 'convergence_gens',
+            'lookback_gens': 'convergence_gens',
+            'population': 'pop',
+            'pop_size': 'pop',
+            'gens': 'max_gens',
+            'generations': 'max_gens',
+            'tolerance': 'ftol',
+            'tol': 'ftol',
         }
         self.__interpret_vlj_algo(
             flag_value_pair, 'CMAES', param_types, flag_aliases)
