@@ -31,4 +31,5 @@ The ViPErLEED Python code can also be obtained from the
     measurement/time_resolved
     measurement/leed_iv
     measurement/best_practice
+    measurement/beam_alignment
     measurement/quantities
