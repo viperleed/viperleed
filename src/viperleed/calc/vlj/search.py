@@ -161,10 +161,12 @@ def vlj_search(slab, rpars):
         calculator.apply_to_slab(tmp_slab, rpars, result.best_x)
 
         poscar.write(
-            slab, f'POSCAR_TL_{optimizer.name}_intermediate', comments='all'
+            tmp_slab,
+            f'POSCAR_TL_{optimizer.name}_intermediate',
+            comments='all',
         )
         writeVIBROCC(
-            slab, f'VIBROCC_TL_{optimizer.name}_intermediate', silent=True
+            tmp_slab, f'VIBROCC_TL_{optimizer.name}_intermediate', silent=True
         )
 
         # write result to file
