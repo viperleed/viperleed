@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 import logging
 import os
 
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.classes.r_error import R_Error
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc
@@ -30,8 +31,17 @@ def errorcalc(sl, rp):
         # TODO!! requested by Tilman!!
         # !!! Should be straightforward. Just take the beams from other domains
         # as constant (from refcalc), vary for the one domain as always
-        logger.error("Error calculation not implemented for multiple domains.")
-        return
+        raise NotImplementedError(
+            "Error calculation are not implemented for multiple domains."
+            )
+
+    if rp.BACKEND["search"] == SearchBackend.VLJ:
+        # TODO - straightforward to implement
+        raise NotImplementedError(
+            'Error calculations are not implemented with the viperleed-jax '
+            'backend. To sample amplitude changes explicitly use the '
+            'TensorCalculator.delta_amplitudes() method from the API instead.'
+            )
 
     if rp.best_v0r is None:
         logger.info("Error calculation called without a stored inner "
