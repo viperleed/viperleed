@@ -358,11 +358,13 @@ def deltas(sl, rp, subdomain=False):
     # During normal operation deltas should never be called with the
     # viperleed-jax backend, but for API compatibility we still check for it.
     if rp.BACKEND["search"] == SearchBackend.VLJ:
-        raise RuntimeError(
+        logger.warning(
             'Delta calculations are not supported with the viperleed-jax '
-            'backend. To sample amplitude changes use the '
+            'backend. Since they are not required for the search, they will '
+            'be skipped. To sample amplitude changes explicitly use the '
             'TensorCalculator.delta_amplitudes() method from the API instead.'
         )
+        return
 
     if rp.domainParams:
         deltas_domains(rp)
