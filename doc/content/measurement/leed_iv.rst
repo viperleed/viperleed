@@ -23,3 +23,5 @@ afterwards, repeat the exact same measurement with the sample connected to the
 sample-current input instead of ground. Be aware that this will apply a +33 V
 bias to your sample, meaning that images acquired with the sample-current input
 connected are taken at an incorrect beam energy.
+
+For further information, visit :ref:`Best Practice <best_practice>`.

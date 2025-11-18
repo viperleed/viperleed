@@ -15,6 +15,11 @@ the sample is properly aligned. The following procedure must be performed
 whenever anything about the shielding, the electron gun, or the compensation
 coil setup changes.
 
+Note that you can use the camera live view in the **Devices** menu to assist
+with the alignment process. If you select your camera there and activate
+auto-contrast, you will struggle less with brightness changes when varying the
+beam energy.
+
 Initial alignment and compensation coil calibration
 ===================================================
 
