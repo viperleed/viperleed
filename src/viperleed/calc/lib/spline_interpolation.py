@@ -1,11 +1,12 @@
-"""Module interpolation.
+"""Module spline_interpolation of viperleed.calc.lib.
 
-Helper functions for the interpolation of ragged arrays using the interpax
-library.
+Helper functions for the interpolation of ragged arrays.
 """
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
+__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-02-19'
+__license__ = 'GPLv3+'
 
 import numpy as np
 from scipy.interpolate import CubicSpline, PPoly
