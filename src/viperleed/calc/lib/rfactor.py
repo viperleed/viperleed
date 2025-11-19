@@ -3,9 +3,10 @@
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __created__ = '2024-02-21'
 
-import jax
-from jax import numpy as jnp
-from jax import lax
+import numpy as _np
+
+
+xp = _np
 
 
 def pendry_R(
@@ -57,12 +58,12 @@ def pendry_R_from_intensity_and_derivative(
 
 def pendry_R_from_y(y_1, y_2, energy_step, per_beam=False):
     # mask out NaNs for this calculation
-    y_1_mask = jnp.isnan(y_1)
-    y_2_mask = jnp.isnan(y_2)
-    mask = jnp.logical_or(y_1_mask, y_2_mask)
+    y_1_mask = xp.isnan(y_1)
+    y_2_mask = xp.isnan(y_2)
+    mask = xp.logical_or(y_1_mask, y_2_mask)
 
-    y_1 = jnp.where(mask, 0, y_1)
-    y_2 = jnp.where(mask, 0, y_2)
+    y_1 = xp.where(mask, 0, y_1)
+    y_2 = xp.where(mask, 0, y_2)
 
     # TODO?: potentially, one could do these integrals analytically based on the spline coefficients
     numerators = nansum_trapezoid((y_1 - y_2) ** 2, dx=energy_step, axis=0)
@@ -71,7 +72,7 @@ def pendry_R_from_y(y_1, y_2, energy_step, per_beam=False):
         # return R factor for each beam
         return numerators / denominators
     # R factor for all beams
-    return jnp.sum(numerators) / jnp.sum(denominators)
+    return xp.sum(numerators) / xp.sum(denominators)
 
 
 def pendry_y(intensity, intensity_derivative, v0_imag):
@@ -80,9 +81,9 @@ def pendry_y(intensity, intensity_derivative, v0_imag):
 
 
 def nansum_trapezoid(y, dx, axis=-1):
-    y_arr = jnp.moveaxis(y, axis, -1)
+    y_arr = xp.moveaxis(y, axis, -1)
     # select the axis to integrate over
-    return jnp.nansum(y_arr[..., 1:] + y_arr[..., :-1], axis=-1) * dx * 0.5
+    return xp.nansum(y_arr[..., 1:] + y_arr[..., :-1], axis=-1) * dx * 0.5
 
 
 def integer_shift_v0r(array, n_steps):
@@ -96,13 +97,13 @@ def integer_shift_v0r(array, n_steps):
     # interpolator.
     n_energies, n_beams = array.shape[0], array.shape[1]
 
-    rolled_array = jnp.roll(array, n_steps, axis=0)
-    row_ids = jnp.arange(n_energies).reshape(-1, 1)
-    row_ids_tiled = jnp.tile(row_ids, (1, n_beams))
-    mask = jnp.logical_or(
+    rolled_array = xp.roll(array, n_steps, axis=0)
+    row_ids = xp.arange(n_energies).reshape(-1, 1)
+    row_ids_tiled = xp.tile(row_ids, (1, n_beams))
+    mask = xp.logical_or(
         row_ids_tiled < n_steps, row_ids >= n_energies + n_steps
     )
-    return jnp.where(mask, jnp.nan, rolled_array)
+    return xp.where(mask, xp.nan, rolled_array)
 
 
 ### R2 ###
@@ -134,7 +135,7 @@ def R_2(
         # return R factor for each beam
         return numerators / denominators
     # R factor for all beams
-    return jnp.sum(numerators) / jnp.sum(denominators)
+    return xp.sum(numerators) / xp.sum(denominators)
 
 
 def R_1(
@@ -165,7 +166,7 @@ def R_1(
         # return R factor for each beam
         return numerators / denominators
     # R factor for all beams
-    return jnp.sum(numerators) / jnp.sum(denominators)
+    return xp.sum(numerators) / xp.sum(denominators)
 
 
 ### RMS ###
@@ -214,7 +215,7 @@ def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
     condition = second_derivative > 0
     denominator = intensity**2 + 0.5 * (first_derivative * v0_imag) ** 2
     denominator += condition * 0.1 * (second_derivative * v0_imag**2) ** 2
-    denominator = jnp.sqrt(denominator)
+    denominator = xp.sqrt(denominator)
     return numerator / denominator
 
 
@@ -279,17 +280,17 @@ def y_s(
         - 0.5 * first_derivative**2 / second_derivative**2
     )
     intermediate_1 = (alpha / v0_imag**2) * intermediate_1 + beta
-    intermediate_2 = intermediate_1 / jnp.sqrt(1 + intermediate_1**2)
+    intermediate_2 = intermediate_1 / xp.sqrt(1 + intermediate_1**2)
 
     numerator = first_derivative
-    condition = jnp.logical_and(second_derivative > 0, intermediate_1 > 0)
+    condition = xp.logical_and(second_derivative > 0, intermediate_1 > 0)
 
     denominator = intensity**2 + 4 * v0_imag**2 * first_derivative**2
     conditional_denominator = (
         second_derivative**2 * v0_imag**4 * intermediate_2**2
     )
     denominator += condition * conditional_denominator
-    denominator = jnp.sqrt(denominator)
+    denominator = xp.sqrt(denominator)
     return numerator / denominator
 
 
@@ -304,31 +305,29 @@ def R_zj(
     exp_derivative_1 = exp_deriv_1_spline(energy_grid)
     exp_derivative_2 = exp_deriv_2_spline(energy_grid)
 
-    exp_mask = jnp.isnan(exp_intensity)
-    exp_mask = jax.lax.stop_gradient(exp_mask)
-    exp_intensity = jnp.where(exp_mask, 0.0, exp_intensity)
-    exp_derivative_1 = jnp.where(exp_mask, 0.0, exp_derivative_1)
-    exp_derivative_2 = jnp.where(exp_mask, 0.0, exp_derivative_2)
+    exp_mask = xp.isnan(exp_intensity)
+    exp_intensity = xp.where(exp_mask, 0.0, exp_intensity)
+    exp_derivative_1 = xp.where(exp_mask, 0.0, exp_derivative_1)
+    exp_derivative_2 = xp.where(exp_mask, 0.0, exp_derivative_2)
 
     # Theory data
     theo_deriv_1_spline = theo_spline.derivative()
     theo_deriv_2_spline = theo_deriv_1_spline.derivative()
 
     theo_intensity = theo_spline(energy_grid)
-    theo_mask = jnp.isnan(theo_intensity)
-    theo_mask = jax.lax.stop_gradient(theo_mask)
-    mask = jnp.logical_or(exp_mask, theo_mask)
+    theo_mask = xp.isnan(theo_intensity)
+    mask = xp.logical_or(exp_mask, theo_mask)
 
     theo_derivative_1 = theo_deriv_1_spline(energy_grid)
     theo_derivative_2 = theo_deriv_2_spline(energy_grid)
 
     # apply mask to theory as well
-    theo_intensity = jnp.where(mask, 0.0, theo_intensity)
-    theo_derivative_1 = jnp.where(mask, 0.0, theo_derivative_1)
-    theo_derivative_2 = jnp.where(mask, 0.0, theo_derivative_2)
+    theo_intensity = xp.where(mask, 0.0, theo_intensity)
+    theo_derivative_1 = xp.where(mask, 0.0, theo_derivative_1)
+    theo_derivative_2 = xp.where(mask, 0.0, theo_derivative_2)
 
     # calculate experimental energy ranges (without NaNs)
-    exp_energy_ranges = jnp.logical_not(mask).sum(axis=0) * energy_step
+    exp_energy_ranges = xp.logical_not(mask).sum(axis=0) * energy_step
 
     # Factor 0.027 for random correlation, Zannazi & Jona 1977
     prefactors = (
@@ -343,11 +342,11 @@ def R_zj(
     numerators = abs(
         beam_normalization * theo_derivative_2 - exp_derivative_2
     ) * abs(beam_normalization * theo_derivative_1 - exp_derivative_1)
-    numerators = jnp.where(mask, 0.0, numerators)
+    numerators = xp.where(mask, 0.0, numerators)
 
-    denominators = abs(exp_derivative_1) + jnp.nanmax(exp_derivative_1, axis=0)
-    denominators = jnp.clip(denominators, a_min=1e-12)
-    denominators = jnp.where(mask, 1.0, denominators)
+    denominators = abs(exp_derivative_1) + xp.nanmax(exp_derivative_1, axis=0)
+    denominators = xp.clip(denominators, a_min=1e-12)
+    denominators = xp.where(mask, 1.0, denominators)
 
     quotient = numerators / denominators
 
@@ -355,7 +354,7 @@ def R_zj(
     if per_beam:
         return r_beams
 
-    return jnp.nansum(r_beams * exp_energy_ranges) / jnp.nansum(
+    return xp.nansum(r_beams * exp_energy_ranges) / xp.nansum(
         exp_energy_ranges
     )
 
@@ -386,32 +385,31 @@ def _shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
 
     Parameters
     ----------
-    theo_intensity : jnp.ndarray
+    theo_intensity : xp.ndarray
         Interpolated theoretical intensity array of shape (n_energies, n_beams)
-    exp_intensity : jnp.ndarray
+    exp_intensity : xp.ndarray
         Interpolated experimental intensity array of shape (n_energies, n_beams)
 
     Returns
     -------
-    jnp.ndarray
+    xp.ndarray
         Shifted theoretical intensity array of shape (n_energies, n_beams)
     """
     # Determine the mask for valid (non-NaN) intensities
-    valid_exp_mask = ~jnp.isnan(exp_intensity)
-    valid_theo_mask = ~jnp.isnan(theo_intensity)
-    overlap_mask = jnp.logical_and(valid_exp_mask, valid_theo_mask)
+    valid_exp_mask = ~xp.isnan(exp_intensity)
+    valid_theo_mask = ~xp.isnan(theo_intensity)
+    overlap_mask = xp.logical_and(valid_exp_mask, valid_theo_mask)
 
     # Calculate the minimum theoretical intensity in the valid regions
-    masked_theo_intensity = jnp.where(overlap_mask, theo_intensity, jnp.nan)
-    masked_theo_mins = jnp.nanmin(masked_theo_intensity, axis=0)
+    masked_theo_intensity = xp.where(overlap_mask, theo_intensity, xp.nan)
+    masked_theo_mins = xp.nanmin(masked_theo_intensity, axis=0)
     # Ensure that we do not consider NaNs in the minimum calculation
-    min_theo_intensity = jnp.where(
-        jnp.isnan(masked_theo_mins), 0.0, masked_theo_mins
+    min_theo_intensity = xp.where(
+        xp.isnan(masked_theo_mins), 0.0, masked_theo_mins
     )
     # only shift if minimum is negative
-    shifts = jnp.where(min_theo_intensity < 0, -min_theo_intensity, 0.0)
+    shifts = xp.where(min_theo_intensity < 0, -min_theo_intensity, 0.0)
     # stop gradient on shifts to avoid affecting optimization
-    shifts = lax.stop_gradient(shifts)
 
     # broadcast shifts and add to theo_intensity
     return theo_intensity + shifts
