@@ -21,6 +21,7 @@ from viperleed.calc.classes.rparams.defaults import NO_VALUE
 from viperleed.calc.classes.rparams.special.max_tl_displacement import (
     MaxTLAction,
     )
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.classes.state_recorder import CalcStateRecorder
 from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.constants import SKIP_IN_DOMAIN_MAIN
@@ -40,6 +41,8 @@ from viperleed.calc.sections import rfactor
 from viperleed.calc.sections import search
 from viperleed.calc.sections import superpos
 from viperleed.calc.sections.cleanup import cleanup, move_oldruns
+from viperleed.calc.vlj.lib import check_vlj_dependencies
+from viperleed.calc.vlj.search import vlj_search
 
 
 logger = logging.getLogger(__name__)
@@ -216,7 +219,14 @@ def run_section(index, sl, rp):
         elif index == 2:
             deltas.deltas(sl, rp)
         elif index == 3:
-            search.search(sl, rp)
+            if rp.BACKEND['search'] is SearchBackend.VLJ:
+                # check dependencies
+                check_vlj_dependencies()
+
+                # initialize the TensorLEED calculator
+                vlj_search(sl, rp)
+            else:
+                search.search(sl, rp)
         elif index == 31:
             superpos.superpos(sl, rp)
         elif index == 5:
@@ -307,12 +317,22 @@ def section_loop(rp, sl):
                 if (next_section != 11  # r-factor after refcalc
                         and (not rp.domainParams or 3 in rp.runHistory)):
                     rp.RUN.insert(0, 11)
-            elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
+            elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]
+                  and rp.BACKEND['search'] is not SearchBackend.VLJ):
                 if next_section != 31:  # superpos after search
                     rp.RUN.insert(0, 31)
-            elif sec == 31 and rp.fileLoaded["EXPBEAMS"]:
+            elif (sec == 31 and rp.fileLoaded["EXPBEAMS"]
+                  and rp.BACKEND['search'] is not SearchBackend.VLJ):
                 if next_section != 12:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
+            elif (sec == 12 and not rp.STOP
+                  and rp.BACKEND['search'] is SearchBackend.VLJ):
+                # everything should be handled via the iterator in the
+                # vlj_search function
+                # TODO: the one thing that will not yet be handled is the
+                # MAX_TL_DISPLACEMENT – but we can implement this when we
+                # implement the general search iterator interface
+                pass
             elif sec == 12 and not rp.STOP:
                 # check for max. displacement condition:
                 exceeds_tl_limit = _check_exceeds_tl_limit(rp, sl)

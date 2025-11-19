@@ -102,6 +102,7 @@ class Rparams:
         # FROM PARAMETERS FILE
         self.ATTENUATION_EPS = 0.001
         self.AVERAGE_BEAMS = None
+        self.BACKEND = self.get_default("BACKEND")
         self.BULKDOUBLING_EPS = 0.001
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
@@ -139,8 +140,8 @@ class Rparams:
                         'overbar': False, 'perpage': 2,
                         }
         self.RUN = self.get_default('RUN')        # what segments should be run
-        self.R_FACTOR_LEGACY = True # use old runtime-compiled R-factor calculation
-        self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
+        self.R_FACTOR_LEGACY = True
+        self.R_FACTOR_TYPE = self.get_default('R_FACTOR_TYPE')
         self.R_FACTOR_SMOOTH = 0
         self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD
         self.SCREEN_APERTURE = 110.
@@ -183,6 +184,12 @@ class Rparams:
         self.V0_Z_ONSET = 1.0
         self.VIBR_AMP_SCALE = []   # read as list of strings, interpret later
         self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
+
+        # ViPErLEED JAX plugin parameters
+        self.VLJ_ALGO = DEFAULTS['VLJ_ALGO']  # algorithms to be used
+        self.VLJ_BATCH = DEFAULTS['VLJ_BATCH']  # batch size for VLJ
+        self.VLJ_CONFIG = DEFAULTS['VLJ_CONFIG']  # configuration for VLJ
+        self.vlj_algo_settings = DEFAULTS['vlj_algo_settings']  # settings for each algorithm
 
         # RUN VARIABLES
         self.timer = ExecutionTimer()

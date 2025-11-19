@@ -127,7 +127,7 @@ def _fetch_and_check_spectra(rp, index, name):
 
 def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     logger.debug("Using new R-factor calculation. This is still experimental!")
-    which_r = rp.R_FACTOR_TYPE
+    which_r = int(rp.R_FACTOR_TYPE)
 
     if which_r == 1:
         n_derivs = 1

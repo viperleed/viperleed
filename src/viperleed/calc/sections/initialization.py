@@ -16,12 +16,14 @@ import copy
 import logging
 import os
 from pathlib import Path
+import multiprocessing as mp
 import shutil
 
 import numpy as np
 
 from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams.domain_params import DomainParameters
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import NoBulkRepeatError
@@ -31,6 +33,7 @@ from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
 from viperleed.calc.constants import DEFAULT_DOMAIN_FOLDER_PREFIX
 from viperleed.calc.constants import DEFAULT_SUPP
+from viperleed.calc.files.new_displacements.file import DisplacementsFile
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
 from viperleed.calc.files import experiment_symmetry
@@ -46,12 +49,19 @@ from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections.cleanup import preserve_original_inputs
+from viperleed.calc.vlj import VLJ_AVAILABLE
+
 
 logger = logging.getLogger(__name__)
 
 
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
+
+    logger.info(f'Running with backend {rp.BACKEND["search"]}.')
+
+    logger.debug(f'Using multiprocessing start method: {mp.get_start_method()}')
+
     if not subdomain:
         rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
@@ -394,7 +404,31 @@ def initialization(sl, rp, subdomain=False):
     # Create directory compile_logs in which logs from compilation will be saved
     make_compile_logs_dir(rp)
 
-    return
+    if not VLJ_AVAILABLE:
+        if rp.BACKEND['search'] == SearchBackend.VLJ:
+            logger.error('The viperleed_jax plugin is not available. '
+                         'Please install it to use the viperleed-jax backend.')
+            rp.setHaltingLevel(3)
+        return
+
+    # viperleed_jax Plugin related initialization
+    if rp.BACKEND['search'] == SearchBackend.VLJ:
+        logger.debug("Initializing viperleed-jax backend")
+
+        if mp.get_start_method() != 'spawn':
+            msg = ('The viperleed-jax backend expects the '
+                   'multiprocessing start method to be "spawn". '
+                   f'Current method is: {mp.get_start_method()}. This can '
+                   'raise several warnings and may lead to unexpected '
+                   'behaviour. Consider setting the start method to "spawn" '
+                   'before running.')
+            logger.warning(msg)
+            rp.setHaltingLevel(1)
+
+        # read the DISPLACEMENTS file using the new parser and store it in rpars
+        rp.vlj_displacements = DisplacementsFile()
+        rp.vlj_displacements.read('DISPLACEMENTS')
+        logger.debug('DISPLACEMENTS file read successfully')
 
 
 def init_domains(rp):

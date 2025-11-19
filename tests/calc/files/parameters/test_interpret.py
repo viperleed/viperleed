@@ -1510,3 +1510,50 @@ class TestV0Real(_TestInterpretBase):
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid V0_REAL raises exceptions."""
         self.check_raises(interpreter, val, exc)
+
+class TestVLJParameters(_TestInterpretBase):
+    """Tests for interpreting VLJ parameters."""
+
+    def test_interpret_vlj_algo(self, interpreter):
+        """Check assignment of valid VLJ_ALGO list."""
+        assignment = Assignment('CMAES, BFGS', 'VLJ_ALGO')
+        interpreter.interpret_vlj_algo(assignment)
+        assert interpreter.rpars.VLJ_ALGO == ['CMAES', 'BFGS']
+
+    def test_interpret_vlj_algo_settings_cmaes(self, interpreter):
+        """Check assignment of valid vlj_algo_settings for CMAES."""
+        assignment = Assignment('pop 20, max_gens 50, ftol 1e-2', 'VLJ_ALGO', flags_str='CMAES')
+        interpreter.interpret_vlj_algo(assignment)
+        assert interpreter.rpars.vlj_algo_settings['CMAES'] == {
+            'pop': 20,
+            'max_gens': 50,
+            'ftol': 1e-2,
+        }
+
+    def test_interpret_vlj_algo_settings_slsqp(self, interpreter):
+        """Check assignment of valid vlj_algo_settings for SLSQP."""
+        assignment = Assignment('grad false, grad_damping 0.5', 'VLJ_ALGO', flags_str='SLSQP')
+        interpreter.interpret_vlj_algo(assignment)
+        assert interpreter.rpars.vlj_algo_settings['SLSQP'] == {
+            'grad': False,
+            'grad_damping': 0.5,
+        }
+
+    def test_interpret_vlj_batch(self, interpreter):
+        """Check assignment of valid VLJ_BATCH."""
+        assignment = Assignment('energies 4, atoms 2', 'VLJ_BATCH')
+        interpreter.interpret_vlj_batch(assignment)
+        assert interpreter.rpars.VLJ_BATCH == {'energies': 4, 'atoms': 2}
+
+    def test_interpret_vlj_config(self, interpreter):
+        """Check assignment of valid VLJ_CONFIG."""
+        assignment = Assignment(
+            'precondition false, recalc_ref_t_matrices true, t-leed-l_max 4',
+            'VLJ_CONFIG'
+        )
+        interpreter.interpret_vlj_config(assignment)
+        assert interpreter.rpars.VLJ_CONFIG == {
+            'precondition': False,
+            'recalc_ref_t_matrices': True,
+            't-leed-l_max': 4,
+        }
