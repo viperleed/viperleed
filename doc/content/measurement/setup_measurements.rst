@@ -10,8 +10,8 @@ After ViPErLEED has been installed successfully, the graphical user interface
 (GUI) can be started by executing ``viperleed gui`` in a command prompt or
 terminal. This opens the main GUI window, which provides two options:
 **Simulate LEED Pattern** and **Measure LEED-IV**. To proceed to the data
-acquisition interface, select **Measure LEED-IV**.
-
+acquisition interface, select **Measure LEED-IV**. If your GUI is rendered
+differently, set the DPI settings of python.exe to override by application.
 
 .. _fig_gui_selection:
 .. figure:: /_static/gui/gui_selection.jpg
@@ -36,7 +36,7 @@ settings need to be defined.
 
     A warning that mandatory system settings need to be selected.
 
-Select *OK* to continue. This opens the **System settings** dialogue, where
+Select *OK* to continue. This opens the **System settings** dialog, where
 paths to relevant folders or directories can be specified. The hints displayed
 next to each label provide short explanations of how each directory is used
 within ViPErLEED.
@@ -46,7 +46,7 @@ within ViPErLEED.
     :width: 55%
     :align: center
 
-    The system settings dialogue.
+    The system settings dialog.
 
 The **System Settings** section allows the definition of the following paths:
 
@@ -79,11 +79,11 @@ to data acquisition:
  * **Devices** – Edit camera and controller settings. Selecting a camera opens a live preview window.
  * **Tools** – Hardware-related utilities.
  * **View** – Reopen the data plot if it has been closed.
- * **Settings** – Reopen the system settings dialogue.
+ * **Settings** – Reopen the system settings dialog.
  * **About** – Display software information.
 
 Once the system settings have been configured, ViPErLEED is ready for firmware
-upload, bad pixel calibration and data acquisiotion.
+upload, bad pixel calibration, and data acquisition.
 
 Uploading firmware
 ==================
@@ -93,7 +93,7 @@ firmware must be uploaded to the controller. ViPErLEED uses the Arduino Micro
 as its hardware controller platform, and new controllers must be flashed once
 before their first use. With the controller connected to the PC, open the
 **Tools** menu and select *Upload/upgrade Firmware*. Make sure that your
-**Firmware** directory contains a copy of the firmware for the controller.
+**Firmware** directory contains a copy of the controller firmware.
 
 .. _fig_measurement_gui_select_firmware:
 .. figure:: /_static/gui/measurement_gui_select_firmware.jpg
@@ -128,8 +128,8 @@ ViPErLEED hardware controller.
     The firmware upload tool.
 
 Press *Refresh* to detect connected controllers. New Arduino Micro boards will
-be shown with the COM port they are detected on. If a controller already
-contains ViPErLEED firmware, this will be indicated by the name and the
+be listed with the COM port on which they were detected. If a controller
+already contains ViPErLEED firmware, this will be indicated by its name and the
 installed version will be displayed. You can select the firmware you wish to
 upload in the dropdown window next to the *Upload firmware* button. ViPErLEED
 will automatically search your configured **Firmware** directory for matching
@@ -138,10 +138,17 @@ After you have selected your desired firmware, press *Upload firmware* to start
 the upload. Once the progress bar reaches 100%, the controller is ready for
 use.
 
+Before you start acquiring data with your ViPErLEED controller, make sure that
+it has the correct I0 settings for your unit. If the wrong mode is selected,
+you will have to adjust the jumpers in the box. You should then open the
+**Devices** menu, select the controller on which the firmware was installed,
+assign a serial number, choose the correct thermocouple type, and save the
+configuration.
+
 Bad pixel calibration
 =====================
 
-This calibration step is optional, but strongly recommended before performing
+This calibration step is optional but strongly recommended before performing
 |LEED-IV| measurements. Camera sensors typically contain a small number of
 defective or unstable pixels. To improve image quality during data acquisition,
 these pixels can be detected and replaced during image processing. To perform a
@@ -188,3 +195,17 @@ the required steps interactively.
 
 Once the calibration is completed, the stored calibration will automatically be
 used for subsequent measurements.
+
+Camera setup
+============
+
+After pixel calibration, the camera can be moved into its final position, as it
+will no longer be necessary to adjust it. The camera aperture should always be
+fully opened. To proceed, open a live view of your camera. For optimal
+settings, position the camera so that the LEED screen fills out the entire
+sensor. (Align the edges of the screen with the edges of the sensor.) After
+adjusting the camera position, right-click the camera view and select
+“Allow setting of ROI”. Set the region of interest such that the edges of the
+ROI align with the edges of the screen. Right-click the camera view again and
+set the binning value in the camera settings. Set the value such that your
+images have between 400x400 and 500x500 pixels after binning.
