@@ -23,7 +23,7 @@ and dipoles to relax after operating at high energies. In such cases, it may be
 preferable to allow a brief downtime between measurements.
 
 Make sure that you have recently (within the last few months) performed a bad
-pixel calibration, and ensure that this file is applied to your images.
+pixel calibration and ensure that this file is applied to your images.
 
 Before acquiring data with a camera, activate a camera live view and manually
 go through the entire energy range you plan to measure at the desired gain.
@@ -81,7 +81,9 @@ required to correct the measurement data later. To measure it, direct the
 electron beam at the sample plate to produce uniform illumination. Ensure that
 the distance between the sample plate and the LEED screen when measuring the
 flat field is equal to the distance between the sample surface and the LEED
-screen during the corresponding |LEED-IV| measurement.
+screen during the corresponding |LEED-IV| measurement. Measure the sample
+thickness beforehand and move the sample plate by that distance closer to the
+electron gun.
 
 You can either use the |LEED-IV| measurement mode or a single snapshot to
 measure stray light (dark frames) emitted by the electron gun and other light
@@ -89,3 +91,44 @@ sources. To acquire dark frames, increase the Wehnelt voltage such that no
 electrons leave the electron gun. Usually, a single snapshot is sufficient for
 dark-frame subtraction.
 
+You can perform three |LEED-IV| measurements at slightly different distances
+from the electron gun to average out the influence of the grid. A distance
+variation of 5 mm is generally sufficient. A separate flat field should be
+acquired for each of these |LEED-IV| measurements.
+
+Measurement flow
+================
+
+To guarantee optimal data quality, it is best to follow the workflow outlined
+below.
+
+Check electronics and setup
+---------------------------
+Ensure everything is turned on and connected properly. Give the electronics
+enough time to warm up. Check that the bad pixel file is up to date. Ensure
+that you know the necessary settle times. Make sure as little stray light as
+possible enters the chamber.
+
+Adjust exposure time
+--------------------
+Turn the LEED optics on and manually ramp through your desired energy range
+with the sample in place. Set the exposure time such that no pixels saturate at
+any energy.
+
+Energy calibration
+------------------
+Perform the energy calibration for your desired energy range.
+
+|LEED-IV| measurement
+---------------------
+Acquire the |LEED-IV| measurement. If you can afford the time, perform three
+|LEED-IV| measurements at different electron-gun-to-sample distances.
+
+Flat field
+----------
+Acquire the flat field for each of the |LEED-IV| measurements. Do not forget to
+correct for the sample thickness.
+
+Dark frame
+----------
+Take a snapshot of the dark frame or acquire dark frames for each beam energy.
