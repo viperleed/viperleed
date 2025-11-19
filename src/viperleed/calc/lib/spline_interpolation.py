@@ -33,7 +33,7 @@ def make_1d_ragged_cubic_spline(
     x_subarray, y_subarray = x[~y_mask], y[~y_mask]
     start_index = xp.where(~y_mask)[0][0]
     subarray_spline = CubicSpline(
-        x_subarray, y_subarray, axis, bc_type, extrapolate, check=False
+        x_subarray, y_subarray, axis, bc_type, extrapolate
     )
 
     return subarray_spline, start_index
