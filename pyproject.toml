@@ -228,7 +228,7 @@ classifiers = [
     fail-on = ['I']   # Fails also for info messages
 
     [tool.pylint.format]
-    max-line-length = 80
+    max-line-length = 79
 
     [tool.pylint.messages_control]
     enable = [

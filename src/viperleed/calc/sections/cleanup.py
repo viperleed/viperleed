@@ -407,6 +407,15 @@ def _zip_folder(folder, compression_level):
     OSError
         If creating the archive fails.
     """
+    def _write_skipping_existing(archive, items):
+        """Write `items` into `archive` skipping existing ones."""
+        existing_members = set(archive.namelist())
+        for item in items:
+            archived_name = item.relative_to(folder).as_posix()
+            if archived_name in existing_members:
+                continue
+            archive.write(item, archived_name)
+
     kwargs = {'compression': ZIP_DEFLATED, 'compresslevel': compression_level}
     arch_name = folder.with_suffix('.zip')
     _LOGGER.info(f'Packing {arch_name}...')
@@ -414,8 +423,7 @@ def _zip_folder(folder, compression_level):
     to_pack = (f for f in folder.iterdir() if f != arch_name)
     try:  # pylint: disable=too-many-try-statements
         with ZipFile(arch_name, 'a', **kwargs) as archive:
-            for item in to_pack:
-                archive.write(item, item.relative_to(folder))
+            _write_skipping_existing(archive, to_pack)
     except OSError:
         _LOGGER.error(f'Error packing {arch_name} file: ', exc_info=True)
         raise

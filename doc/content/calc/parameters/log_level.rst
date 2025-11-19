@@ -30,7 +30,7 @@ amount of output, which can be useful for debugging purposes.
 
 .. note::
     If a calculation is invoked with the ``--verbose`` or ``--very-verbose``
-    command-line options, the log level will be overridden to 10 or 1,
+    command-line options, the log level will be overridden to 5 or 1,
     respectively. This can be useful for quick debugging without having
     to change the PARAMETERS file.
 

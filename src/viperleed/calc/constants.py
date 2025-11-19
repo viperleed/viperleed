@@ -27,6 +27,9 @@ DEFAULT_WORK_HISTORY = 'workhistory'
 # epsilon for comparison of user inputs in the DISPLACEMENTS file
 DISPLACEMENTS_FILE_EPS = 1e-6
 LOG_PREFIX = 'viperleed-calc'
+# Below-DEBUG log levels. Can be made visible via -v or -vv CLI flags
+LOG_VERBOSE = 5
+LOG_VERY_VERBOSE = 1
 ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 SKIP_IN_DOMAIN_MAIN = (
     # Input files that should not be present in the

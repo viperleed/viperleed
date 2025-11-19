@@ -20,24 +20,21 @@ import time
 
 import numpy as np
 
+from viperleed.calc.classes.search_job import IS_WINDOWS
 from viperleed.calc.classes.search_job import SearchJob
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.files import (
-    iosearch,
-    parameters,
-    searchpdf,
-)
+from viperleed.calc.files import iosearch
+from viperleed.calc.files import parameters
+from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.lib.context import execute_in_dir
 from viperleed.calc.lib.parabola_fit import parabolaFit
-from viperleed.calc.lib.time_utils import (
-    ExecutionTimer,
-    ExpiringOnCountTimer,
-    ExpiringTimerWithDeadline,
-)
+from viperleed.calc.lib.time_utils import ExecutionTimer
+from viperleed.calc.lib.time_utils import ExpiringOnCountTimer
+from viperleed.calc.lib.time_utils import ExpiringTimerWithDeadline
 from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
@@ -267,8 +264,8 @@ def _write_control_chem(rp, generation, configs):
     try:
         with _ctrl_chem_p.open("w", encoding="utf-8") as control_chem:
             control_chem.writelines(lines)                                      # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
-    except Exception:
-        logger.error("Failed to write control.chem")
+    except Exception as exc:
+        logger.error(f"Failed to write control.chem. Reason: {exc}")
         rp.setHaltingLevel(1)
 
 
@@ -446,6 +443,8 @@ def search(sl, rp):
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
+    if rp.TL_VERSION >= Version('1.7.0'):
+        rf_info_content = ''  # search reads from rf.info since v1.7
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
@@ -480,7 +479,12 @@ def search(sl, rp):
         return None
 
     # Decide whether to use parallelization
-    usempi = rp.N_CORES > 1 and shutil.which('mpirun')
+    mpi_runners = ['mpirun']
+    if IS_WINDOWS:
+        # On Windows, Intel does not provide a mpirun>mpiexec symlink
+        mpi_runners.append('mpiexec')
+    mpirun = next((r for r in mpi_runners if shutil.which(r)), None)
+    usempi = rp.N_CORES > 1 and mpirun
     if not usempi:
         reason = (
             f'The N_CORES parameter is set to {rp.N_CORES}' if rp.N_CORES <= 1
@@ -521,7 +525,10 @@ def search(sl, rp):
         libpattern = 'lib.search'
         if usempi and rp.TL_VERSION <= Version('1.7.3'):
             libpattern += '.mpi'
-        lib_file = next(libpath.glob(libpattern + '*'), None)
+        lib_files = libpath.glob(libpattern + '*')
+        if not usempi:
+            lib_files = (f for f in lib_files if 'mpi' not in f.name)
+        lib_file = next(lib_files, None)
         if lib_file is None:
             raise FileNotFoundError(f'File {libpattern}.f not found.')
 
@@ -563,12 +570,35 @@ def search(sl, rp):
     # Prepare to compile fortran files
     searchname = f'search-{rp.timestamp}'
     fcomp = rp.FORTRAN_COMP_MPI if usempi else rp.FORTRAN_COMP
+
+    # On Windows with ifort, older versions that need the rf.info
+    # contents to be piped are known not to work correctly (they
+    # stall forever). There are also some problems in the random
+    # number generator external module (which affect up to v1.7.3)
+    # but we can let the compiler fail in that case.
+    known_unsupported = (
+        rp.TL_VERSION < Version('1.7.0')
+        and IS_WINDOWS
+        and 'ifort' in fcomp[0]
+        )
+    if known_unsupported:
+        logger.error('Old TensErLEED versions are not supported on Windows. '
+                     'Please upgrade your TensErLEED code to at least '
+                     # Suggest the version that uses Fortran's random
+                     # so people don't have to bother modifying and
+                     # manually compiling random_.c (see also #151).
+                     'version 1.7.4')
+        rp.setHaltingLevel(3)
+        return
+
     logger.info('Compiling fortran input files...')
 
     # compile task could be inherited from general CompileTask (issue #43)
     ctasks = [(f"{fcomp[0]} -o lib.search.o -c", lib_file.name, fcomp[1])]
     if hashname:
-        ctasks.append((f"{fcomp[0]} -c", hashname, fcomp[1]))
+        ctasks.append(
+            (f"{fcomp[0]} -o intarr_hashing.o -c", hashname, fcomp[1])
+            )
     ctasks.append((f"{fcomp[0]} -o restrict.o -c", "restrict.f", fcomp[1]))
     _fixed_format = any(f.endswith('.f90')
                         for f in (lib_file.name, src_file.name, hashname))
@@ -661,7 +691,7 @@ def search(sl, rp):
 
     # Prepare the command to be run via subprocess
     executable = os.path.join('.', searchname)
-    command = [] if not usempi else ['mpirun', '-n', str(rp.N_CORES)]
+    command = [] if not usempi else [mpirun, '-n', str(rp.N_CORES)]
     if usempi and is_gfortran:
         # Assume we're using OpenMPI: we need to specify the use of all
         # CPU threads explicitly, otherwise OpenMPI will use only the
@@ -680,11 +710,9 @@ def search(sl, rp):
             if log_exists:  # log file existed before
                 search_log_f.write("\n\n-------\nRESTARTING\n-------\n\n")
 
-        search_job = SearchJob(
-            command=command,
-            input_data=rf_info_content,
-            log_path=search_log_path,
-        )
+        search_job = SearchJob(command=command,
+                               input_data=rf_info_content,
+                               log_path=search_log_path)
         search_job.start()
 
         # MONITOR SEARCH

@@ -17,6 +17,7 @@ import logging
 import os
 from pathlib import Path
 import multiprocessing as mp
+import shutil
 
 import numpy as np
 
@@ -568,51 +569,17 @@ def init_domains(rp):
     rp.updateDerivedParams()  # Also sets LMAX
     if not rp.LMAX.has_max:
         rp.LMAX.max = max(dp.rpars.LMAX.max for dp in rp.domainParams)
-    for dp in rp.domainParams:
-        if dp.refcalc_required:
-            continue
-        cmessage = f'Reference calculation required for {dp}: '
-        # check energies
-        if not dp.rpars.THEO_ENERGIES.contains(rp.THEO_ENERGIES):
-            logger.info("%sEnergy range is mismatched.", cmessage)
-            dp.refcalc_required = True
-            continue
-        # check LMAX - should be obsolete since TensErLEED version 1.6
-        if (rp.TL_VERSION <= Version('1.6.0')
-                and rp.LMAX.max != dp.rpars.LMAX.max):
-            logger.info("%sLMAX is mismatched.", cmessage)
-            dp.refcalc_required = True
-        # check beam incidence
-        if rp.THETA != dp.rpars.THETA or rp.PHI != dp.rpars.PHI:
-            logger.info("%sBEAM_INCIDENCE is mismatched.", cmessage)
-            dp.refcalc_required = True
-        # check IVBEAMS
-        if not dp.rpars.fileLoaded["IVBEAMS"]:
-            logger.info("%sNo IVBEAMS file loaded", cmessage)
-            dp.refcalc_required = True
-            continue
-        if (len(rp.ivbeams) != len(dp.rpars.ivbeams)
-                or not all(dp.rpars.ivbeams[i].isEqual(rp.ivbeams[i])
-                           for i in range(len(rp.ivbeams)))):
-            logger.info("%sIVBEAMS file mismatched with supercell.", cmessage)
-            dp.refcalc_required = True
-            continue
+    inconsistent_params_by_domain = {
+        # Also updates domain.refcalc_required
+        domain: _check_domain_consistent(domain, rp)
+        for domain in rp.domainParams
+        }
 
     rr = [dp for dp in rp.domainParams if dp.refcalc_required]
     if rr:
         logger.info("The following domains require new reference "
                     f"calculations: {', '.join(d.name for d in rr)}")
-        inherited = (
-            'THEO_ENERGIES',
-            'THETA',
-            'PHI',
-            'N_CORES',
-            'ivbeams',
-            )
-        for dp in rp.domainParams:
-            dp.rpars.inherit_from(rp, *inherited, override=True)
-            if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
-                dp.rpars.LMAX.max = rp.LMAX.max
+        _inherit_from_main(rr, rp, inconsistent_params_by_domain)
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
@@ -626,14 +593,28 @@ def init_domains(rp):
                 logger.error(f'Error while re-initializing {dp}')
                 raise
 
-    if 4 not in rp.RUN and 1 not in rp.RUN and rr:
-        logger.error(
-            "Some domains require new reference calculations before "
-            "a domain search can be executed. Please either manually "
-            "execute appropriate reference calculations, or set RUN = 4"
-            )
-        rp.setHaltingLevel(3)
-        return
+    sections_that_run_refcalc = {1, 4}
+    sections_that_need_refcalc = {2, 3, 5}
+
+    # Check if a refcalc was explicitly requested,
+    # or one is required but it is missing
+    for section in rp.RUN:
+        if section == 1:
+            # Users explicitly requested a refcalc for all domains.
+            for domain in rp.domainParams:
+                domain.refcalc_required = True
+        if section in sections_that_run_refcalc:
+            # A refcalc will be executed if needed, before other
+            # segments that may require it. No need to check further.
+            break
+        if section in sections_that_need_refcalc and rr:
+            logger.error(
+                'Some domains require new reference calculations before '
+                'a domain search can be executed. Please either manually '
+                'execute appropriate reference calculations, or set RUN = 4'
+                )
+            rp.setHaltingLevel(3)
+            return
 
     while 4 in rp.RUN:
         if rr:
@@ -701,7 +682,7 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             "Make sure the angle phi is interpreted correctly: "
             f"Phi is {rp.PHI:.2f}° from x, which is "
             f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from a.\n"
-            "See the ViPErLEED documentation for the parameter BEAM_INCDIDENCE "
+            "See the ViPErLEED documentation for the parameter BEAM_INCIDENCE "
             "for details."
             )
 
@@ -716,6 +697,75 @@ def _check_and_warn_layer_cuts(rpars, slab):
             "convergence issues in the reference calculation. Check the "
             "LAYERS_CUTS parameter in the PARAMETERS file."
             )
+
+
+def _check_domain_consistent(domain, main_rpars):
+    """Return PARAMETERS for domain that are inconsistent with main ones.
+
+    Parameters
+    ----------
+    domain : DomainParameters
+        The domain to be checked for consistency.
+    main_rpars : Rparams
+        The PARAMETERS of the **main** calculation.
+
+    Returns
+    -------
+    inconsistent_params : list of str
+        Names of PARAMETERS that are found to be inconsistent with
+        those given in the main directory. If any is inconsistent,
+        `domain.refcalc_required` is set to True.
+        `inconsistent_params` is empty if `domain` was already
+        identified as .refcalc_required before this call. This
+        typically means that there were no/incomplete Tensors
+        or that `domain` needs to be recalculated as a supercell.
+
+    Notes
+    -----
+    The following is checked for consistency:
+        - THEO_ENERGIES: needs to be a sub-grid of the main one
+        - BEAM_INCIDENCE: equal
+        - LMAX, only for TL_VERSION <= 1.6.0: same maximum value
+        - IVBEAMS file: present and identical
+    """
+    inconsistent_params = []
+    if domain.refcalc_required:  # No/incomplete tensors or supercell
+        return inconsistent_params
+    cmessage = f'Reference calculation required for {domain}: '
+    # check energies
+    if not domain.rpars.THEO_ENERGIES.contains(main_rpars.THEO_ENERGIES):
+        logger.info(f'{cmessage}Energy range is mismatched.')
+        domain.refcalc_required = True
+        inconsistent_params.append('THEO_ENERGIES')
+    # check LMAX - should be obsolete since TensErLEED version 1.6
+    if (main_rpars.TL_VERSION <= Version('1.6.0')
+            and main_rpars.LMAX.max != domain.rpars.LMAX.max):
+        logger.info(f'{cmessage}LMAX is mismatched.')
+        domain.refcalc_required = True
+        inconsistent_params.append('LMAX')
+    # check beam incidence
+    beam_incidence_domain = (domain.rpars.THETA, domain.rpars.PHI)
+    beam_incidence_main = (main_rpars.THETA, main_rpars.PHI)
+    if beam_incidence_domain != beam_incidence_main:
+        logger.info(f'{cmessage}BEAM_INCIDENCE is mismatched.')
+        domain.refcalc_required = True
+        inconsistent_params.append('BEAM_INCIDENCE')
+    # check IVBEAMS
+    if not domain.rpars.fileLoaded['IVBEAMS']:
+        logger.info(f'{cmessage}No IVBEAMS file loaded')
+        domain.refcalc_required = True
+        return inconsistent_params
+    ivbeams_consistent = (
+        len(main_rpars.ivbeams) == len(domain.rpars.ivbeams)
+        and all(
+            dom_b.isEqual(main_b)
+            for dom_b, main_b in zip(domain.rpars.ivbeams, main_rpars.ivbeams)
+            )
+        )
+    if not ivbeams_consistent:
+        logger.info(f'{cmessage}IVBEAMS file mismatched with supercell.')
+        domain.refcalc_required = True
+    return inconsistent_params
 
 
 def _check_slab_duplicates_and_vacuum(slab, rpars):
@@ -753,6 +803,68 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
     if not slab.layers:
         # May have been cleared by shifting slab away from c==0
         slab.create_layers(rpars)
+
+
+def _inherit_from_main(domains, main_rpars, inconsistent_params_by_domain):
+    """Clone PARAMETERS and files from `main_rpars` to `domains`.
+
+    Parameters
+    ----------
+    domains : Sequence of DomainParameters
+        The domains that need to inherit PARAMETERS values and files
+        from those of the main directory. Typically these are the
+        domains for which a new reference calculation is needed.
+    main_rpars : Rparams
+        The PARAMETERS of the **main** directory.
+    inconsistent_params_by_domain : dict
+        Keys are DomainParameters, values are sequences of names
+        of the PARAMETERS values that need to be overwritten in
+        each domain's PARAMETERS file.
+
+    Notes
+    -----
+    The following files are copied from the current directory into
+    each domain.workdir:
+        IVBEAMS
+    The following PARAMETERS values are written to each domain if
+    they were not given or they were inconsistent:
+        THEO_ENERGIES
+        BEAM_INCIDENCE
+        LMAX (only for TL_VERSION <= 1.6.0)
+    """
+    inherited_params = {
+        # attr to inherit: what to write
+        'THEO_ENERGIES': 'THEO_ENERGIES',
+        'THETA': 'BEAM_INCIDENCE',
+        'PHI': 'BEAM_INCIDENCE',
+        'N_CORES': None,  # Don't write: determined at runtime
+        }
+    inherited = (
+        *inherited_params,
+        'ivbeams',
+        )
+    params_to_write = {p for p in inherited_params.values() if p}
+    if main_rpars.TL_VERSION <= Version('1.6.0'):
+        params_to_write.add('LMAX')
+    for domain in domains:
+        domain.rpars.inherit_from(main_rpars, *inherited, override=True)
+        if main_rpars.TL_VERSION <= Version('1.6.0'):
+            domain.rpars.LMAX.max = main_rpars.LMAX.max
+        # Copy over the IVBEAMS from the main work, otherwise
+        # follow-up runs will again require a refcalc
+        shutil.copy2('IVBEAMS', domain.workdir)
+        # Edit the PARAMETERS file of this domain
+        # for inconsistent or missing PARAMETERS.
+        with execute_in_dir(domain.workdir):
+            write_this_domain = (
+                p for p in params_to_write
+                # Don't overwrite user-given parameters
+                # as long as they're consistent
+                if p not in domain.rpars.readParams
+                or p in inconsistent_params_by_domain[domain]
+                )
+            for param_to_write in write_this_domain:
+                parameters.modify(domain.rpars, param_to_write)
 
 
 def _make_domain_workdir(name, src, calc_started_at, must_use_auto_name):
@@ -825,13 +937,19 @@ def _read_inputs_for_domain(domain, main_rpars):
     # when fetching files in init_domains).
     domain.rpars = rpars = parameters.read()
 
-    # Inherit some values from the main PARAMETERS
+    # Inherit some values from the main PARAMETERS:
+    # For some of these, keep user-given ones if they were:
     inherited = (
         'paths',
         'timestamp',
         'ZIP_COMPRESSION_LEVEL',
         )
     rpars.inherit_from(main_rpars, *inherited)
+    # It is crucial that some others are identical:
+    inherit_and_override = (
+        'TL_VERSION',
+        )
+    rpars.inherit_from(main_rpars, *inherit_and_override, override=True)
 
     # Store input files for each domain, BEFORE any edit
     preserve_original_inputs(rpars)
