@@ -20,6 +20,7 @@ For information on how to install the package, please visit
     measurement/download_firmware
     measurement/download_imaging_source_drivers
     measurement/setup_measurements
+    measurement/measurement_characteristics
     measurement/energy_calibration
     measurement/time_resolved
     measurement/leed_iv
