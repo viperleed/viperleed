@@ -32,9 +32,11 @@ any energy, decrease the exposure time. The goal is to use the full dynamic
 range of the sensor without reaching pixel saturation. Lower gain and higher
 exposure times are generally preferable.
 
-Never connect the beam-current and beam-energy ports to your LEED optics
-simultaneously. The voltage divider on the beam-energy port draws current and
-will falsify the beam-current measurement.
+If you are using the ViPErLEED hardware controller, make sure that it is
+grounded at all times during operation. Never connect the beam-current and
+beam-energy ports to your LEED optics simultaneously. The voltage divider on
+the beam-energy port draws current and will falsify the beam-current
+measurement.
 
 Energy calibration
 ==================
@@ -96,8 +98,8 @@ from the electron gun to average out the influence of the grid. A distance
 variation of 5 mm is generally sufficient. A separate flat field should be
 acquired for each of these |LEED-IV| measurements.
 
-Measurement flow
-================
+Data acquisition flow
+=====================
 
 To guarantee optimal data quality, it is best to follow the workflow outlined
 below.

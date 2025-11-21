@@ -75,9 +75,9 @@ appear.
 The toolbar at the top provides additional functionality not directly related
 to data acquisition:
 
- * **File** – Load existing measurements for review.
- * **Devices** – Edit camera and controller settings. Selecting a camera opens a live preview window.
- * **Tools** – Hardware-related utilities.
+ * **File** – Load existing measurements for review. Loaded measurements are displayed in the data plot.
+ * **Devices** – Edit camera and controller settings. Selecting a camera opens a live preview window. Settings for new devices can be created by selecting the corresponding device from this menu.
+ * **Tools** – Hardware-related utilities, such as the firmware upload tool for the ViPErLEED hardware controller and a bad-pixel calibration tool.
  * **View** – Reopen the data plot if it has been closed.
  * **Settings** – Reopen the system settings dialog.
  * **About** – Display software information.
