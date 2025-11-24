@@ -32,16 +32,16 @@ The continuous time-resolved mode enables very fast sampling of quantities and
 is ideal for observing rapid signal changes in real time. In this mode, the
 controllers continuously return data without interruption. A typical use case
 is determining the settle times of the beam energy and beam current. After
-setting a new beam energy, the electronics may exhibit transient behavior; the
+setting a new beam energy, the electronics may exhibit transient behaviour; the
 duration and shape of these transients can be characterized using this mode.
 
 This mode acquires measurements as fast as possible and creates a continuous
 data stream to the PC. The continuous time-resolved measurement does not
 currently support camera use.
 
-The behavior of controllers differs between primary and secondary controllers.
+The behaviour of controllers differs between primary and secondary controllers.
 Primary controllers restart their acquisition sequence at each energy step
-(their behavior is identical at all energies). Secondary controllers, however,
+(their behaviour is identical at all energies). Secondary controllers, however,
 continue measuring while the primary controller sets the beam energy. This
 provides additional information about transients.
 
@@ -53,6 +53,9 @@ provides additional information about transients.
     Step timing for secondary controllers in continuous measurements. A primary
     controller would repeat the behaviour of the first step at all other energy
     steps.
+
+Continuous time-resolved measurements ignore all settle times, and primary
+controllers immediately begin data acquisition after an energy has been set.
 
 Triggered time-resolved measurement
 ===================================
@@ -73,6 +76,10 @@ synchronization between devices and stable acquisition over extended periods.
     :align: center
 
     Step timing for devices in a triggered measurement.
+
+Triggered time-resolved measurements wait for the HV settle time to elapse
+before acquiring data. The initial delay before the first data point and the
+interval between consecutive data points are both constant.
 
 ----
 
