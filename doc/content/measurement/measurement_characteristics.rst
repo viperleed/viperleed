@@ -112,5 +112,6 @@ quantity at a certain energy. A time-resolved measurement in contrast will
 remain at each energy for the desired amount of time and continue collecting
 data during this time span.
 
+----
 
 For further information, visit :ref:`Best Practice <best_practice>`.

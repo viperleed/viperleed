@@ -14,15 +14,16 @@ collects one data point and then moves on, a time-resolved measurement remains
 at that energy and continues collecting data at fixed intervals for a defined
 duration.
 
-Time-resolved measurements are helpful when trying to determine how long the
+Time-resolved measurements are useful when trying to determine how long the
 LEED optics need to relax after setting a new energy, or when performing a
 long-term measurement to observe the energy drift of the optics as they heat up
 during extended use. Another typical use case is the measurement of *I*\(*t*\)
 curves, for example during a phase transition induced by the electron beam or
 by temperature. The measurement package can perform these kinds of
-measurements with the time-resolved measurement type. A time-resolved
-measurement can be performed in two manners. Either it is a continuous
-measurement, or it is non-continuous and therefore triggered.
+measurements with the time-resolved measurement type.
+
+A time-resolved measurement can be performed in two ways: as a **continuous**
+measurement or as a **triggered** (non-continuous) measurement.
 
 Continuous time-resolved measurement
 ====================================
@@ -38,6 +39,21 @@ This mode acquires measurements as fast as possible and creates a continuous
 data stream to the PC. The continuous time-resolved measurement does not
 currently support camera use.
 
+The behavior of controllers differs between primary and secondary controllers.
+Primary controllers restart their acquisition sequence at each energy step
+(their behavior is identical at all energies). Secondary controllers, however,
+continue measuring while the primary controller sets the beam energy. This
+provides additional information about transients.
+
+.. _fig_measurement_flow:
+.. figure:: /_static/gui/StepTimingContinuous.svg
+    :width: 90%
+    :align: center
+
+    Step timing for secondary controllers in continuous measurements. A primary
+    controller would repeat the behaviour of the first step at all other energy
+    steps.
+
 Triggered time-resolved measurement
 ===================================
 
@@ -50,6 +66,13 @@ transition while controlling the sample temperature.
 Unlike the continuous mode, the triggered mode supports camera use. Each frame
 or data point is acquired according to the defined timing interval, ensuring
 synchronization between devices and stable acquisition over extended periods.
+
+.. _fig_measurement_flow:
+.. figure:: /_static/gui/StepTimingTriggered.svg
+    :width: 90%
+    :align: center
+
+    Step timing for devices in a triggered measurement.
 
 ----
 
