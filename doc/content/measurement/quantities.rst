@@ -44,7 +44,8 @@ Times
 **HV settle time / Energy settle time**: The duration of the transient response
 of the acceleration voltage after setting a new energy. This is the minimum
 time cameras in |LEED-IV| measurements, and controllers during the energy
-calibration, will wait before acquiring data.
+calibration and triggered time-resolved measurements, will wait before
+acquiring data.
 
 |I0b| **settle time / Current settle time**: The duration of the transient
 response of the beam current after setting a new energy. This is the minimum
