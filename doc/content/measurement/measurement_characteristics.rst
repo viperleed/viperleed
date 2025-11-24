@@ -35,7 +35,7 @@ functional blocks, as shown in the figure below.
 
 .. _fig_measurement_flow:
 .. figure:: /_static/gui/Measurement_flow.svg
-    :width: 90%
+    :width: 70%
     :align: center
 
     Functional flow chart illustrating the blocks that make up a measurement.
@@ -51,7 +51,7 @@ with the hardware is established.
 Preparation
 -----------
 
-Next is the preparation phase in which devices are instructed to perform their
+Next is the preparation phase, in which devices are instructed to perform their
 own preparation and calibration. The preparation phase is complete once all
 devices have completed their setup and are no longer busy. During preparation,
 the beam energy is first set to the desired starting value.
@@ -106,11 +106,57 @@ energy to zero.
 Energy-resolved and time-resolved measurements
 ==============================================
 
-Measurements can either be energy-resolved or time-resolved. An energy-resolved
+Measurements can be either energy-resolved or time-resolved. An energy-resolved
 measurement will collect one measurement per controller for each requested
-quantity at a certain energy. A time-resolved measurement in contrast will
+quantity at a certain energy. A time-resolved measurement, in contrast, will
 remain at each energy for the desired amount of time and continue collecting
 data during this time span.
+
+Energy-resolved measurements
+----------------------------
+
+There are two types of energy-resolved measurements: the energy calibration and
+the regular |LEED-IV| measurement. Data acquired in an energy-resolved
+measurement is plotted against the beam energy.
+
+Time-resolved measurements
+--------------------------
+
+Time-resolved measurements are divided into two subcategories: continuous and
+triggered. Data is plotted against the time elapsed since the measurement was
+initiated.
+
+Step profile
+============
+
+When transitioning from one energy to another, the measurement waits for settle
+times to elapse before triggering data acquisition in the controlled devices.
+Settle times represent an unavoidable slowdown due to transients following a
+change in beam energy.
+
+By controlling how the beam energy is stepped, the overall time until the beam
+energy becomes stable can be reduced for some electronics. To support this,
+ViPErLEED provides several step profiles:
+
+* **Abrupt** — A direct jump from one energy to another. This is the default.
+* **Linear** — A transition using equidistant intermediate steps. Useful when
+  lower intermediate energies with very short intermediate settle times reduce
+  the total settle time.
+* **Custom** — Allows specifying arbitrary intermediate energies and settle
+  times. This can, for example, be used to deliberately overshoot in order to
+  create destructive interference between transients.
+
+.. _fig_profile:
+.. figure:: /_static/gui/profile.svg
+    :width: 70%
+    :align: center
+
+    The step profile can take a more complex form than a simple abrupt jump.
+
+In total, the time until the next measurement is the duration of the step
+profile plus the settle time. For cameras, the settle time is always the HV
+settle time. For controllers, the applicable settle time depends on the
+measurement type.
 
 ----
 
