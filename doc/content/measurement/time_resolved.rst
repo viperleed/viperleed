@@ -45,7 +45,7 @@ Primary controllers restart their acquisition sequence at each energy step
 continue measuring while the primary controller sets the beam energy. This
 provides additional information about transients.
 
-.. _fig_measurement_flow:
+.. _fig_continuous:
 .. figure:: /_static/gui/StepTimingContinuous.svg
     :width: 90%
     :align: center
@@ -67,7 +67,7 @@ Unlike the continuous mode, the triggered mode supports camera use. Each frame
 or data point is acquired according to the defined timing interval, ensuring
 synchronization between devices and stable acquisition over extended periods.
 
-.. _fig_measurement_flow:
+.. _fig_triggered:
 .. figure:: /_static/gui/StepTimingTriggered.svg
     :width: 90%
     :align: center
