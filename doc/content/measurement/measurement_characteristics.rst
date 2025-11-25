@@ -158,6 +158,44 @@ profile plus the settle time. For cameras, the settle time is always the HV
 settle time. For controllers, the applicable settle time depends on the
 measurement type.
 
+Device handling
+===============
+
+ViPErLEED is designed to control more than just a single controller and camera.
+Devices are managed asynchronously, which means devices may return data at any
+time and ViPErLEED will process data accordingly. At the same time, ViPErLEED
+ensures that commands are given at appropriate times by tracking whether
+devices are busy or not. Despite their asynchronous operation, device data
+acquisition is automatically synchronized whenever required.
+
+While cameras only acquire images and therefore do not differentiate in
+behaviour, controllers may interact with the LEED control unit. It is therefore
+necessary to differentiate between the **primary controller** and **secondary
+controllers**. The **primary controller** is responsible for setting the beam
+energy during a measurement and it may optionally acquire data as well. Other
+devices are only triggered to perform data acquisition after the primary
+controller reports that the target beam energy has been set. **Secondary
+controllers** perform data acquisition only.
+
+.. _fig_handling:
+.. figure:: /_static/gui/hardware_handling.svg
+    :width: 100%
+    :align: center
+
+    Device handling in ViPErLEED. Physical hardware is shown on the right.
+    Collected data is passed to the GUI on the left via the software
+    implementations of the devices in the center.
+
+Each hardware device has a corresponding software abstraction. This software
+representation defines the tasks required to control the device and is managed
+by the measurement. Communication between the software representation and the
+physical hardware is handled by a serial layer or device driver, which
+translates these tasks into hardware-specific instructions.
+
+Images collected by cameras are shown in the camera views, while numerical data
+from controllers is presented in the data plot. All collected data is compiled
+by the measurement and stored on disk once the measurement has finished.
+
 ----
 
 For further information, visit :ref:`Best Practice <best_practice>`.
