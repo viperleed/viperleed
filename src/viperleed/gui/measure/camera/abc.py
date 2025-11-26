@@ -911,7 +911,7 @@ class CameraABC(DeviceABC):
             # We may ignore errors related to the bad-pixels path
             self.settings['camera_settings']['bad_pixels_path'] = ''
         handler.add_option('camera_settings', 'bad_pixels_path',
-                           handler_widget=PathSelector,
+                           handler_widget=PathSelector(select_file=False),
                            tags=SettingsTag.READ_ONLY, tooltip=_tip)
         return handler
 
