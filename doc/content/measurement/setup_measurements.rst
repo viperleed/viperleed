@@ -181,7 +181,7 @@ controller, but it can be changed later if needed.
 
 .. _fig_new_settings_no_serial_nr.jpg:
 .. figure:: /_static/gui/new_settings_no_serial_nr.jpg
-    :width: 47%
+    :width: 45%
     :align: center
 
     Set a serial number on your controller.
@@ -201,7 +201,7 @@ controller with the serial number you assigned it.
 
 .. _fig_new_settings_with_serial_nr.jpg:
 .. figure:: /_static/gui/new_settings_with_serial_nr.jpg
-    :width: 50%
+    :width: 48%
     :align: center
 
     Once the controller is powered, the hardware configuration will be
@@ -238,7 +238,51 @@ controller box.
 Camera setup
 ============
 
-TODO
+To set up your camera, first ensure that it is powered and connected to your
+PC. Give the camera enough time to boot. Go to the **Devices** menu and select
+your camera to open a live view.
+
+.. _fig_select_camera.jpg:
+.. figure:: /_static/gui/select_camera.jpg
+    :width: 48%
+    :align: center
+
+    Select the camera.
+
+You should receive a notification that no settings were found for this camera.
+Press *Create a new settings file* to generate new configuration files for the
+camera in your **Configuration** directory.
+
+.. _fig_create_new_settings_camera.jpg:
+.. figure:: /_static/gui/create_new_settings_camera.jpg
+    :width: 65%
+    :align: center
+
+    Create new settings for your camera.
+
+Once the settings have been created, a live view of the camera will open.
+Right-click inside the live view.
+
+.. _fig_camera_view.jpg:
+.. figure:: /_static/gui/camera_view.jpg
+    :width: 100%
+    :align: center
+
+    Right-click in the live view to open its menu.
+
+Select *Properties* from the menu to open the camera settings. Set the binning
+value such that your images have between 400×400 and 500×500 pixels after
+binning. If your sensor is rectangular, set the binning so that the shorter
+side is between 400 and 500 pixels. Later, we will set the ROI so that the
+resulting images are square.
+
+.. _fig_new_camera_settings.jpg:
+.. figure:: /_static/gui/new_camera_settings.jpg
+    :width: 55%
+    :align: center
+
+    Set the binning value to reduce image size and improve the signal-to-noise
+    ratio.
 
 Bad pixel calibration
 =====================
@@ -257,8 +301,7 @@ menu.
 
     The bad pixel calibration tool.
 
-After connecting the camera and allowing it to fully initialise, it will be
-detected and can be selected in the dropdown menu at the top of the tool.
+The camera can be selected in the dropdown menu at the top of the tool.
 
 .. _fig_find_bad_pixels:
 .. figure:: /_static/gui/find_bad_pixels.jpg
@@ -267,8 +310,8 @@ detected and can be selected in the dropdown menu at the top of the tool.
 
     The bad pixel finder.
 
-When selecting a camera for the first time, you will be prompted to choose a
-directory in which the resulting bad pixel files will be stored.
+When selecting a camera for the first time, you will need to choose a directory
+in which the resulting bad pixel files will be stored.
 
 .. _fig_find_bad_pixels_with_camera:
 .. figure:: /_static/gui/find_bad_pixels_with_camera.jpg
@@ -301,6 +344,4 @@ settings, position the camera so that the LEED screen fills out the entire
 sensor. (Align the edges of the screen with the edges of the sensor.) After
 adjusting the camera position, right-click the camera view and select
 “Allow setting of ROI”. Set the region of interest such that the edges of the
-ROI align with the edges of the screen. Right-click the camera view again and
-set the binning value in the camera settings. Set the value such that your
-images have between 400x400 and 500x500 pixels after binning.
+ROI align with the edges of the screen.
