@@ -135,15 +135,110 @@ upload in the dropdown window next to the *Upload firmware* button. ViPErLEED
 will automatically search your configured **Firmware** directory for matching
 firmware files, and will automatically select the newest available version.
 After you have selected your desired firmware, press *Upload firmware* to start
-the upload. Once the progress bar reaches 100%, the controller is ready for
-use.
+the upload. Once the progress bar reaches 100%, the firmware has been
+installed on the controller.
 
-Before you start acquiring data with your ViPErLEED controller, make sure that
-it has the correct I0 settings for your unit. If the wrong mode is selected,
-you will have to adjust the jumpers in the box. You should then open the
-**Devices** menu, select the controller on which the firmware was installed,
-assign a serial number, choose the correct thermocouple type, and save the
-configuration.
+.. _fig_upload_finished:
+.. figure:: /_static/gui/upload_finished.jpg
+    :width: 58%
+    :align: center
+
+    The upload progress has to reach 100%. If it fails and reports an error for
+    any reason, the upload has to be repeated.
+
+ViPErLEED hardware controller setup
+===================================
+
+To operate the controller during a measurement, it must be identifiable. To
+assign your controller a serial number and to create settings for it, open the
+**Devices** menu and select the controller on which the firmware was just
+installed.
+
+.. _fig_select_controller:
+.. figure:: /_static/gui/select_controller.jpg
+    :width: 53%
+    :align: center
+
+    If the controller has not been used before, it will not yet have a serial
+    number.
+
+You should receive a notification that no settings were found for this
+controller. Press *Create a new settings file* to generate new configuration
+files for the controller in your **Configuration** directory.
+
+.. _fig_create_new_settings_no_serial_nr.jpg:
+.. figure:: /_static/gui/create_new_settings_no_serial_nr.jpg
+    :width: 65%
+    :align: center
+
+    Create new settings for your controller.
+
+After creating new settings, assign a serial number to the controller. Either
+generate a random serial number by pressing *Generate randomly* or type your
+desired serial number into the line edit. Press *Set* to write it to the
+controller. This serial number will act as the identification marker for the
+controller, but it can be changed later if needed.
+
+.. _fig_new_settings_no_serial_nr.jpg:
+.. figure:: /_static/gui/new_settings_no_serial_nr.jpg
+    :width: 47%
+    :align: center
+
+    Set a serial number on your controller.
+
+After setting the serial number, delete the old, temporary settings file and
+close the settings dialog. Ensure the controller is powered, then reopen the
+controller settings dialog. The **Devices** menu should now display the
+controller with the serial number you assigned it.
+
+.. _fig_delete_old_settings.jpg:
+.. figure:: /_static/gui/delete_old_settings.jpg
+    :width: 65%
+    :align: center
+
+    The old settings file can be deleted; it corresponds to a controller
+    without a serial number.
+
+.. _fig_new_settings_with_serial_nr.jpg:
+.. figure:: /_static/gui/new_settings_with_serial_nr.jpg
+    :width: 50%
+    :align: center
+
+    Once the controller is powered, the hardware configuration will be
+    displayed.
+
+Click on the *Temperature (°C) - ?? thermocouple* dropdown menu and click the
+option with the same content in the dropdown, as seen in
+:numref:`_fig_dropdown_thermocouple`.
+
+.. _fig_dropdown_thermocouple.jpg:
+.. figure:: /_static/gui/dropdown_thermocouple.jpg
+    :width: 30%
+    :align: center
+
+    Select the thermocouple option.
+
+In the window that opens, select the type of thermocouple installed on your
+controller.
+
+.. _fig_select_thermocouple.jpg:
+.. figure:: /_static/gui/select_thermocouple.jpg
+    :width: 45%
+    :align: center
+
+    Select the installed thermocouple type.
+
+When finished, press *OK* to save your settings.
+
+Before acquiring data with your ViPErLEED controller, verify that it is
+configured for the correct |I0| input range for your LEED unit. If the wrong
+mode is selected, you must adjust the jumpers inside the ViPErLEED hardware
+controller box.
+
+Camera setup
+============
+
+TODO
 
 Bad pixel calibration
 =====================
@@ -196,8 +291,8 @@ the required steps interactively.
 Once the calibration is completed, the stored calibration will automatically be
 used for subsequent measurements.
 
-Camera setup
-============
+Camera placement
+================
 
 After pixel calibration, the camera can be moved into its final position, as it
 will no longer be necessary to adjust it. The camera aperture should always be
