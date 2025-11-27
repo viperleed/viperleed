@@ -31,7 +31,7 @@ to save the data it has collected so far. Detected errors are reported in the
 GUI.
 
 The functionality of the different measurement types can be broken down into
-functional blocks, as shown in the figure below.
+functional blocks, as shown in :numref:`fig_measurement_flow`.
 
 .. _fig_measurement_flow:
 .. figure:: /_static/gui/Measurement_flow.svg
@@ -153,10 +153,10 @@ ViPErLEED provides several step profiles:
 
     The step profile can take a more complex form than a simple abrupt jump.
 
-In total, the time until the next measurement is the duration of the step
-profile plus the settle time. For cameras, the settle time is always the HV
-settle time. For controllers, the applicable settle time depends on the
-measurement type.
+In total, as seen in :numref:`fig_profile`, the time until the next measurement
+is the duration of the step profile plus the settle time. For cameras, the
+settle time is always the HV settle time. For controllers, the applicable
+settle time depends on the measurement type.
 
 Device handling
 ===============
