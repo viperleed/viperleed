@@ -1090,6 +1090,8 @@ class CameraViewer(qtw.QScrollArea):
             else:
                 enable = active or self.interactions_enabled
             action.setEnabled(enable)
+            if "ROI" in action.text():                                          # TODO: remove once visual ROI selection is fixed
+                action.setEnabled(False)
 
     def __update_frame_style(self):
         """Pick frame style depending on whether the image is saturated."""
