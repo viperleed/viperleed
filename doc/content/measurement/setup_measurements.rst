@@ -77,13 +77,13 @@ to data acquisition:
 
  * **File** – Load existing measurements for review. Loaded measurements are displayed in the data plot.
  * **Devices** – Edit camera and controller settings. Selecting a camera opens a live preview window. Settings for new devices can be created by selecting the corresponding device from this menu.
- * **Tools** – Hardware-related utilities, such as the firmware upload tool for the ViPErLEED hardware controller and a bad-pixel calibration tool.
+ * **Tools** – Hardware-related utilities, such as the firmware upload tool for the ViPErLEED hardware controller and the bad-pixel calibration tool.
  * **View** – Reopen the data plot if it has been closed.
  * **Settings** – Reopen the system settings dialog.
  * **About** – Display software information.
 
 Once the system settings have been configured, ViPErLEED is ready for firmware
-upload, bad pixel calibration, and data acquisition.
+upload, bad-pixel calibration, and data acquisition.
 
 Uploading firmware
 ==================
@@ -92,7 +92,7 @@ Before a ViPErLEED hardware controller can be used for data acquisition, the
 firmware must be uploaded to the controller. ViPErLEED uses the Arduino Micro
 as its hardware controller platform, and new controllers must be flashed once
 before their first use. With the controller connected to the PC, open the
-**Tools** menu and select *Upload/upgrade Firmware*. Make sure that your
+**Tools** menu and select *Upload/upgrade Firmware*. Ensure that your
 **Firmware** directory contains a copy of the controller firmware.
 
 .. _fig_measurement_gui_select_firmware:
@@ -131,7 +131,7 @@ Press *Refresh* to detect connected controllers. New Arduino Micro boards will
 be listed with the COM port on which they were detected. If a controller
 already contains ViPErLEED firmware, this will be indicated by its name and the
 installed version will be displayed. You can select the firmware you wish to
-upload in the dropdown window next to the *Upload firmware* button. ViPErLEED
+upload in the dropdown menu next to the *Upload firmware* button. ViPErLEED
 will automatically search your configured **Firmware** directory for matching
 firmware files, and will automatically select the newest available version.
 After you have selected your desired firmware, press *Upload firmware* to start
@@ -291,7 +291,7 @@ This calibration step is optional but strongly recommended before performing
 |LEED-IV| measurements. Camera sensors typically contain a small number of
 defective or unstable pixels. To improve image quality during data acquisition,
 these pixels can be detected and replaced during image processing. To perform a
-bad pixel calibration, open the bad pixel calibration tool under the **Tools**
+bad pixel calibration, open the bad-pixel calibration tool under the **Tools**
 menu.
 
 .. _fig_measurement_gui_select_pixels:
@@ -313,20 +313,20 @@ The camera can be selected in the dropdown menu at the top of the tool.
     again.
 
 When selecting a camera for the first time, you will need to choose a directory
-in which the resulting bad pixel files will be stored.
+in which the resulting bad-pixel files will be stored.
 
 .. _fig_find_bad_pixels_with_camera:
 .. figure:: /_static/gui/find_bad_pixels_with_camera.jpg
     :width: 45%
     :align: center
 
-    If the bad pixel calibration has been performed previously, the stored
+    If the bad-pixel calibration has been performed previously, the stored
     results will be shown.
 
 Press *Find* to start the acquisition process. The tool will guide you through
-the required steps interactively. First you will have to acquire dark images.
-For this you should have the cap of the camera lens ready, to ensure that you
-can cover it entirely.
+the required steps interactively. First, you will acquire dark images. For this
+step you should have the lens cap ready to ensure that the camera is completely
+covered.
 
 .. _fig_bad_pixels_instruction_1:
 .. figure:: /_static/gui/bad_pixels_instruction_1.jpg
@@ -335,39 +335,42 @@ can cover it entirely.
 
     Instructions will appear as each step is performed.
 
-There are two dark image steps in which different pixel errors are detected.
-After this you will have to take off the cap of the camera lens again and you
-need to provide uniform illumination. Usually just turning the lights on and
-putting a sheet of white paper a few centimeters infront of the lense is good
-enough. Make sure that there are no shadows cast onto the sheet.
+Two dark-image steps are performed to detect different pixel errors. After
+this, remove the lens cap and provide uniform illumination. Usually, turning on
+the room lights and placing a sheet of white paper a few centimetres in front
+of the lens is sufficient. Make sure that no shadows are cast onto the paper.
 
 .. _fig_bad_pixels_instruction_2:
 .. figure:: /_static/gui/bad_pixels_instruction_2.jpg
     :width: 50%
     :align: center
 
-    Take off the cap and put a white sheet of paper infront of the camera.
+    Remove the lens cap and place a white sheet of paper in front of the
+    camera.
 
-Once the calibration is completed, the calibration will be stored in your
-chosen directory and is automatically used in subsequent measurements.
+Once the calibration is completed, it will be stored in your chosen directory
+and used automatically in subsequent measurements.
 
-.. _fig_bad_pixels_finished
+.. _fig_bad_pixels_finished:
 .. figure:: /_static/gui/bad_pixels_finished.jpg
     :width: 50%
     :align: center
 
-    After completion you can close the bad-pixel finder dialog.
-
-
+    After completion, you can close the bad-pixel finder dialog.
 
 Camera placement
 ================
 
-After pixel calibration, the camera can be moved into its final position, as it
-will no longer be necessary to adjust it. The camera aperture should always be
-fully opened. To proceed, open a live view of your camera. For optimal
-settings, position the camera so that the LEED screen fills out the entire
-sensor. (Align the edges of the screen with the edges of the sensor.) After
-adjusting the camera position, right-click the camera view and select
-“Allow setting of ROI”. Set the region of interest such that the edges of the
-ROI align with the edges of the screen.
+After bad-pixel calibration, the camera can be moved into its final position,
+as further adjustment will not be necessary. Before placing the camera, fully
+open the camera aperture. Then mount it on your camera mount.
+
+Open a live view of your camera. While observing the live view, position the
+camera so that the LEED screen fills the entire sensor for optimal pixel use.
+If your sensor is rectangular, align the edges of the screen with the shorter
+edge of the image.
+
+After adjusting the camera position, right-click the live view and select
+*Properties*. Adjust the ROI settings to crop away the parts of the image that
+do not cover the LEED screen. Press *Apply* to test different settings. Once
+you are satisfied, the camera is ready for data acquisition.
