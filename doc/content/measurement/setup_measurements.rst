@@ -166,7 +166,7 @@ You should receive a notification that no settings were found for this
 controller. Press *Create a new settings file* to generate new configuration
 files for the controller in your **Configuration** directory.
 
-.. _fig_create_new_settings_no_serial_nr.jpg:
+.. _fig_create_new_settings_no_serial_nr:
 .. figure:: /_static/gui/create_new_settings_no_serial_nr.jpg
     :width: 65%
     :align: center
@@ -179,7 +179,7 @@ desired serial number into the line edit. Press *Set* to write it to the
 controller. This serial number will act as the identification marker for the
 controller, but it can be changed later if needed.
 
-.. _fig_new_settings_no_serial_nr.jpg:
+.. _fig_new_settings_no_serial_nr:
 .. figure:: /_static/gui/new_settings_no_serial_nr.jpg
     :width: 45%
     :align: center
@@ -191,7 +191,7 @@ close the settings dialog. Ensure the controller is powered, then reopen the
 controller settings dialog. The **Devices** menu should now display the
 controller with the serial number you assigned it.
 
-.. _fig_delete_old_settings.jpg:
+.. _fig_delete_old_settings:
 .. figure:: /_static/gui/delete_old_settings.jpg
     :width: 65%
     :align: center
@@ -199,7 +199,7 @@ controller with the serial number you assigned it.
     The old settings file can be deleted; it corresponds to a controller
     without a serial number.
 
-.. _fig_new_settings_with_serial_nr.jpg:
+.. _fig_new_settings_with_serial_nr:
 .. figure:: /_static/gui/new_settings_with_serial_nr.jpg
     :width: 48%
     :align: center
@@ -211,7 +211,7 @@ Click on the *Temperature (°C) - ?? thermocouple* dropdown menu and click the
 option with the same content in the dropdown, as seen in
 :numref:`_fig_dropdown_thermocouple`.
 
-.. _fig_dropdown_thermocouple.jpg:
+.. _fig_dropdown_thermocouple:
 .. figure:: /_static/gui/dropdown_thermocouple.jpg
     :width: 30%
     :align: center
@@ -221,7 +221,7 @@ option with the same content in the dropdown, as seen in
 In the window that opens, select the type of thermocouple installed on your
 controller.
 
-.. _fig_select_thermocouple.jpg:
+.. _fig_select_thermocouple:
 .. figure:: /_static/gui/select_thermocouple.jpg
     :width: 45%
     :align: center
@@ -242,7 +242,7 @@ To set up your camera, first ensure that it is powered and connected to your
 PC. Give the camera enough time to boot. Go to the **Devices** menu and select
 your camera to open a live view.
 
-.. _fig_select_camera.jpg:
+.. _fig_select_camera:
 .. figure:: /_static/gui/select_camera.jpg
     :width: 48%
     :align: center
@@ -253,7 +253,7 @@ You should receive a notification that no settings were found for this camera.
 Press *Create a new settings file* to generate new configuration files for the
 camera in your **Configuration** directory.
 
-.. _fig_create_new_settings_camera.jpg:
+.. _fig_create_new_settings_camera:
 .. figure:: /_static/gui/create_new_settings_camera.jpg
     :width: 65%
     :align: center
@@ -263,7 +263,7 @@ camera in your **Configuration** directory.
 Once the settings have been created, a live view of the camera will open.
 Right-click inside the live view.
 
-.. _fig_camera_view.jpg:
+.. _fig_camera_view:
 .. figure:: /_static/gui/camera_view.jpg
     :width: 100%
     :align: center
@@ -276,7 +276,7 @@ binning. If your sensor is rectangular, set the binning so that the shorter
 side is between 400 and 500 pixels. Later, we will set the ROI so that the
 resulting images are square.
 
-.. _fig_new_camera_settings.jpg:
+.. _fig_new_camera_settings:
 .. figure:: /_static/gui/new_camera_settings.jpg
     :width: 55%
     :align: center
@@ -291,7 +291,7 @@ This calibration step is optional but strongly recommended before performing
 |LEED-IV| measurements. Camera sensors typically contain a small number of
 defective or unstable pixels. To improve image quality during data acquisition,
 these pixels can be detected and replaced during image processing. To perform a
-bad pixel calibration, open the *Find bad pixels* tool under the **Tools**
+bad pixel calibration, open the bad pixel calibration tool under the **Tools**
 menu.
 
 .. _fig_measurement_gui_select_pixels:
@@ -299,7 +299,7 @@ menu.
     :width: 40%
     :align: center
 
-    The bad pixel calibration tool.
+    Select *Find bad pixels*.
 
 The camera can be selected in the dropdown menu at the top of the tool.
 
@@ -308,7 +308,9 @@ The camera can be selected in the dropdown menu at the top of the tool.
     :width: 33%
     :align: center
 
-    The bad pixel finder.
+    The dropdown menu is populated automatically. If you just connected your
+    camera to the PC, give it some time to initialise and then check the menu
+    again.
 
 When selecting a camera for the first time, you will need to choose a directory
 in which the resulting bad pixel files will be stored.
@@ -322,17 +324,41 @@ in which the resulting bad pixel files will be stored.
     results will be shown.
 
 Press *Find* to start the acquisition process. The tool will guide you through
-the required steps interactively.
+the required steps interactively. First you will have to acquire dark images.
+For this you should have the cap of the camera lens ready, to ensure that you
+can cover it entirely.
 
-.. _fig_find_bad_pixels_started:
-.. figure:: /_static/gui/find_bad_pixels_started.jpg
+.. _fig_bad_pixels_instruction_1:
+.. figure:: /_static/gui/bad_pixels_instruction_1.jpg
     :width: 50%
     :align: center
 
     Instructions will appear as each step is performed.
 
-Once the calibration is completed, the stored calibration will automatically be
-used for subsequent measurements.
+There are two dark image steps in which different pixel errors are detected.
+After this you will have to take off the cap of the camera lens again and you
+need to provide uniform illumination. Usually just turning the lights on and
+putting a sheet of white paper a few centimeters infront of the lense is good
+enough. Make sure that there are no shadows cast onto the sheet.
+
+.. _fig_bad_pixels_instruction_2:
+.. figure:: /_static/gui/bad_pixels_instruction_2.jpg
+    :width: 50%
+    :align: center
+
+    Take off the cap and put a white sheet of paper infront of the camera.
+
+Once the calibration is completed, the calibration will be stored in your
+chosen directory and is automatically used in subsequent measurements.
+
+.. _fig_bad_pixels_finished
+.. figure:: /_static/gui/bad_pixels_finished.jpg
+    :width: 50%
+    :align: center
+
+    After completion you can close the bad-pixel finder dialog.
+
+
 
 Camera placement
 ================
