@@ -550,6 +550,12 @@ class CameraABC(DeviceABC):
         _, size_max, *_ = limits = self.get_roi_size_limits()
         full_roi = 0, 0, *size_max
 
+        roi_str = self.settings.get('camera_settings', 'roi', fallback='_')
+        roi_str = roi_str.lower()
+        if roi_str == 'none':
+            self.settings.set('camera_settings', 'roi', 'None')
+            return full_roi
+
         if not self.__is_valid_roi(roi, limits):
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'camera_settings/roi', '\nInfo: ROI is invalid. '
