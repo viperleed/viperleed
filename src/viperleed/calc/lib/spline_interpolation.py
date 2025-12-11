@@ -42,7 +42,8 @@ def make_1d_ragged_cubic_spline(
 def interpolate_ragged_array(
     x, y, axis=0, bc_type='not-a-knot', extrapolate=False
 ):
-    all_coeffs = xp.full((4, y.shape[0], y.shape[1]), fill_value=xp.nan)
+    # NB: all_coeffs is a Numpy array even if the backend is switched
+    all_coeffs = _np.full((4, y.shape[0], y.shape[1]), fill_value=xp.nan)
     for dim in range(y.shape[1]):
         _y = y[:, dim]
         all_nans = xp.all(xp.isnan(_y))
