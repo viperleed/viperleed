@@ -512,9 +512,9 @@ class CameraABC(DeviceABC):
         Returns
         -------
         tuple
-            Returns an empty tuple if the value in the settings is
-            'None' or if any error occurred while trying to interpret
-            the setting.
+            Returns an empty tuple if any error occurred while trying to
+            interpret the setting, or the full ROI if the value in the
+            settings is 'None'.
 
             Otherwise the following elements are returned:
             roi_x, roi_y : int
