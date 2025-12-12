@@ -512,9 +512,9 @@ class CameraABC(DeviceABC):
         Returns
         -------
         tuple
-            Returns an empty tuple if the value in the settings is
-            'None' or if any error occurred while trying to interpret
-            the setting.
+            Returns an empty tuple if any error occurred while trying to
+            interpret the setting, or the full ROI if the value in the
+            settings is 'None'.
 
             Otherwise the following elements are returned:
             roi_x, roi_y : int
@@ -549,6 +549,12 @@ class CameraABC(DeviceABC):
 
         _, size_max, *_ = limits = self.get_roi_size_limits()
         full_roi = 0, 0, *size_max
+
+        roi_str = self.settings.get('camera_settings', 'roi', fallback='_')
+        roi_str = roi_str.lower()
+        if roi_str == 'none':
+            self.settings.set('camera_settings', 'roi', 'None')
+            return full_roi
 
         if not self.__is_valid_roi(roi, limits):
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,

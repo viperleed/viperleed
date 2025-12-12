@@ -45,12 +45,14 @@ from viperleed.gui.widgets.lib import screen_fraction
 
 _RED_BORDER_WIDTH = 3  # pixels
 _UNIQUE = qtc.Qt.UniqueConnection
+_ROI_RECT_ACTIVE = False  # TEMPORARY: ROI rectangle feature is disabled due to bugs. Re-enable this flag when the bugs are fixed.
+_ALLOW_ROI_TEXT = "Allow setting ROI"
 
 # Each entry is ("short_name", default_value, "long name", always_active)
 # Those with an empty long name will not be added as context
 # menu entries, and will thus not be editable by the user
 _DEFAULT_FLAGS = (
-    ("roi_visible", True, "Allow setting ROI", False),
+    ("roi_visible", True, _ALLOW_ROI_TEXT, False),
     ("show_auto", True, "Show on new frames", False),
     ("stop_on_close", True, "Stop camera when closed", False),
     ("auto_contrast", False, "Auto-adjust contrast", True),
@@ -495,6 +497,8 @@ class CameraViewer(qtw.QScrollArea):
         if not self.roi_visible or self.__mouse_button != qtc.Qt.LeftButton:
             super().mouseMoveEvent(event)
             return
+        if not _ROI_RECT_ACTIVE:
+            return
         mouse_pos = self.roi.parent().mapFromGlobal(event.globalPos())
         self.roi.setGeometry(qtc.QRect(self.roi.origin, mouse_pos))
         if not self.roi.isVisible():
@@ -931,7 +935,7 @@ class CameraViewer(qtw.QScrollArea):
         new_roi = (roi_x - offs_x, roi_y - offs_y, roi_w, roi_h)
         if new_roi != self.roi.image_coordinates:
             self.roi.image_coordinates = new_roi
-        if not self.roi.isVisible():
+        if _ROI_RECT_ACTIVE and not self.roi.isVisible():
             self.roi.show()
 
     def __on_settings_changed(self):
@@ -1090,6 +1094,8 @@ class CameraViewer(qtw.QScrollArea):
             else:
                 enable = active or self.interactions_enabled
             action.setEnabled(enable)
+            if action.text() == _ALLOW_ROI_TEXT and not _ROI_RECT_ACTIVE:
+                action.setEnabled(False)
 
     def __update_frame_style(self):
         """Pick frame style depending on whether the image is saturated."""
