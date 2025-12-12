@@ -45,6 +45,7 @@ from viperleed.gui.widgets.lib import screen_fraction
 
 _RED_BORDER_WIDTH = 3  # pixels
 _UNIQUE = qtc.Qt.UniqueConnection
+_ROI_RECT_ACTIVE = False # Whether the ROI rectangle is displayed or not.
 
 # Each entry is ("short_name", default_value, "long name", always_active)
 # Those with an empty long name will not be added as context
@@ -495,10 +496,12 @@ class CameraViewer(qtw.QScrollArea):
         if not self.roi_visible or self.__mouse_button != qtc.Qt.LeftButton:
             super().mouseMoveEvent(event)
             return
-        # mouse_pos = self.roi.parent().mapFromGlobal(event.globalPos())        # TODO: enable after ROI was fixed
-        # self.roi.setGeometry(qtc.QRect(self.roi.origin, mouse_pos))
-        # if not self.roi.isVisible():
-            # self.roi.show()
+        if not _ROI_RECT_ACTIVE:
+            return
+        mouse_pos = self.roi.parent().mapFromGlobal(event.globalPos())
+        self.roi.setGeometry(qtc.QRect(self.roi.origin, mouse_pos))
+        if not self.roi.isVisible():
+            self.roi.show()
 
     def mousePressEvent(self, event):    # pylint: disable=invalid-name
         """Extend mousePressEvent to begin drawing a ROI."""
@@ -931,8 +934,8 @@ class CameraViewer(qtw.QScrollArea):
         new_roi = (roi_x - offs_x, roi_y - offs_y, roi_w, roi_h)
         if new_roi != self.roi.image_coordinates:
             self.roi.image_coordinates = new_roi
-        # if not self.roi.isVisible():                                          # TODO: enable after ROI was fixed
-            # self.roi.show()
+        if _ROI_RECT_ACTIVE and not self.roi.isVisible():
+            self.roi.show()
 
     def __on_settings_changed(self):
         """React to a user press of "Apply"/"Ok" in the settings dialog."""
@@ -1090,7 +1093,7 @@ class CameraViewer(qtw.QScrollArea):
             else:
                 enable = active or self.interactions_enabled
             action.setEnabled(enable)
-            if action.text() == "Allow setting ROI":                            # TODO: remove once visual ROI selection is fixed
+            if action.text() == "Allow setting ROI" and not _ROI_RECT_ACTIVE:
                 action.setEnabled(False)
 
     def __update_frame_style(self):
