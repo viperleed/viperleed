@@ -45,7 +45,7 @@ from viperleed.gui.widgets.lib import screen_fraction
 
 _RED_BORDER_WIDTH = 3  # pixels
 _UNIQUE = qtc.Qt.UniqueConnection
-_ROI_RECT_ACTIVE = False  # Whether the ROI rectangle is displayed or not.
+_ROI_RECT_ACTIVE = False  # TEMPORARY: ROI rectangle feature is disabled due to bugs. Re-enable this flag when the bugs are fixed.
 _ALLOW_ROI_TEXT = "Allow setting ROI"
 
 # Each entry is ("short_name", default_value, "long name", always_active)
