@@ -8,9 +8,24 @@ __license__ = 'GPLv3+'
 
 import numpy as _np
 
-
 xp = _np
 
+
+def stop_gradient(array):
+    """Stop gradient calculation of given array.
+
+    When using the R-factor calculation with a numerical library that
+    supports automatic differentiation (such as JAX in viperleed-jax),
+    this utility function should be patched with a method that stops
+    gradient propagation. In JAX this can be done as
+    ```
+    from viperleed.calc.lib import rfactor
+
+    rfactor.xp = jax.numpy
+    rfactor.stop_gradient = jax.lax.stop_gradient
+    ```
+    """
+    return array
 
 def pendry_R(
     theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
@@ -413,6 +428,7 @@ def _shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
     # only shift if minimum is negative
     shifts = xp.where(min_theo_intensity < 0, -min_theo_intensity, 0.0)
     # stop gradient on shifts to avoid affecting optimization
+    shifts = stop_gradient(shifts)
 
     # broadcast shifts and add to theo_intensity
     return theo_intensity + shifts
