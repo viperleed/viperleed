@@ -178,7 +178,7 @@ def vlj_search(slab, rpars):
 
         # update rpars with the best R
         rpars.last_R = result.best_R
-        rpars.stored_R['viperleed-jax'] = (
+        rpars.stored_R['search'] = (
             result.best_R,
             -1,
             -1,
