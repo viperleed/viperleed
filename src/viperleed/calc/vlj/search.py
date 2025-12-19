@@ -149,7 +149,7 @@ def vlj_search(slab, rpars):
         f' potential shift of {used_v0r:.2f} eV.'
     )
 
-    for optimizer, result in optimizer_iterator:
+    for optimizer_id, (optimizer, result) in enumerate(optimizer_iterator):
         logger.info(
             f'Optimizer {optimizer.name} finished with best '
             f'R = {result.best_R:.4f}'
@@ -162,17 +162,21 @@ def vlj_search(slab, rpars):
 
         poscar.write(
             tmp_slab,
-            f'POSCAR_TL_{optimizer.name}_intermediate',
+            f'POSCAR_TLOpt_{optimizer_id}_{optimizer.name}_intermediate',
             comments='all',
         )
         writeVIBROCC(
-            tmp_slab, f'VIBROCC_TL_{optimizer.name}_intermediate', silent=True
+            tmp_slab,
+            f'VIBROCC_TLOpt_{optimizer_id}_{optimizer.name}_intermediate',
+            silent=True,
         )
 
         # write result to file
-        result.write_to_file(f'{optimizer.name}_result.npz')
+        result.write_to_file(
+            f'TLOpt_{optimizer_id}_{optimizer.name}_history.npz'
+        )
 
-        # udate rpars with the best R
+        # update rpars with the best R
         rpars.last_R = result.best_R
         rpars.stored_R['viperleed-jax'] = (
             result.best_R,
