@@ -23,6 +23,8 @@ from viperleed.calc.files.new_displacements.tokens.target import (
         ('A', re.compile(r'^A'), None, None),
         # list of numbers
         ('A 1 3 5', re.compile(r'^A'), [1, 3, 5], None),
+        # multi digit numbers
+        ('A 10 30 500', re.compile(r'^A'), [10, 30, 500], None),
         # numeric range
         ('A 2-4', re.compile(r'^A'), [2, 3, 4], None),
         # numeric range
