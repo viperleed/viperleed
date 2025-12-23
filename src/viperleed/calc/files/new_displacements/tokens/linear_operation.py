@@ -1,6 +1,7 @@
 """Module linear_operation of viperleed.calc.files.new_displacements.tokens."""
 
-__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',
+               'Florian Kraushofer (@fkraushofer)')
 __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-05-14'
 __license__ = 'GPLv3+'
@@ -33,14 +34,18 @@ class LinearOperationToken(DisplacementsFileToken):
         # some simple input sanitization
         cleaned = op_str.strip()
 
-        # space separated syntax
-        if ',' not in cleaned:
-            # add commas between numbers
-            cleaned = re.sub(r'(?<=\d)\s+(?=\d)', ', ', cleaned)
-            # add commas between brackets
-            cleaned = re.sub(r'\]\s+\[', '], [', cleaned)
         # replace round brackets with square brackets
         cleaned = cleaned.replace('(', '[').replace(')', ']')
+
+        # space separated syntax
+        if ',' not in cleaned:
+            # add commas between adjacent numbers:
+            #  "<num>   <num>" -> "<num>, <num>"
+            num_pattern = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+            cleaned = re.sub(rf'({num_pattern})\s+(?={num_pattern})', r'\1, ',
+                             cleaned)
+            # add commas between brackets
+            cleaned = re.sub(r'\]\s+\[', '], [', cleaned)
 
         # parse to expression
         try:
