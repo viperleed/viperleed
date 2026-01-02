@@ -86,6 +86,13 @@ def mock_displacements_path_and_lines():
         (
             VibDeltaLine,
             {
+                'targets': (TargetToken('Pt_sub'),),
+                'range': RangeToken('-0.07 0.07 0.005'),
+            },
+        ),
+        (
+            VibDeltaLine,
+            {
                 'targets': (TargetToken('Si* 2'),),
                 'range': RangeToken('0.05 -0.05'),
             },
