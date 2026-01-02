@@ -121,7 +121,7 @@ def mock_displacements_path_and_lines():
         (
             ConstraintLine,
             {
-                'type': ModeToken('vib'),
+                'mode_token': ModeToken('vib'),
                 'targets': (TargetToken('Ir_top'),),
                 'linear_operation': LinearOperationToken.from_array([[1.0]]),
                 'link_target': TargetToken('Ir_top'),
@@ -130,7 +130,7 @@ def mock_displacements_path_and_lines():
         (
             ConstraintLine,
             {
-                'type': ModeToken('geo'),
+                'mode_token': ModeToken('geo'),
                 'targets': (TargetToken('O L(1-2)'), TargetToken('Ir L(1)')),
                 'linear_operation': LinearOperationToken.from_array([[1.0]]),
                 'link_target': TargetToken('O L(1-2)'),
