@@ -13,7 +13,7 @@ xp = _np
 
 
 def pendry_R(
-    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
 ):
     """Calculate the R-factor for two beams."""
     # Experimental data
@@ -36,7 +36,7 @@ def pendry_R(
     exp_y = pendry_y(exp_intensity, exp_derivative, v0_imag)
     theo_y = pendry_y(theo_intensity, theo_derivative, v0_imag)
 
-    return pendry_R_from_y(exp_y, theo_y, energy_step, per_beam=per_beam)
+    return pendry_R_from_y(exp_y, theo_y, energy_step, groups=groups)
 
 
 def pendry_R_from_intensity_and_derivative(
@@ -45,7 +45,7 @@ def pendry_R_from_intensity_and_derivative(
     v0_real_steps,
     v0_imag,
     energy_step,
-    per_beam=False,
+    groups=None,
 ):
     intens_1, deriv_1 = intens_deriv_1
     intens_2, deriv_2 = intens_deriv_2
@@ -56,10 +56,10 @@ def pendry_R_from_intensity_and_derivative(
     # shift y_1 by v0_real_steps
     y_1 = integer_shift_v0r(y_1, v0_real_steps)
 
-    return pendry_R_from_y(y_1, y_2, energy_step, per_beam=per_beam)
+    return pendry_R_from_y(y_1, y_2, energy_step, groups=groups)
 
 
-def pendry_R_from_y(y_1, y_2, energy_step, per_beam=False):
+def pendry_R_from_y(y_1, y_2, energy_step, groups=None):
     # mask out NaNs for this calculation
     y_1_mask = xp.isnan(y_1)
     y_2_mask = xp.isnan(y_2)
@@ -71,11 +71,9 @@ def pendry_R_from_y(y_1, y_2, energy_step, per_beam=False):
     # TODO?: potentially, one could do these integrals analytically based on the spline coefficients
     numerators = nansum_trapezoid((y_1 - y_2) ** 2, dx=energy_step, axis=0)
     denominators = nansum_trapezoid((y_1**2 + y_2**2), dx=energy_step, axis=0)
-    if per_beam:
-        # return R factor for each beam
-        return numerators / denominators
-    # R factor for all beams
-    return xp.sum(numerators) / xp.sum(denominators)
+
+    # calculate R-factor with requested grouping
+    return group_rfactors(numerators, denominators, groups=groups)
 
 
 def pendry_y(intensity, intensity_derivative, v0_imag):
@@ -113,7 +111,7 @@ def integer_shift_v0r(array, n_steps):
 
 
 def R_2(
-    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
 ):
     # calculate interpolation only – no derivatives needed for R2
 
@@ -134,15 +132,13 @@ def R_2(
         axis=0,
     )
     denominators = nansum_trapezoid(exp_intensity**2, energy_step, axis=0)
-    if per_beam:
-        # return R factor for each beam
-        return numerators / denominators
-    # R factor for all beams
-    return xp.sum(numerators) / xp.sum(denominators)
+
+    # calculate R-factor with requested grouping
+    return group_rfactors(numerators, denominators, groups=groups)
 
 
 def R_1(
-    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
 ):
     # Experimental data
     exp_deriv_spline = exp_spline.derivative()
@@ -165,18 +161,16 @@ def R_1(
         axis=0,
     )
     denominators = nansum_trapezoid(exp_intensity, energy_step, axis=0)
-    if per_beam:
-        # return R factor for each beam
-        return numerators / denominators
-    # R factor for all beams
-    return xp.sum(numerators) / xp.sum(denominators)
+
+    # calculate R-factor with requested grouping
+    return group_rfactors(numerators, denominators, groups=groups)
 
 
 ### RMS ###
 
 
 def R_ms(
-    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
 ):
     # Experimental data
     exp_deriv_1_spline = exp_spline.derivative()
@@ -210,7 +204,7 @@ def R_ms(
         energy_step,
     )
 
-    return pendry_R_from_y(y_exp, y_theo, energy_step, per_beam=per_beam)
+    return pendry_R_from_y(y_exp, y_theo, energy_step, groups=groups)
 
 
 def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
@@ -228,7 +222,7 @@ def R_s(
     energy_step,
     energy_grid,
     exp_spline,
-    per_beam=False,
+    groups=None,
     alpha=4.0,
     beta=0.15,
 ):
@@ -266,7 +260,7 @@ def R_s(
         beta=beta,
     )
 
-    return pendry_R_from_y(y_exp, y_theo, energy_step, per_beam=per_beam)
+    return pendry_R_from_y(y_exp, y_theo, energy_step, groups=groups)
 
 
 def y_s(
@@ -298,7 +292,7 @@ def y_s(
 
 
 def R_zj(
-    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, per_beam=False
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
 ):
     # Experimental data
     exp_deriv_1_spline = exp_spline.derivative()
@@ -353,12 +347,13 @@ def R_zj(
 
     quotient = numerators / denominators
 
-    r_beams = prefactors * nansum_trapezoid(quotient, axis=0, dx=energy_step)
-    if per_beam:
-        return r_beams
-
-    return xp.nansum(r_beams * exp_energy_ranges) / xp.nansum(
-        exp_energy_ranges
+    # calculate R-factor with requested grouping
+    return group_rfactors(
+        prefactors
+        * nansum_trapezoid(quotient, axis=0, dx=energy_step)
+        * exp_energy_ranges,
+        exp_energy_ranges,
+        groups=groups,
     )
 
 
@@ -440,9 +435,9 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
     Returns
     -------
     xp.ndarray
-        R-factors per beam of shape (n_beams,) if per_beam is True,
-        shape (1,) if per_beam is False, or shape (n_groups,) if
-        per_beam is an array-like of integers.
+        R-factors per beam of shape (n_beams,) if groups is "beam",
+        shape (1,) if groups is None, or shape (n_groups,) if
+        groups is an array-like of integers.
     """
     # check numerators and denominators have the same shape
     if numerators.shape != denominators.shape:
