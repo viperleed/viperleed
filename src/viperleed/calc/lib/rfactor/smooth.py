@@ -7,7 +7,7 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
-from .pendry import pendry_R_from_y
+from .pendry import R_pendry_from_y
 from .utils import shift_theo_intensity_non_negative
 
 
@@ -46,7 +46,7 @@ def R_ms(
         energy_step,
     )
 
-    return pendry_R_from_y(y_exp, y_theo, energy_step, groups=groups)
+    return R_pendry_from_y(y_exp, y_theo, energy_step, groups=groups)
 
 
 def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
@@ -102,7 +102,7 @@ def R_s(
         beta=beta,
     )
 
-    return pendry_R_from_y(y_exp, y_theo, energy_step, groups=groups)
+    return R_pendry_from_y(y_exp, y_theo, energy_step, groups=groups)
 
 
 def y_s(

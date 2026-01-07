@@ -11,7 +11,7 @@ from .groups import group_rfactors
 from .utils import nansum_trapezoid, shift_theo_intensity_non_negative
 
 
-def pendry_R(
+def R_pendry(
     theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
 ):
     """Calculate the R-factor for two beams."""
@@ -32,13 +32,13 @@ def pendry_R(
 
     theo_derivative = theo_deriv_spline(energy_grid)
 
-    exp_y = pendry_y(exp_intensity, exp_derivative, v0_imag)
-    theo_y = pendry_y(theo_intensity, theo_derivative, v0_imag)
+    exp_y = y_pendry(exp_intensity, exp_derivative, v0_imag)
+    theo_y = y_pendry(theo_intensity, theo_derivative, v0_imag)
 
-    return pendry_R_from_y(exp_y, theo_y, energy_step, groups=groups)
+    return R_pendry_from_y(exp_y, theo_y, energy_step, groups=groups)
 
 
-def pendry_R_from_y(y_1, y_2, energy_step, groups=None):
+def R_pendry_from_y(y_1, y_2, energy_step, groups=None):
     # mask out NaNs for this calculation
     y_1_mask = dnl.xp.isnan(y_1)
     y_2_mask = dnl.xp.isnan(y_2)
@@ -55,6 +55,6 @@ def pendry_R_from_y(y_1, y_2, energy_step, groups=None):
     return group_rfactors(numerators, denominators, groups=groups)
 
 
-def pendry_y(intensity, intensity_derivative, v0_imag):
+def y_pendry(intensity, intensity_derivative, v0_imag):
     intens_deriv_ratio = intensity / intensity_derivative
     return intens_deriv_ratio / (intens_deriv_ratio**2 + v0_imag**2)
