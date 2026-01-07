@@ -176,13 +176,17 @@ def vlj_search(slab, rpars):
             f'TLOpt_{optimizer_id}_{optimizer.name}_history.npz'
         )
 
+        # determine integer and fractional beams
+        integer_fractional_mask = _determine_integer_or_fractional(rpars)
+        integer_fractional_R = calculator.R(
+            result.best_x, groups=integer_fractional_mask, num_groups=2
+        )
         # update rpars with the best R
-        rpars.last_R = result.best_R
         rpars.stored_R['search'] = (
             result.best_R,
-            -1,
-            -1,
-        )  # TODO: calc integer and fractional parts
+            integer_fractional_R[0],
+            integer_fractional_R[1],
+        )
 
     # Finished optimization
     logger.info(f'Finished optimization with best R = {result.best_R:.4f}')
@@ -202,3 +206,16 @@ def vlj_search(slab, rpars):
 
     # delete the calculator to make sure resources are freed asap
     del calculator
+
+
+def _determine_integer_or_fractional(rp):
+    """Determine whether beams are integer or fractional."""
+
+    iorf = []
+    for i, beam in enumerate(rp.expbeams):
+        if beam.hk[0] % 1.0 != 0.0 or beam.hk[1] % 1.0 != 0.0:
+            iorf.append(1)
+        else:
+            iorf.append(0)
+    iorf.extend([0] * (len(rp.ivbeams) - len(rp.expbeams)))
+    return np.array(iorf, dtype=int)
