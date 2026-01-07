@@ -5,7 +5,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
-from viperleed.calc.lib.dynamic_numerical_lib import xp
+from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 from .pendry import pendry_R_from_y
 from .utils import shift_theo_intensity_non_negative
@@ -54,7 +54,7 @@ def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
     condition = second_derivative > 0
     denominator = intensity**2 + 0.5 * (first_derivative * v0_imag) ** 2
     denominator += condition * 0.1 * (second_derivative * v0_imag**2) ** 2
-    denominator = xp.sqrt(denominator)
+    denominator = dnl.xp.sqrt(denominator)
     return numerator / denominator
 
 
@@ -119,15 +119,15 @@ def y_s(
         - 0.5 * first_derivative**2 / second_derivative**2
     )
     intermediate_1 = (alpha / v0_imag**2) * intermediate_1 + beta
-    intermediate_2 = intermediate_1 / xp.sqrt(1 + intermediate_1**2)
+    intermediate_2 = intermediate_1 / dnl.xp.sqrt(1 + intermediate_1**2)
 
     numerator = first_derivative
-    condition = xp.logical_and(second_derivative > 0, intermediate_1 > 0)
+    condition = dnl.xp.logical_and(second_derivative > 0, intermediate_1 > 0)
 
     denominator = intensity**2 + 4 * v0_imag**2 * first_derivative**2
     conditional_denominator = (
         second_derivative**2 * v0_imag**4 * intermediate_2**2
     )
     denominator += condition * conditional_denominator
-    denominator = xp.sqrt(denominator)
+    denominator = dnl.xp.sqrt(denominator)
     return numerator / denominator

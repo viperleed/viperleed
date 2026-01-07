@@ -5,7 +5,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
-from . import xp
+from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
 def group_rfactors(numerators, denominators, groups=None, num_groups=None):
@@ -13,9 +13,9 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
 
     Parameters
     ----------
-    numerators : xp.ndarray
+    numerators : dnl.xp.ndarray
         Array of R-factor numerators of shape (n_beams,)
-    denominators : xp.ndarray
+    denominators : dnl.xp.ndarray
         Array of R-factor denominators of shape (n_beams,)
     groups : None | "beam" | array-like of int, optional
         - None: return overall R-factor = sum(num) / sum(den)
@@ -29,7 +29,7 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
 
     Returns
     -------
-    xp.ndarray
+    dnl.xp.ndarray
         R-factors per beam of shape (n_beams,) if groups is "beam",
         shape (1,) if groups is None, or shape (n_groups,) if
         groups is an array-like of integers.
@@ -41,18 +41,18 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
         )
 
     if groups is None:
-        return xp.sum(numerators) / xp.sum(denominators)
+        return dnl.xp.sum(numerators) / dnl.xp.sum(denominators)
     if isinstance(groups, str) and groups == 'beam':
         return numerators / denominators
 
     # otherwise, assume groups is array-like of integers
-    groups = xp.asarray(groups, dtype=int)
+    groups = dnl.xp.asarray(groups, dtype=int)
 
-    num_groups = xp.max(groups) + 1
-    grouped_numerators = xp.bincount(
+    num_groups = dnl.xp.max(groups) + 1
+    grouped_numerators = dnl.xp.bincount(
         groups, weights=numerators, minlength=num_groups
     )
-    grouped_denominators = xp.bincount(
+    grouped_denominators = dnl.xp.bincount(
         groups, weights=denominators, minlength=num_groups
     )
     return grouped_numerators / grouped_denominators

@@ -5,7 +5,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
-from viperleed.calc.lib.dynamic_numerical_lib import xp
+from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 from .groups import group_rfactors
 from .utils import nansum_trapezoid, shift_theo_intensity_non_negative
@@ -40,12 +40,12 @@ def pendry_R(
 
 def pendry_R_from_y(y_1, y_2, energy_step, groups=None):
     # mask out NaNs for this calculation
-    y_1_mask = xp.isnan(y_1)
-    y_2_mask = xp.isnan(y_2)
-    mask = xp.logical_or(y_1_mask, y_2_mask)
+    y_1_mask = dnl.xp.isnan(y_1)
+    y_2_mask = dnl.xp.isnan(y_2)
+    mask = dnl.xp.logical_or(y_1_mask, y_2_mask)
 
-    y_1 = xp.where(mask, 0, y_1)
-    y_2 = xp.where(mask, 0, y_2)
+    y_1 = dnl.xp.where(mask, 0, y_1)
+    y_2 = dnl.xp.where(mask, 0, y_2)
 
     # TODO?: potentially, one could do these integrals analytically based on the spline coefficients
     numerators = nansum_trapezoid((y_1 - y_2) ** 2, dx=energy_step, axis=0)
