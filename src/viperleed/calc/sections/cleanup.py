@@ -70,7 +70,7 @@ _SUPP_FILES = (
     'superpos-PARAM',
     'VIBROCC_generated',
     'VIBROCC_*_intermediate',
-    '*_result.npz'
+    '*_history.npz'
     )
 
 _SUPP_DIRS = (
