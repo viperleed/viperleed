@@ -9,6 +9,7 @@ __created__ = '2024-02-19'
 __license__ = 'GPLv3+'
 
 
+import numpy as np
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
@@ -34,9 +35,9 @@ def make_1d_ragged_cubic_spline(
 def interpolate_ragged_array(
     x, y, axis=0, bc_type='not-a-knot', extrapolate=False
 ):
-    all_coeffs = dnl.xp.full(
-        (4, y.shape[0], y.shape[1]), fill_value=dnl.xp.nan
-    )
+    # NB: this is intentionally using a Numpy array, even if the backend is
+    # swapped out
+    all_coeffs = np.full((4, y.shape[0], y.shape[1]), fill_value=dnl.xp.nan)
     for dim in range(y.shape[1]):
         _y = y[:, dim]
         all_nans = dnl.xp.all(dnl.xp.isnan(_y))
