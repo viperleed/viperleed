@@ -210,7 +210,6 @@ def vlj_search(slab, rpars):
 
 def _determine_integer_or_fractional(rp):
     """Determine whether beams are integer or fractional."""
-
     iorf = []
     for i, beam in enumerate(rp.expbeams):
         if beam.hk[0] % 1.0 != 0.0 or beam.hk[1] % 1.0 != 0.0:
@@ -218,4 +217,4 @@ def _determine_integer_or_fractional(rp):
         else:
             iorf.append(0)
     iorf.extend([0] * (len(rp.ivbeams) - len(rp.expbeams)))
-    return np.array(iorf, dtype=int)
+    return tuple(iorf)
