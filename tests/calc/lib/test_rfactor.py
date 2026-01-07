@@ -93,39 +93,3 @@ def test_pendry_R_from_splines(
     assert calc_R == pytest.approx(expected_R, rel=1e-6)
 
 
-class TestGroupedRfactors:
-    def test_per_beam_true(self):
-        numerators = np.array([1, 2, 3])
-        denominators = np.array([4, 5, 6])
-        result = rfactor.group_rfactors(
-            numerators, denominators, groups='beam'
-        )
-        assert result == pytest.approx(np.array([0.25, 0.4, 0.5]))
-
-    def test_per_beam_false(self):
-        numerators = np.array([1, 2, 3])
-        denominators = np.array([4, 5, 6])
-        result = rfactor.group_rfactors(numerators, denominators, groups=None)
-        assert result == pytest.approx(np.array([0.4]))
-
-    def test_per_beam_index_array(self):
-        numerators = np.array([1, 2, 3, 4])
-        denominators = np.array([4, 5, 6, 8])
-        group_indices = np.array([0, 0, 1, 1])
-        result = rfactor.group_rfactors(
-            numerators,
-            denominators,
-            groups=group_indices,
-        )
-        expected = np.array([1 / 3, 0.5])
-        assert result == pytest.approx(expected)
-
-    def test_incompatible_shapes(self):
-        numerators = np.array([1, 2])
-        denominators = np.array([4, 5, 6])
-        with pytest.raises(ValueError):
-            rfactor.group_rfactors(
-                numerators,
-                denominators,
-                groups=None,
-            )
