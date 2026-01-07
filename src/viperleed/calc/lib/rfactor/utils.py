@@ -14,26 +14,6 @@ def nansum_trapezoid(y, dx, axis=-1):
     return dnl.xp.nansum(y_arr[..., 1:] + y_arr[..., :-1], axis=-1) * dx * 0.5
 
 
-def integer_shift_v0r(array, n_steps):
-    """Applies a v0r shift to the array by shifting the values n_steps up or
-    down the first axis (energy) and padding with NaNs.
-    """
-    # NB, TODO: This only allows for integer shifts (multiples of the set
-    # energy step). This is a limitation of the current implementation.
-    # In principle, we could implement a more general shift and allow real
-    # numbers by doing this earlier and changing the knot values in the
-    # interpolator.
-    n_energies, n_beams = array.shape[0], array.shape[1]
-
-    rolled_array = dnl.xp.roll(array, n_steps, axis=0)
-    row_ids = dnl.xp.arange(n_energies).reshape(-1, 1)
-    row_ids_tiled = dnl.xp.tile(row_ids, (1, n_beams))
-    mask = dnl.xp.logical_or(
-        row_ids_tiled < n_steps, row_ids >= n_energies + n_steps
-    )
-    return dnl.xp.where(mask, dnl.xp.nan, rolled_array)
-
-
 def shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
     """Shift the theoretical intensity so that it is non-negative.
 
