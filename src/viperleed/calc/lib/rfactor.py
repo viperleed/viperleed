@@ -7,8 +7,6 @@ __license__ = 'GPLv3+'
 
 
 import numpy as _np
-
-
 xp = _np
 
 
@@ -62,30 +60,6 @@ def pendry_y(intensity, intensity_derivative, v0_imag):
     return intens_deriv_ratio / (intens_deriv_ratio**2 + v0_imag**2)
 
 
-def nansum_trapezoid(y, dx, axis=-1):
-    y_arr = xp.moveaxis(y, axis, -1)
-    # select the axis to integrate over
-    return xp.nansum(y_arr[..., 1:] + y_arr[..., :-1], axis=-1) * dx * 0.5
-
-
-def integer_shift_v0r(array, n_steps):
-    """Applies a v0r shift to the array by shifting the values n_steps up or
-    down the first axis (energy) and padding with NaNs.
-    """
-    # NB, TODO: This only allows for integer shifts (multiples of the set
-    # energy step). This is a limitation of the current implementation.
-    # In principle, we could implement a more general shift and allow real
-    # numbers by doing this earlier and changing the knot values in the
-    # interpolator.
-    n_energies, n_beams = array.shape[0], array.shape[1]
-
-    rolled_array = xp.roll(array, n_steps, axis=0)
-    row_ids = xp.arange(n_energies).reshape(-1, 1)
-    row_ids_tiled = xp.tile(row_ids, (1, n_beams))
-    mask = xp.logical_or(
-        row_ids_tiled < n_steps, row_ids >= n_energies + n_steps
-    )
-    return xp.where(mask, xp.nan, rolled_array)
 
 
 ### R2 ###
@@ -338,107 +312,3 @@ def R_zj(
     )
 
 
-R_FACTOR_SYNONYMS = {
-    pendry_R: ('pendry', 'r_p', 'rp', 'pendry r-factor'),
-    R_1: ('r1', 'r_1', 'r1 factor'),
-    R_2: ('r2', 'r_2', 'r2 factor'),
-    R_s: ('s', 'rs', 'r_s', 'smooth'),
-    R_zj: (
-        'zj',
-        'zj factor',
-        'zannazi',
-        'zannazi jona',
-        'zannazi-jona',
-    ),
-}
-
-def _shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
-    """Shift the theoretical intensity so that it is non-negative.
-
-    The array containing the theoretical intensity is calculated from a spline
-    interpolation, which can lead to small negative values due to undershoots
-    near the minima. This function shifts the theoretical intensities
-    into the non-negative (physical) range by adding a constant value.
-    The constant is chosen on a per-beam basis, and only considers the region of
-    overlap between the theoretical and experimental intensities.
-
-    Parameters
-    ----------
-    theo_intensity : xp.ndarray
-        Interpolated theoretical intensity array of shape (n_energies, n_beams)
-    exp_intensity : xp.ndarray
-        Interpolated experimental intensity array of shape (n_energies, n_beams)
-
-    Returns
-    -------
-    xp.ndarray
-        Shifted theoretical intensity array of shape (n_energies, n_beams)
-    """
-    # Determine the mask for valid (non-NaN) intensities
-    valid_exp_mask = ~xp.isnan(exp_intensity)
-    valid_theo_mask = ~xp.isnan(theo_intensity)
-    overlap_mask = xp.logical_and(valid_exp_mask, valid_theo_mask)
-
-    # Calculate the minimum theoretical intensity in the valid regions
-    masked_theo_intensity = xp.where(overlap_mask, theo_intensity, xp.nan)
-    masked_theo_mins = xp.nanmin(masked_theo_intensity, axis=0)
-    # Ensure that we do not consider NaNs in the minimum calculation
-    min_theo_intensity = xp.where(
-        xp.isnan(masked_theo_mins), 0.0, masked_theo_mins
-    )
-    # only shift if minimum is negative
-    shifts = xp.where(min_theo_intensity < 0, -min_theo_intensity, 0.0)
-    # stop gradient on shifts to avoid affecting optimization
-
-    # broadcast shifts and add to theo_intensity
-    return theo_intensity + shifts
-
-
-def group_rfactors(numerators, denominators, groups=None, num_groups=None):
-    """Calculate grouped R-factor from numerators and denominators.
-
-    Parameters
-    ----------
-    numerators : xp.ndarray
-        Array of R-factor numerators of shape (n_beams,)
-    denominators : xp.ndarray
-        Array of R-factor denominators of shape (n_beams,)
-    groups : None | "beam" | array-like of int, optional
-        - None: return overall R-factor = sum(num) / sum(den)
-        - "beam": return per-beam R-factors = num / den
-        - array of ints: group id per beam; returns per-group R-factors.
-          Group ids are assumed to be non-negative integers.
-    num_groups : int, optional
-        Number of groups, required if groups is array-like of int.
-        Must be specified to ensure compatibility with just-in-time
-        compilation and static array shapes.
-
-    Returns
-    -------
-    xp.ndarray
-        R-factors per beam of shape (n_beams,) if groups is "beam",
-        shape (1,) if groups is None, or shape (n_groups,) if
-        groups is an array-like of integers.
-    """
-    # check numerators and denominators have the same shape
-    if numerators.shape != denominators.shape:
-        raise ValueError(
-            'Numerators and denominators must have the same shape.'
-        )
-
-    if groups is None:
-        return xp.sum(numerators) / xp.sum(denominators)
-    if isinstance(groups, str) and groups == 'beam':
-        return numerators / denominators
-
-    # otherwise, assume groups is array-like of integers
-    groups = xp.asarray(groups, dtype=int)
-
-    num_groups = xp.max(groups) + 1
-    grouped_numerators = xp.bincount(
-        groups, weights=numerators, minlength=num_groups
-    )
-    grouped_denominators = xp.bincount(
-        groups, weights=denominators, minlength=num_groups
-    )
-    return grouped_numerators / grouped_denominators
