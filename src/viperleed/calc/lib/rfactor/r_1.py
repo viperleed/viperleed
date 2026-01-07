@@ -9,7 +9,7 @@ from .groups import group_rfactors
 from .utils import nansum_trapezoid
 
 
-def R_2(
+def R_1(
     theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
 ):
     """

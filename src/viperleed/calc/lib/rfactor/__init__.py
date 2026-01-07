@@ -7,8 +7,8 @@ __license__ = 'GPLv3+'
 
 
 from .pendry import R_pendry
-from .R_1 import R_1
-from .R_2 import R_2
+from .r_1 import R_1
+from .r_2 import R_2
 from .smooth import R_s
 from .zannazi_jona import R_zj
 
