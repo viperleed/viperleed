@@ -1,5 +1,3 @@
-"""Test Module R-factor"""
-
 import numpy as np
 import pytest
 from pytest_cases import case, fixture, parametrize_with_cases
@@ -26,6 +24,7 @@ _FE2O3_0123_EXPECTED_VALUES = [
     (0.5, 0.19706298),
     (1.0, 0.24195227),
 ]
+
 
 @fixture
 def sin_spline():
@@ -54,42 +53,21 @@ def fe2o3_012_exp_spline_and_hk():
     return exp_spline, exp_hk
 
 
-
 class SplinesWithExpectedValues:
-    @case(tags='pendry')
     def case_sin_correlated(self, sin_spline):
         theo_spline, exp_spline = sin_spline, sin_spline
         v0i, energy_step, energies = 3.0, 0.5, _MOCK_FINE_E_AXIS
-        expected_R = 0.005350277
+        expected_R = {'pendry': 0.005350277}
         return theo_spline, v0i, energy_step, energies, exp_spline, expected_R
 
-    @case(tags='pendry')
     def case_cos_correlated(self, cos_spline):
         theo_spline, exp_spline = cos_spline, cos_spline
         v0i, energy_step, energies = 3.0, 0.5, _MOCK_FINE_E_AXIS
-        expected_R = 0.0
+        expected_R = {'pendry': 0.0}
         return theo_spline, v0i, energy_step, energies, exp_spline, expected_R
 
-    @case(tags='pendry')
     def case_sin_anticorrelated(self, sin_spline, cos_spline):
         theo_spline, exp_spline = sin_spline, cos_spline
         v0i, energy_step, energies = 3.0, 0.5, _MOCK_FINE_E_AXIS
-        expected_R = 1.89674664
+        expected_R = {'pendry': 1.89674664}
         return theo_spline, v0i, energy_step, energies, exp_spline, expected_R
-
-
-@parametrize_with_cases(
-    'theo_spline, v0i, energy_step, energies, exp_spline, expected_R',
-    cases=SplinesWithExpectedValues,
-    has_tag='pendry',
-)
-def test_pendry_R_from_splines(
-    theo_spline, v0i, energy_step, energies, exp_spline, expected_R
-):
-    """Test the R-factor calculation from spline objects."""
-    calc_R = rfactor.R_pendry(
-        theo_spline, v0i, energy_step, energies, exp_spline
-    )
-    assert calc_R == pytest.approx(expected_R, rel=1e-6)
-
-
