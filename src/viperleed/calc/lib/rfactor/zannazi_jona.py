@@ -6,7 +6,7 @@ __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
-from .utils import shift_theo_intensity_non_negative, nansum_trapezoid
+from .utils import nansum_trapezoid
 from .groups import group_rfactors
 
 
