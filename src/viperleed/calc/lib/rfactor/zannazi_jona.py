@@ -10,9 +10,7 @@ from .utils import nansum_trapezoid
 from .groups import group_rfactors
 
 
-def R_zj(
-    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
-):
+def R_zj(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs):
     # Experimental data
     exp_deriv_1_spline = exp_spline.derivative()
     exp_deriv_2_spline = exp_deriv_1_spline.derivative()
@@ -74,5 +72,5 @@ def R_zj(
         * nansum_trapezoid(quotient, axis=0, dx=energy_step)
         * exp_energy_ranges,
         exp_energy_ranges,
-        groups=groups,
+        **kwargs,
     )

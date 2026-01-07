@@ -9,9 +9,7 @@ from .groups import group_rfactors
 from .utils import nansum_trapezoid
 
 
-def R_2(
-    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, groups=None
-):
+def R_2(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs):
     """
     Notes
     -----
@@ -38,4 +36,4 @@ def R_2(
     denominators = nansum_trapezoid(exp_intensity**2, energy_step, axis=0)
 
     # calculate R-factor with requested grouping
-    return group_rfactors(numerators, denominators, groups=groups)
+    return group_rfactors(numerators, denominators, **kwargs)
