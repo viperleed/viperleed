@@ -47,7 +47,6 @@ def R_pendry_from_y(y_1, y_2, energy_step, groups=None):
     y_1 = dnl.xp.where(mask, 0, y_1)
     y_2 = dnl.xp.where(mask, 0, y_2)
 
-    # TODO?: potentially, one could do these integrals analytically based on the spline coefficients
     numerators = nansum_trapezoid((y_1 - y_2) ** 2, dx=energy_step, axis=0)
     denominators = nansum_trapezoid((y_1**2 + y_2**2), dx=energy_step, axis=0)
 
