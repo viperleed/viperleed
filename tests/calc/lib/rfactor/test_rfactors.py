@@ -1,3 +1,5 @@
+"""Tests for viperleed.calc.lib.rfactor module."""
+
 import numpy as np
 import pytest
 from pytest_cases import case, fixture, parametrize_with_cases
