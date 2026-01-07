@@ -47,3 +47,13 @@ def stop_gradient(array):
     ```
     """
     return array
+
+
+def bincount(x, weights, length):
+    """Bincount implementation compatible with dynamic numerical libraries.
+
+    This is a wrapper around `dnl.xp.bincount` to provide a consistent
+    interface across different numerical libraries. Some libraries may
+    use `minlength` instead of `length` as a parameter name.
+    """
+    return _np.bincount(x, weights=weights, minlength=length)
