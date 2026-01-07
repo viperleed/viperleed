@@ -46,13 +46,14 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
         return numerators / denominators
 
     # otherwise, assume groups is array-like of integers
-    groups = dnl.xp.asarray(groups, dtype=int)
+    _groups = dnl.xp.asarray(groups, dtype=int)
 
-    num_groups = dnl.xp.max(groups) + 1
-    grouped_numerators = dnl.xp.bincount(
-        groups, weights=numerators, minlength=num_groups
+    if num_groups is None:
+        num_groups = dnl.xp.max(groups) + 1
+    grouped_numerators = dnl.bincount(
+        _groups, weights=numerators, length=num_groups
     )
-    grouped_denominators = dnl.xp.bincount(
-        groups, weights=denominators, minlength=num_groups
+    grouped_denominators = dnl.bincount(
+        _groups, weights=denominators, length=num_groups
     )
     return grouped_numerators / grouped_denominators
