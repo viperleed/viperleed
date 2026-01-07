@@ -182,14 +182,18 @@ def vlj_search(slab, rpars):
             result.best_x, groups=integer_fractional_mask, num_groups=2
         )
         # update rpars with the best R
-        rpars.stored_R['search'] = (
+        rpars.stored_R['superpos'] = (
             result.best_R,
             integer_fractional_R[0],
             integer_fractional_R[1],
         )
 
     # Finished optimization
-    logger.info(f'Finished optimization with best R = {result.best_R:.4f}')
+    logger.info(
+        f'Finished optimization with best R = {result.best_R:.4f} '
+        f'({rpars.stored_R["superpos"][1]:.4f}, '
+        f'{rpars.stored_R["superpos"][2]:.4f})'
+    )
     logger.debug(f'Best parameter vector:\n{result.best_x}')
 
     # apply the final result to the slab object
