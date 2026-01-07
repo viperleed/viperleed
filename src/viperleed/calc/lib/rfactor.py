@@ -39,25 +39,6 @@ def pendry_R(
     return pendry_R_from_y(exp_y, theo_y, energy_step, groups=groups)
 
 
-def pendry_R_from_intensity_and_derivative(
-    intens_deriv_1,
-    intens_deriv_2,
-    v0_real_steps,
-    v0_imag,
-    energy_step,
-    groups=None,
-):
-    intens_1, deriv_1 = intens_deriv_1
-    intens_2, deriv_2 = intens_deriv_2
-
-    y_1 = pendry_y(intens_1, deriv_1, v0_imag)
-    y_2 = pendry_y(intens_2, deriv_2, v0_imag)
-
-    # shift y_1 by v0_real_steps
-    y_1 = integer_shift_v0r(y_1, v0_real_steps)
-
-    return pendry_R_from_y(y_1, y_2, energy_step, groups=groups)
-
 
 def pendry_R_from_y(y_1, y_2, energy_step, groups=None):
     # mask out NaNs for this calculation
