@@ -46,6 +46,8 @@ logger = logging.getLogger(__name__)
 _FLOAT_RE = r'-?\d+(?:\.\d+)?'
 _DIRECTION_BRACKETS_RE = rf'\[\s*{_FLOAT_RE}(?:\s+{_FLOAT_RE})*\s*\]'
 DIRECTION_PATTERN = (
+    # not preceeded by a whitespace
+    r'(?<!\S)'
     r'(?P<direction>('
     # longer, more specific first:
     rf'azi\((?:ab|xy)?{_DIRECTION_BRACKETS_RE}\)'
@@ -660,6 +662,7 @@ def separate_direction_from_targets(targets_and_direction: str):
         A tuple containing the targets string and the direction string. Either
         string may be empty if the corresponding part was not found.
     """
+
     matches = tuple(_DIR_AT_END.finditer(targets_and_direction))
     if len(matches) > 1:
         raise ValueError('Only one directional specification is allowed.')
