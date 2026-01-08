@@ -1,4 +1,4 @@
-"""viperleed.calc.lib.rfactor.groups"""
+"""viperleed.calc.lib.rfactor.groups."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
@@ -9,7 +9,28 @@ from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
 def group_rfactors(numerators, denominators, groups=None, num_groups=None):
-    """Calculate grouped R-factor from numerators and denominators.
+    r"""Calculate grouped R-factor from numerators and denominators.
+
+    R-factors are often calculated over multiple beams, where the
+    R-factor for a set $`g`$ of beams is given by
+    $`R_g = \sum_{b \in g} \int f(I_{1,b}, I_{2,b}) \, dE \; / \;
+    \sum_{b \in g} \int g(I_{1,b}, I_{2,b}) \, dE`$,
+    where $`I_{1,b}`$ and $`I_{2,b}`$ are the intensities of beam $`b`$
+    for the two data sets being compared and $`f`$ and $`g`$ are
+    functions specific to the R-factor being calculated.
+    Here, `numerators` and `denominators` are arrays of shape
+    (n_beams,) containing the values of $`\int f(I_{1,b}, I_{2,b})
+    \, dE`$ and $`\int g(I_{1,b}, I_{2,b}) \, dE`$ for each beam
+    $`b`$.
+    This function allows grouping these beams into arbitrary sets
+    and calculating the R-factor for each set.
+    The grouping can be specified in three ways:
+    - If `groups` is None, the overall R-factor is calculated.
+    - If `groups` is "beam", individual per-beam R-factors are
+    calculated.
+    - If `groups` is an array-like of integers of shape (n_beams,),
+    the beams are grouped according to the group ids specified in
+    `groups`, and per-group R-factors are calculated.
 
     Parameters
     ----------
@@ -21,7 +42,7 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
         - None: return overall R-factor = sum(num) / sum(den)
         - "beam": return per-beam R-factors = num / den
         - array of ints: group id per beam; returns per-group R-factors.
-          Group ids are assumed to be non-negative integers.
+            Group ids are assumed to be non-negative integers.
     num_groups : int, optional
         Number of groups, required if groups is array-like of int.
         Must be specified to ensure compatibility with just-in-time
