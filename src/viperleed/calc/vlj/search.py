@@ -15,6 +15,7 @@ from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import poscar
 from viperleed.calc.files.vibrocc import writeVIBROCC
 from viperleed.calc.vlj import VLJ_AVAILABLE
+from viperleed.calc.sections.rfactor import determine_integer_or_fractional
 
 if VLJ_AVAILABLE:
     from viperleed_jax.from_objects import (
@@ -177,7 +178,7 @@ def vlj_search(slab, rpars):
         )
 
         # determine integer and fractional beams
-        integer_fractional_mask = _determine_integer_or_fractional(rpars)
+        integer_fractional_mask = determine_integer_or_fractional(rpars)
         integer_fractional_R = calculator.R(
             result.best_x, groups=integer_fractional_mask, num_groups=2
         )
@@ -210,15 +211,3 @@ def vlj_search(slab, rpars):
 
     # delete the calculator to make sure resources are freed asap
     del calculator
-
-
-def _determine_integer_or_fractional(rp):
-    """Determine whether beams are integer or fractional."""
-    iorf = []
-    for i, beam in enumerate(rp.expbeams):
-        if beam.hk[0] % 1.0 != 0.0 or beam.hk[1] % 1.0 != 0.0:
-            iorf.append(1)
-        else:
-            iorf.append(0)
-    iorf.extend([0] * (len(rp.ivbeams) - len(rp.expbeams)))
-    return tuple(iorf)
