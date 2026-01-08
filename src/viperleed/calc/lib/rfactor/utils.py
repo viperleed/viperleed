@@ -5,6 +5,7 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
+import numpy as np
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
@@ -57,3 +58,56 @@ def shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
 
     # broadcast shifts and add to theo_intensity
     return theo_intensity + shifts
+
+
+def average_beam_array(beam_array, beam_correspondence):
+    """Average the beam array over the beam correspondence.
+
+    Parameters
+    ----------
+    beam_array : array_like
+        The beam array to average, shape (n_energies, n_beams).
+    beam_correspondence : tuple
+        A tuple containing the beam correspondence, which maps the
+        experimental beams to the theoretical beams. It should be a 1D array
+        of integers with shape (n_beams,).
+
+    Returns
+    -------
+    array_like
+        The averaged beam array, shape (n_energies, n_averaged_beams).
+
+    Raises
+    ------
+    ValueError
+        If the number of beams in the beam array does not match the length of
+        the beam correspondence.
+    """
+    # convert beam correspondence to numpy array
+    beam_corr = np.array(beam_correspondence, dtype=np.int32)  # force numpy
+
+    # check if beam_array and beam_corr have the same number of beams
+    if beam_array.shape[1] != beam_corr.shape[0]:
+        raise ValueError(
+            'Beam array and beam correspondence must have the same number of beams.'
+        )
+
+    # beam_corr may contain -1 for beams that have no correspondence; these
+    # need to be filtered out
+    valid_beam_mask = beam_corr != -1
+    beam_corr = beam_corr[valid_beam_mask]
+    filtered_beam_array = beam_array[:, valid_beam_mask]
+    # determine the number of averaged beams after filtering
+    n_averaged_beams = np.unique(beam_corr).size  # force numpy
+
+    # get weights for averaging
+    ones = dnl.xp.ones_like(beam_corr, dtype=float)
+    summed = dnl.segment_sum(ones, beam_corr, num_segments=n_averaged_beams)
+    averaged_beam_weights = dnl.xp.reciprocal(summed)
+
+    # sum beams according to the beam correspondence
+    mix_beams_vmap = dnl.vmap(dnl.segment_sum, in_axes=(0, None, None))
+    averaged = mix_beams_vmap(filtered_beam_array, beam_corr, n_averaged_beams)
+
+    # apply the averaged weights
+    return averaged * averaged_beam_weights[dnl.xp.newaxis, :]
