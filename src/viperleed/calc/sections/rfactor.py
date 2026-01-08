@@ -17,16 +17,14 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc.constants import DEFAULT_OUT
-from viperleed.calc.constants import DEFAULT_SUPP
-from viperleed.calc.constants import DEFAULT_TENSORS
-from viperleed.calc.files import iorfactor
-from viperleed.calc.files import iotensors
+from viperleed.calc.constants import DEFAULT_OUT, DEFAULT_SUPP, DEFAULT_TENSORS
+from viperleed.calc.files import iorfactor, iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
-from viperleed.calc.lib import fs_utils
-from viperleed.calc.lib import leedbase
+from viperleed.calc.files.iorfactor import beamlist_to_array
+from viperleed.calc.lib import fs_utils, leedbase, spline_interpolation
+from viperleed.calc.lib import rfactor as rfactor_lib
 from viperleed.calc.lib.checksums import validate_multiple_files
-
+from viperleed.calc.lib.rfactor.utils import average_beam_array
 
 logger = logging.getLogger(__name__)
 
@@ -117,21 +115,11 @@ def _fetch_and_check_spectra(rp, index, name):
                      "cannot proceed.")
         raise ValueError("Contradiction in beam sets")
 
-from viperleed.calc.lib import rfactor as rfactor_lib
-from viperleed.calc.files.iorfactor import beamlist_to_array
-from viperleed.calc.lib import spline_interpolation
-from viperleed.calc.lib.rfactor.utils import average_beam_array
-
 
 def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
-<<<<<<< Updated upstream
-    logger.debug("Using new R-factor calculation. This is still experimental!")
-    which_r = rp.R_FACTOR_TYPE
-=======
     logger.warning(
         'Using new R-factor calculation. This is still experimental!'
     )
->>>>>>> Stashed changes
 
     # select R-factor function by name
     r_func = rfactor_lib.select_rfactor(rp.R_FACTOR_TYPE.name)
