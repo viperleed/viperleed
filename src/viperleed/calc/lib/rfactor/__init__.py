@@ -12,7 +12,7 @@ from .r_2 import R_2
 from .smooth import R_s
 from .zannazi_jona import R_zj
 
-_R_FACTOR_SYNONYMS = {
+R_FACTOR_SYNONYMS = {
     R_pendry: ('pendry', 'r_p', 'rp', 'pendry r-factor', 'p'),
     R_1: ('r1', 'r_1', 'r1 factor'),
     R_2: ('r2', 'r_2', 'r2 factor'),
@@ -29,7 +29,7 @@ _R_FACTOR_SYNONYMS = {
 def select_rfactor(name):
     """Select R-factor function by name using synonyms."""
     _rfactor_name = name.lower().strip()
-    for func, synonyms in _R_FACTOR_SYNONYMS.items():
+    for func, synonyms in R_FACTOR_SYNONYMS.items():
         if _rfactor_name in synonyms:
             return func
     err_msg = f'Unknown R-factor name: {name}'
