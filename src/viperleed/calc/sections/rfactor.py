@@ -462,5 +462,4 @@ def determine_integer_or_fractional(rp):
             iorf.append(1)
         else:
             iorf.append(0)
-    iorf.extend([0] * (len(rp.ivbeams) - len(rp.expbeams)))
     return tuple(iorf)
