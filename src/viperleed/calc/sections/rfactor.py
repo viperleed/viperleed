@@ -142,6 +142,11 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         rp.setHaltingLevel(1)
         return []
 
+    # find correspondence experimental to theoretical beams:
+    beam_correspondence = leedbase.getBeamCorrespondence(sl, rp)
+    beam_correspondence = tuple(beam_correspondence)
+    logger.debug(f'Beam correspondence: {beam_correspondence}')
+
     # calculate splines from the spectra
 
     ## experiment
@@ -156,10 +161,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     (theo_grid, _, _, theo_intensities) = iorfactor.beamlist_to_array(
         theobeams
     )
-    # find correspondence experimental to theoretical beams:
-    beam_correspondence = leedbase.getBeamCorrespondence(sl, rp)
-    beam_correspondence = tuple(beam_correspondence)
-    logger.debug(f'Beam correspondence: {beam_correspondence}')
+
     theo_intensities = average_beam_array(
         theo_intensities, beam_correspondence
     )
