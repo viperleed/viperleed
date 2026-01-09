@@ -37,7 +37,9 @@ def interpolate_ragged_array(
 ):
     # NB: this is intentionally using a Numpy array, even if the backend is
     # swapped out
-    all_coeffs = np.full((4, y.shape[0], y.shape[1]), fill_value=dnl.xp.nan)
+    all_coeffs = np.full(
+        (4, y.shape[0] - 1, y.shape[1]), fill_value=dnl.xp.nan
+    )
     for dim in range(y.shape[1]):
         _y = y[:, dim]
         all_nans = dnl.xp.all(dnl.xp.isnan(_y))
