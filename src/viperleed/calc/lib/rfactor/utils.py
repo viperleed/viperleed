@@ -54,7 +54,7 @@ def shift_theo_intensity_non_negative(theo_intensity, exp_intensity):
     # only shift if minimum is negative
     shifts = dnl.xp.where(min_theo_intensity < 0, -min_theo_intensity, 0.0)
     # stop gradient on shifts to avoid affecting optimization
-    dnl.stop_gradient(shifts)
+    shifts = dnl.stop_gradient(shifts)
 
     # broadcast shifts and add to theo_intensity
     return theo_intensity + shifts
