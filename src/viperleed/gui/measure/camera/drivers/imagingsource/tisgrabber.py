@@ -815,7 +815,7 @@ class WindowsCamera:
         if not self.is_running or not self.trigger_enabled:
             return
         self.pause()
-        for i in range(0,5):
+        for _ in range(5):
             try:
                 self._dll_start_live(self.__handle, False)
             except ImagingSourceError:
