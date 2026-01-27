@@ -64,7 +64,9 @@ c_float_p = POINTER(c_float)
 c_long_p = POINTER(c_long)
 c_int_p = POINTER(c_int)
 
-BURST_RETRIES = 5
+# Number of retries for burst operations; empirically, a single retry
+# has been sufficient, so keep this low to fail fast and aid diagnostics.
+BURST_RETRIES = 3
 
 
 def get_dll_path():
