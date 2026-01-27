@@ -64,6 +64,9 @@ c_float_p = POINTER(c_float)
 c_long_p = POINTER(c_long)
 c_int_p = POINTER(c_int)
 
+# Number of retries for burst operations; so far one retry has been sufficient
+BURST_RETRIES = 3
+
 
 def get_dll_path():
     """Return the path to the dll files."""
@@ -413,7 +416,7 @@ class WindowsCamera:
 
         return min_rate, max_rate
 
-    _dll_get_frame_rate =  _dll.IC_GetFrameRate
+    _dll_get_frame_rate = _dll.IC_GetFrameRate
     _dll_get_frame_rate.restype = c_float
     _dll_get_frame_rate.argtypes = (GrabberHandlePtr,)
     _dll_get_frame_rate.errcheck = check_dll_return('>0')
@@ -815,7 +818,17 @@ class WindowsCamera:
         if not self.is_running or not self.trigger_enabled:
             return
         self.pause()
-        self._dll_start_live(self.__handle, False)
+        for _ in range(BURST_RETRIES):
+            try:
+                self._dll_start_live(self.__handle, False)
+            except ImagingSourceError:
+                # Failed, try again.
+                pass
+            else:
+                # Succeeded, no need to repeat.
+                return
+        raise ImagingSourceError('The camera was unable to restart after '
+                                 'aborting burst mode.')
 
     _dll_close_device = _dll.IC_CloseVideoCaptureDevice
     _dll_close_device.restype = None  # Returns void
