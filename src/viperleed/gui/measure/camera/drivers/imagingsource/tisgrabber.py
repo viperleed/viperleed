@@ -826,8 +826,8 @@ class WindowsCamera:
             else:
                 # Succeeded, no need to repeat.
                 return
-        raise ImagingSourceError('The camera was unable to acquire '
-                                 'images in burst mode.')
+        raise ImagingSourceError('The camera was unable to restart after '
+                                 'aborting burst mode.')
 
     _dll_close_device = _dll.IC_CloseVideoCaptureDevice
     _dll_close_device.restype = None  # Returns void
