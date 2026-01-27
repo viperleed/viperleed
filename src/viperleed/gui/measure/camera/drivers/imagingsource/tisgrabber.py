@@ -64,8 +64,7 @@ c_float_p = POINTER(c_float)
 c_long_p = POINTER(c_long)
 c_int_p = POINTER(c_int)
 
-# Number of retries for burst operations; empirically, a single retry
-# has been sufficient, so keep this low to fail fast and aid diagnostics.
+# Number of retries for burst operations; so far one retry has been sufficient
 BURST_RETRIES = 3
 
 
