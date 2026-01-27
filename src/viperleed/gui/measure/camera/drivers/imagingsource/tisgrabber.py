@@ -64,6 +64,8 @@ c_float_p = POINTER(c_float)
 c_long_p = POINTER(c_long)
 c_int_p = POINTER(c_int)
 
+BURST_RETRIES = 5
+
 
 def get_dll_path():
     """Return the path to the dll files."""
@@ -815,7 +817,7 @@ class WindowsCamera:
         if not self.is_running or not self.trigger_enabled:
             return
         self.pause()
-        for _ in range(5):
+        for _ in range(BURST_RETRIES):
             try:
                 self._dll_start_live(self.__handle, False)
             except ImagingSourceError:
