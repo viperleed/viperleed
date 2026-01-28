@@ -231,8 +231,8 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
 
     # plotting
     if rp.PLOT_IV['plot']:
-        exp_data = exp_spline(out_grid)
-        theo_data = theo_spline(out_grid)
+        exp_data = np.array(exp_spline(out_grid))
+        theo_data = np.array(theo_spline(out_grid))
         outname = f"Rfactor_plots_{name}.pdf"
         rfac_str = ["R = {:.4f}".format(r) for r in r_fac_per_beam]
         labelstyle = "overbar" if rp.PLOT_IV["overbar"] else "minus"
