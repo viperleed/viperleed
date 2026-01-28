@@ -64,9 +64,10 @@ def R_s(
     exp_spline,
     alpha=4.0,
     beta=0.15,
+    theo_shift=0.0,
     **kwargs,
 ):
-    # Experimental data
+    # Experimental data (cacheable via CachedSpline)
     exp_deriv_1_spline = exp_spline.derivative()
     exp_deriv_2_spline = exp_deriv_1_spline.derivative()
 
@@ -74,30 +75,24 @@ def R_s(
     exp_derivative_1 = exp_deriv_1_spline(energy_grid)
     exp_derivative_2 = exp_deriv_2_spline(energy_grid)
 
+    y_exp = y_s(
+        exp_intensity, exp_derivative_1, exp_derivative_2,
+        v0_imag, energy_step, alpha=alpha, beta=beta
+    )
+
     # Theory data
     theo_deriv_1_spline = theo_spline.derivative()
     theo_deriv_2_spline = theo_deriv_1_spline.derivative()
 
-    theo_intensity = theo_spline(energy_grid)
-    # shift theo_intensity to be non-negative
-    theo_intensity = shift_theo_intensity_non_negative(
-        theo_intensity, exp_intensity
-    )
+    shifted_grid = energy_grid - theo_shift
+    theo_intensity = theo_spline(shifted_grid)
+    theo_intensity = shift_theo_intensity_non_negative(theo_intensity, exp_intensity)
+    theo_derivative_1 = theo_deriv_1_spline(shifted_grid)
+    theo_derivative_2 = theo_deriv_2_spline(shifted_grid)
 
-    theo_derivative_1 = theo_deriv_1_spline(energy_grid)
-    theo_derivative_2 = theo_deriv_2_spline(energy_grid)
-
-    y_exp = y_s(
-        exp_intensity, exp_derivative_1, exp_derivative_2, v0_imag, energy_step
-    )
     y_theo = y_s(
-        theo_intensity,
-        theo_derivative_1,
-        theo_derivative_2,
-        v0_imag,
-        energy_step,
-        alpha=alpha,
-        beta=beta,
+        theo_intensity, theo_derivative_1, theo_derivative_2,
+        v0_imag, energy_step, alpha=alpha, beta=beta
     )
 
     return R_pendry_from_y(y_exp, y_theo, energy_step, **kwargs)

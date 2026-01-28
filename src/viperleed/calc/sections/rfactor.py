@@ -157,24 +157,20 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         y=exp_intensities,
         bc_type='not-a-knot',  # TODO: from Rfactor parameter?
     )
+    exp_spline = spline_interpolation.CachedSpline(exp_spline)
 
     ## theory
-    (theo_grid, _, _, theo_intensities) = iorfactor.beamlist_to_array(
-        theobeams
+    (theo_grid, _, _, theo_intensities) = iorfactor.beamlist_to_array(theobeams)
+    theo_intensities = average_beam_array(theo_intensities, beam_correspondence)
+    theo_spline = spline_interpolation.interpolate_ragged_array(
+        x=theo_grid,
+        y=theo_intensities,
+        bc_type='not-a-knot',  # TODO: from Rfactor parameter?
     )
-    theo_intensities = average_beam_array(
-        theo_intensities, beam_correspondence
-    )
-
-    def theo_spline_with_offset(offset):
-        return spline_interpolation.interpolate_ragged_array(
-            x=theo_grid + offset,
-            y=theo_intensities,
-            bc_type='not-a-knot',  # TODO: from Rfactor parameter?
-        )
+    theo_spline = spline_interpolation.CachedSpline(theo_spline)
 
     logger.debug('Sweeping V0r...')
-    # sweep V0r shifts - TODO: continous shifts?
+    # sweep V0r shifts - TODO: continuous shifts?
     shifts = np.arange(
         rp.IV_SHIFT_RANGE.start,
         rp.IV_SHIFT_RANGE.stop + rp.IV_SHIFT_RANGE.step,
@@ -182,7 +178,6 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     )
     r_values = []
     for shift in shifts:
-        theo_spline = theo_spline_with_offset(shift)
         r_values.append(
             r_func(
                 theo_spline,
@@ -191,6 +186,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
                 out_grid,
                 exp_spline,
                 groups=None,
+                theo_shift=shift,
             )
         )
 
@@ -203,12 +199,25 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         f'with R = {r_values[best_index]:.4f}'
     )
     rp.best_v0r = best_shift
-    theo_spline = theo_spline_with_offset(best_shift)
 
-    # calculate R-factors
+    if best_shift != 0:
+        # re-build theoretical splines one more time on the shifted grid
+        theo_spline = spline_interpolation.interpolate_ragged_array(
+            x=theo_grid + best_shift,
+            y=theo_intensities,
+            bc_type='not-a-knot',  # TODO: from Rfactor parameter?
+            )
+        theo_spline = spline_interpolation.CachedSpline(theo_spline)
+
+    # calculate R-factors at best shift
     logger.debug('Calculating R-factors...')
     r_fac_overall = r_func(
-        theo_spline, rp.V0_IMAG, intpol_step, out_grid, exp_spline, groups=None
+        theo_spline,
+        rp.V0_IMAG,
+        intpol_step,
+        out_grid,
+        exp_spline,
+        groups=None,
     )
 
     integer_fractional_mask = determine_integer_or_fractional(rp)
@@ -221,6 +230,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         groups=integer_fractional_mask,
         num_groups=2,
     )
+
     r_fac_per_beam = r_func(
         theo_spline,
         rp.V0_IMAG,

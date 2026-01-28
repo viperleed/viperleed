@@ -13,6 +13,40 @@ import numpy as np
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
+class CachedSpline:
+    """
+    Proxy that caches derivative splines and last evaluation.
+    Assumes spline is pure: same x -> same y.
+    """
+    __slots__ = ("_s", "_deriv_cache", "_last_x_id", "_last_y")
+
+    def __init__(self, spline):
+        self._s = spline
+        self._deriv_cache = {}  # key: (args, frozenset(kwargs.items()))
+        self._last_x_id = None
+        self._last_y = None
+
+    def __call__(self, x):
+        x_id = id(x)
+        if x_id == self._last_x_id:
+            return self._last_y
+        y = self._s(x)
+        self._last_x_id = x_id
+        self._last_y = y
+        return y
+
+    def derivative(self, *args, **kwargs):
+        key = (args, tuple(sorted(kwargs.items())))
+        if key not in self._deriv_cache:
+            self._deriv_cache[key] = CachedSpline(self._s.derivative(*args,
+                                                                     **kwargs))
+        return self._deriv_cache[key]
+
+    def __getattr__(self, name):
+        # delegate anything else (e.g., extrapolate, c, x, etc.)
+        return getattr(self._s, name)
+
+
 def make_1d_ragged_cubic_spline(
     x, y, axis=0, bc_type='not-a-knot', extrapolate=False
 ):

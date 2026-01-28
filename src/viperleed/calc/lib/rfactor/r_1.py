@@ -9,7 +9,8 @@ from .groups import group_rfactors
 from .utils import nansum_trapezoid
 
 
-def R_1(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs):
+def R_1(theo_spline, v0_imag, energy_step, energy_grid, exp_spline,
+        theo_shift=0.0, **kwargs):
     """
     Notes
     -----
@@ -19,7 +20,7 @@ def R_1(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs):
     exp_intensity = exp_spline(energy_grid)
 
     # theory
-    theo_intensity = theo_spline(energy_grid)
+    theo_intensity = theo_spline(energy_grid - theo_shift)
 
     # calculate normalization for each beam
     beam_normalization = nansum_trapezoid(
