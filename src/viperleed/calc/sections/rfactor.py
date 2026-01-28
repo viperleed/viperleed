@@ -21,6 +21,7 @@ from viperleed.calc.constants import DEFAULT_OUT, DEFAULT_SUPP, DEFAULT_TENSORS
 from viperleed.calc.files import iorfactor, iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
 from viperleed.calc.files.iorfactor import beamlist_to_array
+from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import fs_utils, leedbase, spline_interpolation
 from viperleed.calc.lib import rfactor as rfactor_lib
 from viperleed.calc.lib.checksums import validate_multiple_files
@@ -230,8 +231,24 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
 
     # plotting
     if rp.PLOT_IV['plot']:
-        logger.warning(
-            'Plotting not yet implemented for new R-factor calculation. (TODO)'
+        exp_data = exp_spline(out_grid)
+        theo_data = theo_spline(out_grid)
+        outname = f"Rfactor_plots_{name}.pdf"
+        rfac_str = ["R = {:.4f}".format(r) for r in r_fac_per_beam]
+        labelstyle = "overbar" if rp.PLOT_IV["overbar"] else "minus"
+        labelwidth = max(beam.getLabel(style=labelstyle)[1]
+                         for beam in rp.expbeams)
+        labels = [(b.getLabel(lwidth=labelwidth, style=labelstyle)[0], r)
+                  for b, r in zip(rp.expbeams, r_fac_per_beam)]
+        plot_iv([theo_data, exp_data],
+                outname,
+                legends=['Theoretical', 'Experimental'],
+                labels=labels,
+                annotations=rfac_str,
+                formatting=rp.PLOT_IV)
+        logger.debug(
+            'R-factor analysis file not yet implemented for new R-factor '
+            'calculation. (TODO)'   # TODO: implement R-factor analysis
         )
 
     # store R-factors
