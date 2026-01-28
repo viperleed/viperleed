@@ -10,7 +10,8 @@ from .utils import nansum_trapezoid
 from .groups import group_rfactors
 
 
-def R_zj(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs):
+def R_zj(theo_spline, v0_imag, energy_step, energy_grid, exp_spline,
+         theo_shift=0.0, **kwargs):
     # Experimental data
     exp_deriv_1_spline = exp_spline.derivative()
     exp_deriv_2_spline = exp_deriv_1_spline.derivative()
@@ -28,12 +29,13 @@ def R_zj(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs):
     theo_deriv_1_spline = theo_spline.derivative()
     theo_deriv_2_spline = theo_deriv_1_spline.derivative()
 
-    theo_intensity = theo_spline(energy_grid)
+    shifted_grid = energy_grid - theo_shift
+    theo_intensity = theo_spline(shifted_grid)
     theo_mask = dnl.xp.isnan(theo_intensity)
     mask = dnl.xp.logical_or(exp_mask, theo_mask)
 
-    theo_derivative_1 = theo_deriv_1_spline(energy_grid)
-    theo_derivative_2 = theo_deriv_2_spline(energy_grid)
+    theo_derivative_1 = theo_deriv_1_spline(shifted_grid)
+    theo_derivative_2 = theo_deriv_2_spline(shifted_grid)
 
     # apply mask to theory as well
     theo_intensity = dnl.xp.where(mask, 0.0, theo_intensity)

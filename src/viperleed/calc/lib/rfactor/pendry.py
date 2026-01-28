@@ -12,7 +12,8 @@ from .utils import nansum_trapezoid, shift_theo_intensity_non_negative
 
 
 def R_pendry(
-    theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs
+    theo_spline, v0_imag, energy_step, energy_grid, exp_spline,
+    theo_shift=0.0, **kwargs
 ):
     """Calculate the R-factor for two beams."""
     # Experimental data
@@ -24,13 +25,14 @@ def R_pendry(
     # Theory data
     theo_deriv_spline = theo_spline.derivative()
 
-    theo_intensity = theo_spline(energy_grid)
+    shifted_grid = energy_grid - theo_shift
+    theo_intensity = theo_spline(shifted_grid)
     # shift theo_intensity to be non-negative
     theo_intensity = shift_theo_intensity_non_negative(
         theo_intensity, exp_intensity
     )
 
-    theo_derivative = theo_deriv_spline(energy_grid)
+    theo_derivative = theo_deriv_spline(shifted_grid)
 
     exp_y = y_pendry(exp_intensity, exp_derivative, v0_imag)
     theo_y = y_pendry(theo_intensity, theo_derivative, v0_imag)
