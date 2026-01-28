@@ -167,6 +167,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     logger.debug(f'Beam correspondence: {beam_correspondence}')
 
     # calculate splines from the spectra
+    logger.debug('Constructing splines from data...')
 
     ## experiment
     exp_energies, _, _, exp_intensities = beamlist_to_array(rp.expbeams)
