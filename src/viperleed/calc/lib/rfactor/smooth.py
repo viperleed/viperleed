@@ -11,7 +11,8 @@ from .pendry import R_pendry_from_y
 from .utils import shift_theo_intensity_non_negative
 
 
-def R_ms(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs):
+def R_ms(theo_spline, v0_imag, energy_step, energy_grid, exp_spline,
+         theo_shift=0.0, **kwargs):
     # Experimental data
     exp_deriv_1_spline = exp_spline.derivative()
     exp_deriv_2_spline = exp_deriv_1_spline.derivative()
@@ -24,14 +25,15 @@ def R_ms(theo_spline, v0_imag, energy_step, energy_grid, exp_spline, **kwargs):
     theo_deriv_1_spline = theo_spline.derivative()
     theo_deriv_2_spline = theo_deriv_1_spline.derivative()
 
-    theo_intensity = theo_spline(energy_grid)
+    shifted_grid = energy_grid - theo_shift
+    theo_intensity = theo_spline(shifted_grid)
     # shift theo_intensity to be non-negative
     theo_intensity = shift_theo_intensity_non_negative(
         theo_intensity, exp_intensity
     )
 
-    theo_derivative_1 = theo_deriv_1_spline(energy_grid)
-    theo_derivative_2 = theo_deriv_2_spline(energy_grid)
+    theo_derivative_1 = theo_deriv_1_spline(shifted_grid)
+    theo_derivative_2 = theo_deriv_2_spline(shifted_grid)
 
     y_exp = y_ms(
         exp_intensity, exp_derivative_1, exp_derivative_2, v0_imag, energy_step
