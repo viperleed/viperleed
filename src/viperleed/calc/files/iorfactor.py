@@ -970,3 +970,85 @@ def beamlist_to_array(beams):
 
     return in_grid, id_start, n_E_beams, beam_arr
 
+
+@log_without_matplotlib(logger, msg='Skipping R-factor plotting.')
+def write_Rfactorpdf_from_splines(
+        rpars,
+        theo_spline,
+        exp_spline,
+        out_grid,
+        r_fac_per_beam,
+        outname='Rfactor_plots.pdf',
+        analysis_file='',
+        ):
+    '''
+    Creates a single PDF file containing the plots of R-factors, using plot_iv.
+    If analysis_file is defined, a second 'analysis' PDF will be generated.
+    # TODO: Actually generate analysis files! #
+
+    Parameters
+    ----------
+    rp : Rparams
+        The object holding information about the current PARAMETERS.
+        Attributes used: PLOT_IV, expbeams
+    theo_spline : scipy.interpolate.PPoly or jaxlib.xla_extension.ArrayImpl
+        interpolation splines of theoretical I(V) data
+    exp_spline : scipy.interpolate.PPoly or jaxlib.xla_extension.ArrayImpl
+        interpolation splines of experimental I(V) data
+    out_grid : np.array of float
+        the grid on which to evaluate the splines
+    r_fac_per_beam : np.array of float
+        the R-factors per beam, in the same order as the beam data
+    outname : kwarg, str
+        name of the file (with or without extension) to which the plots
+        will be saved.
+        default: 'Rfactor_plots.pdf'
+    analysis_file : kwarg, string
+        if not empty, a more extensive R-factor analysis pdf with
+        calculated Y-functions and absolute errors will be written to the
+        given file name.
+
+    Returns
+    -------
+    None
+
+    '''
+    exp_data = np.asarray(exp_spline(out_grid))
+    theo_data = np.asarray(theo_spline(out_grid))
+    xy_theo = []
+    xy_exp = []
+    for i in range(len(rpars.expbeams)):
+        intens_theo = theo_data[:, i]
+        intens_exp = exp_data[:, i]
+        # keep only points where BOTH are finite (non-NaN, non-inf)
+        m = np.isfinite(intens_theo) & np.isfinite(intens_exp)
+        if not np.any(m):
+            # nothing to plot for this beam; keep empty arrays
+            xy_theo.append(np.empty((0, 2)))
+            xy_exp.append(np.empty((0, 2)))
+            continue
+        # select overlapping range and normalize
+        plot_grid  = out_grid[m]
+        plot_intens_theo = intens_theo[m] / max(intens_theo[m])
+        plot_intens_exp = intens_exp[m] / max(intens_exp[m])
+        xy_theo.append(np.column_stack([plot_grid, plot_intens_theo]))
+        xy_exp.append(np.column_stack([plot_grid, plot_intens_exp]))
+    rfac_str = ["R = {:.4f}".format(r) for r in r_fac_per_beam]
+    labelstyle = "overbar" if rpars.PLOT_IV["overbar"] else "minus"
+    labelwidth = max(beam.getLabel(style=labelstyle)[1]
+                     for beam in rpars.expbeams)
+    labels = [b.getLabel(lwidth=labelwidth, style=labelstyle)[0]
+              for b in rpars.expbeams]
+    plot_iv([xy_theo, xy_exp],
+            outname,
+            legends=['Theoretical', 'Experimental'],
+            labels=labels,
+            annotations=rfac_str,
+            formatting=rpars.PLOT_IV
+            )
+    logger.debug(
+        'R-factor analysis file not yet implemented for new R-factor '
+        'calculation. (TODO)'   # TODO: implement R-factor analysis
+    )
+        
+        
