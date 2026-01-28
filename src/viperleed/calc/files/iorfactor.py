@@ -885,6 +885,7 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
     axs[1].legend()
 
 
+# TODO: delete obsolete writeRfactorPdf_new ??
 @log_without_matplotlib(logger, msg='Skipping R-factor plotting.')
 def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
                         energies, id_start,
