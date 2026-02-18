@@ -6,6 +6,7 @@ from a camera and computes a pixel-badness array.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
+    'Florian Dörr (@FlorianDoerr)',
     )
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-10-09'
@@ -172,8 +173,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         self._current_section = _FinderSection.ACQUIRE_DARK_SHORT
 
         # _badness contains a measure of the badness of
-        # each pixel. 'Normal' pixels have badness 0, bad
-        # pixels have badness >= 6, very good pixels < 0.
+        # each pixel. 'Normal' pixels have badness 3.75, bad
+        # pixels have badness >= 9.75, very good pixels < 3.75.
         self._badness = np.zeros((height, width), dtype=float)
 
         # __bad_pixels will contain info about bad
@@ -328,7 +329,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
                             (0, 2), (1, 2), (2, 1), (1, -2), (2, -1)))
         badness = self._badness.copy()
 
-        bad_coords = np.asarray(np.where(badness >= 6))
+        bad_coords = np.asarray(np.where(badness >= 9.75))
         bad_y, bad_x = bad_coords
         badness[bad_y, bad_x] = np.inf
         width, height = badness.shape
@@ -390,7 +391,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         Dead pixels are those whose intensity is much smaller
         than the average of the neighbours (excluding flickery
         and hot pixels). This method adds to the badness the
-        ratio I_neighbors/I_pixel - 1.
+        ratio I_neighbors/I_pixel.
 
         Return
         ------
@@ -412,7 +413,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         flat_bad = flat + offset
         flat_bad_ones = np.ones(flat_bad.shape)  # for counting
 
-        bad_px_mask = self._badness >= 6
+        bad_px_mask = self._badness >= 8.75
 
         flat_bad[bad_px_mask] = 0
         flat_bad_ones[bad_px_mask] = 0
@@ -434,7 +435,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
 
         # As will those that have both zero neighbour average
         # and zero intensity (dead in a cluster of bad ones)
-        delta_badness = neighbor_ave / flat - 1
+        delta_badness = neighbor_ave / flat
         delta_badness[np.isnan(delta_badness)] = np.inf
 
         self._badness += delta_badness
@@ -544,11 +545,11 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         self._badness = np.zeros_like(long_flicker)
 
         # The conditional checks prevent division by zero for very good
-        # cameras. '-1' --> badness == 0 for normally flickery pixels
+        # cameras.
         if short_mean:
-            self._badness += short_flicker / short_mean - 1
+            self._badness += short_flicker / short_mean
         if long_mean:
-            self._badness += long_flicker / long_mean - 1
+            self._badness += long_flicker / long_mean
 
     def _find_long_term_flickery_pixels(self):
         """Calculate badness for pixels with sporadic burst noise.
@@ -559,8 +560,10 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         picked up by each pixel. The threshold when a pixel is
         considered to have too much telegraph noise is when the
         flicker of the pixel is about 3 times the average flicker.
-        (3-1)^2 * 1.5 = 6,
-        where 6 is the threshold used for the total badness.
+        3^2 * 0.75 = 6.75,
+        where (6.75 + 3) is the threshold used for the total badness.
+        (The +3 is attained if the pixel shows average badness in the
+        other parts of the calculation.)
 
         To determine the long-term flickering we use a medium exposure
         time with a very high frame count. The overall measurement for
@@ -573,7 +576,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """
         flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].range_
         flicker_mean = flicker.mean()
-        self._badness += ((flicker / flicker_mean - 1)**2) * 1.5
+        self._badness += (flicker / flicker_mean)**2 * 0.75
 
     @qtc.pyqtSlot()
     def _trigger_next_frame(self, *_):
