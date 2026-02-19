@@ -560,7 +560,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         picked up by each pixel. The threshold when a pixel is
         considered to have too much telegraph noise is when the
         flicker of the pixel is about 3 times the average flicker.
-        (3^2 - 1)* 0.75 = 6,
+        (3**2 - 1)*0.75 = 6,
         where 6 is the threshold used for the total badness.
 
         To determine the long-term flickering we use a medium exposure
@@ -574,7 +574,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """
         flicker = self._imgs[_FinderSection.ACQUIRE_DARK_MEDIUM].range_
         flicker_mean = flicker.mean()
-        self._badness += ((flicker / flicker_mean)**2 - 1) * 0.75
+        if flicker_mean:
+            self._badness += ((flicker / flicker_mean)**2 - 1) * 0.75
 
     @qtc.pyqtSlot()
     def _trigger_next_frame(self, *_):
