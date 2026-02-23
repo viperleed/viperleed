@@ -41,11 +41,11 @@ class TestEnsureAliasesExist:
     """Tests for the ensure_aliases_exist function."""
 
     def test_merges_installed_and_user(self, tmp_path, mocker):
-        """Check that user changes to their aliases.ini are retained."""
+        """Check that old aliases are overwritten and other aliases stay."""
         user_aliases = tmp_path / 'aliases.ini'
-        user_aliases.write_text('[Foo]\nchanged=user')
+        user_aliases.write_text('[Foo]\nstays_user=stays1\nchanged=user')
         installed_aliases = ConfigParser()
-        installed_aliases.read_string('[Foo]\nstays=stays\nchanged=installed')
+        installed_aliases.read_string('[Foo]\nstays_installed=stays2\nchanged=installed')
         defaults = tmp_path / '_defaults'
         defaults.mkdir()
         with (defaults/'_aliases.ini').open('w') as installed_ini:
@@ -56,8 +56,9 @@ class TestEnsureAliasesExist:
         merged_aliases = ConfigParser()
         merged_aliases.read(user_aliases)
         # pylint: disable=magic-value-comparison
-        assert merged_aliases['Foo']['stays'] == 'stays'
-        assert merged_aliases['Foo']['changed'] == 'user'
+        assert merged_aliases['Foo']['stays_user'] == 'stays1'
+        assert merged_aliases['Foo']['stays_installed'] == 'stays2'
+        assert merged_aliases['Foo']['changed'] == 'installed'
         # pylint: enable=magic-value-comparison
 
     def test_new_aliases_written(self, tmp_path, mocker):
