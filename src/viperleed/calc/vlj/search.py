@@ -147,7 +147,7 @@ def vlj_search(slab, rpars):
     used_v0r = float(used_v0r[0])
     logger.info(
         f'R-factor for unperturbed structure: {starting_R:.4f} with inner '
-        f' potential shift of {used_v0r:.2f} eV.'
+        f'potential shift of {used_v0r:.2f} eV.'
     )
 
     for optimizer_id, (optimizer, result) in enumerate(optimizer_iterator):
