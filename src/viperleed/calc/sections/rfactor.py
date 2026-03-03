@@ -203,9 +203,10 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
                 rp.V0_IMAG,
                 intpol_step,
                 out_grid,
-                exp_spline,
+                data_spline_1=exp_spline,
+                data_spline_2=theo_spline,
+                shift_2nd_spline=shift,
                 groups=None,
-                theo_shift=shift,
             )
         )
 
@@ -231,31 +232,31 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     # calculate R-factors at best shift
     logger.debug('Calculating R-factors...')
     r_fac_overall = r_func(
-        theo_spline,
         rp.V0_IMAG,
         intpol_step,
         out_grid,
-        exp_spline,
+        data_spline_1=exp_spline,
+        data_spline_2=theo_spline,
         groups=None,
-    )
+        )
 
     integer_fractional_mask = determine_integer_or_fractional(rp)
     r_fac_integer, r_fac_fractional = r_func(
-        theo_spline,
         rp.V0_IMAG,
         intpol_step,
         out_grid,
-        exp_spline,
+        data_spline_1=exp_spline,
+        data_spline_2=theo_spline,
         groups=integer_fractional_mask,
         num_groups=2,
     )
 
     r_fac_per_beam = r_func(
-        theo_spline,
         rp.V0_IMAG,
         intpol_step,
         out_grid,
-        exp_spline,
+        data_spline_1=exp_spline,
+        data_spline_2=theo_spline,
         groups='beam',
     )
 
