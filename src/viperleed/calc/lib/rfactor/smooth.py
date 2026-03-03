@@ -1,7 +1,8 @@
 """viperleed.calc.lib.rfactor.smooth."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__authors__ = ('Alexander M. Imre (@amimre)',
+               'Florian Kraushofer (@fkraushofer)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
@@ -11,93 +12,108 @@ from .pendry import R_pendry_from_y
 from .utils import shift_theo_intensity_non_negative
 
 
-def R_ms(theo_spline, v0_imag, energy_step, energy_grid, exp_spline,
-         theo_shift=0.0, **kwargs):
-    # Experimental data
-    exp_deriv_1_spline = exp_spline.derivative()
-    exp_deriv_2_spline = exp_deriv_1_spline.derivative()
-
-    exp_intensity = exp_spline(energy_grid)
-    exp_derivative_1 = exp_deriv_1_spline(energy_grid)
-    exp_derivative_2 = exp_deriv_2_spline(energy_grid)
-
-    # Theory data
-    theo_deriv_1_spline = theo_spline.derivative()
-    theo_deriv_2_spline = theo_deriv_1_spline.derivative()
-
-    shifted_grid = energy_grid - theo_shift
-    theo_intensity = theo_spline(shifted_grid)
-    # shift theo_intensity to be non-negative
-    theo_intensity = shift_theo_intensity_non_negative(
-        theo_intensity, exp_intensity
-    )
-
-    theo_derivative_1 = theo_deriv_1_spline(shifted_grid)
-    theo_derivative_2 = theo_deriv_2_spline(shifted_grid)
-
-    y_exp = y_ms(
-        exp_intensity, exp_derivative_1, exp_derivative_2, v0_imag, energy_step
-    )
-    y_theo = y_ms(
-        theo_intensity,
-        theo_derivative_1,
-        theo_derivative_2,
-        v0_imag,
-        energy_step,
-    )
-
-    return R_pendry_from_y(y_exp, y_theo, energy_step, **kwargs)
-
-
-def y_ms(intensity, first_derivative, second_derivative, v0_imag, e_step):
-    numerator = first_derivative
-    condition = second_derivative > 0
-    denominator = intensity**2 + 0.5 * (first_derivative * v0_imag) ** 2
-    denominator += condition * 0.1 * (second_derivative * v0_imag**2) ** 2
-    denominator = dnl.xp.sqrt(denominator)
-    return numerator / denominator
-
-
 def R_s(
-    theo_spline,
     v0_imag,
     energy_step,
     energy_grid,
-    exp_spline,
+    data_spline_1=None,
+    data_and_derivatives_1=None,
+    data_spline_2=None,
+    data_and_derivatives_2=None,
+    shift_2nd_spline=0.0,   # only available if passed as spline
     alpha=4.0,
     beta=0.15,
-    theo_shift=0.0,
     **kwargs,
-):
-    # Experimental data (cacheable via CachedSpline)
-    exp_deriv_1_spline = exp_spline.derivative()
-    exp_deriv_2_spline = exp_deriv_1_spline.derivative()
+    ):
+    """
+    Smooth R-factor, see
+    https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
+    Uses two sets of beam data, either passed as splines or as already
+    calculated arrays of intensities and derivatives. When comparing
+    experimental and theoretical data, the theoretical data should be the
+    second dataset, as this is also shifted to correct for non-negative values.
 
-    exp_intensity = exp_spline(energy_grid)
-    exp_derivative_1 = exp_deriv_1_spline(energy_grid)
-    exp_derivative_2 = exp_deriv_2_spline(energy_grid)
+    For each dataset, pass either data_spline or data_and_derivatives, but not
+    both. Using splines for one and pre-computed data for the other is allowed.
 
-    y_exp = y_s(
-        exp_intensity, exp_derivative_1, exp_derivative_2,
-        v0_imag, energy_step, alpha=alpha, beta=beta
+    Parameters
+    ----------
+    v0_imag : float
+        The imaginary part of the inner potential.
+    energy_step : float
+        The energy step of the data grid.
+    energy_grid : array
+        The grid on which data should be evaluated. All evaluations will ignore
+        regions in which either of the datasets is nan.
+    data_spline_1, data_spline_2 : arrays of splines
+        Splines of the data, which will be evaluated on energy_grid. Need to be
+        at least cubic for calculating derivatives. Ignored if the respective
+        data_and_derivatives are passed.
+    data_and_derivatives_1, data_and_derivatives_2 : 3-tuples of float arrays
+        Pre-evaluated tuples (intensity, 1st derivative, 2nd derivative) at the
+        energy_grid points. This avoids re-calculation of splines and is more
+        JAX-friendly.
+    shift_2nd_spline : float, optional
+        Evaluate the 2nd spline on a shifted energy grid. This is meant for
+        testing V0r variations. Note that this is NOT available when the 2nd
+        dataset is passed as data_and_derivatives.
+    alpha : float, optional
+        Tuning parameter, default 4.0.
+        Determines the influence of the intensity offset of the minimum, see
+        https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
+    beta : float, optional
+        Tuning parameter, default 0.15.
+        Determines the behaviour at a minimum reaching zero intensity, see
+        https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
+    """
+    
+    # Get data either as splines or as pre-computed arrays (mainly for JAX)
+    if data_and_derivatives_1 is None:
+        if data_spline_1 is None:
+            raise TypeError('R_s requires either data splines or pre-computed '
+                            'data_and_derivatives arrays.')
+        # when using splines, this can be sped up via CashedSplines
+        data_1_deriv_1_spline = data_spline_1.derivative()
+        data_1_deriv_2_spline = data_1_deriv_1_spline.derivative()
+        data_1_intensity = data_spline_1(energy_grid)
+        data_1_derivative_1 = data_1_deriv_1_spline(energy_grid)
+        data_1_derivative_2 = data_1_deriv_2_spline(energy_grid)
+    else:
+        data_1_intensity, data_1_derivative_1, data_1_derivative_2 = (
+            data_and_derivatives_1
+            )
+    # 2nd data also uses shifted grid if spline
+    shifted_grid = energy_grid - shift_2nd_spline
+    if data_and_derivatives_2 is None:
+        if data_spline_2 is None:
+            raise TypeError('R_s requires either data splines or pre-computed '
+                            'data_and_derivatives arrays.')
+        # when using splines, this can be sped up via CashedSplines
+        data_2_deriv_1_spline = data_spline_2.derivative()
+        data_2_deriv_2_spline = data_2_deriv_1_spline.derivative()
+        # evaluate on shifted grid, allowing continuous shifts
+        data_2_intensity = data_spline_2(shifted_grid)
+        data_2_derivative_1 = data_2_deriv_1_spline(shifted_grid)
+        data_2_derivative_2 = data_2_deriv_2_spline(shifted_grid)
+    else:
+        data_2_intensity, data_2_derivative_1, data_2_derivative_2 = (
+            data_and_derivatives_2
+            )
+    # shift data_2 to be non-negative in overlapping regions. This should fix
+    #  any potential issues cause by undershooting splines.
+    data_2_intensity = shift_theo_intensity_non_negative(data_2_intensity,
+                                                         data_1_intensity)
+
+    y_1 = y_s(
+        data_1_intensity, data_1_derivative_1, data_1_derivative_2,
+        v0_imag, alpha=alpha, beta=beta
+    )
+    y_2 = y_s(
+        data_2_intensity, data_2_derivative_1, data_2_derivative_2,
+        v0_imag, alpha=alpha, beta=beta
     )
 
-    # Theory data
-    theo_deriv_1_spline = theo_spline.derivative()
-    theo_deriv_2_spline = theo_deriv_1_spline.derivative()
-
-    shifted_grid = energy_grid - theo_shift
-    theo_intensity = theo_spline(shifted_grid)
-    theo_intensity = shift_theo_intensity_non_negative(theo_intensity, exp_intensity)
-    theo_derivative_1 = theo_deriv_1_spline(shifted_grid)
-    theo_derivative_2 = theo_deriv_2_spline(shifted_grid)
-
-    y_theo = y_s(
-        theo_intensity, theo_derivative_1, theo_derivative_2,
-        v0_imag, energy_step, alpha=alpha, beta=beta
-    )
-
-    return R_pendry_from_y(y_exp, y_theo, energy_step, **kwargs)
+    return R_pendry_from_y(y_1, y_2, energy_step, **kwargs)
 
 
 def y_s(
@@ -105,7 +121,6 @@ def y_s(
     first_derivative,
     second_derivative,
     v0_imag,
-    e_step,
     alpha=4.0,
     beta=0.15,
 ):
