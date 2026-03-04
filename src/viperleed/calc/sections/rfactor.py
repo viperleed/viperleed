@@ -181,7 +181,6 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     for shift in shifts:
         r_values.append(
             r_func(
-                theo_spline,
                 rp.V0_IMAG,
                 intpol_step,
                 out_grid,
