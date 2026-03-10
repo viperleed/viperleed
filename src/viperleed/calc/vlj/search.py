@@ -155,7 +155,7 @@ def vlj_search(slab, rpars):
             f'Optimizer {optimizer.name} finished with best '
             f'R = {result.best_R:.4f}'
         )
-        logger.debug(f'Optimizer result:\n{result}')
+        logger.debug(f'Optimizer result:\n{result.best_x}')
 
         # write intermediate results to files
         tmp_slab = copy.deepcopy(slab)
