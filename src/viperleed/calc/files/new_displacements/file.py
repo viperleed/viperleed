@@ -69,7 +69,8 @@ class DisplacementsFile(NodeMixin):
         """
         self._child_id = 0
         for child in self.children:
-            child.reset_iterator()
+            if isinstance(child, LoopBlock):
+                child.reset_iterator()
 
     @property
     def offsets(self):
