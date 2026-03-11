@@ -62,6 +62,15 @@ class DisplacementsFile(NodeMixin):
         if not self._has_been_read:
             raise ValueError('File has not been read yet. Call read() first.')
 
+    def reset_iterator(self):
+        """
+        Reset to the beginning of the displacement file, e.g. when search
+        repeats after a new reference calculation.
+        """
+        self._child_id = 0
+        for child in self.children:
+            child.reset_iterator()
+
     @property
     def offsets(self):
         """Return the OFFSETS block if present, else None."""
