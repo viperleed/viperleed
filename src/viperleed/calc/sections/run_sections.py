@@ -223,8 +223,15 @@ def run_section(index, sl, rp):
                 # check dependencies
                 check_vlj_dependencies()
 
-                # initialize the TensorLEED calculator
-                vlj_search(sl, rp)
+                # run the TensorLEED calculator; NO built-in loop,
+                #  stop when it returns StopIteration
+                while True:
+                    try:
+                        vlj_search(sl, rp)
+                    except StopIteration:
+                        break
+                # reset the iterator
+                rp.vlj_displacements.reset_iterator()
             else:
                 search.search(sl, rp)
         elif index == 31:

@@ -274,6 +274,16 @@ class LoopBlock(DisplacementsSegmentABC):
         self._current_child_id = 0
         self._subsegments = (SearchBlock, LoopBlock)
 
+    def reset_iterator(self):
+        """
+        Reset to the beginning of the displacement file, e.g. when search
+        repeats after a new reference calculation.
+        """
+        self._current_child_id = 0
+        for child in self.children:
+            if isinstance(child, LoopBlock):
+                child.reset_iterator()
+
     @staticmethod
     def is_my_header_line(line):
         """Loops are started by Loop start lines."""
