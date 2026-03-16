@@ -412,7 +412,7 @@ def initialization(sl, rp, subdomain=False):
         return
 
     # viperleed_jax Plugin related initialization
-    if rp.BACKEND['search'] == SearchBackend.VLJ:
+    if rp.BACKEND['search'] == SearchBackend.VLJ and 3 in rp.RUN:
         logger.debug("Initializing viperleed-jax backend")
 
         if mp.get_start_method() != 'spawn':
@@ -947,6 +947,7 @@ def _read_inputs_for_domain(domain, main_rpars):
     rpars.inherit_from(main_rpars, *inherited)
     # It is crucial that some others are identical:
     inherit_and_override = (
+        'BACKEND',
         'TL_VERSION',
         )
     rpars.inherit_from(main_rpars, *inherit_and_override, override=True)
