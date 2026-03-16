@@ -38,6 +38,7 @@ _LOGGER = logging.getLogger(parent_name(__name__))
 KNOWN_PARAMS = (
     'ATTENUATION_EPS',
     'AVERAGE_BEAMS',
+    'BACKEND',
     'BEAM_INCIDENCE',
     'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX',
@@ -99,6 +100,11 @@ KNOWN_PARAMS = (
     'V0_Z_ONSET',
     'VIBR_AMP_SCALE',
     'ZIP_COMPRESSION_LEVEL',
+
+    # Parameters for ViPErLEED JAX plugin
+    'VLJ_ALGO',  # algorithms to be used
+    'VLJ_BATCH',  # batch size for VLJ
+    'VLJ_CONFIG',  # configuration for VLJ
     )
 
 

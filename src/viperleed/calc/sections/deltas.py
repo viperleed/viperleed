@@ -20,6 +20,7 @@ import subprocess
 
 import numpy as np
 
+from viperleed.calc.classes.search_backends import SearchBackend
 from viperleed.calc.constants import DEFAULT_DELTAS
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iodeltas
@@ -380,6 +381,18 @@ def compile_delta(comptask):
 
 def deltas(slab, rpars):
     """Run the delta-amplitudes calculation."""
+
+    # During normal operation deltas should never be called with the
+    # viperleed-jax backend, but for API compatibility we still check for it.
+    if rpars.BACKEND["search"] == SearchBackend.VLJ:
+        logger.warning(
+            'Delta calculations are not supported with the viperleed-jax '
+            'backend. Since they are not required for the search, they will '
+            'be skipped. To sample amplitude changes explicitly use the '
+            'TensorCalculator.delta_amplitudes() method from the API instead.'
+        )
+        return
+
     if rpars.domainParams:
         deltas_domains(rpars)
         return

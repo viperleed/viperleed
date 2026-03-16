@@ -16,6 +16,7 @@ import operator
 
 from viperleed.calc.lib.base import available_cpu_count   # For N_CORES
 from viperleed.calc.lib.string_utils import parent_name
+from viperleed.calc.sections.calc_section import CalcSection as Section
 
 from .errors import ParameterConflictError
 
@@ -88,3 +89,37 @@ class ParametersChecker:
                 'may not be ideal for performance, or may render execution '
                 'impossible. Consider reducing N_CORES.'
                 )
+
+    ##### Methods related to the viperleed-jax plugin #####
+
+    def _check_backend_search_and_run_segments(self):
+        """Check BACKEND['search'] and RUN for consistency.
+
+        When using the ViPErLEED JAX plugin for the search, delta-amplitude
+        calculations become moot. In this method, we check for any delta-
+        amplitude calculations in the RUN parameter and remove them if
+        necessary. We also warn the user that this is the case.
+        """
+        if self._rpars.BACKEND["search"] != "viperleed-jax":
+            # ignore for TensErLEED backend
+            return
+
+        # TODO: replace with section.DELTAS when segments are full implemented
+        deltas_removed = [sec for sec in self._rpars.RUN if sec != 2]
+        if len(deltas_removed) < len(self._rpars.RUN):
+            # warn that we removed the delta-amplitude calculation
+            _LOGGER.warning(
+                'Delta-amplitude calculations are not supported with the '
+                'ViPErLEED JAX backend. The delta-amplitude calculation '
+                'segments have been removed from the RUN parameter.'
+                )
+        # TODO: replace with section.SUPERPOS when segments are full implemented
+        superpos_removed = [sec for sec in deltas_removed if sec != 31]
+        if len(superpos_removed) < len(deltas_removed):
+            # warn that we removed the superposition calculation
+            _LOGGER.warning(
+                'Superposition calculations are not supported with the '
+                'ViPErLEED JAX backend. The superposition calculation '
+                'segments have been removed from the RUN parameter.'
+                )
+        self._rpars.RUN = superpos_removed
