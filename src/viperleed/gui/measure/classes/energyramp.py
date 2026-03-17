@@ -183,7 +183,7 @@ class EnergyRampABC(QObjectWithError):                                          
             # Not a float
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'energies/start_energy', '')
-            self._start_energy = max(self.min_energy, DEFAULT_START)
+            start_e = DEFAULT_START
         self._start_energy = max(self.min_energy, start_e)
         try:
             profile = settings.getsequence('energies', 'step_profile',
