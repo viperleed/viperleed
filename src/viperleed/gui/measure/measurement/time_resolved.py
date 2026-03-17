@@ -105,36 +105,36 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         min_t = self.energy_step_duration_min
         try:
-            interval = self.settings.getint('measurement_settings',
+            duration = self.settings.getint('measurement_settings',
                                             'energy_step_duration')
         except (TypeError, ValueError):
             # Not an int
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'measurement_settings/energy_step_duration', '')
-            interval = min_t
+            duration = min_t
 
-        if interval < min_t:
+        if duration < min_t:
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                f'{interval} (too short)',
+                f'{duration} (too short)',
                 'measurement_settings/energy_step_duration', min_t
                 )
-            interval = min_t
+            duration = min_t
             self.settings.set('measurement_settings', 'energy_step_duration',
-                              str(interval))
-            self._energy_step_timer.setInterval(interval)
-        return interval
+                              str(duration))
+            self._energy_step_timer.setInterval(duration)
+        return duration
 
     @energy_step_duration.setter
-    def energy_step_duration(self, new_interval):
+    def energy_step_duration(self, new_duration):
         """Set the duration of one energy step (msec)."""
         min_t = self.energy_step_duration_min
-        if new_interval < min_t:
-            raise ValueError(f'{new_interval} is too small for the '
+        if new_duration < min_t:
+            raise ValueError(f'{new_duration} is too small for the '
                              f'controllers. Minimum is {min_t}')
-        self.settings.set('measurement_settings', 'measurement_interval',
-                          str(new_interval))
-        self._energy_step_timer.setInterval(new_interval)
+        self.settings.set('measurement_settings', 'energy_step_duration',
+                          str(new_duration))
+        self._energy_step_timer.setInterval(new_duration)
 
     @property
     def energy_step_duration_min(self):
