@@ -97,8 +97,9 @@ class MeasureEnergyCalibration(MeasurementABC):
             # Require at least 10 eV for a reasonable calibration
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTINGS,
-                'energies/start_energy and /end_energy\nToo small ',
-                f'energy range ({self._energy_ramp.energy_range} eV) '
+                'energies/start_energy and /end_energy',
+                '\nToo small energy range '
+                f'({self._energy_ramp.energy_range} eV) '
                 'for calibration. It should be at least 10 eV.'
                 )
             return False
