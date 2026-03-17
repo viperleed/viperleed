@@ -232,6 +232,30 @@ class EnergyRampABC(QObjectWithError):                                          
         -------
         None.
         """
+        # Validate overall structure: need an even number of entries and at
+        # least one (fraction, time) pair.
+        try:
+            n_items = len(profile)
+        except TypeError:
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
+                'energies/step_profile',
+                'Custom step profile must be a finite sequence of '
+                '(fraction, time) pairs'
+            )
+            self._step_profile = (ABRUPT,)
+            return
+
+        if n_items < 2 or n_items % 2 != 0:
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
+                'energies/step_profile',
+                'Invalid custom step profile: expected an even number of '
+                f'entries (fraction, time, ...), found {n_items}'
+            )
+            self._step_profile = (ABRUPT,)
+            return
+
         # Casting may break. This is caught in self._set_step_profile.
         for fraction in profile[::2]:
             float(fraction)
