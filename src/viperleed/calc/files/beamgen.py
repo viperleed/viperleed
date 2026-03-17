@@ -10,10 +10,10 @@ flexible and allows for more accurate calculations.
 """
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-17'
 __license__ = 'GPLv3+'

@@ -5,8 +5,8 @@ Defines an enumeration of calculation sections.
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
-    'Alexander M. Imre (@amimre)',
-    )
+    'Alexandra Mia Imre (@alexmiame)',
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-01-23'
 __license__ = 'GPLv3+'

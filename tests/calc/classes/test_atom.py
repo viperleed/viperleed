@@ -1,10 +1,10 @@
 """Tests for module viperleed.calc.classes.atom."""
 
 __authors__ = (
-    'Alexander M. Imre (@amimre)',
+    'Alexandra Mia Imre (@alexmiame)',
     'Michele Riva (@michele-riva)',
     'Florian Kraushofer (@fkraushofer)',
-    )
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-07-28'
 __license__ = 'GPLv3+'
