@@ -643,8 +643,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         Reimplementations of this method must set whether the
         measurement is time_resolved in the data_points.
-        Furthermore, an appropriate EnergyRamp class has to
-        be selected.
 
         Parameters
         ----------
