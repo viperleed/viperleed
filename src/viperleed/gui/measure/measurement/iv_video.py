@@ -3,17 +3,17 @@
 This module contains the definition of the IVVideo class
 which gives commands to the controller classes.
 """
+
 __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Dörr (@FlorianDoerr)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2021-07-19'
 __license__ = 'GPLv3+'
 
 from PyQt5 import QtCore as qtc
 
-from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsSectionColumnInfo,
@@ -29,46 +29,6 @@ class IVVideo(MeasurementABC):
     display_name = 'I(V) video'
 
     @property
-    def _delta_energy(self):
-        """Return the amplitude of an energy step in eV."""
-        # pylint: disable=redefined-variable-type
-        # Seems a pylint bug
-
-        # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actually need it.
-        fallback = 0.5
-        if not self.settings:
-            return fallback
-        try:
-            delta = self.settings.getfloat('energies', 'delta_energy')
-        except (TypeError, ValueError):
-            # Not a float
-            delta = fallback
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/delta_energy', '')
-        return delta
-
-    @property
-    def _end_energy(self):
-        """Return the energy (in eV) at which the energy ramp ends."""
-        # pylint: disable=redefined-variable-type
-        # Seems a pylint bug
-
-        # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actually need it.
-        fallback = 0
-        if not self.settings:
-            return fallback
-        try:
-            egy = self.settings.getfloat('energies', 'end_energy')
-        except (TypeError, ValueError):
-            # Not a float
-            egy = fallback
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/end_energy', '')
-        return egy
-
-    @property
     def _i0_settle_time(self):
         """Return the time interval for the settling of I0."""
         if not self.primary_controller:
@@ -79,9 +39,7 @@ class IVVideo(MeasurementABC):
     def _n_digits(self):
         """Return the number of digits needed to represent each step."""
         # Used for zero-padding counter in image names.
-        num_meas = (1 + round((self._end_energy - self.start_energy)
-                              / self._delta_energy))
-        return len(str(num_meas))
+        return len(str(self._energy_ramp.energy_steps))
 
     # We don't have anything to do in abort() that is not
     # already done in the ABC, but abort is abstract.
@@ -135,8 +93,7 @@ class IVVideo(MeasurementABC):
             # started later and we may go on without acquiring an image
             device.busy = True
 
-        profile = self.step_profile
-        self.set_leed_energy(*profile,
+        self.set_leed_energy(*self._energy_ramp.step_profile,
                              self.current_energy, self._i0_settle_time)
 
         # TODO: here we should start the camera no earlier than
@@ -146,7 +103,7 @@ class IVVideo(MeasurementABC):
         # (exposure + 1000/fr_rate) + (n_frames - 1) * fr_interval
         # Also, we should probably have one timer per camera, as
         # cameras may potentially deliver frames at different rates!
-        profile_duration = sum(profile[1::2])
+        profile_duration = sum(self._energy_ramp.step_profile[1::2])
         camera_delay = profile_duration + self.hv_settle_time
         self._camera_timer.start(camera_delay)
 
@@ -156,18 +113,18 @@ class IVVideo(MeasurementABC):
             return
 
         if profile_duration:
-            txt = "Setting each energy takes"
-            print(txt, f"{profile_duration:>{30-len(txt)}.2f} ms")
+            txt = 'Setting each energy takes'
+            print(txt, f'{profile_duration:>{30-len(txt)}.2f} ms')
         for ctrl in self.controllers:
             if not ctrl.measures():
                 continue
             ctrl_time = ctrl.time_to_first_measurement + ctrl.time_to_trigger
-            txt = f"{ctrl.name} at {ctrl.address}:"
-            print(txt, f"{ctrl_time:>{30-len(txt)}.2f} ms")
+            txt = f'{ctrl.name} at {ctrl.address}:'
+            print(txt, f'{ctrl_time:>{30-len(txt)}.2f} ms')
         for cam in self.cameras:
-            txt = f"{cam.name}:"
+            txt = f'{cam.name}:'
             cam_time = camera_delay + cam.time_to_image_ready
-            print(txt, f"{cam_time:>{30-len(txt)}.2f} ms")
+            print(txt, f'{cam_time:>{30-len(txt)}.2f} ms')
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
@@ -187,20 +144,3 @@ class IVVideo(MeasurementABC):
         settings_ok = super().set_settings(new_settings)
         self.data_points.time_resolved = False
         return settings_ok
-
-    def _is_finished(self):
-        """Check if the full measurement cycle is done.
-
-        If the energy is above the _end_energy the cycle is
-        completed. If not, then the delta energy is added
-        and the next measurement is started.
-
-        Returns
-        -------
-        bool
-        """
-        super()._is_finished()
-        if self.current_energy + self._delta_energy > self._end_energy:
-            return True
-        self.current_energy += self._delta_energy
-        return False
