@@ -38,7 +38,7 @@ class EnergyRampABC(QObjectWithError):                                          
         self._min_energy = MINIMUM_ENERGY
         self._previous_energy = 0.0
         self._start_energy = DEFAULT_START
-        self._step_profile = tuple()
+        self._step_profile = (ABRUPT,)
 
     @property
     @abstractmethod
@@ -168,7 +168,7 @@ class EnergyRampABC(QObjectWithError):                                          
         if not settings:
             self._min_energy = MINIMUM_ENERGY
             self._start_energy = max(self.min_energy, DEFAULT_START)            # TODO: without settings this will default to 0.0 right now. (Used to be 5.0 for energy calibration)
-            self._step_profile = ()
+            self._step_profile = (ABRUPT,)
             return
         try:
             self._min_energy = settings.getfloat('energies', 'min_energy',
