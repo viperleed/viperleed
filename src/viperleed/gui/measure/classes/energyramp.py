@@ -77,7 +77,7 @@ class EnergyRampABC(QObjectWithError):                                          
         """Return the first energy for the energy ramp.
 
         The returned value is limited below by a minimum energy
-        (as found in 'energies/min_energy' if present, 5 eV otherwise).
+        (as found in 'energies/min_energy' if present, 0.0 eV otherwise).
         This is useful to avoid calibrating for the non-linearity of
         LEED electronics in the low-energy regime.
 
