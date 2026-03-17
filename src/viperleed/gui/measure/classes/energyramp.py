@@ -232,27 +232,12 @@ class EnergyRampABC(QObjectWithError):                                          
         -------
         None.
         """
-        # Validate overall structure: need an even number of entries and at
-        # least one (fraction, time) pair.
         try:
             n_items = len(profile)
         except TypeError:
-            self.emit_error(
-                QObjectSettingsErrors.INVALID_SETTINGS,
-                'energies/step_profile',
-                'Custom step profile must be a finite sequence of '
-                '(fraction, time) pairs'
-            )
-            self._step_profile = (ABRUPT,)
-            return
-
-        if n_items < 2 or n_items % 2 != 0:
-            self.emit_error(
-                QObjectSettingsErrors.INVALID_SETTINGS,
-                'energies/step_profile',
-                'Invalid custom step profile: expected an even number of '
-                f'entries (fraction, time, ...), found {n_items}'
-            )
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            'energies/step_profile',
+                            'Step profiles must be sequences.')
             self._step_profile = (ABRUPT,)
             return
 
@@ -264,9 +249,19 @@ class EnergyRampABC(QObjectWithError):                                          
             if time_ < 0:
                 self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                                 'energies/step_profile',
-                                '\nInfo: Time intervals must be non-negative')
+                                'Time intervals must be non-negative.')
                 self._step_profile = (ABRUPT,)
                 return
+
+        if n_items < 2 or n_items % 2 != 0:
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTINGS,
+                'energies/step_profile',
+                'Invalid custom step profile: expected an even number of '
+                f'entries (fraction, time, ...), found {n_items}.'
+            )
+            self._step_profile = (ABRUPT,)
+            return
         self._step_profile = profile
 
     def _set_linear_profile(self, profile):
