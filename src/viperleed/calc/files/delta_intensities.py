@@ -5,8 +5,8 @@ Reads in delta-amplitude files.
 
 __authors__ = (
     'Tobias Hable (@ElHablos)',
-    'Alexander M. Imre (@amimre)',
-    )
+    'Alexandra Mia Imre (@alexmiame)',
+)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2022-05-02'
 __license__ = 'GPLv3+'
