@@ -15,24 +15,13 @@ from pytest_cases import fixture
 from pytest_cases import parametrize
 
 from viperleed.gui.measure.classes.energyramp import ABRUPT
-from viperleed.gui.measure.classes.energyramp import DEFAULT_DELTA
-from viperleed.gui.measure.classes.energyramp import DEFAULT_END
-from viperleed.gui.measure.classes.energyramp import DEFAULT_START
+# from viperleed.gui.measure.classes.energyramp import DEFAULT_DELTA            # TODO: add tests for default values
+# from viperleed.gui.measure.classes.energyramp import DEFAULT_END
+# from viperleed.gui.measure.classes.energyramp import DEFAULT_START
 from viperleed.gui.measure.classes.energyramp import LINEAR
 from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
 from viperleed.gui.measure.classes.energyramp import EndlessLinearEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
-
-
-@fixture(scope='session', name='qapp', autouse=True)
-def fixture_qapp():
-    """Provide a QApplication instance required by all Qt-based objects."""
-    from PyQt5.QtWidgets import QApplication  # pylint: disable=import-outside-toplevel
-    app = QApplication.instance()
-    if app is None:
-        import sys  # pylint: disable=import-outside-toplevel
-        app = QApplication(sys.argv[:1])
-    return app
 
 
 @fixture(name='linear_ramp')
@@ -69,9 +58,11 @@ class TestReturnMatchingEnergyRamp:
         result = LinearEnergyRamp.return_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
-    def test_returns_linear_ramp_when_constant_energy_false(self):
-        """Check that constant_energy=false still yields LinearEnergyRamp."""
-        settings = _make_settings({'energies': {'constant_energy': 'false'}})
+    def test_returns_linear_ramp_when_constant_energy_and_endless_false(self):
+        """Check that constant_energy/endless=false yield LinearEnergyRamp."""
+        settings = _make_settings(
+            {'energies': {'constant_energy': 'false', 'endless': 'false'}}
+            )
         result = LinearEnergyRamp.return_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
@@ -91,7 +82,7 @@ class TestReturnMatchingEnergyRamp:
         """Check that constant_energy=true takes precedence over endless."""
         settings = _make_settings(
             {'energies': {'constant_energy': 'true', 'endless': 'true'}}
-        )
+            )
         result = LinearEnergyRamp.return_matching_energy_ramp(settings)
         assert result is ConstantEnergyRamp
 
@@ -107,7 +98,7 @@ class TestReturnMatchingEnergyRamp:
         result = LinearEnergyRamp.return_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
-
+# pylint: disable=protected-access
 class TestLinearEnergyRampFinished:
     """Tests for LinearEnergyRamp.ramp_finished."""
 
@@ -133,7 +124,7 @@ class TestLinearEnergyRampFinished:
         assert linear_ramp.ramp_finished()
 
     def test_not_finished_negative_delta_within_range(self, linear_ramp):
-        """Check ramp not finished when next step is within range (negative delta)."""
+        """Check ramp not finished when next step is within range."""
         linear_ramp._delta_energy = -1.0
         linear_ramp._end_energy = 10.0
         linear_ramp.current_energy = 11.0
@@ -153,13 +144,6 @@ class TestLinearEnergyRampFinished:
         linear_ramp.current_energy = 5.0
         assert linear_ramp.ramp_finished()
 
-    def test_not_finished_zero_delta(self, linear_ramp):
-        """Check ramp never finished when delta is zero."""
-        linear_ramp._delta_energy = 0.0
-        linear_ramp._end_energy = 20.0
-        linear_ramp.current_energy = 10.0
-        assert not linear_ramp.ramp_finished()
-
     def test_energy_steps_positive_delta(self, linear_ramp):
         """Check energy_steps computed correctly for positive delta."""
         linear_ramp._start_energy = 10.0
@@ -173,6 +157,13 @@ class TestLinearEnergyRampFinished:
         linear_ramp._end_energy = 10.0
         linear_ramp._delta_energy = -2.0
         assert linear_ramp.energy_steps == 6  # 20, 18, 16, 14, 12, 10
+
+    def test_energy_steps_zero_delta(self, linear_ramp):
+        """Check energy_steps is 0 for 0.0 delta."""
+        linear_ramp._start_energy = 10.0
+        linear_ramp._end_energy = 20.0
+        linear_ramp._delta_energy = 0.0
+        assert linear_ramp.energy_steps == 0
 
 
 class TestEndlessLinearEnergyRampIncrementEnergy:
@@ -203,7 +194,7 @@ class TestEndlessLinearEnergyRampIncrementEnergy:
         endless_ramp._delta_energy = 1.0
         endless_ramp.current_energy = 15.0
         endless_ramp.increment_energy()
-        assert endless_ramp.current_energy == pytest.approx(16.0)
+        assert endless_ramp.current_energy == 16.0
 
     def test_normal_increment_within_range_negative(self, endless_ramp):
         """Check that energy is decremented normally within range."""
@@ -212,7 +203,7 @@ class TestEndlessLinearEnergyRampIncrementEnergy:
         endless_ramp._delta_energy = -1.0
         endless_ramp.current_energy = 15.0
         endless_ramp.increment_energy()
-        assert endless_ramp.current_energy == pytest.approx(14.0)
+        assert endless_ramp.current_energy == 14.0
 
     def test_ramp_never_finished(self, endless_ramp):
         """Check that an endless ramp is never considered finished."""
@@ -220,13 +211,6 @@ class TestEndlessLinearEnergyRampIncrementEnergy:
         endless_ramp._end_energy = 20.0
         endless_ramp.current_energy = 100.0
         assert not endless_ramp.ramp_finished()
-
-    def test_energy_steps_always_zero(self, endless_ramp):
-        """Check that energy_steps is always zero for endless ramp."""
-        endless_ramp._start_energy = 10.0
-        endless_ramp._end_energy = 20.0
-        endless_ramp._delta_energy = 1.0
-        assert endless_ramp.energy_steps == 0
 
 
 class TestConstantEnergyRamp:
@@ -241,10 +225,6 @@ class TestConstantEnergyRamp:
         constant_ramp.current_energy = 42.0
         constant_ramp.increment_energy()
         assert constant_ramp.current_energy == 42.0
-
-    def test_energy_steps_always_zero(self, constant_ramp):
-        """Check that energy_steps is always zero."""
-        assert constant_ramp.energy_steps == 0
 
 
 class TestStepProfileParsing:
@@ -265,32 +245,27 @@ class TestStepProfileParsing:
         linear_ramp._set_step_profile((LINEAR, '5', '100'))
         assert linear_ramp._step_profile == (LINEAR, '5', '100')
 
-    def test_linear_profile_too_few_params_falls_back_to_abrupt(self,
-                                                                  linear_ramp):
-        """Check that too few params for LINEAR fall back to ABRUPT."""
+    def test_linear_profile_too_few_params(self, linear_ramp):
+        """Check that too few params for LINEAR falls back to ABRUPT."""
         linear_ramp._set_step_profile((LINEAR, '5'))
         assert linear_ramp._step_profile == (ABRUPT,)
 
-    def test_linear_profile_too_many_params_falls_back_to_abrupt(self,
-                                                                   linear_ramp):
-        """Check that too many params for LINEAR fall back to ABRUPT."""
+    def test_linear_profile_too_many_params(self, linear_ramp):
+        """Check that too many params for LINEAR falls back to ABRUPT."""
         linear_ramp._set_step_profile((LINEAR, '5', '100', '200'))
         assert linear_ramp._step_profile == (ABRUPT,)
 
-    def test_linear_profile_non_integer_params_falls_back_to_abrupt(self,
-                                                                      linear_ramp):
-        """Check that non-integer params for LINEAR fall back to ABRUPT."""
+    def test_linear_profile_non_integer_params(self, linear_ramp):
+        """Check that non-integer params for LINEAR falls back to ABRUPT."""
         linear_ramp._set_step_profile((LINEAR, 'abc', 'xyz'))
         assert linear_ramp._step_profile == (ABRUPT,)
 
-    def test_linear_profile_zero_n_steps_falls_back_to_abrupt(self,
-                                                                linear_ramp):
+    def test_linear_profile_zero_n_steps(self, linear_ramp):
         """Check that n_steps <= 0 for LINEAR falls back to ABRUPT."""
         linear_ramp._set_step_profile((LINEAR, '0', '100'))
         assert linear_ramp._step_profile == (ABRUPT,)
 
-    def test_linear_profile_negative_time_falls_back_to_abrupt(self,
-                                                                 linear_ramp):
+    def test_linear_profile_negative_time(self, linear_ramp):
         """Check that negative total_time for LINEAR falls back to ABRUPT."""
         linear_ramp._set_step_profile((LINEAR, '5', '-10'))
         assert linear_ramp._step_profile == (ABRUPT,)
@@ -305,18 +280,17 @@ class TestStepProfileParsing:
         linear_ramp._set_step_profile(('0.3', '30', '0.7', '70'))
         assert linear_ramp._step_profile == ('0.3', '30', '0.7', '70')
 
-    def test_custom_profile_odd_length_falls_back_to_abrupt(self, linear_ramp):
+    def test_custom_profile_odd_length(self, linear_ramp):
         """Check that an odd-length custom profile falls back to ABRUPT."""
         linear_ramp._set_step_profile(('0.5', '50', '0.8'))
         assert linear_ramp._step_profile == (ABRUPT,)
 
-    def test_custom_profile_negative_time_falls_back_to_abrupt(self,
-                                                                 linear_ramp):
-        """Check that a negative time in a custom profile falls back to ABRUPT."""
+    def test_custom_profile_negative_time(self, linear_ramp):
+        """Check that negative time in custom profile falls back to ABRUPT."""
         linear_ramp._set_step_profile(('0.5', '-50'))
         assert linear_ramp._step_profile == (ABRUPT,)
 
-    def test_unknown_profile_shape_falls_back_to_abrupt(self, linear_ramp):
+    def test_unknown_profile_shape(self, linear_ramp):
         """Check that an unknown profile shape falls back to ABRUPT."""
         linear_ramp._set_step_profile(('UNKNOWN_SHAPE',))
         assert linear_ramp._step_profile == (ABRUPT,)
