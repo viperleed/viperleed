@@ -1,10 +1,10 @@
-"""Module beamgen of viperleed.calc.files
+"""Module beamgen of viperleed.calc.files.
 
 Creates the BEAMLIST file for TensErLEED calculations.
 
 Original version by Florian Kraushofer (2020) was a wrapper for
 the Fortran beamgen script by Uli Löffler et al. Complete refactor
-by Alexander Imre (2023) that removes the dependency on the Fortran
+by Alexandra Mia Imre (2023) that removes the dependency on the Fortran
 script and instead accomplishes the same in python. This is more
 flexible and allows for more accurate calculations.
 """
