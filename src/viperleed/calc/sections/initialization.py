@@ -536,6 +536,7 @@ def init_domains(rp):
     rp.pseudoSlab.ucell = largestDomain.slab.ucell.copy()
     rp.pseudoSlab.bulkslab = BulkSlab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.slab.bulkslab.ucell.copy()
+    rp.SUPERLATTICE = largestDomain.rpars.SUPERLATTICE.copy()
     # run beamgen for the whole system
     logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in the end of initialization
     calc_and_write_beamlist(copy.deepcopy(largestDomain.slab),
