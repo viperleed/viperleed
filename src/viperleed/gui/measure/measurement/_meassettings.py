@@ -77,10 +77,10 @@ class DeviceEditor(SettingsDialogSectionBase):
         None.
         """
         self._settings = settings
-        kwargs.setdefault('display_name', 'Device configuration')
+        kwargs.setdefault('display_name', 'Device Configuration')
         kwargs.setdefault('tags', SettingsTag.REGULAR)
         kwargs.setdefault('tooltip', 'This section lists devices, allows their'
-                          'selection, and the editing of their settings.')
+                          ' selection, and the editing of their settings.')
         super().__init__(**kwargs)
         self._controllers = CollapsibleControllerList()
         self._cameras = CollapsibleCameraList()
