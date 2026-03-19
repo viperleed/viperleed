@@ -111,17 +111,13 @@ class EnergyRampABC(QObjectWithError):                                          
             pass
 
         shape, *params = self._step_profile
-        # if shape.lower() == ABRUPT:
-            # values = tuple()
-        # else:
-            # values = self._get_linear_step(*params)
         is_abrupt = shape.lower() == ABRUPT
         values = tuple() if is_abrupt else self._get_linear_step(*params)
         return values
 
     @classmethod
-    def return_matching_energy_ramp(cls, settings):
-        """Determine the type of energy ramp."""
+    def get_matching_energy_ramp(cls, settings):
+        """Determine and return the type of energy ramp."""
         constant_energy = False
         endless = False
 

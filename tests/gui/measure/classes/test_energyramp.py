@@ -50,12 +50,12 @@ def _make_settings(section_dict):
 
 
 class TestReturnMatchingEnergyRamp:
-    """Tests for EnergyRampABC.return_matching_energy_ramp."""
+    """Tests for EnergyRampABC.get_matching_energy_ramp."""
 
     def test_returns_linear_ramp_by_default(self):
         """Check that an empty settings object yields LinearEnergyRamp."""
         settings = _make_settings({})
-        result = LinearEnergyRamp.return_matching_energy_ramp(settings)
+        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
     def test_returns_linear_ramp_when_constant_energy_and_endless_false(self):
@@ -63,19 +63,19 @@ class TestReturnMatchingEnergyRamp:
         settings = _make_settings(
             {'energies': {'constant_energy': 'false', 'endless': 'false'}}
             )
-        result = LinearEnergyRamp.return_matching_energy_ramp(settings)
+        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
     def test_returns_constant_ramp_when_constant_energy_true(self):
         """Check that constant_energy=true yields ConstantEnergyRamp."""
         settings = _make_settings({'energies': {'constant_energy': 'true'}})
-        result = LinearEnergyRamp.return_matching_energy_ramp(settings)
+        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
         assert result is ConstantEnergyRamp
 
     def test_returns_endless_ramp_when_endless_true(self):
         """Check that endless=true yields EndlessLinearEnergyRamp."""
         settings = _make_settings({'energies': {'endless': 'true'}})
-        result = LinearEnergyRamp.return_matching_energy_ramp(settings)
+        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
         assert result is EndlessLinearEnergyRamp
 
     def test_constant_energy_takes_priority_over_endless(self):
@@ -83,7 +83,7 @@ class TestReturnMatchingEnergyRamp:
         settings = _make_settings(
             {'energies': {'constant_energy': 'true', 'endless': 'true'}}
             )
-        result = LinearEnergyRamp.return_matching_energy_ramp(settings)
+        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
         assert result is ConstantEnergyRamp
 
     _invalid = {
@@ -95,7 +95,7 @@ class TestReturnMatchingEnergyRamp:
     def test_returns_linear_ramp_for_invalid_values(self, section):
         """Check that invalid boolean values fall back to LinearEnergyRamp."""
         settings = _make_settings({'energies': section})
-        result = LinearEnergyRamp.return_matching_energy_ramp(settings)
+        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
 # pylint: disable=protected-access
