@@ -41,23 +41,28 @@ def averageBeams(beams, weights=None):
         _weights = np.repeat([1/len(beams)], len(beams))
     else:
         _weights = np.asarray(weights) / sum(weights)
+    # map beams by hk so ordering no longer matters
+    beamdicts = [{beam.hkfrac: beam for beam in blist} for blist in beams]
+    # all beam lists must contain the same set of beams
+    if not all(set(bd.keys()) == set(beamdicts[0].keys())
+               for bd in beamdicts[1:]):
+        _err = "averageBeams: Beam lists are mismatched."
+        logger.error(_err)
+        raise ValueError(_err)
+        return []
     avbeams = copy.deepcopy(beams[0])
-    for (i, b) in enumerate(avbeams):
-        if not all([beams[j][i].isEqual(b) for j in range(1, len(beams))]):
-            _err = "averageBeams: Beam lists are mismatched."
-            logger.error(_err)
-            raise ValueError(_err)
-            return []
-        if not all([set(beams[j][i].intens.keys()) == set(b.intens.keys())
-                    for j in range(1, len(beams))]):
+    for b in avbeams:
+        matched = [beamdicts[j][b.hkfrac] for j in range(len(beams))]
+        if not all(set(matched[j].intens.keys()) == set(b.intens.keys())
+                   for j in range(1, len(beams))):
             _err = "averageBeams: Beams have different energy ranges."
             logger.error(_err)
             raise ValueError(_err)
             return []
         for en in b.intens:
-            b.intens[en] *= _weights[0]
+            b.intens[en] = matched[0].intens[en] * _weights[0]
             for j in range(1, len(beams)):
-                b.intens[en] += beams[j][i].intens[en] * _weights[j]
+                b.intens[en] += matched[j].intens[en] * _weights[j]
     return avbeams
 
 
