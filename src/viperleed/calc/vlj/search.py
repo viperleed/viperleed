@@ -97,7 +97,7 @@ def vlj_search(slab, rpars):
         slab,
         rpars,
         tensor_path=tensor_path,
-        phaseshifts_path=rpars.paths.home / 'PHASESHIFTS',
+        phaseshifts_path=Path('PHASESHIFTS').resolve(),
     )
 
     # apply the parameter space to the calculator
