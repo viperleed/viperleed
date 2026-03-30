@@ -124,7 +124,6 @@ _SIMPLE_NUMERICAL_PARAMS = {
     'ZIP_COMPRESSION_LEVEL' : NumericBounds(type_=int, range_=(0, 9))
     }
 
-
 # parameters that can be optimized in FD optimization
 _OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i', 'a', 'b', 'c', 'ab', 'abc',}
 

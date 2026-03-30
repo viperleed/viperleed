@@ -468,10 +468,14 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         output += '\n'
     output += '&NL2\n'
     output += ' NSSK=    0,\n'
-    if rp.R_FACTOR_TYPE == 1:
-        output += ' WR=      0.,0.,1.,\n'  # Pendry
-    elif rp.R_FACTOR_TYPE == 2:
-        output += ' WR=      1.,0.,0.,\n'  # R2
+    if str(rp.R_FACTOR_TYPE) == 'pendry':
+        output += ' WR=      0.,0.,1.,\n'
+    elif str(rp.R_FACTOR_TYPE) == 'r2':
+        output += ' WR=      1.,0.,0.,\n'
+    elif str(rp.R_FACTOR_TYPE) == 'zj':
+        output += ' WR=      0.,1.,0.,\n'
+    elif str(rp.R_FACTOR_TYPE) == 'smooth':
+        output += ' WR=      0.,0.,0.,\n'   # rfactor.f changes 4th weight to 1
     else:
         output += ' WR=      0.,1.,0.,\n'  # Zanazzi-Jona
     output += '''\
