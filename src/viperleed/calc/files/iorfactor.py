@@ -480,7 +480,17 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     elif str(rp.R_FACTOR_TYPE) == 'zj':
         output += ' WR=      0.,1.,0.,\n'
     elif str(rp.R_FACTOR_TYPE) == 'smooth':
-        output += ' WR=      0.,0.,0.,\n'   # rfactor.f changes 4th weight to 1
+        if rp.TL_VERSION < Version('2.1.0'):  # No R_S implemented
+            output += ' WR=      0.,0.,1.,\n'
+            logger.warning(
+                'Smooth R-factors are not supported outside of the search for '
+                'TensErLEED versions <2.1. Falling back on Pendry R-factor. '
+                'Resulting R-factors may differ from those calculated during '
+                'the search.'
+                )
+        else:
+            # rfactor.f changes 4th weight to 1
+            output += ' WR=      0.,0.,0.,\n'  
     else:
         msg = (
             f'R factor type {rp.R_FACTOR_TYPE} not supported by '
