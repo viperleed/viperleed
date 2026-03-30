@@ -348,8 +348,15 @@ def initialization(sl, rp, subdomain=False):
     except Exception:
         logger.warning("Failed to plot phaseshifts", exc_info=rp.is_debug_mode)
 
-    # generate beamlist
-    logger.info("Generating BEAMLIST...")                                       # TODO: this bit is largely repeated in init_domains
+
+    # Create directory compile_logs in which logs from compilation will be saved
+    make_compile_logs_dir(rp)
+
+    if subdomain:
+        # everything below is dealt with in init_domains for subdomains
+        return
+
+    logger.info("Generating BEAMLIST...")
     calc_and_write_beamlist(sl, rp, beamlist_name="BEAMLIST")
 
     try:
@@ -359,40 +366,36 @@ def initialization(sl, rp, subdomain=False):
         logger.error("Error while reading required file BEAMLIST")
         raise
 
-    if not subdomain:
-        try:
-            experiment_symmetry.write(sl, rp)
-        except (OSError, ValueError):
-            # OSError: failed to write file. It's not that critical,
-            # so we can probably go ahead. We logged the problem
-            # already. If it is a more fundamental issue it will
-            # pop up when we try to do more file-system operations.
-            # ValueError: SUPERLATTICE not integer. Probably
-            # we complain already somewhere else. Surely in
-            # iobeams.writeIVBEAMS, likely already earlier
-            # when we work on the slab.
-            pass
+    try:
+        experiment_symmetry.write(sl, rp)
+    except (OSError, ValueError):
+        # OSError: failed to write file. It's not that critical,
+        # so we can probably go ahead. We logged the problem
+        # already. If it is a more fundamental issue it will
+        # pop up when we try to do more file-system operations.
+        # ValueError: SUPERLATTICE not integer. Probably
+        # we complain already somewhere else. Surely in
+        # iobeams.writeIVBEAMS, likely already earlier
+        # when we work on the slab.
+        pass
 
-        # if EXPBEAMS was loaded, it hasn't been checked yet - check now
-        if rp.fileLoaded["EXPBEAMS"]:
-            iobeams.checkEXPBEAMS(sl, rp)
-        # write and sort IVBEAMS
-        if not rp.fileLoaded["IVBEAMS"]:
-            try:
-                rp.ivbeams = iobeams.writeIVBEAMS(sl, rp)
-                rp.ivbeams_sorted = False
-                rp.fileLoaded["IVBEAMS"] = True
-                rp.manifest.add("IVBEAMS")
-            except Exception:
-                logger.error("Error while writing IVBEAMS file based on "
-                             "EXPBEAMS data.")
-                raise
+    # if EXPBEAMS was loaded, it hasn't been checked yet - check now
+    if rp.fileLoaded["EXPBEAMS"]:
+        iobeams.checkEXPBEAMS(sl, rp)
+    # write and sort IVBEAMS
+    if not rp.fileLoaded["IVBEAMS"]:
+        try:
+            rp.ivbeams = iobeams.writeIVBEAMS(sl, rp)
+            rp.ivbeams_sorted = False
+            rp.fileLoaded["IVBEAMS"] = True
+            rp.manifest.add("IVBEAMS")
+        except Exception:
+            logger.error("Error while writing IVBEAMS file based on "
+                         "EXPBEAMS data.")
+            raise
     if rp.fileLoaded["IVBEAMS"] and not rp.ivbeams_sorted:
         rp.ivbeams = iobeams.sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
-
-    # Create directory compile_logs in which logs from compilation will be saved
-    make_compile_logs_dir(rp)
 
     return
 
@@ -694,6 +697,8 @@ def _check_domain_consistent(domain, main_rpars):
         - BEAM_INCIDENCE: equal
         - LMAX, only for TL_VERSION <= 1.6.0: same maximum value
         - IVBEAMS file: present and identical
+    Note that identical IVBEAMS does not guarantee an identical BEAMLIST, which
+    my still cause issues down the line.
     """
     inconsistent_params = []
     if domain.refcalc_required:  # No/incomplete tensors or supercell
@@ -792,6 +797,7 @@ def _inherit_from_main(domains, main_rpars, inconsistent_params_by_domain):
     -----
     The following files are copied from the current directory into
     each domain.workdir:
+        BEAMLIST
         IVBEAMS
     The following PARAMETERS values are written to each domain if
     they were not given or they were inconsistent:
@@ -806,9 +812,12 @@ def _inherit_from_main(domains, main_rpars, inconsistent_params_by_domain):
         'PHI': 'BEAM_INCIDENCE',
         'N_CORES': None,  # Don't write: determined at runtime
         }
+    inherited_files = {
+        'BEAMLIST', 'IVBEAMS',
+        }
     inherited = (
         *inherited_params,
-        'ivbeams',
+        'beamlist', 'ivbeams', 'ivbeams_sorted',
         )
     params_to_write = {p for p in inherited_params.values() if p}
     if main_rpars.TL_VERSION <= Version('1.6.0'):
@@ -817,9 +826,11 @@ def _inherit_from_main(domains, main_rpars, inconsistent_params_by_domain):
         domain.rpars.inherit_from(main_rpars, *inherited, override=True)
         if main_rpars.TL_VERSION <= Version('1.6.0'):
             domain.rpars.LMAX.max = main_rpars.LMAX.max
-        # Copy over the IVBEAMS from the main work, otherwise
+        # Copy over the BEAMLIST and IVBEAMS from the main work, otherwise
         # follow-up runs will again require a refcalc
-        shutil.copy2('IVBEAMS', domain.workdir)
+        for file in inherited_files:
+            shutil.copy2(file, domain.workdir)
+            domain.rpars.fileLoaded[file] = True
         # Edit the PARAMETERS file of this domain
         # for inconsistent or missing PARAMETERS.
         with execute_in_dir(domain.workdir):
@@ -936,6 +947,7 @@ def _read_inputs_for_domain(domain, main_rpars):
         raise
     rpars.fileLoaded['VIBROCC'] = True
     slab.full_update(rpars)
+
     try:
         rpars.ivbeams = iobeams.readIVBEAMS()
     except FileNotFoundError:
