@@ -252,8 +252,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     def camera_settle_time(self):
         """Return the camera-settle time after changing energy."""
         if not self.primary_controller:
-            raise RuntimeError("Cannot return a voltage-settling time "
-                               "when no primary controller was set.")
+            raise RuntimeError("Cannot return a camera settle time "
+                               "('camera_settle_time') when no primary "
+                               "controller was set.")
         return self.primary_controller.camera_settle_time
 
     @property

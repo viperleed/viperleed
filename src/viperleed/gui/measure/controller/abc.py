@@ -516,7 +516,8 @@ class ControllerABC(DeviceABC):
             (if self.sets_energy:
                 'measurement_settings'/'ctrl_settle_time'
                 'measurement_settings'/'camera_settle_time'
-                'measurement_settings'/'energy_settle_time')
+                'measurement_settings'/'energy_settle_time'
+                'measurement_settings'/'first_settle_time')
 
         Returns
         -------
