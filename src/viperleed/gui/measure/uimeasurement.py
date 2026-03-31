@@ -543,6 +543,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         layout.addWidget(self._ctrls['energy_input'], 2, 2, 1, 1)
         self._compose_menu()
         self._compose_error_box()
+        self._compose_warning_box()
 
         # Take care of dialogs and other windows
         self._dialogs['sys_settings'].setModal(True)
@@ -554,6 +555,13 @@ class Measure(ViPErLEEDPluginBase):                                             
         err_box.setWindowTitle("Error")
         err_box.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
         err_box.setIcon(err_box.Critical)
+
+    def _compose_warning_box(self):
+        """Prepare the message box shown when warnings happen."""
+        warn_box = self._dialogs['warning_box']
+        warn_box.setWindowTitle("Warning")
+        warn_box.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
+        warn_box.setIcon(warn_box.Warning)
 
     def _compose_menu(self):
         """Put together menu."""
