@@ -154,7 +154,13 @@ class CollapsibleDeviceList(CollapsibleList):
 
     def event(self, event):
         """Extend event to match QScrollArea width to required width."""
-        self.setMinimumWidth(self._required_width())
+        event_type = event.type()
+        if event_type in (qtc.QEvent.Show,
+                          qtc.QEvent.Resize,
+                          qtc.QEvent.LayoutRequest):
+            required_width = self._required_width()
+            if required_width != self.minimumWidth():
+                self.setMinimumWidth(required_width)
         return super().event(event)
 
     def _required_width(self):
@@ -163,8 +169,10 @@ class CollapsibleDeviceList(CollapsibleList):
             return 10
         widget = self.widget()
         width = widget.minimumSizeHint().width()
-        view_widths = (view.minimumSizeHint().width() for view in self.views)
-        width = max(width, *view_widths, 0)
+        view_widths = (
+            view.minimumSizeHint().width() for view in self.views.keys()
+            )
+        width = max(width, max(view_widths, default=0))
         width += self.verticalScrollBar().sizeHint().width()
         width += 2*self.frameWidth() + _PIXEL_SPACING
         return width
