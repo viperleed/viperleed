@@ -377,6 +377,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def closeEvent(self, event):         # pylint: disable=invalid-name
         """Extend closeEvent to abort measurements as well."""
+        self._stop_device_search_triggers()
         if self.measurement and self.measurement.running:
             # TODO: Perhaps would be nicer to ask for confirmation
             # rather than always (silently) aborting the measurement
@@ -430,6 +431,14 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._dialogs['sys_settings'].close()
         self._dialogs['firmware_upgrade'].close()
         super().closeEvent(event)
+
+    def _stop_device_search_triggers(self):
+        """Stop periodic/queued search triggers before shutdown."""
+        self._timers['refresh_devices'].stop()
+        base.safe_disconnect(self._timers['refresh_devices'].timeout,
+                             self._trigger_device_search)
+        base.safe_disconnect(self.detect_devices_requested,
+                             self._device_detection_worker.detect_devices)
 
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
         """Allow copying (Ctrl+C) device name to clipboard when visible."""

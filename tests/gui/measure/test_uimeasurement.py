@@ -19,6 +19,7 @@ class _FakeSignal:  # pylint: disable=too-few-public-methods
     def __init__(self):
         self.connected = []
         self.emitted = 0
+        self.disconnected = []
 
     def connect(self, slot):
         """Store connected slots."""
@@ -27,6 +28,10 @@ class _FakeSignal:  # pylint: disable=too-few-public-methods
     def emit(self):
         """Count emissions."""
         self.emitted += 1
+
+    def disconnect(self, slot):
+        """Store disconnected slots."""
+        self.disconnected.append(slot)
 
 
 class _FakeAction:  # pylint: disable=too-few-public-methods
@@ -174,3 +179,24 @@ def test_on_devices_detected_updates_menu_and_unblocks_search():
     assert devices_menu.cameras.enabled
     assert devices_menu.controllers.enabled
     assert not fake._device_search_in_progress
+
+
+def test_stop_device_search_triggers(mocker):
+    """Check shutdown helper disables periodic and queued search triggers."""
+    timer_signal = _FakeSignal()
+    detect_signal = _FakeSignal()
+    stop = mocker.Mock()
+    refresh_timer = SimpleNamespace(stop=stop, timeout=timer_signal)
+    fake_worker = SimpleNamespace(detect_devices=lambda: None)
+    fake = SimpleNamespace(
+        _timers={'refresh_devices': refresh_timer},
+        detect_devices_requested=detect_signal,
+        _device_detection_worker=fake_worker,
+        _trigger_device_search=lambda: None,
+        )
+
+    Measure._stop_device_search_triggers(fake)
+
+    stop.assert_called_once_with()
+    assert timer_signal.disconnected == [fake._trigger_device_search]
+    assert detect_signal.disconnected == [fake_worker.detect_devices]
