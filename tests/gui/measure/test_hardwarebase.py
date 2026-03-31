@@ -9,6 +9,7 @@ __created__ = '2025-10-13'
 __license__ = 'GPLv3+'
 
 import abc
+import threading
 import types
 
 import pytest
@@ -16,6 +17,8 @@ import pytest
 from viperleed.gui.measure.hardwarebase import class_from_name
 from viperleed.gui.measure.hardwarebase import get_devices
 from viperleed.gui.measure.hardwarebase import import_with_sub_modules
+from viperleed.gui.measure.hardwarebase import InvalidThreadError
+from viperleed.gui.measure.hardwarebase import ensure_main_thread
 
 
 _DUMMY_NAME = 'DummyA'
@@ -213,3 +216,35 @@ class TestGetDevices:
 
         devices = get_devices('fakepkg')
         assert not devices
+
+
+class TestEnsureMainThread:
+    """Tests for ensure_main_thread."""
+
+    def test_main_thread_allowed(self):
+        """Test calls in main thread succeed."""
+        @ensure_main_thread
+        def _func():
+            return 'ok'
+
+        assert _func() == 'ok'
+
+    def test_non_main_thread_raises(self):
+        """Test calls in non-main thread raise InvalidThreadError."""
+        @ensure_main_thread
+        def _func():
+            return 'ok'
+
+        errors = []
+
+        def _call():
+            try:
+                _func()
+            except InvalidThreadError as exc:
+                errors.append(exc)
+
+        thread = threading.Thread(target=_call)
+        thread.start()
+        thread.join()
+
+        assert len(errors) == 1

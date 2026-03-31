@@ -13,11 +13,13 @@ __license__ = 'GPLv3+'
 
 from contextlib import contextmanager
 import enum
+from functools import wraps
 import importlib
 import inspect
 from pathlib import Path
 import pkgutil
 import re
+import threading
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
@@ -29,6 +31,22 @@ from viperleed.gui.qsettings import get_qsettings
 
 
 ################################## FUNCTIONS ##################################
+
+class InvalidThreadError(RuntimeError):
+    """Exception raised when calling a function from a non-main thread."""
+
+
+def ensure_main_thread(func):
+    """Raise InvalidThreadError if `func` runs in a non-main thread."""
+    @wraps(func)
+    def _wrapper(*args, **kwargs):
+        if threading.current_thread() != threading.main_thread():
+            raise InvalidThreadError(
+                f'{func.__name__} must be called from the main thread.'
+                )
+        return func(*args, **kwargs)
+    return _wrapper
+
 
 def class_from_name(package, class_name):
     """Return a class given its name.
@@ -377,6 +395,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     raise NoSettingsError('Failed to get device settings.')
 
 
+@ensure_main_thread
 def get_object_settings(obj_cls, obj_info, **kwargs):
     """Return the settings file for a specific device.
 
