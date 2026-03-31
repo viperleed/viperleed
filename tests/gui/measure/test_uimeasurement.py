@@ -10,7 +10,10 @@ __license__ = 'GPLv3+'
 
 from types import SimpleNamespace
 
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.uimeasurement import _DeviceDetectionWorker
 from viperleed.gui.measure.uimeasurement import Measure
+from viperleed.gui.measure.uimeasurement import UIErrors
 
 
 class _FakeSignal:  # pylint: disable=too-few-public-methods
@@ -200,3 +203,57 @@ def test_stop_device_search_triggers(mocker):
     stop.assert_called_once_with()
     assert timer_signal.disconnected == [fake._trigger_device_search]
     assert detect_signal.disconnected == [fake_worker.detect_devices]
+
+
+def test_device_detection_worker_emits_default_settings_error(mocker):
+    """Check DefaultSettingsError is emitted via worker error signal."""
+    worker = _DeviceDetectionWorker()
+    emitted_errors = []
+    emitted_devices = []
+    worker.error_occurred.connect(emitted_errors.append)
+    worker.devices_detected.connect(emitted_devices.append)
+
+    class _DefaultErr(Exception):
+        pass
+
+    mocker.patch(
+        'viperleed.gui.measure.uimeasurement.DefaultSettingsError',
+        _DefaultErr
+        )
+    get_devices = mocker.patch(
+        'viperleed.gui.measure.uimeasurement.base.get_devices'
+        )
+    get_devices.side_effect = [_DefaultErr('bad defaults'), {'ctrl': ('c', 'i')}]
+
+    worker.detect_devices()
+
+    assert emitted_devices == [
+        {'camera': {}, 'controller': {'ctrl': ('c', 'i')}}
+        ]
+    assert emitted_errors == [
+        (QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED.value[0],
+         QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED.value[1]
+         .format('bad defaults'))
+        ]
+
+
+def test_device_detection_worker_emits_runtime_error(mocker):
+    """Check unexpected exceptions are emitted as runtime errors."""
+    worker = _DeviceDetectionWorker()
+    emitted_errors = []
+    emitted_devices = []
+    worker.error_occurred.connect(emitted_errors.append)
+    worker.devices_detected.connect(emitted_devices.append)
+
+    get_devices = mocker.patch(
+        'viperleed.gui.measure.uimeasurement.base.get_devices'
+        )
+    get_devices.side_effect = [RuntimeError('boom'), {}]
+
+    worker.detect_devices()
+
+    assert emitted_devices == [{'camera': {}, 'controller': {}}]
+    assert emitted_errors == [
+        (UIErrors.RUNTIME_ERROR.value[0],
+         UIErrors.RUNTIME_ERROR.value[1].format('boom'))
+        ]

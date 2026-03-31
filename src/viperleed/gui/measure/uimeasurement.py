@@ -201,6 +201,7 @@ import PyQt5.QtWidgets as qtw
 from viperleed.gui.dialogs.errors import DialogDismissedError
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera.abc import CameraABC
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
 from viperleed.gui.measure.classes.datapoints import DataPoints
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
@@ -245,29 +246,27 @@ class _DeviceDetectionWorker(qtc.QObject):
     """Worker object for detecting devices in a dedicated thread."""
 
     devices_detected = qtc.pyqtSignal(object)
+    error_occurred = qtc.pyqtSignal(tuple)
 
     @qtc.pyqtSlot()
     def detect_devices(self):
         """Detect all supported device types and emit the result."""
         detected = {}
-        default_settings_errors = []
         try:
             for device_type in ('camera', 'controller'):
                 try:
                     detected[device_type] = base.get_devices(device_type)
                 except DefaultSettingsError as exc:
-                    # Record the error but still provide an empty entry for this device type
                     detected[device_type] = {}
-                    default_settings_errors.append(exc)
-                except Exception:
-                    # On any unexpected error, ensure this device type is present but empty
+                    base.emit_error(self,
+                                    QObjectSettingsErrors
+                                    .DEFAULT_SETTINGS_CORRUPTED,
+                                    exc)
+                except Exception as exc:  # pylint: disable=broad-exception-caught
                     detected[device_type] = {}
+                    base.emit_error(self, UIErrors.RUNTIME_ERROR, exc)
         finally:
-            # Always emit the signal so the UI can clear any "search in progress" state
             self.devices_detected.emit(detected)
-        # After emitting the result, re-raise a DefaultSettingsError if any occurred
-        if default_settings_errors:
-            raise default_settings_errors[0]
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -706,6 +705,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             )
         self._device_detection_worker.devices_detected.connect(
             self._on_devices_detected
+            )
+        self._device_detection_worker.error_occurred.connect(
+            self._on_error_occurred
             )
 
         # TIMERS
