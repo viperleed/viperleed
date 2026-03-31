@@ -1118,7 +1118,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         meas_config.prepare_aliases(cls_name)
         # Use the information in the config for
         # correctly updating the DataPoints
-        datapts.time_resolved = cls_name == "TimeResolved"
+        datapts.time_resolved = cls_name in ('TimeResolved',
+                                             'TimeResolvedTriggered',
+                                             'TimeResolvedContinuous')
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
                                                         'is_continuous')
@@ -1141,7 +1143,9 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         cls_name = meas_config['measurement_settings']['measurement_class']
         meas_config.prepare_aliases(cls_name)
-        datapts.time_resolved = cls_name == 'TimeResolved'
+        datapts.time_resolved = cls_name in ('TimeResolved',
+                                             'TimeResolvedTriggered',
+                                             'TimeResolvedContinuous')
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
                                                         'is_continuous')

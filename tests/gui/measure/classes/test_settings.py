@@ -294,3 +294,14 @@ class TestSystemSettings:
         settings_path = Path(sys_settings._sys_qsettings.fileName()).resolve()
         assert settings_path.parent.is_dir()
         assert settings_path.is_file()
+
+
+class TestTimeResolvedAliasSections:
+    """Tests for time-resolved aliases for split measurement classes."""
+
+    @parametrize('cls_name', ('TimeResolvedTriggered', 'TimeResolvedContinuous'))
+    def test_split_classes_reuse_time_resolved_aliases(self, cls_name):
+        """Ensure split classes inherit aliases from TimeResolved section."""
+        parser = AliasConfigParser(cls_name=cls_name)
+        parser.read_dict({'measurement_settings': {'endless': 'True'}})
+        assert parser.getboolean('energies', 'endless')
