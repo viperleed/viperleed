@@ -982,18 +982,19 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             for ctrl in self.controllers:
                 base.safe_disconnect(ctrl.busy_changed,
                                      self._continue_preparation)
-            primary.busy_changed.connect(self._continue_preparation,
-                                         type=_UNIQUE)
-            self.set_leed_energy(self.start_energy, primary.long_settle_time,
-                                 trigger_meas=False)
-            if not primary.busy:
+            base.safe_connect(primary.serial.busy_changed,
+                              self._continue_preparation, type=_UNIQUE)
+            primary.set_energy(self.start_energy, primary.long_settle_time,
+                               trigger_meas=False)
+            if not primary.serial.busy:
                 self._continue_preparation(False)
             return
 
         # Use the controller.busy_changed to move from this segment
         # of the preparation to the exit point of the preparation
         # that will later start the measurement loop.
-        base.safe_disconnect(primary.busy_changed, self._continue_preparation)
+        base.safe_disconnect(primary.serial.busy_changed,
+                             self._continue_preparation)
         # The camera.busy_changed signals are connected only now, rather
         # than during _begin_preparation. This prevents early calls
         # to the _check_preparation_finished method, should cameras
