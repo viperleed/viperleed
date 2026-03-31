@@ -154,10 +154,20 @@ class CollapsibleDeviceList(CollapsibleList):
 
     def event(self, event):
         """Extend event to match QScrollArea width to required width."""
-        width = self.widget().sizeHint().width()+10 if self.widget() else 10
-        if width > self.minimumWidth():
-            self.setMinimumWidth(width)
+        self.setMinimumWidth(self._required_width())
         return super().event(event)
+
+    def _required_width(self):
+        """Return minimum pixel width required to display all contents."""
+        if not self.widget():
+            return 10
+        widget = self.widget()
+        width = widget.minimumSizeHint().width()
+        view_widths = (view.minimumSizeHint().width() for view in self.views)
+        width = max(width, *view_widths, 0)
+        width += self.verticalScrollBar().sizeHint().width()
+        width += 2*self.frameWidth() + _PIXEL_SPACING
+        return width
 
     def store_settings(self):
         """Store the settings of the selected devices."""
