@@ -148,7 +148,7 @@ class TestDefaultSettings:  # pylint: disable=too-few-public-methods
         assert 'i0_settle_time' not in mset
         assert 'hv_settle_time' not in mset
 
-    def test_legacy_settle_time_aliases_populate_both_new_keys(self):
+    def test_legacy_settle_time_aliases_populate_all_new_keys(self):
         """Check hv/i0 legacy settle keys map to all new settle keys."""
         config = AliasConfigParser(cls_name='ControllerABC')
         config.read_dict(

@@ -249,11 +249,12 @@ class AliasConfigParser(ConfigParser):
             # stored in the new section/option pair.
             self[section][option] = value
             alias_key = f'{old_section}/{old_option}'
-            if alias_counts is None:
-                alias_counts = {}
-            alias_counts[alias_key] = alias_counts.get(alias_key, 1) - 1
-            if alias_counts[alias_key] <= 0:
+            if alias_counts is None or alias_key not in alias_counts:
                 self.remove_option(old_section, old_option)
+            else:
+                alias_counts[alias_key] -= 1
+                if alias_counts[alias_key] <= 0:
+                    self.remove_option(old_section, old_option)
             # Remove sections that were emptied
             # because of the alias replacement.
             if not self.options(old_section):
