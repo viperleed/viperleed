@@ -9,7 +9,7 @@ __created__ = '2025-10-13'
 __license__ = 'GPLv3+'
 
 import abc
-import threading
+import concurrent.futures
 import types
 
 import pytest
@@ -235,16 +235,7 @@ class TestEnsureMainThread:
         def _func():
             return 'ok'
 
-        errors = []
-
-        def _call():
-            try:
-                _func()
-            except InvalidThreadError as exc:
-                errors.append(exc)
-
-        thread = threading.Thread(target=_call)
-        thread.start()
-        thread.join()
-
-        assert len(errors) == 1
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_func)
+            with pytest.raises(InvalidThreadError):
+                future.result()

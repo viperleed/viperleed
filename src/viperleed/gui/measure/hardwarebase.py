@@ -37,12 +37,25 @@ class InvalidThreadError(RuntimeError):
 
 
 def ensure_main_thread(func):
-    """Raise InvalidThreadError if `func` runs in a non-main thread."""
+    """Raise InvalidThreadError if `func` runs outside main GUI thread.
+
+    If a Qt QApplication instance exists, the main thread is considered
+    the application's GUI thread. Otherwise, this falls back to the
+    Python interpreter's main thread.
+    """
     @wraps(func)
     def _wrapper(*args, **kwargs):
-        if threading.current_thread() != threading.main_thread():
+        app = qtw.QApplication.instance()
+        if app is not None and app.thread() is not None:
+            main_thread = app.thread()
+            current_thread = qtc.QThread.currentThread()
+        else:
+            main_thread = threading.main_thread()
+            current_thread = threading.current_thread()
+
+        if current_thread is not main_thread:
             raise InvalidThreadError(
-                f'{func.__name__} must be called from the main thread.'
+                f'{func.__name__} must be called from the main GUI thread.'
                 )
         return func(*args, **kwargs)
     return _wrapper
