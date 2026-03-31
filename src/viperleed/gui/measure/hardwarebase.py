@@ -46,7 +46,7 @@ def ensure_main_thread(func):
     @wraps(func)
     def _wrapper(*args, **kwargs):
         app = qtw.QApplication.instance()
-        if app is not None and app.thread() is not None:
+        if app is not None:
             main_thread = app.thread()
             current_thread = qtc.QThread.currentThread()
         else:
