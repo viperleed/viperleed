@@ -834,6 +834,82 @@ class ControllerABC(DeviceABC):
         self.serial.send_message(*data, **kwargs)
 
     @abstractmethod
+    def process_hardware_information(self, data):
+        """Process non-measurement data received from the hardware.
+
+        Parameters
+        ----------
+        data : object
+            Data received from self.serial that does not represent
+            measurement values.
+
+        Returns
+        -------
+        None.
+        """
+
+    def is_measurement_data(self, data):
+        """Return whether data should be treated as measurement data.
+
+        The default implementation assumes data are not measurements.
+        Subclasses should reimplement this method with criteria that
+        can distinguish measurement values from hardware information.
+
+        Parameters
+        ----------
+        data : object
+            Data received from self.serial.
+
+        Returns
+        -------
+        bool
+            Whether data represent measurements.
+        """
+        _ = data
+        return False
+
+    @qtc.pyqtSlot(object)
+    def on_data_ready(self, data):
+        """Dispatch incoming data for processing.
+
+        This method is the slot connected to the data_received signal
+        of self.serial. It dispatches data either to
+        .process_measurement_data() or to
+        .process_hardware_information().
+
+        Parameters
+        ----------
+        data : object
+            Data received from self.serial.
+
+        Returns
+        -------
+        None.
+        """
+        if self.is_measurement_data(data):
+            self.process_measurement_data(data)
+            return
+        self.process_hardware_information(data)
+
+    def process_measurement_data(self, data):
+        """Process measurement data received from the hardware.
+
+        Non-measuring controllers are not required to implement this
+        method. MeasureControllerABC subclasses should reimplement it.
+
+        Parameters
+        ----------
+        data : object
+            Data received from self.serial that represent
+            measurements.
+
+        Returns
+        -------
+        None.
+        """
+        _ = data
+
+    @abstractmethod
     def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
         """Set electron energy on LEED controller.
 
@@ -1272,12 +1348,8 @@ class MeasureControllerABC(ControllerABC):
         self._time_to_trigger = 0
 
     @abstractmethod
-    @qtc.pyqtSlot(object)
-    def on_data_ready(self, data):
-        """Receive and store data from the serial.
-
-        This method is the slot connected to the data_received
-        signal of self.serial and must be extended in subclasses.
+    def process_measurement_data(self, data):
+        """Process measurement data from the serial.
 
         Measurements received from the serial should be processed,
         appropriately converted to the correct physical units and
@@ -1287,10 +1359,6 @@ class MeasureControllerABC(ControllerABC):
         When all the measurements expected have been received, this
         method should call self.measurements_done().
 
-        Notice that data may also be non-measurement information.
-        This should also be processed and stored, if needed. In
-        this case, do not call .measurements_done().
-
         All of the settings required for processing data should
         be derived from self.settings. This includes, for example,
         conversion factors/curves.
@@ -1298,13 +1366,12 @@ class MeasureControllerABC(ControllerABC):
         Parameters
         ----------
         data : object
-            Data received from self.serial.
+            Measurement data received from self.serial.
 
         Returns
         -------
         None.
         """
-        self.measurements_done()
 
     @abstractmethod
     def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
