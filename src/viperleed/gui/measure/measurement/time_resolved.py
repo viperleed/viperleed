@@ -12,6 +12,8 @@ __created__ = '2021-07-19'
 __license__ = 'GPLv3+'
 
 from abc import abstractmethod
+from configparser import NoOptionError
+from configparser import NoSectionError
 from math import ceil
 
 from PyQt5 import QtCore as qtc
@@ -410,8 +412,9 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 option.handler_widget.setVisible
                 )
             retain_size_when_hidden(option.handler_widget)
-        interval.set_enabled(not self.is_continuous)
-        interval.handler_widget.setVisible(not self.is_continuous)
+        is_triggered = not self.is_continuous
+        interval.set_enabled(is_triggered)
+        interval.handler_widget.setVisible(is_triggered)
         retain_size_when_hidden(interval.handler_widget)
 
         settings_path = SystemSettings().paths['configuration']
@@ -430,8 +433,20 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                       'measurement_class',
                                       fallback='')
         if meas_class == 'TimeResolved':
+            try:
+                legacy_continuous = new_settings.getboolean(
+                    'measurement_settings', 'is_continuous'
+                    )
+            except (ValueError, NoSectionError, NoOptionError):
+                legacy_continuous = self.is_continuous
+            if legacy_continuous != self.is_continuous:
+                self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                                'measurement_settings/is_continuous', '')
+                return False
             new_settings.set('measurement_settings', 'measurement_class',
                              self.__class__.__name__)
+        # Keep this flag synchronized for compatibility with loading old
+        # time-resolved data/configuration that still relies on it.
         new_settings.set('measurement_settings', 'is_continuous',
                          str(self.is_continuous))
         settings_ok = super().set_settings(new_settings)
@@ -790,7 +805,13 @@ class TimeResolvedTriggered(TimeResolved):
                                 fallback=None)
         if meas_class == cls.__name__:
             return True
-        return meas_class == 'TimeResolved'
+        if meas_class != 'TimeResolved':
+            return False
+        try:
+            return not config.getboolean('measurement_settings',
+                                         'is_continuous')
+        except (ValueError, NoSectionError, NoOptionError):
+            return True
 
 
 class TimeResolvedContinuous(TimeResolved):
@@ -810,4 +831,9 @@ class TimeResolvedContinuous(TimeResolved):
                                 fallback=None)
         if meas_class == cls.__name__:
             return True
-        return meas_class == 'TimeResolved'
+        if meas_class != 'TimeResolved':
+            return False
+        try:
+            return config.getboolean('measurement_settings', 'is_continuous')
+        except (ValueError, NoSectionError, NoOptionError):
+            return False
