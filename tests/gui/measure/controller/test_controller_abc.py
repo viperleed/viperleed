@@ -11,15 +11,19 @@ __license__ = 'GPLv3+'
 from viperleed.gui.measure.controller.abc import ControllerABC
 
 
+class _DummyController:
+    """Minimal non-QObject holder for testing unbound ControllerABC methods."""
+
+
 def test_is_measurement_data_default_false():
     """Check that non-overridden data-type detection defaults to False."""
-    controller = object.__new__(ControllerABC)
+    controller = _DummyController()
     assert not ControllerABC.is_measurement_data(controller, object())
 
 
 def test_on_data_ready_dispatches_to_hardware_handler_by_default(mocker):
     """Check that data dispatch defaults to hardware-information handler."""
-    controller = object.__new__(ControllerABC)
+    controller = _DummyController()
     process_hw = mocker.Mock()
     process_meas = mocker.Mock()
     mocker.patch.object(controller, 'process_hardware_information', process_hw)
@@ -34,7 +38,7 @@ def test_on_data_ready_dispatches_to_hardware_handler_by_default(mocker):
 
 def test_on_data_ready_dispatches_to_measurement_handler(mocker):
     """Check that measurement data are dispatched to measurement handler."""
-    controller = object.__new__(ControllerABC)
+    controller = _DummyController()
     process_hw = mocker.Mock()
     process_meas = mocker.Mock()
     mocker.patch.object(controller, 'process_hardware_information', process_hw)

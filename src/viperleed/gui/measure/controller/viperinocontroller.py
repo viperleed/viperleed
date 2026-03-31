@@ -755,7 +755,7 @@ class ViPErinoController(MeasureControllerABC):
 
     def process_measurement_data(self, data):
         """Process incoming measurement data."""
-        # Otherwise it is a list of data: [ADC0, ADC1, LM35]
+        # Data are expected as a list of values: [ADC0, ADC1, LM35].
         # The order is the same as stored in the config file under
         # controller/measurement_devices. The ADC channels chosen
         # via set_measurements() determine which value was measured
