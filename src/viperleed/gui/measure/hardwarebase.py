@@ -170,14 +170,14 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
 
 
 def emit_warning(sender, warning, *msg_args, **msg_kwargs):
-    """Emit a ViPErLEEDErrorEnum-like warning.
+    """Emit a warning tuple.
 
     Parameters
     ----------
     sender : object
         The instance in which the warning occurred. Must have
         a warning_occurred pyqtSignal.
-    warning : tuple or ViPErLEEDErrorEnum
+    warning : tuple
         The warning to be emitted. Should be a 2-tuple of the
         form (warning_code, warning_message).
     *msg_args : object

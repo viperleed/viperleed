@@ -300,6 +300,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             'last_cfg': ViPErLEEDSettings(),
             'errors': [],         # Report a bunch at once
             'warnings': [],       # Report warnings without aborting
+            'warnings_set': set(),
             'n_retry_close': 0,   # Try at most 50 times, i.e., 2.5 sec
             }
         self._timers = {
@@ -924,9 +925,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         """React to a warning."""
         sender = self.sender()
         warning = (sender, *warning_info)
-        if warning not in set(self._glob['warnings']):
+        if warning not in self._glob['warnings_set']:
             self._glob['warnings'].append(warning)
-        if self._glob['warnings']:
+            self._glob['warnings_set'].add(warning)
             self._report_warnings()
 
     @qtc.pyqtSlot()
@@ -1236,6 +1237,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         warn_box.setText('\n\n'.join(warn_text))
         warn_box.open()
         self._glob['warnings'] = []
+        self._glob['warnings_set'].clear()
 
     @qtc.pyqtSlot()
     def _on_measurement_cancelled(self):
