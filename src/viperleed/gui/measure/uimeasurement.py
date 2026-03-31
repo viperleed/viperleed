@@ -250,12 +250,24 @@ class _DeviceDetectionWorker(qtc.QObject):
     def detect_devices(self):
         """Detect all supported device types and emit the result."""
         detected = {}
-        for device_type in ('camera', 'controller'):
-            try:
-                detected[device_type] = base.get_devices(device_type)
-            except DefaultSettingsError:
-                detected[device_type] = {}
-        self.devices_detected.emit(detected)
+        default_settings_errors = []
+        try:
+            for device_type in ('camera', 'controller'):
+                try:
+                    detected[device_type] = base.get_devices(device_type)
+                except DefaultSettingsError as exc:
+                    # Record the error but still provide an empty entry for this device type
+                    detected[device_type] = {}
+                    default_settings_errors.append(exc)
+                except Exception:
+                    # On any unexpected error, ensure this device type is present but empty
+                    detected[device_type] = {}
+        finally:
+            # Always emit the signal so the UI can clear any "search in progress" state
+            self.devices_detected.emit(detected)
+        # After emitting the result, re-raise a DefaultSettingsError if any occurred
+        if default_settings_errors:
+            raise default_settings_errors[0]
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
