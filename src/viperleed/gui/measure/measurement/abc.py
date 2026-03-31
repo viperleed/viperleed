@@ -538,7 +538,17 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             delta_energy.handler_widget.soft_minimum = 0.1                      # TODO: allow negative values and catch zero once EnergyGenerator has been implemented
         delta_energy.handler_widget.setSingleStep(0.5)
 
-        widget = _settings.StepProfileViewer()
+        try:
+            controller_settings = self.settings.getsequence(
+                'devices', 'primary_controller', fallback=()
+                )
+        except NotASequenceError:
+            controller_settings = ()
+        max_steps, max_delay = _settings.get_step_profile_limits(
+            controller_settings
+            )
+        widget = _settings.StepProfileViewer(max_num_steps=max_steps,
+                                             max_delay=max_delay)
         tip = '<nobr>How to move from </nobr>one energy to the next one.'
         handler.add_option('energies', 'step_profile', handler_widget=widget,
                            display_name='Step profile', tooltip=tip)
