@@ -241,6 +241,23 @@ _TIME_CRITICAL = qtc.QThread.TimeCriticalPriority
 _UNIQUE = qtc.Qt.UniqueConnection
 
 
+class _DeviceDetectionWorker(qtc.QObject):
+    """Worker object for detecting devices in a dedicated thread."""
+
+    devices_detected = qtc.pyqtSignal(object)
+
+    @qtc.pyqtSlot()
+    def detect_devices(self):
+        """Detect all supported device types and emit the result."""
+        detected = {}
+        for device_type in ('camera', 'controller'):
+            try:
+                detected[device_type] = base.get_devices(device_type)
+            except DefaultSettingsError:
+                detected[device_type] = {}
+        self.devices_detected.emit(detected)
+
+
 class UIErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring in the UI."""
 
@@ -254,6 +271,7 @@ class Measure(ViPErLEEDPluginBase):                                             
     """A GUI that allows to take measurements."""
 
     error_occurred = qtc.pyqtSignal(tuple)
+    detect_devices_requested = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize window."""
@@ -312,6 +330,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.measurement = None
         self._measurement_thread = qtc.QThread()
         self._measurement_thread.start(_TIME_CRITICAL)
+        self._device_detection_thread = qtc.QThread()
+        self._device_detection_worker = _DeviceDetectionWorker()
+        self._device_detection_worker.moveToThread(self._device_detection_thread)
+        self._device_detection_thread.start()
+        self._device_search_in_progress = False
 
         _timer_setup = (
             # key,      interval, single shot
@@ -320,6 +343,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             ('start_measurement', 50, True),
             ('retry_open_bpx_dialog', 50, True),
             ('delay_check_settings', 5, True),
+            ('refresh_devices', 60000, False),
             )
         for timer, interval, single in _timer_setup:
             self._timers[timer].setSingleShot(single)
@@ -359,6 +383,11 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._measurement_thread.quit()
             if not self._measurement_thread.wait(100):
                 self._measurement_thread.terminate()
+            retry_later = True
+        if self._device_detection_thread.isRunning():
+            self._device_detection_thread.quit()
+            if not self._device_detection_thread.wait(100):
+                self._device_detection_thread.terminate()
             retry_later = True
 
         if self._glob['plot']:
@@ -426,7 +455,33 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._timers['delay_check_settings'].start()
 
     def update_device_lists(self):
-        """Update entries in "Devices" menu."""
+        """Request update of entries in "Devices" menu."""
+        self._trigger_device_search()
+
+    def _device_search_allowed(self):
+        """Return whether a new device search can be started."""
+        if self._device_search_in_progress:
+            return False
+        if self.measurement and self.measurement.running:
+            return False
+        if any(viewer.isVisible() for viewer in self._dialogs['camera_viewers']):
+            return False
+        if any(dialog.isVisible()
+               for dialog in self._dialogs['device_settings'].values()):
+            return False
+        return True
+
+    @qtc.pyqtSlot()
+    def _trigger_device_search(self):
+        """Start a device search if no search is running and no device is active."""
+        if not self._device_search_allowed():
+            return
+        self._device_search_in_progress = True
+        self.detect_devices_requested.emit()
+
+    @qtc.pyqtSlot(object)
+    def _on_devices_detected(self, detected_devices):
+        """Update the menu with newly detected devices."""
         devices_menu = self._ctrls['menus']['devices']
         cameras, controllers = [a.menu() for a in devices_menu.actions()]
         cameras.clear()
@@ -437,14 +492,10 @@ class Measure(ViPErLEEDPluginBase):                                             
             'controller': (controllers, self._on_controller_clicked),
             }
         for device, (menu, slot) in devices_and_slots.items():
-            try:
-                detected_devices = self._detect_devices(device)
-            except DefaultSettingsError:
-                continue
             # The _detect_devices method returns the device name,
             # class and, additional information. The class and
             # additional information are returned as a tuple.
-            for device_name, cls_and_info in detected_devices.items():
+            for device_name, cls_and_info in detected_devices[device].items():
                 act = menu.addAction(device_name)
                 act.setData(cls_and_info)
                 act.triggered.connect(slot)
@@ -452,6 +503,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         # Leave enabled only those containing entries
         cameras.setEnabled(bool(cameras.actions()))
         controllers.setEnabled(bool(controllers.actions()))
+        self._device_search_in_progress = False
 
     def _can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
@@ -564,11 +616,14 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         # Devices
         devices_menu = self._ctrls['menus']['devices']                          # TODO: have to update the lists regularly. Use timer to update_device_lists.
-        devices_menu.aboutToShow.connect(self.update_device_lists)
+        devices_menu.aboutToShow.connect(self._trigger_device_search)
         menu.insertMenu(self.about_action, devices_menu)
+        devices_action = devices_menu.menuAction()
+        devices_action.hovered.connect(self._trigger_device_search)
+        devices_action.triggered.connect(self._trigger_device_search)
         devices_menu.addMenu("Cameras")
         devices_menu.addMenu("Controllers")
-        self.update_device_lists()
+        self._trigger_device_search()
 
         # Tools
         tools_menu = self._ctrls['menus']['tools']
@@ -623,6 +678,12 @@ class Measure(ViPErLEEDPluginBase):                                             
         # OTHERS
         self.error_occurred.connect(self._on_error_occurred)
         self._measurement_thread.finished.connect(self._switch_button_enable)
+        self.detect_devices_requested.connect(
+            self._device_detection_worker.detect_devices
+            )
+        self._device_detection_worker.devices_detected.connect(
+            self._on_devices_detected
+            )
 
         # TIMERS
         slots = (
@@ -631,9 +692,11 @@ class Measure(ViPErLEEDPluginBase):                                             
             ('start_measurement', self._on_measurement_started),
             ('retry_open_bpx_dialog', self._on_bad_pixels_selected),
             ('delay_check_settings', self._check_sys_settings_ok),
+            ('refresh_devices', self._trigger_device_search),
             )
         for timer, slot in slots:
             self._timers[timer].timeout.connect(slot)
+        self._timers['refresh_devices'].start()
 
     def _connect_measurement(self):
         connect = functools.partial(base.safe_connect, type=_UNIQUE)
