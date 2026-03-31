@@ -177,9 +177,9 @@ def emit_warning(sender, warning, *msg_args, **msg_kwargs):
     sender : object
         The instance in which the warning occurred. Must have
         a warning_occurred pyqtSignal.
-    warning : tuple
-        The warning to be emitted. Should be a 2-tuple of the
-        form (warning_code, warning_message).
+    warning : tuple or ViPErLEEDErrorEnum
+        The warning to be emitted. Should be a 2-element sequence, such as
+        a tuple, of the form (warning_code, warning_message).
     *msg_args : object
         Extra info to be inserted in the warning message as
         positional arguments to str.format.
