@@ -535,6 +535,12 @@ def init_domains(rp):
     if not rp.ivbeams_sorted:
         rp.ivbeams = iobeams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
+    for dp in rp.domainParams:
+        # inherit the beamlist and sort IVBEAMS if present
+        dp.rp.inherit_from(rp, 'beamlist')
+        if dp.rp.fileLoaded["IVBEAMS"]:
+            dp.rp.ivbeams = iobeams.sortIVBEAMS(None, dp.rp)
+            dp.rp.ivbeams_sorted = True
 
     rp.updateDerivedParams()  # Also sets LMAX
     if not rp.LMAX.has_max:
