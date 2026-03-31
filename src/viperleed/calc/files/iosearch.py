@@ -606,8 +606,10 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     output += (formatter['int'].write([0]).ljust(16) + "initialisation for "
                "random number generator - 0: use system time, 1,...: use"
                " init\n")
-    output += (formatter['int'].write([rp.R_FACTOR_TYPE]).ljust(16)
-               + "1: use RPe -- 2: use R2\n")
+    output += (
+        formatter['int'].write([int(rp.R_FACTOR_TYPE)]).ljust(16)
+        + '1: use RPe -- 2: use R2\n'
+    )
     output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)
                + "Optimization of which beam group do you want? "
                "(0=Aver,1=Int,2=Half)\n")
