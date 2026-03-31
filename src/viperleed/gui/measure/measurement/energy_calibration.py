@@ -209,7 +209,8 @@ class MeasureEnergyCalibration(MeasurementABC):
             # be not yet busy when the primary becomes not busy
             device.busy = True
         self.set_leed_energy(*self.step_profile,
-                             self.current_energy, self.hv_settle_time)
+                             self.current_energy,
+                             self.primary_controller.energy_settle_time)
 
     def calibrate_energy_setpoint(self):                                        # TODO: move this to DataPoints?
         """Calibrate the energy setpoint of the LEED electronics.

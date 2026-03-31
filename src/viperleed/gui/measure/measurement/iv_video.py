@@ -69,11 +69,11 @@ class IVVideo(MeasurementABC):
         return egy
 
     @property
-    def _i0_settle_time(self):
-        """Return the time interval for the settling of I0."""
+    def _ctrl_settle_time(self):
+        """Return the settle time used for controller measurements."""
         if not self.primary_controller:
             return 0
-        return self.primary_controller.i0_settle_time
+        return self.primary_controller.ctrl_settle_time
 
     @property
     def _n_digits(self):
@@ -137,17 +137,17 @@ class IVVideo(MeasurementABC):
 
         profile = self.step_profile
         self.set_leed_energy(*profile,
-                             self.current_energy, self._i0_settle_time)
+                             self.current_energy, self._ctrl_settle_time)
 
         # TODO: here we should start the camera no earlier than
-        # hv_settle_time, but such that image acquisition
+        # camera_settle_time, but such that image acquisition
         # overlaps as much as possible with the measurement time!
         # Frame delivery from the camera should take:
         # (exposure + 1000/fr_rate) + (n_frames - 1) * fr_interval
         # Also, we should probably have one timer per camera, as
         # cameras may potentially deliver frames at different rates!
         profile_duration = sum(profile[1::2])
-        camera_delay = profile_duration + self.hv_settle_time
+        camera_delay = profile_duration + self.camera_settle_time
         self._camera_timer.start(camera_delay)
 
         # Let the user know how much time we are loosing, at

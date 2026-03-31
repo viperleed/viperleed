@@ -134,3 +134,15 @@ class TestDefaultSettings:  # pylint: disable=too-few-public-methods
                     f'Option "{option}" in section [{section}] '
                     'contains uppercase letters.'
                     )
+
+    def test_settle_time_keys(self):
+        """Check settle-time keys in the default ViPErLEED hardware file."""
+        config = ConfigParser()
+        config.optionxform = str
+        config.read(DEFAULTS / '_viperleed_hardware_0_10.ini')
+        mset = config['measurement_settings']
+        assert 'ctrl_settle_time' in mset
+        assert 'camera_settle_time' in mset
+        assert 'energy_settle_time' in mset
+        assert 'i0_settle_time' not in mset
+        assert 'hv_settle_time' not in mset

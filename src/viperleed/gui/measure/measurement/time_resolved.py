@@ -489,8 +489,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # Pick a different settle time for continuous and triggered:
         # in continuous mode we want to get measurements as quickly as
         # possible (and look at short-term time traces); in "triggered"
-        # mode give the user freedom to choose by using hv_settle_time          # TODO: Use something else than hv_settle_time here. i0_settle_time would be long enough for both HV and I0 measurements.
-        settle_time = 0 if _continuous else self.hv_settle_time
+        # mode use the settle time for controller-based measurements.
+        settle_time = 0 if _continuous else self.primary_controller.ctrl_settle_time
 
         # Always trigger measurements. For a "triggered" measurement
         # type the about_to_trigger emitted when the first measurement
