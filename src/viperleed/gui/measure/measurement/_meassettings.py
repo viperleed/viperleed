@@ -52,8 +52,10 @@ def get_step_profile_limits(primary_controller_settings):
 
     Parameters
     ----------
-    primary_controller_settings : Sequence or str
-        Settings entry from devices/primary_controller.
+    primary_controller_settings : sequence or str
+        Settings entry from devices/primary_controller. Expected shape
+        is (<settings_file>, <quantities>). If given as string, it is
+        parsed with ast.literal_eval.
 
     Returns
     -------
@@ -63,6 +65,13 @@ def get_step_profile_limits(primary_controller_settings):
         Maximum delay per intermediate step in milliseconds.
     """
     defaults = ControllerABC.MAX_NUM_STEPS, ControllerABC.MAX_DELAY
+    if isinstance(primary_controller_settings, str):
+        try:
+            primary_controller_settings = literal_eval(
+                primary_controller_settings
+                )
+        except (TypeError, ValueError, SyntaxError):
+            return defaults
     if not isinstance(primary_controller_settings, (list, tuple)):
         return defaults
     if len(primary_controller_settings) != 2:
@@ -81,11 +90,18 @@ def get_step_profile_limits(primary_controller_settings):
         return defaults
     try:
         cls = base.class_from_name('controller', cls_name)
-    except ValueError:
+    except (AttributeError, RuntimeError, ValueError):
         return defaults
     max_num_steps = getattr(cls, 'MAX_NUM_STEPS', ControllerABC.MAX_NUM_STEPS)
     max_delay = getattr(cls, 'MAX_DELAY', ControllerABC.MAX_DELAY)
-    return int(max_num_steps), int(max_delay)
+    try:
+        max_num_steps = int(max_num_steps)
+        max_delay = int(max_delay)
+    except (TypeError, ValueError):
+        return defaults
+    if max_num_steps < 0 or max_delay < 0:
+        return defaults
+    return max_num_steps, max_delay
 
 
 class DeviceEditor(SettingsDialogSectionBase):
@@ -242,10 +258,12 @@ class StepProfileViewer(ButtonWithLabel):
     settings_changed = qtc.pyqtSignal()
     notify_ = settings_changed
 
-    def __init__(self, max_num_steps=None, max_delay=None, **kwargs):
+    def __init__(self, max_num_steps=None, max_delay=None,
+                 limits_resolver=None, **kwargs):
         """Initialize viewer."""
         super().__init__(**kwargs)
         self.set_button_text('Edit')
+        self._limits_resolver = limits_resolver
         self.profile_editor = EnergyStepProfileDialog(
             max_num_steps=max_num_steps,
             max_delay=max_delay,
@@ -280,8 +298,20 @@ class StepProfileViewer(ButtonWithLabel):
 
     def _connect(self):
         """Connect relevant signals and slots."""
-        self.button.clicked.connect(self.profile_editor.show)
+        self.button.clicked.connect(self._on_button_clicked)
         self.profile_editor.accepted.connect(self._on_profile_edited)
+
+    @qtc.pyqtSlot()
+    def _on_button_clicked(self):
+        """Update limits from current settings and show the editor."""
+        if self._limits_resolver is not None:
+            try:
+                max_steps, max_delay = self._limits_resolver()
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+            else:
+                self.profile_editor.set_limits(max_steps, max_delay)
+        self.profile_editor.show()
 
     @qtc.pyqtSlot()
     def _on_profile_edited(self):
@@ -405,6 +435,11 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
             name = self._format_profile_name(profile_editor.name)
             self.pick_profile.addItem(name, userData=profile_editor)
 
+    def set_limits(self, max_num_steps, max_delay):
+        """Update limits in all profile editors."""
+        for profile_editor in self._profile_editors.values():
+            profile_editor.set_limits(max_num_steps, max_delay)
+
 
 class EnergyStepProfileShapeEditor(qtw.QWidget):
     """Base class for step profiles."""
@@ -427,13 +462,17 @@ class EnergyStepProfileShapeEditor(qtw.QWidget):
     def __init__(self, max_num_steps=None, max_delay=None):
         """Initialise object."""
         super().__init__()
+        self.set_limits(max_num_steps, max_delay)
+        self.profile = ()
+
+    def set_limits(self, max_num_steps=None, max_delay=None):
+        """Set limits for step-profile editors."""
         if max_num_steps is None:
             max_num_steps = ControllerABC.MAX_NUM_STEPS
         if max_delay is None:
             max_delay = ControllerABC.MAX_DELAY
         self.max_num_steps = int(max_num_steps)
         self.max_delay = int(max_delay)
-        self.profile = ()
 
     @property
     def subclasses(self):
@@ -541,12 +580,13 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QFormLayout()
-        step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
-                         f'Cannot be more than {self.max_num_steps}.')
+        step_num_info = self._step_number_info_text()
         duration_info = ('<nobr>How long to wait until </nobr>'
                          'the next intermediate step.')
+        self._step_info_label = InfoLabel(label_text='Nr. of steps:',
+                                          tooltip=step_num_info)
         layout.addRow(
-            InfoLabel(label_text='Nr. of steps:', tooltip=step_num_info),
+            self._step_info_label,
             self._controls['n_steps']
             )
         layout.addRow(
@@ -554,6 +594,23 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
             self._controls['duration']
             )
         self.setLayout(layout)
+
+    def _step_number_info_text(self):
+        """Return info text for step count."""
+        return ('<nobr>The number of intermediate steps.</nobr> '
+                f'Cannot be more than {self.max_num_steps}.')
+
+    def set_limits(self, max_num_steps=None, max_delay=None):
+        """Update limits and related widgets."""
+        super().set_limits(max_num_steps=max_num_steps, max_delay=max_delay)
+        controls = getattr(self, '_controls', {})
+        if controls:
+            controls['n_steps'].soft_maximum = self.max_num_steps
+            controls['duration'].soft_maximum = self.max_delay
+        if hasattr(self, '_step_info_label'):
+            self._step_info_label.field_info.set_info_text(
+                self._step_number_info_text()
+                )
 
 
 class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
@@ -657,18 +714,25 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose_labels(self):
         """Return a layout of the labels."""
         layout = qtw.QHBoxLayout()
-        info = ('<nobr>The energies to set given as a fraction</nobr> '
+        self._fraction_info_label = InfoLabel(
+            label_text='Step fraction',
+            tooltip=self._fraction_info_text(),
+            )
+        layout.addWidget(self._fraction_info_label)
+        info = ('<nobr>How long to wait until </nobr>'
+                'the next intermediate step.')
+        layout.addWidget(InfoLabel(label_text='Duration', tooltip=info))
+        return layout
+
+    def _fraction_info_text(self):
+        """Return info text for step fractions."""
+        return ('<nobr>The energies to set given as a fraction</nobr> '
                 f'of {DELTA_E_NAME}. Number of steps cannot exceed '
                 f'{self.max_num_steps}. Any value is acceptable. Zero is '
                 'equivalent to the current energy and one to the next '
                 'energy. A fraction of one does not have to be '
                 'explicitly included at the end, as this is added '
                 'automatically with the correct settle time.')
-        layout.addWidget(InfoLabel(label_text='Step fraction', tooltip=info))
-        info = ('<nobr>How long to wait until </nobr>'
-                'the next intermediate step.')
-        layout.addWidget(InfoLabel(label_text='Duration', tooltip=info))
-        return layout
 
     def _connect(self):
         """Connect buttons to methods."""
@@ -695,3 +759,20 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         """Enable/disable add/remove buttons."""
         self._controls['add_step'].setEnabled(self.n_steps < self.max_num_steps)
         self._controls['remove_step'].setEnabled(self.n_steps > 0)
+
+    def set_limits(self, max_num_steps=None, max_delay=None):
+        """Update limits and related widgets."""
+        super().set_limits(max_num_steps=max_num_steps, max_delay=max_delay)
+        if hasattr(self, '_fraction_info_label'):
+            self._fraction_info_label.field_info.set_info_text(
+                self._fraction_info_text()
+                )
+        while self.n_steps > self.max_num_steps:
+            self._remove_step()
+        layout = self.layout()
+        if layout is not None:
+            for index in range(N_HEADER_ROWS, layout.count()):
+                item = layout.itemAt(index)
+                duration_handler = item.itemAt(1).widget()
+                duration_handler.soft_maximum = self.max_delay
+        self._update_button_states()
