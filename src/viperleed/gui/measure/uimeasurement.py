@@ -482,28 +482,31 @@ class Measure(ViPErLEEDPluginBase):                                             
     @qtc.pyqtSlot(object)
     def _on_devices_detected(self, detected_devices):
         """Update the menu with newly detected devices."""
-        devices_menu = self._ctrls['menus']['devices']
-        cameras, controllers = [a.menu() for a in devices_menu.actions()]
-        cameras.clear()
-        controllers.clear()
+        try:
+            devices_menu = self._ctrls['menus']['devices']
+            cameras, controllers = [a.menu() for a in devices_menu.actions()]
+            cameras.clear()
+            controllers.clear()
 
-        devices_and_slots = {
-            'camera': (cameras, self._on_camera_clicked),
-            'controller': (controllers, self._on_controller_clicked),
-            }
-        for device, (menu, slot) in devices_and_slots.items():
-            # The _detect_devices method returns the device name,
-            # class and, additional information. The class and
-            # additional information are returned as a tuple.
-            for device_name, cls_and_info in detected_devices[device].items():
-                act = menu.addAction(device_name)
-                act.setData(cls_and_info)
-                act.triggered.connect(slot)
+            devices_and_slots = {
+                'camera': (cameras, self._on_camera_clicked),
+                'controller': (controllers, self._on_controller_clicked),
+                }
+            for device, (menu, slot) in devices_and_slots.items():
+                # The detection worker returns the device name,
+                # class and, additional information. The class and
+                # additional information are returned as a tuple.
+                for device_name, cls_and_info in (
+                        detected_devices.get(device, {}).items()):
+                    act = menu.addAction(device_name)
+                    act.setData(cls_and_info)
+                    act.triggered.connect(slot)
 
-        # Leave enabled only those containing entries
-        cameras.setEnabled(bool(cameras.actions()))
-        controllers.setEnabled(bool(controllers.actions()))
-        self._device_search_in_progress = False
+            # Leave enabled only those containing entries
+            cameras.setEnabled(bool(cameras.actions()))
+            controllers.setEnabled(bool(controllers.actions()))
+        finally:
+            self._device_search_in_progress = False
 
     def _can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
@@ -623,7 +626,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         devices_action.triggered.connect(self._trigger_device_search)
         devices_menu.addMenu("Cameras")
         devices_menu.addMenu("Controllers")
-        self._trigger_device_search()
 
         # Tools
         tools_menu = self._ctrls['menus']['tools']
