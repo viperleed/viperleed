@@ -169,6 +169,58 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
     sender.error_occurred.emit((error_code, error_msg))
 
 
+def emit_warning(sender, warning, *msg_args, **msg_kwargs):
+    """Emit a ViPErLEEDErrorEnum-like warning.
+
+    Parameters
+    ----------
+    sender : object
+        The instance in which the warning occurred. Must have
+        a warning_occurred pyqtSignal.
+    warning : tuple or ViPErLEEDErrorEnum
+        The warning to be emitted. Should be a 2-tuple of the
+        form (warning_code, warning_message).
+    *msg_args : object
+        Extra info to be inserted in the warning message as
+        positional arguments to str.format.
+    **msg_kwargs : object
+        Extra info to be inserted in the warning message as
+        keyword arguments.
+
+    Raises
+    ------
+    TypeError
+        If sender does not have a warning_occurred signal,
+        or if warning is not a Sequence.
+    ValueError
+        If warning is not a 2-element tuple.
+    """
+    try:
+        sender.parent()
+    except RuntimeError:
+        # C++ QObject deleted
+        return
+
+    if not hasattr(sender, 'warning_occurred'):
+        raise TypeError(f"Object {sender} has no warning_occurred signal "
+                        "to emit. Probably an inappropriate type")
+    try:
+        _ = len(warning)
+    except TypeError as err:
+        raise TypeError(f"Invalid warning {warning} cannot be emitted") from err
+
+    if len(warning) != 2:
+        raise ValueError(f"Invalid warning {warning} cannot be emitted")
+
+    if not msg_args and not msg_kwargs:
+        sender.warning_occurred.emit(warning)
+        return
+
+    warning_code, warning_msg = warning
+    warning_msg = warning_msg.format(*msg_args, **msg_kwargs)
+    sender.warning_occurred.emit((warning_code, warning_msg))
+
+
 _W_DASH_DOT_RE = re.compile(r'[^-\w.]')
 _MULTI_DASH_RE = re.compile(r'[-]+')
 _MULTI_UNDERSCORE_RE = re.compile(r'[_]+')

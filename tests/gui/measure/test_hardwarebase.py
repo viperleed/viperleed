@@ -14,6 +14,7 @@ import types
 import pytest
 
 from viperleed.gui.measure.hardwarebase import class_from_name
+from viperleed.gui.measure.hardwarebase import emit_warning
 from viperleed.gui.measure.hardwarebase import get_devices
 from viperleed.gui.measure.hardwarebase import import_with_sub_modules
 
@@ -213,3 +214,39 @@ class TestGetDevices:
 
         devices = get_devices('fakepkg')
         assert not devices
+
+
+class _DummySignal:  # pylint: disable=too-few-public-methods
+    def __init__(self):
+        self.emitted = []
+
+    def emit(self, payload):
+        self.emitted.append(payload)
+
+
+class _DummyWarningSender:  # pylint: disable=too-few-public-methods
+    def __init__(self):
+        self.warning_occurred = _DummySignal()
+
+    @staticmethod
+    def parent():
+        return None
+
+
+class TestEmitWarning:
+    """Tests for the emit_warning function."""
+
+    def test_emit_warning_direct(self):
+        sender = _DummyWarningSender()
+        warning = (1, 'warning text')
+
+        emit_warning(sender, warning)
+
+        assert sender.warning_occurred.emitted == [warning]
+
+    def test_emit_warning_formats_message(self):
+        sender = _DummyWarningSender()
+
+        emit_warning(sender, (1, 'hello {}'), 'world')
+
+        assert sender.warning_occurred.emitted == [(1, 'hello world')]
