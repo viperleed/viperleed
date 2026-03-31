@@ -959,7 +959,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     def _continue_preparation(self, _):
         """Continue preparation for measurements.
 
-        Do nothing till all controllers are done with te first part
+        Do nothing till all controllers are done with the first part
         of the preparation, then set the starting energy and wait for
         stabilization, then move on to the second segment (i.e.,
         everything that is done after the starting energy is set).
