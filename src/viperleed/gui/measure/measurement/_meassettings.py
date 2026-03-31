@@ -14,6 +14,7 @@ __license__ = 'GPLv3+'
 
 from abc import abstractmethod
 from ast import literal_eval
+import logging
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
@@ -46,13 +47,15 @@ END_E_NAME = 'E end'
 N_COLUMNS = 2
 N_HEADER_ROWS = 2
 
+LOGGER = logging.getLogger(__name__)
+
 
 def get_step_profile_limits(primary_controller_settings):
     """Return limits for step-profile editors.
 
     Parameters
     ----------
-    primary_controller_settings : sequence or str
+    primary_controller_settings : Sequence or str
         Settings entry from devices/primary_controller. Expected shape
         is (<settings_file>, <quantities>). If given as string, it is
         parsed with ast.literal_eval.
@@ -307,8 +310,9 @@ class StepProfileViewer(ButtonWithLabel):
         if self._limits_resolver is not None:
             try:
                 max_steps, max_delay = self._limits_resolver()
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                LOGGER.warning('Failed to refresh step-profile limits.',
+                               exc_info=True)
             else:
                 self.profile_editor.set_limits(max_steps, max_delay)
         self.profile_editor.show()
@@ -462,7 +466,12 @@ class EnergyStepProfileShapeEditor(qtw.QWidget):
     def __init__(self, max_num_steps=None, max_delay=None):
         """Initialise object."""
         super().__init__()
-        self.set_limits(max_num_steps, max_delay)
+        if max_num_steps is None:
+            max_num_steps = ControllerABC.MAX_NUM_STEPS
+        if max_delay is None:
+            max_delay = ControllerABC.MAX_DELAY
+        self.max_num_steps = int(max_num_steps)
+        self.max_delay = int(max_delay)
         self.profile = ()
 
     def set_limits(self, max_num_steps=None, max_delay=None):
@@ -542,6 +551,7 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     def __init__(self, **kwargs):
         """Initialise object."""
         super().__init__(**kwargs)
+        self._step_info_label = None
         self._controls = {
             'n_steps' : CoercingSpinBox(soft_range=(0, self.max_num_steps)),
             'duration' : CoercingSpinBox(soft_range=(0, self.max_delay),
@@ -603,11 +613,9 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     def set_limits(self, max_num_steps=None, max_delay=None):
         """Update limits and related widgets."""
         super().set_limits(max_num_steps=max_num_steps, max_delay=max_delay)
-        controls = getattr(self, '_controls', {})
-        if controls:
-            controls['n_steps'].soft_maximum = self.max_num_steps
-            controls['duration'].soft_maximum = self.max_delay
-        if hasattr(self, '_step_info_label'):
+        self._controls['n_steps'].soft_maximum = self.max_num_steps
+        self._controls['duration'].soft_maximum = self.max_delay
+        if self._step_info_label is not None:
             self._step_info_label.field_info.set_info_text(
                 self._step_number_info_text()
                 )
@@ -625,6 +633,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def __init__(self, **kwargs):
         """Initialise object."""
         super().__init__(**kwargs)
+        self._fraction_info_label = None
         self._controls = {
             'add_step' : QNoDefaultPushButton('Add'),
             'remove_step' : QNoDefaultPushButton('Remove'),
@@ -763,16 +772,32 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def set_limits(self, max_num_steps=None, max_delay=None):
         """Update limits and related widgets."""
         super().set_limits(max_num_steps=max_num_steps, max_delay=max_delay)
-        if hasattr(self, '_fraction_info_label'):
+        if self._fraction_info_label is not None:
             self._fraction_info_label.field_info.set_info_text(
                 self._fraction_info_text()
                 )
         while self.n_steps > self.max_num_steps:
             self._remove_step()
-        layout = self.layout()
-        if layout is not None:
-            for index in range(N_HEADER_ROWS, layout.count()):
-                item = layout.itemAt(index)
-                duration_handler = item.itemAt(1).widget()
-                duration_handler.soft_maximum = self.max_delay
+        self._update_duration_limits()
         self._update_button_states()
+
+    def _update_duration_limits(self):
+        """Update duration limits in all added custom-step rows."""
+        layout = self.layout()
+        if layout is None:
+            return
+        for index in range(N_HEADER_ROWS, layout.count()):
+            duration_handler = self._duration_handler(layout.itemAt(index))
+            if duration_handler is None:
+                continue
+            duration_handler.soft_maximum = self.max_delay
+
+    @staticmethod
+    def _duration_handler(row_item):
+        """Return duration spinbox from a row item."""
+        if row_item is None:
+            return None
+        duration_item = row_item.itemAt(1)
+        if duration_item is None:
+            return None
+        return duration_item.widget()
