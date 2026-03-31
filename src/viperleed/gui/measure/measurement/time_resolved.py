@@ -429,26 +429,29 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
     @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Change settings of the measurement."""
-        meas_class = new_settings.get('measurement_settings',
-                                      'measurement_class',
-                                      fallback='')
-        if meas_class == 'TimeResolved':
-            try:
-                legacy_continuous = new_settings.getboolean(
-                    'measurement_settings', 'is_continuous'
-                    )
-            except (ValueError, NoSectionError, NoOptionError):
-                legacy_continuous = self.is_continuous
-            if legacy_continuous != self.is_continuous:
-                self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                                'measurement_settings/is_continuous', '')
-                return False
-            new_settings.set('measurement_settings', 'measurement_class',
-                             self.__class__.__name__)
-        # Keep this flag synchronized for compatibility with loading old
-        # time-resolved data/configuration that still relies on it.
-        new_settings.set('measurement_settings', 'is_continuous',
-                         str(self.is_continuous))
+        # Only access parser APIs directly when available, as callers may
+        # pass dict/path/str and rely on the base class for conversion.
+        if hasattr(new_settings, 'get') and hasattr(new_settings, 'set'):
+            meas_class = new_settings.get('measurement_settings',
+                                          'measurement_class',
+                                          fallback='')
+            if meas_class == 'TimeResolved':
+                try:
+                    legacy_continuous = new_settings.getboolean(
+                        'measurement_settings', 'is_continuous'
+                        )
+                except (ValueError, NoSectionError, NoOptionError):
+                    legacy_continuous = self.is_continuous
+                if legacy_continuous != self.is_continuous:
+                    self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                                    'measurement_settings/is_continuous', '')
+                    return False
+                new_settings.set('measurement_settings', 'measurement_class',
+                                 self.__class__.__name__)
+            # Keep this flag synchronized for compatibility with loading old
+            # time-resolved data/configuration that still relies on it.
+            new_settings.set('measurement_settings', 'is_continuous',
+                             str(self.is_continuous))
         settings_ok = super().set_settings(new_settings)
         self.data_points.time_resolved = True
         self.data_points.continuous = self.is_continuous

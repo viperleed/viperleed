@@ -11,6 +11,10 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2021-10-12'
 __license__ = 'GPLv3+'
 
+_TIME_RESOLVED_CLASS_NAMES = {'TimeResolved',
+                              'TimeResolvedTriggered',
+                              'TimeResolvedContinuous'}
+
 # FIXED? camera error should close viewer --> check that no frames can arrive
 #        and reopen the viewer. If this is the case, the .close() can be tied
 #        to a timer with a small delay.
@@ -1118,9 +1122,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         meas_config.prepare_aliases(cls_name)
         # Use the information in the config for
         # correctly updating the DataPoints
-        datapts.time_resolved = cls_name in ('TimeResolved',
-                                             'TimeResolvedTriggered',
-                                             'TimeResolvedContinuous')
+        datapts.time_resolved = cls_name in _TIME_RESOLVED_CLASS_NAMES
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
                                                         'is_continuous')
@@ -1143,9 +1145,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
         cls_name = meas_config['measurement_settings']['measurement_class']
         meas_config.prepare_aliases(cls_name)
-        datapts.time_resolved = cls_name in ('TimeResolved',
-                                             'TimeResolvedTriggered',
-                                             'TimeResolvedContinuous')
+        datapts.time_resolved = cls_name in _TIME_RESOLVED_CLASS_NAMES
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
                                                         'is_continuous')
