@@ -88,12 +88,13 @@ class OffsetsHeaderLine(HeaderLine):
         = OFFSETS
     """
 
+    section = 'OFFSETS'
+
     def __init__(self, line):
         """Initialize the OffsetsHeaderLine with a line string."""
         if not OFFSETS_HEADER_PATTERN.match(line.strip()):
             msg = f'Invalid offsets header line: {line!r}.'
             raise DisplacementsSyntaxError(msg)
-        self.section = 'OFFSETS'
 
     def __str__(self):
         """Return the string representation of the offsets header."""
