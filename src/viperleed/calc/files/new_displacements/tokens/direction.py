@@ -76,7 +76,7 @@ class CartesianDirectionToken(DirectionToken):
     ----------
     dof : int
         The number of degrees of freedom (DOF), either 1, 2, or 3.
-    vectors : tuple of np.ndarray
+    vectors_xyz : ndarray, shape (dof, 3)
         A tuple of one, two or three orthonormal vectors spanning the
         direction space. Note, the vectors are in the xyz convention.
         Use the `vectors_zxy` property to get them in the zxy (LEED)
