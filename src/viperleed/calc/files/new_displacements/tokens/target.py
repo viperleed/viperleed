@@ -83,13 +83,9 @@ class TargetToken(DisplacementsFileToken):
         if not isinstance(other, TargetToken):
             return NotImplemented
         return (
-            (other.nums == self.nums if self.nums is not None else True)
-            and (
-                other.layers == self.layers
-                if self.layers is not None
-                else True
-            )
-            and (other.regex == self.regex)
+            other.nums == self.nums
+            and self.layers == other.layers
+            and self.regex == other.regex
         )
 
 
