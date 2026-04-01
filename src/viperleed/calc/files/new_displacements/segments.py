@@ -102,7 +102,7 @@ class DisplacementsSegmentABC(ABC, NodeMixin):
 
     @abstractmethod
     def validate_segment(self):
-        """Check the segments contents run before returning to parent."""
+        """Validate the segment."""
 
     @abstractmethod
     def _belongs_to_me(self, line):
@@ -234,7 +234,7 @@ class SearchBlock(DisplacementsSegmentABC):
         return self._get_block_lines(VibDeltaBlock)
 
     def validate_segment(self):
-        """Check the segments contents run before returning to parent."""
+        """Validate the segment."""
         if not self.children:
             msg = f'Empty search block: {self.label!r}.'
             raise DisplacementsSyntaxError(msg)
