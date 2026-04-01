@@ -239,6 +239,15 @@ class SearchBlock(DisplacementsSegmentABC):
             msg = f'Empty search block: {self.label!r}.'
             raise DisplacementsSyntaxError(msg)
 
+        # check that children are of allowed types
+        for child in self.children:
+            if not isinstance(child, self.subsegments):
+                msg = (
+                    f'Invalid block type {type(child).__name__} found in '
+                    f'search block: "{self.label}".'
+                )
+                raise DisplacementsSyntaxError(msg)
+
         # check that there is at most one block of each type
         for block_type in self.subsegments:
             blocks = [
