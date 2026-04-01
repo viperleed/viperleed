@@ -59,13 +59,13 @@ class TargetToken(DisplacementsFileToken):
                 msg = f'Invalid layer specification: "{parts[1]}".'
                 raise TargetingError(msg)
             int_ranges = read_int_range(layer_match['ranges'].strip())
-            self.layers = list(int_ranges)
+            self.layers = tuple(int_ranges)
 
             return
 
         # Check for a list of numbers or range like "1-4"
         try:
-            self.nums = list(read_int_range(parts[1]))
+            self.nums = tuple(read_int_range(parts[1]))
         except ValueError as err:
             msg = f'Invalid target specification: "{parts[1]}".'
             raise TargetingError(msg) from err
