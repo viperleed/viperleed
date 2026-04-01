@@ -195,15 +195,20 @@ class ParsedLine(ABC):
         # split the line into raw left and right hand sides
         self._lhs, self._rhs = self.raw_line.split('=')
 
-    @property
-    @abstractmethod
-    def block_name(self):
-        """Name of the block in the DISPLACEMENTS file."""
-
-    @property
-    @abstractmethod
-    def expected_format(self):
-        """Name of the block in the DISPLACEMENTS file."""
+    def __init_subclass__(cls, **kwargs):
+        """Check that subclasses define required class attributes."""
+        super().__init_subclass__(**kwargs)
+        required_attrs = (
+            'block_name',  # Name of the block in the DISPLACEMENTS file
+            'expected_format',  # Format of the block
+        )
+        for attr in required_attrs:
+            if not hasattr(cls, attr):
+                msg = (
+                    f'Class {cls.__name__} must define '
+                    f'class attribute {attr!r}'
+                )
+                raise TypeError(msg)
 
     def _parse_targets(self, targets_str):
         target_parts = targets_str.split(',')
