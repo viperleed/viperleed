@@ -117,7 +117,9 @@ def vlj_search(slab, rpars):
     except Exception as e:
         logger.warning(
             f'Could not export parameter space tree view: {e}. '
-            'Dot language support may not be available.'
+            'Dot language support may not be available. Graphical export is '
+            'handled by the `dot` tool from the `graphviz` package. '
+            'See https://www.graphviz.org for details.'
         )
     else:
         logger.info(
