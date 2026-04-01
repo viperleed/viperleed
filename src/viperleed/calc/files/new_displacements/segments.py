@@ -294,11 +294,7 @@ class LoopBlock(DisplacementsSegmentABC):
         if self.lines and self.lines[-1].kind == 'end':
             return False
         # if not, check if this is the end line
-        is_end_line = isinstance(line, LoopMarkerLine) and line.kind == 'end'
-        if is_end_line:
-            # accept no more subsegments after this
-            self._subsegments = ()
-        return is_end_line
+        return isinstance(line, LoopMarkerLine) and line.kind == 'end'
 
     @property
     def _render_name(self):
