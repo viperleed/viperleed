@@ -171,6 +171,20 @@ class TestParametersEditor:
         assert modified.comment == comment
         assert modified.fmt_value == '0.2300'
 
+    def test_modify_param_same_value(self, tmp_path):
+        """Ensure no modification happens if the value is unchanged."""
+        fpath = tmp_path/'PARAMETERS'
+        param, flag, old_value = 'DOMAIN', 'one', './one'
+        fpath.write_text(f'{param} {flag} = {old_value}')
+        rpars = Rparams()
+        rpars.readParams[param].append(Assignment(old_value, param, flag))
+        with execute_in_dir(tmp_path):
+            with ParametersFileEditor(rpars) as editor:
+                editor.modify_param('DOMAIN', old_value)
+        contents = fpath.read_text()
+        assert contents
+        assert ParametersFileEditor._header not in contents
+
     def test_modify_multi_valued_raises(self, read_one_param_file):
         """Test complaints when modifying a multi-valued parameter."""
         rpars = Rparams()

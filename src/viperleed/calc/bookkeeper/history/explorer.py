@@ -171,7 +171,7 @@ class HistoryExplorer:
         return fixed_anything
 
     def has_subfolder(self, name_rgx):
-        """Return whether a a subfolder matching `name_rgx` is present."""
+        """Return whether a subfolder matching `name_rgx` is present."""
         return any(re.fullmatch(name_rgx, f.name) for f in self._subfolders)
 
     def list_paths_to_discard(self):

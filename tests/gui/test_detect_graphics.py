@@ -16,10 +16,12 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-from viperleed.gui.detect_graphics import _HAS_PYQT
 from viperleed.gui.detect_graphics import _QtUnixPlatformsGetter
 from viperleed.gui.detect_graphics import _TIMEOUT
+from viperleed.gui.detect_graphics import PyQtSanity
+from viperleed.gui.detect_graphics import PyQtSanityChecker
 from viperleed.gui.detect_graphics import Qt5DependencyFinder
+from viperleed.gui.detect_graphics import _import_dummy_pyqt_and_run_app
 from viperleed.gui.detect_graphics import _init_dummy_qapp
 from viperleed.gui.detect_graphics import find_missing_qt_dependencies
 from viperleed.gui.detect_graphics import has_graphics
@@ -27,13 +29,13 @@ from viperleed.gui.detect_graphics import has_pyqt
 from viperleed.gui.detect_graphics import suppress_file_permission_warnings
 
 _MODULE = 'viperleed.gui.detect_graphics'
-with_pyqt = pytest.mark.skipif(not _HAS_PYQT)
 
 
-# TODO: would be better to find a way to mock at least _init_dummy_qapp
-# instead of mocking multiprocessing.Process. My tests seem to reveal
-# that, while has_graphics gets the correct target, that target is
-# never actually called.
+# TODO: would be better to find a way to mock at least
+# _import_dummy_pyqt_and_run_app instead of mocking
+# multiprocessing.Process. My tests seem to reveal
+# that, while _check_pyqt_sanity gets the correct
+# target, that target is never actually called.
 
 
 @fixture(name='mock_multiprocessing')
@@ -59,8 +61,8 @@ def fixture_mock_process(mocker):
 
 def test_init_dummy_qapp(mocker):
     """Check calls in _init_dummy_qapp."""
-    mock_qapp = mocker.patch(f'{_MODULE}.QApplication',
-                             create=not _HAS_PYQT)
+    mock_qtwidgets = mocker.patch('importlib.import_module').return_value
+    mock_qapp = mock_qtwidgets.QApplication
     mock_suppress = mocker.patch(
         f'{_MODULE}.suppress_file_permission_warnings'
         )
@@ -72,36 +74,90 @@ def test_init_dummy_qapp(mocker):
 
 @parametrize(pyqt_present=(True, False))
 @parametrize(has_display=(True, False))
-def test_has_graphics(pyqt_present, has_display, mock_multiprocessing, mocker):
+def test_has_graphics(pyqt_present, has_display, mocker):
     """Ensure correct identification of graphics capabilities."""
-    mocker.patch(f'{_MODULE}._HAS_PYQT', pyqt_present)
-    proc, proc_cls = mock_multiprocessing(has_display)
-    calls = {}
-    if pyqt_present:
-        calls = {
-            'start': mocker.call(),
-            'join': mocker.call(_TIMEOUT),
-            'is_alive': mocker.call(),
-            }
-    if pyqt_present and not has_display:
-        calls['terminate'] = mocker.call()
-
+    mocker.patch(f'{_MODULE}.has_pyqt', return_value=pyqt_present)
+    check_sanity = mocker.patch(
+        f'{_MODULE}.check_pyqt_sanity',
+        return_value=PyQtSanity.OK if has_display else PyQtSanity.NO_DISPLAY
+        )
     result = has_graphics()
     assert result == (pyqt_present and has_display)
 
     # Check also internal calls
     if pyqt_present:
-        proc_cls.assert_called_once_with(target=_init_dummy_qapp)
-    for method_name, call in calls.items():
-        method = getattr(proc, method_name)
-        assert method.mock_calls == [call]
+        check_sanity.assert_called_once_with()
+    else:
+        check_sanity.assert_not_called()
 
 
-@parametrize(pyqt_present=(True, False))
-def test_has_pyqt(pyqt_present, mocker):
+@parametrize(pyqt_sanity=PyQtSanity)
+def test_has_pyqt(pyqt_sanity, mocker):
     """Ensure correct detection of PyQt5 presence."""
-    mocker.patch(f'{_MODULE}._HAS_PYQT', pyqt_present)
+    mocker.patch(f'{_MODULE}.check_pyqt_sanity', return_value=pyqt_sanity)
+    pyqt_present = pyqt_sanity in {PyQtSanity.OK, PyQtSanity.NO_DISPLAY}
     assert has_pyqt() == pyqt_present
+
+
+class TestImportDummyPyqtAndRunApp:
+    """Tests for the _import_dummy_pyqt_and_run_app subprocess worker."""
+
+    # The modules that we attempt to import
+    _modules = (
+        'PyQt5.QtCore',
+        'PyQt5.QtWidgets',
+        )
+
+    @fixture(name='mock_dummy_qapp', autouse=True)
+    def fixture_mock_dummy_qapp(self, mocker):
+        """Replace _init_dummy_qapp with a mock."""
+        # This is to ensure tests don't hang forever on a system
+        # without graphics.
+        return mocker.patch(f'{_MODULE}._init_dummy_qapp')
+
+    def test_cant_import_pyqt(self, mocker):
+        """Check the expected exit code when importing PyQt5 fails."""
+        mocker.patch('importlib.import_module',
+                     side_effect=ImportError)
+        with pytest.raises(SystemExit) as excinfo:
+            _import_dummy_pyqt_and_run_app()
+        assert excinfo.value.code == PyQtSanity.IMPORT_ERROR.value
+
+    @parametrize(module=_modules)
+    def test_cant_import_pyqt_submodule(self, module, mocker):
+        """Check the expected exit code when importing PyQt5 fails."""
+        def _fail_module_import(mod_name):
+            if mod_name == module:
+                raise ImportError
+        mocker.patch('importlib.import_module',
+                     side_effect=_fail_module_import)
+        with pytest.raises(SystemExit) as excinfo:
+            _import_dummy_pyqt_and_run_app()
+        assert excinfo.value.code == PyQtSanity.IMPORT_ERROR.value
+
+    def test_pyqt_not_found(self, mocker):
+        """Check the expected exit code when PyQt5 is not found."""
+        mocker.patch('importlib.import_module',
+                     side_effect=ModuleNotFoundError)
+        with pytest.raises(SystemExit) as excinfo:
+            _import_dummy_pyqt_and_run_app()
+        assert excinfo.value.code == PyQtSanity.NOT_FOUND.value
+
+    def test_success(self, mocker, mock_dummy_qapp):
+        """Test an execution that does not cause the interpreter to exit."""
+        # NB: normally, the interpreter always exits when
+        # _import_dummy_pyqt_and_run_app is called. The only
+        # reason why we don't exit here is the patching of
+        # _init_dummy_qapp via mock_dummy_qapp.
+        mock_import = mocker.patch('importlib.import_module')
+        _import_dummy_pyqt_and_run_app()
+
+        expect_calls = [
+            mocker.call('PyQt5'),
+            *(mocker.call(m) for m in self._modules)
+            ]
+        mock_import.assert_has_calls(expect_calls, any_order=True)
+        mock_dummy_qapp.assert_called_once_with()
 
 
 class TestFindMissingDependencies:
@@ -109,7 +165,8 @@ class TestFindMissingDependencies:
 
     def test_raises(self, mocker):
         """Check complaints when calling the function without Qt."""
-        mocker.patch(f'{_MODULE}.has_pyqt', return_value=False)
+        mocker.patch(f'{_MODULE}.check_pyqt_sanity',
+                     return_value=PyQtSanity.NOT_FOUND)
         with pytest.raises(NotImplementedError):
             find_missing_qt_dependencies()
 
@@ -180,8 +237,8 @@ class TestSuppressFilePermissionWarnings:
         expect_path = fallback/'viperleed-gui'
 
         mocker.patch(f'{_MODULE}._UNIX_RUNTIME_DIR', str(fails))
-        mocker.patch(f'{_MODULE}.qtc.QStandardPaths.writableLocation',
-                     return_value=str(fallback))
+        mock_qtc = mocker.patch('importlib.import_module').return_value
+        mock_qtc.QStandardPaths.writableLocation.return_value = str(fallback)
 
         mkdir = Path.mkdir
         def mkdir_raises(path, *args, **kwargs):
@@ -202,11 +259,86 @@ class TestSuppressFilePermissionWarnings:
         assert os.environ['XDG_RUNTIME_DIR'] == str(expect_path)
 
 
+class TestPyQtSanityChecker:
+    """Tests for the PyQtSanityChecker class."""
+
+    def test_checks_only_once(self, mocker):
+        """Ensure that checking is skipped when already done."""
+        mock_sanity = mocker.MagicMock()
+        mock_do_check = mocker.patch.object(PyQtSanityChecker,
+                                            '_check_pyqt_sanity',
+                                            return_value=mock_sanity)
+        # Reset status manually, just in case it was checked already
+        mocker.patch.object(PyQtSanityChecker, '_status', None)
+        checker = PyQtSanityChecker()
+
+        # Call it once: performs the check.
+        assert checker() is mock_sanity
+        # pylint: disable-next=protected-access
+        assert PyQtSanityChecker._status is mock_sanity
+
+        # Call it again: should skip the check
+        assert checker() is mock_sanity
+        mock_do_check.assert_called_once_with()
+
+    def test_forget_status(self, mocker):
+        """Ensure resetting re-checks."""
+        # Reset status manually, just in case it was checked already
+        mocker.patch.object(PyQtSanityChecker, '_status', None)
+        mock_do_check = mocker.patch.object(PyQtSanityChecker,
+                                            '_check_pyqt_sanity')
+        checker = PyQtSanityChecker()
+        # Check once to ensure forget_status does the right thing
+        checker()
+
+        checker.forget_status()
+        checker()
+
+        # pylint: disable-next=magic-value-comparison
+        assert mock_do_check.call_count == 2
+
+    _exit_codes = {
+        0: PyQtSanity.OK,
+        1: PyQtSanity.NOT_FOUND,
+        2: PyQtSanity.IMPORT_ERROR,
+        3: PyQtSanity.RUNTIME_CRASH,
+        4: PyQtSanity.NO_DISPLAY,
+        -6: PyQtSanity.RUNTIME_CRASH,   # SIGABRT
+        134: PyQtSanity.RUNTIME_CRASH,  # SIGABRT on Unix
+        'any code': PyQtSanity.RUNTIME_CRASH
+        }
+
+    @parametrize(has_display=(True, False))
+    @parametrize('exit_code,expect', _exit_codes.items())
+    # pylint: disable-next=too-many-arguments   # 2/6 fixtures
+    def test_check_sanity(self, has_display, exit_code, expect,
+                          mock_multiprocessing, mocker):
+        """Check expected return value when no display is available."""
+        proc, proc_cls = mock_multiprocessing(has_display)
+        proc.exitcode = exit_code
+        expect_calls = {
+            'start': mocker.call(),
+            'join': mocker.call(_TIMEOUT),
+            'is_alive': mocker.call(),
+            }
+        if not has_display:
+            expect_calls['terminate'] = mocker.call()
+            expect = PyQtSanity.NO_DISPLAY
+        # pylint: disable-next=protected-access
+        result = PyQtSanityChecker._check_pyqt_sanity()
+        assert result is expect
+        proc_cls.assert_called_once_with(target=_import_dummy_pyqt_and_run_app)
+        for method_name, call in expect_calls.items():
+            method = getattr(proc, method_name)
+            assert method.mock_calls == [call]
+
+
 @fixture(name='mock_pyqt_root')
 def fixture_mock_pyqt_root(mocker):
     """Fake the existence of PyQt5's root path."""
     mock_root = '/path/to/pyqt'
-    mocker.patch(f'{_MODULE}.PyQt5.__file__', f'{mock_root}/__init__.py')
+    mock_pyqt = mocker.patch('importlib.import_module').return_value
+    mock_pyqt.__file__ = f'{mock_root}/__init__.py'
     mocker.patch('pathlib.Path.exists', resturn_value=True)
     return Path(mock_root).resolve()
 
@@ -286,6 +418,19 @@ class TestQt5DependencyFinder:
         result = Qt5DependencyFinder.find_install_for_libs(mocker.MagicMock())
         no_install_suggestion = ''
         assert result == no_install_suggestion
+
+    @parametrize(platform=(*_supported, *_unsupported))
+    def test_find_install_for_libs_no_missing(self, platform, mocker):
+        """Check shortcut if nothing is missing."""
+        mocker.patch('sys.platform', platform)
+        mock_delegate = mocker.patch.object(
+            Qt5DependencyFinder,
+            f'_find_install_for_libs_{platform}',
+            create=True,
+            )
+        none_missing = {}
+        assert not Qt5DependencyFinder.find_install_for_libs(none_missing)
+        mock_delegate.assert_not_called()
 
     @pytest.mark.usefixtures('mock_pyqt_root')
     @parametrize(platform=_supported)
@@ -438,16 +583,26 @@ class TestQtUnixPlatformGetter:
         '6.0.0',
         )
 
+    @fixture(name='mock_qtc')
+    def fixture_mock_qtc(self, mocker):
+        """Return a fake QtCore module."""
+        return mocker.patch('importlib.import_module').return_value
+
     @fixture
     @parametrize(version=_supported)
-    def mock_supported_version(self, version, mocker):
+    def mock_supported_version(self, version, mock_qtc):
         """Fake a supported PyQt5 version."""
-        mocker.patch(f'{_MODULE}.qtc.QT_VERSION_STR', version)
+        mock_qtc.QT_VERSION_STR = version
+
+    def test_cant_import_qtcore(self, mocker):
+        """Check outcome when QtCore fails to import."""
+        mocker.patch('importlib.import_module', side_effect=ImportError)
+        assert not _QtUnixPlatformsGetter.get()
 
     @parametrize(version=_unsupported)
-    def test_unsupported_version(self, version, mocker):
+    def test_unsupported_version(self, version, mock_qtc):
         """Check complaints for unsupported Qt versions."""
-        mocker.patch(f'{_MODULE}.qtc.QT_VERSION_STR', version)
+        mock_qtc.QT_VERSION_STR = version
         with pytest.raises(NotImplementedError):
             _QtUnixPlatformsGetter.get()
 
@@ -478,8 +633,9 @@ class TestQtUnixPlatformGetter:
     @parametrize(gnome=({},
                         {'XDG_CURRENT_DESKTOP': 'some-gnome-value'},
                         {'XDG_SESSION_DESKTOP': 'some-gnome-value'}))
+    @pytest.mark.usefixtures('mock_supported_version')
     def test_wayland(self, default, gnome, mocker):
-        """Check result when XDG_SESSION_TYPE is set to x11."""
+        """Check result when XDG_SESSION_TYPE is set to wayland."""
         kwargs = {'clear': True,
                   'XDG_SESSION_TYPE': 'wayland',
                   **gnome}
@@ -494,8 +650,9 @@ class TestQtUnixPlatformGetter:
 
     @parametrize(default=(None, 'some-default'))
     @parametrize(xdg=('valid', 'invalid', 'xcb'))
+    @pytest.mark.usefixtures('mock_supported_version')
     def test_xdg_other(self, default, xdg, mocker):
-        """Check result when XDG_SESSION_TYPE is set to x11."""
+        """Check result when XDG_SESSION_TYPE is set to non-wayland/x11."""
         kwargs = {'clear': True,
                   'XDG_SESSION_TYPE': xdg}
         if default:
@@ -507,6 +664,7 @@ class TestQtUnixPlatformGetter:
         assert result == {xdg, default}
 
     @parametrize(default=(None, 'some-default'))
+    @pytest.mark.usefixtures('mock_supported_version')
     def test_x_eleven(self, default, mocker):
         """Check result when XDG_SESSION_TYPE is set to x11."""
         kwargs = {'clear': True,

@@ -80,6 +80,7 @@ parameter to define the step width for domain-area variations.
     │   ├── PARAMETERS
     │   ├── POSCAR
     │   ├── VIBROCC
+    │   ├── IVBEAMS        <-- Not used
     │   └── DISPLACEMENTS  <-- Not used
     ├── my_domain_2/       <-- Use most recent Tensors
     │   ├── Tensors/
@@ -127,6 +128,7 @@ after the :ref:`super_pos`).
     │   ├── Tensors/       <-- Created by calc at end
     │   │   └── Tensors_001.zip
     │   ├── history.info   <-- Created by bookkeeper, for my_domain_1
+    │   ├── IVBEAMS        <-- Copied from my_domain_calc/
     │   ├── PARAMETERS
     │   ├── PARAMETERS_ori
     │   ├── POSCAR
@@ -151,6 +153,7 @@ after the :ref:`super_pos`).
     │   │   ├── ...
     │   │   └── Tensors_005.zip
     │   ├── history.info   <-- Created by bookkeeper, for my_domain_2
+    │   ├── IVBEAMS        <-- Extracted from Tensors_005.zip
     │   ├── PARAMETERS
     │   ├── PARAMETERS_ori <-- The unused one
     │   ├── POSCAR
@@ -165,8 +168,9 @@ after the :ref:`super_pos`).
     ├── DISPLACEMENTS
     ├── EXPBEAMS.csv
     ├── history.info       <-- Created by bookkeeper, for the main directory
-    ├── PARAMETERS_ori
+    ├── IVBEAMS            <-- Created by calc from EXPBEAMS.csv
     ├── PARAMETERS
+    ├── PARAMETERS_ori
     └── viperleed-calc-<timestamp>.log
 
 To specify which segments should be run, either use the :ref:`RUN` parameter

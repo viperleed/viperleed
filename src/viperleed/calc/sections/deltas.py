@@ -9,7 +9,9 @@ __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
+import functools
 import hashlib
+import itertools
 import logging
 import os
 from pathlib import Path
@@ -19,11 +21,9 @@ import subprocess
 import numpy as np
 
 from viperleed.calc.constants import DEFAULT_DELTAS
-from viperleed.calc.constants import DEFAULT_SUPP
 from viperleed.calc.constants import DEFAULT_TENSORS
 from viperleed.calc.files import iodeltas
 from viperleed.calc.files import iotensors
-from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
@@ -32,7 +32,9 @@ from viperleed.calc.lib.context import execute_in_dir
 
 logger = logging.getLogger(__name__)
 
-# TODO: would be nice to replace all os.path with pathlib
+
+class DeltasError(Exception):
+    """Base exception for delta-amplitudes-related errors."""
 
 
 # TODO: see note in refcalc. #43
@@ -48,18 +50,24 @@ class DeltaCompileTask:
         after successful compilation.
     fortran_comp : tuple
         Compiler and compilation flags.
-    hash : str
-        A unique identifier for this task. Usually calculated
-        from `param`.
     param : str
         Contents of the PARAM file, defining array dimensions
         for compilation.
     source_dir : Path
         Path to the folder containing the static Fortran
         source files to be compiled.
+
+    Notes
+    -----
+    Instances of this class remember the path in which they were
+    created. Compilation (via compile_delta) and later execution
+    (via run_delta) happen in a subfolder of this path. It is
+    thus important to create instances of this class in the correct
+    work directory: the main one for a single domain, domain.workdir
+    for each domain of a multi-domain calculation.
     """
 
-    def __init__(self, param, hash_, source_dir, index):
+    def __init__(self, param, source_dir, index):
         """Initialize instance.
 
         Parameters
@@ -67,9 +75,6 @@ class DeltaCompileTask:
         param : str
             Contents of the PARAM file, defining array dimensions
             for compilation.
-        hash_ : str
-            A unique identifier for this task. Usually calculated
-            from `param`.
         source_dir : Path
             Path to the folder containing the static Fortran
             source files to be compiled.
@@ -85,9 +90,15 @@ class DeltaCompileTask:
         self.exename = f'delta-{index}'
         self.foldername = f'Delta_Compile_{index}'
         self.fortran_comp = ['', '']
-        self.hash = hash_
         self.param = param
         self.source_dir = Path(source_dir).resolve()  # where the fortran files are
+
+        # _root is the folder that contains .foldername. Compilation
+        # happens in self.exec_dir, but _root contains the tensors
+        # required for the calculation. It is also in _root that the
+        # results of the delta calculation are placed when finished.
+        # This is critical for multi-domain calculations (Issue #440).
+        self._root = Path.cwd()
 
         if os.name == 'nt':
             self.exename += '.exe'
@@ -95,6 +106,11 @@ class DeltaCompileTask:
     def __str__(self):
         """Return a string representation of this DeltaCompileTask."""
         return f'{type(self).__name__} {self.foldername}'
+
+    @property
+    def exec_dir(self):
+        """Return the path to the folder where compilation takes place."""
+        return self._root / self.foldername
 
     @property
     def logfile(self):
@@ -164,6 +180,11 @@ class DeltaRunTask:
         return f'calculating_{self.name}'
 
     @property
+    def io_dir(self):
+        """Path where inputs are and results should be placed."""
+        return self.comptask.exec_dir.parent
+
+    @property
     def name(self):
         """Return a name for this task."""
         return self.deltaname
@@ -177,9 +198,9 @@ class DeltaRunTask:
 def run_delta(runtask):
     """Execute a single delta-amplitude DeltaRunTask.
 
-    The calculation is executed in a subfolder of the current working
-    directory. The subfolder is removed upon successful execution.
-    This function is meant to be executed by parallelized workers.
+    The calculation is executed in a subfolder of runtask.io_dir. The
+    subfolder is removed upon successful execution. This function is
+    meant to be executed by parallelized workers.
 
     Parameters
     ----------
@@ -193,8 +214,7 @@ def run_delta(runtask):
         A message with information about errors occurred during
         execution of `runtask`.
     """
-    base = Path.cwd()
-    workfolder = base / runtask.foldername
+    workfolder = runtask.io_dir / runtask.foldername
     # Make folder and go there:
     try:
         workfolder.mkdir()
@@ -203,7 +223,7 @@ def run_delta(runtask):
                        'Contents may get overwritten.')
     with execute_in_dir(workfolder):
         # Collect tensor file
-        tensor = base / DEFAULT_TENSORS / runtask.tensorname
+        tensor = runtask.io_dir / DEFAULT_TENSORS / runtask.tensorname
         try:
             shutil.copy2(tensor, 'AMP')
         except FileNotFoundError:
@@ -220,33 +240,41 @@ def run_delta(runtask):
         # Fetch compiled executable
         exename = runtask.comptask.exename
         try:
-            shutil.copy2(base / runtask.comptask.foldername / exename, '.')
+            shutil.copy2(runtask.comptask.exec_dir / exename, '.')
         except OSError:
             logger.error('Error getting delta executable: ', exc_info=True)
             return (f'Error encountered by {runtask}: '
                     'Failed to get delta executable.')
 
+        # Write DIN file to be piped. We need an explicit file, as
+        # multiprocessing with spawn may not create a proper STDIN
+        # (typically on Windows), so we can't just pass it along
+        # via subprocess.run's input kwarg but have to provide a
+        # real file handle.
+        din_path = Path('delta-DIN')
+        din_path.write_text(runtask.din, encoding='utf-8')
+
         # Run delta-amplitudes calculation
         log_file = Path('delta.log')
         with log_file.open('w', encoding='utf-8') as log:
-            try:
-                subprocess.run(str(workfolder / exename),
-                               input=runtask.din,
-                               encoding='ascii',
-                               stdout=log,
-                               stderr=log,
-                               check=False)
-            except Exception:
-                logger.error('Error while executing delta-amplitudes '
-                             f'calculation for {runtask.name}. Also '
-                             'check delta log file.',
-                             exc_info=True)
-                return (f'Error encountered by {runtask}: '
-                        'Error during delta execution.')
+            with din_path.open('r', encoding='utf-8') as din_file:
+                try:
+                    subprocess.run(str(workfolder / exename),
+                                   stdout=log,
+                                   stderr=log,
+                                   stdin=din_file,
+                                   check=False)
+                except Exception:
+                    logger.error('Error while executing delta-amplitudes '
+                                 f'calculation for {runtask.name}. Also '
+                                 'check delta log file.',
+                                 exc_info=True)
+                    return (f'Error encountered by {runtask}: '
+                            'Error during delta execution.')
 
         # Copy delta file out
         try:
-            shutil.copy2('DELWV', base / runtask.deltaname)
+            shutil.copy2('DELWV', runtask.io_dir / runtask.deltaname)
         except OSError:
             logger.error('Failed to copy delta output file DELWV to main '
                          f'folder as {runtask.deltaname}', exc_info=True)
@@ -261,7 +289,7 @@ def run_delta(runtask):
             logger.warning('Could not read local delta '
                            f'log for {runtask.name}')
         if log:
-            deltalog = base / runtask.deltalogname
+            deltalog = runtask.io_dir / runtask.deltalogname
             try:  # pylint: disable=too-many-try-statements
                 with deltalog.open('a', encoding='utf-8') as collated_log:
                     collated_log.write(
@@ -285,8 +313,7 @@ def run_delta(runtask):
 def compile_delta(comptask):
     """Compile a delta-amplitudes calculation executable.
 
-    Compilation is performed in the comptask.foldername
-    subfolder of the current directory. This function may
+    Compilation is performed in comptask.exec_dir. This function may
     be executed by parallelized workers.
 
     Parameters
@@ -299,7 +326,7 @@ def compile_delta(comptask):
     error_info : str
         Description of any error that occurred while compiling.
     """
-    workfolder = Path(comptask.foldername).resolve()
+    workfolder = comptask.exec_dir
     try:
         workfolder.mkdir()
     except FileExistsError:
@@ -351,70 +378,218 @@ def compile_delta(comptask):
     return ''
 
 
-def deltas(sl, rp, subdomain=False):
-    """Runs the delta-amplitudes calculation."""
-
-    if rp.domainParams:
-        deltas_domains(rp)
+def deltas(slab, rpars):
+    """Run the delta-amplitudes calculation."""
+    if rpars.domainParams:
+        deltas_domains(rpars)
         return
+    prepare_tasks_for_slab = functools.partial(_prepare_deltas_for_one_domain,
+                                               slab=slab)
+    _execute_deltas(rpars, prepare_delta_tasks=prepare_tasks_for_slab)
 
-    # read DISPLACEMENTS block
-    if not rp.disp_block_read:
-        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
-        rp.disp_block_read = True
 
-    # get Tensors
-    if not Path(DEFAULT_TENSORS).is_dir():
-        logger.error(f'No {DEFAULT_TENSORS} directory found.')
-        raise RuntimeError(f'{DEFAULT_TENSORS} not found')                      # TODO: FileNotFoundError?
-    iotensors.fetch_unpacked_tensor(rp.TENSOR_INDEX)
-    if 1 not in rp.runHistory:
-        load_from = Path(DEFAULT_TENSORS)
-        load_from /= f'{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}'
+def deltas_domains(rpars):
+    """Define and run delta calculations for all domains."""
+    _execute_deltas(rpars, prepare_delta_tasks=_prepare_deltas_for_domains)
+
+
+def _assemble_tasks(slab, rpars, atom_element_pairs, deltalogname):
+    """Return compilation/execution tasks for atoms that need deltas.
+
+    Parameters
+    ----------
+    slab : Slab
+        The slab for which delta amplitudes should be calculated.
+    rpars : Rparams
+        The run parameters corresponding to `slab`.
+    atom_element_pairs : Sequence of (Atom, str)
+        Atoms and the corresponding element names for which delta
+        amplitudes should be calculated.
+    deltalogname : str
+        Name of the log file where runtime information from the
+        execution tasks should be collected.
+
+    Returns
+    -------
+    compile_tasks : list of DeltaCompileTask
+        Information about which executables need to be compiled
+        to calculate delta amplitudes for `atom_element_pairs`.
+        May have fewer items than `atom_element_pairs`.
+    run_tasks : list of DeltaRunTask
+        Information about which executions of `compile_tasks` are
+        needed to produce delta amplitudes for `atom_element_pairs`.
+        As many items as there are `atom_element_pairs`.
+    """
+    # Collect input files that are common to all deltas
+    static_files_contents = iodeltas.collect_static_input_files(slab, rpars)
+
+    # Assemble tasks
+    comp_tasks_by_hash = {}  # Which versions to compile
+    run_tasks = []           # Which deltas to run
+    tensordir = Path(f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}')
+    tl_path = rpars.get_tenserleed_directory().path
+    for atom, element in atom_element_pairs:
+        *din, param = iodeltas.generateDeltaInput(atom,
+                                                  element,
+                                                  slab,
+                                                  rpars,
+                                                  *static_files_contents)
+        hash_ = hashlib.md5(param.encode()).digest()
+        compile_task = comp_tasks_by_hash.setdefault(
+            hash_,
+            DeltaCompileTask(param, tl_path, len(comp_tasks_by_hash)),
+            )
+        run_tasks.append(
+            _create_runtask(atom, element, compile_task, din, tensordir)
+            )
+        run_tasks[-1].deltalogname = deltalogname
+    return list(comp_tasks_by_hash.values()), run_tasks
+
+
+def _create_runtask(atom, element, compile_task, din, tensordir):
+    """Return a new DeltaRunTask for an (atom, element) pair."""
+    run_task = DeltaRunTask(compile_task)
+    run_task.din, run_task.din_short = din
+    run_task.tensorname = str(tensordir / f'T_{atom.num}')
+    run_task.deltaname = _get_unique_delta_file_name(atom, element)
+    atom.current_deltas.append(run_task.deltaname)
+    return run_task
+
+
+def _compile_and_run_deltas_in_parallel(rpars, compile_tasks, run_tasks):
+    """Compile and run multiple delta-amplitude calculations in parallel."""
+    rpars.updateCores()  # In case it was not known yet
+    _compile_deltas_in_parallel(rpars, compile_tasks)
+    if rpars.STOP:
+        return
+    ran_anything = _run_deltas_in_parallel(rpars, run_tasks)
+    if rpars.STOP:
+        return
+    if ran_anything:
+        logger.info('Delta calculations finished.')
+
+    # Clean up compile folders
+    for comp_task in compile_tasks:
+        with execute_in_dir(comp_task.exec_dir.parent):
+            # The compile_logs folder is in the parent directory
+            # of the one in which the delta compilation occurs.
+            leedbase.copy_compile_log(rpars,
+                                      comp_task.logfile,
+                                      comp_task.compile_log_name)
+        try:
+            shutil.rmtree(comp_task.exec_dir)
+        except Exception:
+            logger.warning('Error deleting delta '
+                           f'compile folder {comp_task.exec_dir}')
+
+
+def _compile_deltas_in_parallel(rpars, compile_tasks):
+    """Compile multiple delta-amplitudes in a parallelized manner."""
+    if not compile_tasks:  # Nothing to compile
+        return False
+
+    # Make sure there's a compiler ready
+    if rpars.FORTRAN_COMP[0] == "":                                             # TODO: this may mask problems of PARAMETERS settings when running a delta without a refcalc if the specified compiler does not exist.
+        try:
+            rpars.getFortranComp()
+        except Exception:
+            logger.error("No fortran compiler found, cancelling...")
+            raise RuntimeError("No Fortran compiler")
+
+    for task in compile_tasks:
+        task.fortran_comp = rpars.FORTRAN_COMP
+
+    # Validate TensErLEED checksums
+    if not rpars.TL_IGNORE_CHECKSUM:
+        validate_multiple_files(compile_tasks[0].get_source_files(),
+                                logger, "delta calculations",
+                                rpars.TL_VERSION)
+
+    # Compile files
+    logger.info('Compiling fortran files...')
+    poolsize = min(len(compile_tasks), rpars.N_CORES)
+    try:
+        parallelization.monitoredPool(rpars, poolsize,
+                                      compile_delta,
+                                      compile_tasks)
+    except Exception:  # Save log files in case of error
+        for task in compile_tasks:
+            with execute_in_dir(task.exec_dir.parent):
+                # The compile_logs folder is in the parent directory
+                # of the one in which the delta compilation occurs.
+                leedbase.copy_compile_log(rpars,
+                                          task.logfile,
+                                          task.compile_log_name)
+        raise
+    return True
+
+
+def _ensure_tensors_loaded(slab, rpars):
+    """Unpack the current Tensors and ensure `slab` is up to date with them."""
+    tensors_dir = Path(DEFAULT_TENSORS)
+    if not tensors_dir.is_dir():
+        logger.error(f'No {tensors_dir} directory found.')
+        raise FileNotFoundError(f'{tensors_dir} not found')
+    iotensors.fetch_unpacked_tensor(rpars.TENSOR_INDEX)
+    if 1 not in rpars.runHistory:
+        load_from = tensors_dir / f'{DEFAULT_TENSORS}_{rpars.TENSOR_INDEX:03d}'
         logger.debug(
             'Running without reference calculation, checking input files '
             f'in {load_from.name} to determine original configuration.'
             )
-        iotensors.getTensorOriStates(sl, load_from)
-        sl.restoreOriState(keepDisp=True)
+        iotensors.getTensorOriStates(slab, load_from)
+        slab.restoreOriState(keepDisp=True)
 
-    # if there are old deltas, fetch them
-    leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
-    dbasic = iodeltas.generateDeltaBasic(sl, rp)
 
-    # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
-    auxbeams_file = Path('AUXBEAMS')
-    if not auxbeams_file.is_file() and (DEFAULT_SUPP/auxbeams_file).is_file():
-        try:
-            shutil.copy2(DEFAULT_SUPP/auxbeams_file, auxbeams_file.name)
-        except OSError:
-            logger.warning(f'Failed to copy {auxbeams_file.name} from '
-                           f'{DEFAULT_SUPP} folder. Generating new file...')
-    if not auxbeams_file.is_file():
-        try:
-            writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
-        except Exception:                                                       # TODO: better exception
-            logger.error('Exception during writeAUXBEAMS: ')
-            raise
-    try:
-        auxbeams = auxbeams_file.read_text(encoding='utf-8')
-    except OSError:
-        logger.error('Could not read {auxbeams_file.name} for delta input')
-        raise
-    if not auxbeams.endswith('\n'):
-        auxbeams += '\n'
+def _execute_deltas(rpars, prepare_delta_tasks):
+    """Actually execute a delta-amplitude calculation.
 
-    # get PHASESHIFTS
-    try:
-        phaseshifts = Path('PHASESHIFTS').read_text(encoding='utf-8')
-    except OSError:
-        logger.error('Could not read PHASESHIFTS for delta-input')
-        raise
-    if not phaseshifts.endswith('\n'):
-        phaseshifts += '\n'
+    Parameters
+    ----------
+    rpars : Rparams
+        The **main** run parameters of the calculation, i.e., not
+        the ones of subdomains for a multi-domain calculation.
+        The actual calculation (compilation and execution) is
+        skipped if rpars.SUPPRESS_EXECUTION is True. However,
+        input files are prepared as needed.
+    prepare_delta_tasks : callable
+        A function that takes `rpars` as its only argument (passed
+        by keyword) and returns compile/run tasks to be executed.
 
+    Returns
+    -------
+    None.
+    """
+    delta_tasks = prepare_delta_tasks(rpars=rpars)
+    if rpars.SUPPRESS_EXECUTION:
+        rpars.setHaltingLevel(3)
+        return
+    _compile_and_run_deltas_in_parallel(rpars, *delta_tasks)
+
+
+def _find_atoms_that_need_deltas(slab, rpars):
+    """Return information about atoms that need delta calculations.
+
+    Parameters
+    ----------
+    slab : Slab
+        The slab for which delta-amplitudes are being calculated.
+    rpars : Rparams
+        The current PARAMETERS.
+
+    Returns
+    -------
+    attodo : list of Atom
+        All atoms in `slab` that have some sort of variation, and that
+        thus require delta-amplitudes to be available.
+    atElTodo : list of tuples
+        (Atom, element) pairs of all atoms in `slab` that require a
+        new delta-amplitude calculation.
+    vaclist : list of Atom
+        All atoms in `attodo` that have partial occupation.
+    """
     # go through atoms, remove those that have no variation whatsoever:
-    attodo = [at for at in sl if not at.is_bulk]
+    attodo = [at for at in slab if not at.is_bulk]
     j = 0
     while j < len(attodo):
         found = False
@@ -445,8 +620,7 @@ def deltas(sl, rp, subdomain=False):
                 for ol in occlists:
                     if len(ol) <= i:
                         break  # error - will pop up again later...
-                    else:
-                        totalocc += ol[i]
+                    totalocc += ol[i]
                 if totalocc < 1 - 1e-4:
                     found = True
                     break
@@ -464,12 +638,10 @@ def deltas(sl, rp, subdomain=False):
             totalocc = 0.
             for ol in occlists:
                 if len(ol) <= i:
-                    logger.error("Inconsistent occupancy lists for {} "
-                                 .format(at))
-                    raise ValueError("Inconsistent occupancy lists for {}"
-                                     .format(at))
-                else:
-                    totalocc += ol[i]
+                    err_msg = f'Inconsistent occupancy lists for {at}'
+                    logger.error(err_msg)
+                    raise ValueError(err_msg)
+                totalocc += ol[i]
             if totalocc < 1 - 1e-4:
                 vaclist.append(at)
                 break
@@ -480,256 +652,223 @@ def deltas(sl, rp, subdomain=False):
     for at in attodo:
         checkEls = list(at.disp_occ.keys())
         if at in vaclist:
-            checkEls.append("vac")
+            checkEls.append('vac')
         for el in checkEls:
-            dfiles = [f for f in os.listdir(".")
-                      if f.startswith(f'DEL_{at.num}_{el}')]
+            dfiles = (f.name for f in Path.cwd().glob(f'DEL_{at.num}_{el}*'))
             found = False
             for df in dfiles:
-                if iodeltas.checkDelta(df, at, el, rp):
+                if iodeltas.checkDelta(df, at, el, rpars):
                     found = True
-                    at.known_deltas.append(df)
+                    at.current_deltas.append(df)
                     countExisting += 1
                     break
             if not found:
                 atElTodo.append((at, el))
 
     if len(atElTodo) == 0:
-        logger.info("All Delta files specified in DISPLACEMENTS are "
-                    "already present in the Deltas.zip file. Skipping new "
-                    "calculations.")
-        return
+        logger.info('All Delta files specified in DISPLACEMENTS are '
+                    'already present in the Deltas.zip file. Skipping new '
+                    'calculations.')
+        return attodo, atElTodo, vaclist
     if countExisting > 0:
-        logger.info("{} of {} required Delta-files are already present. "
-                    "Generating remaining {} files..."
-                    .format(countExisting, len(atElTodo) + countExisting,
-                            len(atElTodo)))
-    # create log file:
-    deltaname = "delta-"+rp.timestamp
-    deltalogname = deltaname+".log"
-    if not subdomain:
-        logger.info(
-            "Generating delta files...\n"
-            "Delta log will be written to local subfolders, and collected in "
-            + deltalogname)
-    try:
-        with open(deltalogname, "w") as wf:
-            wf.write("Logs from multiple delta calculations are collected "
-                     "here. Their order may not be preserved.\n")
-    except Exception:
-        logger.warning("Error creating delta log file. This will not "
-                       "affect execution, proceeding...")
+        logger.info(f'{countExisting} of {len(atElTodo) + countExisting} '
+                    'required Delta-files are already present. '
+                    f'Generating remaining {len(atElTodo)} files...')
+    return attodo, atElTodo, vaclist
 
-    # move PARAM file
-    if os.path.isfile("PARAM"):
+
+def _get_unique_delta_file_name(atom, element):
+    """Return a unique name for a delta file for an (atom, element) pair."""
+    def _get_delta_index(file):
         try:
-            os.rename("PARAM", "PARAM-old")
-        except Exception:
-            try:
-                os.remove(os.path.join(".", "PARAM"))
-            except Exception:
-                logger.warning(
-                    "Section Delta-Amplitudes: Cannot rename/remove old PARAM "
-                    "file. This might cause the Delta generation to fail!")
-    # assemble tasks
-    deltaCompTasks = []  # keep track of what versions to compile
-    deltaRunTasks = []   # which deltas to run
-    tensordir = f"{DEFAULT_TENSORS}_{rp.TENSOR_INDEX:03d}"
-    tl_source = rp.get_tenserleed_directory()
-    tl_path = tl_source.path
-    for (at, el) in atElTodo:
-        din, din_short, param = iodeltas.generateDeltaInput(
-            at, el, sl, rp, dbasic, auxbeams, phaseshifts)
-        h = hashlib.md5(param.encode()).digest()
-        found = False
-        for ct in deltaCompTasks:
-            if ct.hash == h:
-                found = True
-                rt = DeltaRunTask(ct)
-                break
-        if not found:
-            index = len(deltaCompTasks)
-            ct = DeltaCompileTask(param, h, tl_path, index)
-            deltaCompTasks.append(ct)
-            rt = DeltaRunTask(ct)
-        deltaRunTasks.append(rt)
-        rt.din = din
-        rt.din_short = din_short
-        rt.tensorname = os.path.join(tensordir, f'T_{at.num}')
-        nameBase = f'DEL_{at.num}_{el}'
-        n = 1
-        nums = []
-        for fn in [f for f in os.listdir(".") if f.startswith(nameBase)]:
-            try:
-                nums.append(int(fn.split("_")[-1]))
-            except Exception:
-                pass
-        if nums:
-            n = max(nums) + 1
-        rt.deltaname = nameBase + "_{}".format(n)
-        rt.deltalogname = deltalogname
-        at.known_deltas.append(rt.deltaname)
+            return int(file.name.split('_')[-1])
+        except ValueError:
+            return 0
 
-    # sort known_deltas
-    for at in attodo:
-        checkEls = list(at.disp_occ.keys())
-        if at in vaclist:
-            checkEls.append("vac")
-        copydel = at.known_deltas[:]
-        at.known_deltas = []
-        for el in checkEls:
-            at.known_deltas.append(
-                [df for df in copydel
-                 if df.split("_")[-2].lower() == el.lower()][0])
-        if len(at.known_deltas) != len(copydel):
-            logger.error("Failed to sort delta files for {}".format(at))
-            raise RuntimeError("Inconsistent delta files")
+    delta_name_prefix = f'DEL_{atom.num}_{element}'
+    delta_indices = (_get_delta_index(f)
+                     for f in Path.cwd().glob(f'{delta_name_prefix}_*'))
+    return f'{delta_name_prefix}_{max(delta_indices, default=0) + 1}'
 
-    # write delta-input file
-    dinput = ("""# ABOUT THIS FILE:
-# Input for the delta-calculations is collected here. The blocks of data are
-# new 'PARAM' files, which are used to recompile the fortran code, and input
-# for generation of specific DELTA files. Lines starting with '#' are comments
-# on the function of the next block of data.
-# In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
-# entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
-""")
-    for ct in deltaCompTasks:
-        dinput += ("\n#### NEW 'PARAM' FILE: ####\n\n" + ct.param + "\n")
-        for rt in [t for t in deltaRunTasks if t.comptask == ct]:
-            dinput += ("\n#### INPUT for new DELTA file {}: ####\n\n"
-                       .format(rt.deltaname) + rt.din_short + "\n")
-    try:
-        with open("delta-input", "w") as wf:
-            wf.write(dinput)
-    except Exception:
-        logger.warning("Failed to write file 'delta-input'. This will "
-                       "not affect TensErLEED execution, proceeding...")
 
-    # if execution is suppressed, stop here
-    if rp.SUPPRESS_EXECUTION and not subdomain:
-        rp.setHaltingLevel(3)
-        return
-
-    # make sure there's a compiler ready:
-    if rp.FORTRAN_COMP[0] == "" and not subdomain:                              # TODO: this may mask problems of PARAMETERS settings when running a delta without a refcalc if the specified compiler does not exist.
+def _prepare_deltas_for_domains(rpars):
+    """Return compile/run tasks for a multi-domain calculation."""
+    compile_tasks = []
+    run_tasks = []
+    for domain in rpars.domainParams:
+        logger.info(f'Collecting input for delta calculations: {domain}')
+        if domain.rpars.domainParams:  # Nested domain
+            domain_tasks = _prepare_deltas_for_domains(domain.rpars)
+        else:
+            with execute_in_dir(domain.workdir):
+                try:
+                    domain_tasks = _prepare_deltas_for_one_domain(
+                        domain.slab,
+                        domain.rpars,
+                        subdomain=True,
+                        )
+                except Exception:
+                    logger.error('Error while creating delta '
+                                 f'input for {domain}')
+                    raise
         try:
-            rp.getFortranComp()
-        except Exception:
-            logger.error("No fortran compiler found, cancelling...")
-            raise RuntimeError("No Fortran compiler")
-
-    for ct in deltaCompTasks:
-        ct.fortran_comp = rp.FORTRAN_COMP
-
-    if subdomain and deltaRunTasks:
-        rp.manifest.add(DEFAULT_DELTAS)
-
-    if subdomain:  # Actual calculations done in deltas_domains
-        return deltaCompTasks, deltaRunTasks
-
-    rp.updateCores()
-
-    # Validate TensErLEED checksums
-    if not rp.TL_IGNORE_CHECKSUM:
-        validate_multiple_files(deltaCompTasks[0].get_source_files(),
-                                logger, "delta calculations",
-                                rp.TL_VERSION)
-
-    # compile files
-    logger.info("Compiling fortran files...")
-    poolsize = min(len(deltaCompTasks), rp.N_CORES)
-    try:
-        parallelization.monitoredPool(rp, poolsize,
-                                      compile_delta,
-                                      deltaCompTasks)
-    except Exception:
-        # save log files in case of error:
-        for ct in deltaCompTasks:
-            leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
-        raise
-    if rp.STOP:
-        return
-
-    # run executions
-    logger.info("Running delta calculations...")
-    poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
-    if rp.STOP:
-        return
-    logger.info("Delta calculations finished.")
-
-    # clean up compile folders
-    for ct in deltaCompTasks:
-        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
-        try:
-            shutil.rmtree(ct.foldername)
-        except Exception:
-            logger.warning("Error deleting delta compile folder "
-                           + ct.foldername)
-    rp.manifest.add(DEFAULT_DELTAS)
-
-
-def deltas_domains(rp):
-    """Define and run delta calculations for all domains."""
-    deltaCompTasks = []
-    deltaRunTasks = []
-    # get input for all domains
-    for dp in rp.domainParams:
-        logger.info(f'Getting input for delta calculations: {dp}')
-        with execute_in_dir(dp.workdir):
-            try:
-                r = deltas(dp.slab, dp.rpars, subdomain=True)
-            except Exception:
-                logger.error(f'Error while creating delta input for {dp}')
-                raise
-        if type(r) == tuple:  # if no deltas need to be calculated returns None
-            deltaCompTasks.extend(r[0])
-            deltaRunTasks.extend(r[1])
-        elif r is not None:
+            domain_compile_tasks, domain_run_tasks = domain_tasks
+        except (ValueError, TypeError) as exc:
             raise RuntimeError('Unknown error while creating '
-                               f'delta input for {dp}')
+                               f'delta input for {domain}') from exc
+        compile_tasks.extend(domain_compile_tasks)
+        run_tasks.extend(domain_run_tasks)
+    return compile_tasks, run_tasks
 
-    # if execution is suppressed, stop here
-    if rp.SUPPRESS_EXECUTION:
-        rp.setHaltingLevel(3)
-        return
 
-    # make sure there's a compiler ready, and we know the number of cores:
-    if rp.FORTRAN_COMP[0] == "":
-        try:
-            rp.getFortranComp()
-        except Exception:
-            logger.error("No fortran compiler found, cancelling...")
-            raise RuntimeError("No Fortran compiler")
-    for ct in deltaCompTasks:
-        ct.fortran_comp = rp.FORTRAN_COMP
-    rp.updateCores()  # if number of cores is not defined, try to find it
+def _prepare_deltas_for_one_domain(slab, rpars, subdomain=False):
+    """Prepare input files and return compile/run tasks for a single slab.
 
-    # compile files
-    if len(deltaCompTasks) > 0:
-        logger.info("Compiling fortran files...")
-        poolsize = min(len(deltaCompTasks), rp.N_CORES)
-        parallelization.monitoredPool(rp, poolsize,
-                                      compile_delta,
-                                      deltaCompTasks)
-        if rp.STOP:
-            return
+    Parameters
+    ----------
+    slab : Slab
+        The slab for which delta-amplitude calculations should be done.
+    rpars : Rparams
+        The parameters corresponding to `slab`.
+    subdomain : bool, optional
+        Whether `slab` is a domain of a multi-domain calculation.
+        The default is False.
 
-    # run executions
-    if len(deltaRunTasks) > 0:
-        logger.info("Running delta calculations...")
-        poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        parallelization.monitoredPool(rp, poolsize, run_delta, deltaRunTasks)
-        if rp.STOP:
-            return
-        logger.info("Delta calculations finished.")
+    Returns
+    -------
+    comp_tasks : list of DeltaCompileTask
+        Information about which executables need to be compiled
+        to calculate delta amplitudes for `slab`.
+    run_tasks : list of DeltaRunTask
+        Information about which executions of `compile_tasks`
+        are needed to produce delta amplitudes for `slab`.
+    """
+    # read DISPLACEMENTS block
+    if not rpars.disp_block_read:
+        readDISPLACEMENTS_block(rpars,
+                                slab,
+                                rpars.disp_blocks[rpars.search_index])
+        rpars.disp_block_read = True
 
-    # clean up
-    for ct in deltaCompTasks:
-        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name) # copy compile folder
-        try:
-            shutil.rmtree(ct.foldername)
-        except Exception:
-            logger.warning('Error deleting delta '
-                           f'compile folder {ct.foldername}')
+    _ensure_tensors_loaded(slab, rpars)
+
+    # If there are old deltas, pull them in here
+    leedbase.getDeltas(rpars.TENSOR_INDEX, required=False)
+
+    (atoms_with_displacements,
+     atom_element_pairs_requiring_new_deltas,
+     atoms_with_vacancies) = _find_atoms_that_need_deltas(slab, rpars)
+    if not atom_element_pairs_requiring_new_deltas:
+        # Nothing to calculate
+        return [], []
+
+    _remove_old_param_file()
+
+    # Create compilation and running tasks, as well as a log
+    # file for collating the runtime information of the latter.
+    collated_logs_name = _prepare_log_file(rpars, subdomain)
+    delta_tasks = _assemble_tasks(slab,
+                                  rpars,
+                                  atom_element_pairs_requiring_new_deltas,
+                                  collated_logs_name)
+    # Ensure stable sorting of the stored delta files. Do so
+    # only after assembling the tasks, as this modifies the
+    # current_deltas of atom_elements_todo.
+    _sort_current_deltas_by_element(atoms_with_displacements,
+                                    atoms_with_vacancies)
+    iodeltas.write_delta_input_file(*delta_tasks)
+
+    _, run_tasks = delta_tasks
+    if run_tasks and not rpars.SUPPRESS_EXECUTION:
+        rpars.manifest.add(DEFAULT_DELTAS)
+
+    return delta_tasks
+
+
+def _prepare_log_file(rpars, subdomain):
+    """Create a log file for collating those of multiple calculations."""
+    log_name = f'delta-{rpars.timestamp}.log'
+    if not subdomain:
+        logger.info('Generating delta files...\n'
+                    'Delta log will be written to local subfolders, '
+                    f'and collected in {log_name}')
+    log_header = ('Logs from multiple delta calculations are collected '
+                  'here. Their order may not be preserved.\n')
+    try:
+        Path(log_name).write_text(log_header, encoding='utf-8')
+    except OSError:
+        logger.warning('Error creating delta log file. This will not '
+                       'affect execution, proceeding...')
+    return log_name
+
+
+def _remove_old_param_file():
+    """Rename or delete a PARAM file in the current directory."""
+    param = Path('PARAM')
+    try:
+        param.replace('PARAM-old')
+    except FileNotFoundError:
+        return  # Nothing to do
+    except OSError:
+        pass
+    try:
+        param.unlink()
+    except OSError:
+        logger.warning(
+            'Section Delta-Amplitudes: Cannot rename/remove old PARAM file. '
+            'This might cause the Delta generation to fail!'
+            )
+
+
+def _run_deltas_in_parallel(rpars, run_tasks):
+    """Execute multiple delta-amplitude calculations in parallel."""
+    if not run_tasks:  # Nothing to run
+        return False
+    logger.info('Running delta calculations...')
+    poolsize = min(len(run_tasks), rpars.N_CORES)
+    parallelization.monitoredPool(rpars, poolsize, run_delta, run_tasks)
+    return True
+
+
+def _sort_current_deltas_by_element(atoms, atoms_with_vacancies):
+    """Re-sort the current_deltas for each `atoms` by element."""
+    # See bf776a37e14ece851cc8c783a7c376a44e55145f for details on
+    # why sorting is needed.
+    # Each (atom, element) pair should have, by now, exactly one delta
+    # file. In fact, .current_deltas is cleared (i) before each refcalc
+    # (in refcalc._reinitialize_deltas) and (ii) after each search
+    # segment (in run_sections, after each SUPERPOS R, via calls to
+    # slab.restoreOriState(keepDisp=False). The sorting we do here
+    # would not be needed if we would fix #447. However, we would
+    # still probably want to raise if some elements have no delta.
+
+    def _by_element(delta_file):
+        """Extract the "element" from a `delta_file` name."""
+        return delta_file.split('_')[-2].lower()
+
+    for atom in atoms:
+        current_deltas = sorted(atom.current_deltas, key=_by_element)
+        deltas_by_element = {
+            el: tuple(fnames)
+            for el, fnames in itertools.groupby(current_deltas,
+                                                key=_by_element)
+            }
+        duplicate_deltas = {el: fnames
+                            for el, fnames in deltas_by_element.items()
+                            if len(fnames) > 1}
+        if duplicate_deltas:
+            raise DeltasError(
+                f'Found multiple delta files for {atom}, elements '
+                + ', '.join(duplicate_deltas)
+                )
+        element_names = list(atom.disp_occ)
+        if atom in atoms_with_vacancies:
+            element_names.append('vac')
+        sorted_by_element = []
+        for element in element_names:
+            try:
+                sorted_by_element.append(deltas_by_element[element.lower()][0])
+            except KeyError:
+                raise DeltasError(f'Found no delta files for {atom}, '
+                                  f'element {element}') from None
+        atom.current_deltas = sorted_by_element

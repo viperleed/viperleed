@@ -24,6 +24,8 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc import symmetry
+from viperleed.calc.constants import LOG_VERBOSE
+from viperleed.calc.constants import LOG_VERY_VERBOSE
 from viperleed.calc.lib.leedbase import BOHR_TO_ANGSTROM
 from viperleed.calc.lib.leedbase import HARTREE_TO_EV
 from viperleed.calc.lib.leedbase import getLEEDdict
@@ -168,9 +170,9 @@ def _log_beamgroups(equivalent_beams):
 
     # Split log message into two parts
     # The first 15 lines are intended for log-level verbose...
-    _LOGGER.log(level=5, msg='\n'.join(full_log_msg[:15]))
+    _LOGGER.log(LOG_VERBOSE, msg='\n'.join(full_log_msg[:15]))
     # ...the rest only at very verbose
-    _LOGGER.log(level=1, msg='\n'+'\n'.join(full_log_msg[15:]))
+    _LOGGER.log(LOG_VERY_VERBOSE, msg='\n'+'\n'.join(full_log_msg[15:]))
 
 
 def _prepare_beam_groups(bulk, beam_subsets):
