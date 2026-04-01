@@ -43,7 +43,7 @@ _BELOW_DEBUG = 2
 logger = logging.getLogger(__name__)
 
 # precompiled direction-at-end regex for separating out the direction token
-_FLOAT_RE = r'-?\d+(?:\.\d+)?'
+_FLOAT_RE = r'-?(?:\d+(?:\.\d*)?|\.\d+)'
 _DIRECTION_BRACKETS_RE = rf'\[\s*{_FLOAT_RE}(?:\s+{_FLOAT_RE})*\s*\]'
 DIRECTION_PATTERN = (
     r'(?P<direction>('
@@ -400,7 +400,7 @@ class OccDeltaLine(ParsedLine):
         if len(element_ranges) < 1:
             # must contain at least one pair
             raise DisplacementsSyntaxError(self.invalid_format_msg)
-        self.element_ranges = tuple(element_ranges)
+        self.element_ranges = element_ranges
 
     def _format_lhs_str(self):
         return ', '.join(str(t) for t in self.targets)

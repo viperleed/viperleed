@@ -1,4 +1,4 @@
-"""Tests for the DisplacementsFile class and its components."""
+"""Tests for module viperleed.calc.files.new_displacements.file."""
 
 __authors__ = ('Alexander M. Imre (@amimre)',)
 
