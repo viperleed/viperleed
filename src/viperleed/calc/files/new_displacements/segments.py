@@ -301,6 +301,7 @@ class LoopBlock(DisplacementsSegmentABC):
         return 'Loop Block'
 
     def validate_segment(self):
+        """Validate the loop block."""
         # loop block must contain exactly one line – the end loop marker
         if len(self.lines) < 1:
             raise DisplacementsSyntaxError('Unfinished loop block.')
