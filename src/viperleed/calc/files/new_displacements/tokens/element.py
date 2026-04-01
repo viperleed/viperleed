@@ -14,6 +14,8 @@ class ElementTokenParserError(TokenParserError):
     """Class for parsing Errors in the ElementToken."""
 
 
+# TODO: Consider support for explicit vacancy elements "Vac".
+#       See discussion in #428.
 class ElementToken(DisplacementsFileToken):
     """Class to parse and represent the <element> token.
 
