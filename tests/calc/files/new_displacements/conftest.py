@@ -48,7 +48,7 @@ def displacements_file_path(file_path):
 
 @fixture
 def mock_displacements_path_and_lines():
-    path = MOCK_DISPLACEMENTS_PATH
+    path = _MOCK_DISPLACEMENTS_PATH / 'DISPLACEMENTS_mixed'
     expected_lines = [
         (SearchHeaderLine, {'label': 'my_search_label'}),
         (SectionHeaderLine, {'section': 'GEO_DELTA'}),
