@@ -515,7 +515,7 @@ class ConstraintLine(ParsedLine):
             return
 
         # check for 'total' tag
-        if self._rhs.lower().startswith('total '):
+        if self._rhs.lower().strip().startswith('total '):
             logger.log(_BELOW_DEBUG, 'Detected "total" tag.')
 
             if self.mode_token.mode is not PerturbationMode.OCC:
