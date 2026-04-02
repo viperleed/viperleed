@@ -648,8 +648,9 @@ class OffsetsLine(ParsedLine):
 def separate_direction_from_targets(targets_and_direction: str):
     """Separate a string into targets and direction.
 
-    Uses a regex pattern to identify and extract an optional direction token at
-    the end of the string. The rest of the string is considered the targets.
+    Uses a regex pattern to identify and extract an optional direction
+    token at the end of the string. The rest of the string is considered
+    the targets.
 
     Parameters
     ----------
@@ -659,8 +660,9 @@ def separate_direction_from_targets(targets_and_direction: str):
     Returns
     -------
     tuple
-        A tuple containing the targets string and the direction string. Either
-        string may be empty if the corresponding part was not found.
+        A tuple containing the targets string and the direction string.
+        Either string may be empty if the corresponding part was not
+        found.
     """
     matches = tuple(_DIR_AT_END.finditer(targets_and_direction))
     if len(matches) > 1:
