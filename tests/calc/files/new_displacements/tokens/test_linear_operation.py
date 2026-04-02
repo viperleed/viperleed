@@ -1,7 +1,9 @@
 """Tests for module viperleed.calc.files.new_displacements.tokens.linear_operation."""
 
 __authors__ = ('Alexandra Mia Imre (@alexmiame)',)
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2025-04-11'
+__license__ = 'GPLv3+'
 
 
 import numpy as np

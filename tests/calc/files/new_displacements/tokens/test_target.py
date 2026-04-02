@@ -1,7 +1,7 @@
 """Tests for module viperleed.calc.files.new_displacements.tokens.target."""
 
 __authors__ = ('Alexandra Mia Imre (@alexmiame)',)
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-10-14'
 __license__ = 'GPLv3+'
 
