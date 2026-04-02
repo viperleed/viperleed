@@ -10,9 +10,7 @@ from viperleed.calc.files.new_displacements.errors import (
 from viperleed.calc.files.new_displacements.file import DisplacementsFile
 
 
-@pytest.mark.xfail(
-    reason='Fractional directions not yet supported', strict=False
-)
+
 def test_read_from_file(displacements_file_path, subtests):
     """Test reading a file and checking its validity."""
 
@@ -24,3 +22,13 @@ def test_read_from_file(displacements_file_path, subtests):
     with subtests.test('read() called again'), pytest.raises(AlreadyReadError):
         # check that read() cannot be called again
         df.read(displacements_file_path)
+
+@pytest.mark.xfail(
+    reason='Fractional directions not yet supported', strict=False
+)
+def test_read_from_unsupported_file(displacements_file_path_xfail):
+    """Test reading a file and checking its validity."""
+
+    # try and read the unsupported file, which should raise an error
+    df = DisplacementsFile()
+    df.read(displacements_file_path_xfail)

@@ -33,6 +33,14 @@ _CU_111_DISPLACEMENTS_PATH = _MOCK_DISPLACEMENTS_PATH / 'Cu_111'
 _CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / 'DISPLACEMENTS_simple'
 
 DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob('*/DISPLACEMENTS*')
+_SUPPORTED_DISPLACEMENTS_FILES = filter(
+    lambda p: 'xfail' not in p.name,
+    DISPLACEMENTS_FILES,
+)
+_UNSUPPORTED_DISPLACEMENTS_FILES = filter(
+    lambda p: 'xfail' in p.name,
+    DISPLACEMENTS_FILES,
+)
 
 def displacements_file_id(file_path):
     """Return a case ID for a DISPLACEMENTS file."""
@@ -43,10 +51,20 @@ def displacements_file_id(file_path):
 @fixture
 @pytest.mark.parametrize(
     'file_path',
-    DISPLACEMENTS_FILES,
+    _SUPPORTED_DISPLACEMENTS_FILES,
     ids=displacements_file_id,
 )
 def displacements_file_path(file_path):
+    """Fixture to provide a path to a DISPLACEMENTS file."""
+    return file_path
+
+@fixture
+@pytest.mark.parametrize(
+    'file_path',
+    _UNSUPPORTED_DISPLACEMENTS_FILES,
+    ids=displacements_file_id,
+)
+def displacements_file_path_xfail(file_path):
     """Fixture to provide a path to a DISPLACEMENTS file."""
     return file_path
 
