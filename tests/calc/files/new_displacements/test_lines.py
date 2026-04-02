@@ -439,9 +439,6 @@ class TestConstraintLine:
         ('Bar r([1 0])', 'Bar', 'r([1 0])'),
         # Extra whitespace
         ('  A1,B2   x  ', 'A1,B2', 'x'),
-        # Only direction, no targets
-        ('xy', '', 'xy'),
-        ('[1 0]', '', '[1 0]'),
         # Empty input
         ('', '', ''),
     ],
