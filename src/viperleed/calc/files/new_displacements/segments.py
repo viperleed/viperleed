@@ -1,6 +1,6 @@
 """Module segments of viperleed.calc.files.new_displacements."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-06-17'
 __license__ = 'GPLv3+'

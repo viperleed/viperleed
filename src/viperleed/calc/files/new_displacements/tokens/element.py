@@ -1,6 +1,6 @@
 """Module element of viperleed.calc.files.new_displacements.tokens."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2025-05-13'
 __license__ = 'GPLv3+'
