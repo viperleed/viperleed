@@ -161,13 +161,27 @@ class TestOffsetLine:
     @pytest.mark.parametrize(
         'line, exp_targets, exp_direction, exp_offset',
         [
-            # geometric offset with direction
+            # 1, 2 and 3D geometric offsets
             pytest.param(
                 'geo A x = 1.23',
                 ['A'],
                 'x',
                 1.23,
-                id='geo-with-direction',
+                id='geo-1D',
+            ),
+            pytest.param(
+                'geo A xy= 1.23 4.56',
+                ['A'],
+                'xy',
+                (1.23, 4.56),
+                id='geo-2D',
+            ),
+            pytest.param(
+                'geo A xyz = 1.23 4.56 7.89',
+                ['A'],
+                'xyz',
+                (1.23, 4.56, 7.89),
+                id='geo-3D',
             ),
             # vib offset, no direction
             pytest.param(
