@@ -27,6 +27,7 @@ from viperleed.calc.files.new_displacements.tokens import (
     OffsetToken,
     RangeToken,
     TargetToken,
+    TotalOccupationToken,
 )
 
 
@@ -377,6 +378,14 @@ class TestConstraintLine:
                 TargetToken('A'),
                 LinearOperationToken.from_array(np.eye(1)),
                 id='occ-linked-shorthand',
+            ),
+            pytest.param(
+                'occ A* = total 1.0',
+                ModeToken('occ'),
+                [TargetToken('A*')],
+                None,
+                TotalOccupationToken('1.0'),
+                id='occ-total',
             ),
             pytest.param(
                 'vib X, Y = 0.5 Z',
