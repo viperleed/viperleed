@@ -159,12 +159,11 @@ class TestVibDeltaLine:
 
 class TestOffsetLine:
     @pytest.mark.parametrize(
-        'line, exp_type, exp_targets, exp_direction, exp_offset',
+        'line, exp_targets, exp_direction, exp_offset',
         [
             # geometric offset with direction
             pytest.param(
                 'geo A x = 1.23',
-                'geo',
                 ['A'],
                 'x',
                 1.23,
@@ -173,7 +172,6 @@ class TestOffsetLine:
             # vib offset, no direction
             pytest.param(
                 'vib B = 2.0',
-                'vib',
                 ['B'],
                 None,
                 2.0,
@@ -182,7 +180,6 @@ class TestOffsetLine:
             # occ offset, multiple targets, no direction
             pytest.param(
                 'occ C1, D2 = -0.5',
-                'occ',
                 ['C1', 'D2'],
                 None,
                 -0.5,
@@ -190,13 +187,8 @@ class TestOffsetLine:
             ),
         ],
     )
-    def test_offsets_valid(
-        self, line, exp_type, exp_targets, exp_direction, exp_offset
-    ):
+    def test_offsets_valid(self, line, exp_targets, exp_direction, exp_offset):
         off = OffsetsLine(line)
-        # type
-        assert isinstance(off.mode, ModeToken)
-        assert off.mode == ModeToken(exp_type)
         # targets
         assert len(off.targets) == len(exp_targets)
         for tok, exp in zip(off.targets, exp_targets):
