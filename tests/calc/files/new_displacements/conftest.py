@@ -34,12 +34,17 @@ _CU_111_SIMPLE_PATH = _CU_111_DISPLACEMENTS_PATH / 'DISPLACEMENTS_simple'
 
 DISPLACEMENTS_FILES = _MOCK_DISPLACEMENTS_PATH.glob('*/DISPLACEMENTS*')
 
+def displacements_file_id(file_path):
+    """Return a case ID for a DISPLACEMENTS file."""
+    rel_path = file_path.relative_to(_MOCK_DISPLACEMENTS_PATH).as_posix()
+    return str(rel_path)
+
 
 @fixture
 @pytest.mark.parametrize(
     'file_path',
     DISPLACEMENTS_FILES,
-    ids=attrgetter('name'),
+    ids=displacements_file_id,
 )
 def displacements_file_path(file_path):
     """Fixture to provide a path to a DISPLACEMENTS file."""
