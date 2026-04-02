@@ -32,3 +32,15 @@ def test_read_from_unsupported_file(displacements_file_path_xfail):
     # try and read the unsupported file, which should raise an error
     df = DisplacementsFile()
     df.read(displacements_file_path_xfail)
+
+def test_next(displacements_file_path):
+    """Test the next() method of DisplacementsFile."""
+
+    df = DisplacementsFile()
+    df.read(displacements_file_path)
+
+    # try calling next() until we reach StopIteration
+    with pytest.raises(StopIteration):
+        while True:
+            line = df.next(current_rfac=0.1)
+            assert line is not None
