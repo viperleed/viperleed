@@ -62,7 +62,7 @@ DIRECTION_PATTERN = (
     r'|[xyzabc]'
     r'))'
 )
-_DIR_AT_END = re.compile(rf'(?P<dir>{DIRECTION_PATTERN})\s*$')
+_DIR_AT_END = re.compile(rf'\s+(?P<dir>{DIRECTION_PATTERN})\s*$')
 
 
 class HeaderLine(ABC):
