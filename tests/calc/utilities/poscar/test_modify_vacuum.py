@@ -1,8 +1,6 @@
 """Tests for the viperleed poscar utility modify_vacuum."""
 
-__authors__ = (
-    'Alexander M. Imre (@amimre)',
-    )
+__authors__ = ('Alexandra Mia Imre (@alexmiame)',)
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-04-05'
 __license__ = 'GPLv3+'

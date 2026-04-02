@@ -45,7 +45,7 @@ keywords = [
 authors = [
     {name = 'Michele Riva'},          # , email='riva@iap.tuwien.ac.at'
     {name = 'Florian Kraushofer'},    # , email='florian.kraushofer@tum.de'
-    {name = 'Alexander M. Imre'},     # , email='imre@iap.tuwien.ac.at'
+    {name = 'Alexandra Mia Imre'},    # , email='imre@iap.tuwien.ac.at'
     {name = 'Florian Dörr'},          # , email='doerr@iap.tuwien.ac.at'
     ]
 maintainers = [
@@ -228,7 +228,7 @@ classifiers = [
     fail-on = ['I']   # Fails also for info messages
 
     [tool.pylint.format]
-    max-line-length = 80
+    max-line-length = 79
 
     [tool.pylint.messages_control]
     enable = [
