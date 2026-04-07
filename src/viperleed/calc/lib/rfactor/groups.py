@@ -77,4 +77,8 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
     grouped_denominators = dnl.bincount(
         _groups, weights=denominators, length=num_groups
     )
-    return grouped_numerators / grouped_denominators
+
+    mask = grouped_denominators != 0
+    safe_denominators = dnl.xp.where(mask, grouped_denominators, 1.0)
+    result = dnl.xp.where(mask, grouped_numerators / safe_denominators, dnl.xp.nan)
+    return result
