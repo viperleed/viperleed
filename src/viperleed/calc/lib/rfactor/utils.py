@@ -1,6 +1,6 @@
 """viperleed.calc.lib.rfactor.utils."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
+__authors__ = ('Alexandra M. Imre (@alexmiame)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'

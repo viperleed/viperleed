@@ -1,6 +1,7 @@
 """viperleed.calc.lib.rfactor.groups."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
+__authors__ = ('Alexandra M. Imre (@alexmiame)',
+               'Florian Kraushofer (@fkraushofer)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
