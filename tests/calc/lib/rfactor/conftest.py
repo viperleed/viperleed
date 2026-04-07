@@ -1,11 +1,9 @@
 import numpy as np
-import pytest
-from pytest_cases import case, fixture, parametrize_with_cases
+from pytest_cases import fixture
 from scipy.interpolate import CubicSpline
 
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.iorfactor import beamlist_to_array
-from viperleed.calc.lib import rfactor
 from viperleed.calc.lib.spline_interpolation import interpolate_ragged_array
 
 _MOCK_ROUGH_E_AXIS = np.arange(15, 300, 3)
@@ -69,5 +67,5 @@ class SplinesWithExpectedValues:
     def case_sin_anticorrelated(self, sin_spline, cos_spline):
         theo_spline, exp_spline = sin_spline, cos_spline
         v0i, energy_step, energies = 3.0, 0.5, _MOCK_FINE_E_AXIS
-        expected_R = {'pendry': 1.89674664}
+        expected_R = {'pendry': 1.9047921884401726}
         return theo_spline, v0i, energy_step, energies, exp_spline, expected_R

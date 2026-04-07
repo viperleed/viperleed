@@ -18,6 +18,10 @@ def test_pendry_R_from_splines(
 ):
     """Test the R-factor calculation from spline objects."""
     calc_R = rfactor.R_pendry(
-        theo_spline, v0i, energy_step, energies, exp_spline
+        v0i,
+        energy_step,
+        energies,
+        data_spline_1=theo_spline,
+        data_spline_2=exp_spline,
     )
     assert calc_R == pytest.approx(expected_R['pendry'], rel=1e-6)
