@@ -1,6 +1,6 @@
 """Module R-factor."""
 
-__authors__ = ('Alexander M. Imre (@amimre)',)
+__authors__ = ('Alexandra M. Imre (@alexmiame)',)
 __copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
 __created__ = '2024-02-21'
 __license__ = 'GPLv3+'
