@@ -118,7 +118,7 @@ def R_zj(
     denominators = abs(data_1_derivative_1) + dnl.xp.nanmax(
         data_1_derivative_1, axis=0
     )
-    denominators = dnl.xp.clip(denominators, a_min=1e-12)
+    denominators = dnl.xp.clip(denominators, 1e-12, None)
     denominators = dnl.xp.where(mask, 1.0, denominators)
 
     quotient = numerators / denominators
