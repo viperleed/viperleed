@@ -154,7 +154,6 @@ def geo_errors_csv_content(error):
         "disp" : [f"Displacement ({error.disp_label}) [Å]"],
         "rfac" : ["R"]
     }
-    rfacs = error.rfacs
     for line in range(0, len(error.rfacs)):
         columns["disp"].append(error.lin_disp[line])
         columns["rfac"].append(error.rfacs[line])
@@ -186,7 +185,6 @@ def vib_errors_csv_content(error):
         "disp" : ["Vib. Amp. change [Å]"],
         "rfac" : ["R"]
     }
-    rfacs = error.rfacs
     for line in range(0, len(error.rfacs)):
         columns["disp"].append(error.lin_disp[line])
         columns["rfac"].append(error.rfacs[line])
@@ -219,7 +217,6 @@ def occ_errors_csv_content(error):
         columns[elem] = [f"Occupation {elem} [%]",]
     columns["rfac"] = ["R",]
 
-    rfacs = error.rfacs
     for line in range(0, len(error.rfacs)):
         for elem, el_occ in error.elem_occ.items():
             columns[elem].append(el_occ[line]*100)  # in %
@@ -294,13 +291,15 @@ def format_col_content(content):
 
 
 @log_without_matplotlib(logger, msg='Skipping error plotting.')
-def make_errors_figs(errors, formatting=None):
+def make_errors_figs(errors, r_factor_type='pendry', formatting=None):
     """Creates figures for Errors.pdf.
 
     Parameters
     ----------
     errors : list of R_Error
         contains the R-factors to be plotted
+    r_factor_type: str or RFactorType
+        which R-factor was used. Only used for labelling of axes.
     formatting : dict, optional
         Dictionary containing formatting options for the plots.
         To be taken from rparams.PLOT_IV. The default is None.
@@ -319,6 +318,15 @@ def make_errors_figs(errors, formatting=None):
     titles = {"geo": "Geometry",
               "vib": "Vibration amplitudes",
               "occ": "Site occupation"}
+    if r_factor_type == 'pendry':
+        ylabel = 'Pendry R-factor'
+        varlabel = '$R_P + var(R_P)$'
+    elif r_factor_type == 'smooth':
+        ylabel = 'Smooth R-factor'
+        varlabel = '$R_S + var(R_S)$'
+    else:
+        ylabel = 'R-factor'   # this should not happen, just a contingency
+        varlabel = '$R + var(R)$'
 
     for mode in ("geo", "vib", "occ"):
         mode_errors = [err for err in errors if err.mode == mode]
@@ -374,7 +382,7 @@ def make_errors_figs(errors, formatting=None):
                           fontsize=9*font_size_scale)
         else:
             ax.set_xlabel('Site occupation (%)', fontsize=10*font_size_scale)
-        ax.set_ylabel('Pendry R-factor', fontsize=9*font_size_scale)
+        ax.set_ylabel(ylabel, fontsize=9*font_size_scale)
         ax.set_title(titles[mode], fontsize=12*font_size_scale)
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
@@ -392,7 +400,7 @@ def make_errors_figs(errors, formatting=None):
                     for err in mode_errors]) > len(mode_errors) / 2:
                 text_y = rmin + var - (rmax-rmin)*0.015
                 va = "top"
-            ax.text(text_x, text_y, "$R_P + var(R_P)$", ha="center", va=va,
+            ax.text(text_x, text_y, varlabel, ha='center', va=va,
                     bbox=dict(facecolor='white', edgecolor='none',
                               alpha=0.6, pad=0.5),
                     fontsize=6*font_size_scale)
@@ -446,7 +454,7 @@ def make_errors_figs(errors, formatting=None):
                 if err_y[err][ind_at_text] > rmin + var:
                     text_y = rmin + var - (rmax-rmin)*0.015
                     va = "top"
-                axs[figcount].text(text_x, text_y, "$R_P + var(R_P)$",
+                axs[figcount].text(text_x, text_y, varlabel,
                                    fontsize=6*font_size_scale,
                                    ha="center", va=va,
                                    bbox=dict(facecolor='white',
@@ -502,7 +510,7 @@ def make_errors_figs(errors, formatting=None):
                 u_bound = p_best+error_estimates[1]
                 draw_error(axs[figcount], u_bound, err, r_interval=(rmax-rmin),
                            font_size_scale=font_size_scale)
-            axs[figcount].set_ylabel('Pendry R-factor',
+            axs[figcount].set_ylabel(ylabel,
                                      fontsize=6*font_size_scale)
             axs[figcount].legend(fontsize=3*font_size_scale, frameon=False)
             figcount += 1
