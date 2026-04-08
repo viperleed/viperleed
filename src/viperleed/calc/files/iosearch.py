@@ -82,7 +82,7 @@ def readSDTL_next(filename="SD.TL", offset=0):
         return (offset, "")     # return old offset, no content
 
 
-def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
+def readSDTL_blocks(content, which_beams=0, print_info=False, n_expect=0):
     """
     Attempts to interpret a given string as one or more blocks of an SD.TL
     file.
@@ -91,7 +91,7 @@ def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
     ----------
     content : str
         A block of data as read from SD.TL.
-    whichR : int, optional
+    which_group : int, optional
         Which r-factor values to use (average / integer / fractional)
     print_info : bool, optional
         Whether some basic information should be printed to logger.info and
@@ -136,7 +136,7 @@ def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
                         configs.append(tuple(dpars))
                         dpars = []
                     try:
-                        rav = float(line.split("|")[2 + whichR])  # average R
+                        rav = float(line.split("|")[2 + which_beams])  # average R
                         rfacs.append(rav)
                     except ValueError:
                         if print_info:
@@ -199,7 +199,7 @@ def repeat_fetch_SDTL_last_block(which_beams,
     if not content:
         raise SearchIOEmptyFileError("No data found in SD.TL file.")
     # if we get here, we have exceeded the maximum number of repeats
-    raise SearchIORaceConditionError(f"Could not read complete block from "
+    raise SearchIORaceConditionError("Could not read complete block from "
                                      "SD.TL file.")
 
 def _fetch_SDTL_last_block(which_beams, n_expect, print_info=False):
@@ -213,9 +213,8 @@ def _fetch_SDTL_last_block(which_beams, n_expect, print_info=False):
         logger.error("Failed to get last block from SD.TL file.")
         raise
     # check if the last block contains the expected number of lines
-    lines_str = "\n".join(lines)
     sdtl_content = readSDTL_blocks("\n".join(lines),
-                                   whichR=which_beams,
+                                   which_beams=which_beams,
                                    print_info=print_info,
                                    n_expect=n_expect)
     return sdtl_content

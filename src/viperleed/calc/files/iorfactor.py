@@ -910,7 +910,6 @@ def beamlist_to_array(beams):
         n_E_beams[i] = len(b.intens)
         beam_arr[id_start[i]: id_start[i] + n_E_beams[i], i] = list(b.intens.values())
 
-
     return in_grid, id_start, n_E_beams, beam_arr
 
 
