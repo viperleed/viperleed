@@ -24,7 +24,6 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     )
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement._meassettings import DeviceEditor
-from viperleed.gui.measure.measurement._meassettings import START_E_NAME
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.gui.widgets.checkboxes import QCheckBoxInvertedSignal
 from viperleed.gui.widgets.lib import retain_size_when_hidden
@@ -301,14 +300,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
              'perform fast sampling of quantities. Typically used for '
              'determining response times of a LEED unit. For <it>I</it>'
              '(<it>t</it>) measurments, use non-continuous mode.'),
-            ('energies', 'endless', 'Keep repeating',
-             '<nobr>If selected, the measurement will return to the start '
-             '</nobr>energy after reaching the end and go on. This kind '
-             'of measurement can only be manually aborted.'),
-            ('energies', 'constant_energy', 'Constant energy',
-             '<nobr>If selected, the measurement will always remain at '
-             f'</nobr>{START_E_NAME}. This kind of measurement can only'
-             ' be manually aborted.'),
             )
         for section, option_name, display_name, tip in info:
             widget = QCheckBoxInvertedSignal()
@@ -317,17 +308,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                 display_name=display_name, tooltip=tip
                 )
 
-        end_energy = handler['energies']['end_energy']
-        delta_energy = handler['energies']['delta_energy']
-        constant = handler['energies']['constant_energy']
         continuous = handler['measurement_settings']['is_continuous']
         interval = handler['measurement_settings']['measurement_interval']
-        for option in (end_energy, delta_energy):
-            constant.handler_widget.unchecked.connect(option.set_enabled)
-            constant.handler_widget.unchecked.connect(
-                option.handler_widget.setVisible
-                )
-            retain_size_when_hidden(option.handler_widget)
         continuous.handler_widget.unchecked.connect(interval.set_enabled)
         continuous.handler_widget.unchecked.connect(
             interval.handler_widget.setVisible

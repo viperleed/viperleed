@@ -39,7 +39,7 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsHandler,
     SettingsTag,
     )
-from viperleed.gui.measure.measurement import _meassettings as _settings
+from viperleed.gui.measure.measurement._meassettings import EnergyRampEditor
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 
 
@@ -456,31 +456,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             type_display, display_name='Measurement type',
             )
 
-        handler.add_section('energies', tags=SettingsTag.REGULAR)
-        info = (
-            ('start_energy', _settings.START_E_NAME,
-             '<nobr>The energy at which the measurement starts.</nobr>'),
-            ('delta_energy', _settings.DELTA_E_NAME,
-             '<nobr>The energy difference between two measurement '
-             'steps.</nobr>'),
-            ('end_energy', _settings.END_E_NAME,
-             '<nobr>The energy value at which </nobr>'
-             'the measurement will finish.'),
-            )
-        for option_name, display_name, tip in info:
-            soft_min = 0 if option_name != 'delta_energy' else -1000
-            widget = CoercingDoubleSpinBox(
-                decimals=1, soft_range=(soft_min, 1000), suffix=' eV'
-                )
-            handler.add_option('energies', option_name, handler_widget=widget,
-                               display_name=display_name, tooltip=tip)
-        delta_energy = handler['energies']['delta_energy']
-        delta_energy.handler_widget.setSingleStep(0.5)
-
-        widget = _settings.StepProfileViewer()
-        tip = '<nobr>How to move from </nobr>one energy to the next one.'
-        handler.add_option('energies', 'step_profile', handler_widget=widget,
-                           display_name='Step profile', tooltip=tip)
+        ramp_section = EnergyRampEditor(self.settings)
+        handler.add_complex_section(ramp_section)
         return handler
 
     @classmethod

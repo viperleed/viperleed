@@ -1,7 +1,7 @@
 """Module energyramp of viperleed.gui.measure.classes.
 
-This module defines the EnergyRampABC class, which decides which energy
-is next during a measurement.
+This module defines the EnergyRampABC class and various subclasses,
+which decides which energy is next during a measurement.
 """
 
 __authors__ = (
@@ -15,12 +15,19 @@ __license__ = 'GPLv3+'
 from abc import abstractmethod
 from configparser import NoSectionError, NoOptionError
 
+from viperleed.gui.measure.classes.abc import QMetaABC
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.abc import QObjectWithError
 from viperleed.gui.measure.classes.settings import NotASequenceError
+from viperleed.gui.measure.dialogs.settingsdialog import SettingsDialogOption, SettingsTag
+from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
+
 
 ABRUPT = 'abrupt'
 LINEAR = 'linear'
+DELTA_E_NAME = '\u0394E'
+START_E_NAME = 'E start'
+END_E_NAME = 'E end'
 DEFAULT_DELTA = 0.5
 DEFAULT_END = 0.0
 DEFAULT_START = 0.0
@@ -28,7 +35,7 @@ MINIMUM_ENERGY = 0.0
 MINIMUM_DELTA = 1e-4
 
 
-class EnergyRampABC(QObjectWithError):                                          # TODO: Move profile settings over to controller settings.
+class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      # TODO: Move profile settings over to controller settings.
     """Generic energy ramp class."""
 
     def __init__(self, *args, **kwargs):
@@ -139,6 +146,27 @@ class EnergyRampABC(QObjectWithError):                                          
     @abstractmethod
     def increment_energy(self):
         """Go to the next energy in the ramp."""
+
+    @classmethod
+    @abstractmethod
+    def get_settings_widgets(cls):
+        """Return the widgets necessary to set a ramp.
+
+        Must be extended in subclasses to add the widgets necessary to
+        set the settings for the ramp.
+
+        Returns
+        -------
+        widgets : tuple
+            A tuple of SettingsDialogOptions.
+        """
+        widget = CoercingDoubleSpinBox(decimals=1, soft_range=(0, 1000),
+                                       suffix=' eV')
+        tip = '<nobr>The energy at which the measurement starts.</nobr>'
+        start = SettingsDialogOption('start_energy', widget, tooltip=tip,
+                                     display_name=START_E_NAME,
+                                     tags=SettingsTag.REGULAR)
+        return (start,)
 
     @abstractmethod
     def ramp_finished(self):
@@ -373,6 +401,34 @@ class LinearEnergyRamp(EnergyRampABC):
             return 0
         return 1 + round(self.energy_range/abs(self._delta_energy))
 
+    @classmethod
+    def get_settings_widgets(cls):
+        """Return the widgets necessary to set a linear ramp.
+
+        Returns
+        -------
+        widgets : tuple
+            A tuple of SettingsDialogOptions.
+        """
+        widgets = super().get_settings_widgets()
+        delta_widget = CoercingDoubleSpinBox(decimals=1,
+                                             soft_range=(-1000, 1000),
+                                             suffix=' eV')
+        delta_widget.setSingleStep(0.5)
+        tip = ('<nobr>The energy difference between '
+               'two measurement steps.</nobr>')
+        delta = SettingsDialogOption('delta_energy', delta_widget, tooltip=tip,
+                                     display_name=DELTA_E_NAME,
+                                     tags=SettingsTag.REGULAR)
+        end_widget = CoercingDoubleSpinBox(decimals=1, soft_range=(0, 1000),
+                                           suffix=' eV')
+        tip = ('<nobr>The energy value at which </nobr>'
+               'the measurement will finish.')
+        end = SettingsDialogOption('end_energy', end_widget, tooltip=tip,
+                                   display_name=END_E_NAME,
+                                   tags=SettingsTag.REGULAR)
+        return (*widgets, delta, end)
+
     def increment_energy(self):
         """Go to the next energy in the ramp."""
         self.current_energy += self._delta_energy
@@ -445,6 +501,11 @@ class ConstantEnergyRamp(EnergyRampABC):
     def energy_steps(self):
         """Return the number of energy steps."""
         return 0
+
+    @classmethod
+    def get_settings_widgets(cls):
+        """Return the settings widgets for the constant energy ramp."""
+        return super().get_settings_widgets()
 
     def increment_energy(self):
         """Go to the next energy in the ramp."""

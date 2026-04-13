@@ -8,18 +8,20 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Dörr (@FlorianDoerr)',
     )
-__copyright__ = 'Copyright (c) 2019-2025 ViPErLEED developers'
+__copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2024-04-18'
 __license__ = 'GPLv3+'
 
-from abc import abstractmethod
 from ast import literal_eval
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
-from viperleed.gui.measure.classes.abc import QMetaABC
+from viperleed.gui.measure.classes.energyramp import DELTA_E_NAME
+from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
+from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
+from viperleed.gui.measure.classes.energyramp import EndlessLinearEnergyRamp
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
@@ -37,17 +39,15 @@ from viperleed.gui.widgets.buttons import QNoDefaultDialogButtonBox
 from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 
-DELTA_E_NAME = '\u0394E'
-START_E_NAME = 'E start'
-END_E_NAME = 'E end'
 MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
 N_COLUMNS = 2
 N_HEADER_ROWS = 2
+ENERGY_RAMPS = (ConstantEnergyRamp, LinearEnergyRamp, EndlessLinearEnergyRamp)
 
 
 class DeviceEditor(SettingsDialogSectionBase):
-    """Class for selecting devices and editing their settings."""
+    """Section for selecting devices and editing their settings."""
 
     error_occurred = qtc.pyqtSignal(tuple)
 
@@ -189,6 +189,99 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._controllers.set_controllers_from_settings(self._settings)
         self._cameras.set_cameras_from_settings(self._settings)
 
+
+class EnergyRampEditor(SettingsDialogSectionBase):                              # TODO: needs the Measurement class to be able to check whether the selected ramp type is compatible with the selected measurement class, e.g. EndlessLinearEnergyRamp should not be available for IVVideo, as it is not compatible with the way IVVideo handles energy steps.
+    """Section for editing energy-ramp related settings."""
+
+    def __init__(self, settings, **kwargs):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The settings of the loaded measurement.
+        **kwargs : object
+            Keyword arguments passed on to SettingsDialogSectionBase
+            'display_name' : Displayed name of section.
+            'tags' : Tags associated with the section.
+            'tooltip' : Tooltip displayed with the section.
+
+        Returns
+        -------
+        None.
+        """
+        self._settings = settings
+        kwargs.setdefault('display_name', 'Energy Ramp')
+        kwargs.setdefault('tags', SettingsTag.REGULAR)
+        kwargs.setdefault('tooltip', 'This section handles settings that '
+                          'control how the energy is ramped between steps.')
+        super().__init__(**kwargs)
+        self._step_profile = StepProfileViewer()
+        self._ramp_type = qtw.QComboBox()
+        self._energy_options = tuple()
+        self.settings_changed.connect(self._store_energy_ramp_settings)
+        self._compose_and_connect()
+        self._set_energy_ramp_options()
+
+    def are_settings_ok(self):
+        """Return whether the energy ramp is acceptable."""
+        return True, '' # TODO: check if end energy is above/below start energy if delta_energy is positive/negative
+
+    def _compose_and_connect(self):
+        """Compose widgets and connect relevant signals."""
+        layout = qtw.QFormLayout()
+        tip = 'The shape of the energy ramp.'
+        label = InfoLabel(label_text='Ramp type', tooltip=tip)
+        layout.addRow(label, self._ramp_type)
+        for ramp_cls in ENERGY_RAMPS:
+            self._ramp_type.addItem(ramp_cls.__name__, userData=ramp_cls)
+        tip = '<nobr>How to move from </nobr>one energy to the next one.'
+        label = InfoLabel(label_text='Step profile', tooltip=tip)
+        layout.addRow(label, self._step_profile)
+        self.central_widget.setLayout(layout)
+        self._ramp_type.currentIndexChanged.connect(self.settings_changed)
+        self._ramp_type.currentIndexChanged.connect(
+            self._set_energy_ramp_options
+            )
+        self._step_profile.settings_changed.connect(self.settings_changed)
+
+    @qtc.pyqtSlot(int)
+    def _set_energy_ramp_options(self, *_):
+        """Add the widget of the selected energy ramp."""
+        while self.central_widget.layout().rowCount() > 2:
+            self.central_widget.layout().removeRow(2)
+        selected_ramp = self._ramp_type.currentData()
+        self._energy_options = selected_ramp.get_settings_widgets()
+        print('here')
+        print(self._energy_options)
+        for option in self._energy_options:
+            self.central_widget.layout().addRow(*option)
+            option.value_changed.connect(self.settings_changed)
+
+    @qtc.pyqtSlot()
+    def _store_energy_ramp_settings(self):
+        """Store the selected energy-ramp settings."""
+        self._settings.set('energies', 'ramp_type',
+                           self._ramp_type.currentData().__name__)
+        self._settings.set('energies', 'step_profile',
+                           self._step_profile.get_())
+        for option in self._energy_options:
+            self._settings.set('energies', option.option_name, option.get_())
+
+    @qtc.pyqtSlot()
+    def update_widgets(self):
+        """Update widgets from settings."""
+        ramp_type = self._settings['energies'].get('ramp_type', '')
+        index = self._ramp_type.findText(ramp_type)
+        if index != -1:
+            self._ramp_type.setCurrentIndex(index)
+        for option in self._energy_options:
+            value = self._settings['energies'].getfloat(option.option_name, None)
+            if value is not None:
+                option.handler_widget.setValue(value)
+        step_profile = self._settings['energies'].get('step_profile', None)
+        if step_profile:
+            self._step_profile.set_(step_profile)
 
 class StepProfileViewer(ButtonWithLabel):
     """Viewer of the current step-profile type.
