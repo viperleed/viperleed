@@ -270,19 +270,19 @@ class EnergyRampEditor(SettingsDialogSectionBase):                              
     @qtc.pyqtSlot()
     def update_widgets(self):
         """Update widgets from settings."""
-        ramp_type = self._settings['energies'].get('ramp_type', '')
-        index = self._ramp_type.findText(ramp_type)
-        if index != -1:
-            self._ramp_type.setCurrentIndex(index)
         with qtc.QSignalBlocker(self):
+            ramp_type = self._settings['energies'].get('ramp_type', '')
+            index = self._ramp_type.findText(ramp_type)
+            if index != -1:
+                self._ramp_type.setCurrentIndex(index)
             for option in self._energy_options:
                 value = self._settings['energies'].getfloat(option.option_name,
                                                             None)
                 if value is not None:
                     option.handler_widget.setValue(value)
-        step_profile = self._settings['energies'].get('step_profile', None)
-        if step_profile:
-            self._step_profile.set_(step_profile)
+            step_profile = self._settings['energies'].get('step_profile', None)
+            if step_profile:
+                self._step_profile.set_(step_profile)
 
 class StepProfileViewer(ButtonWithLabel):
     """Viewer of the current step-profile type.
