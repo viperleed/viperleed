@@ -325,9 +325,9 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
         _, *params = profile
         if len(params) != 2:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                'energies/step_profile',
-                'Too many/few parameters for linear profile. '
-                f'Expected 2, found {len(params)}')
+                            'energies/step_profile',
+                            'Too many/few parameters for linear profile. '
+                            f'Expected 2, found {len(params)}')
             self._step_profile = (ABRUPT,)
             return
         try:
@@ -339,7 +339,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
                             'parameters for linear profile')
             self._step_profile = (ABRUPT,)
             return
-        if n_steps <= 0 or tot_time < 0:
+        if n_steps <= 0 or tot_time <= 0:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'energies/step_profile',
                             'Linear-step parameters should be '
