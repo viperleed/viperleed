@@ -309,6 +309,8 @@ class StepProfileViewer(ButtonWithLabel):
 
     def get_(self):
         """Return the value to be stored in the config."""
+        if not self.profile_editor.profile:
+            return str(AbruptEnergyStepEditor().profile)
         return str(self.profile_editor.profile)
 
     def set_(self, value):
@@ -574,6 +576,7 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
             raise ValueError('Unsuitable settings for a linear profile.')       # TODO: Catch error on the outside.
         self._controls['n_steps'].setValue(profile[1])
         self._controls['duration'].setValue(profile[2])
+        self.update_profile()
 
     def update_profile(self):
         """Set the profile to the selected values."""
@@ -644,10 +647,10 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         """
         while self.n_steps > 0:
             self._remove_step()
-        self.profile = profile
         for fraction, duration in zip(profile[0::2], profile[1::2]):
             self._add_step(fraction, duration)
         self._update_button_states()
+        self.update_profile()
 
     def update_profile(self):
         """Set the profile to the selected values."""
