@@ -699,13 +699,16 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         for camera in self.cameras:
             self._missing_data[camera] = 1
 
-        try:
-            ramp_name = self.settings.get('energies', 'ramp_type')
-        except (TypeError, AttributeError, NoOptionError):
+        ramp_name = self.settings.get('energies', 'ramp_type', fallback=None)
+        ramp_type = None
+        if ramp_name:
+            try:
+                ramp_type = base.class_from_name('classes', ramp_name)
+            except (RuntimeError, ValueError):
+                pass
+        if ramp_type is None:
             ramp_type = EnergyRampABC.get_matching_energy_ramp(self.settings)
             self.settings.set('energies', 'ramp_type', str(ramp_type.__name__))
-        else:
-            ramp_type = base.class_from_name('classes', ramp_name)
         self._energy_ramp = ramp_type()
         self._energy_ramp.error_occurred.connect(self.error_occurred)
         self._energy_ramp.set_ramp(self.settings)
