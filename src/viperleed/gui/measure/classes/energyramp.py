@@ -19,7 +19,8 @@ from viperleed.gui.measure.classes.abc import QMetaABC
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.abc import QObjectWithError
 from viperleed.gui.measure.classes.settings import NotASequenceError
-from viperleed.gui.measure.dialogs.settingsdialog import SettingsDialogOption, SettingsTag
+from viperleed.gui.measure.dialogs.settingsdialog import SettingsDialogOption
+from viperleed.gui.measure.dialogs.settingsdialog import SettingsTag
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 
 
