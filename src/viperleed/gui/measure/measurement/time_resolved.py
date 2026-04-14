@@ -43,8 +43,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         *MeasurementABC._mandatory_settings,
         ('measurement_settings', 'is_continuous'),
         ('measurement_settings', 'energy_step_duration'),
-        ('energies', 'endless'),
-        ('energies', 'constant_energy'),
         )
 
     _request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                  # TODO: could be done with QMetaObject.invokeMethod
