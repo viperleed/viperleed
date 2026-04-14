@@ -225,7 +225,11 @@ class EnergyRampEditor(SettingsDialogSectionBase):                              
 
     def are_settings_ok(self):
         """Return whether the energy ramp is acceptable."""
-        return True, '' # TODO: check if end energy is above/below start energy if delta_energy is positive/negative
+        ramp = self._ramp_type.currentData()
+        try:
+            return ramp.ramp_settings_ok(self._energy_options)
+        except AttributeError:
+            return False, 'Set a valid energy ramp type.'
 
     def _compose_and_connect(self):
         """Compose widgets and connect relevant signals."""
@@ -255,6 +259,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):                              
         for option in self._energy_options:
             self.central_widget.layout().addRow(*option)
             option.value_changed.connect(self.settings_changed)
+            option.value_changed.connect(self.settings_ok_changed)
         self.update_widgets()
 
     @qtc.pyqtSlot()
@@ -277,10 +282,11 @@ class EnergyRampEditor(SettingsDialogSectionBase):                              
                 self._ramp_type.setCurrentIndex(index)
             for option in self._energy_options:
                 value = self._settings['energies'].getfloat(option.option_name,
-                                                            None)
+                                                            fallback=None)
                 if value is not None:
                     option.handler_widget.setValue(value)
-            step_profile = self._settings['energies'].get('step_profile', None)
+            step_profile = self._settings['energies'].get('step_profile',
+                                                          fallback=None)
             if step_profile:
                 self._step_profile.set_(step_profile)
 

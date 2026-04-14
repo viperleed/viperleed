@@ -172,6 +172,27 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
     def ramp_finished(self):
         """Return whether the energy ramp has been finished."""
 
+    @classmethod
+    @abstractmethod
+    def ramp_settings_ok(cls, energy_options):
+        """Return whether the settings for the ramp are ok.
+
+        Parameters
+        ----------
+        energy_options : tuple
+            The energy options to check.
+
+        Returns
+        -------
+        settings_ok : bool
+            Whether the settings selected in the widgets are
+            acceptable or not.
+        reason : str
+            A descriptive string elaborating why the settings
+            are not acceptable.
+        """
+        return True, ''
+
     def set_ramp(self, settings):
         """Set the energy ramp from settings.
 
@@ -429,6 +450,40 @@ class LinearEnergyRamp(EnergyRampABC):
                                    tags=SettingsTag.REGULAR)
         return (*widgets, delta, end)
 
+    @classmethod
+    def ramp_settings_ok(cls, energy_options):
+        """Return whether the settings for the ramp are ok.
+
+        Parameters
+        ----------
+        energy_options : tuple
+            The energy options to check.
+
+        Returns
+        -------
+        settings_ok : bool
+            Whether the settings selected in the widgets are
+            acceptable or not.
+        reason : str
+            A descriptive string elaborating why the settings
+            are not acceptable.
+        """
+        energy_dict = {option.option_name: float(option.get_())
+                       for option in energy_options}
+        start_energy = energy_dict.get('start_energy', DEFAULT_START)
+        delta_energy = energy_dict.get('delta_energy', DEFAULT_DELTA)
+        end_energy = energy_dict.get('end_energy', DEFAULT_END)
+        if delta_energy == 0.0:
+            return False, ('Delta energy cannot be zero.'
+                           ' Use constant energy ramp.')
+        if delta_energy > 0 and end_energy < start_energy:
+            return False, ('For positive delta energy, end energy '
+                           'should be greater than start energy.')
+        if delta_energy < 0 and end_energy > start_energy:
+            return False, ('For negative delta energy, end energy '
+                           'should be less than start energy.')
+        return True, ''
+
     def increment_energy(self):
         """Go to the next energy in the ramp."""
         self.current_energy += self._delta_energy
@@ -506,6 +561,11 @@ class ConstantEnergyRamp(EnergyRampABC):
     def get_settings_widgets(cls):
         """Return the settings widgets for the constant energy ramp."""
         return super().get_settings_widgets()
+
+    @classmethod
+    def ramp_settings_ok(cls, *_):
+        """The settings for a constant energy ramp are always ok."""
+        return True, ''
 
     def increment_energy(self):
         """Go to the next energy in the ramp."""
