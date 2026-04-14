@@ -252,11 +252,10 @@ class EnergyRampEditor(SettingsDialogSectionBase):                              
             self.central_widget.layout().removeRow(2)
         selected_ramp = self._ramp_type.currentData()
         self._energy_options = selected_ramp.get_settings_widgets()
-        print('here')
-        print(self._energy_options)
         for option in self._energy_options:
             self.central_widget.layout().addRow(*option)
             option.value_changed.connect(self.settings_changed)
+        self.update_widgets()
 
     @qtc.pyqtSlot()
     def _store_energy_ramp_settings(self):
@@ -275,10 +274,12 @@ class EnergyRampEditor(SettingsDialogSectionBase):                              
         index = self._ramp_type.findText(ramp_type)
         if index != -1:
             self._ramp_type.setCurrentIndex(index)
-        for option in self._energy_options:
-            value = self._settings['energies'].getfloat(option.option_name, None)
-            if value is not None:
-                option.handler_widget.setValue(value)
+        with qtc.QSignalBlocker(self):
+            for option in self._energy_options:
+                value = self._settings['energies'].getfloat(option.option_name,
+                                                            None)
+                if value is not None:
+                    option.handler_widget.setValue(value)
         step_profile = self._settings['energies'].get('step_profile', None)
         if step_profile:
             self._step_profile.set_(step_profile)
