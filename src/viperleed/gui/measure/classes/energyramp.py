@@ -569,8 +569,9 @@ class ConstantEnergyRamp(EnergyRampABC):
         return True, ''
 
     def increment_energy(self):
-        """Go to the next energy in the ramp."""
-        # This is a no-op as the energy should never change.
+        """Advance the ramp state without changing the energy."""
+        # This is necessary to avoid recalling set_leed_energy.
+        self._previous_energy = self.current_energy
 
     def ramp_finished(self):                                                    # TODO: we could add a counter here that allows us to repeat constant energy ramps only a limited amount of times
         """Return whether the energy ramp has been finished."""
