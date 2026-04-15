@@ -256,7 +256,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     @property
     def primary_controller(self):
-        """Return the primary controllers used by this class."""
+        """Return the primary controller used by this class."""
         return self._primary_controller
 
     @primary_controller.setter
@@ -892,7 +892,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     def _continue_preparation(self, _):
         """Continue preparation for measurements.
 
-        Do nothing till all controllers are done with te first part
+        Do nothing till all controllers are done with the first part
         of the preparation, then move on to the second segment (i.e.,
         everything that is done after the starting energy is set).
         Finally, move on to trigger the beginning of the measurement
