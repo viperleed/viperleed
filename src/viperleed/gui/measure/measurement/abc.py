@@ -1054,6 +1054,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
             # Keep only the primary controller connected, so we can
             # set the LEED energy to zero (and detect it has been set)
+            if self.current_energy == 0:
+                self._cleanup_and_end()
+                return
             primary = self.primary_controller
             primary.connect_()
             primary.busy_changed.connect(self._cleanup_and_end, type=_UNIQUE)
