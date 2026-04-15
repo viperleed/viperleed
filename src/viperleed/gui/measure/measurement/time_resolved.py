@@ -299,7 +299,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
              'data as quickly as possible, without averaging. Useful to '
              'perform fast sampling of quantities. Typically used for '
              'determining response times of a LEED unit. For <it>I</it>'
-             '(<it>t</it>) measurments, use non-continuous mode.'),
+             '(<it>t</it>) measurements, use non-continuous mode.'),
             )
         for section, option_name, display_name, tip in info:
             widget = QCheckBoxInvertedSignal()

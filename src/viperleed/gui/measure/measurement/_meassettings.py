@@ -50,6 +50,7 @@ ALLOWED_ENERGY_RAMPS = {
     'TimeResolved': (LinearEnergyRamp, EndlessLinearEnergyRamp,
                      ConstantEnergyRamp),
     }
+ABRUPT_PROFILE = ('abrupt', )
 
 
 class DeviceEditor(SettingsDialogSectionBase):
@@ -327,7 +328,7 @@ class StepProfileViewer(ButtonWithLabel):
     def get_(self):
         """Return the value to be stored in the config."""
         if not self.profile_editor.profile:
-            return str(AbruptEnergyStepEditor().profile)
+            return str(ABRUPT_PROFILE)
         return str(self.profile_editor.profile)
 
     def set_(self, value):
@@ -339,7 +340,7 @@ class StepProfileViewer(ButtonWithLabel):
             pass
 
         if not value:
-            value = AbruptEnergyStepEditor().profile
+            value = ABRUPT_PROFILE
         if isinstance(value, str):
             value = (value,)
         self.profile_editor.profile = value
@@ -543,7 +544,7 @@ class AbruptEnergyStepEditor(EnergyStepProfileShapeEditor):
     def __init__(self):
         """Initialise object."""
         super().__init__()
-        self.profile = ('abrupt', )
+        self.profile = ABRUPT_PROFILE
 
     def set_profile(self, *_):
         """Do nothing."""
@@ -600,7 +601,7 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         self.profile = (self.name, self._controls['n_steps'].value(),
                         self._controls['duration'].value())
         if any(value == 0 for value in self.profile):
-            self.profile = AbruptEnergyStepEditor().profile
+            self.profile = ABRUPT_PROFILE
 
     def _compose(self):
         """Place children widgets."""
@@ -682,7 +683,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
             profile.append(item.itemAt(1).widget().value())
         self.profile = tuple(profile)
         if not self.profile or not any(self.profile):
-            self.profile = AbruptEnergyStepEditor().profile
+            self.profile = ABRUPT_PROFILE
 
     @qtc.pyqtSlot()
     def _add_step(self, fraction=None, duration=None):
