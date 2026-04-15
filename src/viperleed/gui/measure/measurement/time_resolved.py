@@ -91,6 +91,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         """Return the appropriate number of digits for padding image names."""
         # Used for zero-padding counter in image names.
         num_meas = self._energy_ramp.energy_steps
+        if num_meas <= 0:
+            return super()._n_digits
         num_meas *= ceil(self.energy_step_duration / self.measurement_interval)
         return len(str(num_meas))
 
