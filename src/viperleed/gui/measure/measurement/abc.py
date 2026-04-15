@@ -418,11 +418,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         as the default button of the dialog.
 
         The base-class implementation returns a handler that
-        already contains the following settings:
-            'energies'/'start_energy'
-            'energies'/'delta_energy'
-            'energies'/'end_energy'
-            'energies'/'step_profile'
+        already contains the EnergyRampEditor for energy ramp
+        settings.
 
         Returns
         -------
