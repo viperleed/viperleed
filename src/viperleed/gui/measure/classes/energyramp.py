@@ -14,6 +14,7 @@ __license__ = 'GPLv3+'
 
 from abc import abstractmethod
 from configparser import NoSectionError, NoOptionError
+import math
 
 from viperleed.gui.measure.classes.abc import QMetaABC
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
@@ -52,6 +53,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
     @abstractmethod
     def energy_steps(self):
         """Return the number of energy steps."""
+        return 0
 
     @property
     def current_energy(self):
@@ -421,7 +423,7 @@ class LinearEnergyRamp(EnergyRampABC):
         """Return the number of energy steps."""
         if self._delta_energy == 0.0:
             return 0
-        return 1 + round(self.energy_range/abs(self._delta_energy))
+        return 1 + math.floor(self.energy_range/abs(self._delta_energy))
 
     @classmethod
     def get_settings_widgets(cls):
