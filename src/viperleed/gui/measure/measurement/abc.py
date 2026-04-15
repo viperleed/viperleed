@@ -219,6 +219,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     @property
     def current_energy(self):
         """Return the current energy in electronvolts."""
+        if not self._energy_ramp:
+            return 0.0
         return self._energy_ramp.current_energy
 
     @current_energy.setter
@@ -234,6 +236,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         new_energy : float
             The new current energy
         """
+        if not self._energy_ramp:
+            raise RuntimeError('Cannot set current energy '
+                               'if no energy ramp is set.')
         self._energy_ramp.current_energy = new_energy
 
     @property
