@@ -705,6 +705,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 ramp_type = base.class_from_name('classes', ramp_name)
             except (RuntimeError, ValueError):
                 pass
+        if ramp_type and not issubclass(ramp_type, EnergyRampABC):
+            ramp_type = None
         if ramp_type is None:
             ramp_type = EnergyRampABC.get_matching_energy_ramp(self.settings)
             self.settings.set('energies', 'ramp_type', str(ramp_type.__name__))
