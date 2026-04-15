@@ -19,6 +19,7 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes.energyramp import DELTA_E_NAME
+from viperleed.gui.measure.classes.energyramp import START_E_NAME
 from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
 from viperleed.gui.measure.classes.energyramp import EndlessLinearEnergyRamp
@@ -262,6 +263,16 @@ class EnergyRampEditor(SettingsDialogSectionBase):
             self.central_widget.layout().removeRow(2)
         selected_ramp = self._ramp_type.currentData()
         self._energy_options = selected_ramp.get_settings_widgets()
+        if self._settings.has_option('energies', 'min_energy'):
+            min_energy = self._settings.getfloat('energies', 'min_energy')
+            start = next(option for option in self._energy_options
+                         if option.option_name == 'start_energy')
+            with qtc.QSignalBlocker(start.handler_widget):
+                start.handler_widget.soft_minimum = min_energy
+            start.set_info_text(
+                '<nobr>The energy at which the measurement starts.</nobr> '
+                f'The minimum {START_E_NAME} is {min_energy} eV.'
+                )
         for option in self._energy_options:
             self.central_widget.layout().addRow(*option)
             option.value_changed.connect(self.settings_changed)
