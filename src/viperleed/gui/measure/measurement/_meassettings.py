@@ -43,7 +43,12 @@ MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
 N_COLUMNS = 2
 N_HEADER_ROWS = 2
-ENERGY_RAMPS = (ConstantEnergyRamp, LinearEnergyRamp, EndlessLinearEnergyRamp)
+ALLOWED_ENERGY_RAMPS = {
+    'IVVideo': (LinearEnergyRamp,),
+    'MeasureEnergyCalibration': (LinearEnergyRamp,),
+    'TimeResolved': (LinearEnergyRamp, EndlessLinearEnergyRamp,
+                     ConstantEnergyRamp),
+    }
 
 
 class DeviceEditor(SettingsDialogSectionBase):
@@ -190,7 +195,7 @@ class DeviceEditor(SettingsDialogSectionBase):
         self._cameras.set_cameras_from_settings(self._settings)
 
 
-class EnergyRampEditor(SettingsDialogSectionBase):                              # TODO: needs the Measurement class to be able to check whether the selected ramp type is compatible with the selected measurement class, e.g. EndlessLinearEnergyRamp should not be available for IVVideo, as it is not compatible with the way IVVideo handles energy steps.
+class EnergyRampEditor(SettingsDialogSectionBase):
     """Section for editing energy-ramp related settings."""
 
     def __init__(self, settings, **kwargs):
@@ -237,7 +242,8 @@ class EnergyRampEditor(SettingsDialogSectionBase):                              
         tip = 'The shape of the energy ramp.'
         label = InfoLabel(label_text='Ramp type', tooltip=tip)
         layout.addRow(label, self._ramp_type)
-        for ramp_cls in ENERGY_RAMPS:
+        meas_cls = self._settings["measurement_settings"]["measurement_class"]
+        for ramp_cls in ALLOWED_ENERGY_RAMPS[meas_cls]:
             self._ramp_type.addItem(ramp_cls.__name__, userData=ramp_cls)
         tip = '<nobr>How to move from </nobr>one energy to the next one.'
         label = InfoLabel(label_text='Step profile', tooltip=tip)
