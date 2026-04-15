@@ -79,7 +79,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
 
     @property
     def previous_energy(self):
-        """Return the current energy in electronvolts."""
+        """Return the previous energy in electronvolts."""
         return self._previous_energy
 
     @property

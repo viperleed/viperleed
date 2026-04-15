@@ -1,4 +1,4 @@
-"""Module energy_setpoint of viperleed.gui.measure.measurement.
+"""Module energy_calibration of viperleed.gui.measure.measurement.
 
 This module contains the definition of the MeasureEnergyCalibration class
 which acquires a measurement for calibrating the (linear) relationship
@@ -140,21 +140,17 @@ class MeasureEnergyCalibration(MeasurementABC):
     def calibrate_energy_setpoint(self):                                        # TODO: move this to DataPoints?
         """Calibrate the energy setpoint of the LEED electronics.
 
-        The offset is measured in the measure_energy_setpoint()
-        function which returns the measured energies and the
-        nominal energies The measured energies are then put into
-        relation to the nominal energies using
-        numpy.polynomial.polynomial.Polynomial. A polynomial of
-        first degree is most likely accurate enough for the
-        calibration, but the degree can be adjusted by changing
+        Measured energies are put into relation to the nominal
+        energies using numpy.polynomial.polynomial.Polynomial. A
+        polynomial of first degree is most likely accurate enough for
+        the calibration, but the degree can be adjusted by changing
         the integer value in the Polynomial.fit function.
 
-        The measured energies are used as the x-coordinates
-        and the nominal energies are used as the y-coordinates.
-        The resulting polynomial is written into the config file
-        and used to calibrate the nominal energy via the
-        true_energy_to_setpoint() function to get the desired
-        output.
+        The measured energies are used as the x-coordinates and the
+        nominal energies are used as the y-coordinates. The resulting
+        polynomial is written into the config file and used to
+        calibrate the nominal energy via the true_energy_to_setpoint()
+        function to get the desired output.
 
         Returns
         -------
