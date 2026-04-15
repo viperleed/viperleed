@@ -40,7 +40,6 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsTag,
     )
 from viperleed.gui.measure.measurement._meassettings import EnergyRampEditor
-from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod

@@ -31,7 +31,7 @@ from viperleed.gui.measure.dialogs.settingsdialog import (
 from viperleed.gui.measure.measurement.abc import MeasurementABC
 from viperleed.gui.measure.measurement.abc import MeasurementErrors
 from viperleed.gui.measure.measurement._meassettings import DeviceEditor
-# from viperleed.gui.measure.classes.energyramp import START_E_NAME
+
 
 _MEASURED_EGY = QuantityInfo.HV
 
@@ -238,13 +238,6 @@ class MeasureEnergyCalibration(MeasurementABC):
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
         handler = super().get_settings_handler()
-        # option = handler['energies']['start_energy']
-        # with qtc.QSignalBlocker(option.handler_widget):
-        #     option.handler_widget.soft_minimum = self._energy_ramp.min_energy
-        # option.set_info_text(
-        #     '<nobr>The energy at which the measurement starts.</nobr> '
-        #     f'The minimum {START_E_NAME} is {self._energy_ramp.min_energy} eV.'
-        #     )
         settings_path = SystemSettings().paths['configuration']
         second_column = SettingsSectionColumnInfo(position=1)
         device_section = DeviceEditor(
