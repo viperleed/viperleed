@@ -1,7 +1,7 @@
 """Module energyramp of viperleed.gui.measure.classes.
 
 This module defines the EnergyRampABC class and various subclasses,
-which decides which energy is next during a measurement.
+which decide which energy is next during a measurement.
 """
 
 __authors__ = (
