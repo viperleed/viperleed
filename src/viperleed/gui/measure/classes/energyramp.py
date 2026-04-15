@@ -383,7 +383,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
             profile = (ABRUPT,)
         self._step_profile = profile
 
-    def _step_profile_from_strings(self, profile):                              # TODO: Warn for .ini files created before 23/05/2025.
+    def _step_profile_from_strings(self, profile):
         """Return a tuple of energies and times from strings."""
         delta = self.current_energy - self.previous_energy
         if abs(delta) < MINIMUM_DELTA:
