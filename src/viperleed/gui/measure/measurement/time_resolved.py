@@ -259,7 +259,9 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         if self.is_continuous:
             self._prepare_continuous_mode()
-            self.data_points.nr_steps_total = self._energy_ramp.energy_steps
+            self.data_points.nr_steps_total = max(
+                1, self._energy_ramp.energy_steps
+                )
         else:
             # With the next connection, triggering the first
             # measurement at the current energy also starts
