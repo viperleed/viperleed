@@ -620,6 +620,8 @@ class Measure(ViPErLEEDPluginBase):                                             
         # Take care of dialogs and other windows
         self._dialogs['sys_settings'].setModal(True)
         self._dialogs['measurement_selection'].setModal(True)
+        for action in self._ctrls['menus']['devices'].actions():
+            action.menu().setEnabled(False)
 
     def _compose_error_box(self):
         """Prepare the message box shown when errors happen."""
