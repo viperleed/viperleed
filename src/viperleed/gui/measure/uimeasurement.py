@@ -258,10 +258,11 @@ class _DeviceDetectionWorker(qtc.QObject):
                     detected[device_type] = base.get_devices(device_type)
                 except DefaultSettingsError as exc:
                     detected[device_type] = {}
-                    base.emit_error(self,
-                                    QObjectSettingsErrors
-                                    .DEFAULT_SETTINGS_CORRUPTED,
-                                    exc)
+                    base.emit_error(
+                        self,
+                        QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
+                        exc
+                        )
                 except Exception as exc:  # pylint: disable=broad-exception-caught
                     detected[device_type] = {}
                     base.emit_error(self, UIErrors.RUNTIME_ERROR, exc)
