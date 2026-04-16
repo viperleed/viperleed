@@ -334,6 +334,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             'start_measurement': qtc.QTimer(parent=self),
             'retry_open_bpx_dialog': qtc.QTimer(parent=self),
             'delay_check_settings': qtc.QTimer(parent=self),
+            'refresh_devices': qtc.QTimer(parent=self),
             }
 
         self._move_settings_files()
