@@ -610,12 +610,16 @@ def rfactor_from_csv(
 
     if beam_correspondence is None:
         expbeams, theobeams = _match_beams_by_label(expbeams, theobeams)
-        beam_correspondence = tuple((i,) for i in range(len(expbeams)))
+        beam_correspondence = np.arange(len(theobeams), dtype=int)
     else:
-        if len(beam_correspondence) != len(expbeams):
+        beam_correspondence = np.asarray(beam_correspondence, dtype=int)
+        if beam_correspondence.ndim != 1:
+            raise ValueError("beam_correspondence must be a 1D sequence of "
+                             "integers.")
+        if len(beam_correspondence) != len(theobeams):
             raise ValueError(
-                "beam_correspondence must have one entry per experimental beam "
-                f"({len(expbeams)}), got {len(beam_correspondence)}."
+                "beam_correspondence must have one entry per theoretical beam "
+                f"({len(theobeams)}), got {len(beam_correspondence)}."
             )
 
     # Prepare an Rparams object to get the energy ranges right.
