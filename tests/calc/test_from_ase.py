@@ -14,6 +14,7 @@ __license__ = 'GPLv3+'
 
 from io import StringIO
 
+import json
 import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
@@ -38,7 +39,17 @@ from . import cases_ase
 
 
 ASE_DATA = TEST_DATA / 'from_ase'
+BEAM_DATA_DIR = TEST_DATA / "beam-data"
 
+
+@pytest.fixture
+def fe2o3_012_1x1_beam_files():
+    exp_csv = BEAM_DATA_DIR / "EXPBEAMS-fe2o3-012-1x1.csv"
+    theo_csv = BEAM_DATA_DIR / "THEOBEAMS-fe2o3-012-1x1.csv"
+    beamcorr_file = BEAM_DATA_DIR / "beamcorr-fe2o3-012-1x1.json"
+    beam_correspondence = json.loads(beamcorr_file.read_text())[
+        "beam_correspondence"]
+    return exp_csv, theo_csv, beam_correspondence
 
 def _make_refcalc_ok_transforms():
     """Yield slab transforms (or sequences thereof) and names (for ids)."""
@@ -555,3 +566,52 @@ class TestFailingRefcalc:
     def test_no_beams(self):
         """Ensure ref-calc did not produce any beam."""
         assert not self.theobeams
+
+class TestRfactorFromCsv:
+    @staticmethod
+    def test_reads_csv_paths_with_explicit_beam_correspondence(
+        fe2o3_012_1x1_beam_files,
+    ):
+        exp_csv, theo_csv, beam_correspondence = fe2o3_012_1x1_beam_files
+
+        best_r, best_v0r, r_beams = vpr_ase.rfactor_from_csv(
+            (exp_csv, theo_csv),
+            4.5,
+            beam_correspondence=beam_correspondence,
+        )
+
+        assert np.isfinite(best_r)
+        assert np.isfinite(best_v0r)
+        assert isinstance(r_beams, np.ndarray)
+        assert r_beams.ndim == 1
+        assert np.all(np.isfinite(r_beams))
+
+    @staticmethod
+    def test_reads_csv_paths_without_beam_correspondence(
+        fe2o3_012_1x1_beam_files,
+    ):
+        exp_csv, theo_csv, _ = fe2o3_012_1x1_beam_files
+
+        best_r, best_v0r, r_beams = vpr_ase.rfactor_from_csv(
+            (exp_csv, theo_csv),
+            4.5,
+        )
+
+        assert np.isfinite(best_r)
+        assert np.isfinite(best_v0r)
+        assert isinstance(r_beams, np.ndarray)
+        assert r_beams.ndim == 1
+        assert np.all(np.isfinite(r_beams))
+
+    @staticmethod
+    def test_invalid_beam_correspondence_length_raises(
+        fe2o3_012_1x1_beam_files,
+    ):
+        exp_csv, theo_csv, beam_correspondence = fe2o3_012_1x1_beam_files
+
+        with pytest.raises(ValueError, match="beam_correspondence"):
+            vpr_ase.rfactor_from_csv(
+                (exp_csv, theo_csv),
+                4.5,
+                beam_correspondence=beam_correspondence[:-1],
+            )
