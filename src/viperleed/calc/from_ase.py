@@ -506,7 +506,7 @@ def rfactor_from_csv(
     intpol_step=0.5,
     which_r='pendry',
     beam_correspondence=None,
-    PLOT_IV=None,
+    plot_iv=None,
     intpol_deg=None,
     return_beam_arrays=None,
 ):
@@ -671,7 +671,7 @@ def rfactor_from_csv(
     r_values = np.array(
         [
             r_func(
-                rpars.V0_IMAG,
+                v0i,
                 intpol_step,
                 out_grid,
                 data_spline_1=exp_spline,
@@ -697,7 +697,7 @@ def rfactor_from_csv(
         theo_spline = spline_interpolation.CachedSpline(theo_spline)
 
     r_beams = r_func(
-        rpars.V0_IMAG,
+        v0i,
         intpol_step,
         out_grid,
         data_spline_1=exp_spline,
@@ -705,13 +705,12 @@ def rfactor_from_csv(
         groups="beam",
     )
 
-    if PLOT_IV is not None:
-        plot_rpars = Rparams()
-        plot_rpars.V0_IMAG = v0i
-        plot_rpars.PLOT_IV.update(PLOT_IV)
+    if plot_iv is not None:
+        rpars.PLOT_IV.update(plot_iv)
+        rpars.expbeams = expbeams
 
         write_Rfactorpdf_from_splines(
-            plot_rpars,
+            rpars,
             theo_spline,
             exp_spline,
             out_grid,
