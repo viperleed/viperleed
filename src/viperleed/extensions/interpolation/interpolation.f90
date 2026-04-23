@@ -1,4 +1,4 @@
-! Created by Alexander M. Imre on 04.12.21.
+! Created by Alexandra Mia Imre on 04.12.21.
 !
 ! Fast B-Spline Interpolation
 ! A part of ViPErLEED
