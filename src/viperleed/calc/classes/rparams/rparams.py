@@ -139,7 +139,7 @@ class Rparams:
                         'overbar': False, 'perpage': 2,
                         }
         self.RUN = self.get_default('RUN')        # what segments should be run
-        self.R_FACTOR_LEGACY = True  # use old runtime-compiled R-factor calculation
+        self.R_FACTOR_LEGACY = False  # use old runtime-compiled R-factor calculation
         self.R_FACTOR_TYPE = self.get_default('R_FACTOR_TYPE')
         self.R_FACTOR_SMOOTH = 0
         self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD
