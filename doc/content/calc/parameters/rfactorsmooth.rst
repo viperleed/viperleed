@@ -3,7 +3,7 @@
 .. _rfactorsmooth:
 
 R_FACTOR_SMOOTHING
-===============
+==================
 
 R_FACTOR_SMOOTHING defines the number of times that experimental |IV| curves
 will be smoothed by 3-point smoothing during |R-factor| calculations, both
