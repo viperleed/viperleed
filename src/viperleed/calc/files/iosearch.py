@@ -399,7 +399,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     output += (formatter['energies'].write([rp.IV_SHIFT_RANGE.stop]).ljust(16)
                + "V02\n")
     output += (formatter['energies'].write([vincr]).ljust(16) + "VINCR\n")
-    output += (formatter['int'].write([rp.R_FACTOR_SMOOTHING]).ljust(16)
+    output += (formatter['int'].write([rp.R_FACTOR_SMOOTH]).ljust(16)
                + "ISMOTH\n")
     output += (formatter['int'].write([0]).ljust(16)
                + "EOT - 0: exp format, 1: van Hove format\n")

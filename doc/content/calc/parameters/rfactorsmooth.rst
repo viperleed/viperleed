@@ -2,16 +2,12 @@
 
 .. _rfactorsmooth:
 
-R_FACTOR_SMOOTHING
+R_FACTOR_SMOOTH
 ===============
 
-R_FACTOR_SMOOTHING defines the number of times that experimental |IV| curves
+R_FACTOR_SMOOTH defines the number of times that experimental |IV| curves
 will be smoothed by 3-point smoothing during |R-factor| calculations, both
 after the reference calculation and during the search.
-
-.. versionchanged:: 0.15.0
-   Parameter renamed from ``R_FACTOR_SMOOTH`` to ``R_FACTOR_SMOOTHING``.
-   The old name is still accepted as an alias for backwards compatibility.
 
 **Default:** 0
 
@@ -21,14 +17,13 @@ after the reference calculation and during the search.
 
 ::
 
-   R_FACTOR_SMOOTHING = 4
+   R_FACTOR_SMOOTH = 4
 
 It is recommended to smooth the experimental curves beforehand, such
 that smoothing during TensErLEED operation is not necessary. See the
 |R-factor| :ref:`page <r-factor_calculation>` for details.
 
-If you do use smoothing through the R_FACTOR_SMOOTHING parameter, check the
+If you do use smoothing through the R_FACTOR_SMOOTH parameter, check the
 experimental curves in the :ref:`Rfactor_analysis.pdf<rfactoranalysis>` file.
 This plots the curves after smoothing, as well as the Y-function used for
 calculating the |R factor|.
-

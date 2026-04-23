@@ -68,7 +68,7 @@ KNOWN_PARAMS = (
     'PLOT_IV',
     'RUN',
     'R_FACTOR_LEGACY',
-    'R_FACTOR_SMOOTHING',
+    'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE',
     'SCREEN_APERTURE',
     'SEARCH_BEAMS',
@@ -129,7 +129,6 @@ _PARAM_ALIAS.update({    # Sort keys alphabetically!
     'logdebug' : 'LOG_LEVEL',
     'plotrfactor': 'PLOT_IV',
     'plotrfactors': 'PLOT_IV',
-    'rfactorsmooth': 'R_FACTOR_SMOOTHING',
     'searchkill': 'STOP',
     })
 
