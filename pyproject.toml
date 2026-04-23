@@ -91,6 +91,17 @@ classifiers = [
     hardware = [
         'requests',
         ]
+    docs = [        # only needed for building the docs
+        'myst-nb',
+        'sphinx',
+        'sphinx-argparse',
+        'sphinx-copybutton',
+        'sphinx-design',
+        'sphinx-rtd-theme',
+        'sphinxcontrib-bibtex',
+        'sphinxcontrib-spelling',
+        'sphinxcontrib-svg2pdfconverter',
+        ]
 
 
 
