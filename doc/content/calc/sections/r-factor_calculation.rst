@@ -97,12 +97,7 @@ differences; artificially increasing the intensity at minima thus gives
 smaller |RP| values. Some LEED programs apply such a smoothing; in those
 cases smaller |R factors| than those obtained with ViPErLEED will be
 reported, but this does not indicate a better agreement between calculated
-and experimental |IV| curves.
-
-.. todo::
-    Refer to issue where we have discussed this (viperleed-betatest #8, after
-    moving it to main.
-
+and experimental |IV| curves.\ [3]_
 By default, ViPErLEED applies no additional smoothing when calculating the
 |R factor| (e.g., during structure optimization). Thus, the :ref:`EXPBEAMS`
 file should already contain smoothed data.
@@ -121,3 +116,4 @@ file should already contain smoothed data.
        A weighted average (with the energy span of each beam used as its weight)
        is usually close to the overall |R factor|.
 .. [2] Unpublished data by Lutz Hammer and coworkers.
+.. [3] See also `this discussion <https://github.com/viperleed/viperleed/issues/218>`_\ .
