@@ -124,15 +124,17 @@ def y_s(
     alpha=4.0,
     beta=0.15,
 ):
+    positive_d2 = second_derivative > 0
+    safe_d2 = dnl.xp.where(positive_d2, second_derivative, 1.0)
     intermediate_1 = (
-        intensity / second_derivative
-        - 0.5 * first_derivative**2 / second_derivative**2
+        intensity / safe_d2
+        - 0.5 * first_derivative**2 / safe_d2**2
     )
     intermediate_1 = (alpha / v0_imag**2) * intermediate_1 + beta
     intermediate_2 = intermediate_1 / dnl.xp.sqrt(1 + intermediate_1**2)
 
     numerator = first_derivative
-    condition = dnl.xp.logical_and(second_derivative > 0, intermediate_1 > 0)
+    condition = dnl.xp.logical_and(positive_d2, intermediate_1 > 0)
 
     denominator = intensity**2 + 4 * v0_imag**2 * first_derivative**2
     conditional_denominator = (
