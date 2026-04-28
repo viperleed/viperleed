@@ -325,7 +325,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
             # pylint: disable-next=possibly-used-before-assignment
             pdf = PdfPages(filename)
         except PermissionError:
-            logger.error(f"writeRfactorPdf: Cannot open file {filename}. "
+            logger.error(f"plot_iv: Cannot open file {filename}. "
                          "Aborting.")
             return
 
