@@ -23,12 +23,15 @@ import numpy as np
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
-from viperleed.calc.lib import leedbase
+from viperleed.calc.lib import leedbase, spline_interpolation
 from viperleed.calc.lib.log_utils import at_level
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
+from viperleed.calc.lib.rfactor.pendry import y_pendry
+from viperleed.calc.lib.rfactor.smooth import y_s
+from viperleed.calc.lib.rfactor.utils import shift_theo_intensity_non_negative
 from viperleed.calc.lib.version import Version
 
 if CAN_PLOT:
@@ -679,7 +682,8 @@ def read_rfactor_columns(cols_dir=''):
 
 @log_without_matplotlib(logger, msg='Skipping R-factor plotting.')
 def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
-                    analysisFile='', v0i=0., formatting=None):
+                    analysisFile='', v0i=0., formatting=None,
+                    which_r='pendry'):
     '''
     Creates a single PDF file containing the plots of R-factors, using plot_iv.
     If analysisFile is defined, a second 'analysis' PDF will be generated.
@@ -729,6 +733,9 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             layout will be adapted automatically. Numbers that are not nicely
             divisible may be rounded up, resulting in some whitespace.
             default: 2 (one column, two rows).
+    which_r : str
+        which R-factor type to use. Affects the Y-functions in the analysis
+        pdf. Only 'pendry' and 'smooth' are accepted.
 
     Returns
     -------
@@ -743,42 +750,28 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     if not analysisFile:
         return
-
-    figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims = prepare_analysis_plot(formatting, xyExp, xyTheo)
-
-    try:
-        # Pylint can't tell that we will not execute this,
-        # as per decorator, if we fail to import matplotlib
-        # pylint: disable-next=possibly-used-before-assignment
-        pdf = PdfPages(analysisFile)
-    except PermissionError:
-        logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
-                     .format(analysisFile))
+    if which_r != 'pendry' and which_r != 'smooth':
+        logger.info('Rfactor_analysis.pdf is only available for Pendry and '
+                    'Smooth R-factors.')
         return
 
-    # The following will spam the logger with debug messages; disable.
-    with at_level(logger, logging.INFO):
-        try:
-            for i, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
-                                                             xyTheo, xyExp)):
-                if len(exp) == 0:
-                    continue
-                ytheo = leedbase.getYfunc(theo, v0i)
-                yexp = leedbase.getYfunc(exp, v0i)
-                plot_analysis(exp, figs, figsize, name, namePos, oritick,
-                              plotcolors, rPos, rfact, theo, xlims, yexp,
-                              ylims, ytheo, v0i)
-            for fig in figs:
-                pdf.savefig(fig)
-                # Pylint can't tell that we will not execute this,
-                # as per decorator, if we fail to import matplotlib
-                # pylint: disable-next=possibly-used-before-assignment
-                plt.close(fig)
-        except Exception:
-            logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
-                         exc_info=True)
-        finally:
-            pdf.close()
+    # spline interpolation for y-functions
+    theo_spline, theo_grid = _rfactor_columns_to_spline(xyTheo)
+    exp_spline, exp_grid = _rfactor_columns_to_spline(xyExp)
+    out_grid = np.array(
+        sorted(set(theo_grid).intersection(exp_grid)),
+        dtype=float,
+    )
+
+    _write_rfactor_analysis_pdf_from_splines(
+        theo_spline, exp_spline,  out_grid,
+        xyTheo, xyExp,
+        labels, rfacs,
+        analysisFile,
+        v0i=v0i,
+        formatting=formatting,
+        which_r=which_r,
+    )
 
 
 @skip_without_matplotlib
@@ -813,7 +806,21 @@ def prepare_analysis_plot(formatting, xyExp, xyTheo):
     return figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims
 
 
-def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims, ytheo, v0i):
+def plot_analysis(exp,
+                  figs,
+                  figsize,
+                  name,
+                  namePos,
+                  oritick,
+                  plotcolors,
+                  rPos,
+                  rfact,
+                  theo,
+                  xlims,
+                  yexp,
+                  ylims,
+                  ytheo,
+                  v0i):
     fig, axs = plt.subplots(3, figsize=figsize,
                             squeeze=True)
     fig.subplots_adjust(left=0.06, right=0.94,
@@ -926,7 +933,6 @@ def write_Rfactorpdf_from_splines(
     '''
     Creates a single PDF file containing the plots of R-factors, using plot_iv.
     If analysis_file is defined, a second 'analysis' PDF will be generated.
-    # TODO: Actually generate analysis files! #
 
     Parameters
     ----------
@@ -988,9 +994,132 @@ def write_Rfactorpdf_from_splines(
             annotations=rfac_str,
             formatting=rpars.PLOT_IV
             )
-    logger.debug(
-        'R-factor analysis file not yet implemented for new R-factor '
-        'calculation. (TODO)'   # TODO: implement R-factor analysis
+    if analysis_file:
+        _write_rfactor_analysis_pdf_from_splines(
+            theo_spline, exp_spline, out_grid,
+            xy_theo, xy_exp,
+            labels, r_fac_per_beam,
+            analysis_file,
+            v0i=rpars.V0_IMAG,
+            formatting=rpars.PLOT_IV,
+            which_r=rpars.R_FACTOR_TYPE,
+        )
+
+def _yfuncs_from_splines(exp_spline, theo_spline, out_grid, v0i, which_r):
+    exp_intensity = np.asarray(exp_spline(out_grid))
+    exp_deriv_1_spline = exp_spline.derivative()
+    exp_deriv_2_spline = exp_deriv_1_spline.derivative()
+    exp_derivative_1 = np.asarray(exp_deriv_1_spline(out_grid))
+    exp_derivative_2 = np.asarray(exp_deriv_2_spline(out_grid))
+
+    theo_intensity = np.asarray(theo_spline(out_grid))
+    theo_deriv_1_spline = theo_spline.derivative()
+    theo_deriv_2_spline = theo_deriv_1_spline.derivative()
+    theo_derivative_1 = np.asarray(theo_deriv_1_spline(out_grid))
+    theo_derivative_2 = np.asarray(theo_deriv_2_spline(out_grid))
+
+    theo_intensity = shift_theo_intensity_non_negative(theo_intensity,
+                                                       exp_intensity)
+
+    if which_r == 'pendry':
+        return (
+            y_pendry(exp_intensity, exp_derivative_1, v0i),
+            y_pendry(theo_intensity, theo_derivative_1, v0i),
+        )
+
+    if which_r == 'smooth':
+        return (
+            y_s(exp_intensity, exp_derivative_1, exp_derivative_2, v0i),
+            y_s(theo_intensity, theo_derivative_1, theo_derivative_2, v0i),
+        )
+    raise ValueError(
+        f'Cannot write R-factor analysis PDF for R_FACTOR_TYPE={which_r!r}.'
     )
-        
-        
+
+def _rfactor_columns_to_spline(xy):
+    """Return a cached spline from R-factor column-style xy arrays."""
+    if not xy:
+        raise RfactorError('Cannot construct spline from empty R-factor data.')
+    # Build the common union grid, preserving the ragged-array convention:
+    # unavailable beam values are NaN.
+    grid = np.array(
+        sorted({energy for beam_xy in xy for energy in beam_xy[:, 0]}),
+        dtype=float,
+    )
+    intensities = np.full((len(grid), len(xy)), np.nan)
+    for i, beam_xy in enumerate(xy):
+        if len(beam_xy) == 0:
+            continue
+        beam_xy = np.asarray(beam_xy, dtype=float)
+        energies = beam_xy[:, 0]
+        values = beam_xy[:, 1]
+        indices = np.searchsorted(grid, energies)
+        intensities[indices, i] = values
+    spline = spline_interpolation.interpolate_ragged_array(
+        x=grid,
+        y=intensities,
+        bc_type='not-a-knot',
+    )
+    return spline_interpolation.CachedSpline(spline), grid
+
+@skip_without_matplotlib
+def _write_rfactor_analysis_pdf_from_splines(
+    theo_spline,
+    exp_spline,
+    out_grid,
+    xy_theo,
+    xy_exp,
+    labels,
+    r_fac_per_beam,
+    analysis_file,
+    v0i,
+    formatting=None,
+    which_r='pendry',
+):
+    y_exp_data, y_theo_data = _yfuncs_from_splines(
+        exp_spline, theo_spline, out_grid,
+        v0i, which_r,
+    )
+    figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims = (
+        prepare_analysis_plot(formatting, xy_exp, xy_theo)
+    )
+    try:
+        # Pylint can't tell that we will not execute this,
+        # as per decorator, if we fail to import matplotlib
+        # pylint: disable-next=possibly-used-before-assignment
+        pdf = PdfPages(analysis_file)
+    except PermissionError:
+        logger.error(
+            'write_Rfactorpdf_from_splines: Cannot open file %s. Aborting.',
+            analysis_file,
+        )
+        return
+    # The following will spam the logger with debug messages; disable.
+    with at_level(logger, logging.INFO):
+        try:
+            for i, (name, rfact, theo, exp) in enumerate(
+                zip(labels, r_fac_per_beam, xy_theo, xy_exp)
+            ):
+                if len(theo) == 0 or len(exp) == 0:
+                    continue
+                mask = (np.isfinite(y_theo_data[:, i])
+                        & np.isfinite(y_exp_data[:, i]))
+                if not np.any(mask):
+                    continue
+                ytheo = np.column_stack((out_grid[mask], y_theo_data[mask, i]))
+                yexp = np.column_stack((out_grid[mask], y_exp_data[mask, i]))
+    
+                plot_analysis(
+                    exp, figs, figsize, name, namePos, oritick, plotcolors,
+                    rPos, rfact, theo, xlims, yexp, ylims, ytheo, v0i
+                )
+            for fig in figs:
+                pdf.savefig(fig)
+                plt.close(fig)
+        except Exception:
+            logger.error(
+                'write_Rfactorpdf_from_splines: Error while writing pdf file.',
+                exc_info=True,
+            )
+        finally:
+            pdf.close()

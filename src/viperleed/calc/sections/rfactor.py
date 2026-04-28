@@ -394,7 +394,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     rp.best_v0r = v0rshift
     dir_list = [Path(), Path(DEFAULT_OUT)]
     for dir_name in dir_list:
-        for f_name in dir_name.glob(f"R_OUT*"):
+        for f_name in dir_name.glob("R_OUT*"):
             if not f_name.is_file():
                 continue
             try:  # delete old R_OUT files
@@ -437,6 +437,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
                 analysisFile=aname,
                 v0i=rp.V0_IMAG,
                 formatting=rp.PLOT_IV,
+                which_r=rp.R_FACTOR_TYPE,
                 )
         except Exception:                                                       # TODO catch correct exception
             logger.warning("Error plotting R-factors.", exc_info=True)
