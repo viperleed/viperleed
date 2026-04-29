@@ -94,6 +94,27 @@ def R_pendry(
 
 
 def R_pendry_from_y(y_1, y_2, energy_step, **kwargs):
+    """Calculate Pendry's R factor from pre-computed Y function values.
+
+    Parameters
+    ----------
+    y_1, y_2 : ndarray, shape (n_beams, n_points)
+        The Y function values for the two datasets, evaluated on the
+        same energy grid. n_beams is the number of diffraction beams,
+        and n_points is the number of energy points.
+        Arrays may contain NaN values marking points that
+        should be ignored in the calculation.
+    energy_step : float
+        The energy step of the data grid.
+    **kwargs
+        Additional keyword arguments are passed to group_rfactors.
+
+    Returns
+    -------
+    r_factors : ndarray, shape (n_groups,)
+        Overall or per-group R factors, depending on the grouping
+        requested.
+    """
     # mask out NaNs for this calculation
     y_1_mask = dnl.xp.isnan(y_1)
     y_2_mask = dnl.xp.isnan(y_2)
@@ -110,6 +131,23 @@ def R_pendry_from_y(y_1, y_2, energy_step, **kwargs):
 
 
 def y_pendry(intensity, intensity_derivative, v0_imag):
+    """Calculate the Y function used in Pendry's R factor.
+
+    Parameters
+    ----------
+    intensity : array
+        The intensity I(V) values of the beam.
+    intensity_derivative : array
+        The first derivative dI/dV of the intensity values.
+    v0_imag : float
+        The imaginary part of the inner potential V0.
+
+    Returns
+    -------
+    array
+        The Y function values, calculated as
+        I * (dI/dV) / (I^2 + (V0_imag * dI/dV)^2).
+    """
     numerator = intensity * intensity_derivative
     denominator = intensity**2 + v0_imag**2 * intensity_derivative**2
     return numerator / denominator
