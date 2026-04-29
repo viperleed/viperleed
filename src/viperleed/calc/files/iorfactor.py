@@ -1025,17 +1025,17 @@ def write_Rfactorpdf_from_splines(
 
 
 def _yfuncs_from_splines(exp_spline, theo_spline, out_grid, v0i, which_r):
-    exp_intensity = np.asarray(exp_spline(out_grid))
+    exp_intensity = exp_spline(out_grid)
     exp_deriv_1_spline = exp_spline.derivative()
     exp_deriv_2_spline = exp_deriv_1_spline.derivative()
-    exp_derivative_1 = np.asarray(exp_deriv_1_spline(out_grid))
-    exp_derivative_2 = np.asarray(exp_deriv_2_spline(out_grid))
+    exp_derivative_1 = exp_deriv_1_spline(out_grid)
+    exp_derivative_2 = exp_deriv_2_spline(out_grid)
 
     theo_intensity = np.asarray(theo_spline(out_grid))
     theo_deriv_1_spline = theo_spline.derivative()
     theo_deriv_2_spline = theo_deriv_1_spline.derivative()
-    theo_derivative_1 = np.asarray(theo_deriv_1_spline(out_grid))
-    theo_derivative_2 = np.asarray(theo_deriv_2_spline(out_grid))
+    theo_derivative_1 = theo_deriv_1_spline(out_grid)
+    theo_derivative_2 = theo_deriv_2_spline(out_grid)
 
     theo_intensity = shift_theo_intensity_non_negative(theo_intensity,
                                                        exp_intensity)
