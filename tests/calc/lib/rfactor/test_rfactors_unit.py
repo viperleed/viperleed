@@ -7,10 +7,10 @@ from viperleed.calc.lib import rfactor
 
 
 RFACTOR_FUNCS = (
-    rfactor.R_pendry,
-    rfactor.R_1,
-    rfactor.R_2,
-    rfactor.R_s,
+    rfactor.r_pendry,
+    rfactor.r_1,
+    rfactor.r_2,
+    rfactor.r_s,
     rfactor.R_zj,
 )
 
@@ -85,7 +85,7 @@ def test_rfactor_per_beam_shape(func, synthetic_pair):
 
 def test_pendry_matches_existing_reference_value(sin_spline, cos_spline):
     energies = np.arange(15.0, 300.0, 0.5)
-    calc_r = rfactor.R_pendry(
+    calc_r = rfactor.r_pendry(
         3.0,
         0.5,
         energies,

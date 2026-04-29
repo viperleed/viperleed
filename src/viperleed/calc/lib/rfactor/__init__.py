@@ -6,17 +6,17 @@ __created__ = '2024-02-21'
 __license__ = 'GPLv3+'
 
 
-from .pendry import R_pendry
-from .r_1 import R_1
-from .r_2 import R_2
-from .smooth import R_s
+from .pendry import r_pendry
+from .r_1 import r_1
+from .r_2 import r_2
+from .smooth import r_s
 from .zannazi_jona import R_zj
 
 _R_FACTOR_SYNONYMS = {
-    R_pendry: ('pendry', 'r_p', 'r_pendry', 'rp', 'pendry r-factor', 'p'),
-    R_1: ('r1', 'r_1', 'r1 factor'),
-    R_2: ('r2', 'r_2', 'r2 factor'),
-    R_s: ('s', 'rs', 'r_s', 'r_smooth', 'smooth', 'schmid'),
+    r_pendry: ('pendry', 'r_p', 'r_pendry', 'rp', 'pendry r-factor', 'p'),
+    r_1: ('r1', 'r_1', 'r1 factor'),
+    r_2: ('r2', 'r_2', 'r2 factor'),
+    r_s: ('s', 'rs', 'r_s', 'r_smooth', 'smooth', 'schmid'),
     R_zj: (
         'zj',
         'zj factor',

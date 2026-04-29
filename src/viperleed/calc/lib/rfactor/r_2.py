@@ -10,7 +10,7 @@ from .groups import group_rfactors
 from .utils import nansum_trapezoid
 
 
-def R_2(
+def r_2(
     v0_imag,
     energy_step,
     energy_grid,
@@ -64,8 +64,10 @@ def R_2(
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
     if data_and_derivatives_1 is None:
         if data_spline_1 is None:
-            raise TypeError('R_2 requires either data splines or '
-                            'pre-computed data_and_derivatives arrays.')
+            raise TypeError(
+                'r_2 requires either data splines or '
+                'pre-computed data_and_derivatives arrays.'
+            )
         data_1_intensity = data_spline_1(energy_grid)
     else:
         data_1_intensity, _, _ = data_and_derivatives_1
@@ -73,8 +75,10 @@ def R_2(
     shifted_grid = energy_grid - shift_2nd_spline
     if data_and_derivatives_2 is None:
         if data_spline_2 is None:
-            raise TypeError('R_2 requires either data splines or '
-                            'pre-computed data_and_derivatives arrays.')
+            raise TypeError(
+                'r_2 requires either data splines or '
+                'pre-computed data_and_derivatives arrays.'
+            )
         # evaluate on shifted grid, allowing continuous shifts
         data_2_intensity = data_spline_2(shifted_grid)
     else:

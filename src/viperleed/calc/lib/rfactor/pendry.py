@@ -12,7 +12,7 @@ from .groups import group_rfactors
 from .utils import nansum_trapezoid, shift_theo_intensity_non_negative
 
 
-def R_pendry(
+def r_pendry(
     v0_imag,
     energy_step,
     energy_grid,
@@ -96,10 +96,10 @@ def R_pendry(
     y_1 = y_pendry(data_1_intensity, data_1_derivative, v0_imag)
     y_2 = y_pendry(data_2_intensity, data_2_derivative, v0_imag)
 
-    return R_pendry_from_y(y_1, y_2, energy_step, **kwargs)
+    return r_pendry_from_y(y_1, y_2, energy_step, **kwargs)
 
 
-def R_pendry_from_y(y_1, y_2, energy_step, **kwargs):
+def r_pendry_from_y(y_1, y_2, energy_step, **kwargs):
     """Calculate Pendry's R factor from pre-computed Y function values.
 
     Parameters

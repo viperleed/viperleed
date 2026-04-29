@@ -140,11 +140,11 @@ def fe2o3_012_1x1_dataset():
 
 def build_regression_payload(dataset, rfactor_module):
     funcs = {
-        "pendry": rfactor_module.R_pendry,
-        "r1": rfactor_module.R_1,
-        "r2": rfactor_module.R_2,
-        "rs": rfactor_module.R_s,
-        "zj": rfactor_module.R_zj,
+        'pendry': rfactor_module.r_pendry,
+        'r1': rfactor_module.r_1,
+        'r2': rfactor_module.r_2,
+        'rs': rfactor_module.r_s,
+        'zj': rfactor_module.R_zj,
     }
 
     payload = {
