@@ -931,9 +931,11 @@ def write_Rfactorpdf_from_splines(
         outname='Rfactor_plots.pdf',
         analysis_file='',
         ):
-    '''
-    Creates a single PDF file containing the plots of R-factors, using plot_iv.
-    If analysis_file is defined, a second 'analysis' PDF will be generated.
+    """
+    Create a single PDF file containing the plots of R-factors.
+
+    Uses plot_iv. If analysis_file is defined, a second 'analysis
+    PDF will be generated.
 
     Parameters
     ----------
@@ -960,7 +962,7 @@ def write_Rfactorpdf_from_splines(
     Returns
     -------
     None.
-    '''
+    """
     exp_data = np.asarray(exp_spline(out_grid))
     theo_data = np.asarray(theo_spline(out_grid))
     xy_theo = []
