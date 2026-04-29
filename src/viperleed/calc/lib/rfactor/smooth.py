@@ -28,7 +28,7 @@ def R_s(
     """
     Calculate the Smooth R-factor.
 
-    See https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
+    See https://doi.org/10.1088/1361-648X/ae4af8.
     Uses two sets of beam data, either passed as splines or as already
     calculated arrays of intensities and derivatives. When comparing
     experimental and theoretical data, the theoretical data should be the
@@ -61,11 +61,11 @@ def R_s(
     alpha : float, optional
         Tuning parameter, default 4.0.
         Determines the influence of the intensity offset of the minimum, see
-        https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
+        https://doi.org/10.1088/1361-648X/ae4af8.
     beta : float, optional
         Tuning parameter, default 0.15.
         Determines the behaviour at a minimum reaching zero intensity, see
-        https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
+        https://doi.org/10.1088/1361-648X/ae4af8.
 
     Raises
     ------
