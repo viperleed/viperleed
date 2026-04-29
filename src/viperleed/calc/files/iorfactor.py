@@ -765,9 +765,13 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     )
 
     _write_rfactor_analysis_pdf_from_splines(
-        theo_spline, exp_spline,  out_grid,
-        xyTheo, xyExp,
-        labels, rfacs,
+        theo_spline,
+        exp_spline,
+        out_grid,
+        xyTheo,
+        xyExp,
+        labels,
+        rfacs,
         analysisFile,
         v0i=v0i,
         formatting=formatting,
