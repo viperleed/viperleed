@@ -11,7 +11,7 @@ RFACTOR_FUNCS = (
     rfactor.r_1,
     rfactor.r_2,
     rfactor.r_s,
-    rfactor.R_zj,
+    rfactor.r_zjj,
 )
 
 

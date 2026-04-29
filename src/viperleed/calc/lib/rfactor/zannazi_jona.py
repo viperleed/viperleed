@@ -12,7 +12,7 @@ from .utils import nansum_trapezoid
 from .groups import group_rfactors
 
 
-def R_zj(
+def r_zjj(
     v0_imag,
     energy_step,
     energy_grid,
@@ -20,9 +20,9 @@ def R_zj(
     data_and_derivatives_1=None,
     data_spline_2=None,
     data_and_derivatives_2=None,
-    shift_2nd_spline=0.0,   # only available if passed as spline
+    shift_2nd_spline=0.0,  # only available if passed as spline
     **kwargs,
-    ):
+):
     """
     Zannazi-Jona R-factor, see
     https://www.sciencedirect.com/science/article/pii/0039602877904289
@@ -57,8 +57,10 @@ def R_zj(
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
     if data_and_derivatives_1 is None:
         if data_spline_1 is None:
-            raise TypeError('R_zj requires either data splines or pre-computed'
-                            'data_and_derivatives arrays.')
+            raise TypeError(
+                'r_zjj requires either data splines or pre-computed'
+                'data_and_derivatives arrays.'
+            )
         # when using splines, this can be sped up via CashedSplines
         data_1_deriv_1_spline = data_spline_1.derivative()
         data_1_deriv_2_spline = data_1_deriv_1_spline.derivative()
@@ -73,8 +75,10 @@ def R_zj(
     shifted_grid = energy_grid - shift_2nd_spline
     if data_and_derivatives_2 is None:
         if data_spline_2 is None:
-            raise TypeError('R_zj requires either data splines or pre-computed'
-                            'data_and_derivatives arrays.')
+            raise TypeError(
+                'r_zjj requires either data splines or pre-computed'
+                'data_and_derivatives arrays.'
+            )
         # when using splines, this can be sped up via CashedSplines
         data_2_deriv_1_spline = data_spline_2.derivative()
         data_2_deriv_2_spline = data_2_deriv_1_spline.derivative()

@@ -10,14 +10,14 @@ from .pendry import r_pendry
 from .r_1 import r_1
 from .r_2 import r_2
 from .smooth import r_s
-from .zannazi_jona import R_zj
+from .zannazi_jona import r_zjj
 
 _R_FACTOR_SYNONYMS = {
     r_pendry: ('pendry', 'r_p', 'r_pendry', 'rp', 'pendry r-factor', 'p'),
     r_1: ('r1', 'r_1', 'r1 factor'),
     r_2: ('r2', 'r_2', 'r2 factor'),
     r_s: ('s', 'rs', 'r_s', 'r_smooth', 'smooth', 'schmid'),
-    R_zj: (
+    r_zjj: (
         'zj',
         'zj factor',
         'zannazi',

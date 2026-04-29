@@ -144,7 +144,7 @@ def build_regression_payload(dataset, rfactor_module):
         'r1': rfactor_module.r_1,
         'r2': rfactor_module.r_2,
         'rs': rfactor_module.r_s,
-        'zj': rfactor_module.R_zj,
+        'zj': rfactor_module.r_zjj,
     }
 
     payload = {

@@ -26,11 +26,11 @@ from viperleed.calc.lib import rfactor
         ('r_smooth', rfactor.r_s),
         ('smooth', rfactor.r_s),
         ('schmid', rfactor.r_s),
-        ('zj', rfactor.R_zj),
-        ('zj factor', rfactor.R_zj),
-        ('zannazi', rfactor.R_zj),
-        ('zannazi jona', rfactor.R_zj),
-        ('zannazi-jona', rfactor.R_zj),
+        ('zj', rfactor.r_zjj),
+        ('zj factor', rfactor.r_zjj),
+        ('zannazi', rfactor.r_zjj),
+        ('zannazi jona', rfactor.r_zjj),
+        ('zannazi-jona', rfactor.r_zjj),
     ],
 )
 def test_select_rfactor_synonyms(name, expected):
