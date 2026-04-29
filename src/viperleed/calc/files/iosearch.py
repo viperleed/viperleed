@@ -91,7 +91,7 @@ def readSDTL_blocks(content, which_beams=0, print_info=False, n_expect=0):
     ----------
     content : str
         A block of data as read from SD.TL.
-    which_group : int, optional
+    which_beams : int, optional
         Which r-factor values to use (average / integer / fractional)
     print_info : bool, optional
         Whether some basic information should be printed to logger.info and

@@ -27,7 +27,7 @@ and :math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`:
     Using |RP| is the **default setting**.
     For structure optimization, we recommend using |RS|, since it is better suited
     as a target function for minimization than |RP| (|RP| is noisy and
-    has many local minima in the vicinity to the global minimum).
+    has many local minima in the vicinity of the global minimum).
     We recommend **not using** :math:`R_2`, since it leads to less accurate results than
     minimization of |RS| or |RP| :cite:p:`spornAccuracyQuantitativeLEED1998,imreRFactor2026`.
 
@@ -52,7 +52,7 @@ are defined as
 where :math:`\mathbf{g}` indexes the beams for which the |R factor| is
 calculated, and :math:`Y(E)` is the :math:`Y` function. The |R factor|
 can be calculated for all beams together or for each beam individually.\ [1]_
-The :math:`Y` functions in Eq. :eq:`eq_RP_def` are based on logarithmic
+The :math:`Y` functions in Eq. :eq:`eq_RP_def` are based on the logarithmic
 derivative :math:`\frac{d}{dE}\big(\ln{I(E)}\big) = \frac{I'(E)}{I(E)}`.
 This makes |RS| and |RP| insensitive to differences in the absolute
 intensities of the |IV| curves. The largest contributions to these |R factors|
@@ -95,7 +95,7 @@ because they effectively raise the minima of the |IV| curves. At minima, where
 the intensities approach zero, |RP| is extremely sensitive to small
 differences; artificially increasing the intensity at minima thus gives
 smaller |RP| values. Some LEED programs apply such a smoothing; in those
-cases smaller |R factors| than those obtained with ViPErLEED will be
+cases, smaller |R factors| than those obtained with ViPErLEED will be
 reported, but this does not indicate a better agreement between calculated
 and experimental |IV| curves.\ [3]_
 By default, ViPErLEED applies no additional smoothing when calculating the

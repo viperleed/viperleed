@@ -23,7 +23,8 @@ import numpy as np
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
-from viperleed.calc.lib import leedbase, spline_interpolation
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib import spline_interpolation
 from viperleed.calc.lib.log_utils import at_level
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
@@ -750,7 +751,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     if not analysisFile:
         return
-    if which_r != 'pendry' and which_r != 'smooth':
+    if which_r not in {'pendry', 'smooth'}:
         logger.info('Rfactor_analysis.pdf is only available for Pendry and '
                     'Smooth R-factors.')
         return
@@ -936,30 +937,29 @@ def write_Rfactorpdf_from_splines(
 
     Parameters
     ----------
-    rp : Rparams
+    rpars : Rparams
         The object holding information about the current PARAMETERS.
         Attributes used: PLOT_IV, expbeams
     theo_spline : scipy.interpolate.PPoly or jaxlib.xla_extension.ArrayImpl
-        interpolation splines of theoretical I(V) data
+        Interpolation splines of theoretical I(V) data
     exp_spline : scipy.interpolate.PPoly or jaxlib.xla_extension.ArrayImpl
         interpolation splines of experimental I(V) data
     out_grid : np.array of float
         the grid on which to evaluate the splines
     r_fac_per_beam : np.array of float
         the R-factors per beam, in the same order as the beam data
-    outname : kwarg, str
+    outname : str, optional
         name of the file (with or without extension) to which the plots
         will be saved.
         default: 'Rfactor_plots.pdf'
-    analysis_file : kwarg, string
+    analysis_file : str, optional
         if not empty, a more extensive R-factor analysis pdf with
         calculated Y-functions and absolute errors will be written to the
         given file name.
 
     Returns
     -------
-    None
-
+    None.
     '''
     exp_data = np.asarray(exp_spline(out_grid))
     theo_data = np.asarray(theo_spline(out_grid))
@@ -981,8 +981,8 @@ def write_Rfactorpdf_from_splines(
         plot_intens_exp = intens_exp[m] / max(intens_exp[m])
         xy_theo.append(np.column_stack([plot_grid, plot_intens_theo]))
         xy_exp.append(np.column_stack([plot_grid, plot_intens_exp]))
-    rfac_str = ["R = {:.4f}".format(r) for r in r_fac_per_beam]
-    labelstyle = "overbar" if rpars.PLOT_IV["overbar"] else "minus"
+    rfac_str = [f'R = {r:.4f}' for r in r_fac_per_beam]
+    labelstyle = 'overbar' if rpars.PLOT_IV['overbar'] else 'minus'
     labelwidth = max(beam.getLabel(style=labelstyle)[1]
                      for beam in rpars.expbeams)
     labels = [b.getLabel(lwidth=labelwidth, style=labelstyle)[0]
@@ -992,7 +992,7 @@ def write_Rfactorpdf_from_splines(
             legends=['Theoretical', 'Experimental'],
             labels=labels,
             annotations=rfac_str,
-            formatting=rpars.PLOT_IV
+            formatting=rpars.PLOT_IV,
             )
     if analysis_file:
         _write_rfactor_analysis_pdf_from_splines(
@@ -1004,6 +1004,7 @@ def write_Rfactorpdf_from_splines(
             formatting=rpars.PLOT_IV,
             which_r=rpars.R_FACTOR_TYPE,
         )
+
 
 def _yfuncs_from_splines(exp_spline, theo_spline, out_grid, v0i, which_r):
     exp_intensity = np.asarray(exp_spline(out_grid))
@@ -1036,6 +1037,7 @@ def _yfuncs_from_splines(exp_spline, theo_spline, out_grid, v0i, which_r):
         f'Cannot write R-factor analysis PDF for R_FACTOR_TYPE={which_r!r}.'
     )
 
+
 def _rfactor_columns_to_spline(xy):
     """Return a cached spline from R-factor column-style xy arrays."""
     if not xy:
@@ -1061,6 +1063,7 @@ def _rfactor_columns_to_spline(xy):
         bc_type='not-a-knot',
     )
     return spline_interpolation.CachedSpline(spline), grid
+
 
 @skip_without_matplotlib
 def _write_rfactor_analysis_pdf_from_splines(

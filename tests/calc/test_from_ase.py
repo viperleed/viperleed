@@ -39,7 +39,7 @@ from . import cases_ase
 
 
 ASE_DATA = TEST_DATA / 'from_ase'
-BEAM_DATA_DIR = TEST_DATA / "beam-data"
+BEAM_DATA_DIR = TEST_DATA / 'beam-data'
 
 
 @pytest.fixture

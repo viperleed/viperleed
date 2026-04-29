@@ -100,7 +100,7 @@ def R_s(
             data_and_derivatives_2
             )
     # shift data_2 to be non-negative in overlapping regions. This should fix
-    #  any potential issues cause by undershooting splines.
+    #  any potential issues caused by undershooting splines.
     data_2_intensity = shift_theo_intensity_non_negative(data_2_intensity,
                                                          data_1_intensity)
 
