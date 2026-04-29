@@ -188,7 +188,10 @@ __license__ = 'GPLv3+'
 #        the list of drives. See bugreports.qt.io/browse/QTBUG-6039
 
 
+import json
+import sys
 from copy import deepcopy
+from importlib import import_module
 import functools
 from pathlib import Path
 import shutil
@@ -202,6 +205,7 @@ from viperleed.gui.dialogs.errors import DialogDismissedError
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.camera.abc import CameraABC
 from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
+from viperleed.gui.measure.classes.abc import SettingsInfo
 from viperleed.gui.measure.classes.decorators import emit_default_faulty
 from viperleed.gui.measure.classes.datapoints import DataPoints
 from viperleed.gui.measure.classes.settings import DefaultSettingsError
@@ -248,26 +252,91 @@ class _DeviceDetectionWorker(qtc.QObject):
     devices_detected = qtc.pyqtSignal(object)
     error_occurred = qtc.pyqtSignal(tuple)
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._process = None
+
     @qtc.pyqtSlot()
     def detect_devices(self):
-        """Detect all supported device types and emit the result."""
-        detected = {}
+        """Detect all supported device types and emit the result via QProcess.
+
+        Using a separate process guarantees the main event loop
+        remains responsive during hardware connection checks.
+        """
+        # If a search is already running, avoid launching a new process immediately.
+        if self._process and self._process.state() != qtc.QProcess.NotRunning:
+            return
+
+        self._process = qtc.QProcess()
+        self._process.finished.connect(self._on_process_finished)
+        self._process.errorOccurred.connect(self._on_process_error)
+
+        if getattr(sys, 'frozen', False):
+            # Bundled executable
+            exe = sys.executable
+            args = ['--detect-devices']
+        else:
+            # Standard Python environment
+            exe = sys.executable
+            args = ['-m', 'viperleed.gui', '--detect-devices']
+
+        self._process.start(exe, args)
+
+    @qtc.pyqtSlot(int, qtc.QProcess.ExitStatus)
+    def _on_process_finished(self, exit_code, exit_status):
+        detected_out = {}
+
+        if exit_code != 0 or exit_status != qtc.QProcess.NormalExit:
+            # We failed to execute the CLI smoothly, parse as a generic exception.
+            error_data = self._process.readAllStandardError().data().decode(errors='replace')
+            for d in ('camera', 'controller'):
+                detected_out[d] = {}
+                base.emit_error(self, UIErrors.RUNTIME_ERROR, Exception(f"Detection failed: {error_data}"))
+            self.devices_detected.emit(detected_out)
+            return
+
         try:
-            for device_type in ('camera', 'controller'):
-                try:
-                    detected[device_type] = base.get_devices(device_type)
-                except DefaultSettingsError as exc:
-                    detected[device_type] = {}
-                    base.emit_error(
-                        self,
-                        QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
-                        exc
-                        )
-                except Exception as exc:  # pylint: disable=broad-exception-caught
-                    detected[device_type] = {}
-                    base.emit_error(self, UIErrors.RUNTIME_ERROR, exc)
-        finally:
-            self.devices_detected.emit(detected)
+            output = self._process.readAllStandardOutput().data().decode().strip()
+            print(output)
+            # Device discovery prints connection warnings (e.g. Qt or
+            # failed COMs) to stdout. We take only the last line, which
+            # contains our dumped JSON.
+            json_str = output.splitlines()[-1] if output else "{}"
+            parsed = json.loads(json_str)
+        except Exception as exc:
+            for d in ('camera', 'controller'):
+                detected_out[d] = {}
+                base.emit_error(self, UIErrors.RUNTIME_ERROR, exc)
+            self.devices_detected.emit(detected_out)
+            return
+
+        # Restore objects
+        for device_type, result in parsed.items():
+            if result.get("success"):
+                recreated = {}
+                for name, (mod_name, cls_name, device_kwargs) in result["devices"].items():
+                    mod = import_module(mod_name)
+                    cls = getattr(mod, cls_name)
+                    recreated[name] = (cls, SettingsInfo(**device_kwargs))
+                detected_out[device_type] = recreated
+            else:
+                detected_out[device_type] = {}
+                err_type = result.get("error_type")
+                err_msg = result.get("error_msg", "")
+                if err_type == "DEFAULT_SETTINGS_CORRUPTED":
+                    base.emit_error(self, QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED, Exception(err_msg))
+                else:
+                    base.emit_error(self, UIErrors.RUNTIME_ERROR, Exception(err_msg))
+
+        self.devices_detected.emit(detected_out)
+
+    @qtc.pyqtSlot(qtc.QProcess.ProcessError)
+    def _on_process_error(self, err):
+        # For completely failed launches
+        for d in ('camera', 'controller'):
+            base.emit_error(self, UIErrors.RUNTIME_ERROR, Exception(f"Subprocess launch error: {err}"))
+
+        self.devices_detected.emit({'camera': {}, 'controller': {}})
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -783,11 +852,11 @@ class Measure(ViPErLEEDPluginBase):                                             
             dialog.deleteLater()
             del self._dialogs['device_settings'][full_name]
 
-    @emit_default_faulty
-    def _detect_devices(self, device_type):
-        """Detect and return devices of a certain type."""
-        # Notice that self is used by emit_default_faulty.
-        return base.get_devices(device_type)
+    # @emit_default_faulty
+    # def _detect_devices(self, device_type):
+    #     """Detect and return devices of a certain type."""
+    #     # Notice that self is used by emit_default_faulty.
+    #     return base.get_devices(device_type)
 
     def _make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
         """Make a new settings dialog for a controller."""

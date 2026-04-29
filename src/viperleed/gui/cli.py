@@ -14,6 +14,7 @@ __license__ = 'GPLv3+'
 from importlib import import_module
 from itertools import chain
 from pathlib import Path
+import argparse
 import signal
 import sys
 
@@ -36,7 +37,7 @@ following:
        conda create with the --no-default-packages flag, then
             pip install "viperleed[GUI]"
        there.
-    2. Deactivating the current environment first, if you have 
+    2. Deactivating the current environment first, if you have
        installed viperleed globally.
 If none of the above works, or you're not in a conda environment, please
 open an issue under https://github.com/viperleed/viperleed/issues.'''
@@ -66,6 +67,12 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
     def __call__(self, args=None):
         """Call either the CLI or graphical versions of the GUI."""
         args = self.parse_cli_args(args)
+        if hasattr(args, 'detect_devices') and args.detect_devices:
+            import json
+            from viperleed.gui.measure.devicedetection import run_device_detection
+            from viperleed.gui.measure.devicedetection import JSONEncoderSafe
+            print(json.dumps(run_device_detection(), cls=JSONEncoderSafe))
+            return 0
         if args.nogui:
             return commandline_main()
         self.check_can_run_gui()
@@ -78,6 +85,11 @@ class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
             '--nogui',
             help=('run the ViPErLEED graphical user interface in '
                   'command-line mode, i.e., without any windows'),
+            action='store_true',
+            )
+        parser.add_argument(
+            '--detect-devices',
+            help=argparse.SUPPRESS,  # Hidden flag for QProcess
             action='store_true',
             )
 
