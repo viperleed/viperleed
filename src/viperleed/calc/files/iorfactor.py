@@ -942,10 +942,14 @@ def write_Rfactorpdf_from_splines(
     rpars : Rparams
         The object holding information about the current PARAMETERS.
         Attributes used: PLOT_IV, expbeams
-    theo_spline : scipy.interpolate.PPoly or jaxlib.xla_extension.ArrayImpl
-        Interpolation splines of theoretical I(V) data
-    exp_spline : scipy.interpolate.PPoly or jaxlib.xla_extension.ArrayImpl
-        interpolation splines of experimental I(V) data
+    theo_spline : callable
+        Must return the interpolated intensity values of the theoretical
+        I(V) data when called with out_grid. Typically
+        scipy.interpolate.PPoly or jaxlib.xla_extension.ArrayImpl.
+    exp_spline : callable
+        Must return the interpolated intensity values of the
+        experimental I(V) data when called with out_grid. Typically
+        scipy.interpolate.PPoly or jaxlib.xla_extension.ArrayImpl.
     out_grid : np.array of float
         the grid on which to evaluate the splines
     r_fac_per_beam : np.array of float
