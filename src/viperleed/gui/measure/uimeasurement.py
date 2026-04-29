@@ -516,7 +516,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 }
             for device, (menu, slot) in devices_and_slots.items():
                 # The detection worker returns the device name,
-                # class and, additional information. The class and
+                # class and additional information. The class and
                 # additional information are returned as a tuple.
                 for device_name, cls_and_info in (
                         detected_devices.get(device, {}).items()):
