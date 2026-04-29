@@ -979,16 +979,20 @@ def write_Rfactorpdf_from_splines(
         intens_theo = theo_data[:, i]
         intens_exp = exp_data[:, i]
         # keep only points where BOTH are finite (non-NaN, non-inf)
-        m = np.isfinite(intens_theo) & np.isfinite(intens_exp)
-        if not np.any(m):
+        finite_mask = np.isfinite(intens_theo) & np.isfinite(intens_exp)
+        if not np.any(finite_mask):
             # nothing to plot for this beam; keep empty arrays
             xy_theo.append(np.empty((0, 2)))
             xy_exp.append(np.empty((0, 2)))
             continue
         # select overlapping range and normalize
-        plot_grid  = out_grid[m]
-        plot_intens_theo = intens_theo[m] / max(intens_theo[m])
-        plot_intens_exp = intens_exp[m] / max(intens_exp[m])
+        plot_grid = out_grid[finite_mask]
+        plot_intens_theo = intens_theo[finite_mask] / max(
+            intens_theo[finite_mask]
+        )
+        plot_intens_exp = intens_exp[finite_mask] / max(
+            intens_exp[finite_mask]
+        )
         xy_theo.append(np.column_stack([plot_grid, plot_intens_theo]))
         xy_exp.append(np.column_stack([plot_grid, plot_intens_exp]))
     rfac_str = [f'R = {r:.4f}' for r in r_fac_per_beam]
@@ -1006,9 +1010,13 @@ def write_Rfactorpdf_from_splines(
             )
     if analysis_file:
         _write_rfactor_analysis_pdf_from_splines(
-            theo_spline, exp_spline, out_grid,
-            xy_theo, xy_exp,
-            labels, r_fac_per_beam,
+            theo_spline,
+            exp_spline,
+            out_grid,
+            xy_theo,
+            xy_exp,
+            labels,
+            r_fac_per_beam,
             analysis_file,
             v0i=rpars.V0_IMAG,
             formatting=rpars.PLOT_IV,
