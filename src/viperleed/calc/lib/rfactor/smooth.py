@@ -65,6 +65,12 @@ def R_s(
         Tuning parameter, default 0.15.
         Determines the behaviour at a minimum reaching zero intensity, see
         https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
+
+    Raises
+    ------
+    TypeError
+        If neither data_spline nor data_and_derivatives is passed for
+        either dataset, or if both are passed for the same dataset.
     """
     
     # Get data either as splines or as pre-computed arrays (mainly for JAX)

@@ -52,6 +52,12 @@ def R_2(
         Evaluate the 2nd spline on a shifted energy grid. This is meant for
         testing V0r variations. Note that this is NOT available when the 2nd
         dataset is passed as data_and_derivatives.
+
+    Raises
+    ------
+    TypeError
+        If neither data_spline nor data_and_derivatives is passed for
+        either dataset, or if both are passed for the same dataset.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
     if data_and_derivatives_1 is None:
