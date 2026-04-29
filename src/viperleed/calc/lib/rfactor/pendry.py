@@ -25,8 +25,7 @@ def R_pendry(
     ):
     """Calculate Pendry's R factor between I(V) curves.
 
-    See
-    https://iopscience.iop.org/article/10.1088/0022-3719/13/5/024/meta
+    See https://doi.org/10.1088/0022-3719/13/5/024
     Uses two sets of beam data, either passed as splines or as already
     calculated arrays of intensities and derivatives. When comparing
     experimental and theoretical data, the theoretical data should be the
