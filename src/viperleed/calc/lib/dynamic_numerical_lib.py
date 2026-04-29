@@ -11,6 +11,13 @@ For example, to use JAX instead of NumPy, you can do:
     from viperleed.calc.lib import dynamic_numerical_lib as dnl
     import jax
     dnl.xp = jax.numpy
+
+This module further provides Numpy-compatible function patches for
+JAX-specific functions such as vmap and stop_gradient.
+
+Note that not all functionality is guaranteed to be fully compatible.
+Scipy splines may be replaced with their JAX-compatible counterparts
+from the interpax package.
 """
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',)
@@ -67,9 +74,12 @@ def vmap(func, in_axes=0, out_axis=0):
     func : callable
         Function to map.
     in_axes : int or None or tuple
-        For each positional arg: which axis to map over, or None to broadcast.
-        If an int is given, it applies to the first arg and all others are None.
-    out_axis : int
+        Axis or axes to map over for each argument. If an int, the same
+        axis is used for all arguments. If None, the argument is not
+        mapped over. If a tuple, it should have the same length as the
+        number of arguments, and specify the axis for each argument.
+        See the JAX documentation for more details.
+    out_axes : int
         Axis along which to stack outputs.
 
     Returns
