@@ -325,8 +325,8 @@ def make_errors_figs(errors, r_factor_type='pendry', formatting=None):
         ylabel = 'Smooth R-factor'
         varlabel = '$R_S + var(R_S)$'
     else:
-        ylabel = 'R-factor'   # this should not happen, just a contingency
-        varlabel = '$R + var(R)$'
+        msg = f'Unknown R-factor type "{r_factor_type}"'
+        raise ValueError(msg)
 
     for mode in ("geo", "vib", "occ"):
         mode_errors = [err for err in errors if err.mode == mode]
