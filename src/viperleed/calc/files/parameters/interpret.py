@@ -124,7 +124,7 @@ _SIMPLE_NUMERICAL_PARAMS = {
     # Other integers
     'HALTING': NumericBounds(type_=int, range_=(1, 3)),
     'N_BULK_LAYERS': NumericBounds(type_=int, range_=(1, 2)),
-    'R_FACTOR_SMOOTH': NumericBounds(type_=int, range_=(0, 999)),
+    'R_FACTOR_SMOOTHING': NumericBounds(type_=int, range_=(0, 999)),
     'ZIP_COMPRESSION_LEVEL': NumericBounds(type_=int, range_=(0, 9)),
 }
 
