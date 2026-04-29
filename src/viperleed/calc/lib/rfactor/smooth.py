@@ -133,6 +133,10 @@ def y_s(
     beta=DEFAULT_BETA,
 ):
     positive_d2 = second_derivative > 0
+    # Note the value of 1.0 is arbitrary and does not affect the result.
+    # The second derivative is only used in the case of a positive
+    # curvature. However, this masking is required to avoid NaNs
+    # in the JAX implementation.
     safe_d2 = dnl.xp.where(positive_d2, second_derivative, 1.0)
     intermediate_1 = (
         intensity / safe_d2
