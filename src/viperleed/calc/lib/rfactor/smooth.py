@@ -11,6 +11,8 @@ from viperleed.calc.lib import dynamic_numerical_lib as dnl
 from .pendry import R_pendry_from_y
 from .utils import shift_theo_intensity_non_negative
 
+DEFAULT_ALPHA = 4.0
+DEFAULT_BETA = 0.15
 
 def R_s(
     v0_imag,
@@ -20,11 +22,11 @@ def R_s(
     data_and_derivatives_1=None,
     data_spline_2=None,
     data_and_derivatives_2=None,
-    shift_2nd_spline=0.0,   # only available if passed as spline
-    alpha=4.0,
-    beta=0.15,
+    shift_2nd_spline=0.0,  # only available if passed as spline
+    alpha=DEFAULT_ALPHA,
+    beta=DEFAULT_BETA,
     **kwargs,
-    ):
+):
     """
     Calculate the Smooth R-factor.
 
@@ -127,8 +129,8 @@ def y_s(
     first_derivative,
     second_derivative,
     v0_imag,
-    alpha=4.0,
-    beta=0.15,
+    alpha=DEFAULT_ALPHA,
+    beta=DEFAULT_BETA,
 ):
     positive_d2 = second_derivative > 0
     safe_d2 = dnl.xp.where(positive_d2, second_derivative, 1.0)
