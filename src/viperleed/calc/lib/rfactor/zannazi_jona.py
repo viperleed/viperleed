@@ -105,7 +105,7 @@ def R_zj(
         1 / nansum_trapezoid(data_1_intensity, energy_step, axis=0) / 0.027
     )
 
-    # # calculate normalization for each beam
+    # calculate normalization for each beam
     beam_normalization = nansum_trapezoid(
         data_1_intensity, dx=energy_step, axis=0
     ) / nansum_trapezoid(data_2_intensity, dx=energy_step, axis=0)

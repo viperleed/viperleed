@@ -1,4 +1,4 @@
-"""viperleed.calc.lib.dynamic_numerical_lib.
+"""Module dynamic_numerical_lib of viperleed.calc.lib.
 
 This module provides dynamic numerical library support, allowing for
 switching between NumPy and JAX for some array computations.
@@ -66,7 +66,7 @@ def vmap(func, in_axes=0, out_axis=0):
     ----------
     func : callable
         Function to map.
-    in_axes : int | None | tuple
+    in_axes : int or None or tuple
         For each positional arg: which axis to map over, or None to broadcast.
         If an int is given, it applies to the first arg and all others are None.
     out_axis : int

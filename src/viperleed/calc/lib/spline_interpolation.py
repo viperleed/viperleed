@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 
 
 import numpy as np
+
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 

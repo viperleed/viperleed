@@ -92,4 +92,4 @@ def test_pendry_matches_existing_reference_value(sin_spline, cos_spline):
         data_spline_1=sin_spline,
         data_spline_2=cos_spline,
     )
-    assert calc_r == pytest.approx(1.9047921884401726, rel=1e-6)
+    assert calc_r == pytest.approx(1.904792, rel=1e-6)

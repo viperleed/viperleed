@@ -39,7 +39,7 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
         Array of R-factor numerators of shape (n_beams,)
     denominators : dnl.xp.ndarray
         Array of R-factor denominators of shape (n_beams,)
-    groups : None | "beam" | array-like of int, optional
+    groups : None or "beam" or array-like of int, optional
         - None: return overall R-factor = sum(num) / sum(den)
         - "beam": return per-beam R-factors = num / den
         - array of ints: group id per beam; returns per-group R-factors.
