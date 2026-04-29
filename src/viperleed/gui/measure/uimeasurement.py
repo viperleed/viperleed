@@ -297,7 +297,6 @@ class _DeviceDetectionWorker(qtc.QObject):
 
         try:
             output = self._process.readAllStandardOutput().data().decode().strip()
-            print(output)
             # Device discovery prints connection warnings (e.g. Qt or
             # failed COMs) to stdout. We take only the last line, which
             # contains our dumped JSON.
