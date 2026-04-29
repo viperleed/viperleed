@@ -110,5 +110,6 @@ def R_pendry_from_y(y_1, y_2, energy_step, **kwargs):
 
 
 def y_pendry(intensity, intensity_derivative, v0_imag):
-    intens_deriv_ratio = intensity / intensity_derivative
-    return intens_deriv_ratio / (intens_deriv_ratio**2 + v0_imag**2)
+    numerator = intensity * intensity_derivative
+    denominator = intensity**2 + v0_imag**2 * intensity_derivative**2
+    return numerator / denominator
