@@ -67,8 +67,10 @@ def r_pendry(
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
     if data_and_derivatives_1 is None:
         if data_spline_1 is None:
-            raise TypeError('R_pendry requires either data splines or '
-                            'pre-computed data_and_derivatives arrays.')
+            raise TypeError(
+                'r_pendry requires either data splines or '
+                'pre-computed data_and_derivatives arrays.'
+            )
         # when using splines, this can be sped up via CashedSplines
         data_1_deriv_spline = data_spline_1.derivative()
         data_1_intensity = data_spline_1(energy_grid)
@@ -79,8 +81,10 @@ def r_pendry(
     shifted_grid = energy_grid - shift_2nd_spline
     if data_and_derivatives_2 is None:
         if data_spline_2 is None:
-            raise TypeError('R_pendry requires either data splines or '
-                            'pre-computed data_and_derivatives arrays.')
+            raise TypeError(
+                'r_pendry requires either data splines or '
+                'pre-computed data_and_derivatives arrays.'
+            )
         # when using splines, this can be sped up via CashedSplines
         data_2_deriv_spline = data_spline_2.derivative()
         # evaluate on shifted grid, allowing continuous shifts
