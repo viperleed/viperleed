@@ -645,9 +645,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         devices_menu = self._ctrls['menus']['devices']                          # TODO: have to update the lists regularly. Use timer to update_device_lists.
         devices_menu.aboutToShow.connect(self._trigger_device_search)
         menu.insertMenu(self.about_action, devices_menu)
-        devices_action = devices_menu.menuAction()
-        devices_action.hovered.connect(self._trigger_device_search)
-        devices_action.triggered.connect(self._trigger_device_search)
+        devices_menu.menuAction()
         devices_menu.addMenu("Cameras")
         devices_menu.addMenu("Controllers")
 
