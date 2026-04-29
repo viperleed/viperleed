@@ -29,8 +29,7 @@ def R_pendry(
     Uses two sets of beam data, either passed as splines or as already
     calculated arrays of intensities and derivatives. When comparing
     experimental and theoretical data, the theoretical data should be the
-    second dataset, as this is also shifted to correct for non-negative values.
-
+    second dataset, as this is also shifted to correct for non-positive values.
     For each dataset, pass either data_spline or data_and_derivatives, but not
     both. Using splines for one and pre-computed data for the other is allowed.
     Note that data_and_derivatives are expected to be 3-tuples for uniform call
