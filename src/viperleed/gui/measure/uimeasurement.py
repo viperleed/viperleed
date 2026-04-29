@@ -313,12 +313,17 @@ class _DeviceDetectionWorker(qtc.QObject):
         # Restore objects
         for device_type, result in parsed.items():
             if result.get("success"):
-                recreated = {}
-                for name, (mod_name, cls_name, device_kwargs) in result["devices"].items():
-                    mod = import_module(mod_name)
-                    cls = getattr(mod, cls_name)
-                    recreated[name] = (cls, SettingsInfo(**device_kwargs))
-                detected_out[device_type] = recreated
+                try:
+                    recreated = {}
+                    for name, (mod_name, cls_name, device_kwargs) in result["devices"].items():
+                        mod = import_module(mod_name)
+                        cls = getattr(mod, cls_name)
+                        recreated[name] = (cls, SettingsInfo(**device_kwargs))
+                except Exception as exc:
+                    detected_out[device_type] = {}
+                    base.emit_error(self, UIErrors.RUNTIME_ERROR, exc)
+                else:
+                    detected_out[device_type] = recreated
             else:
                 detected_out[device_type] = {}
                 err_type = result.get("error_type")
