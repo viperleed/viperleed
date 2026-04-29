@@ -81,8 +81,18 @@ class RFactorType(SpecialParameter, param='R_FACTOR_TYPE'):
 
     def __init__(self, value):
         r_fac_id, name = self._coerce(value)
-        self.id = r_fac_id
-        self.name = name
+        self._id = r_fac_id
+        self._name = name
+
+    @property
+    def id(self):
+        """Integer code of the R-factor type."""
+        return self._id
+
+    @property
+    def name(self):
+        """Canonical name of the R-factor type."""
+        return self._name
 
     # --------- construction helpers ---------
     @classmethod
