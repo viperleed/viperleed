@@ -20,9 +20,9 @@ def r_pendry(
     data_and_derivatives_1=None,
     data_spline_2=None,
     data_and_derivatives_2=None,
-    shift_2nd_spline=0.0,   # only available if passed as spline
+    shift_2nd_spline=0.0,  # only available if passed as spline
     **kwargs,
-    ):
+):
     """Calculate Pendry's R factor between I(V) curves.
 
     See https://doi.org/10.1088/0022-3719/13/5/024
