@@ -1,6 +1,6 @@
-"""Module l_max of viperleed.calc.classes.rparams.special.
+"""Module r_factor_type of viperleed.calc.classes.rparams.special.
 
-Defines the LMax class, a convenience container for parameter LMAX.
+Defines the RFactorType class, a convenience container for parameter R_FACTOR_TYPE.
 """
 
 __authors__ = ('Alexandra M. Imre (@alexmiame)',)
