@@ -26,8 +26,9 @@ def R_s(
     **kwargs,
     ):
     """
-    Smooth R-factor, see
-    https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
+    Calculate the Smooth R-factor.
+
+    See https://iopscience.iop.org/article/10.1088/1361-648X/ae4af8
     Uses two sets of beam data, either passed as splines or as already
     calculated arrays of intensities and derivatives. When comparing
     experimental and theoretical data, the theoretical data should be the
@@ -72,7 +73,6 @@ def R_s(
         If neither data_spline nor data_and_derivatives is passed for
         either dataset, or if both are passed for the same dataset.
     """
-    
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
     if data_and_derivatives_1 is None:
         if data_spline_1 is None:

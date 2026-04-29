@@ -22,7 +22,9 @@ def R_2(
     **kwargs,
     ):
     """
-    R2 R-factor. Uses two sets of beam data, either passed as splines or as
+    Calculate the R2 R factor.
+
+    Uses two sets of beam data, either passed as splines or as
     already calculated arrays of intensities.
 
     For each dataset, pass either data_spline or data_and_derivatives, but not
