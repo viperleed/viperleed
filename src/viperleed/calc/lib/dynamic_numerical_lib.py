@@ -66,7 +66,7 @@ def bincount(x, weights, length):
     return _np.bincount(x, weights=weights, minlength=length)
 
 
-def vmap(func, in_axes=0, out_axis=0):
+def vmap(func, in_axes=0, out_axes=0):
     """Substitute for JAX vmap using NumPy.
 
     Parameters
@@ -125,7 +125,7 @@ def vmap(func, in_axes=0, out_axis=0):
                     sliced_args.append(_np.take(a_arr, i, axis=ax))
             outs.append(func(*sliced_args, **kwargs))
 
-        return _np.stack(outs, axis=out_axis)
+        return _np.stack(outs, axis=out_axes)
 
     return wrapped
 
