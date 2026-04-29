@@ -132,6 +132,27 @@ def y_s(
     alpha=DEFAULT_ALPHA,
     beta=DEFAULT_BETA,
 ):
+    """Calculate the Y function for the Smooth R-factor.
+
+    Parameters
+    ----------
+    intensity : array
+        The intensity values of the beam, evaluated on the energy grid.
+    first_derivative : array
+        The first derivative of the intensity with respect to energy
+        evaluated on the same energy grid.
+    second_derivative : array
+        The second derivative of the intensity with respect to energy
+        evaluated on the same energy grid.
+    v0_imag : float
+        The imaginary part of the inner potential.
+    alpha : float, optional
+        Tuning parameter, default 4.0 (module global,
+        see also https://doi.org/10.1088/1361-648X/ae4af8).
+    beta : float, optional
+        Tuning parameter, default 0.15 (module global,
+        see also https://doi.org/10.1088/1361-648X/ae4af8).
+    """
     positive_d2 = second_derivative > 0
     # Note the value of 1.0 is arbitrary and does not affect the result.
     # The second derivative is only used in the case of a positive
