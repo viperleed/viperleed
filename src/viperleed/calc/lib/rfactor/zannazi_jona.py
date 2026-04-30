@@ -25,7 +25,7 @@ def r_zjj(
 ):
     """
     Zannazi-Jona R-factor, see
-    https://www.sciencedirect.com/science/article/pii/0039602877904289
+    https://doi.org/10.1016/0039-6028(77)90428-9.
     Uses two sets of beam data, either passed as splines or as already
     calculated arrays of intensities and derivatives.
 
