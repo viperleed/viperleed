@@ -84,5 +84,6 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
 
     mask = grouped_denominators != 0
     safe_denominators = dnl.xp.where(mask, grouped_denominators, 1.0)
-    result = dnl.xp.where(mask, grouped_numerators / safe_denominators, dnl.xp.nan)
-    return result
+    return dnl.xp.where(
+        mask, grouped_numerators / safe_denominators, dnl.xp.nan
+    )
