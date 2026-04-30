@@ -1020,7 +1020,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         This is the slot connected to the busy_changed signal of
         all controllers, and to the .stopped signal of all cameras,
-        after ._is_finished() returns True, or after .abort()ing the
+        after the energy ramp is finished, or after .abort()ing the
         measurement. Signals are disconnected again once all devices
         turn "not busy".
 
@@ -1107,20 +1107,17 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             raise ValueError(f'No config file {configname!r} in '
                              f'directory {self.settings.base_dir}') from None
 
-    def _is_finished(self):
-        """Check if the full measurement cycle is done.
+    def _on_ramp_finished(self):
+        """Called when the energy ramp finishes, before finalization.
 
-        Go to the next energy if the measurement is not complete.
+        Subclasses can override this to perform cleanup or post-processing
+        actions (e.g., energy calibration) after the last energy step.
 
         Returns
         -------
-        finished : bool
-            True when the measurement is finished.
+        None.
         """
-        if self._energy_ramp.ramp_finished():
-            return True
-        self._energy_ramp.increment_energy()
-        return False
+        pass
 
     def _make_camera(self, camera_settings):
         """Instantiate camera class object.
@@ -1490,8 +1487,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     def _prepare_finalization(self):
         """Prepare for finalization.
 
-        This method is called both when ._is_finished() returns
-        True, and while .abort()ing a measurement.
+        This method is called both when the energy ramp is finished
+        and while .abort()ing a measurement.
 
         This method may need to be extended in subclasses.
         Ensure that finalization is prepared properly and that
@@ -1558,9 +1555,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self.data_points.nr_steps_done += 1
         self.new_data_available.emit(self.data_points[-1].copy())
 
-        if self._is_finished():
+        if self._energy_ramp.ramp_finished():
+            self._on_ramp_finished()
             self._prepare_finalization()
         else:
+            self._energy_ramp.increment_energy()
             self._begin_next_energy_step()
 
     # too-many-locals, too-complex

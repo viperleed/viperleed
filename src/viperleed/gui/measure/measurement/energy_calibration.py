@@ -248,21 +248,14 @@ class MeasureEnergyCalibration(MeasurementABC):
         self.data_points.time_resolved = False
         return settings_ok
 
-    def _is_finished(self):
-        """Check if the full measurement cycle is done.
-
-        If the measurement is complete, calculate the energy
-        calibration. If not, go to the next energy.
+    def _on_ramp_finished(self):
+        """Calibrate energy when the energy ramp finishes.
 
         Returns
         -------
-        bool
+        None.
         """
-        if self._energy_ramp.ramp_finished():
-            self.calibrate_energy_setpoint()
-            return True
-        self._energy_ramp.increment_energy()
-        return False
+        self.calibrate_energy_setpoint()
 
     def _make_cameras(self):
         """Make sure we have no camera."""
