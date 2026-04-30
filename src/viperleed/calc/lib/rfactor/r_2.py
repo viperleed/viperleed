@@ -24,6 +24,9 @@ def r_2(
     """
     Calculate the R2 R factor.
 
+    This uses R2 R factor as defined by Van Hove et al. in
+    https://doi.org/10.1007/978-3-642-82721-1.
+
     Uses two sets of beam data, either passed as splines or as
     already calculated arrays of intensities.
 
