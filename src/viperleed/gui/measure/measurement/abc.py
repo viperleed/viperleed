@@ -1487,8 +1487,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     def _prepare_finalization(self):
         """Prepare for finalization.
 
-        This method is called both when the energy ramp is finished
-        and while .abort()ing a measurement.
+        This method is called both when the energy ramp is
+        finished and while .abort()ing a measurement.
 
         This method may need to be extended in subclasses.
         Ensure that finalization is prepared properly and that
