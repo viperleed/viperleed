@@ -11,6 +11,7 @@ from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 
 def nansum_trapezoid(y, dx, axis=-1):
+    """Calculate the trapezoidal integral, ignoring NaNs."""
     y_arr = dnl.xp.moveaxis(y, axis, -1)
     # select the axis to integrate over
     return dnl.xp.nansum(y_arr[..., 1:] + y_arr[..., :-1], axis=-1) * dx * 0.5
@@ -70,8 +71,10 @@ def average_beam_array(beam_array, beam_correspondence):
         The beam array to average, shape (n_energies, n_beams).
     beam_correspondence : tuple
         A tuple containing the beam correspondence, which maps the
-        experimental beams to the theoretical beams. It should be a 1D array
-        of integers with shape (n_beams,).
+        two sets of beams to each other (usually experimental and
+        theoretical). Should be a 1D array of integers with shape
+        (n_beams,). Any beams assigned a value of -1 are removed from
+        the beam array.
 
     Returns
     -------
@@ -85,7 +88,8 @@ def average_beam_array(beam_array, beam_correspondence):
         the beam correspondence.
     """
     # convert beam correspondence to numpy array
-    beam_corr = np.array(beam_correspondence, dtype=np.int32)  # force numpy
+    # force numpy to ensure it can be used as an index array
+    beam_corr = np.array(beam_correspondence, dtype=np.int32)
 
     # check if beam_array and beam_corr have the same number of beams
     if beam_array.shape[1] != beam_corr.shape[0]:
