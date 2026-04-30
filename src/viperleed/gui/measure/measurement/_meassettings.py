@@ -310,6 +310,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
             if step_profile:
                 self._step_profile.set_(step_profile)
 
+
 class StepProfileViewer(ButtonWithLabel):
     """Viewer of the current step-profile type.
 
