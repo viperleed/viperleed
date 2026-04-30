@@ -90,19 +90,32 @@ def r_zjj(
         data_2_intensity, data_2_derivative_1, data_2_derivative_2 = (
             data_and_derivatives_2
             )
-    mask_1 = dnl.xp.isnan(data_1_intensity)
-    data_1_intensity = dnl.xp.where(mask_1, 0.0, data_1_intensity)
-    data_1_derivative_1 = dnl.xp.where(mask_1, 0.0, data_1_derivative_1)
-    data_1_derivative_2 = dnl.xp.where(mask_1, 0.0, data_1_derivative_2)
+    nan_mask_data_1 = dnl.xp.isnan(data_1_intensity)
+    nan_mask_data_2 = dnl.xp.isnan(data_2_intensity)
+    no_overlap_mask = dnl.xp.logical_or(nan_mask_data_1, nan_mask_data_2)
 
-    mask_2 = dnl.xp.isnan(data_2_intensity)
-    mask = dnl.xp.logical_or(mask_1, mask_2)
-    data_2_intensity = dnl.xp.where(mask, 0.0, data_2_intensity)
-    data_2_derivative_1 = dnl.xp.where(mask, 0.0, data_2_derivative_1)
-    data_2_derivative_2 = dnl.xp.where(mask, 0.0, data_2_derivative_2)
+    # set all values to 0 in regions where either dataset is nan
+    # to avoid issues in the calculation
+
+    data_1_intensity = dnl.xp.where(no_overlap_mask, 0.0, data_1_intensity)
+    data_1_derivative_1 = dnl.xp.where(
+        no_overlap_mask, 0.0, data_1_derivative_1
+    )
+    data_1_derivative_2 = dnl.xp.where(
+        no_overlap_mask, 0.0, data_1_derivative_2
+    )
+    data_2_intensity = dnl.xp.where(no_overlap_mask, 0.0, data_2_intensity)
+    data_2_derivative_1 = dnl.xp.where(
+        no_overlap_mask, 0.0, data_2_derivative_1
+    )
+    data_2_derivative_2 = dnl.xp.where(
+        no_overlap_mask, 0.0, data_2_derivative_2
+    )
 
     # calculate experimental energy ranges (without NaNs)
-    exp_energy_ranges = dnl.xp.logical_not(mask).sum(axis=0) * energy_step
+    exp_energy_ranges = (
+        dnl.xp.logical_not(no_overlap_mask).sum(axis=0) * energy_step
+    )
 
     # Factor 0.027 for random correlation, Zannazi & Jona 1977
     prefactors = (
@@ -117,13 +130,13 @@ def r_zjj(
     numerators = abs(
         beam_normalization * data_2_derivative_2 - data_1_derivative_2
     ) * abs(beam_normalization * data_2_derivative_1 - data_1_derivative_1)
-    numerators = dnl.xp.where(mask, 0.0, numerators)
+    numerators = dnl.xp.where(no_overlap_mask, 0.0, numerators)
 
     denominators = abs(data_1_derivative_1) + dnl.xp.nanmax(
         data_1_derivative_1, axis=0
     )
     denominators = dnl.xp.clip(denominators, 1e-12, None)
-    denominators = dnl.xp.where(mask, 1.0, denominators)
+    denominators = dnl.xp.where(no_overlap_mask, 1.0, denominators)
 
     quotient = numerators / denominators
 
