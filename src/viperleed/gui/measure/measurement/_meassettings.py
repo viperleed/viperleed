@@ -226,7 +226,6 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         self._step_profile = StepProfileViewer()
         self._ramp_type = qtw.QComboBox()
         self._energy_options = tuple()
-        self.settings_changed.connect(self._store_energy_ramp_settings)
         self._compose_and_connect()
         self._set_energy_ramp_options()
 
@@ -256,6 +255,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
             self._set_energy_ramp_options
             )
         self._step_profile.settings_changed.connect(self.settings_changed)
+        self.settings_changed.connect(self._store_energy_ramp_settings)
 
     @qtc.pyqtSlot(int)
     def _set_energy_ramp_options(self, *_):
@@ -293,6 +293,8 @@ class EnergyRampEditor(SettingsDialogSectionBase):
     @qtc.pyqtSlot()
     def update_widgets(self):
         """Update widgets from settings."""
+        # When updating the widgets from settings, we have to block
+        # signals to avoid overwriting the partially loaded settings.
         with qtc.QSignalBlocker(self):
             ramp_type = self._settings['energies'].get('ramp_type', '')
             index = self._ramp_type.findText(ramp_type)
