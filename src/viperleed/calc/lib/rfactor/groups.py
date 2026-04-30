@@ -56,6 +56,8 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
         R-factors per beam of shape (n_beams,) if groups is "beam",
         shape (1,) if groups is None, or shape (n_groups,) if
         groups is an array-like of integers.
+        Any invalid groups (e.g. groups with zero denominator) will
+        return have R-factor set to nan.
     """
     # check numerators and denominators have the same shape
     if numerators.shape != denominators.shape:
