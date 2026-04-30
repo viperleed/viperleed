@@ -46,8 +46,9 @@ def group_rfactors(numerators, denominators, groups=None, num_groups=None):
             Group ids are assumed to be non-negative integers.
     num_groups : int, optional
         Number of groups, required if groups is array-like of int.
-        Must be specified to ensure compatibility with just-in-time
-        compilation and static array shapes.
+        If not specified, it will be inferred from the
+        `groups`. Must be specified for JIT compiled code to ensure
+        static array sizes.
 
     Returns
     -------
