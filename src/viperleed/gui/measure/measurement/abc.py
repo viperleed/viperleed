@@ -700,21 +700,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         for camera in self.cameras:
             self._missing_data[camera] = 1
 
-        ramp_name = self.settings.get('energies', 'ramp_type', fallback=None)
-        ramp_type = None
-        if ramp_name:
-            try:
-                ramp_type = base.class_from_name('classes', ramp_name)
-            except (RuntimeError, ValueError):
-                pass
-        if ramp_type and not issubclass(ramp_type, EnergyRampABC):
-            ramp_type = None
-        if ramp_type is None:
-            ramp_type = EnergyRampABC.get_matching_energy_ramp(self.settings)
-            self.settings.set('energies', 'ramp_type', str(ramp_type.__name__))
-        self._energy_ramp = ramp_type()
-        self._energy_ramp.error_occurred.connect(self.error_occurred)
-        self._energy_ramp.set_ramp(self.settings)
+        self._prepare_energy_ramp()
         return True
 
     @qtc.pyqtSlot()
@@ -1053,12 +1039,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         finally:
             # Disconnect all devices and their signals
             self._disconnect_devices()
-
-            # Keep only the primary controller connected, so we can
-            # set the LEED energy to zero (and detect it has been set)
             if self.current_energy == 0:
                 self._cleanup_and_end()
                 return
+
+            # Keep only the primary controller connected, so we can
+            # set the LEED energy to zero (and detect it has been set)
             primary = self.primary_controller
             primary.connect_()
             primary.busy_changed.connect(self._cleanup_and_end, type=_UNIQUE)
@@ -1476,6 +1462,30 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         # Remove the image just appended to the archive
         img_name.unlink()
+
+    def _prepare_energy_ramp(self):
+        """Prepare the energy ramp."""
+        ramp_name = self.settings.get('energies', 'ramp_type', fallback=None)
+        ramp_type = None
+        if ramp_name:
+            try:
+                ramp_type = base.class_from_name('classes', ramp_name)
+            except (RuntimeError, ValueError):
+                self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                                'energies/ramp_type',
+                                f'Invalid string {ramp_name}.')
+                pass
+        if ramp_type and not issubclass(ramp_type, EnergyRampABC):
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            'energies/ramp_type',
+                            f'Invalid string {ramp_name}.')
+            ramp_type = None
+        if ramp_type is None:
+            ramp_type = EnergyRampABC.get_matching_energy_ramp(self.settings)
+            self.settings.set('energies', 'ramp_type', str(ramp_type.__name__))
+        self._energy_ramp = ramp_type()
+        self._energy_ramp.error_occurred.connect(self.error_occurred)
+        self._energy_ramp.set_ramp(self.settings)
 
     def _prepare_finalization(self):
         """Prepare for finalization.
