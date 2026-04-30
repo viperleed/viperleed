@@ -44,11 +44,11 @@ MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
 N_COLUMNS = 2
 N_HEADER_ROWS = 2
+ALL_ENERGY_RAMPS = (LinearEnergyRamp, EndlessLinearEnergyRamp,
+                    ConstantEnergyRamp)
 ALLOWED_ENERGY_RAMPS = {
     'IVVideo': (LinearEnergyRamp,),
     'MeasureEnergyCalibration': (LinearEnergyRamp,),
-    'TimeResolved': (LinearEnergyRamp, EndlessLinearEnergyRamp,
-                     ConstantEnergyRamp),
     }
 ABRUPT_PROFILE = ('abrupt', )
 
@@ -244,7 +244,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         label = InfoLabel(label_text='Ramp type', tooltip=tip)
         layout.addRow(label, self._ramp_type)
         meas_cls = self._settings["measurement_settings"]["measurement_class"]
-        for ramp_cls in ALLOWED_ENERGY_RAMPS[meas_cls]:
+        for ramp_cls in ALLOWED_ENERGY_RAMPS.get(meas_cls, ALL_ENERGY_RAMPS):
             self._ramp_type.addItem(ramp_cls.__name__, userData=ramp_cls)
         tip = '<nobr>How to move from </nobr>one energy to the next one.'
         label = InfoLabel(label_text='Step profile', tooltip=tip)
