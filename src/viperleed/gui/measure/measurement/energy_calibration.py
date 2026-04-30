@@ -43,14 +43,13 @@ class MeasureEnergyCalibration(MeasurementABC):
 
     def __init__(self, measurement_settings):
         """Initialise instance from settings."""
-        super().__init__(measurement_settings)
         self._old_coefficients = ''
+        super().__init__(measurement_settings)
 
     @qtc.pyqtSlot()
     def abort(self):
         """Abort all current actions."""
-        if (hasattr(self, '_old_coefficients')
-                and self._old_coefficients):
+        if self._old_coefficients:
             self.primary_controller.settings.set('energy_calibration',
                                                  'coefficients',
                                                  self._old_coefficients)
