@@ -57,6 +57,10 @@ def r_pendry(
         Evaluate the 2nd spline on a shifted energy grid. This is meant for
         testing V0r variations. Note that this is NOT available when the 2nd
         dataset is passed as data_and_derivatives.
+    **kwargs
+        Additional keyword arguments are passed to group_rfactors, which
+        determines the grouping of beams for the final R-factor
+        calculation.
 
     Raises
     ------
