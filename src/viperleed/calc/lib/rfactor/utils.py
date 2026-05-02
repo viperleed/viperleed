@@ -116,3 +116,61 @@ def average_beam_array(beam_array, beam_correspondence):
 
     # apply the averaged weights
     return averaged * averaged_beam_weights[dnl.xp.newaxis, :]
+
+
+def coerce_to_energy_grid(
+    data_and_derivatives, data_spline, energy_grid, derivs
+):
+    """Coerce data or splines to the energy grid.
+
+    Utitlity function to allow flexible input of either pre-computed
+    data and derivatives or splines that can be evaluated on the energy grid.
+    If both are passed, data_and_derivatives will be used and data_spline
+    will be ignored.
+
+    Parameters
+    ----------
+    data_and_derivatives : tuple of arrays or None
+        Pre-computed data and derivatives, expected to be a tuple of
+        arrays (intensity, 1st derivative, ..., nth derivative) on the
+        energy_grid. It is not checked (and not possible to check)
+        whether the data is actually on the energy_grid.
+        If None, data_spline will be used to evaluate the data.
+    data_spline : scipy.interpolate.CubicSpline or similar or None
+        Spline of the data, which will be evaluated on energy_grid.
+        Ignored if data_and_derivatives is not None.
+    energy_grid : array
+        The grid on which data should be evaluated. Only used if
+        data_and_derivatives is None.
+    derivs : int
+        The number of derivatives to compute. Only used if
+        data_and_derivatives is None.
+
+    Returns
+    -------
+    tuple of arrays
+        Tuple of arrays (intensity, 1st derivative, ..., nth derivative)
+        on the energy_grid, either taken from data_and_derivatives or
+        evaluated from data_spline.
+
+    Raises
+    ------
+    TypeError
+        If both data_and_derivatives and data_spline are None.
+    """
+    if data_and_derivatives is None and data_spline is None:
+        raise TypeError(
+            'R_pendry requires either data splines or '
+            'pre-computed data_and_derivatives arrays.'
+        )
+    if data_and_derivatives is None:
+        # evaluate splines on energy grid to get data and derivatives
+        sampled_data = data_spline(energy_grid)
+        sampled_derivs = [
+            data_spline.derivative(nu=deriv)(energy_grid)
+            for deriv in range(derivs)
+        ]
+        return (sampled_data, *sampled_derivs)
+
+    # otherwise just return data and derivatives as they are
+    return data_and_derivatives
