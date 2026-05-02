@@ -45,9 +45,9 @@ def r_pendry(
     energy_grid : array
         The grid on which data should be evaluated. All evaluations will ignore
         regions in which either of the datasets is nan.
-    data_spline_1, data_spline_2 : arrays of splines
-        Splines of the data, which will be evaluated on energy_grid. Ignored if
-        the respective data_and_derivatives are passed.
+    data_spline_1, data_spline_2 : scipy.interpolate.CubicSpline or similar
+        Splines of the data, which will be evaluated on energy_grid.
+        Ignored if the respective data_and_derivatives are passed.
     data_and_derivatives_1, data_and_derivatives_2 : 3-tuples of float arrays
         Pre-evaluated tuples (intensity, 1st derivative, 2nd derivative) at the
         energy_grid points. This avoids re-calculation of splines and is more
