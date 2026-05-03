@@ -9,7 +9,7 @@ __license__ = 'GPLv3+'
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 from .pendry import r_pendry_from_y
-from .utils import shift_theo_intensity_non_negative, coerce_to_energy_grid
+from .utils import coerce_to_energy_grid, shift_theo_intensity_non_negative
 
 DEFAULT_ALPHA = 4.0
 DEFAULT_BETA = 0.15
