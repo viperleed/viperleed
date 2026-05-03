@@ -9,7 +9,7 @@ __license__ = 'GPLv3+'
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 from .pendry import r_pendry_from_y
-from .utils import shift_theo_intensity_non_negative
+from .utils import shift_theo_intensity_non_negative, coerce_to_energy_grid
 
 DEFAULT_ALPHA = 4.0
 DEFAULT_BETA = 0.15
@@ -76,41 +76,20 @@ def r_s(
         either dataset, or if both are passed for the same dataset.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    if data_and_derivatives_1 is None:
-        if data_spline_1 is None:
-            raise TypeError(
-                'r_s requires either data splines or pre-computed '
-                'data_and_derivatives arrays.'
-            )
-        # when using splines, this can be sped up via CashedSplines
-        data_1_deriv_1_spline = data_spline_1.derivative()
-        data_1_deriv_2_spline = data_1_deriv_1_spline.derivative()
-        data_1_intensity = data_spline_1(energy_grid)
-        data_1_derivative_1 = data_1_deriv_1_spline(energy_grid)
-        data_1_derivative_2 = data_1_deriv_2_spline(energy_grid)
-    else:
-        data_1_intensity, data_1_derivative_1, data_1_derivative_2 = (
-            data_and_derivatives_1
-            )
-    # 2nd data also uses shifted grid if spline
+    data_1_intensity, data_1_derivative_1, data_1_derivative_2 = (
+        coerce_to_energy_grid(
+            data_and_derivatives_1, data_spline_1, energy_grid, derivs=2
+        )
+    )
+
+    # 2nd data uses shifted grid if spline
     shifted_grid = energy_grid - shift_2nd_spline
-    if data_and_derivatives_2 is None:
-        if data_spline_2 is None:
-            raise TypeError(
-                'r_s requires either data splines or pre-computed '
-                'data_and_derivatives arrays.'
-            )
-        # when using splines, this can be sped up via CashedSplines
-        data_2_deriv_1_spline = data_spline_2.derivative()
-        data_2_deriv_2_spline = data_2_deriv_1_spline.derivative()
-        # evaluate on shifted grid, allowing continuous shifts
-        data_2_intensity = data_spline_2(shifted_grid)
-        data_2_derivative_1 = data_2_deriv_1_spline(shifted_grid)
-        data_2_derivative_2 = data_2_deriv_2_spline(shifted_grid)
-    else:
-        data_2_intensity, data_2_derivative_1, data_2_derivative_2 = (
-            data_and_derivatives_2
-            )
+    data_2_intensity, data_2_derivative_1, data_2_derivative_2 = (
+        coerce_to_energy_grid(
+            data_and_derivatives_2, data_spline_2, shifted_grid, derivs=2
+        )
+    )
+
     # shift data_2 to be non-negative in overlapping regions. This should fix
     #  any potential issues caused by undershooting splines.
     data_2_intensity = shift_theo_intensity_non_negative(data_2_intensity,
