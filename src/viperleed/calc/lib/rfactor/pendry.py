@@ -12,7 +12,6 @@ from .groups import group_rfactors
 from .utils import (
     coerce_to_energy_grid,
     nansum_trapezoid,
-    shift_theo_intensity_non_negative,
 )
 
 
