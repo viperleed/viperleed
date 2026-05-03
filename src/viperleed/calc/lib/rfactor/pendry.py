@@ -10,9 +10,9 @@ from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
 from .groups import group_rfactors
 from .utils import (
+    coerce_to_energy_grid,
     nansum_trapezoid,
     shift_theo_intensity_non_negative,
-    coerce_to_energy_grid,
 )
 
 
