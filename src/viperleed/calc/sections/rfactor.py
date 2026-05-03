@@ -177,19 +177,18 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         rp.IV_SHIFT_RANGE.stop + rp.IV_SHIFT_RANGE.step,
         rp.IV_SHIFT_RANGE.step,
     )
-    r_values = []
-    for shift in shifts:
-        r_values.append(
-            r_func(
-                rp.V0_IMAG,
-                intpol_step,
-                out_grid,
-                data_spline_1=exp_spline,
-                data_spline_2=theo_spline,
-                shift_2nd_spline=shift,
-                groups=None,
-            )
+    r_values = [
+        r_func(
+            rp.V0_IMAG,
+            intpol_step,
+            out_grid,
+            data_spline_1=exp_spline,
+            data_spline_2=theo_spline,
+            shift_2nd_spline=shift,
+            groups=None,
         )
+        for shift in shifts
+    ]
 
     # use best shift
     r_values = np.array(r_values)
