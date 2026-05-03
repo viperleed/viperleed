@@ -95,6 +95,40 @@ def make_1d_ragged_cubic_spline(
 def interpolate_ragged_array(
     x, y, axis=0, bc_type='not-a-knot', extrapolate=False
 ):
+    """Interpolate a ragged array along a specified axis.
+
+    This function constructs a piecewise cubic spline interpolator for each
+    column of the input array `y`, allowing for NaN values that indicate
+    missing data. The NaN values are allowed only at the beginning and end of
+    the array, and the non-NaN region must be contiguous. The function returns
+    a single piecewise polynomial object that can be evaluated on the original
+    x values.
+
+    Parameters
+    ----------
+    x : array-like
+        1D array of x-coordinates of the data points.
+    y : array-like
+        2D array of y-coordinates of the data points, which may contain
+        NaNs to indicate missing data. NaNs are allowed only at the
+        beginning and end of each column, and the non-NaN region must be
+        contiguous.
+    axis : int, optional
+        Axis along which to interpolate. Default is 0.
+    bc_type : str, optional
+        Boundary condition type for the spline. Default is 'not-a-knot'.
+    extrapolate : bool or str, optional
+        Whether to extrapolate beyond the data range. Default is False.
+        If True, extrapolation is done according to the specified
+        boundary conditions. See scipy.interpolate for more details.
+
+    Returns
+    -------
+    dnl.PPoly
+        A piecewise polynomial object from the selected numerical
+        library that can be evaluated on a 1D array of x values
+        to return the interpolated y values.
+    """
     # NB: this is intentionally using a Numpy array, even if the backend is
     # swapped out
     all_coeffs = np.full(
