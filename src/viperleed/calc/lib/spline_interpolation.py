@@ -20,10 +20,11 @@ class CachedSpline:
     Proxy that caches derivative splines and last evaluation.
     Assumes spline is pure: same x -> same y.
     """
-    __slots__ = ("_s", "_deriv_cache", "_last_x", "_last_y")
+
+    __slots__ = ('_spline', '_deriv_cache', '_last_x', '_last_y')
 
     def __init__(self, spline):
-        self._s = spline
+        self._spline = spline
         self._deriv_cache = {}  # key: (args, frozenset(kwargs.items()))
         self._last_x = None
         self._last_y = None
@@ -31,7 +32,7 @@ class CachedSpline:
     def __call__(self, x):
         if x is self._last_x:
             return self._last_y
-        y = self._s(x)
+        y = self._spline(x)
         self._last_x = x
         self._last_y = y
         return y
@@ -39,13 +40,14 @@ class CachedSpline:
     def derivative(self, *args, **kwargs):
         key = (args, tuple(sorted(kwargs.items())))
         if key not in self._deriv_cache:
-            self._deriv_cache[key] = CachedSpline(self._s.derivative(*args,
-                                                                     **kwargs))
+            self._deriv_cache[key] = CachedSpline(
+                self._spline.derivative(*args, **kwargs)
+            )
         return self._deriv_cache[key]
 
     def __getattr__(self, name):
         # delegate anything else (e.g., extrapolate, c, x, etc.)
-        return getattr(self._s, name)
+        return getattr(self._spline, name)
 
 
 def make_1d_ragged_cubic_spline(
