@@ -30,7 +30,7 @@ class CachedSpline:
         self._last_y = None
 
     def __call__(self, x):
-        if x is self._last_x:
+        if x == self._last_x:
             return self._last_y
         y = self._spline(x)
         self._last_x = x
