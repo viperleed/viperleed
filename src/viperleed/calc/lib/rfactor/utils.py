@@ -172,5 +172,6 @@ def coerce_to_energy_grid(
         ]
         return (sampled_data, *sampled_derivs)
 
-    # otherwise just return data and derivatives as they are
-    return data_and_derivatives
+    # otherwise just return data and derivatives truncated to the
+    # requested number of derivatives
+    return data_and_derivatives[: derivs + 1]
