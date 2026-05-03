@@ -47,6 +47,8 @@ class CachedSpline:
 
     def __getattr__(self, name):
         # delegate anything else (e.g., extrapolate, c, x, etc.)
+        # this is only invoced if the attribute is not defined on the
+        # CachedSpline itself
         return getattr(self._spline, name)
 
 
