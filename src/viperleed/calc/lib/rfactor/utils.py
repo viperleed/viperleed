@@ -165,12 +165,11 @@ def coerce_to_energy_grid(
         )
     if data_and_derivatives is None:
         # evaluate splines on energy grid to get data and derivatives
-        sampled_data = data_spline(energy_grid)
-        sampled_derivs = [
+        # deriv 0 is the sampled spline itself
+        return tuple(
             data_spline.derivative(nu=deriv)(energy_grid)
-            for deriv in range(derivs)
-        ]
-        return (sampled_data, *sampled_derivs)
+            for deriv in range(derivs + 1)
+        )
 
     # otherwise just return data and derivatives truncated to the
     # requested number of derivatives
