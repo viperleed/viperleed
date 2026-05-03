@@ -77,7 +77,7 @@ def r_1(
     ) / nansum_trapezoid(data_2_intensity, energy_step, axis=0)
 
     numerators = nansum_trapezoid(
-        (data_1_intensity - beam_normalization * data_2_intensity),
+        abs(data_1_intensity - beam_normalization * data_2_intensity),
         energy_step,
         axis=0,
     )
