@@ -20,8 +20,6 @@ import numpy as np
 from viperleed.calc.constants import DEFAULT_OUT, DEFAULT_SUPP, DEFAULT_TENSORS
 from viperleed.calc.files import iorfactor, iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
-from viperleed.calc.files.iorfactor import (beamlist_to_array,
-                                            write_Rfactorpdf_from_splines)
 from viperleed.calc.lib import fs_utils, leedbase, spline_interpolation
 from viperleed.calc.lib import rfactor as rfactor_lib
 from viperleed.calc.lib.checksums import validate_multiple_files
@@ -152,7 +150,9 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     logger.debug('Constructing splines from data...')
 
     ## experiment
-    exp_energies, _, _, exp_intensities = beamlist_to_array(rp.expbeams)
+    exp_energies, _, _, exp_intensities = iorfactor.beamlist_to_array(
+        rp.expbeams
+    )
     exp_spline = spline_interpolation.interpolate_ragged_array(
         x=exp_energies,
         y=exp_intensities,
@@ -244,14 +244,15 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     if rp.PLOT_IV['plot']:
         outname = f'Rfactor_plots_{name}.pdf'
         aname = f'Rfactor_analysis_{name}.pdf'
-        write_Rfactorpdf_from_splines(rp,
-                                      theo_spline,
-                                      exp_spline,
-                                      out_grid,
-                                      r_fac_per_beam,
-                                      outname=outname,
-                                      analysis_file=aname,
-                                      )
+        iorfactor.write_Rfactorpdf_from_splines(
+            rp,
+            theo_spline,
+            exp_spline,
+            out_grid,
+            r_fac_per_beam,
+            outname=outname,
+            analysis_file=aname,
+        )
 
     # store R-factors
     rp.last_R = r_fac_overall
