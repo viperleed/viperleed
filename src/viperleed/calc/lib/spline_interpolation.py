@@ -106,7 +106,7 @@ def interpolate_ragged_array(
         if all_nans:
             continue
         spline, start_id = make_1d_ragged_cubic_spline(
-            x, _y, axis=0, bc_type=bc_type, extrapolate=None
+            x, _y, axis=axis, bc_type=bc_type, extrapolate=extrapolate
         )
         all_coeffs[:, start_id : start_id + spline.c.shape[1], dim] = spline.c
     return dnl.PPoly.construct_fast(all_coeffs, x)
