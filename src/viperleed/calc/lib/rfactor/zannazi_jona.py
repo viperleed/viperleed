@@ -8,7 +8,7 @@ __license__ = 'GPLv3+'
 
 from viperleed.calc.lib import dynamic_numerical_lib as dnl
 
-from .utils import nansum_trapezoid
+from .utils import coerce_to_energy_grid, nansum_trapezoid
 from .groups import group_rfactors
 
 
@@ -55,41 +55,18 @@ def r_zjj(
         dataset is passed as data_and_derivatives.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    if data_and_derivatives_1 is None:
-        if data_spline_1 is None:
-            raise TypeError(
-                'r_zjj requires either data splines or pre-computed'
-                'data_and_derivatives arrays.'
-            )
-        # when using splines, this can be sped up via CashedSplines
-        data_1_deriv_1_spline = data_spline_1.derivative()
-        data_1_deriv_2_spline = data_1_deriv_1_spline.derivative()
-        data_1_intensity = data_spline_1(energy_grid)
-        data_1_derivative_1 = data_1_deriv_1_spline(energy_grid)
-        data_1_derivative_2 = data_1_deriv_2_spline(energy_grid)
-    else:
-        data_1_intensity, data_1_derivative_1, data_1_derivative_2 = (
-            data_and_derivatives_1
-            )
+    data_1_intensity, data_1_derivative_1, data_1_derivative_2 = (
+        coerce_to_energy_grid(
+            data_and_derivatives_1, data_spline_1, energy_grid, derivs=2
+        )
+    )
     # 2nd data also uses shifted grid if spline
     shifted_grid = energy_grid - shift_2nd_spline
-    if data_and_derivatives_2 is None:
-        if data_spline_2 is None:
-            raise TypeError(
-                'r_zjj requires either data splines or pre-computed'
-                'data_and_derivatives arrays.'
-            )
-        # when using splines, this can be sped up via CashedSplines
-        data_2_deriv_1_spline = data_spline_2.derivative()
-        data_2_deriv_2_spline = data_2_deriv_1_spline.derivative()
-        # evaluate on shifted grid, allowing continuous shifts
-        data_2_intensity = data_spline_2(shifted_grid)
-        data_2_derivative_1 = data_2_deriv_1_spline(shifted_grid)
-        data_2_derivative_2 = data_2_deriv_2_spline(shifted_grid)
-    else:
-        data_2_intensity, data_2_derivative_1, data_2_derivative_2 = (
-            data_and_derivatives_2
-            )
+    data_2_intensity, data_2_derivative_1, data_2_derivative_2 = (
+        coerce_to_energy_grid(
+            data_and_derivatives_2, data_spline_2, shifted_grid, derivs=2
+        )
+    )
     nan_mask_data_1 = dnl.xp.isnan(data_1_intensity)
     nan_mask_data_2 = dnl.xp.isnan(data_2_intensity)
     no_overlap_mask = dnl.xp.logical_or(nan_mask_data_1, nan_mask_data_2)
