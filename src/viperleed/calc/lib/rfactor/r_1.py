@@ -7,7 +7,7 @@ __created__ = '2026-01-07'
 __license__ = 'GPLv3+'
 
 from .groups import group_rfactors
-from .utils import nansum_trapezoid
+from .utils import coerce_to_energy_grid, nansum_trapezoid
 
 
 def r_1(
@@ -62,27 +62,14 @@ def r_1(
         either dataset, or if both are passed for the same dataset.
     """
     # Get data either as splines or as pre-computed arrays (mainly for JAX)
-    if data_and_derivatives_1 is None:
-        if data_spline_1 is None:
-            raise TypeError(
-                'r_2 requires either data splines or '
-                'pre-computed data_and_derivatives arrays.'
-            )
-        data_1_intensity = data_spline_1(energy_grid)
-    else:
-        data_1_intensity, _, _ = data_and_derivatives_1
-    # 2nd data also uses shifted grid if spline
+    data_1_intensity, *_ = coerce_to_energy_grid(
+        data_and_derivatives_1, data_spline_1, energy_grid, derivs=0
+    )
+    # 2nd data also shifted grid if spline
     shifted_grid = energy_grid - shift_2nd_spline
-    if data_and_derivatives_2 is None:
-        if data_spline_2 is None:
-            raise TypeError(
-                'r_2 requires either data splines or '
-                'pre-computed data_and_derivatives arrays.'
-            )
-        # evaluate on shifted grid, allowing continuous shifts
-        data_2_intensity = data_spline_2(shifted_grid)
-    else:
-        data_2_intensity, _, _ = data_and_derivatives_2
+    data_2_intensity, *_ = coerce_to_energy_grid(
+        data_and_derivatives_2, data_spline_2, shifted_grid, derivs=0
+    )
 
     # calculate normalization for each beam
     beam_normalization = nansum_trapezoid(
