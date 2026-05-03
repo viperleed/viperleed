@@ -444,10 +444,10 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     return rfaclist
 
 
-def determine_integer_or_fractional(rp):
+def determine_integer_or_fractional(rpars):
     """Determine whether beams are integer or fractional."""
     iorf = []
-    for i, beam in enumerate(rp.expbeams):
+    for beam in rpars.expbeams:
         if beam.hk[0] % 1.0 or beam.hk[1] % 1.0:
             iorf.append(1)
         else:
