@@ -12,6 +12,7 @@ from .groups import group_rfactors
 from .utils import (
     coerce_to_energy_grid,
     nansum_trapezoid,
+    shift_theo_intensity_non_negative,
 )
 
 
@@ -80,6 +81,11 @@ def r_pendry(
     shifted_grid = energy_grid - shift_2nd_spline
     data_2_intensity, data_2_derivative = coerce_to_energy_grid(
         data_and_derivatives_2, data_spline_2, shifted_grid, derivs=1
+    )
+    # shift data_2 to be non-negative in overlapping regions. This should fix
+    #  any potential issues cause by undershooting splines.
+    data_2_intensity = shift_theo_intensity_non_negative(
+        data_2_intensity, data_1_intensity
     )
 
     y_1 = y_pendry(data_1_intensity, data_1_derivative, v0_imag)
