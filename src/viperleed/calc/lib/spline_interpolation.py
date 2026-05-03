@@ -56,6 +56,29 @@ def make_1d_ragged_cubic_spline(
     """Construct a piecewise cubic spline interpolator with ragged edges.
 
     The interpolator uses a cubic spline to interpolate data.
+
+    Parameters
+    ----------
+    x : array-like
+        1D array of x-coordinates of the data points.
+    y : array-like
+        1D array of y-coordinates of the data points, which may contain
+        NaNs to indicate missing data. NaNs are allowed only at the
+        beginning and end of the array, and the non-NaN region must be
+        contiguous.
+    axis : int, optional
+        Axis along which to interpolate. Default is 0.
+    bc_type : str, optional
+        Boundary condition type for the spline. Default is 'not-a-knot'.
+    extrapolate : bool or str, optional
+        Whether to extrapolate beyond the data range. Default is False.
+        If True, extrapolation is done according to the specified
+        boundary conditions. See scipy.interpolate for more details.
+
+    Returns
+    -------
+    dnl.CubicSpline
+        A cubic spline object from the selected numerical library.
     """
     if x.ndim > 1 or y.ndim > 1:
         raise ValueError('x and y must be 1-dimensional arrays.')
