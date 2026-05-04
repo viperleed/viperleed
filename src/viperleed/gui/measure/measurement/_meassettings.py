@@ -18,7 +18,9 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
+from viperleed.gui.measure.classes.energyramp import ABRUPT
 from viperleed.gui.measure.classes.energyramp import DELTA_E_NAME
+from viperleed.gui.measure.classes.energyramp import LINEAR
 from viperleed.gui.measure.classes.energyramp import START_E_NAME
 from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
@@ -51,7 +53,7 @@ ALLOWED_ENERGY_RAMPS = {
     'IVVideo': (LinearEnergyRamp,),
     'MeasureEnergyCalibration': (LinearEnergyRamp,),
     }
-ABRUPT_PROFILE = ('abrupt', )
+ABRUPT_PROFILE = (ABRUPT, )
 
 
 class DeviceEditor(SettingsDialogSectionBase):
@@ -546,7 +548,7 @@ class EnergyStepProfileShapeEditor(qtw.QWidget):
 class AbruptEnergyStepEditor(EnergyStepProfileShapeEditor):
     """Abrupt step."""
 
-    name = 'abrupt'
+    name = ABRUPT
     description = ('An abrupt energy step that immediately goes from\n'
                    'the current energy to the next desired energy.')
 
@@ -568,7 +570,7 @@ class AbruptEnergyStepEditor(EnergyStepProfileShapeEditor):
 class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     """Editor for selecting settings of a linear energy profile."""
 
-    name = 'linear'
+    name = LINEAR
     description = ('A linear energy step that goes from the \ncurrent '
                    'energy to the next desired energy\nin equidistant '
                    'intermediate steps.')
