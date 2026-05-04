@@ -40,6 +40,9 @@ MINIMUM_DELTA = 1e-4
 class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      # TODO: Move profile settings over to controller settings.
     """Generic energy ramp class."""
 
+    display_name = None
+    info_text = None
+
     def __init__(self, *args, **kwargs):
         """Initialise generic energy ramp class."""
         super().__init__(*args, **kwargs)
@@ -407,6 +410,10 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
 class LinearEnergyRamp(EnergyRampABC):
     """Generic linear energy ramp."""
 
+    display_name = 'Linear energy ramp'
+    info_text = ('<nobr>Linearly increases or decreases the energy'
+                 '</nobr> until reaching the end energy.')
+
     def __init__(self, *args, **kwargs):
         """Initialize LinearEnergyRamp."""
         self._delta_energy = DEFAULT_DELTA
@@ -555,6 +562,11 @@ class LinearEnergyRamp(EnergyRampABC):
 class ConstantEnergyRamp(EnergyRampABC):
     """Constant energy ramp."""
 
+    display_name = 'Constant energy ramp'
+    info_text = ('<nobr>Keeps the energy constant throughout the</nobr>'
+                 ' measurement. Useful for time-resolved measurements '
+                 'at fixed energy.')
+
     @property
     def energy_steps(self):
         """Return the number of energy steps."""
@@ -582,6 +594,11 @@ class ConstantEnergyRamp(EnergyRampABC):
 
 class EndlessLinearEnergyRamp(LinearEnergyRamp):
     """Endless linear energy ramp."""
+
+    display_name = 'Endless linear energy ramp'
+    info_text = ('<nobr>Linearly increases or decreases the energy'
+                 '</nobr> until reaching the end energy. Energy resets '
+                 'to start when reaching the end.')
 
     @property
     def energy_steps(self):

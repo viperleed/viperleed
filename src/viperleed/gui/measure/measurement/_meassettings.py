@@ -32,6 +32,7 @@ from viperleed.gui.measure.widgets.collapsiblelists import (
     CollapsibleCameraList,
     CollapsibleControllerList,
     )
+from viperleed.gui.measure.widgets.fieldinfo import InfoComboBox
 from viperleed.gui.measure.widgets.fieldinfo import InfoLabel
 from viperleed.gui.measure.widgets.spinboxes import CoercingDoubleSpinBox
 from viperleed.gui.measure.widgets.spinboxes import CoercingSpinBox
@@ -224,14 +225,14 @@ class EnergyRampEditor(SettingsDialogSectionBase):
                           'control how the energy is ramped between steps.')
         super().__init__(**kwargs)
         self._step_profile = StepProfileViewer()
-        self._ramp_type = qtw.QComboBox()
+        self._ramp_type = InfoComboBox()
         self._energy_options = tuple()
         self._compose_and_connect()
         self._set_energy_ramp_options()
 
     def are_settings_ok(self):
         """Return whether the energy ramp is acceptable."""
-        ramp = self._ramp_type.currentData()
+        ramp = self._ramp_type.combo_box.currentData()
         try:
             return ramp.ramp_settings_ok(self._energy_options)
         except AttributeError:
@@ -245,13 +246,13 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         layout.addRow(label, self._ramp_type)
         meas_cls = self._settings["measurement_settings"]["measurement_class"]
         for ramp_cls in ALLOWED_ENERGY_RAMPS.get(meas_cls, ALL_ENERGY_RAMPS):
-            self._ramp_type.addItem(ramp_cls.__name__, userData=ramp_cls)
+            self._ramp_type.combo_box.addItem(ramp_cls.display_name, userData=ramp_cls)
         tip = '<nobr>How to move from </nobr>one energy to the next one.'
         label = InfoLabel(label_text='Step profile', tooltip=tip)
         layout.addRow(label, self._step_profile)
         self.central_widget.setLayout(layout)
-        self._ramp_type.currentIndexChanged.connect(self.settings_changed)
-        self._ramp_type.currentIndexChanged.connect(
+        self._ramp_type.combo_box.currentIndexChanged.connect(self.settings_changed)
+        self._ramp_type.combo_box.currentIndexChanged.connect(
             self._set_energy_ramp_options
             )
         self._step_profile.settings_changed.connect(self.settings_changed)
@@ -262,7 +263,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         """Add the widget of the selected energy ramp."""
         while self.central_widget.layout().rowCount() > 2:
             self.central_widget.layout().removeRow(2)
-        selected_ramp = self._ramp_type.currentData()
+        selected_ramp = self._ramp_type.combo_box.currentData()
         self._energy_options = selected_ramp.get_settings_widgets()
         if self._settings.has_option('energies', 'min_energy'):
             min_energy = self._settings.getfloat('energies', 'min_energy')
@@ -284,7 +285,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
     def _store_energy_ramp_settings(self):
         """Store the selected energy-ramp settings."""
         self._settings.set('energies', 'ramp_type',
-                           self._ramp_type.currentData().__name__)
+                   self._ramp_type.combo_box.currentData().__name__)
         self._settings.set('energies', 'step_profile',
                            self._step_profile.get_())
         for option in self._energy_options:
@@ -297,9 +298,14 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         # signals to avoid overwriting the partially loaded settings.
         with qtc.QSignalBlocker(self):
             ramp_type = self._settings['energies'].get('ramp_type', '')
-            index = self._ramp_type.findText(ramp_type)
+            index = -1
+            for i in range(self._ramp_type.combo_box.count()):
+                ramp_cls = self._ramp_type.combo_box.itemData(i)
+                if getattr(ramp_cls, '__name__', '') == ramp_type:
+                    index = i
+                    break
             if index != -1:
-                self._ramp_type.setCurrentIndex(index)
+                self._ramp_type.combo_box.setCurrentIndex(index)
             for option in self._energy_options:
                 value = self._settings['energies'].getfloat(option.option_name,
                                                             fallback=None)
