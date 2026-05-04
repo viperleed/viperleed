@@ -607,14 +607,9 @@ class SawtoothEnergyRamp(LinearEnergyRamp):
 
     def increment_energy(self):
         """Go to the next energy in the ramp."""
-        if self._delta_energy > 0:
-            if self.current_energy + self._delta_energy > self._end_energy:
-                self.current_energy = self.start_energy
-                return
-        if self._delta_energy < 0:
-            if self.current_energy + self._delta_energy < self._end_energy:
-                self.current_energy = self.start_energy
-                return
+        if super().ramp_finished():
+            self.current_energy = self.start_energy
+            return
         super().increment_energy()
 
     def ramp_finished(self):
