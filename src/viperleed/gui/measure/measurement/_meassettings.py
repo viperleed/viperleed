@@ -24,7 +24,7 @@ from viperleed.gui.measure.classes.energyramp import LINEAR
 from viperleed.gui.measure.classes.energyramp import START_E_NAME
 from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
-from viperleed.gui.measure.classes.energyramp import EndlessLinearEnergyRamp
+from viperleed.gui.measure.classes.energyramp import SawtoothEnergyRamp
 from viperleed.gui.measure.classes.settings import SystemSettings
 from viperleed.gui.measure.dialogs.settingsdialog import (
     SettingsDialogSectionBase,
@@ -47,7 +47,7 @@ MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
 N_COLUMNS = 2
 N_HEADER_ROWS = 2
-ALL_ENERGY_RAMPS = (LinearEnergyRamp, EndlessLinearEnergyRamp,
+ALL_ENERGY_RAMPS = (LinearEnergyRamp, SawtoothEnergyRamp,
                     ConstantEnergyRamp)
 ALLOWED_ENERGY_RAMPS = {
     'IVVideo': (LinearEnergyRamp,),

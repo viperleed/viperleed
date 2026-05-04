@@ -51,7 +51,7 @@ def get_matching_energy_ramp(settings):
     if constant_energy:
         return ConstantEnergyRamp
     if endless:
-        return EndlessLinearEnergyRamp
+        return SawtoothEnergyRamp
     return LinearEnergyRamp
 
 
@@ -593,10 +593,10 @@ class ConstantEnergyRamp(EnergyRampABC):
         return False  # A constant energy ramp is never finished.
 
 
-class EndlessLinearEnergyRamp(LinearEnergyRamp):
-    """Endless linear energy ramp."""
+class SawtoothEnergyRamp(LinearEnergyRamp):
+    """Sawtooth energy ramp."""
 
-    display_name = 'Endless linear energy ramp'
+    display_name = 'Sawtooth energy ramp'
     info_text = ('<nobr>Linearly increases or decreases the energy'
                  f'</nobr> until reaching the {END_E_NAME}. Energy resets '
                  f'to {START_E_NAME} when reaching the {END_E_NAME}.')

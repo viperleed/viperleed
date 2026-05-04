@@ -25,7 +25,7 @@ from viperleed.gui.measure.classes.energyramp import LINEAR
 from viperleed.gui.measure.classes.energyramp import MINIMUM_ENERGY
 from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
 from viperleed.gui.measure.classes.energyramp import EnergyRampABC
-from viperleed.gui.measure.classes.energyramp import EndlessLinearEnergyRamp
+from viperleed.gui.measure.classes.energyramp import SawtoothEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
 
 
@@ -61,10 +61,10 @@ def fixture_linear_ramp():
     return LinearEnergyRamp()
 
 
-@fixture(name='endless_ramp')
-def fixture_endless_ramp():
-    """Return a fresh EndlessLinearEnergyRamp instance."""
-    return EndlessLinearEnergyRamp()
+@fixture(name='sawtooth_ramp')
+def fixture_sawtooth_ramp():
+    """Return a fresh SawtoothEnergyRamp instance."""
+    return SawtoothEnergyRamp()
 
 
 @fixture(name='constant_ramp')
@@ -159,11 +159,11 @@ class TestReturnMatchingEnergyRamp:
         result = LinearEnergyRamp.get_matching_energy_ramp(settings)
         assert result is ConstantEnergyRamp
 
-    def test_returns_endless_ramp_when_endless_true(self):
-        """Check that endless=true yields EndlessLinearEnergyRamp."""
+    def test_returns_sawtooth_ramp_when_endless_true(self):
+        """Check that endless=true yields SawtoothEnergyRamp."""
         settings = _make_settings({'energies': {'endless': 'true'}})
         result = LinearEnergyRamp.get_matching_energy_ramp(settings)
-        assert result is EndlessLinearEnergyRamp
+        assert result is SawtoothEnergyRamp
 
     def test_constant_energy_takes_priority_over_endless(self):
         """Check that constant_energy=true takes precedence over endless."""
@@ -537,55 +537,55 @@ class TestLinearEnergyRampFinished:
         assert linear_ramp.n_steps == 0
 
 
-class TestEndlessLinearEnergyRampIncrementEnergy:
-    """Tests for EndlessLinearEnergyRamp.increment_energy."""
+class TestSawtoothEnergyRampIncrementEnergy:
+    """Tests for SawtoothEnergyRamp.increment_energy."""
 
-    def test_n_steps_is_zero(self, endless_ramp):
-        """Check endless-ramp n_steps value."""
-        assert endless_ramp.n_steps == 0
+    def test_n_steps_is_zero(self, sawtooth_ramp):
+        """Check sawtooth-ramp n_steps value."""
+        assert sawtooth_ramp.n_steps == 0
 
-    def test_wraps_to_start_on_positive_overflow(self, endless_ramp):
+    def test_wraps_to_start_on_positive_overflow(self, sawtooth_ramp):
         """Check that energy wraps to start when next step exceeds end."""
-        endless_ramp._start_energy = 10.0
-        endless_ramp._end_energy = 20.0
-        endless_ramp._delta_energy = 1.0
-        endless_ramp.current_energy = 20.0
-        endless_ramp.increment_energy()
-        assert endless_ramp.current_energy == 10.0
+        sawtooth_ramp._start_energy = 10.0
+        sawtooth_ramp._end_energy = 20.0
+        sawtooth_ramp._delta_energy = 1.0
+        sawtooth_ramp.current_energy = 20.0
+        sawtooth_ramp.increment_energy()
+        assert sawtooth_ramp.current_energy == 10.0
 
-    def test_wraps_to_start_on_negative_overflow(self, endless_ramp):
+    def test_wraps_to_start_on_negative_overflow(self, sawtooth_ramp):
         """Check that energy wraps to start when next step goes below end."""
-        endless_ramp._start_energy = 20.0
-        endless_ramp._end_energy = 10.0
-        endless_ramp._delta_energy = -1.0
-        endless_ramp.current_energy = 10.0
-        endless_ramp.increment_energy()
-        assert endless_ramp.current_energy == 20.0
+        sawtooth_ramp._start_energy = 20.0
+        sawtooth_ramp._end_energy = 10.0
+        sawtooth_ramp._delta_energy = -1.0
+        sawtooth_ramp.current_energy = 10.0
+        sawtooth_ramp.increment_energy()
+        assert sawtooth_ramp.current_energy == 20.0
 
-    def test_normal_increment_within_range_positive(self, endless_ramp):
+    def test_normal_increment_within_range_positive(self, sawtooth_ramp):
         """Check that energy is incremented normally within range."""
-        endless_ramp._start_energy = 10.0
-        endless_ramp._end_energy = 20.0
-        endless_ramp._delta_energy = 1.0
-        endless_ramp.current_energy = 15.0
-        endless_ramp.increment_energy()
-        assert endless_ramp.current_energy == 16.0
+        sawtooth_ramp._start_energy = 10.0
+        sawtooth_ramp._end_energy = 20.0
+        sawtooth_ramp._delta_energy = 1.0
+        sawtooth_ramp.current_energy = 15.0
+        sawtooth_ramp.increment_energy()
+        assert sawtooth_ramp.current_energy == 16.0
 
-    def test_normal_increment_within_range_negative(self, endless_ramp):
+    def test_normal_increment_within_range_negative(self, sawtooth_ramp):
         """Check that energy is decremented normally within range."""
-        endless_ramp._start_energy = 20.0
-        endless_ramp._end_energy = 10.0
-        endless_ramp._delta_energy = -1.0
-        endless_ramp.current_energy = 15.0
-        endless_ramp.increment_energy()
-        assert endless_ramp.current_energy == 14.0
+        sawtooth_ramp._start_energy = 20.0
+        sawtooth_ramp._end_energy = 10.0
+        sawtooth_ramp._delta_energy = -1.0
+        sawtooth_ramp.current_energy = 15.0
+        sawtooth_ramp.increment_energy()
+        assert sawtooth_ramp.current_energy == 14.0
 
-    def test_ramp_never_finished(self, endless_ramp):
-        """Check that an endless ramp is never considered finished."""
-        endless_ramp._delta_energy = 1.0
-        endless_ramp._end_energy = 20.0
-        endless_ramp.current_energy = 100.0
-        assert not endless_ramp.ramp_finished()
+    def test_ramp_never_finished(self, sawtooth_ramp):
+        """Check that a sawtooth ramp is never considered finished."""
+        sawtooth_ramp._delta_energy = 1.0
+        sawtooth_ramp._end_energy = 20.0
+        sawtooth_ramp.current_energy = 100.0
+        assert not sawtooth_ramp.ramp_finished()
 
 
 class TestConstantEnergyRamp:
