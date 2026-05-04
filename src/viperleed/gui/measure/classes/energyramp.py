@@ -501,12 +501,11 @@ class LinearEnergyRamp(EnergyRampABC):
 
     def ramp_finished(self):
         """Return whether the energy ramp has been finished."""
-        if self._delta_energy > 0:
-            if self.current_energy + self._delta_energy > self._end_energy:
-                return True
-        if self._delta_energy < 0:
-            if self.current_energy + self._delta_energy < self._end_energy:
-                return True
+        next_energy = self.current_energy + self._delta_energy
+        if self._delta_energy > 0 and next_energy > self._end_energy:
+            return True
+        if self._delta_energy < 0 and next_energy < self._end_energy:
+            return True
         return False
 
     def set_ramp(self, settings):
