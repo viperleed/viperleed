@@ -103,12 +103,12 @@ class MeasureEnergyCalibration(MeasurementABC):
                 )
             return False
 
-        if self._energy_ramp.energy_steps < 10:
+        if self._energy_ramp.n_steps < 10:
             # Require at least 10 data points for a decent fit
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTINGS,
                 'energies/start_energy, /end_energy, and /delta_energy',
-                f'\nToo few energies ({self._energy_ramp.energy_steps})'
+                f'\nToo few energies ({self._energy_ramp.n_steps})'
                 ' for a reasonable fit of the calibration curve. '
                 'Expected at least 10 energies.'
                 )

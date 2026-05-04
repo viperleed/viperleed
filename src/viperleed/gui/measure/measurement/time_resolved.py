@@ -90,7 +90,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
     def _n_digits(self):
         """Return the appropriate number of digits for padding image names."""
         # Used for zero-padding counter in image names.
-        num_meas = self._energy_ramp.energy_steps
+        num_meas = self._energy_ramp.n_steps
         if num_meas <= 0:
             return super()._n_digits
         num_meas *= ceil(self.energy_step_duration / self.measurement_interval)
@@ -261,9 +261,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         if self.is_continuous:
             self._prepare_continuous_mode()
-            self.data_points.nr_steps_total = max(
-                1, self._energy_ramp.energy_steps
-                )
+            self.data_points.nr_steps_total = max(1, self._energy_ramp.n_steps)
         else:
             # With the next connection, triggering the first
             # measurement at the current energy also starts

@@ -33,9 +33,9 @@ class _ConcreteEnergyRamp(EnergyRampABC):
     """Concrete implementation used to test EnergyRampABC defaults."""
 
     @property
-    def energy_steps(self):
+    def n_steps(self):
         """Return default energy steps from base class."""
-        return super().energy_steps
+        return super().n_steps
 
     @classmethod
     def get_settings_widgets(cls):
@@ -189,9 +189,9 @@ class TestReturnMatchingEnergyRamp:
 class TestEnergyRampABCDefaults:
     """Tests for default behavior implemented in EnergyRampABC."""
 
-    def test_default_energy_steps_returns_zero(self, concrete_ramp):
+    def test_default_n_steps_returns_zero(self, concrete_ramp):
         """Check that the default abstract implementation yields 0 steps."""
-        assert concrete_ramp.energy_steps == 0
+        assert concrete_ramp.n_steps == 0
 
     def test_default_ramp_settings_ok_returns_true(self):
         """Check that the default abstract implementation accepts settings."""
@@ -515,34 +515,34 @@ class TestLinearEnergyRampFinished:
         linear_ramp.current_energy = 5.0
         assert linear_ramp.ramp_finished()
 
-    def test_energy_steps_positive_delta(self, linear_ramp):
-        """Check energy_steps computed correctly for positive delta."""
+    def test_n_steps_positive_delta(self, linear_ramp):
+        """Check n_steps computed correctly for positive delta."""
         linear_ramp._start_energy = 10.0
         linear_ramp._end_energy = 20.0
         linear_ramp._delta_energy = 2.0
-        assert linear_ramp.energy_steps == 6  # 10, 12, 14, 16, 18, 20
+        assert linear_ramp.n_steps == 6  # 10, 12, 14, 16, 18, 20
 
-    def test_energy_steps_negative_delta(self, linear_ramp):
-        """Check energy_steps computed correctly for negative delta."""
+    def test_n_steps_negative_delta(self, linear_ramp):
+        """Check n_steps computed correctly for negative delta."""
         linear_ramp._start_energy = 20.0
         linear_ramp._end_energy = 10.0
         linear_ramp._delta_energy = -2.0
-        assert linear_ramp.energy_steps == 6  # 20, 18, 16, 14, 12, 10
+        assert linear_ramp.n_steps == 6  # 20, 18, 16, 14, 12, 10
 
-    def test_energy_steps_zero_delta(self, linear_ramp):
-        """Check energy_steps is 0 for 0.0 delta."""
+    def test_n_steps_zero_delta(self, linear_ramp):
+        """Check n_steps is 0 for 0.0 delta."""
         linear_ramp._start_energy = 10.0
         linear_ramp._end_energy = 20.0
         linear_ramp._delta_energy = 0.0
-        assert linear_ramp.energy_steps == 0
+        assert linear_ramp.n_steps == 0
 
 
 class TestEndlessLinearEnergyRampIncrementEnergy:
     """Tests for EndlessLinearEnergyRamp.increment_energy."""
 
-    def test_energy_steps_is_zero(self, endless_ramp):
-        """Check endless-ramp energy_steps value."""
-        assert endless_ramp.energy_steps == 0
+    def test_n_steps_is_zero(self, endless_ramp):
+        """Check endless-ramp n_steps value."""
+        assert endless_ramp.n_steps == 0
 
     def test_wraps_to_start_on_positive_overflow(self, endless_ramp):
         """Check that energy wraps to start when next step exceeds end."""
@@ -591,9 +591,9 @@ class TestEndlessLinearEnergyRampIncrementEnergy:
 class TestConstantEnergyRamp:
     """Tests for ConstantEnergyRamp."""
 
-    def test_energy_steps_is_zero(self, constant_ramp):
-        """Check constant-ramp energy_steps value."""
-        assert constant_ramp.energy_steps == 0
+    def test_n_steps_is_zero(self, constant_ramp):
+        """Check constant-ramp n_steps value."""
+        assert constant_ramp.n_steps == 0
 
     def test_ramp_never_finished(self, constant_ramp):
         """Check that a constant-energy ramp is never considered finished."""

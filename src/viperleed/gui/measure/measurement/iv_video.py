@@ -39,9 +39,9 @@ class IVVideo(MeasurementABC):
     def _n_digits(self):
         """Return the number of digits needed to represent each step."""
         # Used for zero-padding counter in image names.
-        energy_steps = self._energy_ramp.energy_steps
-        if energy_steps > 0:
-            return len(str(energy_steps))
+        n_steps = self._energy_ramp.n_steps
+        if n_steps > 0:
+            return len(str(n_steps))
         return super()._n_digits
 
     # We don't have anything to do in abort() that is not

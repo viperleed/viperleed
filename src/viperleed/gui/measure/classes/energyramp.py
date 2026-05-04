@@ -72,7 +72,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
 
     @property
     @abstractmethod
-    def energy_steps(self):
+    def n_steps(self):
         """Return the number of energy steps."""
         return 0
 
@@ -229,8 +229,10 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
                                         fallback=DEFAULT_START)
         except (TypeError, ValueError):
             # Not a float
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/start_energy', '')
+            self.emit_error(
+                QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'energies/start_energy', DEFAULT_START
+                )
             start_e = DEFAULT_START
         self._start_energy = max(self.min_energy, start_e)
         try:
@@ -423,7 +425,7 @@ class LinearEnergyRamp(EnergyRampABC):
         return abs(self._end_energy - self._start_energy)
 
     @property
-    def energy_steps(self):
+    def n_steps(self):
         """Return the number of energy steps."""
         if self._delta_energy == 0.0:
             return 0
@@ -565,7 +567,7 @@ class ConstantEnergyRamp(EnergyRampABC):
                  'at fixed energy.')
 
     @property
-    def energy_steps(self):
+    def n_steps(self):
         """Return the number of energy steps."""
         return 0
 
@@ -598,7 +600,7 @@ class EndlessLinearEnergyRamp(LinearEnergyRamp):
                  'to start when reaching the end.')
 
     @property
-    def energy_steps(self):
+    def n_steps(self):
         """Return the number of energy steps."""
         return 0
 
