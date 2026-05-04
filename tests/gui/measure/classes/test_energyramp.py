@@ -469,6 +469,7 @@ class TestLinearEnergyRampIncrement:
         assert linear_ramp.previous_energy == 10.0
         assert linear_ramp.current_energy == pytest.approx(11.5)
 
+
 # pylint: disable=protected-access
 class TestLinearEnergyRampFinished:
     """Tests for LinearEnergyRamp.ramp_finished."""
