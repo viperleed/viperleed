@@ -543,7 +543,7 @@ class LinearEnergyRamp(EnergyRampABC):
         if abs(self._delta_energy) < MINIMUM_DELTA:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'energies/delta_energy', f'{DELTA_E_NAME} was '
-                            'set to 0. Use constant energy mode instead.')
+                            'set to 0. Use constant-energy mode instead.')
         try:
             self._end_energy = settings.getfloat('energies', 'end_energy')
         except (TypeError, ValueError):
