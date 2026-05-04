@@ -126,10 +126,10 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
         The returned value excludes the very last step, i.e.,
         self.current_energy and the settling time for it.
         A typical call to set_leed_energy would be
-            self.set_leed_energy(*self._energy_ramp.step_profile,
-                                 self.current_energy,
-                                 last_settle_time,
-                                 ...)
+            measurement.set_leed_energy(*self._energy_ramp.step_profile,
+                                        self.current_energy,
+                                        last_settle_time,
+                                        ...)
 
         Returns
         -------
@@ -182,8 +182,9 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
 
         Parameters
         ----------
-        energy_options : tuple
-            The energy options to check.
+        energy_options : tuple of SettingsDialogOptions
+            The energy options to check. These are the widgets used to
+            set the ramp settings, as returned by get_settings_widgets.
 
         Returns
         -------
@@ -411,7 +412,7 @@ class LinearEnergyRamp(EnergyRampABC):
 
     display_name = 'Linear energy ramp'
     info_text = ('<nobr>Linearly increases or decreases the energy'
-                 '</nobr> until reaching the end energy.')
+                 f'</nobr> until reaching the {END_E_NAME}.')
 
     def __init__(self, *args, **kwargs):
         """Initialize LinearEnergyRamp."""
@@ -427,7 +428,7 @@ class LinearEnergyRamp(EnergyRampABC):
     @property
     def n_steps(self):
         """Return the number of energy steps."""
-        if self._delta_energy == 0.0:
+        if abs(self._delta_energy) < MINIMUM_DELTA:
             return 0
         return 1 + math.floor(self.energy_range/abs(self._delta_energy))
 
@@ -465,8 +466,9 @@ class LinearEnergyRamp(EnergyRampABC):
 
         Parameters
         ----------
-        energy_options : tuple
-            The energy options to check.
+        energy_options : tuple of SettingsDialogOptions
+            The energy options to check. These are the widgets used to
+            set the ramp settings, as returned by get_settings_widgets.
 
         Returns
         -------
@@ -482,15 +484,15 @@ class LinearEnergyRamp(EnergyRampABC):
         start_energy = energy_dict.get('start_energy', DEFAULT_START)
         delta_energy = energy_dict.get('delta_energy', DEFAULT_DELTA)
         end_energy = energy_dict.get('end_energy', DEFAULT_END)
-        if delta_energy == 0.0:
-            return False, ('Delta energy cannot be zero.'
+        if abs(delta_energy) < MINIMUM_DELTA:
+            return False, (f'{DELTA_E_NAME} cannot be zero.'
                            ' Use constant energy ramp.')
         if delta_energy > 0 and end_energy < start_energy:
-            return False, ('For positive delta energy, end energy '
-                           'should be greater than start energy.')
+            return False, (f'For positive {DELTA_E_NAME}, {END_E_NAME} '
+                           f'should be greater than {START_E_NAME}.')
         if delta_energy < 0 and end_energy > start_energy:
-            return False, ('For negative delta energy, end energy '
-                           'should be less than start energy.')
+            return False, (f'For negative {DELTA_E_NAME}, {END_E_NAME} '
+                           f'should be less than {START_E_NAME}.')
         return True, ''
 
     def increment_energy(self):
@@ -538,9 +540,9 @@ class LinearEnergyRamp(EnergyRampABC):
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'energies/delta_energy', DEFAULT_DELTA
                 )
-        if self._delta_energy == 0.0:
+        if abs(self._delta_energy) < MINIMUM_DELTA:
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/delta_energy', 'delta_energy was '
+                            'energies/delta_energy', f'{DELTA_E_NAME} was '
                             'set to 0. Use constant energy mode instead.')
         try:
             self._end_energy = settings.getfloat('energies', 'end_energy')
@@ -596,8 +598,8 @@ class EndlessLinearEnergyRamp(LinearEnergyRamp):
 
     display_name = 'Endless linear energy ramp'
     info_text = ('<nobr>Linearly increases or decreases the energy'
-                 '</nobr> until reaching the end energy. Energy resets '
-                 'to start when reaching the end.')
+                 f'</nobr> until reaching the {END_E_NAME}. Energy resets '
+                 f'to {START_E_NAME} when reaching the {END_E_NAME}.')
 
     @property
     def n_steps(self):
