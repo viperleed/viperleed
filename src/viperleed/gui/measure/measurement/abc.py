@@ -30,6 +30,7 @@ from viperleed.gui.measure.classes.abc import QObjectWithSettingsABC
 from viperleed.gui.measure.classes.datapoints import DataPoints
 from viperleed.gui.measure.classes.datapoints import QuantityInfo
 from viperleed.gui.measure.classes.energyramp import EnergyRampABC
+from viperleed.gui.measure.classes.energyramp import get_matching_energy_ramp
 from viperleed.gui.measure.classes.settings import NoSettingsError
 from viperleed.gui.measure.classes.settings import NotASequenceError
 from viperleed.gui.measure.classes.settings import SystemSettings
@@ -1478,7 +1479,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                             f'Invalid string {ramp_name}.')
             ramp_type = None
         if ramp_type is None:
-            ramp_type = EnergyRampABC.get_matching_energy_ramp(self.settings)
+            ramp_type = get_matching_energy_ramp(self.settings)
             self.settings.set('energies', 'ramp_type', str(ramp_type.__name__))
         self._energy_ramp = ramp_type()
         self._energy_ramp.error_occurred.connect(self.error_occurred)

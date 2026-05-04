@@ -37,6 +37,24 @@ MINIMUM_ENERGY = 0.0
 MINIMUM_DELTA = 1e-4
 
 
+def get_matching_energy_ramp(settings):
+    """Determine and return the type of energy ramp."""
+    try:
+        constant_energy = settings.getboolean('energies', 'constant_energy',
+                                              fallback=False)
+    except (TypeError, ValueError):
+        pass
+    try:
+        endless = settings.getboolean('energies', 'endless', fallback=False)
+    except (TypeError, ValueError):
+        pass
+    if constant_energy:
+        return ConstantEnergyRamp
+    if endless:
+        return EndlessLinearEnergyRamp
+    return LinearEnergyRamp
+
+
 class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      # TODO: Move profile settings over to controller settings.
     """Generic energy ramp class."""
 
@@ -127,27 +145,6 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      
         is_abrupt = shape.lower() == ABRUPT
         values = tuple() if is_abrupt else self._get_linear_step(*params)
         return values
-
-    @classmethod
-    def get_matching_energy_ramp(cls, settings):
-        """Determine and return the type of energy ramp."""
-        constant_energy = False
-        endless = False
-
-        try:
-            constant_energy = settings.getboolean('energies',
-                                                  'constant_energy')
-        except (TypeError, ValueError, NoSectionError, NoOptionError):
-            pass
-        try:
-            endless = settings.getboolean('energies', 'endless')
-        except (TypeError, ValueError, NoSectionError, NoOptionError):
-            pass
-        if constant_energy:
-            return ConstantEnergyRamp
-        if endless:
-            return EndlessLinearEnergyRamp
-        return LinearEnergyRamp
 
     @abstractmethod
     def increment_energy(self):
