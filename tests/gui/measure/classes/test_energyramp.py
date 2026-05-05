@@ -494,41 +494,31 @@ class TestSawtoothEnergyRampIncrementEnergy:
         """Check sawtooth-ramp n_steps value."""
         assert sawtooth_ramp.n_steps == 0
 
-    def test_wraps_to_start_on_positive_overflow(self, sawtooth_ramp):
-        """Check that energy wraps to start when next step exceeds end."""
-        settings = _make_settings(start_energy='10.0', end_energy='20.0',
-                                  delta_energy='1.0')
+    @parametrize('start, end, delta, current, expected',
+                 (('10.0', '20.0', '1.0', 20.0, 10.0),
+                  ('20.0', '10.0', '-1.0', 10.0, 20.0)))
+    def test_wraps_to_start_on_overflow(self, sawtooth_ramp, start, end,
+                                        delta, current, expected):
+        """Check that energy wraps to start when limit is exceeded."""
+        settings = _make_settings(start_energy=start, end_energy=end,
+                                  delta_energy=delta)
         sawtooth_ramp.set_ramp(settings)
-        sawtooth_ramp.current_energy = 20.0
+        sawtooth_ramp.current_energy = current
         sawtooth_ramp.increment_energy()
-        assert sawtooth_ramp.current_energy == 10.0
+        assert sawtooth_ramp.current_energy == expected
 
-    def test_wraps_to_start_on_negative_overflow(self, sawtooth_ramp):
-        """Check that energy wraps to start when next step goes below end."""
-        settings = _make_settings(start_energy='20.0', end_energy='10.0',
-                                  delta_energy='-1.0')
-        sawtooth_ramp.set_ramp(settings)
-        sawtooth_ramp.current_energy = 10.0
-        sawtooth_ramp.increment_energy()
-        assert sawtooth_ramp.current_energy == 20.0
-
-    def test_normal_increment_within_range_positive(self, sawtooth_ramp):
+    @parametrize('start, end, delta, current, expected',
+                 (('10.0', '20.0', '1.0', 15.0, 16.0),
+                  ('20.0', '10.0', '-1.0', 15.0, 14.0)))
+    def test_normal_increment_within_range(self, sawtooth_ramp, start, end,
+                                           delta, current, expected):
         """Check that energy is incremented normally within range."""
-        settings = _make_settings(start_energy='10.0', end_energy='20.0',
-                                  delta_energy='1.0')
+        settings = _make_settings(start_energy=start, end_energy=end,
+                                  delta_energy=delta)
         sawtooth_ramp.set_ramp(settings)
-        sawtooth_ramp.current_energy = 15.0
+        sawtooth_ramp.current_energy = current
         sawtooth_ramp.increment_energy()
-        assert sawtooth_ramp.current_energy == 16.0
-
-    def test_normal_increment_within_range_negative(self, sawtooth_ramp):
-        """Check that energy is decremented normally within range."""
-        settings = _make_settings(start_energy='20.0', end_energy='10.0',
-                                  delta_energy='-1.0')
-        sawtooth_ramp.set_ramp(settings)
-        sawtooth_ramp.current_energy = 15.0
-        sawtooth_ramp.increment_energy()
-        assert sawtooth_ramp.current_energy == 14.0
+        assert sawtooth_ramp.current_energy == expected
 
     def test_ramp_never_finished(self, sawtooth_ramp):
         """Check that a sawtooth ramp is never considered finished."""
@@ -569,29 +559,15 @@ class TestStepProfileParsing:
         linear_ramp._set_step_profile((LINEAR, '5', '100'))
         assert linear_ramp._step_profile == (LINEAR, '5', '100')
 
-    def test_linear_profile_too_few_params(self, linear_ramp):
-        """Check that too few params for LINEAR falls back to ABRUPT."""
-        linear_ramp._set_step_profile((LINEAR, '5'))
-        assert linear_ramp._step_profile == (ABRUPT,)
-
-    def test_linear_profile_too_many_params(self, linear_ramp):
-        """Check that too many params for LINEAR falls back to ABRUPT."""
-        linear_ramp._set_step_profile((LINEAR, '5', '100', '200'))
-        assert linear_ramp._step_profile == (ABRUPT,)
-
-    def test_linear_profile_non_integer_params(self, linear_ramp):
-        """Check that non-integer params for LINEAR falls back to ABRUPT."""
-        linear_ramp._set_step_profile((LINEAR, 'abc', 'xyz'))
-        assert linear_ramp._step_profile == (ABRUPT,)
-
-    def test_linear_profile_zero_n_steps(self, linear_ramp):
-        """Check that n_steps <= 0 for LINEAR falls back to ABRUPT."""
-        linear_ramp._set_step_profile((LINEAR, '0', '100'))
-        assert linear_ramp._step_profile == (ABRUPT,)
-
-    def test_linear_profile_negative_time(self, linear_ramp):
-        """Check that negative total_time for LINEAR falls back to ABRUPT."""
-        linear_ramp._set_step_profile((LINEAR, '5', '-10'))
+    @parametrize('profile', ((LINEAR, '5'),
+                             (LINEAR, '5', '100', '200'),
+                             (LINEAR, 'abc', 'xyz'),
+                             (LINEAR, '0', '100'),
+                             (LINEAR, '5', '-10')))
+    def test_linear_profile_invalid_falls_back_to_abrupt(self, linear_ramp,
+                                                         profile):
+        """Check that invalid LINEAR params fall back to ABRUPT."""
+        linear_ramp._set_step_profile(profile)
         assert linear_ramp._step_profile == (ABRUPT,)
 
     def test_custom_profile_valid(self, linear_ramp):
@@ -604,19 +580,13 @@ class TestStepProfileParsing:
         linear_ramp._set_step_profile(('0.3', '30', '0.7', '70'))
         assert linear_ramp._step_profile == ('0.3', '30', '0.7', '70')
 
-    def test_custom_profile_odd_length(self, linear_ramp):
-        """Check that an odd-length custom profile falls back to ABRUPT."""
-        linear_ramp._set_step_profile(('0.5', '50', '0.8'))
-        assert linear_ramp._step_profile == (ABRUPT,)
-
-    def test_custom_profile_negative_time(self, linear_ramp):
-        """Check that negative time in custom profile falls back to ABRUPT."""
-        linear_ramp._set_step_profile(('0.5', '-50'))
-        assert linear_ramp._step_profile == (ABRUPT,)
-
-    def test_unknown_profile_shape(self, linear_ramp):
-        """Check that an unknown profile shape falls back to ABRUPT."""
-        linear_ramp._set_step_profile(('UNKNOWN_SHAPE',))
+    @parametrize('profile', (('0.5', '50', '0.8'),
+                             ('0.5', '-50'),
+                             ('UNKNOWN_SHAPE',)))
+    def test_custom_profile_invalid_falls_back_to_abrupt(self, linear_ramp,
+                                                         profile):
+        """Check that invalid custom profiles fall back to ABRUPT."""
+        linear_ramp._set_step_profile(profile)
         assert linear_ramp._step_profile == (ABRUPT,)
 
     def test_custom_step_profile_from_strings(self, linear_ramp):
