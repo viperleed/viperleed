@@ -307,8 +307,7 @@ class TestStepProfileFallbackAndGeneration:
 
         assert linear_ramp.step_profile == ()
 
-    def test_step_profile_falls_back_to_linear_profile_generation(self,
-                                                                  linear_ramp):
+    def test_step_profile_returns_linear_profile(self, linear_ramp):
         """Check linear-step generation when profile shape is LINEAR."""
         linear_ramp._previous_energy = 0.0
         linear_ramp._current_energy = 10.0
@@ -318,13 +317,14 @@ class TestStepProfileFallbackAndGeneration:
             (1.0, 2, 3.0, 2, 5.0, 2, 7.0, 2, 9.0, 2)
             )
 
-    def test_get_linear_step_returns_empty_when_interval_is_zero(self,
-                                                                 linear_ramp):
-        """Check that no profile is generated when integer interval is zero."""
+    def test_get_linear_step_returns_empty_when_time_is_zero(self,
+                                                             linear_ramp):
+        """Check that 0 ms time intervals do not produce steps."""
         linear_ramp._previous_energy = 0.0
         linear_ramp._current_energy = 10.0
 
         assert linear_ramp._get_linear_step(20, 5) == ()
+        assert linear_ramp._step_profile == (ABRUPT,)
 
     def test_get_linear_step_returns_empty_for_tiny_energy_delta(self,
                                                                  linear_ramp):
@@ -333,6 +333,7 @@ class TestStepProfileFallbackAndGeneration:
         linear_ramp._current_energy = 1.0 + 1e-6
 
         assert linear_ramp._get_linear_step(2, 10) == ()
+        assert linear_ramp._step_profile == (ABRUPT,)
 
     def test_set_step_profile_rejects_non_sequence_profile(self, linear_ramp):
         """Check that non-sequence profiles are rejected as invalid."""
@@ -343,6 +344,8 @@ class TestStepProfileFallbackAndGeneration:
 class TestRampSettingsWidgetsAndValidation:
     """Tests for get_settings_widgets and ramp_settings_ok methods."""
 
+    # These are intentionally broken settings that we use to check that
+    # ramp_settings_ok correctly indentifies invalid configurations.
     _invalid_linear_settings = {
         'zero delta': (10.0, 0.0, 20.0, f'{DELTA_E_NAME} cannot be zero.'),
         'positive delta descending range': (
