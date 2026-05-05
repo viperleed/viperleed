@@ -12,7 +12,6 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
 
-import viperleed.gui.measure.classes.energyramp as energyramp_mod
 from viperleed.gui.measure.classes.energyramp import ABRUPT
 from viperleed.gui.measure.classes.energyramp import DEFAULT_DELTA
 from viperleed.gui.measure.classes.energyramp import DEFAULT_END
@@ -26,6 +25,10 @@ from viperleed.gui.measure.classes.energyramp import SawtoothEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
 from viperleed.gui.measure.classes.energyramp import get_matching_energy_ramp
 from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
+
+
+MODULE = 'viperleed.gui.measure.classes.energyramp'
+
 
 class _ConcreteEnergyRamp(EnergyRampABC):
     """Concrete implementation used to test EnergyRampABC defaults."""
@@ -364,11 +367,8 @@ class TestRampSettingsWidgetsAndValidation:
 
     def test_linear_settings_widgets_include_expected_options(self, mocker):
         """Check linear widget setup without creating real Qt widgets."""
-        mocker.patch.object(energyramp_mod, 'CoercingDoubleSpinBox',
-                            _FakeSpinBox)
-        mocker.patch.object(energyramp_mod, 'SettingsDialogOption',
-                            _FakeSettingsDialogOption)
-
+        mocker.patch(f'{MODULE}.CoercingDoubleSpinBox', _FakeSpinBox)
+        mocker.patch(f'{MODULE}.SettingsDialogOption', _FakeSettingsDialogOption)
         widgets = LinearEnergyRamp.get_settings_widgets()
 
         assert [option.option_name for option in widgets] == [
@@ -380,11 +380,8 @@ class TestRampSettingsWidgetsAndValidation:
 
     def test_constant_settings_widgets_include_start_only(self, mocker):
         """Check constant widget setup without creating real Qt widgets."""
-        mocker.patch.object(energyramp_mod, 'CoercingDoubleSpinBox',
-                            _FakeSpinBox)
-        mocker.patch.object(energyramp_mod, 'SettingsDialogOption',
-                            _FakeSettingsDialogOption)
-
+        mocker.patch(f'{MODULE}.CoercingDoubleSpinBox', _FakeSpinBox)
+        mocker.patch(f'{MODULE}.SettingsDialogOption', _FakeSettingsDialogOption)
         widgets = ConstantEnergyRamp.get_settings_widgets()
 
         assert [option.option_name for option in widgets] == ['start_energy']
