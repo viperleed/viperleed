@@ -27,6 +27,7 @@ from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
 from viperleed.gui.measure.classes.energyramp import EnergyRampABC
 from viperleed.gui.measure.classes.energyramp import SawtoothEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
+from viperleed.gui.measure.classes.energyramp import get_matching_energy_ramp
 
 
 class _ConcreteEnergyRamp(EnergyRampABC):
@@ -137,12 +138,12 @@ class _FakeSettingsDialogOption:
 
 
 class TestReturnMatchingEnergyRamp:
-    """Tests for EnergyRampABC.get_matching_energy_ramp."""
+    """Tests for get_matching_energy_ramp."""
 
     def test_returns_linear_ramp_by_default(self):
         """Check that an empty settings object yields LinearEnergyRamp."""
         settings = _make_settings({})
-        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
+        result = get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
     def test_returns_linear_ramp_when_constant_energy_and_endless_false(self):
@@ -150,19 +151,19 @@ class TestReturnMatchingEnergyRamp:
         settings = _make_settings(
             {'energies': {'constant_energy': 'false', 'endless': 'false'}}
             )
-        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
+        result = get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
     def test_returns_constant_ramp_when_constant_energy_true(self):
         """Check that constant_energy=true yields ConstantEnergyRamp."""
         settings = _make_settings({'energies': {'constant_energy': 'true'}})
-        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
+        result = get_matching_energy_ramp(settings)
         assert result is ConstantEnergyRamp
 
     def test_returns_sawtooth_ramp_when_endless_true(self):
         """Check that endless=true yields SawtoothEnergyRamp."""
         settings = _make_settings({'energies': {'endless': 'true'}})
-        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
+        result = get_matching_energy_ramp(settings)
         assert result is SawtoothEnergyRamp
 
     def test_constant_energy_takes_priority_over_endless(self):
@@ -170,7 +171,7 @@ class TestReturnMatchingEnergyRamp:
         settings = _make_settings(
             {'energies': {'constant_energy': 'true', 'endless': 'true'}}
             )
-        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
+        result = get_matching_energy_ramp(settings)
         assert result is ConstantEnergyRamp
 
     _invalid = {
@@ -182,7 +183,7 @@ class TestReturnMatchingEnergyRamp:
     def test_returns_linear_ramp_for_invalid_values(self, section):
         """Check that invalid boolean values fall back to LinearEnergyRamp."""
         settings = _make_settings({'energies': section})
-        result = LinearEnergyRamp.get_matching_energy_ramp(settings)
+        result = get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
 
