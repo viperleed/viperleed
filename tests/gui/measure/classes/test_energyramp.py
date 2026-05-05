@@ -21,6 +21,7 @@ from viperleed.gui.measure.classes.energyramp import ABRUPT
 from viperleed.gui.measure.classes.energyramp import DEFAULT_DELTA
 from viperleed.gui.measure.classes.energyramp import DEFAULT_END
 from viperleed.gui.measure.classes.energyramp import DEFAULT_START
+from viperleed.gui.measure.classes.energyramp import DELTA_E_NAME
 from viperleed.gui.measure.classes.energyramp import LINEAR
 from viperleed.gui.measure.classes.energyramp import MINIMUM_ENERGY
 from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
@@ -383,18 +384,18 @@ class TestRampSettingsWidgetsAndValidation:
     """Tests for get_settings_widgets and ramp_settings_ok methods."""
 
     _invalid_linear_settings = {
-        'zero delta': (10.0, 0.0, 20.0, 'Delta energy cannot be zero.'),
+        'zero delta': (10.0, 0.0, 20.0, f'{DELTA_E_NAME} cannot be zero.'),
         'positive delta descending range': (
             10.0,
             1.0,
             9.0,
-            'For positive delta energy',
+            f'For positive {DELTA_E_NAME}',
             ),
         'negative delta ascending range': (
             10.0,
             -1.0,
             11.0,
-            'For negative delta energy',
+            f'For negative {DELTA_E_NAME}',
             ),
         }
 
