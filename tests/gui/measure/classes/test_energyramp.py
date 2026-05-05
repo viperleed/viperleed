@@ -8,10 +8,6 @@ __copyright__ = 'Copyright (c) 2019-2026 ViPErLEED developers'
 __created__ = '2026-03-17'
 __license__ = 'GPLv3+'
 
-from configparser import ConfigParser
-from configparser import NoOptionError
-from configparser import NoSectionError
-
 import pytest
 from pytest_cases import fixture
 from pytest_cases import parametrize
@@ -29,7 +25,7 @@ from viperleed.gui.measure.classes.energyramp import EnergyRampABC
 from viperleed.gui.measure.classes.energyramp import SawtoothEnergyRamp
 from viperleed.gui.measure.classes.energyramp import LinearEnergyRamp
 from viperleed.gui.measure.classes.energyramp import get_matching_energy_ramp
-
+from viperleed.gui.measure.classes.settings import ViPErLEEDSettings
 
 class _ConcreteEnergyRamp(EnergyRampABC):
     """Concrete implementation used to test EnergyRampABC defaults."""
@@ -81,30 +77,12 @@ def fixture_concrete_ramp():
     return _ConcreteEnergyRamp()
 
 
-def _make_settings(section_dict):
-    """Return a ConfigParser populated from a dictionary."""
-    cfg = ConfigParser()
-    cfg.read_dict(section_dict)
-    return cfg
-
-
-class _FakeRampSettings:
-    """Minimal settings stub for exercising set_ramp branches."""
-
-    def __init__(self, *, float_values=None, sequence=(ABRUPT,)):
-        self._float_values = dict(float_values or {})
-        self._sequence = sequence
-
-    def getfloat(self, section, option, fallback=None):
-        """Return configured float values or a fallback."""
-        value = self._float_values.get((section, option), fallback)
-        if isinstance(value, Exception):
-            raise value
-        return value
-
-    def getsequence(self, section, option, fallback=None):
-        """Return the configured sequence or a fallback."""
-        return self._sequence
+def _make_settings(**kwargs):
+    """Return a ViPErLEEDSettings."""
+    settings_dict = {'energies': kwargs} if kwargs else {}
+    settings = ViPErLEEDSettings()
+    settings.read_dict(settings_dict)
+    return settings
 
 
 class _FakeOption:
@@ -143,35 +121,31 @@ class TestReturnMatchingEnergyRamp:
 
     def test_returns_linear_ramp_by_default(self):
         """Check that an empty settings object yields LinearEnergyRamp."""
-        settings = _make_settings({})
+        settings = _make_settings()
         result = get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
     def test_returns_linear_ramp_when_constant_energy_and_endless_false(self):
         """Check that constant_energy/endless=false yield LinearEnergyRamp."""
-        settings = _make_settings(
-            {'energies': {'constant_energy': 'false', 'endless': 'false'}}
-            )
+        settings = _make_settings(constant_energy='false', endless='false')
         result = get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
     def test_returns_constant_ramp_when_constant_energy_true(self):
         """Check that constant_energy=true yields ConstantEnergyRamp."""
-        settings = _make_settings({'energies': {'constant_energy': 'true'}})
+        settings = _make_settings(constant_energy='true')
         result = get_matching_energy_ramp(settings)
         assert result is ConstantEnergyRamp
 
     def test_returns_sawtooth_ramp_when_endless_true(self):
         """Check that endless=true yields SawtoothEnergyRamp."""
-        settings = _make_settings({'energies': {'endless': 'true'}})
+        settings = _make_settings(endless='true')
         result = get_matching_energy_ramp(settings)
         assert result is SawtoothEnergyRamp
 
     def test_constant_energy_takes_priority_over_endless(self):
         """Check that constant_energy=true takes precedence over endless."""
-        settings = _make_settings(
-            {'energies': {'constant_energy': 'true', 'endless': 'true'}}
-            )
+        settings = _make_settings(constant_energy='true', endless='true')
         result = get_matching_energy_ramp(settings)
         assert result is ConstantEnergyRamp
 
@@ -183,7 +157,7 @@ class TestReturnMatchingEnergyRamp:
     @parametrize('section', _invalid.values(), ids=_invalid)
     def test_returns_linear_ramp_for_invalid_values(self, section):
         """Check that invalid boolean values fall back to LinearEnergyRamp."""
-        settings = _make_settings({'energies': section})
+        settings = _make_settings(**section)
         result = get_matching_energy_ramp(settings)
         assert result is LinearEnergyRamp
 
@@ -233,14 +207,12 @@ class TestLinearEnergyRampSetRamp:
 
     def test_set_ramp_clamps_start_energy_to_minimum(self, linear_ramp):
         """Check that start_energy is never set below min_energy."""
-        settings = _FakeRampSettings(
-            float_values={
-                ('energies', 'min_energy'): 5.0,
-                ('energies', 'start_energy'): 2.0,
-                ('energies', 'delta_energy'): 0.5,
-                ('energies', 'end_energy'): 10.0,
-            },
-            sequence=ABRUPT,
+        settings = _make_settings(
+            min_energy='5.0',
+            start_energy='2.0',
+            delta_energy='0.5',
+            end_energy='10.0',
+            step_profile='abrupt',
         )
 
         linear_ramp.set_ramp(settings)
@@ -251,14 +223,12 @@ class TestLinearEnergyRampSetRamp:
 
     def test_set_ramp_converts_string_profile_to_tuple(self, linear_ramp):
         """Check that string profiles are converted to one-element tuples."""
-        settings = _FakeRampSettings(
-            float_values={
-                ('energies', 'min_energy'): 0.0,
-                ('energies', 'start_energy'): 1.0,
-                ('energies', 'delta_energy'): 1.0,
-                ('energies', 'end_energy'): 5.0,
-            },
-            sequence=ABRUPT,
+        settings = _make_settings(
+            min_energy='0.0',
+            start_energy='1.0',
+            delta_energy='1.0',
+            end_energy='5.0',
+            step_profile='abrupt',
         )
 
         linear_ramp.set_ramp(settings)
@@ -268,14 +238,12 @@ class TestLinearEnergyRampSetRamp:
     def test_set_ramp_handles_invalid_minimum_and_start_values(self,
                                                                linear_ramp):
         """Check fallback values when min/start energies are malformed."""
-        settings = _FakeRampSettings(
-            float_values={
-                ('energies', 'min_energy'): ValueError('bad min'),
-                ('energies', 'start_energy'): TypeError('bad start'),
-                ('energies', 'delta_energy'): 1.0,
-                ('energies', 'end_energy'): 5.0,
-            },
-            sequence=(ABRUPT,),
+        settings = _make_settings(
+            min_energy='bad min',
+            start_energy='bad start',
+            delta_energy='1.0',
+            end_energy='5.0',
+            step_profile='abrupt',
         )
 
         linear_ramp.set_ramp(settings)
@@ -285,14 +253,12 @@ class TestLinearEnergyRampSetRamp:
 
     def test_set_ramp_handles_invalid_delta_and_end_values(self, linear_ramp):
         """Check fallback values when delta/end energies are malformed."""
-        settings = _FakeRampSettings(
-            float_values={
-                ('energies', 'min_energy'): 0.0,
-                ('energies', 'start_energy'): 1.0,
-                ('energies', 'delta_energy'): ValueError('bad delta'),
-                ('energies', 'end_energy'): TypeError('bad end'),
-            },
-            sequence=(ABRUPT,),
+        settings = _make_settings(
+            min_energy='0.0',
+            start_energy='1.0',
+            delta_energy='bad delta',
+            end_energy='bad end',
+            step_profile='abrupt',
         )
 
         linear_ramp.set_ramp(settings)
@@ -302,15 +268,10 @@ class TestLinearEnergyRampSetRamp:
 
     def test_set_ramp_handles_missing_delta_and_end(self, linear_ramp):
         """Check fallback values when delta/end options are missing."""
-        settings = _FakeRampSettings(
-            float_values={
-                ('energies', 'min_energy'): 0.0,
-                ('energies', 'start_energy'): 1.0,
-                ('energies', 'delta_energy'): NoOptionError('delta_energy',
-                                                            'energies'),
-                ('energies', 'end_energy'): NoSectionError('energies'),
-            },
-            sequence=(ABRUPT,),
+        settings = _make_settings(
+            min_energy='0.0',
+            start_energy='1.0',
+            step_profile='abrupt',
         )
 
         linear_ramp.set_ramp(settings)
@@ -320,14 +281,12 @@ class TestLinearEnergyRampSetRamp:
 
     def test_set_ramp_preserves_zero_delta(self, linear_ramp):
         """Check that a configured zero delta is kept by set_ramp."""
-        settings = _FakeRampSettings(
-            float_values={
-                ('energies', 'min_energy'): 0.0,
-                ('energies', 'start_energy'): 0.0,
-                ('energies', 'delta_energy'): 0.0,
-                ('energies', 'end_energy'): 5.0,
-            },
-            sequence=(ABRUPT,),
+        settings = _make_settings(
+            min_energy='0.0',
+            start_energy='0.0',
+            delta_energy='0.0',
+            end_energy='5.0',
+            step_profile='abrupt',
         )
 
         linear_ramp.set_ramp(settings)
