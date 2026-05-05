@@ -39,6 +39,8 @@ MINIMUM_DELTA = 1e-4
 
 def get_matching_energy_ramp(settings):
     """Determine and return the type of energy ramp."""
+    constant_energy = False
+    endless = False
     try:
         constant_energy = settings.getboolean('energies', 'constant_energy',
                                               fallback=False)
