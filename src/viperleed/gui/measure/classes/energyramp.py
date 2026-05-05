@@ -13,7 +13,6 @@ __created__ = '2026-02-27'
 __license__ = 'GPLv3+'
 
 from abc import abstractmethod
-from configparser import NoSectionError, NoOptionError
 import math
 
 from viperleed.gui.measure.classes.abc import QMetaABC
@@ -528,15 +527,10 @@ class LinearEnergyRamp(EnergyRampABC):
             self._end_energy = DEFAULT_END                                      # TODO: iv/time: fallback = 0.0, ecal: fallback = 1000
             return
         try:
-            self._delta_energy = settings.getfloat('energies', 'delta_energy')
+            self._delta_energy = settings.getfloat('energies', 'delta_energy',
+                                                   fallback=DEFAULT_DELTA)
         except (TypeError, ValueError):
             # Not a float
-            self._delta_energy = DEFAULT_DELTA
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/delta_energy', '')
-        except (NoSectionError, NoOptionError):
-            # Not present
-            self._delta_energy = DEFAULT_DELTA
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'energies/delta_energy', DEFAULT_DELTA
@@ -546,15 +540,10 @@ class LinearEnergyRamp(EnergyRampABC):
                             'energies/delta_energy', f'{DELTA_E_NAME} was '
                             'set to 0. Use constant-energy mode instead.')
         try:
-            self._end_energy = settings.getfloat('energies', 'end_energy')
+            self._end_energy = settings.getfloat('energies', 'end_energy',
+                                                 fallback=DEFAULT_END)
         except (TypeError, ValueError):
             # Not a float
-            self._end_energy = DEFAULT_END
-            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'energies/end_energy', '')
-        except (NoSectionError, NoOptionError):
-            # Not present
-            self._end_energy = DEFAULT_END
             self.emit_error(
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'energies/end_energy', DEFAULT_END
