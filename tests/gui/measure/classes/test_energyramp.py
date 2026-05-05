@@ -92,6 +92,7 @@ class _FakeOption:
     """Minimal option stub for ramp_settings_ok tests."""
 
     def __init__(self, option_name, value):
+        """Initialize name and value of fake option."""
         self.option_name = option_name
         self._value = value
 
@@ -104,6 +105,7 @@ class _FakeSpinBox:
     """Small spin-box stub used to avoid QWidget creation in tests."""
 
     def __init__(self, *_, **__):
+        """Initialize fake spin box."""
         self.single_step = None
 
     def setSingleStep(self, value):
@@ -115,6 +117,7 @@ class _FakeSettingsDialogOption:
     """Small settings option stub used in widget-construction tests."""
 
     def __init__(self, option_name, handler_widget, *_args, **_kwargs):
+        """Initialize fake settings dialog option."""
         self.option_name = option_name
         self.handler_widget = handler_widget
 
@@ -368,7 +371,8 @@ class TestRampSettingsWidgetsAndValidation:
     def test_linear_settings_widgets_include_expected_options(self, mocker):
         """Check linear widget setup without creating real Qt widgets."""
         mocker.patch(f'{MODULE}.CoercingDoubleSpinBox', _FakeSpinBox)
-        mocker.patch(f'{MODULE}.SettingsDialogOption', _FakeSettingsDialogOption)
+        mocker.patch(f'{MODULE}.SettingsDialogOption',
+                     _FakeSettingsDialogOption)
         widgets = LinearEnergyRamp.get_settings_widgets()
 
         assert [option.option_name for option in widgets] == [
@@ -381,7 +385,8 @@ class TestRampSettingsWidgetsAndValidation:
     def test_constant_settings_widgets_include_start_only(self, mocker):
         """Check constant widget setup without creating real Qt widgets."""
         mocker.patch(f'{MODULE}.CoercingDoubleSpinBox', _FakeSpinBox)
-        mocker.patch(f'{MODULE}.SettingsDialogOption', _FakeSettingsDialogOption)
+        mocker.patch(f'{MODULE}.SettingsDialogOption',
+                     _FakeSettingsDialogOption)
         widgets = ConstantEnergyRamp.get_settings_widgets()
 
         assert [option.option_name for option in widgets] == ['start_energy']
@@ -432,51 +437,8 @@ class TestLinearEnergyRampIncrement:
         assert linear_ramp.current_energy == pytest.approx(11.5)
 
 
-# pylint: disable=protected-access
 class TestLinearEnergyRampFinished:
     """Tests for LinearEnergyRamp.ramp_finished."""
-
-    def test_not_finished_positive_delta_within_range(self, linear_ramp):
-        """Check ramp not finished when next step is within range."""
-        linear_ramp._delta_energy = 1.0
-        linear_ramp._end_energy = 20.0
-        linear_ramp.current_energy = 19.0
-        assert not linear_ramp.ramp_finished()
-
-    def test_finished_positive_delta_at_end(self, linear_ramp):
-        """Check ramp finished when next step would exceed end energy."""
-        linear_ramp._delta_energy = 1.0
-        linear_ramp._end_energy = 20.0
-        linear_ramp.current_energy = 20.0
-        assert linear_ramp.ramp_finished()
-
-    def test_finished_positive_delta_beyond_end(self, linear_ramp):
-        """Check ramp finished when current energy is already past end."""
-        linear_ramp._delta_energy = 1.0
-        linear_ramp._end_energy = 20.0
-        linear_ramp.current_energy = 25.0
-        assert linear_ramp.ramp_finished()
-
-    def test_not_finished_negative_delta_within_range(self, linear_ramp):
-        """Check ramp not finished when next step is within range."""
-        linear_ramp._delta_energy = -1.0
-        linear_ramp._end_energy = 10.0
-        linear_ramp.current_energy = 11.0
-        assert not linear_ramp.ramp_finished()
-
-    def test_finished_negative_delta_at_end(self, linear_ramp):
-        """Check ramp finished when next step would go below end energy."""
-        linear_ramp._delta_energy = -1.0
-        linear_ramp._end_energy = 10.0
-        linear_ramp.current_energy = 10.0
-        assert linear_ramp.ramp_finished()
-
-    def test_finished_negative_delta_beyond_end(self, linear_ramp):
-        """Check ramp finished when current energy is already below end."""
-        linear_ramp._delta_energy = -1.0
-        linear_ramp._end_energy = 10.0
-        linear_ramp.current_energy = 5.0
-        assert linear_ramp.ramp_finished()
 
     def test_n_steps_positive_delta(self, linear_ramp):
         """Check n_steps computed correctly for positive delta."""
@@ -498,6 +460,26 @@ class TestLinearEnergyRampFinished:
         linear_ramp._end_energy = 20.0
         linear_ramp._delta_energy = 0.0
         assert linear_ramp.n_steps == 0
+
+    @parametrize('delta, end, current', ((1.0, 20.0, 20.0),
+                                         (1.0, 20.0, 25.0),
+                                         (-1.0, 10.0, 10.0),
+                                         (-1.0, 10.0, 5.0)))
+    def test_ramp_finished(self, linear_ramp, delta, end, current):
+        """Check ramp correctly identifies when it is finished."""
+        linear_ramp._delta_energy = delta
+        linear_ramp._end_energy = end
+        linear_ramp.current_energy = current
+        assert linear_ramp.ramp_finished()
+
+    @parametrize('delta, end, current', ((1.0, 20.0, 19.0),
+                                         (-1.0, 10.0, 11.0)))
+    def test_ramp_not_finished(self, linear_ramp, delta, end, current):
+        """Check ramp not finished when next step is within range."""
+        linear_ramp._delta_energy = delta
+        linear_ramp._end_energy = end
+        linear_ramp.current_energy = current
+        assert not linear_ramp.ramp_finished()
 
 
 class TestSawtoothEnergyRampIncrementEnergy:
