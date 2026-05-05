@@ -56,7 +56,7 @@ def get_matching_energy_ramp(settings):
     return LinearEnergyRamp
 
 
-class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):                      # TODO: Move profile settings over to controller settings.
+class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
     """Generic energy ramp class."""
 
     display_name = None
