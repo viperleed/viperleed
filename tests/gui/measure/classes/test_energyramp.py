@@ -168,6 +168,8 @@ class TestReturnMatchingEnergyRamp:
         assert result is LinearEnergyRamp
 
 
+# pylint: disable=protected-access
+# pylint: disable=magic-value-comparison
 class TestEnergyRampABCDefaults:
     """Tests for default behavior implemented in EnergyRampABC."""
 
@@ -307,17 +309,19 @@ class TestStepProfileFallbackAndGeneration:
 
     def test_step_profile_falls_back_to_abrupt(self, linear_ramp):
         """Check ABRUPT fallback branch when parsing as fractions fails."""
-        linear_ramp._previous_energy = 3.0
-        linear_ramp._current_energy = 6.0
-        linear_ramp._step_profile = (ABRUPT,)
+        settings = _make_settings(step_profile='abrupt')
+        linear_ramp.set_ramp(settings)
+        linear_ramp.current_energy = 3.0
+        linear_ramp.current_energy = 6.0
 
         assert linear_ramp.step_profile == ()
 
     def test_step_profile_returns_linear_profile(self, linear_ramp):
         """Check linear-step generation when profile shape is LINEAR."""
-        linear_ramp._previous_energy = 0.0
-        linear_ramp._current_energy = 10.0
-        linear_ramp._step_profile = (LINEAR, '5', '10')
+        settings = _make_settings(step_profile=['linear', '5', '10'])
+        linear_ramp.set_ramp(settings)
+        linear_ramp.current_energy = 0.0
+        linear_ramp.current_energy = 10.0
 
         assert linear_ramp.step_profile == pytest.approx(
             (1.0, 2, 3.0, 2, 5.0, 2, 7.0, 2, 9.0, 2)
@@ -326,8 +330,8 @@ class TestStepProfileFallbackAndGeneration:
     def test_get_linear_step_returns_empty_when_time_is_zero(self,
                                                              linear_ramp):
         """Check that 0 ms time intervals do not produce steps."""
-        linear_ramp._previous_energy = 0.0
-        linear_ramp._current_energy = 10.0
+        linear_ramp.current_energy = 0.0
+        linear_ramp.current_energy = 10.0
 
         assert linear_ramp._get_linear_step(20, 5) == ()
         assert linear_ramp._step_profile == (ABRUPT,)
@@ -335,8 +339,8 @@ class TestStepProfileFallbackAndGeneration:
     def test_get_linear_step_returns_empty_for_tiny_energy_delta(self,
                                                                  linear_ramp):
         """Check that tiny energy changes do not produce steps."""
-        linear_ramp._previous_energy = 1.0
-        linear_ramp._current_energy = 1.0 + 1e-6
+        linear_ramp.current_energy = 1.0
+        linear_ramp.current_energy = 1.0 + 1e-6
 
         assert linear_ramp._get_linear_step(2, 10) == ()
         assert linear_ramp._step_profile == (ABRUPT,)
@@ -428,8 +432,9 @@ class TestLinearEnergyRampIncrement:
 
     def test_increment_energy_updates_current_and_previous(self, linear_ramp):
         """Check that incrementing updates both current and previous values."""
+        settings = _make_settings(delta_energy='1.5')
+        linear_ramp.set_ramp(settings)
         linear_ramp.current_energy = 10.0
-        linear_ramp._delta_energy = 1.5
 
         linear_ramp.increment_energy()
 
@@ -442,23 +447,23 @@ class TestLinearEnergyRampFinished:
 
     def test_n_steps_positive_delta(self, linear_ramp):
         """Check n_steps computed correctly for positive delta."""
-        linear_ramp._start_energy = 10.0
-        linear_ramp._end_energy = 20.0
-        linear_ramp._delta_energy = 2.0
+        settings = _make_settings(start_energy='10.0', end_energy='20.0',
+                                  delta_energy='2.0')
+        linear_ramp.set_ramp(settings)
         assert linear_ramp.n_steps == 6  # 10, 12, 14, 16, 18, 20
 
     def test_n_steps_negative_delta(self, linear_ramp):
         """Check n_steps computed correctly for negative delta."""
-        linear_ramp._start_energy = 20.0
-        linear_ramp._end_energy = 10.0
-        linear_ramp._delta_energy = -2.0
+        settings = _make_settings(start_energy='20.0', end_energy='10.0',
+                                  delta_energy='-2.0')
+        linear_ramp.set_ramp(settings)
         assert linear_ramp.n_steps == 6  # 20, 18, 16, 14, 12, 10
 
     def test_n_steps_zero_delta(self, linear_ramp):
         """Check n_steps is 0 for 0.0 delta."""
-        linear_ramp._start_energy = 10.0
-        linear_ramp._end_energy = 20.0
-        linear_ramp._delta_energy = 0.0
+        settings = _make_settings(start_energy='10.0', end_energy='20.0',
+                                  delta_energy='0.0')
+        linear_ramp.set_ramp(settings)
         assert linear_ramp.n_steps == 0
 
     @parametrize('delta, end, current', ((1.0, 20.0, 20.0),
@@ -467,8 +472,8 @@ class TestLinearEnergyRampFinished:
                                          (-1.0, 10.0, 5.0)))
     def test_ramp_finished(self, linear_ramp, delta, end, current):
         """Check ramp correctly identifies when it is finished."""
-        linear_ramp._delta_energy = delta
-        linear_ramp._end_energy = end
+        settings = _make_settings(end_energy=str(end), delta_energy=str(delta))
+        linear_ramp.set_ramp(settings)
         linear_ramp.current_energy = current
         assert linear_ramp.ramp_finished()
 
@@ -476,8 +481,8 @@ class TestLinearEnergyRampFinished:
                                          (-1.0, 10.0, 11.0)))
     def test_ramp_not_finished(self, linear_ramp, delta, end, current):
         """Check ramp not finished when next step is within range."""
-        linear_ramp._delta_energy = delta
-        linear_ramp._end_energy = end
+        settings = _make_settings(end_energy=str(end), delta_energy=str(delta))
+        linear_ramp.set_ramp(settings)
         linear_ramp.current_energy = current
         assert not linear_ramp.ramp_finished()
 
@@ -491,44 +496,44 @@ class TestSawtoothEnergyRampIncrementEnergy:
 
     def test_wraps_to_start_on_positive_overflow(self, sawtooth_ramp):
         """Check that energy wraps to start when next step exceeds end."""
-        sawtooth_ramp._start_energy = 10.0
-        sawtooth_ramp._end_energy = 20.0
-        sawtooth_ramp._delta_energy = 1.0
+        settings = _make_settings(start_energy='10.0', end_energy='20.0',
+                                  delta_energy='1.0')
+        sawtooth_ramp.set_ramp(settings)
         sawtooth_ramp.current_energy = 20.0
         sawtooth_ramp.increment_energy()
         assert sawtooth_ramp.current_energy == 10.0
 
     def test_wraps_to_start_on_negative_overflow(self, sawtooth_ramp):
         """Check that energy wraps to start when next step goes below end."""
-        sawtooth_ramp._start_energy = 20.0
-        sawtooth_ramp._end_energy = 10.0
-        sawtooth_ramp._delta_energy = -1.0
+        settings = _make_settings(start_energy='20.0', end_energy='10.0',
+                                  delta_energy='-1.0')
+        sawtooth_ramp.set_ramp(settings)
         sawtooth_ramp.current_energy = 10.0
         sawtooth_ramp.increment_energy()
         assert sawtooth_ramp.current_energy == 20.0
 
     def test_normal_increment_within_range_positive(self, sawtooth_ramp):
         """Check that energy is incremented normally within range."""
-        sawtooth_ramp._start_energy = 10.0
-        sawtooth_ramp._end_energy = 20.0
-        sawtooth_ramp._delta_energy = 1.0
+        settings = _make_settings(start_energy='10.0', end_energy='20.0',
+                                  delta_energy='1.0')
+        sawtooth_ramp.set_ramp(settings)
         sawtooth_ramp.current_energy = 15.0
         sawtooth_ramp.increment_energy()
         assert sawtooth_ramp.current_energy == 16.0
 
     def test_normal_increment_within_range_negative(self, sawtooth_ramp):
         """Check that energy is decremented normally within range."""
-        sawtooth_ramp._start_energy = 20.0
-        sawtooth_ramp._end_energy = 10.0
-        sawtooth_ramp._delta_energy = -1.0
+        settings = _make_settings(start_energy='20.0', end_energy='10.0',
+                                  delta_energy='-1.0')
+        sawtooth_ramp.set_ramp(settings)
         sawtooth_ramp.current_energy = 15.0
         sawtooth_ramp.increment_energy()
         assert sawtooth_ramp.current_energy == 14.0
 
     def test_ramp_never_finished(self, sawtooth_ramp):
         """Check that a sawtooth ramp is never considered finished."""
-        sawtooth_ramp._delta_energy = 1.0
-        sawtooth_ramp._end_energy = 20.0
+        settings = _make_settings(end_energy='20.0', delta_energy='1.0')
+        sawtooth_ramp.set_ramp(settings)
         sawtooth_ramp.current_energy = 100.0
         assert not sawtooth_ramp.ramp_finished()
 
@@ -616,17 +621,19 @@ class TestStepProfileParsing:
 
     def test_custom_step_profile_from_strings(self, linear_ramp):
         """Check step_profile property from a numeric custom profile."""
-        linear_ramp._step_profile = ('0.5', '50')
+        settings = _make_settings(step_profile=['0.5', '50'])
+        linear_ramp.set_ramp(settings)
         # delta = current - previous: set previous to 80, current to 100
-        linear_ramp._previous_energy = 80.0
-        linear_ramp._current_energy = 100.0
+        linear_ramp.current_energy = 80.0
+        linear_ramp.current_energy = 100.0
         # fraction=0.5 → (0.5 - 1) * 20 + 100 = 90.0, time=50
         result = linear_ramp.step_profile
         assert result == (pytest.approx(90.0), 50)
 
     def test_custom_step_profile_from_strings_no_delta(self, linear_ramp):
         """Check step_profile returns empty tuple when there is no delta."""
-        linear_ramp._step_profile = ('0.5', '50')
-        linear_ramp._previous_energy = 100.0
-        linear_ramp._current_energy = 100.0
+        settings = _make_settings(step_profile=['0.5', '50'])
+        linear_ramp.set_ramp(settings)
+        linear_ramp.current_energy = 100.0
+        linear_ramp.current_energy = 100.0
         assert linear_ramp.step_profile == ()
