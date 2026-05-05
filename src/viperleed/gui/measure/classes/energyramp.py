@@ -456,8 +456,7 @@ class LinearEnergyRamp(EnergyRampABC):
                                      tags=SettingsTag.REGULAR)
         end_widget = CoercingDoubleSpinBox(decimals=1, soft_range=(0, 1000),
                                            suffix=' eV')
-        tip = ('<nobr>The energy value at which </nobr>'
-               'the measurement will finish.')
+        tip = '<nobr>The energy at which the measurement ends.</nobr>'
         end = SettingsDialogOption('end_energy', end_widget, tooltip=tip,
                                    display_name=END_E_NAME,
                                    tags=SettingsTag.REGULAR)

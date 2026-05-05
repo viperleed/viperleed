@@ -20,6 +20,7 @@ from PyQt5 import QtWidgets as qtw
 from viperleed.gui.measure import hardwarebase as base
 from viperleed.gui.measure.classes.energyramp import ABRUPT
 from viperleed.gui.measure.classes.energyramp import DELTA_E_NAME
+from viperleed.gui.measure.classes.energyramp import END_E_NAME
 from viperleed.gui.measure.classes.energyramp import LINEAR
 from viperleed.gui.measure.classes.energyramp import START_E_NAME
 from viperleed.gui.measure.classes.energyramp import ConstantEnergyRamp
@@ -260,6 +261,21 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         self._step_profile.settings_changed.connect(self.settings_changed)
         self.settings_changed.connect(self._store_energy_ramp_settings)
 
+    def _edit_energy_info(self):
+        """Set info texts to reflect the minimum energy."""
+        min_energy = self._settings.getfloat('energies', 'min_energy')
+        _energy_info_map = {'start_energy': (START_E_NAME, 'starts'),
+                            'end_energy': (END_E_NAME, 'ends')}
+        for opt in self._energy_options:
+            name = opt.option_name
+            if name in _energy_info_map:
+                pub_name, verb = _energy_info_map[name]
+                with qtc.QSignalBlocker(opt.handler_widget):
+                    opt.handler_widget.soft_minimum = min_energy
+                opt.set_info_text('<nobr>The energy at which the measurement '
+                                  f'{verb}.</nobr> The minimum '
+                                  f'{pub_name} is {min_energy} eV.')
+
     @qtc.pyqtSlot(int)
     def _set_energy_ramp_options(self, *_):
         """Add the widget of the selected energy ramp."""
@@ -268,15 +284,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         selected_ramp = self._ramp_type.combo_box.currentData()
         self._energy_options = selected_ramp.get_settings_widgets()
         if self._settings.has_option('energies', 'min_energy'):
-            min_energy = self._settings.getfloat('energies', 'min_energy')
-            start = next(option for option in self._energy_options
-                         if option.option_name == 'start_energy')
-            with qtc.QSignalBlocker(start.handler_widget):
-                start.handler_widget.soft_minimum = min_energy
-            start.set_info_text(
-                '<nobr>The energy at which the measurement starts.</nobr> '
-                f'The minimum {START_E_NAME} is {min_energy} eV.'
-                )
+            self._edit_energy_info()
         for option in self._energy_options:
             self.central_widget.layout().addRow(*option)
             option.value_changed.connect(self.settings_changed)
