@@ -418,6 +418,8 @@ class LinearEnergyRamp(EnergyRampABC):
     def __init__(self, *args, **kwargs):
         """Initialize LinearEnergyRamp."""
         self._delta_energy = DEFAULT_DELTA
+        # _end_energy is limited below by a minimum energy (as found
+        # in 'energies/min_energy' if present, 0.0 eV otherwise).
         self._end_energy = DEFAULT_END
         super().__init__(*args, **kwargs)
 
@@ -548,6 +550,7 @@ class LinearEnergyRamp(EnergyRampABC):
                 QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'energies/end_energy', DEFAULT_END
                 )
+        self._end_energy = max(self.min_energy, self._end_energy)
 
 
 class ConstantEnergyRamp(EnergyRampABC):

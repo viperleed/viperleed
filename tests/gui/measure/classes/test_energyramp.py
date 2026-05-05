@@ -205,13 +205,13 @@ class TestLinearEnergyRampSetRamp:
         assert linear_ramp._delta_energy == DEFAULT_DELTA
         assert linear_ramp._end_energy == DEFAULT_END
 
-    def test_set_ramp_clamps_start_energy_to_minimum(self, linear_ramp):
-        """Check that start_energy is never set below min_energy."""
+    def test_set_ramp_clamps_energies_to_minimum(self, linear_ramp):
+        """Check that energies are never set below min_energy."""
         settings = _make_settings(
             min_energy='5.0',
             start_energy='2.0',
             delta_energy='0.5',
-            end_energy='10.0',
+            end_energy='3.0',
             step_profile='abrupt',
         )
 
@@ -219,6 +219,7 @@ class TestLinearEnergyRampSetRamp:
 
         assert linear_ramp.min_energy == 5.0
         assert linear_ramp.start_energy == 5.0
+        assert linear_ramp._end_energy == 5.0
         assert linear_ramp._step_profile == (ABRUPT,)
 
     def test_set_ramp_converts_string_profile_to_tuple(self, linear_ramp):
