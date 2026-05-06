@@ -328,7 +328,18 @@ class EnergyRampEditor(SettingsDialogSectionBase):
             step_profile = self._settings['energies'].get('step_profile',
                                                           fallback=None)
             if step_profile:
-                self._step_profile.set_(step_profile)
+                try:
+                    self._step_profile.set_(step_profile)
+                except ValueError as err:
+                    qtw.QMessageBox.warning(
+                        self,
+                        'Invalid Step Profile',
+                        f'Could not load the step profile: {err}\n\n'
+                        'Falling back to an abrupt profile.'
+                        )
+                    self._settings.set('energies', 'step_profile',
+                                       str(ABRUPT_PROFILE))
+                    self._step_profile.set_(ABRUPT_PROFILE)
 
 
 class StepProfileViewer(ButtonWithLabel):
@@ -442,6 +453,8 @@ class EnergyStepProfileDialog(qtw.QDialog):                                     
         name = (first if isinstance(first, str)
                 else FractionalEnergyStepEditor.name)
         index = self.pick_profile.findText(self._format_profile_name(name))
+        if index == -1:
+            raise ValueError('Unknown profile type.')
         self.pick_profile.setCurrentIndex(index)
         self.pick_profile.currentData().set_profile(profile_data)
         self._profile_description.setText(
@@ -613,8 +626,8 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
         -------
         None.
         """
-        if not profile[0] == self.name or len(profile) != 3:
-            raise ValueError('Unsuitable settings for a linear profile.')       # TODO: Catch error on the outside.
+        if not len(profile) == 3:
+            raise ValueError('Unsuitable settings for a linear profile.')
         self._controls['n_steps'].setValue(profile[1])
         self._controls['duration'].setValue(profile[2])
         self.update_profile()
