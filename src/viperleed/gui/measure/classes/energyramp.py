@@ -127,7 +127,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
         The returned value excludes the very last step, i.e.,
         self.current_energy and the settling time for it.
         A typical call to set_leed_energy would be
-            measurement.set_leed_energy(*self._energy_ramp.step_profile,
+            measurement.set_leed_energy(*self.step_profile,
                                         self.current_energy,
                                         last_settle_time,
                                         ...)
