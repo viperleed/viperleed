@@ -88,7 +88,7 @@ def _make_settings(**kwargs):
     return settings
 
 
-#pylint: disable-next=too-few-public-methods
+# pylint: disable-next=too-few-public-methods
 class _FakeOption:
     """Minimal option stub for ramp_settings_ok tests."""
 
@@ -102,7 +102,7 @@ class _FakeOption:
         return self._value
 
 
-#pylint: disable-next=too-few-public-methods
+# pylint: disable-next=too-few-public-methods
 class _FakeSpinBox:
     """Small spin-box stub used to avoid QWidget creation in tests."""
 
@@ -110,13 +110,13 @@ class _FakeSpinBox:
         """Initialize fake spin box."""
         self.single_step = None
 
-    #pylint: disable-next=invalid-name
+    # pylint: disable-next=invalid-name
     def setSingleStep(self, value):
         """Store single-step values for assertions."""
         self.single_step = value
 
 
-#pylint: disable-next=too-few-public-methods
+# pylint: disable-next=too-few-public-methods
 class _FakeSettingsDialogOption:
     """Small settings option stub used in widget-construction tests."""
 
@@ -174,12 +174,12 @@ class TestReturnMatchingEnergyRamp:
 
 # pylint: disable=protected-access
 # pylint: disable=magic-value-comparison
-# pylint: disable=use-implicit-booleaness-not-comparison-to-zero
 class TestEnergyRampABCDefaults:
     """Tests for default behavior implemented in EnergyRampABC."""
 
     def test_default_n_steps_returns_zero(self, concrete_ramp):
         """Check that the default abstract implementation yields 0 steps."""
+        # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
         assert concrete_ramp.n_steps == 0
 
     def test_default_ramp_settings_ok_returns_true(self):
@@ -305,6 +305,7 @@ class TestLinearEnergyRampSetRamp:
 
         linear_ramp.set_ramp(settings)
 
+        # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
         assert linear_ramp._delta_energy == 0.0
         assert linear_ramp._end_energy == 5.0
 
@@ -314,7 +315,7 @@ class TestStepProfileFallbackAndGeneration:
 
     def test_step_profile_falls_back_to_abrupt(self, linear_ramp):
         """Check ABRUPT fallback branch when parsing as fractions fails."""
-        settings = _make_settings(step_profile='abrupt')
+        settings = _make_settings(step_profile='invalid')
         linear_ramp.set_ramp(settings)
         linear_ramp.current_energy = 3.0
         linear_ramp.current_energy = 6.0
@@ -338,6 +339,9 @@ class TestStepProfileFallbackAndGeneration:
         linear_ramp.current_energy = 0.0
         linear_ramp.current_energy = 10.0
 
+        # To calculate time intervals we divide the total time by the
+        # number of steps. 5 // 20 then yields a time interval of 0 ms,
+        # which should not produce any steps.
         assert linear_ramp._get_linear_step(20, 5) == ()
         assert linear_ramp._step_profile == (ABRUPT,)
 
@@ -432,7 +436,7 @@ class TestRampSettingsWidgetsAndValidation:
         assert ConstantEnergyRamp.ramp_settings_ok(()) == (True, '')
 
 
-#pylint: disable-next=too-few-public-methods
+# pylint: disable-next=too-few-public-methods
 class TestLinearEnergyRampIncrement:
     """Tests for LinearEnergyRamp.increment_energy."""
 
@@ -470,6 +474,8 @@ class TestLinearEnergyRampFinished:
         settings = _make_settings(start_energy='10.0', end_energy='20.0',
                                   delta_energy='0.0')
         linear_ramp.set_ramp(settings)
+
+        # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
         assert linear_ramp.n_steps == 0
 
     @parametrize('delta, end, current', ((1.0, 20.0, 20.0),
@@ -493,13 +499,14 @@ class TestLinearEnergyRampFinished:
         assert not linear_ramp.ramp_finished()
 
 
-#pylint: disable=too-many-arguments
-#pylint: disable=too-many-positional-arguments
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-positional-arguments
 class TestSawtoothEnergyRampIncrementEnergy:
     """Tests for SawtoothEnergyRamp.increment_energy."""
 
     def test_n_steps_is_zero(self, sawtooth_ramp):
         """Check sawtooth-ramp n_steps value."""
+        # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
         assert sawtooth_ramp.n_steps == 0
 
     @parametrize('start, end, delta, current, expected',
@@ -534,8 +541,8 @@ class TestSawtoothEnergyRampIncrementEnergy:
         sawtooth_ramp.set_ramp(settings)
         sawtooth_ramp.current_energy = 100.0
         assert not sawtooth_ramp.ramp_finished()
-#pylint: enable=too-many-arguments
-#pylint: enable=too-many-positional-arguments
+# pylint: enable=too-many-arguments
+# pylint: enable=too-many-positional-arguments
 
 
 class TestConstantEnergyRamp:
@@ -543,6 +550,7 @@ class TestConstantEnergyRamp:
 
     def test_n_steps_is_zero(self, constant_ramp):
         """Check constant-ramp n_steps value."""
+        # pylint: disable-next=use-implicit-booleaness-not-comparison-to-zero
         assert constant_ramp.n_steps == 0
 
     def test_ramp_never_finished(self, constant_ramp):
