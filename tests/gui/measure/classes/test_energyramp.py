@@ -364,7 +364,7 @@ class TestRampSettingsWidgetsAndValidation:
     """Tests for get_settings_widgets and ramp_settings_ok methods."""
 
     # These are intentionally broken settings that we use to check that
-    # ramp_settings_ok correctly indentifies invalid configurations.
+    # ramp_settings_ok correctly identifies invalid configurations.
     # The contents are: {'type of error': (start_energy, delta_energy,
     # end_energy, expected reason fragment), ...}
     _invalid_linear_settings = {
