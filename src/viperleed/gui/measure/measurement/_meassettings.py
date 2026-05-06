@@ -277,7 +277,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
                 with qtc.QSignalBlocker(opt.handler_widget):
                     opt.handler_widget.soft_minimum = min_energy
                 opt.set_info_text('<nobr>The energy at which the measurement '
-                                  f'{verb}.</nobr> The minimum '
+                                  f'{verb}. </nobr>The minimum '
                                   f'{pub_name} is {min_energy} eV.')
 
     @qtc.pyqtSlot(int)
@@ -642,7 +642,7 @@ class LinearEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QFormLayout()
-        step_num_info = ('<nobr>The number of intermediate steps.</nobr> '
+        step_num_info = ('<nobr>The number of intermediate steps. </nobr>'
                          f'Cannot be more than {MAX_NUM_STEPS}.')
         duration_info = ('<nobr>How long to wait until </nobr>'
                          'the next intermediate step.')
@@ -758,7 +758,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _compose_labels(self):
         """Return a layout of the labels."""
         layout = qtw.QHBoxLayout()
-        info = ('<nobr>The energies to set given as a fraction</nobr> '
+        info = ('<nobr>The energies to set given as a fraction </nobr>'
                 f'of {DELTA_E_NAME}. Number of steps cannot exceed '
                 f'{MAX_NUM_STEPS}. Any value is acceptable. Zero is '
                 'equivalent to the current energy and one to the next '

@@ -413,7 +413,7 @@ class LinearEnergyRamp(EnergyRampABC):
 
     display_name = 'Linear energy ramp'
     info_text = ('<nobr>Linearly increases or decreases the energy'
-                 f'</nobr> until reaching the {END_E_NAME}.')
+                 f' </nobr>until reaching the {END_E_NAME}.')
 
     def __init__(self, *args, **kwargs):
         """Initialize LinearEnergyRamp."""
@@ -590,7 +590,7 @@ class SawtoothEnergyRamp(LinearEnergyRamp):
 
     display_name = 'Sawtooth energy ramp'
     info_text = ('<nobr>Linearly increases or decreases the energy'
-                 f'</nobr> until reaching the {END_E_NAME}. Energy resets '
+                 f' </nobr>until reaching the {END_E_NAME}. Energy resets '
                  f'to {START_E_NAME} when reaching the {END_E_NAME}.')
 
     @property
