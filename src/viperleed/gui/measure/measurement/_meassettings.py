@@ -46,8 +46,9 @@ from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
-N_COLUMNS = 2
-N_HEADER_ROWS = 2
+RAMP_N_HEADER_ROWS = 2
+STEP_N_COLUMNS = 2
+STEP_N_HEADER_ROWS = 2
 ALL_ENERGY_RAMPS = (LinearEnergyRamp, SawtoothEnergyRamp,
                     ConstantEnergyRamp)
 ALLOWED_ENERGY_RAMPS = {
@@ -247,14 +248,17 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         tip = 'The shape of the energy ramp.'
         label = InfoLabel(label_text='Ramp type', tooltip=tip)
         layout.addRow(label, self._ramp_type)
-        meas_cls = self._settings["measurement_settings"]["measurement_class"]
+        meas_cls = self._settings['measurement_settings']['measurement_class']
         for ramp_cls in ALLOWED_ENERGY_RAMPS.get(meas_cls, ALL_ENERGY_RAMPS):
-            self._ramp_type.combo_box.addItem(ramp_cls.display_name, userData=ramp_cls)
+            self._ramp_type.combo_box.addItem(ramp_cls.display_name,
+                                              userData=ramp_cls)
         tip = '<nobr>How to move from </nobr>one energy to the next one.'
         label = InfoLabel(label_text='Step profile', tooltip=tip)
         layout.addRow(label, self._step_profile)
         self.central_widget.setLayout(layout)
-        self._ramp_type.combo_box.currentIndexChanged.connect(self.settings_changed)
+        self._ramp_type.combo_box.currentIndexChanged.connect(
+            self.settings_changed
+            )
         self._ramp_type.combo_box.currentIndexChanged.connect(
             self._set_energy_ramp_options
             )
@@ -279,8 +283,8 @@ class EnergyRampEditor(SettingsDialogSectionBase):
     @qtc.pyqtSlot(int)
     def _set_energy_ramp_options(self, *_):
         """Add the widget of the selected energy ramp."""
-        while self.central_widget.layout().rowCount() > 2:
-            self.central_widget.layout().removeRow(2)
+        while self.central_widget.layout().rowCount() > RAMP_N_HEADER_ROWS:
+            self.central_widget.layout().removeRow(RAMP_N_HEADER_ROWS)
         selected_ramp = self._ramp_type.combo_box.currentData()
         self._energy_options = selected_ramp.get_settings_widgets()
         if self._settings.has_option('energies', 'min_energy'):
@@ -666,7 +670,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     @property
     def n_steps(self):
         """Return the number of intermediate steps."""
-        return max(0, self.layout().rowCount() - N_HEADER_ROWS)
+        return max(0, self.layout().rowCount() - STEP_N_HEADER_ROWS)
 
     def set_profile(self, profile):
         """Set fractional profile.
@@ -696,7 +700,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
         # The first two elements in the layout are the add/remove
         # buttons and the labels. After that, each step is a separate
         # item with two widgets.
-        for index in range(N_HEADER_ROWS, layout.count()):
+        for index in range(STEP_N_HEADER_ROWS, layout.count()):
             item = layout.itemAt(index)
             profile.append(item.itemAt(0).widget().value())
             profile.append(item.itemAt(1).widget().value())
@@ -762,7 +766,7 @@ class FractionalEnergyStepEditor(EnergyStepProfileShapeEditor):
     def _emit_step_count_reduced(self):
         """Emit the step_count_reduced signal once both widgets are deleted."""
         self._n_widgets_removed += 1
-        if self._n_widgets_removed < N_COLUMNS:
+        if self._n_widgets_removed < STEP_N_COLUMNS:
             return
         self.step_count_reduced.emit()
         self._n_widgets_removed = 0
