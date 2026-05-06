@@ -267,7 +267,10 @@ class EnergyRampEditor(SettingsDialogSectionBase):
 
     def _edit_energy_info(self):
         """Set info texts to reflect the minimum energy."""
-        min_energy = self._settings.getfloat('energies', 'min_energy')
+        try:
+            min_energy = self._settings.getfloat('energies', 'min_energy')
+        except (TypeError, ValueError):
+            return
         _energy_info_map = {'start_energy': (START_E_NAME, 'starts'),
                             'end_energy': (END_E_NAME, 'ends')}
         for opt in self._energy_options:
