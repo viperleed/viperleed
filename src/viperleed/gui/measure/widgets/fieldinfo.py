@@ -127,7 +127,12 @@ class InfoLabel(qtw.QWidget):
 
 
 class InfoComboBox(qtw.QWidget):
-    """A QComboBox with an attached FieldInfo that displays item info text."""
+    """A QComboBox with an attached FieldInfo that displays item info text.
+
+    The user data of the items in self._combo_box must be objects
+    with an info_text attribute. This text is displayed in the
+    tooltip of the attached FieldInfo when the item is selected.
+    """
 
     def __init__(self, parent=None):
         """Initialize instance."""
