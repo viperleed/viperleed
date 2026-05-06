@@ -293,17 +293,29 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
             self._step_profile = (ABRUPT,)
             return
 
-        # Casting may break. This is caught in self._set_step_profile.
-        for fraction in profile[::2]:
-            float(fraction)
-        for time_ in profile[1::2]:
-            time_ = int(time_)
-            if time_ < 0:
-                self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                                'energies/step_profile',
-                                'Time intervals must be non-negative.')
-                self._step_profile = (ABRUPT,)
-                return
+        # If the first element is not a number, it's probably a named profile.
+        # We let the exception propagate to self._set_step_profile.
+        if n_items > 0:
+            float(profile[0])
+
+        try:
+            for fraction in profile[::2]:
+                float(fraction)
+            for time_ in profile[1::2]:
+                time_ = int(time_)
+                if time_ < 0:
+                    self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                                    'energies/step_profile',
+                                    'Time intervals must be non-negative.')
+                    self._step_profile = (ABRUPT,)
+                    return
+        except (ValueError, TypeError):
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            'energies/step_profile',
+                            'Invalid custom step profile: fractions must be '
+                            'floats and times must be integers.')
+            self._step_profile = (ABRUPT,)
+            return
 
         if n_items < 2 or n_items % 2 != 0:
             self.emit_error(
