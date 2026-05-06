@@ -365,6 +365,8 @@ class TestRampSettingsWidgetsAndValidation:
 
     # These are intentionally broken settings that we use to check that
     # ramp_settings_ok correctly indentifies invalid configurations.
+    # The contents are: {'type of error': (start_energy, delta_energy,
+    # end_energy, expected reason fragment), ...}
     _invalid_linear_settings = {
         'zero delta': (10.0, 0.0, 20.0, f'{DELTA_E_NAME} cannot be zero.'),
         'positive delta descending range': (
