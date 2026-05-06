@@ -147,9 +147,9 @@ class MeasureEnergyCalibration(MeasurementABC):
 
         The measured energies are used as the x-coordinates and the
         nominal energies are used as the y-coordinates. The resulting
-        polynomial is written into the config file and used to
-        calibrate the nominal energy via the true_energy_to_setpoint()
-        function to get the desired output.
+        polynomial is written into the config file and used to calibrate
+        the nominal energy. The setpoint energy can be obtained
+        via the ControllerABC.true_energy_to_setpoint() method.
 
         Returns
         -------
