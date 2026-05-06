@@ -156,8 +156,8 @@ class InfoComboBox(qtw.QWidget):
         self.setLayout(layout)
         self._combo_box.currentIndexChanged.connect(self._update_field_info)
 
-    @qtc.pyqtSlot()
-    def _update_field_info(self):
+    @qtc.pyqtSlot(int)
+    def _update_field_info(self, _):
         """Update the field info text from the selected combo box item."""
         selected_data = self._combo_box.currentData()
         info_text = getattr(selected_data, 'info_text', None)
