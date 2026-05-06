@@ -88,6 +88,7 @@ def _make_settings(**kwargs):
     return settings
 
 
+#pylint: disable-next=too-few-public-methods
 class _FakeOption:
     """Minimal option stub for ramp_settings_ok tests."""
 
@@ -101,6 +102,7 @@ class _FakeOption:
         return self._value
 
 
+#pylint: disable-next=too-few-public-methods
 class _FakeSpinBox:
     """Small spin-box stub used to avoid QWidget creation in tests."""
 
@@ -108,11 +110,13 @@ class _FakeSpinBox:
         """Initialize fake spin box."""
         self.single_step = None
 
+    #pylint: disable-next=invalid-name
     def setSingleStep(self, value):
         """Store single-step values for assertions."""
         self.single_step = value
 
 
+#pylint: disable-next=too-few-public-methods
 class _FakeSettingsDialogOption:
     """Small settings option stub used in widget-construction tests."""
 
@@ -170,6 +174,7 @@ class TestReturnMatchingEnergyRamp:
 
 # pylint: disable=protected-access
 # pylint: disable=magic-value-comparison
+# pylint: disable=use-implicit-booleaness-not-comparison-to-zero
 class TestEnergyRampABCDefaults:
     """Tests for default behavior implemented in EnergyRampABC."""
 
@@ -427,6 +432,7 @@ class TestRampSettingsWidgetsAndValidation:
         assert ConstantEnergyRamp.ramp_settings_ok(()) == (True, '')
 
 
+#pylint: disable-next=too-few-public-methods
 class TestLinearEnergyRampIncrement:
     """Tests for LinearEnergyRamp.increment_energy."""
 
@@ -487,6 +493,8 @@ class TestLinearEnergyRampFinished:
         assert not linear_ramp.ramp_finished()
 
 
+#pylint: disable=too-many-arguments
+#pylint: disable=too-many-positional-arguments
 class TestSawtoothEnergyRampIncrementEnergy:
     """Tests for SawtoothEnergyRamp.increment_energy."""
 
@@ -526,6 +534,8 @@ class TestSawtoothEnergyRampIncrementEnergy:
         sawtooth_ramp.set_ramp(settings)
         sawtooth_ramp.current_energy = 100.0
         assert not sawtooth_ramp.ramp_finished()
+#pylint: enable=too-many-arguments
+#pylint: enable=too-many-positional-arguments
 
 
 class TestConstantEnergyRamp:
