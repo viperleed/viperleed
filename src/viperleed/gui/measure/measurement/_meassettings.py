@@ -375,6 +375,9 @@ class StepProfileViewer(ButtonWithLabel):
         except ValueError:
             # Value is already a string and cannot be converted.
             pass
+        except (SyntaxError, TypeError):
+            # Value is a malformed string.
+            value = ABRUPT_PROFILE
 
         if not value:
             value = ABRUPT_PROFILE
