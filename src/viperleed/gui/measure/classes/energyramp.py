@@ -36,7 +36,7 @@ MINIMUM_ENERGY = 0.0
 MINIMUM_DELTA = 1e-4
 
 
-def get_matching_energy_ramp(settings):
+def get_ramp_from_settings(settings):
     """Determine and return the type of energy ramp."""
     constant_energy = False
     endless = False
