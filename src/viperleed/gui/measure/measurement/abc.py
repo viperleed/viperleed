@@ -1472,7 +1472,6 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                 self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                                 'energies/ramp_type',
                                 f'Invalid string {ramp_name}.')
-                pass
         if ramp_type and not issubclass(ramp_type, EnergyRampABC):
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
                             'energies/ramp_type',
