@@ -299,7 +299,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
     def _store_energy_ramp_settings(self):
         """Store the selected energy-ramp settings."""
         self._settings.set('energies', 'ramp_type',
-                   self._ramp_type.combo_box.currentData().__name__)
+                           self._ramp_type.combo_box.currentData().__name__)
         self._settings.set('energies', 'step_profile',
                            self._step_profile.get_())
         for option in self._energy_options:
