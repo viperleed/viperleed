@@ -423,7 +423,7 @@ class EnergyRampABC(QObjectWithError, metaclass=QMetaABC):
 class LinearEnergyRamp(EnergyRampABC):
     """Generic linear energy ramp."""
 
-    display_name = 'Linear energy ramp'
+    display_name = 'Linear'
     info_text = ('<nobr>Linearly increases or decreases the energy'
                  f' </nobr>up to and including {END_E_NAME}.')
 
@@ -567,7 +567,7 @@ class LinearEnergyRamp(EnergyRampABC):
 class ConstantEnergyRamp(EnergyRampABC):
     """Constant energy ramp."""
 
-    display_name = 'Constant energy ramp'
+    display_name = 'Constant'
     info_text = ('<nobr>Keeps the energy constant throughout the</nobr>'
                  ' measurement. Useful for time-resolved measurements '
                  'at fixed energy.')
@@ -600,7 +600,7 @@ class ConstantEnergyRamp(EnergyRampABC):
 class SawtoothEnergyRamp(LinearEnergyRamp):
     """Sawtooth energy ramp."""
 
-    display_name = 'Sawtooth energy ramp'
+    display_name = 'Sawtooth'
     info_text = ('<nobr>Linearly increases or decreases the energy'
                  f' </nobr>up to and including {END_E_NAME}. Energy '
                  f'resets to {START_E_NAME} when reaching {END_E_NAME}.')

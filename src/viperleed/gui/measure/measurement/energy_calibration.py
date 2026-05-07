@@ -140,10 +140,8 @@ class MeasureEnergyCalibration(MeasurementABC):
         """Calibrate the energy setpoint of the LEED electronics.
 
         Measured energies are put into relation to the nominal
-        energies using numpy.polynomial.polynomial.Polynomial. A
-        polynomial of first degree is most likely accurate enough for
-        the calibration, but the degree can be adjusted by changing
-        the integer value in the Polynomial.fit function.
+        energies using a numpy.polynomial.polynomial.Polynomial
+        of degree 1.
 
         The measured energies are used as the x-coordinates and the
         nominal energies are used as the y-coordinates. The resulting
@@ -177,13 +175,16 @@ class MeasureEnergyCalibration(MeasurementABC):
                 '', 'energy_calibration/domain', domain
                 )
 
+        # A polynomial of first degree is most likely accurate enough for
+        # the calibration, but the degree can be adjusted by changing
+        # deg in this call.
         fit_polynomial, (residuals, *_) = (
             Polynomial.fit(measured_energies, nominal_energies, deg=1,
                            domain=domain, window=domain, full=True)
             )
 
         # Check quality of fit
-        offs, gain = fit_polynomial.coef
+        offs, gain, *_ = fit_polynomial.coef
         if (abs(offs) > 50               # Can't be more than 50 eV off
             or gain < 1e-3 or gain > 50  # Gain should be >0 and small
                 or residuals > 100):     # Most of the time < 1

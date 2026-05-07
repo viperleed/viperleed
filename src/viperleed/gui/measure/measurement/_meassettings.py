@@ -46,7 +46,8 @@ from viperleed.gui.widgets.buttons import QNoDefaultPushButton
 
 MAX_NUM_STEPS = 7
 MAX_DELAY = 65535
-RAMP_N_HEADER_ROWS = 2
+RAMP_N_FOOTER_ROWS = 1
+RAMP_N_HEADER_ROWS = 1
 STEP_N_COLUMNS = 2
 STEP_N_HEADER_ROWS = 2
 ALL_ENERGY_RAMPS = (LinearEnergyRamp, SawtoothEnergyRamp,
@@ -223,10 +224,12 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         None.
         """
         self._settings = settings
-        kwargs.setdefault('display_name', 'Energy Ramp')
+        kwargs.setdefault('display_name', 'Energies')
         kwargs.setdefault('tags', SettingsTag.REGULAR)
-        kwargs.setdefault('tooltip', 'This section handles settings that '
-                          'control how the energy is ramped between steps.')
+        kwargs.setdefault(
+            'tooltip',
+            'Which energies to measure and how to move between them.'
+            )
         super().__init__(**kwargs)
         self._step_profile = StepProfileViewer()
         self._ramp_type = InfoComboBox()
@@ -246,7 +249,7 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         """Compose widgets and connect relevant signals."""
         layout = qtw.QFormLayout()
         tip = 'The shape of the energy ramp.'
-        label = InfoLabel(label_text='Ramp type', tooltip=tip)
+        label = InfoLabel(label_text='Energy ramp', tooltip=tip)
         layout.addRow(label, self._ramp_type)
         meas_cls = self._settings['measurement_settings']['measurement_class']
         for ramp_cls in ALLOWED_ENERGY_RAMPS.get(meas_cls, ALL_ENERGY_RAMPS):
@@ -286,14 +289,16 @@ class EnergyRampEditor(SettingsDialogSectionBase):
     @qtc.pyqtSlot(int)
     def _set_energy_ramp_options(self, *_):
         """Add the widget of the selected energy ramp."""
-        while self.central_widget.layout().rowCount() > RAMP_N_HEADER_ROWS:
+        n_rows_remain = RAMP_N_HEADER_ROWS + RAMP_N_FOOTER_ROWS
+        while self.central_widget.layout().rowCount() > n_rows_remain:
             self.central_widget.layout().removeRow(RAMP_N_HEADER_ROWS)
         selected_ramp = self._ramp_type.combo_box.currentData()
         self._energy_options = selected_ramp.get_settings_widgets()
         if self._settings.has_option('energies', 'min_energy'):
             self._edit_energy_info()
-        for option in self._energy_options:
-            self.central_widget.layout().addRow(*option)
+        for i, option in enumerate(self._energy_options):
+            self.central_widget.layout().insertRow(i + RAMP_N_HEADER_ROWS,
+                                                   *option)
             option.value_changed.connect(self.settings_changed)
             option.value_changed.connect(self.settings_ok_changed)
         self.update_widgets()
