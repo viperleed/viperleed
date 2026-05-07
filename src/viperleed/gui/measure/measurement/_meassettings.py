@@ -18,6 +18,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.gui.measure import hardwarebase as base
+from viperleed.gui.measure.classes.abc import QObjectSettingsErrors
 from viperleed.gui.measure.classes.energyramp import ABRUPT
 from viperleed.gui.measure.classes.energyramp import DELTA_E_NAME
 from viperleed.gui.measure.classes.energyramp import END_E_NAME
@@ -206,6 +207,8 @@ class DeviceEditor(SettingsDialogSectionBase):
 class EnergyRampEditor(SettingsDialogSectionBase):
     """Section for editing energy-ramp related settings."""
 
+    error_occurred = qtc.pyqtSignal(tuple)
+
     def __init__(self, settings, **kwargs):
         """Initialize instance.
 
@@ -259,9 +262,8 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         label = InfoLabel(label_text='Step profile', tooltip=tip)
         layout.addRow(label, self._step_profile)
         self.central_widget.setLayout(layout)
-        self._ramp_type.combo_box.currentIndexChanged.connect(
-            self.settings_changed
-            )
+        # There is no connection between currentIndexChanged and
+        # settings_changed. It is emitted in _set_energy_ramp_options.
         self._ramp_type.combo_box.currentIndexChanged.connect(
             self._set_energy_ramp_options
             )
@@ -299,9 +301,11 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         for i, option in enumerate(self._energy_options):
             self.central_widget.layout().insertRow(i + RAMP_N_HEADER_ROWS,
                                                    *option)
-            option.value_changed.connect(self.settings_changed)
             option.value_changed.connect(self.settings_ok_changed)
-        self.update_widgets()
+            option.value_changed.connect(self.settings_changed)
+        self._update_energy_ramp_options()
+        self.settings_ok_changed.emit()
+        self.settings_changed.emit()
 
     @qtc.pyqtSlot()
     def _store_energy_ramp_settings(self):
@@ -318,8 +322,10 @@ class EnergyRampEditor(SettingsDialogSectionBase):
         """Update widgets from settings."""
         # When updating the widgets from settings, we have to block
         # signals to avoid overwriting the partially loaded settings.
+        error = None
         with qtc.QSignalBlocker(self):
             ramp_type = self._settings['energies'].get('ramp_type', '')
+            current_index = self._ramp_type.combo_box.currentIndex()
             index = -1
             for i in range(self._ramp_type.combo_box.count()):
                 ramp_cls = self._ramp_type.combo_box.itemData(i)
@@ -328,26 +334,38 @@ class EnergyRampEditor(SettingsDialogSectionBase):
                     break
             if index != -1:
                 self._ramp_type.combo_box.setCurrentIndex(index)
-            for option in self._energy_options:
-                value = self._settings['energies'].getfloat(option.option_name,
-                                                            fallback=None)
-                if value is not None:
-                    option.handler_widget.setValue(value)
+            if index == current_index:
+                # Already done automatically upon index change
+                # in _set_energy_ramp_options.
+                self._update_energy_ramp_options()
             step_profile = self._settings['energies'].get('step_profile',
                                                           fallback=None)
             if step_profile:
                 try:
                     self._step_profile.set_(step_profile)
                 except ValueError as err:
-                    qtw.QMessageBox.warning(
-                        self,
-                        'Invalid Step Profile',
-                        f'Could not load the step profile: {err}\n\n'
-                        'Falling back to an abrupt profile.'
-                        )
+                    error = err
                     self._settings.set('energies', 'step_profile',
                                        str(ABRUPT_PROFILE))
                     self._step_profile.set_(ABRUPT_PROFILE)
+        if error:
+            base.emit_error(self,
+                            QObjectSettingsErrors.INVALID_SETTINGS,
+                            'energies/step_profile',
+                            f'Invalid step profile: {error}')
+        # By now, all widgets are up to date. We can signal that
+        # something may have changed.
+        self.settings_ok_changed.emit()
+        self.settings_changed.emit()
+
+    def _update_energy_ramp_options(self):
+        """Update the energy ramp options to reflect the current settings."""
+        for option in self._energy_options:
+            value = self._settings['energies'].getfloat(option.option_name,
+                                                        fallback=None)
+            if value is not None:
+                with qtc.QSignalBlocker(option.handler_widget):
+                    option.handler_widget.setValue(value)
 
 
 class StepProfileViewer(ButtonWithLabel):
