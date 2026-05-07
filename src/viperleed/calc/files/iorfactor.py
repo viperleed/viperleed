@@ -1129,7 +1129,7 @@ def _write_rfactor_analysis_pdf_from_splines(
                     continue
                 ytheo = np.column_stack((out_grid[mask], y_theo_data[mask, i]))
                 yexp = np.column_stack((out_grid[mask], y_exp_data[mask, i]))
-    
+
                 plot_analysis(
                     exp, figs, figsize, name, namePos, oritick, plotcolors,
                     rPos, rfact, theo, xlims, yexp, ylims, ytheo, v0i
