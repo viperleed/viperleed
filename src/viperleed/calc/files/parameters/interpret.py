@@ -285,13 +285,6 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             if p in self.rpars.readParams and p not in self._param_names
             )
 
-    def _parse_simple_bool(self, val):
-        val_lower = val.lower()
-        for key, values in self.bool_synonyms.items():
-            if val_lower in values:
-                return key
-        raise ValueError(f"Unrecognized boolean value: {val!r}")
-
     # ---------- Methods for interpreting simple parameters -----------
     # Disable pylint warning since, while 6 is a bit many, we can't
     # really do much better than this. Merging some in a container
