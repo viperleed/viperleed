@@ -23,7 +23,6 @@ from .cases_read import CasesInvalidDomainDisplacements
 def fixture_write_displacements(tmp_path):
     """Write a temporary DISPLACEMENTS file with given contents."""
     file = tmp_path/'DISPLACEMENTS'
-
     def _write(contents):
         file.write_text(contents, encoding='utf-8')
         return file
