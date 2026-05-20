@@ -544,4 +544,4 @@ class CollapsibleControllerView(CollapsibleDeviceView):
             self._quantity_selector.set_quantities(quantities)
         except ValueError as err:
             emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                        'quantities', str(err))
+                        'controller/measurement_devices', str(err))
