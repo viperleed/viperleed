@@ -466,11 +466,7 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         with disconnected_slot(self._check_if_quantities_changed,
                                self._quantity_selector.settings_changed,
                                type=qtc.Qt.UniqueConnection):
-            try:
-                self._quantity_selector.set_quantities(quantities)
-            except ValueError as err:
-                emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                           'quantities', str(err))
+            self._set_quantities(quantities)
 
     @qtc.pyqtSlot()
     def _build_device_settings_widgets(self):
@@ -484,11 +480,7 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         layout = self._frame.layout().itemAt(2).widget().layout()
         self._quantity_selector = QuantitySelector(settings)
         if self._quantities_to_set:
-            try:
-                self._quantity_selector.set_quantities(self._quantities_to_set)
-            except ValueError as err:
-                emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                           'quantities', str(err))
+            self._set_quantities(self._quantities_to_set)
         safe_connect(self._quantity_selector.settings_changed,
                      self._check_if_quantities_changed,
                      type=qtc.Qt.UniqueConnection)
@@ -545,3 +537,11 @@ class CollapsibleControllerView(CollapsibleDeviceView):
         ctrl.ready_to_show_settings.connect(ctrl.disconnect_)
         ctrl.ready_to_show_settings.connect(self._check_if_primary_changed)
         ctrl.prepare_to_show_settings()
+
+    def _set_quantities(self, quantities):
+        """Set the quantities to measure."""
+        try:
+            self._quantity_selector.set_quantities(quantities)
+        except ValueError as err:
+            emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                        'quantities', str(err))
