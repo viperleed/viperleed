@@ -16,6 +16,7 @@ from pytest_cases import parametrize
 
 from viperleed.gui.measure.constants import DEFAULTS
 from viperleed.gui.measure.constants import SRC_ALIASES_PATH
+from viperleed.gui.measure.classes.settings import AliasConfigParser
 
 
 @fixture(name='alias_config')
@@ -134,3 +135,32 @@ class TestDefaultSettings:  # pylint: disable=too-few-public-methods
                     f'Option "{option}" in section [{section}] '
                     'contains uppercase letters.'
                     )
+
+    def test_settle_time_keys(self):
+        """Check settle-time keys in the default ViPErLEED hardware file."""
+        config = ConfigParser()
+        config.optionxform = str
+        config.read(DEFAULTS / '_viperleed_hardware_0_10.ini')
+        mset = config['measurement_settings']
+        assert 'ctrl_settle_time' in mset
+        assert 'camera_settle_time' in mset
+        assert 'energy_settle_time' in mset
+        assert 'i0_settle_time' not in mset
+        assert 'hv_settle_time' not in mset
+
+    def test_legacy_settle_time_aliases_populate_all_new_keys(self):
+        """Check hv/i0 legacy settle keys map to all new settle keys."""
+        config = AliasConfigParser(cls_name='ControllerABC')
+        config.read_dict(
+            {
+                'measurement_settings': {
+                    'i0_settle_time': '2000',
+                    'hv_settle_time': '1000',
+                    'first_settle_time': '3000',
+                    }
+                }
+            )
+        mset = config['measurement_settings']
+        assert mset['ctrl_settle_time'] == '2000'
+        assert mset['camera_settle_time'] == '1000'
+        assert mset['energy_settle_time'] == '1000'

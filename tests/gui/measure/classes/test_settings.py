@@ -278,6 +278,22 @@ fallback_values = (('A/opt2', 'cfb'),)
         parser.read_string(f'[oldsection]\noption={expected}')
         assert parser['new_section']['new_option'] == expected
 
+    def test_one_old_option_to_multiple_new_options(self, tmp_path, mocker):
+        """Check aliases can reuse one legacy option for multiple new ones."""
+        aliases = tmp_path/'aliases.ini'
+        aliases.write_text('''
+[MultiAlias]
+new_a/new_opt = ('old/legacy',)
+new_b/new_opt = ('old/legacy',)
+''')
+        mocker.patch(f'{_MODULE}.get_aliases_path', return_value=aliases)
+
+        parser = AliasConfigParser(cls_name='MultiAlias')
+        parser.read_string('[old]\nlegacy=42')
+
+        assert parser.get('new_a', 'new_opt') == '42'
+        assert parser.get('new_b', 'new_opt') == '42'
+
 
 class TestSystemSettings:
     """Tests for SystemSettings."""

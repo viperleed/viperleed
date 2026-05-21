@@ -276,10 +276,10 @@ class ControllerABC(DeviceABC):
         return bool(self.settings and self.serial)
 
     @property
-    def hv_settle_time(self):
-        """Return the time it takes to settle the energy (msec)."""
+    def camera_settle_time(self):
+        """Return the camera-settle time after changing energy (msec)."""
         if not self.sets_energy:
-            raise RuntimeError("Should never ask the hv_settle_time for "
+            raise RuntimeError("Should never ask the camera_settle_time for "
                                "a controller that does not .sets_energy")
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
@@ -289,19 +289,19 @@ class ControllerABC(DeviceABC):
         try:
             # Mandatory for a controller that .sets_energy.
             settle_t = self.settings.getint('measurement_settings',
-                                            'hv_settle_time')
+                                            'camera_settle_time')
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/hv_settle_time', '')
+                            'measurement_settings/camera_settle_time', '')
         return settle_t
 
     @property
-    def i0_settle_time(self):
-        """Return the time it takes to settle the beam current (msec)."""
+    def ctrl_settle_time(self):
+        """Return the controller-settle time for measurements (msec)."""
         if not self.sets_energy:
-            raise RuntimeError("Should never ask the i0_settle_time for "
+            raise RuntimeError("Should never ask the ctrl_settle_time for "
                                "a controller that does not .sets_energy")
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
@@ -311,12 +311,34 @@ class ControllerABC(DeviceABC):
         try:
             # Mandatory for a controller that .sets_energy
             settle_t = self.settings.getint('measurement_settings',
-                                            'i0_settle_time')
+                                            'ctrl_settle_time')
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/i0_settle_time', '')
+                            'measurement_settings/ctrl_settle_time', '')
+        return settle_t
+
+    @property
+    def energy_settle_time(self):
+        """Return the settle time used for energy calibration (msec)."""
+        if not self.sets_energy:
+            raise RuntimeError("Should never ask the energy_settle_time for "
+                               "a controller that does not .sets_energy")
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+        fallback = 1000
+        if not self.settings:
+            return fallback
+        try:
+            # Mandatory for a controller that .sets_energy
+            settle_t = self.settings.getint('measurement_settings',
+                                            'energy_settle_time')
+        except (TypeError, ValueError):
+            # Not an int
+            settle_t = fallback
+            self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/energy_settle_time', '')
         return settle_t
 
     @property
@@ -355,7 +377,7 @@ class ControllerABC(DeviceABC):
             # Not an int
             settle_t = fallback
             self.emit_error(QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/i0_settle_time', '')
+                            'measurement_settings/first_settle_time', '')
         return settle_t
 
     @property
@@ -492,8 +514,10 @@ class ControllerABC(DeviceABC):
             for the following mandatory sections/options:
                 'controller'/'serial_class'
             (if self.sets_energy:
-                'measurement_settings'/'i0_settle_time'
-                'measurement_settings'/'hv_settle_time')
+                'measurement_settings'/'ctrl_settle_time'
+                'measurement_settings'/'camera_settle_time'
+                'measurement_settings'/'energy_settle_time'
+                'measurement_settings'/'first_settle_time')
 
         Returns
         -------
@@ -572,8 +596,9 @@ class ControllerABC(DeviceABC):
         # controller that sets the LEED energy on the optics
         extra_mandatory = ()
         if self.sets_energy:
-            extra_mandatory = (('measurement_settings', 'i0_settle_time'),
-                               ('measurement_settings', 'hv_settle_time'),
+            extra_mandatory = (('measurement_settings', 'ctrl_settle_time'),
+                               ('measurement_settings', 'camera_settle_time'),
+                               ('measurement_settings', 'energy_settle_time'),
                                ('measurement_settings', 'first_settle_time'))
         invalid_settings = settings.misses_settings(*self._mandatory_settings,
                                                     *extra_mandatory)
@@ -675,8 +700,9 @@ class ControllerABC(DeviceABC):
         as the default button of the dialog.
 
         and, if self.sets_energy:
-        - 'measurement_settings'/'i0_settle_time'
-        - 'measurement_settings'/'hv_settle_time'
+        - 'measurement_settings'/'ctrl_settle_time'
+        - 'measurement_settings'/'camera_settle_time'
+        - 'measurement_settings'/'energy_settle_time'
         - 'measurement_settings'/'first_settle_time'
         These options are normally set as 'advanced', and are not
         normally visible. They should usually be made visible in
@@ -697,16 +723,19 @@ class ControllerABC(DeviceABC):
                             display_name='Measurement Configuration')
         _i0 = QuantityInfo.I0.display_name
         info = (
-            ('i0_settle_time', f'{_i0} settle time',
-             f'<nobr>The time interval required for the {_i0} current'
-             '</nobr> to reach a stable value after a new energy has '
-             'been set. This should be calibrated for a typical step '
-             'size (e.g., 0.5 eV).'),
-            ('hv_settle_time', 'Energy settle time',
+            ('ctrl_settle_time', f'{_i0}/Ctrl settle time',
+             f'<nobr>The time interval required for controller-based'
+             f' measurements (e.g., {_i0})</nobr> to settle after a new '
+             'energy has been set. This should be calibrated for a typical '
+             'step size (e.g., 0.5 eV).'),
+            ('camera_settle_time', 'Camera settle time',
+             '<nobr>The time interval required after setting a new '
+             'energy</nobr> before starting image acquisition. This should '
+             'be calibrated for a typical step size (e.g., 0.5 eV).'),
+            ('energy_settle_time', 'Energy-calibration settle time',
              '<nobr>The time interval required for the true beam '
-             'energy</nobr> to reach a stable value after a new '
-             'energy has been set. This should be calibrated for '
-             'a typical step size (e.g., 0.5 eV).'),
+             'energy</nobr> to reach a stable value during energy '
+             'calibration measurements.'),
             ('first_settle_time', 'First-energy settle time',
              '<nobr>The time interval required for the true beam '
              'energy</nobr> to reach a stable value when the first energy '
@@ -1185,8 +1214,9 @@ class MeasureControllerABC(ControllerABC):
         as the default button of the dialog.
 
         and, if self.sets_energy:
-        - 'measurement_settings'/'i0_settle_time'
-        - 'measurement_settings'/'hv_settle_time'
+        - 'measurement_settings'/'ctrl_settle_time'
+        - 'measurement_settings'/'camera_settle_time'
+        - 'measurement_settings'/'energy_settle_time'
         - 'measurement_settings'/'first_settle_time'
         - 'measurement_settings'/'nr_samples'
         These options are normally set as 'advanced', and are not
