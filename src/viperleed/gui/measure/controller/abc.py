@@ -75,6 +75,9 @@ def ensure_connected(method):
 class ControllerABC(DeviceABC):
     """Base class for giving orders to the LEED electronics."""
 
+    MAX_NUM_STEPS = 7
+    MAX_DELAY = 65535
+
     # This signal is only used by the primary controller which
     # sets the energy. If the primary controller does not take
     # measurements then this signal needs to be emitted after
